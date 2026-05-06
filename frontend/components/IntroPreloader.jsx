@@ -277,12 +277,14 @@ function WakingUpText() {
 
   return (
     <div 
-      className="font-mono font-black tracking-tighter uppercase mt-4 flex" 
+      className="mt-6 flex" 
       style={{ 
-        color: "#FFD700", 
-        fontSize: "13.6px", 
-        textShadow: "0 0 8px rgba(255,215,0,0.8), 0 0 16px rgba(218,165,32,0.7), 0 0 25px rgba(218,165,32,0.5)",
-        filter: "drop-shadow(0 0 4px rgba(218,165,32,0.4))"
+        color: "rgba(255,255,255,0.7)", 
+        fontFamily: "'Inter', sans-serif",
+        fontSize: "9px",
+        letterSpacing: "0.8em",
+        textTransform: "uppercase",
+        fontWeight: 300,
       }}
     >
       <span>{text}</span>
@@ -403,14 +405,14 @@ export default function IntroPreloader({ onComplete }) {
       <div
         style={{
           position: "absolute",
-          top: "50%",
+          top: "35%", // Fixed top position to prevent vertical shifting
           left: "50%",
-          transform: "translate(-50%, -50%)",
+          transform: "translateX(-50%)", // Only center horizontally
           zIndex: 20,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          width: "320px",
+          width: "400px", // Slightly wider to ensure no wrapping
         }}
       >
         {/* KALCERIA Logo */}
@@ -431,18 +433,6 @@ export default function IntroPreloader({ onComplete }) {
           transition={{ duration: 0.8, ease: "easeOut" }}
           style={{ marginTop: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}
         >
-          <p
-            style={{
-              color: "#9a9a9a",
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "11px",
-              letterSpacing: "0.4em",
-              textTransform: "uppercase",
-              margin: 0,
-            }}
-          >
-            Coki Anyway
-          </p>
           <StaticGears visible={showGears} />
           {showGears && !laserActive && <WakingUpText />}
         </motion.div>

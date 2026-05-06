@@ -118,20 +118,48 @@ function Typewriter({ text, speed = 120, delay = 0, dir = "ltr" }) {
 
 // ─── RedirectText Component ─────────────────────────────────────────────────
 function RedirectText() {
+  const [text, setText] = useState("");
+  const fullText = "REDIRECTING";
+  const [showDots, setShowDots] = useState(false);
   const [dots, setDots] = useState("");
+
   useEffect(() => {
-    let count = 1;
+    let i = 0;
     const interval = setInterval(() => {
-      setDots(".".repeat(count));
-      count = (count % 3) + 1;
-    }, 500);
+      if (i <= fullText.length) {
+        setText(fullText.slice(0, i));
+        i++;
+      } else {
+        clearInterval(interval);
+        setShowDots(true);
+      }
+    }, 80);
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (!showDots) return;
+    let count = 1;
+    const interval = setInterval(() => {
+      setDots(" .".repeat(count));
+      count = (count % 3) + 1;
+    }, 400);
+    return () => clearInterval(interval);
+  }, [showDots]);
+
   return (
-    <div className="font-mono font-black tracking-tighter uppercase flex" style={{ color: "#D946EF", fontSize: "13px", textShadow: "0 0 15px rgba(217,70,239,0.8)" }}>
-      <span>REDIRECT</span>
-      <span className="w-8 text-left ml-1">{dots}</span>
+    <div className="flex" style={{ 
+      color: "rgba(255,255,255,0.7)", 
+      fontFamily: "'Inter', sans-serif",
+      fontSize: "9px", 
+      letterSpacing: "0.8em",
+      textTransform: "uppercase",
+      fontWeight: 300,
+    }}>
+      <span>{text}</span>
+      <span style={{ minWidth: "3em", textAlign: "left", whiteSpace: "pre" }}>
+        {showDots ? dots : ""}
+      </span>
     </div>
   );
 }
@@ -147,7 +175,7 @@ function BackgroundBlobs() {
           scale: [1, 1.8, 0.7, 1.4, 1],
         }}
         transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-        className="absolute -top-40 -left-40 w-[800px] h-[800px] rounded-full filter blur-[150px] opacity-20"
+        className="absolute -top-40 -left-40 w-[800px] h-[800px] rounded-full filter blur-[150px] opacity-5"
         style={{ backgroundColor: "rgba(217, 70, 239, 0.6)" }}
       />
       <motion.div
@@ -157,7 +185,7 @@ function BackgroundBlobs() {
           scale: [1, 1.4, 1.8, 0.8, 1],
         }}
         transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-        className="absolute -bottom-40 -right-40 w-[800px] h-[800px] rounded-full filter blur-[150px] opacity-20"
+        className="absolute -bottom-40 -right-40 w-[800px] h-[800px] rounded-full filter blur-[150px] opacity-5"
         style={{ backgroundColor: "rgba(0, 255, 255, 0.6)" }}
       />
     </div>
@@ -166,98 +194,43 @@ function BackgroundBlobs() {
 
 // ─── WelcomeTransition Main ──────────────────────────────────────────────────
 export default function WelcomeTransition({ username, onComplete }) {
-  const canvasRef = useRef(null);
   const [showGears, setShowGears] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
     const tGears = setTimeout(() => setShowGears(true), 2500);
+    
+    // Start exit animation slightly before calling onComplete
+    const tExit = setTimeout(() => setIsExiting(true), 6500);
     const tEnd = setTimeout(() => onComplete(), 7500);
-    return () => { clearTimeout(tGears); clearTimeout(tEnd); };
+    
+    return () => { 
+      clearTimeout(tGears); 
+      clearTimeout(tExit);
+      clearTimeout(tEnd); 
+    };
   }, [onComplete]);
 
-  // Thread Logic (High Fidelity)
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    resize();
-    window.addEventListener("resize", resize);
-    const TOTAL_MS = 6500, FADE_IN_MS = 1000, FADE_OUT_START = 5000;
-    const PALETTES = {
-      cyan: { tail: "0,80,100", mid: "0,220,220", head: "180,255,255", shadow: "0,255,255" },
-      purple: { tail: "60,0,100", mid: "168,85,247", head: "220,180,255", shadow: "168,85,247" },
-    };
-    const CY = canvas.height * 0.5, R = () => Math.random() * Math.PI * 2;
-    const threadDefs = [
-      { dir: 1, yBase: CY-20, amp: 22, freq: 4.8, phase: R(), speed: 0.55, thick: 2.2, pal: "cyan", delay: 0 },
-      { dir: 1, yBase: CY+30, amp: 28, freq: 4.2, phase: R(), speed: 0.40, thick: 2.0, pal: "purple", delay: 200 },
-      { dir: -1, yBase: CY-10, amp: 20, freq: 5.5, phase: R(), speed: 0.62, thick: 1.8, pal: "cyan", delay: 100 },
-      { dir: -1, yBase: CY+25, amp: 25, freq: 3.8, phase: R(), speed: 0.35, thick: 1.6, pal: "purple", delay: 400 },
-    ];
-    const threads = threadDefs.map(t => ({ ...t, progress: 0 }));
-    const drawThread = (th, gEnv, el) => {
-      const { dir, yBase, amp, freq, phase, progress, thick, pal } = th;
-      if (progress <= 0.005) return;
-      const p = PALETTES[pal], W = canvas.width, headDist = Math.min(progress * W, W), timeFlow = el / 6500;
-      const reachFade = progress > 0.85 ? Math.max(0, 1 - (progress - 0.85) / 0.15) : 1.0;
-      const env = gEnv * reachFade;
-      if (env < 0.005) return;
-      const pts = []; const SEG = 180;
-      for (let i = 0; i <= SEG; i++) {
-        const t = i / SEG, dist = t * headDist;
-        const x = dir === 1 ? dist : W - dist;
-        const y = yBase + amp * Math.sin(freq * (x/W) * Math.PI * 2 + phase + timeFlow * 1.2);
-        pts.push([x, y]);
-      }
-      const tailX = dir === 1 ? 0 : W, headX = dir === 1 ? headDist : W - headDist;
-      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineWidth = thick * 6; ctx.lineCap = "round"; ctx.lineJoin = "round";
-      const glow = ctx.createLinearGradient(tailX, 0, headX, 0);
-      glow.addColorStop(0, `rgba(${p.tail},0)`); glow.addColorStop(0.12, `rgba(${p.mid},${env * 0.12})`); glow.addColorStop(0.7, `rgba(${p.mid},${env * 0.22})`); glow.addColorStop(0.92, `rgba(${p.head},${env * 0.5})`); glow.addColorStop(1, `rgba(255,255,255,0)`);
-      ctx.strokeStyle = glow; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke(); ctx.restore();
-      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineWidth = thick; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.shadowBlur = 6; ctx.shadowColor = `rgba(${p.shadow},${env * 0.9})`;
-      const main = ctx.createLinearGradient(tailX, 0, headX, 0);
-      main.addColorStop(0, `rgba(${p.tail},0)`); main.addColorStop(0.08, `rgba(${p.mid},${env * 0.35})`); main.addColorStop(0.6, `rgba(${p.mid},${env * 0.8})`); main.addColorStop(0.88, `rgba(${p.head},${env * 0.95})`); main.addColorStop(1, `rgba(255,255,255,0)`);
-      ctx.strokeStyle = main; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.stroke(); ctx.restore();
-      if (progress < 0.92) {
-        const hx = pts[pts.length - 1][0], hy = pts[pts.length - 1][1], sr = thick * 3.5;
-        ctx.save(); ctx.globalCompositeOperation = "lighter"; const srd = ctx.createRadialGradient(hx, hy, 0, hx, hy, sr);
-        srd.addColorStop(0, `rgba(255,255,255,${env})`); srd.addColorStop(0.4, `rgba(${p.head},${env * 0.7})`); srd.addColorStop(1, `rgba(${p.mid},0)`);
-        ctx.fillStyle = srd; ctx.beginPath(); ctx.arc(hx, hy, sr, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-      }
-    };
-    let startTs = null, lastTs = null, raf;
-    const draw = (ts) => {
-      if (!startTs) startTs = ts;
-      const elapsed = ts - startTs, dt = lastTs ? Math.min(ts - lastTs, 50) : 16;
-      lastTs = ts;
-      if (elapsed > TOTAL_MS + 200) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const gEnv = (el) => { if (el < FADE_IN_MS) return el / FADE_IN_MS; if (el < FADE_OUT_START) return 1.0; return Math.max(0, 1 - (el - FADE_OUT_START) / (TOTAL_MS - FADE_OUT_START)); };
-      for (const th of threads) {
-        const tElapsed = Math.max(0, elapsed - th.delay);
-        if (tElapsed <= 0) continue;
-        if (th.progress < 1.0) th.progress = Math.min(th.progress + th.speed * (dt / 1000), 1.0);
-        drawThread(th, gEnv(elapsed), elapsed);
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
-  }, []);
-
   return (
-    <div className="fixed inset-0 bg-[#050a14] z-[9999] overflow-hidden flex flex-col items-center justify-center">
+    <motion.div 
+      initial={{ opacity: 1, filter: "blur(0px)" }}
+      animate={{ 
+        opacity: isExiting ? 0 : 1,
+        filter: isExiting ? "blur(40px)" : "blur(0px)",
+        scale: isExiting ? 1.1 : 1
+      }}
+      transition={{ duration: 1.2, ease: "easeInOut" }}
+      className="fixed inset-0 bg-[#010204] z-[9999] overflow-hidden flex flex-col items-center justify-center"
+    >
       <BackgroundBlobs />
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none mix-blend-screen z-10" />
       
       <div className="relative z-20 flex flex-col items-center">
         {/* Main Text Container - Fixed Vertical Area to avoid jumping */}
-        <div className="h-[120px] flex flex-col md:flex-row items-center justify-center gap-x-4 gap-y-2 font-sans font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#FACC15] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)]">
-          <h1 className="text-4xl md:text-5xl lg:text-7xl">
-            <Typewriter text="Welcome Back " delay={800} speed={130} />
+        <div className="h-[120px] flex flex-col md:flex-row items-center justify-center gap-x-4 gap-y-2 font-sans font-black tracking-tighter">
+          <h1 className="text-4xl md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF4D00] via-[#FFD700] to-[#FFCC00] drop-shadow-[0_0_20px_rgba(255,140,0,0.3)]">
+            <Typewriter text="Welcome Back," delay={800} speed={130} />
           </h1>
-          <h1 className="text-4xl md:text-5xl lg:text-7xl min-w-[350px] text-left md:text-right">
+          <h1 className="text-4xl md:text-5xl lg:text-7xl min-w-[350px] text-left md:text-right bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)]">
              <Typewriter text={`${username} !`} delay={800} speed={130} dir="rtl" />
           </h1>
         </div>
@@ -270,6 +243,6 @@ export default function WelcomeTransition({ username, onComplete }) {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
