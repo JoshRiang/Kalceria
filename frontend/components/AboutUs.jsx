@@ -34,272 +34,226 @@ function StaticTypewriter({ text, speed = 20, delay = 0 }) {
   );
 }
 
-// ─── Ghostly Car Gallery Background (Section 2) ───
-const GHOST_LANES = [10, 35, 60, 85]; // vertical percentages
-
-function GhostItem({ ghost, onComplete }) {
-  useEffect(() => {
-    // Exact 12-second lifespan
-    const timer = setTimeout(() => {
-      onComplete(ghost);
-    }, 12000);
-    return () => clearTimeout(timer);
-  }, [ghost, onComplete]);
+// ─── Photo Collage Background (Section 2) ───
+function PhotoCollage() {
+  const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.jpeg`);
+  // Double the photos for seamless rolling
+  const rollingPhotos = [...photos, ...photos];
 
   return (
-    <motion.img
-      src={ghost.src}
-      initial={{ x: ghost.startX, y: ghost.startY, opacity: 0 }}
-      animate={{ 
-        x: ghost.endX, 
-        y: ghost.startY, // Horizontal only movement
-        opacity: [0, 0.3, 0.3, 0] 
-      }}
-      transition={{
-        x: { duration: 12, ease: "linear" },
-        // 12 seconds lifecycle: 1.2s fade in (0.1), hold until 9.0s (0.75), fade out by 12.0s (1.0)
-        opacity: { duration: 12, times: [0, 0.1, 0.75, 1], ease: "easeInOut" }
-      }}
-      className="absolute w-64 h-64 grayscale mix-blend-overlay object-cover shadow-2xl pointer-events-none rounded-md z-[1]"
-      onError={(e) => { e.target.style.display = 'none'; onComplete(ghost); }}
-    />
-  );
-}
+    <div className="absolute inset-0 z-0 overflow-hidden bg-[#050a14]">
+      {/* Background Glows */}
+      <div className="absolute inset-0 opacity-40 mix-blend-screen">
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-[#FFD700]/15 via-[#00FFFF]/10 to-[#FFD700]/15" />
+      </div>
 
-function GhostlyCarGallery() {
-  const containerRef = useRef(null);
-  const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
-  const [activeGhosts, setActiveGhosts] = useState([]);
-  
-  const occupiedLanesRef = useRef(new Set()); // Strict 4-Lane Highway tracking
-  const ghostIdCounter = useRef(0);
-  const availableImagesRef = useRef(Array.from({length: 20}, (_, i) => i + 1));
+      <motion.div 
+        animate={{ opacity: [0.4, 0.7, 0.4] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="relative w-full h-full"
+      >
+        <div 
+          className="flex h-full animate-[roll_80s_linear_infinite]"
+          style={{ width: "200%" }}
+        >
+          {/* Each "half" is a 5x4 grid */}
+          {[0, 1].map((setIndex) => (
+            <div key={setIndex} className="grid grid-cols-5 w-1/2 h-full gap-1">
+              {photos.map((src, i) => (
+                <div key={i} className="relative w-full h-full overflow-hidden bg-slate-900 border border-white/5">
+                  <img 
+                    src={src} 
+                    alt="Background" 
+                    className="w-full h-full object-cover filter grayscale contrast-125 brightness-75 opacity-80" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </motion.div>
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const updateDims = () => {
-      setDimensions({
-        w: containerRef.current.offsetWidth,
-        h: containerRef.current.offsetHeight
-      });
-    };
-    updateDims();
-    window.addEventListener("resize", updateDims);
-    return () => window.removeEventListener("resize", updateDims);
-  }, []);
-
-  useEffect(() => {
-    if (dimensions.w === 0 || dimensions.h === 0) return;
-    
-    // Aggressive Continuous Convoy Engine
-    const MAX_GHOSTS = 8;
-    
-    const spawnInterval = setInterval(() => {
-      setActiveGhosts(prev => {
-        // Limit to max 8 ghosts on screen
-        if (prev.length >= MAX_GHOSTS) return prev;
-
-        // Find unlocked lanes
-        const availableLanes = [0, 1, 2, 3].filter(lane => !occupiedLanesRef.current.has(lane));
-        if (availableLanes.length === 0) return prev; // All lanes currently locked
-
-        const newGhosts = [];
-        const IMAGE_SIZE = 256; 
-        
-        // Lock a random lane
-        const rndLaneIdx = Math.floor(Math.random() * availableLanes.length);
-        const laneNum = availableLanes[rndLaneIdx];
-        
-        // PARTIAL LANE LOCKING: Unlock after 4 seconds to allow a convoy effect
-        occupiedLanesRef.current.add(laneNum);
-        setTimeout(() => {
-          occupiedLanesRef.current.delete(laneNum);
-        }, 4000);
-
-        if (availableImagesRef.current.length === 0) {
-          availableImagesRef.current = Array.from({length: 20}, (_, i) => i + 1);
+      <div className="absolute inset-0 bg-gradient-to-b from-[#050a14] via-transparent to-[#050a14]" />
+      
+      <style jsx>{`
+        @keyframes roll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
         }
-        const rndIdx = Math.floor(Math.random() * availableImagesRef.current.length);
-        const imgId = availableImagesRef.current[rndIdx];
-        availableImagesRef.current.splice(rndIdx, 1);
-
-        const src = `/foto_abt${imgId}.jpeg`;
-        const isLeft = Math.random() > 0.5;
-        
-        // Spawn far outside the screen bounds (Horizontal ONLY)
-        const startX = isLeft ? -IMAGE_SIZE : dimensions.w;
-        const endX = isLeft ? dimensions.w + 100 : -IMAGE_SIZE - 100;
-        
-        // Position strictly on the locked lane
-        const startY = Math.max(0, (GHOST_LANES[laneNum] / 100) * dimensions.h - (IMAGE_SIZE / 2));
-
-        ghostIdCounter.current++;
-        newGhosts.push({
-          id: ghostIdCounter.current,
-          imgId,
-          src,
-          startX,
-          endX,
-          startY,
-          laneNum
-        });
-        
-        return [...prev, ...newGhosts];
-      });
-    }, 1500); // Check and spawn every 1.5 seconds
-
-    return () => clearInterval(spawnInterval);
-  }, [dimensions]);
-
-  const handleGhostComplete = useCallback((ghostObj) => {
-    // Note: Lane is already unlocked by the 4000ms timeout! We only return the image to the pool.
-    availableImagesRef.current.push(ghostObj.imgId);
-    setActiveGhosts(prev => prev.filter(g => g.id !== ghostObj.id));
-  }, []);
-
-  return (
-    <div ref={containerRef} className="absolute inset-0 z-[1] pointer-events-none overflow-hidden">
-      <AnimatePresence>
-        {activeGhosts.map(ghost => (
-          <GhostItem key={ghost.id} ghost={ghost} onComplete={handleGhostComplete} />
-        ))}
-      </AnimatePresence>
+      `}</style>
     </div>
   );
 }
 
-// ─── Video Waves Gallery Background (Section 1) ───
-const LANES = [10, 35, 60, 85]; // vertical percentages
+// ─── Individual Video Cell ───
+function VideoCell({ initialSrc, allVids, index }) {
+  const [src, setSrc] = useState(initialSrc);
+  const videoRef = useRef(null);
 
-function VideoWaveItem({ vid, onComplete }) {
-  useEffect(() => {
-    // Unmount and free lane exactly at 9.5 seconds to ensure the 10s video never freezes
-    const timer = setTimeout(() => {
-      onComplete(vid);
-    }, 9500);
-    return () => clearTimeout(timer);
-  }, [vid, onComplete]);
+  const handleEnded = () => {
+    const others = allVids.filter(v => v !== src);
+    const next = others[Math.floor(Math.random() * others.length)];
+    setSrc(next);
+  };
 
   return (
-    <motion.div
-      initial={{ x: vid.startX, y: vid.startY, opacity: 0 }}
-      animate={{ x: vid.endX, y: vid.startY, opacity: [0, 0.5, 0.5, 0] }}
-      transition={{
-        x: { duration: vid.duration, ease: "linear" },
-        // 9 seconds total opacity lifecycle: fades in by 0.9s, holds until 7s, fully fades out by 9s
-        opacity: { duration: 9, times: [0, 0.1, 0.77, 1], ease: "easeInOut" }
-      }}
-      className="absolute w-64 aspect-video rounded-lg shadow-2xl pointer-events-none overflow-hidden z-[50]"
-    >
+    <div className="relative w-full h-full overflow-hidden bg-slate-900/50 border border-white/10">
       <video 
-        src={vid.src} 
+        ref={videoRef}
+        src={src} 
         autoPlay 
         muted 
         playsInline 
-        className="w-full h-full object-cover mix-blend-screen"
-        onError={(e) => { e.target.style.display = 'none'; onComplete(vid); }}
+        onEnded={handleEnded}
+        className="w-full h-full object-cover filter saturate-[1.4] contrast-125 brightness-110"
       />
+      {/* Subtle Glitch */}
+      <motion.div 
+        animate={{ opacity: [0, 0.1, 0] }}
+        transition={{ duration: 0.2, repeat: Infinity, repeatDelay: (index % 4) + 3 }}
+        className="absolute inset-0 bg-white mix-blend-overlay pointer-events-none"
+      />
+    </div>
+  );
+}
+
+// ─── Video Collage Background (Section 1) ───
+function VideoCollage() {
+  const [initialGrid, setInitialGrid] = useState([]);
+  const vids = useRef(Array.from({ length: 8 }, (_, i) => `/vid_abt${i + 1}.mp4`));
+  
+  useEffect(() => {
+    // Create the initial 4x5 grid
+    const base = Array.from({ length: 20 }, (_, i) => vids.current[i % vids.current.length]);
+    setInitialGrid(base.sort(() => Math.random() - 0.5));
+  }, []);
+
+  if (initialGrid.length === 0) return null;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 2, ease: "easeOut" }}
+      className="absolute inset-0 z-0 overflow-hidden bg-[#050a14]"
+    >
+      {/* Background Glow to fill gaps */}
+      <div className="absolute inset-0 opacity-40 mix-blend-screen">
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#FF00FF]/20 via-[#00FFFF]/10 to-[#FF00FF]/20" />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 w-full h-full gap-1 opacity-60">
+        {initialGrid.map((src, i) => (
+          <VideoCell 
+            key={i} 
+            index={i} 
+            initialSrc={src} 
+            allVids={vids.current} 
+          />
+        ))}
+      </div>
+      
+      {/* Atmospheric Overlays */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#050a14] via-transparent to-[#050a14] opacity-80" />
     </motion.div>
   );
 }
 
-function VideoWaveGallery() {
-  const containerRef = useRef(null);
-  const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
-  const [activeVideos, setActiveVideos] = useState([]);
-  
-  const occupiedLanesRef = useRef(new Set()); // Strict 4-Lane Highway tracking
-  const vidIdCounter = useRef(0);
-  const availableVidsRef = useRef(Array.from({length: 8}, (_, i) => i + 1));
+// ─── Floating Bohemian Quotes Background (Section 3) ───
+const COMMUNITY_QUOTES = [
+  "Bro, Kalceria keren ga si?", "Bro, Wahib Embut gimana?", "Kalceria, kece tuhh.",
+  "CokiGakDisini sedang disini.", "Woy, Adnannn!!!!", "Halo, ada yang bisa saya bantu?",
+  "Pilih Tekkom atau Fisip?", "Mending Brio atau Harrier?", "Kapan terakhir lu ******?",
+  "Apaansi, Cok, Apaansi, Cok?", "Hi, aku Joshua, kamu siapa?", "Gw Otniel. Pendekar Volley.",
+  "Iya Nil, Gw tau Nielll!", "Hayoooo, Besok Kelas ga ya??", "Hah, makan di F I A ga sieh?"
+];
+
+function FloatingQuote({ quote, onComplete }) {
+  // quote contains: { id, text, style, pos }
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, x: 0, y: 0 }}
+      animate={{ 
+        opacity: 0.7, 
+        scale: 1, 
+        x: quote.pos.dx, 
+        y: quote.pos.dy 
+      }}
+      exit={{ opacity: 0, scale: 1.1, y: -20 }}
+      transition={{ 
+        duration: 8, 
+        ease: "linear",
+        opacity: { duration: 1.5 }, // Smooth fade in/out
+      }}
+      onAnimationComplete={(definition) => {
+        // If we wanted to trigger on end of 'animate', but we use a timer in Layer for lifespan
+      }}
+      className={`absolute z-[60] pointer-events-none text-white/70 whitespace-nowrap text-xl md:text-3xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] ${quote.style}`}
+      style={{ left: `${quote.pos.x}%`, top: `${quote.pos.y}%` }}
+    >
+      "{quote.text}"
+    </motion.div>
+  );
+}
+
+function FloatingQuotesLayer() {
+  const [activeQuotes, setActiveQuotes] = useState([]);
+  const availableIndicesRef = useRef(Array.from({ length: COMMUNITY_QUOTES.length }, (_, i) => i));
+  const idCounter = useRef(0);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const updateDims = () => {
-      setDimensions({
-        w: containerRef.current.offsetWidth,
-        h: containerRef.current.offsetHeight
-      });
-    };
-    updateDims();
-    window.addEventListener("resize", updateDims);
-    return () => window.removeEventListener("resize", updateDims);
-  }, []);
-
-  useEffect(() => {
-    if (dimensions.w === 0 || dimensions.h === 0) return;
+    let spawnTimer;
     
-    // Aggressive Continuous Convoy Engine
-    const MAX_VIDEOS = 7;
-    
-    const spawnInterval = setInterval(() => {
-      setActiveVideos(prev => {
-        // Maintain an aggressive density without exceeding the limit
-        if (prev.length >= MAX_VIDEOS) return prev;
-
-        // Find unlocked lanes
-        const availableLanes = [0, 1, 2, 3].filter(lane => !occupiedLanesRef.current.has(lane));
-        if (availableLanes.length === 0) return prev; // All lanes currently locked
-
-        const newVids = [];
-        const VID_WIDTH = 256; 
+    const spawnNext = () => {
+      if (availableIndicesRef.current.length > 0) {
+        const rndIdxIdx = Math.floor(Math.random() * availableIndicesRef.current.length);
+        const quoteIdx = availableIndicesRef.current[rndIdxIdx];
         
-        // Lock a random lane
-        const rndLaneIdx = Math.floor(Math.random() * availableLanes.length);
-        const laneNum = availableLanes[rndLaneIdx];
+        // Lock this quote: remove from available
+        availableIndicesRef.current.splice(rndIdxIdx, 1);
+
+        const text = COMMUNITY_QUOTES[quoteIdx];
+        const fontStyles = ["font-serif italic", "font-sans font-black uppercase tracking-tighter", "font-mono font-bold tracking-widest", "font-serif underline font-medium"];
+        const style = fontStyles[Math.floor(Math.random() * fontStyles.length)];
         
-        // PARTIAL LANE LOCKING: Unlock after 3 seconds to allow a convoy effect
-        occupiedLanesRef.current.add(laneNum);
+        const quoteId = idCounter.current++;
+        const newQuote = {
+          id: quoteId,
+          quoteIdx,
+          text,
+          style,
+          pos: {
+            x: Math.random() * 70 + 15,
+            y: Math.random() * 70 + 15,
+            dx: (Math.random() - 0.5) * 150,
+            dy: (Math.random() - 0.5) * 150
+          }
+        };
+
+        setActiveQuotes(prev => [...prev, newQuote]);
+
+        // Lifespan of 8 seconds before removing
         setTimeout(() => {
-          occupiedLanesRef.current.delete(laneNum);
-        }, 3000);
+          setActiveQuotes(prev => prev.filter(q => q.id !== quoteId));
+          // Unlock quote: return index to available pool
+          availableIndicesRef.current.push(quoteIdx);
+        }, 8000);
+      }
 
-        if (availableVidsRef.current.length === 0) {
-          availableVidsRef.current = Array.from({length: 8}, (_, i) => i + 1);
-        }
-        const rndIdx = Math.floor(Math.random() * availableVidsRef.current.length);
-        const vidIdNum = availableVidsRef.current[rndIdx];
-        availableVidsRef.current.splice(rndIdx, 1);
+      // Rhythmic majestic spawning
+      spawnTimer = setTimeout(spawnNext, 1500 + Math.random() * 1000);
+    };
 
-        const src = `/vid_abt${vidIdNum}.mp4`;
-        const isLeft = Math.random() > 0.5;
-        
-        // Spawn far outside the screen bounds
-        const startX = isLeft ? -VID_WIDTH : dimensions.w;
-        const endX = isLeft ? dimensions.w + 50 : -VID_WIDTH - 50;
-        
-        // Position on the strictly locked lane
-        const startY = Math.max(0, (LANES[laneNum] / 100) * dimensions.h - 72); // 72 is half of 144px height
-
-        vidIdCounter.current++;
-        newVids.push({
-          id: vidIdCounter.current,
-          vidIdNum,
-          src,
-          startX,
-          endX,
-          startY,
-          laneNum,
-          duration: 15 + Math.random() * 5 // Majestic 15 to 20 seconds slow traversal
-        });
-        
-        return [...prev, ...newVids];
-      });
-    }, 1500); // Check and spawn every 1.5 seconds
-
-    return () => clearInterval(spawnInterval);
-  }, [dimensions]);
-
-  const handleVideoComplete = useCallback((vidObj) => {
-    // Note: Lane is already unlocked by the 3000ms timeout! We only return the video to the pool.
-    availableVidsRef.current.push(vidObj.vidIdNum);
-    setActiveVideos(prev => prev.filter(v => v.id !== vidObj.id));
+    spawnNext();
+    return () => clearTimeout(spawnTimer);
   }, []);
 
   return (
-    <div ref={containerRef} className="absolute inset-0 z-[50] pointer-events-none overflow-hidden">
+    <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
       <AnimatePresence>
-        {activeVideos.map(vid => (
-          <VideoWaveItem key={vid.id} vid={vid} onComplete={handleVideoComplete} />
+        {activeQuotes.map(q => (
+          <FloatingQuote key={q.id} quote={q} />
         ))}
       </AnimatePresence>
     </div>
@@ -361,10 +315,9 @@ export default function AboutUs() {
       {/* ── SECTION 1: ABOUT US & DICTIONARY ── */}
       <section className="relative w-full min-h-screen flex flex-col items-center justify-center px-8 py-32 overflow-hidden z-10">
         
-        {/* Video Waves Gallery */}
-        <VideoWaveGallery />
+        {/* Video Collage Background */}
+        <VideoCollage />
 
-        {/* Ambient Blobs: Magenta & Cyan */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-30 mix-blend-screen">
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[20%] left-[10%] w-[30vw] h-[30vw] rounded-full blur-[130px] bg-[#00FFFF]" />
           <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }} className="absolute bottom-[10%] right-[20%] w-[40vw] h-[40vw] rounded-full blur-[160px] bg-[#FF00FF]" />
@@ -420,8 +373,8 @@ export default function AboutUs() {
       {/* ── SECTION 2: MAN BEHIND THE SCENE ── */}
       <section className="relative w-full py-40 flex flex-col items-center overflow-hidden z-20 bg-[#050a14]">
         
-        {/* Ghostly Car Gallery */}
-        <GhostlyCarGallery />
+        {/* Photo Collage Background */}
+        <PhotoCollage />
 
         {/* Ambient Blobs: Golden & Cyan */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-30 mix-blend-screen">
@@ -498,6 +451,9 @@ export default function AboutUs() {
       {/* ── SECTION 3: THE FAQ ACCORDION ── */}
       <section className="relative w-full py-40 flex flex-col items-center overflow-hidden z-30 bg-[#050a14]">
         
+        {/* Floating Bohemian Quotes Background */}
+        <FloatingQuotesLayer />
+
         {/* Ambient Blobs: Golden & Magenta */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-30 mix-blend-screen">
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[10%] left-[30%] w-[30vw] h-[30vw] rounded-full blur-[130px] bg-[#FF00FF]" />
@@ -511,15 +467,15 @@ export default function AboutUs() {
           className="relative z-10 w-[90%] max-w-4xl flex flex-col"
         >
           {/* MASTER FAQ CARD */}
-          <div className="flex flex-col border border-slate-700 bg-[#0a1120] overflow-hidden transition-all duration-300 shadow-2xl" style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }}>
+          <div className="flex flex-col border border-white/10 bg-white/5 backdrop-blur-xl overflow-hidden transition-all duration-300 shadow-[0_0_80px_rgba(0,0,0,0.8)]" style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }}>
             <button 
               onClick={() => setMasterFaqOpen(!masterFaqOpen)}
-              className="w-full px-8 py-8 text-left flex justify-between items-center group hover:bg-[#111c34] transition-colors focus:outline-none"
+              className="w-full px-8 py-10 text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none"
             >
-              <span className="font-mono font-black uppercase tracking-[0.2em] text-xl md:text-2xl text-white transition-colors">
+              <span className="font-mono font-black uppercase tracking-tighter text-3xl md:text-5xl text-white transition-colors drop-shadow-2xl">
                 FREQUENTLY ASKED QUESTIONS
               </span>
-              <span className="font-mono text-3xl text-white transition-transform duration-300" style={{ transform: masterFaqOpen ? "rotate(45deg)" : "rotate(0deg)" }}>
+              <span className="font-mono text-4xl text-white transition-transform duration-300" style={{ transform: masterFaqOpen ? "rotate(45deg)" : "rotate(0deg)" }}>
                 +
               </span>
             </button>
@@ -532,7 +488,7 @@ export default function AboutUs() {
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.4, ease: "easeInOut" }}
-                  className="bg-[#050a14] border-t border-slate-800"
+                  className="bg-transparent border-t border-white/10"
                 >
                   <div className="p-4 md:p-8 flex flex-col gap-4">
                     
@@ -542,16 +498,16 @@ export default function AboutUs() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.15 }}
-                        className="flex flex-col border border-slate-800 bg-[#0a1120] overflow-hidden hover:border-slate-600 transition-colors"
+                        className="flex flex-col border border-white/10 bg-white/5 overflow-hidden hover:border-white/20 transition-colors"
                       >
                         <button 
                           onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                          className="w-full px-6 py-5 text-left flex justify-between items-center group hover:bg-[#111c34] transition-colors focus:outline-none"
+                          className="w-full px-6 py-6 text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none"
                         >
-                          <span className="font-mono font-bold uppercase tracking-widest text-sm md:text-base text-slate-300 group-hover:text-white transition-colors pr-8">
+                          <span className="font-mono font-black uppercase tracking-tighter text-base md:text-xl text-slate-300 group-hover:text-white transition-colors pr-8">
                             {faq.q}
                           </span>
-                          <span className="font-mono text-xl text-white transition-colors flex-shrink-0">
+                          <span className="font-mono text-2xl text-white transition-colors flex-shrink-0">
                             {openFaq === i ? "—" : "+"}
                           </span>
                         </button>

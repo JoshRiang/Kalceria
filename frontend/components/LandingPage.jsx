@@ -298,6 +298,76 @@ function StarDust() {
   );
 }
 
+// ─── Floating Spare Parts Component ──────────────────
+function FloatingSpareParts() {
+  const parts = [
+    { src: "/support_1.png", pos: "top-10 left-4 md:left-20", rot: 15, delay: 0.2, dur: 7.5 },
+    { src: "/support_2.png", pos: "top-10 right-4 md:right-20", rot: -15, delay: 1.5, dur: 6.2 },
+    { src: "/support_3.png", pos: "bottom-10 left-4 md:left-20", rot: -20, delay: 0.8, dur: 8.4 },
+    { src: "/support_4.png", pos: "bottom-10 right-4 md:right-20", rot: 25, delay: 2.3, dur: 5.8 },
+  ];
+
+  return (
+    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+      {parts.map((part, i) => {
+        // Adjust size for top-right (index 1) and bottom-left (index 2)
+        const isSmaller = i === 1 || i === 2;
+        const sizeClass = isSmaller ? "w-20 md:w-44" : "w-28 md:w-64";
+
+        return (
+          <motion.img
+            key={i}
+            src={part.src}
+            className={`absolute ${part.pos} ${sizeClass} h-auto opacity-70`}
+            initial={{ rotate: part.rot }}
+            animate={{
+              y: [0, -20, 0],
+              rotate: [part.rot, part.rot + 4, part.rot],
+            }}
+            transition={{
+              duration: part.dur,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: part.delay,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Dynamic Collage Component ────────────────────────
+function DynamicCollage() {
+  const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.jpeg`);
+  
+  return (
+    <div className="absolute inset-0 z-0 overflow-hidden opacity-45 pointer-events-none">
+      <div className="flex w-[200%] h-full animate-roll">
+         <div className="grid grid-cols-5 grid-rows-4 w-1/2 h-full">
+            {photos.map((src, i) => (
+              <img key={i} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
+            ))}
+         </div>
+         <div className="grid grid-cols-5 grid-rows-4 w-1/2 h-full">
+            {photos.map((src, i) => (
+              <img key={`loop-${i}`} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
+            ))}
+         </div>
+      </div>
+      <style>{`
+        @keyframes roll {
+          0% { transform: translateX(-50%); }
+          100% { transform: translateX(0); }
+        }
+        .animate-roll {
+          animation: roll 80s linear infinite;
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // ─── Prince Rupert's Drop Animation ────────────────────
 const PR_DOT_COUNT = 150;
 const PR_COLORS = ["#F97316", "#FACC15", "#D946EF"];
@@ -571,15 +641,17 @@ export default function LandingPage({ onNavigateAuth }) {
       className="relative w-full bg-[#050a14] text-white font-mono overflow-x-hidden selection:bg-[#FF00FF] selection:text-white"
     >
       {/* ── Section 1: Hero ── */}
-      <section className="relative w-full min-h-[70vh] flex flex-col items-center justify-center overflow-hidden py-10 z-10">
+      <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center overflow-hidden py-24 z-10">
+        <DynamicCollage />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050a14]/50 via-[#050a14]/10 to-[#050a14] z-0" />
 
         {/* Video Container */}
-        <div className="relative w-[90%] max-w-5xl aspect-video rounded-lg overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-slate-800/50 flex flex-col items-center justify-center z-10">
+        <div className="relative w-[72%] max-w-4xl aspect-video rounded-lg overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-md flex flex-col items-center justify-center z-10">
           <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
             <source src="/video_landingatas.mp4" type="video/mp4" />
           </video>
           
-          <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+          <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
           <div className="relative z-10 flex flex-col items-center gap-10 px-4 w-full">
             <motion.img 
@@ -611,15 +683,15 @@ export default function LandingPage({ onNavigateAuth }) {
           <motion.div animate={{ scale: [1, 1.05, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute top-[30%] left-[50%] w-[30vw] h-[30vw] rounded-full blur-[80px] bg-[#ffffff]" />
         </div>
 
-        {/* Left Side: Text and Button */}
-        <div className="relative z-10 flex flex-col items-start gap-8 flex-1">
-          <h2 className="text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.2)" }}>
+        {/* Left Content (Absolute for no shift) */}
+        <div className="absolute left-8 md:left-24 top-1/2 -translate-y-1/2 z-20 flex flex-col items-start gap-6">
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
             <Typewriter text="SEE EVENT" mode="letter" delay={0} />
           </h2>
           <Link href="/events">
             <button
-              className="relative px-12 py-4 font-sans font-extrabold uppercase tracking-wide text-[15px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer"
-              style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }}
+              className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer"
+              style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
             >
               <span className="relative z-10">EXPLORE</span>
               <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
@@ -627,9 +699,24 @@ export default function LandingPage({ onNavigateAuth }) {
           </Link>
         </div>
 
-        {/* Right Side: Event Slider Card */}
-        <div className="relative z-10 flex-1 w-full max-w-md aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_50px_rgba(255,0,255,0.15)] border border-[#FF00FF]/30" style={{ clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" }}>
+        {/* Center: Event Slider Card (Absolutely Centered) */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm" style={{ clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" }}>
           <EventSlider />
+        </div>
+
+        {/* Silhouettes - Static Background */}
+        <div className="absolute bottom-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden px-8 md:px-24">
+          <div className="absolute bottom-0 left-12 md:left-40 opacity-35 flex items-end">
+            <img src="/grup.png" alt="Group" className="h-[180px] md:h-[280px] object-contain translate-y-[2.5px]" />
+          </div>
+          <div className="absolute bottom-0 right-4 md:right-10 opacity-50 flex flex-col items-center pointer-events-none">
+            {/* Magenta Tapakan (Base) - Wedge Shape from Sketch */}
+            <div 
+              className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[22px] z-0 opacity-80"
+              style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%, 0 100%)" }}
+            />
+            <img src="/brio_black.png" alt="Brio" className="relative z-10 h-[150px] md:h-[240px] object-contain translate-y-[2.5px]" />
+          </div>
         </div>
       </section>
 
@@ -661,10 +748,11 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 4: Merchandise / Support Us ── */}
-      <section className="relative w-full min-h-[80vh] flex flex-col items-center justify-center py-20 z-40 border-t border-slate-900 bg-transparent isolate">
+      <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center py-20 z-40 border-t border-slate-900 bg-transparent isolate">
         
         {/* The Ultimate Background */}
         <SupportUsBackground />
+        <FloatingSpareParts />
 
         <h2 className="relative z-10 text-6xl md:text-8xl font-black uppercase tracking-tighter mb-16" style={{ textShadow: "4px 4px 0 rgba(255,255,255,0.1)" }}>
           <Typewriter text="SUPPORT US" mode="none" delay={6000} />
