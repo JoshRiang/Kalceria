@@ -1,0 +1,20 @@
+; ─── DNS TXT Records for domain: kalceria.com ─────────────────────────────────
+
+; SPF (Google Workspace / Gmail)
+; Add TXT record on root domain @
+@ IN TXT "v=spf1 include:_spf.google.com ~all"
+
+; DKIM (Google Workspace)
+; Google provides the DKIM key value in Admin Console
+; DNS Name format: google._domainkey.kalceria.com
+google._domainkey IN TXT "v=DKIM1; k=rsa; p=<PASTE_GOOGLE_DKIM_PUBLIC_KEY_HERE>"
+
+; DMARC (Reject policy — strict)
+; Add TXT record on _dmarc subdomain
+_dmarc IN TXT "v=DMARC1; p=reject; rua=mailto:dmarc-reports@kalceria.com; ruf=mailto:dmarc-reports@kalceria.com; fo=1; adkim=s; aspf=s"
+
+; ─── Notes ────────────────────────────────────────────────────────────────────
+; SPF ~all = SoftFail (safe default). Change to -all after testing.
+; DMARC p=reject blocks all unauthenticated mail.
+; Get DKIM key from Google Admin > Apps > Gmail > Authenticate email.
+; TTL: 3600 recommended.

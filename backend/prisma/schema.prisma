@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum SocialPlatform {
+  WA
+  IG
+  FB
+  NULL
+}
+
+enum ServiceType {
+  SHOOTING
+  HOST_EVENT
+  EO
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum ServiceBookingStatus {
+  PENDING
+  PROCESSED
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─── User ────────────────────────────────────────────────────────────────────
+model User {
+  id                String          @id @default(uuid())
+  name              String
+  dob               DateTime
+  email             String          @unique
+  gender            Gender
+  phone             String
+  passwordHash      String
+  profilePicture    String?
+  nickname          String?
+  domicileLat       Float
+  domicileLng       Float
+  isEmailVerified   Boolean         @default(false)
+  allowLiveLocation Boolean         @default(false)
+  isSentEvent       Boolean         @default(false)
+  socialPlatform    SocialPlatform  @default(NULL)
+  socialLink        String?
+  role              Role            @default(USER)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  miniEvents       MiniEvent[]
+  serviceBookings  ServiceBooking[]
+  bookings         Booking[]
+  broadcast        UserBroadcast?
+
+  @@map("users")
+}
+
+// ─── Mini Event ──────────────────────────────────────────────────────────────
+model MiniEvent {
+  id        String   @id @default(uuid())
+  creatorId String
+  title     String
+  lat       Float
+  lng       Float
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@map("mini_events")
+}
+
+// ─── Service Booking (Jasa - WA based) ───────────────────────────────────────
+model ServiceBooking {
+  id              String               @id @default(uuid())
+  requestorId     String
+  serviceType     ServiceType
+  targetDate      DateTime
+  locationString  String
+  additionalNotes String?
+  status          ServiceBookingStatus @default(PENDING)
+  createdAt       DateTime             @default(now())
+
+  requestor User @relation(fields: [requestorId], references: [id], onDelete: Cascade)
+
+  @@map("service_bookings")
+}
+
+// ─── Booking (Need Us? - Timekeeper) ─────────────────────────────────────────
+model Booking {
+  id          String        @id @default(uuid())
+  userId      String
+  serviceType String        @default("SHOOTING")
+  bookingDate DateTime
+  startTime   String
+  endTime     String
+  totalAmount Float
+  status      BookingStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+// ─── Media Post ──────────────────────────────────────────────────────────────
+model MediaPost {
+  id          String   @id @default(uuid())
+  title       String
+  imageUrl    String
+  description String?
+  viewCount   Int      @default(0)
+  likeCount   Int      @default(0)
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@map("media_posts")
+}
+
+// ─── Merch (DB-backed, Admin managed) ────────────────────────────────────────
+model Merch {
+  id        String   @id @default(uuid())
+  name      String
+  photoUrl  String
+  link      String
+  price     Float
+  isSoldOut Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("merch")
+}
+
+// ─── Event (Admin managed) ───────────────────────────────────────────────────
+model Event {
+  id             String   @id
+  title          String
+  displayPhotoUrl String
+  regStartTime   DateTime
+  regEndTime     DateTime
+  sessionOptions Json
+  price          Float
+  createdAt      DateTime @default(now())
+
+  @@map("events")
+}
+
+// ─── User Broadcast ──────────────────────────────────────────────────────────
+model UserBroadcast {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  message   String
+  expiresAt DateTime @db.Timestamptz
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_broadcasts")
+}

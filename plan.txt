@@ -1,0 +1,105 @@
+BACKEND KOLEKSI PROMPT
+Sekarang kita akan bangun backend kita, kita akan menggunakn PostgreSQL + Redis dengan Prisma (optional, ya kan?) 
+ini adlaah fitur fitur dari rancangan webku : 
+1. Events (Main Host : Kalceria)
+2. Media showcase (Hot Collection, Recent Post, Older Treasure)
+3. Users map (kalcerian nearby me, must be activated through phone and map allow by user)
+4. Mini event by user (broadcast sederhana pada map) 
+5. Notification for Event (by Email, pretext hardcoded denggan script) 
+6. About Us (Pendiri Kalceriah) 
+7. Sistem Jasa Kalceria (Shooting, Host Event, EO direct ke WA) -> berbasis form pendaftaran kemudian terdapat pemilihan jadwal shooting oleh user, nantinya data dari jadwal shoot akan dikirim lewat JSON dan dinormalisasikan menjadi pretext WA
+8. Admin Dashboard
+9. FAQ
+10. Support Us!, Ikutin design logo Wahib yang waktu CS, dinamis, link ke Tokped-Shopee . Di sini juga ada Showcase collection dari produk merch yang akan didisplay berbentuk photo card - section yang berbentuk map 
+11. Find Us on Tiktok Instagram , trus ada kek auto scroll figure dari postingan Reels Tiktok sama IG
+
+Nah untuk skema pertama adalah table user 
+A. Untuk tabell user, maka terdapat 
+- Nama 
+- tanggal lahir 
+- email 
+- domisili (nantinya ini akan berpengaruh krusial) 
+- jenis kelamin 
+- Telepon Nomor 
+- Password (di hash dnegnan bycrpt/argon), terdapat requirement min 8 char, ada special char, ada huruf besar, ada angka 
+-foto profile
+
+Fitur lanjutan dari regristrasi ini adalah, EMAIL akan di link dan terdapat challenge dan response dari web dengan keamanan standard yaitu pin verifikasi, 
+
+Maka akan dibuatkan script pretext dengan menggunakan Hai Kalcerian ! ini Adlaah kode verifikasi mu ... bla bla bla , buat seperti standar Microsoft bahasanya 
+
+- Llau proses verifikasi selesai dan akun berhasil dibuat. 
+NAH, lanjut ke tahap 2 pembuatan akun adlah username, setelah akun berhasil dibuat, maka ada fitur You can call me _______ . Nah mengapa diadakan fitur ini? karena ini untuk UX client side saja sebenarnya hehehehe 
+
+- krusialnya dari email adalah ini akan memiliki interseksi yang luas terdapat main event, apabila terdapat main event yang diproduce oleh main host kalceria (admin) maka ada variable IsSent yang akan ditoggle dari 0  ke 1 dengans syarat, ada notifikasi gmail yang dikirim ke user dengan kelengkapan konten mencakup infografis, dan link gform pendaftaran. 
+
+
+- email juga akan dipakai Ketika LOGIN dan password recovery sesuai perunntukkannya dengan website standar professional. 
+
+- Nah, DOMISILI ini akan menjadi juru Utama dari Users Map. Karena apa? Kalceria secara fundamental merupaakn website  community mobil, yang mempunyai fitur  pelacakan anggota, pastinya lewat this Wesbite want to know your location. 
+
+Saat users memasukkan domisili akan menyimpan titik point tersebut di map. Kemudian saat uusers tersebut akan login Kembali, maka titik point itu di set ulang lewat third party atau API dan akan mengirimkan koordinasi aktif daripada users (pastinya user bisa men-toggle informasi lokasi lewat suatu toggle button). Nah bagaimana live locationnya, dari website akan melakuakn reverse polling terhadap HPnya lewat ping ataupun telemetri tertentu. 
+
+B. Main event 
+- Terdapat Waktu regristrasi 
+- ID Event degenerate dengna pattern tertentu sebagai PK 
+- Link pendaftaran 
+- Foto Display (blob) 
+- Nah untuk main event , coba kamu decide, mau pake google form terus  bis itu di Dashboard Frontend Event (spesifikasi meentyusul) akan ada semacam watchdog variable, Ketika form tersebut dikumpulkan maka akan ebrniali 1, dan API dari sheet akan disimpan ke Tabel C.User-Event, ketergantungan ada di ID Event. ATAU kita membuat form pendaftaran dengan regristrasi sederhana, gmail, biaya pendaftaran , konfirmasi biaya pendaftaran . lebih elegan pake web kali ya, tinggal gmail dan ada section fleksibel apabila event ada dua sesi atau lebih, maka bisa dipilih ingin ikut di sesi berapa , ada warning message *Pengisian hanya berlaku untuk satu sesi, dan sehabis itu terdapat virtual account BCA yang menyangkut erhadap suatu user, seperti konfirmasi bayar ShopeePay, OVO, dsbg. 
+-Setelah berhasil membayar uang pendaftaran, maka pada C. User-Event, akan terdaftar ID User sebagai FK dan ini akan memunculkan table terbaru lagi yaitu D. Transaksi user dengan user sebagai PK dan pastinya untuk mematuhi PCI DSS, transaksi segala jenis virtual account pada table khusus harus di enkripsi dengan library tertentu. 
+
+
+C.  Users map 
+Maka system ini bergantung sekali terhadap jenis tambahan databse baru seperti WIDE COLUMN STORE. Penggunaan database ini tidak begitu ditonjolkan dan sepertinya hanya untuk live telemetry ini. Maka : 
+* setiap kali user login && Menyalakan fitur lokasi, maka dari ID user tersebut,baru digneerate (di mass assign) column live location, live location memiliki rentetan 5x perhitungan dengan durasi polling per 1 menit, IfSame maka data tidak terlebih dahulu di drop, kemudain setiap 5x, if SELECT COUNT = 5 && ada live location terbaru, maka akan dihapus dan diganti, Hal ini untuk meminimalisir penggunaan memory. 
+* Nah live location ini akan disambungkan ke google map, Nnatinya di frontend akan ada serprti globa yang bisa di zoom in zoom out rotate left rotate in (saya biacarakan skema frontendnya dulu, karena ini masi berkecimnpung dengna backend) dan user bisa mengklik foto profile (dari user lain) dan mengklik dia  ada diman, cukup bukan alamat detail, hanya sampai kecmatan sjaa untuk alasan privasi). 
+Note : tidak ada fitur tambah teman ya, 
+* Nah sebagai gantinya , ada fitur Contact Me yang hyper link ke salah satu media social antara WA / Instagram / FB. lagi dan lagi, ini opsional dan apabila user saat regrsitrasi tidak inign memasukkan hal ini, maka akan menjadi NULL padding pada database. Nantinya, hal ini akan mmenjadi direct hyper link (But verifikasi dulu Follow this Link (nanti pas frontnend ya) 
+
+
+D. Mini Event 
+Setiap user bsia mengadakan mini eventnya sendiri, difitur users Map (frontend akan dijelaskan segera). Nah untuk mini event ini, user akan meregristrasi pada embedded column pada PostgreSQL yang dimana event ini lebih hanya sekedar, boradcasting ) 
+Sperti kalau di IG, fitur live status gitu loh atau thread. Nah jadi di user map, ketika kita melihat profil kita, ada buletan dialog degnan buletan inner dan tanda tambah, nah nanti kita bisa memuat suatu broadcast message ni bro untuk mendeskripsikan suatu kegiatan yang infformal, hal ini tidak perlu pendaftaran y, tetap, ini hanya ajakan broadcast. 
+nah untuk itu, ada tabel khusus yang defaultnya adalah NULL, sehingga apabila suer tidak ada status, maka saat diklik bubble nya ada tulisan tambahkan status. Status tersebut mempunyai Waktu default 24 jam , jadi ada TIMESTAMPZ yang musti didefinisikan per domisili user, by reference. nah abis itu pnya  fitur delete dan perbarui, nanti akn dikordinasikan nya, apabila delete maka timestampz reset ke 0, apabila update, maka timestampz tetep berjalan. Untuk satu user hnaya satu status mini event yang bisa di post di Users Map. 
+
+E. Notification 
+Ini bukan table baru, tapi perpanjangan tangan, pastikan dkim spf, dmarcnya dikonfigurasiin SEDERHANA AJA A(pls gw bukan cyber, tapi untuk modul keamanan web ini saja). Jadi  kita harus ada kalceria@gmail.com sebagai kredensial script  account yang otomatis untuk API dengan template 
+
+- Pretext 
+- Deskripsi Event 
+- Poster (Poster bertindak sebagai hyperlink ke forum pendaftaran, TAPI TETEP , redirect dulu ke register account atau appabila session token masih terdaftar (tolong untuk token pake algoritma yang meumpuni RSA atau apapun dan validate selama 20 menit, ada table khusus di REDIS, karena butuh fleksibel untuk token, apabila ternyata token masih aktif, maka lgsg redirect ke endpoint regristrasi event , cocokkan dulu dengan event ID sehingga tidak terjadi mismatch antara API CAll dengan Event ID pada Layer Bawah). Ini akan connect ke Tabel User, sesuai dengan ketergantungan pada point A dan B. 
+
+
+nah abis itu setelah intro tambahan, maka kita masuk ke login page, untuk login page ini, maka backgroundny adalah kumpulan video video_login1.mp4 ------- dkk yang gw bakal taro di folder (gatau folderny apaan, keknya public)  nah 
+gw tegaskan lagiya,TEMA KITA ITU ADALAH FORZA HORIZON + HTB +  ROG AGGRESIVENESS. TOlong untuk form login ini sama profesionallnya seperti Microsoft bro, tapi tidak mengkontaminasi base desing lagi. Karena video loogin ada banyak ,maka gw perlu timer  jg sekuential yang bakal ganti video dengan transisi mulus di latar belakang. Login ini akan nyambung juga ke regristation page nya ya bro. (coba lu kulik lagi untuk frontend yang kita bahas pada awal awal banget itu)
+
+
+Kemudian mari kita menuju intro dan fondasi landing page 
+Sebelum kita beranjak ke animasi 3D , terdapat layer intro tambahan. 
+
+Nanti saya ingin memasukkan image dalam chat saya dan sonnet sebagai image brand kami yairu KALCERIA, tentunya asset ini sudah kami design font dan pewarnaannya. Sehingga nanobanana akan saya suruh untuk mengubah background dari design benad kami menjadi hitam. 
+
+Nah sonnet akan memuat intro dengan animasi fade in dan background hitam . HiTAM DISINI WALAUPUN SEMPURNA, namun sonnet harus menganalisis warna background pada image yang saya kasih, sehingga animasi FADE In berjalan lancar. 
+
+Kemudian dari pojok kiri tengah layar , akan keluar semburat api seperti pada penari kecak , yang akan memercik ke tujuaj font Kalceria yang barusan fade in ,  percikan api TIDAK BOLEH Menutup sepenuhnya , melainkan hal ini semi transparan. Oleh karwna itu , saya tau spnnet tidak akan mempunyai asset api, tapi dia akan membuat partikel seprti semburat api dengan mneggunakan library frontend ataupun dari scratch supaya hasilnya realistis. 
+
+
+KEMUDIAN untuk subtitle buat ukurannya kecil dihandingkan design  UTAMA KALCERIA. Sehingga akan di taro di bawah tepat box Kalcrria. Untuk captionnya bakal "Coki Anyway " Aja sebagai placeholder. 
+
+Jadi urutannya Kalcrria bakal fade in , setelah terender semua (set timer khusus) kemudian subtitle akan fade in , dengan kecrpatan 1.25x (di perantaraan ini semburat api  muncul dengan stage time sekitar 3s) kemudian akan ada muncul SEMACAM GEAR , buat gearnya tidak lempeng dengan hanya menyisipkan satu gear saja.  Namun gearnya terstruktur layaknya golden ratio , terdiri dari gear 1 terbesar , gear 2 medimum dan gear 3 pada ekor ratio paling kecil. Kemudian gear ini akan berputar sesuai timer khusus. Daripada membuat timer khusus sevagai placeholder, Pastikan terdapat TRIGGER BACKEND TERMUAT (karena kan seprti yang kita tahu, walaupun backend sudah termuat dari cold start , pasti ada latency yang harus terpenuhi. Maka latency ini akan menjadi boolean yang harus terpenuhi dahulu sehingga gear akan selesai meng-lo
+Nah kemudian utnuk merch , mereka mempunyai merch id dan Photo. Mengapa hanya sedikit ? , karena kita akan menghyperlink melalui tokped dan shopee.  Jadi pada image1 dan image2 yang saya beriksn pada kolom chat ini , nantilogo tersebut akan dibrri animasi , apabila ia di hovrr , maka warna abu abu nua akan menjadi brrnyala lagi, dan logo tetsebut pastinya ada tokped dan shopee. Nah untuk item id dan photonya, tabel databse yang dipakai akan menjadi sedikit , mengapa? Karena ini bukan katalog tokonya.
+Karena section ini hanya mendisplay produk secara bergantian (random map) selama kurang lebih 5 drtik durasi paling lama sbis itu fade out (katakan ada 4 display card dengan masing masing item berbeda) maka sistem skan menrandom kan map melslui produk yang ada , tetapi diutamakan IsSeven (7 dsys terskhir ) ,  nAH DISINI LAH LOGIKS MENARIKNYA , pada backend, ada suatu fungsi yanf berfungsi NullIt, karena kita mau untuk random mapnya tidak SEEDED , maka produk yanh sudah didisplay dalam satu kali pilih  , akan punya column khsuus yaitu IsPilih , nahketika sudah di toggle menjadi 1 (sistem memiljh yang belum , yaitu yang null) maka dia akan ditoggle lagi emnjadi 0 sesuai dengan nams produk terakhir , misal backend menyimpan jumlah produk yang ada (40 bua, dipilih 4 per sesi, produk ke 40 akan mentrigger fingsi NullIt untuk meng nolkan kolom khusus ini)
+Dan gw kepikiran, apa produk nya taro frontend sja ya jadi ini benrr benr logika frontend , keknya frontend aja kali ya enak
+Nah sekarang masuk ke pengajuan jasa ni bro , ada minta jasa shooting , ada mimat
+Nah untuk pengajuan jasa ini ada shooting aja namun fitur iNI TETAP MASUK KE DALAM LINGKUP LOGIN DAN RWGRISTRASI MENGHINDARI DDOS / INJECTION /SMUGGLING. Nah ada bagoan need Us ? . Di Need Us? Ini user akan mengisi form pastinya color palette disesuaiksn dengan landing page kita bro. Nah form nya itu diisi SEKUENSIAL  , jadi bertahap dari atas ke bawah. Karena fitur sekuensial , maka bagian bawah tidak akan bisa diisi (kek diwarnain abu abu gitu kesan UX nya kek lock). Mulai dari Akun pemesan (gmail) , nanti data data lain akan otomatis ter join . Ini berarti buat tabel Baru ya , buat Tabel Pemesanan. Nah abis gmail terisi baru pilihan jasa , kali ini Shooting aja. Abisisi shotting bakal ada kalendar (pastikan designnya tidak terkontaminasi pallete , tetep profesional) nah user akan memilih tanggal bulan tahun , MAKSIMAL 7 HARI KEDEPAN (tahun di set 2026 ataupun sesuai timestampz , oleh karena itu ada fungsi krusial juga sebagai timekeeper di web ini ( namun hal ini tidak usah di display , namun tetep heartbeatnya ngikut jam ini) . Kemudian habis milih kalender , milih JAM MULAI nya    , office hournya kalceria dari jam 09.00-00.00 , trus jam  berakhirnya . Nah kemudian ada klik submit abis klik submit maka akan ada invoice pembayaran , 120.000 per jam , pastikan invoicenya mengikuti standar google play MINIMAL. nah abis invoice kelar , maka yang disimpan ke databaee adalah user id , tanggal , jam mulai jam akhir dan total pembayaran (ID Transaksi jasa) kemudian hal ini akan membawa pesan otomatis ke akun WA bussiness acountnya , jadi kek pesan otomatis (WEH ADA PSANAN MASUK) DENHAN STRUKTURNYA JUGA HARUS PAKEM.
+
+Nah awal awal gw sempet mention ada akun admin yang dikususkan untuk single pane of glass. Secara ui sama kek pengguna biasa , namun fitur admin punya priviledge untuk : Ada page untuk MENAMBAHKAN - Delete - Update (dari jam dkk) MAIN EVENT SESUAI STRUKTUR DAN PERATURAN MAINNYA) (cek lagi bagaimana kamu deskripsikan prompt untuk Main Event), kemudian ada SUBPAGE MENAMBAHKAN-Delete- update harga , membuat abu abu dengan Sold Out (gpp nanti di frontend , barang ya sold out , bakal ditambahin semacam flag atau penanda agar tidak didisplay) PRODAK merch( cek lagi bagaimana anda membuatnya) .
+Kemudian untuk About Us itu nsnti bakal ada 3 Tokoh pendiri kalceria , kasi aja Name 1 , Name 2 Name 3 , ini sih pure frontend , abis itu dia mencakup 1 page ya x jadi setiap person punya sectionnya secara balok persegi panjang , dan deksripsinya ataupun kata katanya
+
+Trus abis itu buat FAQ keknya udh ok tau lah ya , What is Kalceria , Who is Reyhan Batara ( Salahs atu pendiri ni bro) , Where is Kalcreria HQ (nah ini ajwabannya seputar Fresh Market Bintaro), nah masing masing di section oertanyaan , sampinfnya ada foto bro , ntar gw kasi , tapi kotak harus seragam ya , dan seragam jg designnya dengan nuansa frontend.
+Nah ini ada fitur asik ni , sebelum footer bakal ada Support Us ! (ini judul section di tengah tengah section ya) , nah abis itu, disini nakal ditampilin box dengan komposisi lsyar seperti asus zenfone 9 dengan skala setelah kali lebih kecil keseluruhan (agar muat di section ini, oh iya untuk kotak section ini di perbesar untuk menampung layar hp , nsnyi akan gw kasih deh image_hp (tapi layarnya kospng aja) nah rencana gw di folder publik, bakal gw adaim video_support minimal 5 lah dari tiktok coki / Rryhan Batara, dan di sebelahnya bakal ada logo tiktok dan ig warna abu abu , nanti trtep kalo di hover , dia toggle ke logo yanh ada warna nya ya bro. Abis itu dia bakal redirect ke tiktok Kalceria.
+
+Frontend Merch , nah untuk mervh pasti gw nanti masukin foto merch_1 ... N , nanti background photo yg gw kasi putih semua. Nah rencana nya gw , itu kek Zig zag gitu bro, setiap foto merch memakan satu balok panjang dection dan di sampingnya bakal ada drskripsi singkat. Selang seling kanan kiri dan bakal ada 4 slot. Nah untuk DNA page ini , kita tetap sesuaikan Base Forza Horizon dan Font penataan Hack The Box. Nah tadi saya sudah deskripisikan kalau tiap photo card bakal fade in fade out per jeda tertentu diganti jadi foto merch terbaru sekuensial sesuai loop. Di bagian bawah gw bakal kasi logo tokped shopee, dan usahakan background nya gak item banget , tapi kek pas handphone dark mode (kalo background sextion footernya bisa seprti ini , maka background kedua logo tokped shopee juga ngikut). BUATKANPROMPT UNTUK NANOBANANA JG YA. Trus abis itu logonya itu bukan kek yang kecil bgt ya , tapi tetap dia di tengah tengah srction fotter dengan ukuran menengah. Abis itu dibawahnya setiap logo akan ada Tokopedia - Kalcrot dan Shopee - Kalces (sesuai di bawah logo masing masing). INGAT DNA base forza hirizon , FONT HACK THE BOX , dan juga ada satu elemen dinamis , jadi gw mau di background skenarionya itu ada grip kek chip motherboaed gitu ga si bro yang kayak maze gitu , tapi di spawnnya ngacak aja bro , di tepi layar atas 1  , di photo card 1 , di bawah kiri latae satu dekat footer , di belakang photo card 2 dan 4 satu. Nah di kek semacam maze ini (kek dia kek akar menjalar gitu jadi design minor) bakal glow kuning - emas - magenta - emas - kuning di grid tipisnya . Pastikan efek 3D grid ada dan perpidahan warna harus mulus sak taek. Jadi diukur pake timer dan fade in fade out perwarna harus seperti gelombang sinus yang beraturan. proceeddd
+Nah untuk section ini , dia kan masi nyatu ke alnding page , mohon dia section paling bawah dan paling broad , karena akan diselipkan miniatur digur hp (no background , ntar di dalam backgrojndnya akan dikasi video_support1 sampe N yang kurang lebih mekanismenya sama di loop juga). Nah abis itu untuk mohon backgroundnya kek dark mode gitu ya (abu abuu ke iteman) dsn disini ntar ada logo dan facebooknya tadi kan udh gw jelasin, dan kalo hover bakal di toggle , jadi ada logo_igabu dan logo_igterang.png logo_ttabu logottterang.png  . Nah ketika user ingin beralih ke section ini dari section atas maka (TETAP SESUAIKAN DNA DENGAN HACK THE BOX + ROG) disini yang dinamis adalah Support Us! Nya . Karena disini ia adalah title daripada section ini yang ada di tengah section , maka ia akan masuk (tolong seprti font subtitle Hack the box yang firm) nah dia ada animasi ketiknya bro , jadi dia animasi ketik dari huruf T sampe !. Sesudah itu dia bakal stay diam 3 detik an NAH SETELAH ITU dia bakal di ketik mundur (alias backspace) abis backspace kelar, MAKA DIA DIKETIK LAGI MAJU. Di loop mulu kek gini. Nah untuk di miniatur hp (ada fitur autoscroll bro , jadi videonya setelah abis (tepat 1s sebelum video tersebut habis , maka dia akan di scfoll ke atas automatis , jadi kek orang scroll. Hpdi tiktok gitu bro ada node nodenya). Nahsetiap scroll ini , bakal ada kek ROAD ARROW SIGN yang animasi ke atas hp (pastinya transparan bro ke putihan gitu) seprti orang mengscroll beneran hpnya. Jadiuntuk section ini semuanya tentang loop fan loop serta UX yang interaktif.
+Nah untuk FAQ dan About Us iti keknya gabung jadi satu page. Nah di landinf page , bakal ada Get to Know Us! , dia ada section sendiri dengan video latar belakangd ebagai background , nah untuk background khusus video ini , gausa di hitam putih , TAPI AKU MAU ADA EFFECT SEPRTI LAYAR TV 90 AN RETRO.. Untukspectrun warna dan opacity masih ada (walaupun opaxity mssih ada) cuman ada layer  bakal ubah grafiknya jadi vintage , nah karena gw tau claude sonnet habakl bisa buat ini, buatkan nano banana prompt.
+Nah abis Get to Know Us! Buttonnya di pencet , maka udh dirdct ke page baeu , tentang about Us ! , kali ini About Us ! Pake animasi flipping letter ya broo , jadi letter letternya di tilte page trrsebut di flip flip gitu sebelum akhirnya jadi About Us beneran. Dan kemudian, dibAwahnya bakal ada foto_pendiri.png yang isinya pendiri kalcrria gitu bos. Nah pasti ada deskripsinya dong, gw mau pto pendiri kalceria ini dijadiin bsxkground aja. Coba kamu kasi juga promot banana buat jadiin foto ini spektrum warnanya emas kuning magenta aja bro , jadi kek warna aslinya ketimpa gitu. Nah abis itu di bawahnya , bakal ada FAQ menegnai Where is Kalceria dan What is Kalceria. Backgroudnya darkmode (abu abu ke hitam) nah dropdown abis itu bro. Kalau dibuka pertanyaannya bakal ada Title Prrtajyaan itu lagi dan teks deksirpsi jawabannua. Abis tiu di samping kanannya bakal ada photocard jg yang bakal auto terganti dengan jeda berapa drtik gitu. Nah untuk photo card 2 pertanyaan ini , masih pake placrholder , keknya 3 poto aja per pertanyaan. Namun di photo card itu juga kalo keganti potonya MAKA CAPTION POTO DI BAWAHNYA JUGA HARUS GANTI  ,maka suruh sonnet buat captionya lorem ipsum+4 aja dengan teks kecil di bawah poto yang pergantiannya menuju poto+caption lain bakal brrjalan mulus.
