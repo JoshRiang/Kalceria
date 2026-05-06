@@ -11,7 +11,7 @@
   "scripts": {
     "postinstall": "npm run db:generate",
     "predev": "npm run db:generate",
-    "dev": "turbo run dev",
+    "dev": "npx turbo run dev",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "build": "npm run build --workspaces",
@@ -22,6 +22,8 @@
     "lint": "npm run lint --workspaces",
     "db:generate": "npm run db:generate --workspace=backend",
     "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:push": "npm run db:push --workspace=backend",
+    "db:pull": "npm run db:pull --workspace=backend",
     "db:studio": "npm run db:studio --workspace=backend",
     "install-all": "npm install"
   },

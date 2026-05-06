@@ -11,6 +11,8 @@
     "start": "node api/index.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:pull": "prisma db pull",
     "db:studio": "prisma studio"
   },
   "dependencies": {

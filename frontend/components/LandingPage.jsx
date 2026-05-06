@@ -933,6 +933,13 @@ export default function LandingPage({ onNavigateAuth }) {
             alt="Kalcer Mascot" 
             className="relative z-10 w-full h-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,255,0.3)]"
           />
+
+          {/* Static Favicon Overlay to cover Gemini Logo in the absolute corner */}
+          <img
+            src="/favicon.png"
+            alt="Favicon"
+            className="absolute bottom-1 right-1 w-6 md:w-8 h-auto z-50 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+          />
         </div>
 
       </section>
