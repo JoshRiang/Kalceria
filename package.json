@@ -1,0 +1,40 @@
+{
+  "name": "kalceria",
+  "version": "1.0.0",
+  "description": "High-Fidelity Automotive Community Platform",
+  "private": true,
+  "packageManager": "npm@9.0.0",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "postinstall": "npm run db:generate",
+    "predev": "npm run db:generate",
+    "dev": "turbo run dev",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspaces",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "start": "npm run start --workspace=backend",
+    "start:frontend": "npm run start --workspace=frontend",
+    "lint": "npm run lint --workspaces",
+    "db:generate": "npm run db:generate --workspace=backend",
+    "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:studio": "npm run db:studio --workspace=backend",
+    "install-all": "npm install"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "automotive",
+    "community",
+    "events",
+    "telemetry"
+  ],
+  "devDependencies": {
+    "turbo": "^2.9.9"
+  }
+}
