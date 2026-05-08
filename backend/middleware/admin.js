@@ -10,15 +10,25 @@ export async function requireAdmin(req, res, next) {
     if (!token) return res.status(401).json({ error: 'No token.' });
 
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } });
+    req.user = payload;
+
+    console.log('[Debug Admin] Token userId:', req.user.userId);
+
+    const user = await prisma.user.findUnique({ 
+      where: { id: req.user.userId }, 
+      select: { id: true, email: true, role: true } 
+    });
+
+    console.log('[Debug Admin] DB User:', user);
 
     if (!user || user.role !== 'ADMIN') {
+      console.log('[Debug Admin] Denied. Role is:', user?.role);
       return res.status(403).json({ error: 'Forbidden. Admin only.' });
     }
 
-    req.user = payload;
     next();
-  } catch {
+  } catch (err) {
+    console.error('[Debug Admin] Error:', err.message);
     res.status(401).json({ error: 'Token invalid.' });
   }
 }

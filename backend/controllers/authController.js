@@ -79,7 +79,8 @@ export async function login(req, res, next) {
       { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
-    res.json({ token, userId: user.id, username: user.name });
+    // Return role so frontend can handle admin redirect easily
+    res.json({ token, userId: user.id, username: user.name, role: user.role });
   } catch (err) {
     next(err);
   }

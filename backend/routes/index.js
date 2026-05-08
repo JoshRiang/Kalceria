@@ -6,7 +6,7 @@ import {
 import { updateLiveLocation, getNearbyUsers } from '../controllers/locationController.js';
 import { getMedia, createMedia } from '../controllers/mediaController.js';
 import { createMiniEvent, getActiveMiniEvents } from '../controllers/miniEventController.js';
-import { createBooking } from '../controllers/serviceController.js';
+import { createBooking, createServiceRequest } from '../controllers/serviceController.js';
 import { saveTelemetry, getMapUsers } from '../controllers/telemetryController.js';
 import { createBroadcast, updateBroadcast, deleteBroadcast } from '../controllers/broadcastController.js';
 import { redirectEvent } from '../controllers/redirectController.js';
@@ -19,8 +19,22 @@ import {
 import {
   createMerch, listMerch, updateMerch, toggleSoldOut, deleteMerch,
 } from '../controllers/adminMerchController.js';
+import {
+  registerEvent, listPublicEvents, getPublicEvent,
+  listRegistrations, confirmRegistrationPayment, deleteRegistration, markPdfExported,
+} from '../controllers/eventRegistrationController.js';
+import {
+  listServiceBookings, confirmServicePayment, deleteServiceBooking, markServicePdf,
+  listBookings, confirmBookingPayment, deleteBooking, markBookingPdf,
+} from '../controllers/adminServiceController.js';
+import {
+  listUsers, getUser, setUserRole, deleteUser,
+} from '../controllers/adminUserController.js';
 
 const router = express.Router();
+
+// ─── Health ───────────────────────────────────────────────────────────────────
+router.get('/health', (_req, res) => res.json({ ok: true }));
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 router.post('/auth/register', register);
@@ -29,6 +43,13 @@ router.post('/auth/otp/request', requestOtp);
 router.post('/auth/otp/verify', verifyOtp);
 router.post('/auth/password/reset-request', requestPasswordReset);
 router.post('/auth/password/reset', resetPassword);
+
+// ─── Events (Public) ─────────────────────────────────────────────────────────
+router.get('/events', listPublicEvents);
+router.get('/events/:eventId', getPublicEvent);
+
+// ─── Event Registration (Auth required) ──────────────────────────────────────
+router.post('/events/:eventId/register', requireAuth, registerEvent);
 
 // ─── Location ────────────────────────────────────────────────────────────────
 router.post('/location/update', requireAuth, updateLiveLocation);
@@ -44,6 +65,7 @@ router.get('/mini-events/active', getActiveMiniEvents);
 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
 router.post('/services/book', requireAuth, createBooking);
+router.post('/services/request', requireAuth, createServiceRequest);
 
 // ─── Telemetry & Map ─────────────────────────────────────────────────────────
 router.post('/map/telemetry', requireAuth, saveTelemetry);
@@ -69,6 +91,30 @@ router.post('/admin/merch', requireAdmin, createMerch);
 router.put('/admin/merch/:id', requireAdmin, updateMerch);
 router.patch('/admin/merch/:id/soldout', requireAdmin, toggleSoldOut);
 router.delete('/admin/merch/:id', requireAdmin, deleteMerch);
+
+// ─── Admin: Event Registrations ──────────────────────────────────────────────
+router.get('/admin/registrations', requireAdmin, listRegistrations);
+router.patch('/admin/registrations/:id/payment', requireAdmin, confirmRegistrationPayment);
+router.delete('/admin/registrations/:id', requireAdmin, deleteRegistration);
+router.patch('/admin/registrations/:id/pdf', requireAdmin, markPdfExported);
+
+// ─── Admin: Service Bookings ──────────────────────────────────────────────────
+router.get('/admin/services', requireAdmin, listServiceBookings);
+router.patch('/admin/services/:id/payment', requireAdmin, confirmServicePayment);
+router.delete('/admin/services/:id', requireAdmin, deleteServiceBooking);
+router.patch('/admin/services/:id/pdf', requireAdmin, markServicePdf);
+
+// ─── Admin: Need Us Bookings ──────────────────────────────────────────────────
+router.get('/admin/bookings', requireAdmin, listBookings);
+router.patch('/admin/bookings/:id/payment', requireAdmin, confirmBookingPayment);
+router.delete('/admin/bookings/:id', requireAdmin, deleteBooking);
+router.patch('/admin/bookings/:id/pdf', requireAdmin, markBookingPdf);
+
+// ─── Admin: Users ─────────────────────────────────────────────────────────────
+router.get('/admin/users', requireAdmin, listUsers);
+router.get('/admin/users/:id', requireAdmin, getUser);
+router.patch('/admin/users/:id/role', requireAdmin, setUserRole);
+router.delete('/admin/users/:id', requireAdmin, deleteUser);
 
 // ─── Cron ────────────────────────────────────────────────────────────────────
 router.get('/cron/cleanup', async (_req, res) => {
