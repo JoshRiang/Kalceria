@@ -167,3 +167,23 @@ export async function createServiceRequest(req, res, next) {
     next(err);
   }
 }
+
+// ─── DELETE /services/request/:id (User cancels their own) ───────────────────
+export async function deleteOwnServiceRequest(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    const booking = await prisma.serviceBooking.findUnique({ where: { id } });
+    if (!booking) return res.status(404).json({ error: 'Request not found.' });
+
+    if (booking.requestorId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to delete this request.' });
+    }
+
+    await prisma.serviceBooking.delete({ where: { id } });
+    res.json({ message: 'Request deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}

@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import ServiceRequestModal from "./ServiceRequestModal";
 
 // ─── Typewriter Component ─────────────────────────────
 function Typewriter({ text, mode = "letter", delay = 0 }) {
@@ -90,6 +91,40 @@ function Typewriter({ text, mode = "letter", delay = 0 }) {
       {displayText}
       <span className="animate-solid-blink ml-1 font-light text-white">|</span>
     </span>
+  );
+}
+
+// ─── Rolling Film Roll Components ─────────────────────
+function FilmLane({ rotation, top, left, height = "h-16 md:h-24" }) {
+  return (
+    <div 
+      className={`absolute w-[300%] ${height} bg-white shadow-[0_0_40px_rgba(255,255,255,0.8)] pointer-events-none`}
+      style={{ top, left, transform: `rotate(${rotation}deg)`, transformOrigin: "left center" }}
+    />
+  );
+}
+
+function FilmStrip({ rotation, top, left, speed = 40, height = "h-16 md:h-24" }) {
+  return (
+    <div 
+      className={`absolute w-[300%] ${height} pointer-events-none overflow-hidden`}
+      style={{ top, left, transform: `rotate(${rotation}deg)`, transformOrigin: "left center" }}
+    >
+      <div className="flex w-full h-full opacity-70 animate-film-scroll">
+        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.png)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
+        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.png)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
+        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.png)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
+      </div>
+      <style>{`
+        @keyframes film-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-33.33%); }
+        }
+        .animate-film-scroll {
+          animation: film-scroll ${speed}s linear infinite;
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -600,6 +635,7 @@ export default function LandingPage({ onNavigateAuth }) {
   const [mounted, setMounted] = useState(false);
   const [aboutIndex, setAboutIndex] = useState(0);
   const [mascotFrame, setMascotFrame] = useState(1);
+  const [showServiceModal, setShowServiceModal] = useState(false);
   const displayedMerch = useMerchRandomizer(MOCK_MERCH);
 
   const ABOUT_IMAGES = [
@@ -941,8 +977,142 @@ export default function LandingPage({ onNavigateAuth }) {
             className="absolute bottom-1 right-1 w-6 md:w-8 h-auto z-50 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
           />
         </div>
-
       </section>
+
+      {/* ── Section 6: Need Help? ── */}
+      <section className="relative w-full min-h-[107vh] bg-white flex flex-col items-center justify-center py-32 z-50 overflow-hidden">
+        
+        {/* Solid Section Divider */}
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-[#050a14] z-[70]" />
+
+        {/* Layer 1: Subtle geometry background (Dark dots for white base) */}
+        <div className="absolute inset-0 opacity-[0.15] pointer-events-none z-0">
+          <div className="absolute inset-0" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, rgba(0,0,0,0.1) 1px, transparent 0)`, backgroundSize: '40px 40px' }} />
+        </div>
+
+        {/* Dynamic Aggressive Blobs (Magenta & Gold) */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.4, 1], 
+              x: ["-15%", "25%", "-15%"], 
+              y: ["-10%", "15%", "-10%"]
+            }} 
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} 
+            className="absolute top-0 left-0 w-[70vw] h-[70vw] rounded-full blur-[140px] bg-[#D946EF] opacity-40 mix-blend-multiply" 
+          />
+          <motion.div 
+            animate={{ 
+              scale: [1.2, 1.6, 1.2], 
+              x: ["20%", "-20%", "20%"], 
+              y: ["20%", "-5%", "20%"]
+            }} 
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }} 
+            className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#FACC15] opacity-40 mix-blend-multiply" 
+          />
+        </div>
+
+        {/* Layer 2: Rolling Film Rolls (Strict Global Layering to prevent any cutting) */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          {/* Bottom Layer: All White Lanes */}
+          <div className="absolute inset-0 z-10">
+            <FilmLane rotation={15} top="15%" left="-10%" />
+            <FilmLane rotation={-3} top="48%" left="-10%" />
+            <FilmLane rotation={6} top="75%" left="-10%" />
+            <FilmLane rotation={-55} top="80%" left="10%" height="h-20 md:h-32" />
+          </div>
+
+          {/* Top Layer: All Scrolling Film Strips */}
+          <div className="absolute inset-0 z-20">
+            <FilmStrip rotation={15} top="15%" left="-10%" speed={50} />
+            <FilmStrip rotation={-3} top="48%" left="-10%" speed={60} />
+            <FilmStrip rotation={6} top="75%" left="-10%" speed={45} />
+            <FilmStrip rotation={-55} top="80%" left="10%" speed={55} height="h-20 md:h-32" />
+          </div>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative z-10 flex flex-col items-center justify-center w-full h-full"
+        >
+          {/* Shrunk square box, centered perfectly with Moto photographers (Dark translucent for white bg) */}
+          <div className="relative bg-black/[0.08] border border-black/10 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 aspect-square w-full max-w-[420px] flex flex-col items-center justify-center shadow-[0_40px_100px_rgba(0,0,0,0.1)]">
+             
+             {/* Moto Figures: Locked tightly to box edges using wrappers for perfect alignment */}
+             
+             {/* TOP (Normal, 0deg) */}
+             <div className="absolute inset-0 pointer-events-none z-20">
+               <motion.img 
+                 src="/moto_1.png" 
+                 alt="Moto 1"
+                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 whileInView={{ opacity: 1, scale: 1 }}
+                 viewport={{ once: true }}
+               />
+             </div>
+
+             {/* RIGHT (90deg) */}
+             <div className="absolute inset-0 rotate-90 pointer-events-none z-20">
+               <motion.img 
+                 src="/moto_2.png" 
+                 alt="Moto 2"
+                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 whileInView={{ opacity: 1, scale: 1 }}
+                 viewport={{ once: true }}
+               />
+             </div>
+
+             {/* BOTTOM (180deg) */}
+             <div className="absolute inset-0 rotate-180 pointer-events-none z-20">
+               <motion.img 
+                 src="/moto_3.png" 
+                 alt="Moto 3"
+                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-44 md:h-60 w-auto object-contain origin-bottom"
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 whileInView={{ opacity: 1, scale: 1 }}
+                 viewport={{ once: true }}
+               />
+             </div>
+
+             {/* LEFT (-90deg) */}
+             <div className="absolute inset-0 -rotate-90 pointer-events-none z-20">
+               <motion.img 
+                 src="/moto_4.png" 
+                 alt="Moto 4"
+                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 whileInView={{ opacity: 1, scale: 1 }}
+                 viewport={{ once: true }}
+               />
+             </div>
+
+             <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-white mb-10 text-center leading-none" style={{ textShadow: "0 0 20px rgba(255,255,255,0.3)" }}>
+               Need Our Help?
+             </h2>
+             
+             <motion.button
+               onClick={() => setShowServiceModal(true)}
+               whileHover={{ scale: 1.05 }}
+               whileTap={{ scale: 0.95 }}
+               className="relative px-12 py-4 font-sans font-black uppercase tracking-tighter text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+               style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+             >
+               <span className="relative z-10">APPLY A REQUEST</span>
+               <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+             </motion.button>
+          </div>
+        </motion.div>
+      </section>
+
+      <AnimatePresence>
+        {showServiceModal && (
+          <ServiceRequestModal onClose={() => setShowServiceModal(false)} />
+        )}
+      </AnimatePresence>
 
     </motion.div>
   );

@@ -6,7 +6,7 @@ import {
 import { updateLiveLocation, getNearbyUsers } from '../controllers/locationController.js';
 import { getMedia, createMedia } from '../controllers/mediaController.js';
 import { createMiniEvent, getActiveMiniEvents } from '../controllers/miniEventController.js';
-import { createBooking, createServiceRequest } from '../controllers/serviceController.js';
+import { createBooking, createServiceRequest, deleteOwnServiceRequest } from '../controllers/serviceController.js';
 import { saveTelemetry, getMapUsers } from '../controllers/telemetryController.js';
 import { createBroadcast, updateBroadcast, deleteBroadcast } from '../controllers/broadcastController.js';
 import { redirectEvent } from '../controllers/redirectController.js';
@@ -66,6 +66,7 @@ router.get('/mini-events/active', getActiveMiniEvents);
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
 router.post('/services/book', requireAuth, createBooking);
 router.post('/services/request', requireAuth, createServiceRequest);
+router.delete('/services/request/:id', requireAuth, deleteOwnServiceRequest);
 
 // ─── Telemetry & Map ─────────────────────────────────────────────────────────
 router.post('/map/telemetry', requireAuth, saveTelemetry);
