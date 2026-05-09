@@ -288,7 +288,7 @@ function GoldenDust() {
   );
 }
 
-// ─── Star Dust Particle System (50/50 Violet & Gold) ──
+// ─── Star Dust Particle System (50/50 Violet & Gold - Circular Micro Dust) ──
 function StarDust() {
   const particles = Array.from({ length: 30 });
   return (
@@ -307,11 +307,10 @@ function StarDust() {
         return (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 0, rotate: 0, scale: 0.5 }}
+            initial={{ opacity: 0, y: 0, scale: 0.5 }}
             animate={{ 
               opacity: [0, 1, 0], 
               y: [0, -20, 0],
-              rotate: [0, 90, 180],
               scale: [0.5, 1, 0.5]
             }}
             transition={{
@@ -320,11 +319,10 @@ function StarDust() {
               delay: delay,
               ease: "easeInOut"
             }}
-            className={`absolute w-3 h-3 ${bgColor}`}
+            className={`absolute w-1 h-1 rounded-full ${bgColor}`}
             style={{ 
               left: `${x}%`, top: `${y}%`,
-              clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)",
-              filter: `drop-shadow(0 0 6px ${shadowColor})`
+              filter: `drop-shadow(0 0 4px ${shadowColor})`
             }}
           />
         );
@@ -637,6 +635,160 @@ function SupportUsBackground() {
   );
 }
 
+function SolarPhoenix() {
+  const particles = useMemo(() => Array.from({ length: 50 }).map((_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    size: Math.random() > 0.8 ? '12px' : '6px', // Much larger
+    color: ['#ffffff', '#fbbf24', '#ff8c00', '#ffed4a'][Math.floor(Math.random() * 4)],
+    delay: Math.random() * 5,
+    duration: 3 + Math.random() * 4,
+    xDrift: (Math.random() - 0.5) * 100, // Bigger drift
+    yDrift: (Math.random() - 0.5) * 100,
+  })), []);
+
+  const flares = [
+    {
+      id: 1, // Top Left
+      paths: [
+        "M 38 38 C 25 15, 15 40, -5 5",
+        "M 36 36 C 22 12, 12 38, -8 2",
+        "M 40 40 C 28 18, 18 42, -2 8"
+      ],
+      colors: ["#FFA07A", "#ff8c00", "#ffd700"]
+    },
+    {
+      id: 2, // Top Right
+      paths: [
+        "M 62 38 C 75 15, 85 40, 105 5",
+        "M 64 36 C 78 12, 88 38, 108 2",
+        "M 60 40 C 72 18, 82 42, 102 8"
+      ],
+      colors: ["#FFA07A", "#ffd700", "#ff8c00"]
+    },
+    {
+      id: 3, // Bottom Left
+      paths: [
+        "M 38 62 C 25 85, 15 60, -5 95",
+        "M 36 64 C 22 88, 12 62, -8 98",
+        "M 40 60 C 28 82, 18 58, -2 92"
+      ],
+      colors: ["#ffd700", "#FFA07A", "#FFB07C"]
+    },
+    {
+      id: 4, // Bottom Right
+      paths: [
+        "M 62 62 C 75 85, 85 60, 105 95",
+        "M 64 64 C 78 88, 88 62, 108 98",
+        "M 60 60 C 72 82, 82 58, 102 92"
+      ],
+      colors: ["#ff8c00", "#FFB07C", "#ffd700"]
+    },
+    {
+      id: 5, // Asymmetrical Sci-Fi Sweep 1
+      paths: [
+        "M -10 30 C 30 50, 60 10, 110 -10",
+        "M -15 32 C 28 55, 62 15, 108 -5",
+        "M -5 28 C 32 45, 58 5, 112 -15"
+      ],
+      colors: ["#ffd700", "#FFA07A", "#ff8c00"]
+    },
+    {
+      id: 6, // Asymmetrical Sci-Fi Sweep 2
+      paths: [
+        "M 110 90 C 70 70, 40 20, 50 -20",
+        "M 115 88 C 72 75, 45 22, 52 -25",
+        "M 105 92 C 68 65, 35 18, 48 -15"
+      ],
+      colors: ["#ff8c00", "#FFB07C", "#ffd700"]
+    },
+    {
+      id: 7, // Massive Deep U-Loop (Sci-fi Prominence)
+      paths: [
+        "M 115 5 C 80 110, 20 110, -15 5",
+        "M 110 0 C 75 105, 25 105, -10 0",
+        "M 120 -5 C 85 115, 15 115, -20 -5"
+      ],
+      colors: ["#FFB07C", "#FFA07A", "#ff8c00"]
+    }
+  ];
+
+  return (
+    <div className="absolute inset-0 z-[1] flex items-center justify-center pointer-events-none overflow-hidden">
+      {/* Deep Red Corona Backdrop */}
+      <motion.div
+        animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.9, 0.6] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute w-[60vw] h-[60vw] rounded-full bg-red-600 blur-[120px]"
+      />
+      
+      {/* Intense Yellow Core */}
+      <motion.div
+        animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute w-[25vw] h-[25vw] rounded-full bg-gradient-to-t from-yellow-500 to-white blur-[60px] mix-blend-add"
+      />
+
+      {/* Micro Pixel Fire Particles */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {particles.map((p) => (
+          <motion.div
+            key={p.id}
+            className="absolute rounded-sm"
+            style={{
+              width: p.size,
+              height: p.size,
+              left: p.left,
+              top: p.top,
+              backgroundColor: p.color,
+              boxShadow: `0 0 5px ${p.color}`,
+            }}
+            animate={{
+              x: [0, p.xDrift, 0],
+              y: [0, p.yDrift, 0],
+              opacity: [0, 1, 0],
+            }}
+            transition={{
+              duration: p.duration,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: p.delay,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Solar Phoenix Flare Strings */}
+      <svg className="absolute w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {flares.map((flare) => (
+          <g key={flare.id}>
+            {flare.paths.map((d, i) => (
+              <motion.path
+                key={i}
+                d={d}
+                stroke={flare.colors[i]}
+                strokeWidth={0.8 + Math.random() * 0.6}
+                fill="none"
+                strokeLinecap="round"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1, opacity: [0.4, 1, 0.4] }}
+                transition={{ 
+                  pathLength: { duration: 3, ease: "easeOut" },
+                  opacity: { duration: 2 + Math.random() * 2, repeat: Infinity, ease: "easeInOut", delay: Math.random() }
+                }}
+                style={{ 
+                  // Removed drop-shadow to stop heavy browser repainting
+                }}
+              />
+            ))}
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 // ─── Landing Page Component ──────────────────────────
 export default function LandingPage({ onNavigateAuth }) {
   const [mounted, setMounted] = useState(false);
@@ -747,10 +899,13 @@ export default function LandingPage({ onNavigateAuth }) {
 
       {/* ── Section 2: Events ── */}
       <section className="relative w-full min-h-[70vh] flex flex-col md:flex-row items-center justify-between overflow-hidden bg-[#050a14] z-20 px-8 md:px-24 py-20 gap-16">
+        <StarDust />
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
           <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] rounded-full blur-[100px] bg-[#FF00FF]" />
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }} className="absolute bottom-[0%] right-[10%] w-[50vw] h-[50vw] rounded-full blur-[120px] bg-[#FFD700]" />
           <motion.div animate={{ scale: [1, 1.05, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute top-[30%] left-[50%] w-[30vw] h-[30vw] rounded-full blur-[80px] bg-[#ffffff]" />
+          <motion.div animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 3 }} className="absolute bottom-[-10%] left-[5%] w-[40vw] h-[40vw] rounded-full blur-[110px] bg-[#FF0000]" />
+          <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }} className="absolute top-[20%] right-[-10%] w-[45vw] h-[45vw] rounded-full blur-[120px] bg-[#FF8C00]" />
         </div>
 
         {/* Left Content (Absolute for no shift) */}
@@ -774,11 +929,57 @@ export default function LandingPage({ onNavigateAuth }) {
           <EventSlider />
         </div>
 
+        {/* Floating Crystal 2 Instances */}
+        <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+           {/* Bottom (Smallest) */}
+           <motion.img 
+             src="/crystal_2.png" 
+             className="absolute h-[20px] md:h-[28px] object-contain opacity-70"
+             style={{ left: "35%", bottom: "5%", translateX: "-50%" }}
+             animate={{ y: [0, -8, 0], rotate: [55, 65, 55] }}
+             transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+           />
+           {/* Left Small */}
+           <motion.img 
+             src="/crystal_2.png" 
+             className="absolute h-[26px] md:h-[36px] object-contain opacity-70"
+             style={{ left: "calc(50% - 260px)", top: "55%" }}
+             animate={{ y: [0, -10, 0], rotate: [-35, -25, -35] }}
+             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+           />
+           {/* Right Medium */}
+           <motion.img 
+             src="/crystal_2.png" 
+             className="absolute h-[34px] md:h-[47px] object-contain opacity-70"
+             style={{ left: "calc(50% + 175px)", top: "18%" }}
+             animate={{ y: [0, -15, 0], rotate: [30, 40, 30] }}
+             transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+           />
+           {/* Right Large */}
+           <motion.img 
+             src="/crystal_2.png" 
+             className="absolute h-[45px] md:h-[63px] object-contain opacity-70"
+             style={{ left: "calc(50% + 200px)", top: "50%" }}
+             animate={{ y: [0, -18, 0], rotate: [0, 10, 0] }}
+             transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+           />
+        </div>
+
         {/* Silhouettes - Static Background */}
         <div className="absolute bottom-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden px-8 md:px-24">
-          <div className="absolute bottom-0 left-12 md:left-40 opacity-35 flex items-end">
-            <img src="/grup.png" alt="Group" className="h-[180px] md:h-[280px] object-contain translate-y-[2.5px]" />
+          
+          {/* Crystal 3 Top Right (Truncated at Top) */}
+          <div className="absolute top-[-20px] md:top-[-40px] right-12 md:right-40 flex flex-col items-center pointer-events-none opacity-80">
+            <img src="/crystal_3.png" alt="Crystal 3" className="h-[75px] md:h-[120px] object-contain rotate-180" />
           </div>
+
+          {/* Crystal 1 Bottom Left (Truncated at Bottom) */}
+          <img src="/crystal_1.png" alt="Crystal 1" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-4 h-[80px] md:h-[130px] object-contain opacity-80 z-0" />
+
+          <div className="absolute bottom-0 left-12 md:left-40 flex items-end">
+            <img src="/grup.png" alt="Group" className="relative z-10 h-[180px] md:h-[280px] object-contain translate-y-[2.5px] opacity-35" />
+          </div>
+
           <div className="absolute bottom-0 right-4 md:right-10 opacity-50 flex flex-col items-center pointer-events-none">
             {/* Magenta Tapakan (Base) - Wedge Shape from Sketch */}
             <div 
@@ -1140,6 +1341,177 @@ export default function LandingPage({ onNavigateAuth }) {
              </motion.button>
           </div>
         </motion.div>
+      </section>
+
+      {/* ── Section 7: Big Square Concept ── */}
+      <section className="relative w-full aspect-square bg-[#0c1528] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
+        {/* Background Blobs (Cyan, Magenta, Gold) */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
+          <motion.div 
+            animate={{ scale: [1, 1.25, 1], x: ["-15%", "15%", "-15%"], y: ["-10%", "10%", "-10%"] }} 
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} 
+            className="absolute top-0 left-0 w-[60vw] h-[60vw] rounded-full blur-[140px] bg-[#00FFFF]" 
+          />
+          <motion.div 
+            animate={{ scale: [1.1, 1.35, 1.1], x: ["15%", "-15%", "15%"], y: ["10%", "-10%", "10%"] }} 
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }} 
+            className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#D946EF]" 
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.4, 1], x: ["0%", "10%", "0%"], y: ["20%", "-20%", "20%"] }} 
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 4 }} 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55vw] h-[55vw] rounded-full blur-[160px] bg-[#FACC15]" 
+          />
+        </div>
+
+        <SolarPhoenix />
+
+        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+          {/* Earth - Core Centerpiece */}
+          <motion.img 
+            src="/earth.png" 
+            alt="Earth" 
+            className="absolute h-[30%] md:h-[40%] object-contain opacity-90 z-0 drop-shadow-[0_0_50px_rgba(0,255,255,0.2)]"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 180, repeat: Infinity, ease: "linear" }}
+          />
+
+          {/* Find The Others Button */}
+          <motion.button
+            onClick={() => document.getElementById('user-map')?.scrollIntoView({ behavior: 'smooth' })}
+            whileHover={{ 
+              scale: 1.05,
+              boxShadow: "0 0 40px rgba(255,255,255,0.3), inset 0 0 20px rgba(255,255,255,0.2)",
+              backgroundColor: "rgba(255,255,255,0.15)"
+            }}
+            whileTap={{ scale: 0.95 }}
+            className="absolute z-30 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white font-black uppercase tracking-tighter text-xl md:text-3xl px-8 py-4 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-colors duration-300"
+          >
+            {/* Peach Blob */}
+            <motion.div 
+              animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -top-8 -left-4 w-24 h-24 bg-[#FFB07C] rounded-full blur-[24px] opacity-70 z-0 pointer-events-none"
+            />
+            {/* Green Blob */}
+            <motion.div 
+              animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              className="absolute -bottom-8 -right-4 w-24 h-24 bg-green-400 rounded-full blur-[24px] opacity-60 z-0 pointer-events-none"
+            />
+            
+            <span 
+              className="relative z-10"
+              style={{
+                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
+              }}
+            >
+              FIND THE OTHERS !
+            </span>
+          </motion.button>
+
+          {/* Earthman - Hero Figure at Bottom */}
+          <motion.img 
+            src="/earthman.png" 
+            alt="Earthman" 
+            className="absolute bottom-[-2%] h-[40%] md:h-[54%] object-contain z-20 pointer-events-none"
+            initial={{ y: 60, opacity: 0, rotate: 0, scale: 1 }}
+            whileInView={{ y: 0, opacity: 1, rotate: 0, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          />
+
+          {/* Asteroid Field - Grouped Clusters */}
+          {[
+            // Cluster 1: Top Left (2x A1, 1x A2)
+            { id: 1, src: '/asteroid_1.png', top: '5%', left: '5%', size: '42px', delay: 0, rot: 45 },
+            { id: 2, src: '/asteroid_1.png', top: '15%', left: '18%', size: '49px', delay: 1.2, rot: -30 },
+            { id: 3, src: '/asteroid_2.png', top: '22%', left: '8%', size: '31px', delay: 2.5, rot: 115 },
+            
+            // Cluster 2: Top Right (2x A1, 2x A2)
+            { id: 4, src: '/asteroid_1.png', top: '10%', right: '10%', size: '55px', delay: 0.8, rot: -80 },
+            { id: 14, src: '/asteroid_1.png', top: '3%', right: '22%', size: '38px', delay: 1.4, rot: 25 },
+            { id: 5, src: '/asteroid_2.png', top: '18%', right: '15%', size: '28px', delay: 1.8, rot: 12 },
+            { id: 10, src: '/asteroid_2.png', top: '5%', right: '30%', size: '34px', delay: 0.9, rot: 55 },
+            
+            // Cluster 3: Bottom Left (2x A1, 2x A2)
+            { id: 6, src: '/asteroid_1.png', bottom: '18%', left: '10%', size: '35px', delay: 3.2, rot: 155 },
+            { id: 15, src: '/asteroid_1.png', bottom: '5%', left: '22%', size: '44px', delay: 0.5, rot: -60 },
+            { id: 7, src: '/asteroid_2.png', bottom: '25%', left: '5%', size: '44px', delay: 0.4, rot: -40 },
+            { id: 12, src: '/asteroid_2.png', bottom: '12%', left: '28%', size: '24px', delay: 3.5, rot: 190 },
+            
+            // Cluster 4: Bottom Right (2x A1, 3x A2)
+            { id: 8, src: '/asteroid_1.png', bottom: '22%', right: '10%', size: '52px', delay: 1.5, rot: 100 },
+            { id: 16, src: '/asteroid_1.png', bottom: '30%', right: '25%', size: '39px', delay: 2.2, rot: 10 },
+            { id: 9, src: '/asteroid_2.png', bottom: '35%', right: '12%', size: '37px', delay: 2.8, rot: -120 },
+            { id: 11, src: '/asteroid_2.png', bottom: '10%', right: '32%', size: '43px', delay: 2.1, rot: -20 },
+            { id: 13, src: '/asteroid_2.png', bottom: '5%', right: '40%', size: '49px', delay: 0.6, rot: -10 }
+          ].map((ast) => (
+            <motion.img
+              key={ast.id}
+              src={ast.src}
+              alt="Asteroid"
+              className="absolute pointer-events-none opacity-60 z-[5]"
+              style={{ 
+                top: ast.top, 
+                left: ast.left, 
+                right: ast.right, 
+                bottom: ast.bottom, 
+                width: ast.size
+              }}
+              animate={{ 
+                y: [0, -12, 0],
+                rotate: [ast.rot - 15, ast.rot + 15, ast.rot - 15]
+              }}
+              transition={{ 
+                duration: 6 + (ast.id % 4), 
+                repeat: Infinity, 
+                ease: "easeInOut", 
+                delay: ast.delay 
+              }}
+            />
+          ))}
+
+          {/* Floating Clouds Assembly */}
+          {/* Left Cloud: awan_3 - Now fully opaque */}
+          <motion.img 
+            src="/awan_3.png" 
+            alt="Cloud Left"
+            className="absolute left-[23%] bottom-[27%] h-[103px] md:h-[184px] object-contain opacity-100 z-30 pointer-events-none"
+            animate={{ 
+              y: [0, -15, 0], 
+              rotate: [-37, -33, -37],
+              scale: [1, 1.05, 1]
+            }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          />
+
+          {/* Right Top Cloud: awan_1 - Duplicated awan_2 but in awan_1 position */}
+          <motion.img 
+            src="/awan_2.png" 
+            alt="Cloud Right Top"
+            className="absolute right-[28%] top-[27%] h-[76px] md:h-[131px] object-contain opacity-100 z-30 pointer-events-none"
+            animate={{ 
+              y: [0, -12, 0], 
+              rotate: [1, -3, 1],
+              scale: [1, 1.08, 1]
+            }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          />
+
+          {/* Right Middle Cloud: awan_2 - 2% lefter */}
+          <motion.img 
+            src="/awan_2.png" 
+            alt="Cloud Right Middle"
+            className="absolute right-[21%] bottom-[33%] h-[66px] md:h-[121px] object-contain opacity-100 z-30 pointer-events-none"
+            animate={{ 
+              y: [0, -20, 0], 
+              rotate: [-1, 1, -1],
+              scale: [1, 1.03, 1]
+            }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          />
+        </div>
       </section>
 
       <AnimatePresence>
