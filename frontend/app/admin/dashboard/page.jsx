@@ -13,7 +13,21 @@ const BTN_PRIMARY = "px-4 py-2 bg-white text-black font-extrabold text-xs upperc
 const BTN_DANGER = "px-3 py-1.5 bg-red-900/50 border border-red-700/60 text-red-100 font-bold text-xs uppercase tracking-wider rounded hover:bg-red-800/60 transition-colors";
 const BTN_SUCCESS = "px-3 py-1.5 bg-emerald-900/50 border border-emerald-700/60 text-emerald-100 font-bold text-xs uppercase tracking-wider rounded hover:bg-emerald-800/60 transition-colors";
 
+const BTN_ICON_DANGER = "p-1.5 bg-red-900/50 border border-red-700/60 rounded hover:bg-red-800/60 transition-colors flex items-center justify-center";
+const BTN_ICON_SUCCESS = "p-1.5 bg-emerald-900/50 border border-emerald-700/60 rounded hover:bg-emerald-800/60 transition-colors flex items-center justify-center";
+
+const CheckIcon = () => <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>;
+const TrashIcon = () => <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+
 const CLIP_BTN = { clipPath: "polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)" };
+
+function getCardHoverStyle(id) {
+  if (!id) return "";
+  const isPink = id.charCodeAt(id.length - 1) % 2 === 0;
+  return isPink 
+    ? "hover:shadow-[0_0_20px_rgba(217,70,239,0.4)] hover:border-fuchsia-500/50 hover:bg-fuchsia-900/10" 
+    : "hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:border-yellow-500/50 hover:bg-yellow-900/10";
+}
 
 function Badge({ label, color }) {
   const map = {
@@ -363,26 +377,26 @@ function RegistrationsPanel() {
   return (
     <div className="flex flex-col gap-3">
       {regs.map((r) => (
-        <div key={r.id} className={`${CARD} rounded p-4`} style={CLIP_BTN}>
+        <div key={r.id} className={`${CARD} rounded-xl p-4 group transition-all duration-300 ${getCardHoverStyle(r.id)}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <p className="font-mono font-bold text-sm text-white">{r.user?.name}</p>
                 <Badge label={r.paymentStatus} />
-                {r.pdfExported && <span className="font-mono text-[10px] text-slate-600">PDF ✓</span>}
+                {r.pdfExported && <span className="font-mono text-[10px] text-slate-600 group-hover:text-white transition-colors duration-300">PDF ✓</span>}
               </div>
-              <p className="font-mono text-xs text-slate-500">{r.user?.email} · {r.event?.title}</p>
-              <p className="font-mono text-xs text-slate-600 mt-1">Session: {r.selectedSession} · {formatDate(r.createdAt)} · {formatRp(r.event?.price)}</p>
+              <p className="font-sans text-xs text-slate-500 group-hover:text-white transition-colors duration-300">{r.user?.email} · {r.event?.title}</p>
+              <p className="font-sans text-xs text-slate-600 mt-1 uppercase group-hover:text-white transition-colors duration-300">Session: {r.selectedSession} · {formatDate(r.createdAt)} · {formatRp(r.event?.price)}</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               {r.paymentStatus === "PENDING" && <>
-                <button onClick={() => confirmPayment(r.id, "CONFIRMED")} className={BTN_SUCCESS}>Confirm</button>
+                <button onClick={() => confirmPayment(r.id, "CONFIRMED")} className={BTN_ICON_SUCCESS}><CheckIcon /></button>
                 <button onClick={() => confirmPayment(r.id, "REJECTED")} className={BTN_DANGER}>Reject</button>
               </>}
               {r.paymentStatus === "CONFIRMED" && !r.pdfExported && (
                 <button onClick={() => exportPdf(r.id)} className="px-3 py-1.5 bg-blue-900/50 border border-blue-700/60 text-blue-100 font-bold text-xs uppercase rounded hover:bg-blue-800/60 transition-colors">PDF</button>
               )}
-              <button onClick={() => del(r.id)} className={BTN_DANGER}>Del</button>
+              <button onClick={() => del(r.id)} className={BTN_ICON_DANGER}><TrashIcon /></button>
             </div>
           </div>
         </div>
@@ -411,27 +425,27 @@ function ServicesPanel() {
   return (
     <div className="flex flex-col gap-3">
       {bookings.map((b) => (
-        <div key={b.id} className={`${CARD} rounded p-4`} style={CLIP_BTN}>
+        <div key={b.id} className={`${CARD} rounded-xl p-4 group transition-all duration-300 ${getCardHoverStyle(b.id)}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <p className="font-mono font-bold text-sm text-white">{b.requestor?.name}</p>
                 <Badge label={b.serviceType} />
                 <Badge label={b.paymentStatus} />
-                {b.pdfExported && <span className="font-mono text-[10px] text-slate-600">PDF ✓</span>}
+                {b.pdfExported && <span className="font-mono text-[10px] text-slate-600 group-hover:text-white transition-colors duration-300">PDF ✓</span>}
               </div>
-              <p className="font-mono text-xs text-slate-500">{b.requestor?.email} · {b.locationString}</p>
-              <p className="font-mono text-xs text-slate-600 mt-1">{formatDate(b.targetDate)} · {b.additionalNotes || "—"}</p>
+              <p className="font-sans text-xs text-slate-500 group-hover:text-white transition-colors duration-300">{b.requestor?.email} · {b.locationString}</p>
+              <p className="font-sans text-xs text-slate-600 mt-1 uppercase group-hover:text-white transition-colors duration-300">{formatDate(b.targetDate)} · {b.additionalNotes || "—"}</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               {b.paymentStatus === "PENDING" && <>
-                <button onClick={() => pay(b.id, "CONFIRMED")} className={BTN_SUCCESS}>Confirm</button>
+                <button onClick={() => pay(b.id, "CONFIRMED")} className={BTN_ICON_SUCCESS}><CheckIcon /></button>
                 <button onClick={() => pay(b.id, "REJECTED")} className={BTN_DANGER}>Reject</button>
               </>}
               {b.paymentStatus === "CONFIRMED" && !b.pdfExported && (
                 <button onClick={() => pdf(b.id)} className="px-3 py-1.5 bg-blue-900/30 border border-blue-700/40 text-blue-400 font-bold text-xs uppercase rounded hover:bg-blue-800/40 transition-colors">PDF</button>
               )}
-              <button onClick={() => del(b.id)} className={BTN_DANGER}>Del</button>
+              <button onClick={() => del(b.id)} className={BTN_ICON_DANGER}><TrashIcon /></button>
             </div>
           </div>
         </div>
@@ -460,29 +474,29 @@ function BookingsPanel() {
   return (
     <div className="flex flex-col gap-3">
       {bookings.map((b) => (
-        <div key={b.id} className={`${CARD} rounded p-4`} style={CLIP_BTN}>
+        <div key={b.id} className={`${CARD} rounded-xl p-4 group transition-all duration-300 ${getCardHoverStyle(b.id)}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <p className="font-mono font-bold text-sm text-white">{b.user?.name}</p>
                 <Badge label={b.paymentStatus} />
                 <Badge label={b.status} />
-                {b.pdfExported && <span className="font-mono text-[10px] text-slate-600">PDF ✓</span>}
+                {b.pdfExported && <span className="font-mono text-[10px] text-slate-600 group-hover:text-white transition-colors duration-300">PDF ✓</span>}
               </div>
-              <p className="font-mono text-xs text-slate-500">{b.user?.email} · {b.serviceType}</p>
-              <p className="font-mono text-xs text-slate-600 mt-1">
+              <p className="font-sans text-xs text-slate-500 group-hover:text-white transition-colors duration-300">{b.user?.email} · {b.serviceType}</p>
+              <p className="font-sans text-xs text-slate-600 mt-1 uppercase group-hover:text-white transition-colors duration-300">
                 {formatDate(b.bookingDate)} · {b.startTime} – {b.endTime} · {formatRp(b.totalAmount)}
               </p>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               {b.paymentStatus === "PENDING" && <>
-                <button onClick={() => pay(b.id, "CONFIRMED")} className={BTN_SUCCESS}>Confirm</button>
+                <button onClick={() => pay(b.id, "CONFIRMED")} className={BTN_ICON_SUCCESS}><CheckIcon /></button>
                 <button onClick={() => pay(b.id, "REJECTED")} className={BTN_DANGER}>Reject</button>
               </>}
               {b.paymentStatus === "CONFIRMED" && !b.pdfExported && (
                 <button onClick={() => pdf(b.id)} className="px-3 py-1.5 bg-blue-900/30 border border-blue-700/40 text-blue-400 font-bold text-xs uppercase rounded hover:bg-blue-800/40 transition-colors">PDF</button>
               )}
-              <button onClick={() => del(b.id)} className={BTN_DANGER}>Del</button>
+              <button onClick={() => del(b.id)} className={BTN_ICON_DANGER}><TrashIcon /></button>
             </div>
           </div>
         </div>
@@ -768,29 +782,29 @@ function UsersPanel() {
   return (
     <div className="flex flex-col gap-3">
       {users.map((u) => (
-        <div key={u.id} className={`${CARD} rounded p-4`} style={CLIP_BTN}>
+        <div key={u.id} className={`${CARD} rounded-xl p-4 group transition-all duration-300 ${getCardHoverStyle(u.id)}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <p className="font-mono font-bold text-sm text-white truncate">{u.name}</p>
                 <Badge label={u.role} />
-                {u.isEmailVerified && <span className="font-mono text-[10px] text-emerald-600">✓ Verified</span>}
+                {u.isEmailVerified && <span className="font-mono text-[10px] text-emerald-600 group-hover:text-emerald-400 transition-colors duration-300">✓ Verified</span>}
               </div>
-              <p className="font-mono text-xs text-slate-500">{u.email} · {u.phone}</p>
-              <div className="flex gap-4 mt-1 text-[10px] text-slate-600 font-mono flex-wrap">
+              <p className="font-sans text-xs text-slate-500 group-hover:text-white transition-colors duration-300">{u.email} · {u.phone}</p>
+              <div className="flex gap-4 mt-1 text-[10px] text-slate-600 font-sans uppercase flex-wrap group-hover:text-white transition-colors duration-300">
                 <span>Bookings: {u._count?.bookings}</span>
                 <span>Events: {u._count?.eventRegistrations}</span>
                 <span>Services: {u._count?.serviceBookings}</span>
                 <span>Joined: {formatDate(u.createdAt)}</span>
               </div>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               {u.role === "USER" ? (
                 <button onClick={() => setRole(u.id, "ADMIN")} className="px-3 py-1.5 bg-red-900/30 border border-red-700/40 text-red-400 font-bold text-xs uppercase rounded hover:bg-red-800/40 transition-colors">→ Admin</button>
               ) : (
                 <button onClick={() => setRole(u.id, "USER")} className="px-3 py-1.5 bg-slate-800 text-slate-400 text-xs font-bold uppercase rounded hover:bg-slate-700 transition-colors">→ User</button>
               )}
-              <button onClick={() => del(u.id)} className={BTN_DANGER}>Del</button>
+              <button onClick={() => del(u.id)} className={BTN_ICON_DANGER}><TrashIcon /></button>
             </div>
           </div>
         </div>

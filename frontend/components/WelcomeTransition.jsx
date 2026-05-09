@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Gear Components ─────────────────────────────────────────────────────────
 function GearShape({ id, cx, cy, pitchR, toothH, teeth, angleOffset = 0, duration = 4, spinDir = 1 }) {
@@ -141,14 +141,14 @@ function RedirectText() {
     if (!showDots) return;
     let count = 1;
     const interval = setInterval(() => {
-      setDots(" .".repeat(count));
+      setDots(".".repeat(count));
       count = (count % 3) + 1;
     }, 400);
     return () => clearInterval(interval);
   }, [showDots]);
 
   return (
-    <div className="flex" style={{ 
+    <div className="flex relative w-fit mx-auto" style={{ 
       color: "rgba(255,255,255,0.7)", 
       fontFamily: "'Inter', sans-serif",
       fontSize: "9px", 
@@ -157,7 +157,7 @@ function RedirectText() {
       fontWeight: 300,
     }}>
       <span>{text}</span>
-      <span style={{ minWidth: "3em", textAlign: "left", whiteSpace: "pre" }}>
+      <span style={{ position: "absolute", left: "100%", whiteSpace: "pre" }}>
         {showDots ? dots : ""}
       </span>
     </div>
@@ -188,6 +188,42 @@ function BackgroundBlobs() {
         className="absolute -bottom-40 -right-40 w-[800px] h-[800px] rounded-full filter blur-[150px] opacity-5"
         style={{ backgroundColor: "rgba(0, 255, 255, 0.6)" }}
       />
+    </div>
+  );
+}
+
+// ─── Domino Chevrons ──────────────────────────────────────────────────────────
+function DominoChevrons({ active }) {
+  const colors = ["#facc15", "#f59e0b", "#f97316", "#ea580c", "#dc2626", "#991b1b"];
+  const chevronCount = 18;
+  
+  return (
+    <div className="absolute inset-0 pointer-events-none z-[5] overflow-hidden flex items-center mix-blend-screen">
+      {active && Array.from({ length: chevronCount }).map((_, i) => {
+        const colorIndex = Math.floor((i / chevronCount) * colors.length);
+        const color = colors[colorIndex];
+        return (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -100 }}
+            animate={{ 
+              opacity: [0, 0.6, 0],
+              x: [-100, 0, 100],
+            }}
+            transition={{ 
+              duration: 2.2, 
+              delay: i * 0.1, 
+              ease: "circOut" 
+            }}
+            className="h-[100vh] -ml-[10vw] flex-shrink-0"
+            style={{ width: "22vw" }}
+          >
+            <svg viewBox="0 0 24 24" preserveAspectRatio="none" className="w-full h-full" style={{ color }}>
+              <path d="M 0 0 L 12 12 L 0 24 L 8 24 L 20 12 L 8 0 Z" fill="currentColor" />
+            </svg>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
@@ -223,6 +259,7 @@ export default function WelcomeTransition({ username, onComplete }) {
       className="fixed inset-0 bg-[#010204] z-[9999] overflow-hidden flex flex-col items-center justify-center"
     >
       <BackgroundBlobs />
+      <DominoChevrons active={showGears && !isExiting} />
       
       <div className="relative z-20 flex flex-col items-center">
         {/* Main Text Container - Fixed Vertical Area to avoid jumping */}
