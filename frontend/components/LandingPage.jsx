@@ -166,52 +166,163 @@ function EventSlider() {
 }
 
 // ─── Merch Randomizer (Null-It Engine) ───────────────
-const MOCK_MERCH = Array.from({ length: 12 }).map((_, i) => {
-  let status = "available";
-  if (i % 3 === 1) status = "new_drop";
-  if (i % 3 === 2) status = "sold_out";
-
-  return {
-    id: `merch_${i}`,
-    name: `KALCERIA EDITION MK-${i + 1}`,
-    status: status,
-    isSeven: status === "new_drop",
-    isPilih: false,
-    image: `https://picsum.photos/id/${10 + i}/400/400`
-  };
-});
-
-function useMerchRandomizer(items) {
-  const [inventory, setInventory] = useState(items);
+function useMerchRandomizer() {
+  const [inventory, setInventory] = useState([]);
   const [displayed, setDisplayed] = useState([]);
 
   useEffect(() => {
-    const pickMerch = () => {
+    const loadAndPick = () => {
+      const raw = localStorage.getItem("kalceria_dummy_products");
+      let items = raw ? JSON.parse(raw) : [];
+      
+      if (!items.length) return;
+
       setInventory((prev) => {
-        let pool = prev.filter(p => !p.isPilih);
-        if (pool.length < 4) {
-          prev = prev.map(p => ({ ...p, isPilih: false }));
-          pool = prev;
-        }
-        
-        let priority = pool.filter(p => p.isSeven).sort(() => 0.5 - Math.random());
-        let normal = pool.filter(p => !p.isSeven).sort(() => 0.5 - Math.random());
-        
-        const merged = [...priority, ...normal];
-        const picked = merged.slice(0, 4);
-        const pickedIds = picked.map(p => p.id);
-        
+        // Track picked items in the current session if needed, 
+        // but simple random pick is fine for showcase.
+        const shuffled = [...items].sort(() => 0.5 - Math.random());
+        const picked = shuffled.slice(0, 4);
         setDisplayed(picked);
-        return prev.map(p => pickedIds.includes(p.id) ? { ...p, isPilih: true } : p);
+        return items;
       });
     };
 
-    pickMerch();
-    const interval = setInterval(pickMerch, 5000);
+    loadAndPick();
+    const interval = setInterval(loadAndPick, 6000); // Slightly slower for typewriter
     return () => clearInterval(interval);
   }, []);
 
   return displayed;
+}
+
+function ShowcaseTypewriter({ text }) {
+  const [displayed, setDisplayed] = useState("");
+  
+  useEffect(() => {
+    setDisplayed("");
+    let i = 0;
+    const interval = setInterval(() => {
+      setDisplayed(text.slice(0, i + 1));
+      i++;
+      if (i >= text.length) clearInterval(interval);
+    }, 40); // Fast but readable typing
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return <span className="font-mono">{displayed}</span>;
+}
+
+function MerchCard({ item, isInitial, index }) {
+  const bg = item.imageUrl || `https://picsum.photos/seed/${item.id}/600/800`;
+  
+  // Dynamic Blobs based on Index
+  const blobConfigs = [
+    { c1: "bg-red-500", c2: "bg-emerald-500" }, // Index 0: Red - Green
+    { c1: "bg-yellow-500", c2: "bg-red-500" },   // Index 1: Gold - Red
+    { c1: "bg-yellow-500", c2: "bg-emerald-500" }, // Index 2: Gold - Green
+    { c1: "bg-yellow-500", c2: "bg-cyan-500" }     // Index 3: Gold - Blue Sea
+  ];
+  const blobs = blobConfigs[index % 4];
+
+  return (
+    <motion.div
+      layout
+      initial={isInitial ? { opacity: 0, y: 30 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+      className="relative flex flex-col bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden group min-h-[374px]"
+      style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }}
+    >
+      {/* Background Blobs */}
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-30">
+        <motion.div 
+          animate={{ x: [0, 15, 0], y: [0, -15, 0], scale: [1, 1.1, 1] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          className={`absolute -top-8 -left-8 w-32 h-32 rounded-full blur-[35px] ${blobs.c1}`} 
+        />
+        <motion.div 
+          animate={{ x: [0, -15, 0], y: [0, 15, 0], scale: [1.1, 0.9, 1.1] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className={`absolute -bottom-8 -right-8 w-32 h-32 rounded-full blur-[35px] ${blobs.c2}`} 
+        />
+      </div>
+
+      {/* Invisible Frame for Image */}
+      <div className="p-3 relative z-10">
+        <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-black/60 border border-white/5 shadow-inner">
+          <AnimatePresence mode="wait">
+            <motion.img 
+              key={item.id}
+              initial={{ opacity: 0, x: 30, filter: "blur(8px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: -30, filter: "blur(8px)" }}
+              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+              src={bg} 
+              alt={item.name} 
+              className="absolute inset-0 w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-700" 
+            />
+          </AnimatePresence>
+          
+          <AnimatePresence mode="wait">
+            <motion.div 
+              key={item.id}
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -15 }}
+              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+              className="absolute top-3 left-3 z-20"
+            >
+              {item.label === "HOT DEALS" && (
+                <span 
+                  className="text-[12px] font-mono font-black uppercase tracking-tighter text-yellow-400"
+                  style={{ textShadow: "1px 1.2px 0px #854d0e, 2px 2.5px 0px #713f12, 2.5px 4px 6px rgba(0,0,0,0.6)" }}
+                >
+                  HOT DEALS
+                </span>
+              )}
+              {item.label === "AVAILABLE" && (
+                <span 
+                  className="text-[10px] font-mono font-black uppercase tracking-tighter text-[#ffe2d1]"
+                  style={{ textShadow: "1px 0.8px 0px #94a3b8, 1.5px 1.5px 0px #64748b, 2px 2px 5px rgba(0,0,0,0.4)" }}
+                >
+                  AVAILABLE
+                </span>
+              )}
+              {item.label === "SOLD OUT" && (
+                <div className="relative inline-block">
+                  <span 
+                    className="text-[10px] font-mono font-black uppercase tracking-tighter text-white"
+                    style={{ textShadow: "1px 0.8px 0px #475569, 1.5px 1.5px 0px #334155, 2px 2px 5px rgba(0,0,0,0.5)" }}
+                  >
+                    SOLD OUT
+                  </span>
+                  <div className="absolute top-[55%] left-[-2px] w-[calc(100%+4px)] h-[1.2px] bg-red-600 shadow-[0_0_5px_rgba(220,38,38,0.5)]" />
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="px-5 pb-6 flex flex-col flex-1 relative z-10">
+        <div className="mt-3 mb-2 h-14 overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <h3 className="font-sans font-black text-base tracking-tight text-white uppercase leading-tight">
+                <ShowcaseTypewriter text={item.name} />
+              </h3>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 
@@ -341,7 +452,7 @@ function FloatingSpareParts() {
   ];
 
   return (
-    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+    <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
       {parts.map((part, i) => {
         // Adjust size for top-right (index 1) and bottom-left (index 2)
         const isSmaller = i === 1 || i === 2;
@@ -351,7 +462,7 @@ function FloatingSpareParts() {
           <motion.img
             key={i}
             src={part.src}
-            className={`absolute ${part.pos} ${sizeClass} h-auto opacity-70`}
+            className={`absolute ${part.pos} ${sizeClass} h-auto ${isSmaller && i === 2 || i === 3 ? "opacity-100" : "opacity-70"}`}
             initial={{ rotate: part.rot }}
             animate={{
               y: [0, -20, 0],
@@ -366,6 +477,118 @@ function FloatingSpareParts() {
           />
         );
       })}
+    </div>
+  );
+}
+
+// ─── Tropical Particles Component (Lush Greenery) ────────
+function TropicalParticles() {
+  const particles = useMemo(() => Array.from({ length: 40 }).map((_, i) => ({
+    id: i,
+    left: `${10 + Math.random() * 80}%`, // Wider spread
+    bottom: `${40 + Math.random() * 30}%`, // Spawning from middle/top of bush
+    size: Math.random() * 4 + 2, 
+    color: ['#bef264', '#4ade80', '#22c55e', '#166534', '#86efac'][Math.floor(Math.random() * 5)], // Varied greens
+    delay: Math.random() * 5,
+    duration: 4 + Math.random() * 4, // Calmer rise
+    xDrift: (Math.random() - 0.5) * 60,
+    yRise: -(120 + Math.random() * 180),
+  })), []);
+
+  return (
+    <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full"
+          style={{
+            width: p.size,
+            height: p.size,
+            left: p.left,
+            bottom: p.bottom,
+            backgroundColor: p.color,
+            boxShadow: `0 0 10px ${p.color}88`,
+          }}
+          animate={{
+            x: [0, p.xDrift, 0],
+            y: [0, p.yRise],
+            opacity: [0, 0.75, 0],
+          }}
+          transition={{
+            duration: p.duration,
+            repeat: Infinity,
+            ease: "easeOut",
+            delay: p.delay,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Aurora Particles Component (Tokyo Night Atmosphere) ─
+function AuroraParticles() {
+  const [pillars, setPillars] = useState([]);
+
+  useEffect(() => {
+    const spawnPillar = () => {
+      const id = Date.now() + Math.random();
+      // Organic aurora color spectrum
+      const colors = ['#4ade80', '#10b981', '#d946ef', '#a855f7', '#06b6d4', '#4ade80'];
+      const newPillar = {
+        id,
+        left: `${Math.random() * 140 - 20}%`,
+        width: Math.random() * 400 + 150, // Wider for softer edges
+        color: colors[Math.floor(Math.random() * colors.length)],
+        duration: 20 + Math.random() * 20, // Much slower for natural feel
+        skew: (Math.random() - 0.5) * 40,
+        blur: Math.random() * 50 + 80, // High blur for feathering
+      };
+      setPillars(prev => [...prev, newPillar]);
+      setTimeout(() => {
+        setPillars(prev => prev.filter(p => p.id !== id));
+      }, newPillar.duration * 1000);
+    };
+
+    // Initial scattered start
+    for(let i=0; i<8; i++) {
+      setTimeout(spawnPillar, i * 600);
+    }
+
+    const interval = setInterval(spawnPillar, 4000); 
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="absolute inset-0 z-1 pointer-events-none overflow-hidden mix-blend-screen opacity-60">
+      <AnimatePresence>
+        {pillars.map(p => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 0, scaleX: 0.8 }}
+            animate={{ 
+              opacity: [0, 0.4, 0.5, 0.4, 0], 
+              x: [0, 80, -40, 40], // Natural drifting
+              skewX: [p.skew, p.skew + 12, p.skew - 8, p.skew], // Organic swaying
+              scaleY: [1, 1.05, 0.98, 1.02, 1], // Breathing effect
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ 
+              duration: p.duration, 
+              ease: "easeInOut",
+              times: [0, 0.15, 0.5, 0.85, 1] 
+            }}
+            className="absolute top-[-30%] h-[160%]"
+            style={{
+              width: p.width,
+              left: p.left,
+              filter: `blur(${p.blur}px)`,
+              background: `linear-gradient(to bottom, transparent, ${p.color}22 20%, ${p.color} 50%, ${p.color}22 80%, transparent)`,
+              maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)',
+            }}
+          />
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
@@ -797,7 +1020,15 @@ export default function LandingPage({ onNavigateAuth }) {
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const displayedMerch = useMerchRandomizer(MOCK_MERCH);
+  const displayedMerch = useMerchRandomizer();
+  const [merchInitial, setMerchInitial] = useState(true);
+
+  useEffect(() => {
+    if (displayedMerch.length > 0) {
+      const t = setTimeout(() => setMerchInitial(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [displayedMerch.length]);
 
   const ABOUT_IMAGES = [
     "/aboutus_bg1.png",
@@ -1019,76 +1250,78 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 4: Merchandise / Support Us ── */}
-      <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center py-20 z-40 border-t border-slate-900 bg-transparent isolate">
+      <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center py-20 z-40 border-t border-white/10 bg-transparent isolate overflow-hidden">
+        {/* Golden Glow Border Aura - Aggressive */}
+        <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_50px_rgba(251,191,36,0.7)] z-50 pointer-events-none" />
         
         {/* The Ultimate Background */}
         <SupportUsBackground />
+        
+        {/* Altar Border Element (Reversed 180, Truncated at Border) */}
+        <div className="absolute top-[-130px] md:top-[-220px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-5 opacity-80">
+          <img src="/altar.png" alt="Altar" className="h-[320px] md:h-[540px] object-contain rotate-180 drop-shadow-[0_10px_70px_rgba(255,255,255,0.05)]" />
+        </div>
+
+        {/* Architectural Wall Backgrounds */}
+        <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
+          <img src="/wall_2.png" alt="Wall 2" className="absolute bottom-0 right-0 h-[215px] md:h-[377px] object-contain opacity-90 brightness-110" />
+          <img src="/wall_1.png" alt="Wall 1" className="absolute bottom-0 left-[-2%] md:left-[9%] h-[175px] md:h-[304px] object-contain opacity-90 brightness-110" />
+        </div>
+
         <FloatingSpareParts />
 
-        <h2 className="relative z-10 text-6xl md:text-8xl font-black uppercase tracking-tighter mb-16" style={{ textShadow: "4px 4px 0 rgba(255,255,255,0.1)" }}>
-          <Typewriter text="SUPPORT US" mode="none" delay={6000} />
-        </h2>
+        <div className="relative z-10 mb-24 flex justify-center w-full">
+           <motion.h2 
+             className="relative text-6xl md:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text"
+             style={{ 
+               backgroundColor: "white",
+               backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
+               backgroundSize: "100% 200%",
+               textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)" 
+             }}
+             animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
+             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+           >
+             <Typewriter text="SUPPORT US" mode="none" delay={6000} />
+           </motion.h2>
+        </div>
 
-        {/* Merch Grid Wrapper */}
-        <div className="relative z-10 w-full max-w-5xl px-4 mb-20">
+        <div className="relative z-10 w-full max-w-6xl px-4 mb-20">
           <StarDust />
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            <AnimatePresence mode="popLayout">
-            {displayedMerch.map((item) => (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.5, ease: "backOut" }}
-                className="relative flex flex-col bg-[#0c1528] border border-slate-800 shadow-xl overflow-hidden group min-h-[420px]"
-                style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
-              >
-                <div className="relative aspect-square w-full flex items-center justify-center border-b border-slate-800 overflow-hidden bg-[#050a14]">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
-                <div className="p-4 flex flex-col bg-[#0c1528] group-hover:bg-[#111c34] transition-colors h-full flex-1">
-                  <h3 className="font-sans font-bold text-sm tracking-wide text-white uppercase">{item.name}</h3>
-                  <div className="mt-auto pt-4 flex">
-                    {item.status === 'available' && (
-                      <div className="px-3 py-1.5 bg-[#22c55e] text-[#050a14] font-sans font-extrabold uppercase tracking-wide text-[10px]" style={{ clipPath: "polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)" }}>
-                        AVAILABLE
-                      </div>
-                    )}
-                    {item.status === 'new_drop' && (
-                      <div className="px-3 py-1.5 bg-[#FF00FF] text-white font-sans font-extrabold uppercase tracking-wide text-[10px]" style={{ clipPath: "polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)" }}>
-                        NEW DROP
-                      </div>
-                    )}
-                    {item.status === 'sold_out' && (
-                      <div className="px-3 py-1.5 bg-gray-200 text-[#ff003c] font-sans font-extrabold uppercase tracking-wide text-[10px]" style={{ clipPath: "polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)" }}>
-                        SOLD OUT
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+            {displayedMerch.map((item, idx) => (
+              <MerchCard key={idx} item={item} isInitial={merchInitial} index={idx} />
             ))}
-          </AnimatePresence>
+            {!displayedMerch.length && (
+               <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-3xl">
+                 <p className="font-mono text-slate-500 uppercase tracking-widest text-sm">Synchronizing Inventory...</p>
+               </div>
+            )}
           </div>
         </div>
 
+        {/* Bush Footer Decoration (Colliding in Middle, Truncated at Border) */}
+        <div className="absolute bottom-[-75px] md:bottom-[-125px] left-1/2 -translate-x-1/2 flex items-end justify-center pointer-events-none z-5 w-screen overflow-hidden opacity-90">
+          <TropicalParticles />
+          <img src="/bush_1.png" alt="Bush 1" className="h-[180px] md:h-[320px] object-contain -mr-16 md:-mr-28 -translate-y-6 md:-translate-y-10" />
+          <img src="/bush_2.png" alt="Bush 2" className="h-[180px] md:h-[320px] object-contain -ml-16 md:-ml-28" />
+        </div>
+
         {/* Marketplace Links */}
-        <div className="relative z-10 flex gap-16 items-center justify-center">
-          <a href="#" className="flex flex-col items-center gap-3 group transition-transform hover:scale-105">
-            <div className="relative w-48 md:w-56 h-16 block">
+        <div className="relative z-20 flex gap-16 items-center justify-center mb-24">
+          <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
+            <div className="relative w-52 md:w-64 h-[72px] block">
               <img src="/logo_tokpedgray.png" alt="Tokopedia" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
               <img src="/logo_tokped.png" alt="Tokopedia Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(3,172,14,0.6)]" draggable={false} />
             </div>
-            <span className="font-sans text-sm text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">Tokopedia - Kalceros</span>
+            <span className="font-sans text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">Tokopedia - Kalceros</span>
           </a>
-          <a href="#" className="flex flex-col items-center gap-3 group transition-transform hover:scale-105">
-            <div className="relative w-48 md:w-56 h-16 block">
+          <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
+            <div className="relative w-52 md:w-64 h-[72px] block">
               <img src="/logo_shopeegray.png" alt="Shopee" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
               <img src="/logo_shopee.png" alt="Shopee Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(238,77,45,0.6)]" draggable={false} />
             </div>
-            <span className="font-sans text-sm text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">Shopee - Kalcres</span>
+            <span className="font-sans text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">Shopee - Kalcres</span>
           </a>
         </div>
       </section>
@@ -1410,11 +1643,11 @@ export default function LandingPage({ onNavigateAuth }) {
             </span>
           </motion.button>
 
-          {/* Earthman - Hero Figure at Bottom */}
+          {/* Earthman - Hero Figure at Bottom - Fine-tuned Position */}
           <motion.img 
             src="/earthman.png" 
             alt="Earthman" 
-            className="absolute bottom-[-2%] h-[40%] md:h-[54%] object-contain z-20 pointer-events-none"
+            className="absolute bottom-[-4%] h-[40%] md:h-[54%] object-contain z-20 pointer-events-none"
             initial={{ y: 60, opacity: 0, rotate: 0, scale: 1 }}
             whileInView={{ y: 0, opacity: 1, rotate: 0, scale: 1 }}
             viewport={{ once: true }}
@@ -1511,6 +1744,150 @@ export default function LandingPage({ onNavigateAuth }) {
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
           />
+        </div>
+      </section>
+
+      {/* ── Section 8: Final Scene / Tokyo Nights ── */}
+      <section className="relative w-full min-h-[75vh] flex flex-col items-center justify-center py-20 z-50 border-t border-slate-900 overflow-hidden bg-black isolation-auto">
+        {/* Tokyo Night Background - ABSOLUTE BACK */}
+        <img src="/bg_tokyo.png" alt="Tokyo Night" className="absolute inset-0 w-full h-full object-cover opacity-50 z-[-2] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050a14] via-transparent to-[#050a14] z-[-2] pointer-events-none" />
+        
+        {/* Battle Glows (Anakin vs Obi-Wan Vibe) - BEHIND LOGOS */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+           {/* Red Dynamic Glow (Left / Kalceria) */}
+           <motion.div 
+             animate={{ opacity: [0.3, 0.5, 0.3] }}
+             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+             className="absolute top-[-10%] left-[-15%] w-[60%] h-[120%] bg-red-600/30 blur-[130px] rounded-full will-change-transform"
+           />
+           {/* Cyan Dynamic Glow (Right / DSL) */}
+           <motion.div 
+             animate={{ opacity: [0.3, 0.5, 0.3] }}
+             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.5 }}
+             className="absolute top-[-10%] right-[-15%] w-[60%] h-[120%] bg-cyan-500/30 blur-[130px] rounded-full will-change-transform"
+           />
+        </div>
+
+        {/* Static Star Wars Backdrop Focal Point */}
+        <div 
+          className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl h-full flex items-center justify-center z-[5] pointer-events-none"
+          style={{ opacity: 0.7 }}
+        >
+          <img 
+            src="/starwarr.png" 
+            alt="Battle of Heroes" 
+            className="w-full h-auto max-h-[85vh] object-contain scale-[1.4]"
+            style={{ 
+              filter: "contrast(1.2) brightness(0.9) saturate(1.1) drop-shadow(0 0 80px rgba(0,0,0,0.8))",
+            }}
+          />
+        </div>
+
+        {/* Scattered Aurora Effect - TOP ATMOSPHERE */}
+        <div className="absolute inset-0 z-40 pointer-events-none">
+          <AuroraParticles />
+        </div>
+        
+        <div className="relative z-10 w-full max-w-6xl px-8 flex flex-col items-center gap-16">
+           {/* Collaboration Header - Shifted 15% Under */}
+           <div 
+             className="flex items-center justify-center gap-6 md:gap-10"
+             style={{ transform: "translateY(15%)" }}
+           >
+              {/* Kalceria Logo - Shifted 15% Under */}
+              <motion.img 
+                src="/logologin.png" 
+                alt="Kalceria" 
+                className="h-18 md:h-24 w-auto object-contain -rotate-[12deg] drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform"
+                animate={{ y: [75, 69, 75], x: '20%' }}
+                transition={{ 
+                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                  default: { duration: 0.8 }
+                }}
+              />
+
+              {/* The "X" as an SVG Clipped Glass Artifact (Stabilized) */}
+              <div className="relative flex items-center justify-center group z-20">
+                 {/* X-Backglow */}
+                 <div className="absolute inset-0 bg-white/10 blur-[40px] rounded-full scale-110 opacity-30 pointer-events-none" />
+
+                 {/* Golden-Red Corona Dynamic Flare */}
+                 <motion.div 
+                   animate={{ scale: [1, 1.1, 1], rotate: [0, 360], opacity: [0.2, 0.4, 0.2] }}
+                   transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] md:w-[340px] h-[240px] md:h-[340px] rounded-full blur-[80px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform"
+                 />
+
+                 <svg width="220" height="220" viewBox="0 0 220 220" className="relative z-10 transform-gpu">
+                    <defs>
+                      <clipPath id="collab-x-clip-v3">
+                        <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" style={{ fontFamily: 'Arial Black, sans-serif' }}>X</text>
+                      </clipPath>
+                    </defs>
+                    
+                    <g clipPath="url(#collab-x-clip-v3)">
+                       {/* Glass Fill */}
+                       <rect width="100%" height="100%" fill="rgba(255,255,255,0.18)" />
+                       
+                       {/* Internal Energy Blobs */}
+                       <motion.circle 
+                         animate={{ cx: [30, 190], cy: [30, 190], r: [45, 75, 45] }}
+                         transition={{ duration: 6, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+                         fill="#FF00FF" style={{ filter: 'blur(35px)', opacity: 0.9 }}
+                         className="will-change-[cx,cy]"
+                       />
+                       <motion.circle 
+                         animate={{ cx: [190, 30], cy: [190, 30], r: [75, 45, 75] }}
+                         transition={{ duration: 7, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+                         fill="#FFD700" style={{ filter: 'blur(35px)', opacity: 0.9 }}
+                         className="will-change-[cx,cy]"
+                       />
+                    </g>
+                    
+                    {/* HD Stroke */}
+                    <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" style={{ fontFamily: 'Arial Black, sans-serif' }}>X</text>
+                 </svg>
+              </div>
+
+              {/* DSL Logo - Shifted 15% Under */}
+              <motion.img 
+                src="/dsl.png" 
+                alt="DSL" 
+                className="h-18 md:h-24 w-auto object-contain rotate-[12deg] drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform"
+                animate={{ y: [80, 86, 80], x: '-20%' }}
+                transition={{ 
+                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                  default: { duration: 0.8 }
+                }}
+              />
+           </div>
+           
+           <div className="flex flex-col items-center gap-8">
+              <motion.h2 
+                initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
+                whileInView={{ opacity: 1, y: 0, x: '4%', scale: 0.85, filter: "blur(0px)" }}
+                viewport={{ once: false, amount: 0.5 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white text-center"
+                style={{ 
+                  textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)"
+                }}
+              >
+                JOIN US?
+              </motion.h2>
+
+              <motion.img 
+                src="/wa_logo.png" 
+                alt="WhatsApp" 
+                className="h-16 md:h-28 w-auto object-contain drop-shadow-[0_0_40px_rgba(37,211,102,0.5)] z-20"
+                animate={{ y: [0, -6, 0], x: '22%' }}
+                transition={{ 
+                  y: { duration: 5, repeat: Infinity, ease: "easeInOut" },
+                  default: { duration: 0.8 }
+                }}
+              />
+           </div>
         </div>
       </section>
 

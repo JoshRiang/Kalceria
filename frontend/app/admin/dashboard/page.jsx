@@ -407,104 +407,193 @@ function RegistrationsPanel() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PANEL: SERVICE REQUESTS
+// PANEL: PRODUCTS
 // ─────────────────────────────────────────────────────────────────────────────
-function ServicesPanel() {
-  const [bookings, setBookings] = useState([]);
-
-  const load = useCallback(async () => {
-    const r = await api.get("/admin/services");
-    setBookings(r.data.bookings);
-  }, []);
-  useEffect(() => { load(); }, [load]);
-
-  async function pay(id, status) { await api.patch(`/admin/services/${id}/payment`, { status }); load(); }
-  async function del(id) { if (!confirm("Delete?")) return; await api.delete(`/admin/services/${id}`); load(); }
-  async function pdf(id) { await api.patch(`/admin/services/${id}/pdf`); window.open("/receipt.pdf", "_blank"); load(); }
+function ProductCard({ product, onEdit, onDelete }) {
+  const [hover, setHover] = useState(false);
+  const bg = product.imageUrl || `https://picsum.photos/seed/${product.id}/600/800`;
+  
+  const labelStyles = {
+    "HOT DEALS": "bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.5)]",
+    "AVAILABLE": "bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]",
+    "SOLD OUT": "bg-slate-700 text-slate-300 shadow-none opacity-80"
+  };
 
   return (
-    <div className="flex flex-col gap-3">
-      {bookings.map((b) => (
-        <div key={b.id} className={`${CARD} rounded-xl p-4 group transition-all duration-300 ${getCardHoverStyle(b.id)}`}>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <p className="font-mono font-bold text-sm text-white">{b.requestor?.name}</p>
-                <Badge label={b.serviceType} />
-                <Badge label={b.paymentStatus} />
-                {b.pdfExported && <span className="font-mono text-[10px] text-slate-600 group-hover:text-white transition-colors duration-300">PDF ✓</span>}
-              </div>
-              <p className="font-sans text-xs text-slate-500 group-hover:text-white transition-colors duration-300">{b.requestor?.email} · {b.locationString}</p>
-              <p className="font-sans text-xs text-slate-600 mt-1 uppercase group-hover:text-white transition-colors duration-300">{formatDate(b.targetDate)} · {b.additionalNotes || "—"}</p>
-            </div>
-            <div className="flex gap-2 flex-wrap items-center">
-              {b.paymentStatus === "PENDING" && <>
-                <button onClick={() => pay(b.id, "CONFIRMED")} className={BTN_ICON_SUCCESS}><CheckIcon /></button>
-                <button onClick={() => pay(b.id, "REJECTED")} className={BTN_DANGER}>Reject</button>
-              </>}
-              {b.paymentStatus === "CONFIRMED" && !b.pdfExported && (
-                <button onClick={() => pdf(b.id)} className="px-3 py-1.5 bg-blue-900/30 border border-blue-700/40 text-blue-400 font-bold text-xs uppercase rounded hover:bg-blue-800/40 transition-colors">PDF</button>
-              )}
-              <button onClick={() => del(b.id)} className={BTN_ICON_DANGER}><TrashIcon /></button>
-            </div>
-          </div>
+    <motion.div 
+      onHoverStart={() => setHover(true)}
+      onHoverEnd={() => setHover(false)}
+      className="relative w-full aspect-[4/5] overflow-hidden bg-slate-900 border border-white/20 shadow-2xl cursor-pointer group"
+      style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
+    >
+      <motion.div 
+        animate={{ scale: hover ? 1.1 : 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="absolute inset-0 bg-cover bg-center filter saturate-120 contrast-110" 
+        style={{ backgroundImage: `url(${bg})` }} 
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 group-hover:opacity-70 transition-opacity" />
+      
+      {/* Actions Overlay */}
+      <AnimatePresence>
+        {hover && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute inset-0 flex items-center justify-center gap-4 z-30 bg-black/60 backdrop-blur-[2px]"
+          >
+            <button 
+              onClick={(e) => { e.stopPropagation(); onEdit(); }} 
+              className="px-6 py-2.5 bg-green-500/20 border border-green-500/50 text-green-400 font-black uppercase text-[11px] tracking-widest hover:bg-green-500/40 transition-all shadow-[0_0_15px_rgba(34,197,94,0.3)]" 
+              style={CLIP_BTN}
+            >
+              EDIT
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+              className="px-6 py-2.5 bg-red-500/20 border border-red-500/50 text-red-400 font-black uppercase text-[11px] tracking-widest hover:bg-red-500/40 transition-all shadow-[0_0_15px_rgba(239,68,68,0.3)]" 
+              style={CLIP_BTN}
+            >
+              DEL
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="absolute top-4 left-4 z-20">
+        <span className={`px-3 py-1 text-[9px] font-mono font-black uppercase tracking-tighter ${labelStyles[product.label] || labelStyles.AVAILABLE}`} style={{ clipPath: "polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%)" }}>
+          {product.label}
+        </span>
+      </div>
+
+      <div className="absolute inset-0 p-5 flex flex-col justify-end pointer-events-none">
+        <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-300 ease-out">
+          <p className="font-mono text-[10px] text-white font-black tracking-widest mb-1 opacity-90 uppercase">{product.productId || "PROD-XXXX"}</p>
+          <h4 className="font-mono font-black text-2xl uppercase tracking-tighter text-white drop-shadow-[0_0_15px_rgba(0,0,0,0.8)] italic">
+            {product.name}
+          </h4>
         </div>
-      ))}
-      {!bookings.length && <p className="font-mono text-sm text-slate-600">No service requests.</p>}
+      </div>
+    </motion.div>
+  );
+}
+
+const INITIAL_DUMMIES = Array.from({ length: 10 }).map((_, i) => ({
+  id: `mock-${i}`,
+  productId: `KLCR-${100 + i}`,
+  name: i === 0 ? "Obsidian Shift Knob" : i === 1 ? "Carbon Fiber Lip" : i === 2 ? "Aero Dynamic Wing" : i === 3 ? "Forged Pistons Set" : i === 4 ? "Titanium Exhaust" : i === 5 ? "Cold Air Intake" : i === 6 ? "Racing Brake Pads" : i === 7 ? "Coilover Suspension" : i === 8 ? "Billet Fuel Rail" : "High Flow Injectors",
+  imageUrl: `https://picsum.photos/seed/kalceria${i}/600/800`,
+  label: i % 4 === 0 ? "HOT DEALS" : i % 4 === 1 ? "SOLD OUT" : "AVAILABLE"
+}));
+
+function ProductsPanel({ onRefresh }) {
+  const [products, setProducts] = useState([]);
+  const [editing, setEditing] = useState(null); 
+  const [form, setForm] = useState({ productId: "", name: "", imageUrl: "", label: "AVAILABLE" });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Load dummies or from localStorage for persistence in this session
+    const saved = localStorage.getItem("kalceria_dummy_products");
+    if (saved) {
+      setProducts(JSON.parse(saved));
+    } else {
+      setProducts(INITIAL_DUMMIES);
+      localStorage.setItem("kalceria_dummy_products", JSON.stringify(INITIAL_DUMMIES));
+    }
+  }, []);
+
+  const saveToLocal = (data) => {
+    setProducts(data);
+    localStorage.setItem("kalceria_dummy_products", JSON.stringify(data));
+    onRefresh();
+  };
+
+  function setField(k, v) { setForm((p) => ({ ...p, [k]: v })); }
+
+  function startEdit(p) {
+    setEditing(p);
+    setForm({ productId: p.productId, name: p.name, imageUrl: p.imageUrl, label: p.label });
+  }
+
+  function handleSave(e) {
+    e.preventDefault();
+    if (editing) {
+      const updated = products.map(p => p.id === editing.id ? { ...p, ...form } : p);
+      saveToLocal(updated);
+      setEditing(null);
+    } else {
+      const newItem = { ...form, id: `mock-${Date.now()}` };
+      saveToLocal([newItem, ...products]);
+    }
+    setForm({ productId: "", name: "", imageUrl: "", label: "AVAILABLE" });
+  }
+
+  function handleDelete(id) {
+    if (!confirm("Delete product?")) return;
+    saveToLocal(products.filter(p => p.id !== id));
+  }
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-10">
+      <div className="lg:col-span-1 space-y-8">
+        <div className={`${CARD} rounded p-6`} style={CLIP_BTN}>
+          <h3 className="font-mono font-black text-sm uppercase tracking-widest text-slate-400 mb-5">
+            {editing ? "Edit Product" : "New Product"}
+          </h3>
+          <form onSubmit={handleSave} className="flex flex-col gap-4">
+            <div>
+              <label className={LABEL}>Product ID</label>
+              <input className={INPUT} placeholder="e.g. KLCR-001" value={form.productId} onChange={(e) => setField("productId", e.target.value)} required />
+            </div>
+            <div>
+              <label className={LABEL}>Name</label>
+              <input className={INPUT} placeholder="Product name" value={form.name} onChange={(e) => setField("name", e.target.value)} required />
+            </div>
+            <div>
+              <label className={LABEL}>Image URL</label>
+              <input className={INPUT} placeholder="https://..." value={form.imageUrl} onChange={(e) => setField("imageUrl", e.target.value)} required />
+            </div>
+            <div>
+              <label className={LABEL}>Label</label>
+              <select className={INPUT} value={form.label} onChange={(e) => setField("label", e.target.value)}>
+                {["AVAILABLE", "HOT DEALS", "SOLD OUT"].map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            
+            <div className="flex gap-3 mt-4">
+              <button type="submit" className={BTN_PRIMARY} style={CLIP_BTN}>
+                {editing ? "Update Product" : "Create Product"}
+              </button>
+              {editing && (
+                <button type="button" onClick={() => { setEditing(null); setForm({ productId: "", name: "", imageUrl: "", label: "AVAILABLE" }); }}
+                  className="px-4 py-2 bg-slate-800 text-slate-400 text-xs font-bold uppercase tracking-wider rounded hover:bg-slate-700 transition-colors">
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div className="lg:col-span-2">
+        <h3 className="font-mono font-black text-sm uppercase tracking-widest text-white mb-6">Product List</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {products.map((p) => (
+            <ProductCard key={p.id} product={p} onEdit={() => startEdit(p)} onDelete={() => handleDelete(p.id)} />
+          ))}
+          {!products.length && (
+            <div className="lg:col-span-2 border border-dashed border-white/20 p-20 text-center rounded">
+              <p className="text-slate-600 text-xs font-mono uppercase tracking-widest">No products found</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PANEL: NEED US BOOKINGS (TIMEKEEPER)
-// ─────────────────────────────────────────────────────────────────────────────
-function BookingsPanel() {
-  const [bookings, setBookings] = useState([]);
-
-  const load = useCallback(async () => {
-    const r = await api.get("/admin/bookings");
-    setBookings(r.data.bookings);
-  }, []);
-  useEffect(() => { load(); }, [load]);
-
-  async function pay(id, status) { await api.patch(`/admin/bookings/${id}/payment`, { status }); load(); }
-  async function del(id) { if (!confirm("Delete booking?")) return; await api.delete(`/admin/bookings/${id}`); load(); }
-  async function pdf(id) { await api.patch(`/admin/bookings/${id}/pdf`); window.open("/receipt.pdf", "_blank"); load(); }
-
-  return (
-    <div className="flex flex-col gap-3">
-      {bookings.map((b) => (
-        <div key={b.id} className={`${CARD} rounded-xl p-4 group transition-all duration-300 ${getCardHoverStyle(b.id)}`}>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <p className="font-mono font-bold text-sm text-white">{b.user?.name}</p>
-                <Badge label={b.paymentStatus} />
-                <Badge label={b.status} />
-                {b.pdfExported && <span className="font-mono text-[10px] text-slate-600 group-hover:text-white transition-colors duration-300">PDF ✓</span>}
-              </div>
-              <p className="font-sans text-xs text-slate-500 group-hover:text-white transition-colors duration-300">{b.user?.email} · {b.serviceType}</p>
-              <p className="font-sans text-xs text-slate-600 mt-1 uppercase group-hover:text-white transition-colors duration-300">
-                {formatDate(b.bookingDate)} · {b.startTime} – {b.endTime} · {formatRp(b.totalAmount)}
-              </p>
-            </div>
-            <div className="flex gap-2 flex-wrap items-center">
-              {b.paymentStatus === "PENDING" && <>
-                <button onClick={() => pay(b.id, "CONFIRMED")} className={BTN_ICON_SUCCESS}><CheckIcon /></button>
-                <button onClick={() => pay(b.id, "REJECTED")} className={BTN_DANGER}>Reject</button>
-              </>}
-              {b.paymentStatus === "CONFIRMED" && !b.pdfExported && (
-                <button onClick={() => pdf(b.id)} className="px-3 py-1.5 bg-blue-900/30 border border-blue-700/40 text-blue-400 font-bold text-xs uppercase rounded hover:bg-blue-800/40 transition-colors">PDF</button>
-              )}
-              <button onClick={() => del(b.id)} className={BTN_ICON_DANGER}><TrashIcon /></button>
-            </div>
-          </div>
-        </div>
-      ))}
-      {!bookings.length && <p className="font-mono text-sm text-slate-600">No bookings.</p>}
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT: SYSTEM LOG & HEALTH
@@ -558,18 +647,17 @@ function RealTimeGraph({ active }) {
   );
 }
 
-function SystemLog({ registrations = [], bookings = [], services = [] }) {
+function SystemLog({ registrations = [], products = [] }) {
   const [logs, setLogs] = useState([]);
   const [wibTime, setWibTime] = useState("");
 
   useEffect(() => {
     const all = [
       ...registrations.map(r => ({ type: 'EVENT', msg: `New Event Registration: ${r.user?.name}`, time: r.createdAt })),
-      ...bookings.map(b => ({ type: 'BOOKING', msg: `New Timekeeper Booking: ${b.user?.name}`, time: b.createdAt })),
-      ...services.map(s => ({ type: 'SERVICE', msg: `New Service Request: ${s.requestor?.name}`, time: s.createdAt }))
-    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 15);
+      ...products.map(p => ({ type: 'PRODUCT', msg: `Inventory Sync: ${p.name}`, time: new Date() })),
+    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 10);
     setLogs(all);
-  }, [registrations, bookings, services]);
+  }, [registrations, products]);
 
   return (
     <div className="p-5 overflow-hidden h-[450px] flex flex-col border-b border-white/10 bg-black/40">
@@ -590,7 +678,7 @@ function SystemLog({ registrations = [], bookings = [], services = [] }) {
             animate={{ opacity: 1, x: 0 }} 
             className="flex gap-3 border-l border-white/20 pl-3 py-1"
           >
-            <span className="text-slate-400">[{new Date(log.time).toLocaleTimeString()}]</span>
+            <span className="text-slate-400">{new Date(log.time).toLocaleTimeString()}</span>
             <span className={`font-bold ${log.type === 'EVENT' ? 'text-fuchsia-400' : log.type === 'BOOKING' ? 'text-cyan-400' : 'text-orange-400'}`}>
               {log.type}
             </span>
@@ -672,7 +760,7 @@ function MailerStatus() {
 }
 
 function LoomBackground() {
-  const threads = useMemo(() => Array.from({ length: 30 }).map((_, i) => {
+  const threads = useMemo(() => Array.from({ length: 24 }).map((_, i) => {
     const isRainbow = Math.random() > 0.7;
     const isVertical = Math.random() > 0.9;
     
@@ -820,16 +908,15 @@ function UsersPanel() {
 const TABS = [
   { id: "events", label: "Events" },
   { id: "registrations", label: "Registrations" },
-  { id: "services", label: "Services" },
-  { id: "bookings", label: "Bookings" },
+  { id: "products", label: "Products" },
   { id: "users", label: "Users" },
 ];
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState("events");
-  const [stats, setStats] = useState({ events: 0, users: 0, regs: 0, services: 0 });
-  const [data, setData] = useState({ events: [], users: [], regs: [], services: [] });
+  const [stats, setStats] = useState({ events: 0, users: 0, regs: 0, products: 0 });
+  const [data, setData] = useState({ events: [], users: [], regs: [], products: [] });
   const [mounted, setMounted] = useState(false);
   const [wibTime, setWibTime] = useState("");
 
@@ -851,25 +938,26 @@ export default function AdminDashboard() {
       api.get("/admin/events").catch(() => ({ data: { events: [] } })),
       api.get("/admin/users").catch(() => ({ data: { users: [] } })),
       api.get("/admin/registrations").catch(() => ({ data: { registrations: [] } })),
-      api.get("/admin/services").catch(() => ({ data: { bookings: [] } })),
-    ]).then(([ev, us, re, sv]) => {
+    ]).then(([ev, us, re]) => {
       const eList = ev.data.events || [];
       const uList = us.data.users || [];
       const rList = re.data.registrations || [];
-      const sList = sv.data.bookings || [];
+      
+      const savedProducts = JSON.parse(localStorage.getItem("kalceria_dummy_products") || "[]");
+      const pList = savedProducts.length ? savedProducts : INITIAL_DUMMIES;
 
       setStats({
         events: eList.length,
         users: uList.length,
         regs: rList.length,
-        services: sList.length,
+        products: pList.length,
       });
 
       setData({
         events: eList,
         users: uList,
         regs: rList,
-        services: sList,
+        products: pList,
       });
     });
   }, []);
@@ -919,7 +1007,7 @@ export default function AdminDashboard() {
               <StatCard label="Events" value={stats.events} />
               <StatCard label="Users" value={stats.users} />
               <StatCard label="Registrations" value={stats.regs} />
-              <StatCard label="Services" value={stats.services} />
+              <StatCard label="Products" value={stats.products} />
             </div>
 
             {/* Tab bar */}
@@ -956,8 +1044,7 @@ export default function AdminDashboard() {
                 <SectionTitle>{TABS.find((t) => t.id === tab)?.label}</SectionTitle>
                 {tab === "events" && <EventsPanel initialEvents={data.events} onRefresh={loadAll} />}
                 {tab === "registrations" && <RegistrationsPanel initialRegs={data.regs} onRefresh={loadAll} />}
-                {tab === "services" && <ServicesPanel initialServices={data.services} onRefresh={loadAll} />}
-                {tab === "bookings" && <BookingsPanel initialBookings={data.services} onRefresh={loadAll} />}
+                {tab === "products" && <ProductsPanel onRefresh={loadAll} />}
                 {tab === "users" && <UsersPanel initialUsers={data.users} onRefresh={loadAll} />}
               </motion.div>
             </AnimatePresence>
@@ -967,9 +1054,8 @@ export default function AdminDashboard() {
           <div className="hidden lg:block relative z-10">
             <div className="border border-white/20 bg-transparent flex flex-col p-[2px] backdrop-blur-sm" style={{ boxShadow: "0 0 20px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.05)" }}>
               <SystemLog 
-                registrations={stats.rawRegs || []} 
-                bookings={stats.rawBookings || []} 
-                services={stats.rawServices || []} 
+                registrations={data.regs} 
+                products={data.products} 
               />
               <SystemHealth />
             </div>
