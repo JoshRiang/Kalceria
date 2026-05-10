@@ -3,12 +3,18 @@ import {
   register, login, requestOtp, verifyOtp,
   requestPasswordReset, resetPassword,
 } from '../controllers/authController.js';
-import { updateLiveLocation, getNearbyUsers } from '../controllers/locationController.js';
+import {
+  updateLiveLocation, getNearbyUsers, setLiveLocationPreference,
+} from '../controllers/locationController.js';
 import { getMedia, createMedia } from '../controllers/mediaController.js';
-import { createMiniEvent, getActiveMiniEvents } from '../controllers/miniEventController.js';
+import {
+  createMiniEvent, getActiveMiniEvents, updateMiniEvent, deleteMiniEvent,
+} from '../controllers/miniEventController.js';
 import { createBooking } from '../controllers/serviceController.js';
 import { saveTelemetry, getMapUsers } from '../controllers/telemetryController.js';
-import { createBroadcast, updateBroadcast, deleteBroadcast } from '../controllers/broadcastController.js';
+import {
+  getMyBroadcast, createBroadcast, updateBroadcast, deleteBroadcast,
+} from '../controllers/broadcastController.js';
 import { redirectEvent } from '../controllers/redirectController.js';
 import { cleanupExpiredBroadcasts } from '../utils/cronWorker.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -32,6 +38,7 @@ router.post('/auth/password/reset', resetPassword);
 
 // ─── Location ────────────────────────────────────────────────────────────────
 router.post('/location/update', requireAuth, updateLiveLocation);
+router.patch('/location/visibility', requireAuth, setLiveLocationPreference);
 router.get('/location/nearby', requireAuth, getNearbyUsers);
 
 // ─── Media ───────────────────────────────────────────────────────────────────
@@ -41,6 +48,8 @@ router.post('/media', requireAuth, createMedia);
 // ─── Mini Events ─────────────────────────────────────────────────────────────
 router.post('/mini-events', requireAuth, createMiniEvent);
 router.get('/mini-events/active', getActiveMiniEvents);
+router.put('/mini-events/:id', requireAuth, updateMiniEvent);
+router.delete('/mini-events/:id', requireAuth, deleteMiniEvent);
 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
 router.post('/services/book', requireAuth, createBooking);
@@ -51,6 +60,7 @@ router.get('/map/users', requireAuth, getMapUsers);
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────
 router.post('/broadcast', requireAuth, createBroadcast);
+router.get('/broadcast/me', requireAuth, getMyBroadcast);
 router.put('/broadcast', requireAuth, updateBroadcast);
 router.delete('/broadcast', requireAuth, deleteBroadcast);
 

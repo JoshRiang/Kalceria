@@ -671,6 +671,14 @@ export default function LandingPage({ onNavigateAuth }) {
               <span className="relative z-10">LOGIN / REGISTER</span>
               <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
             </button>
+            <Link href="/map">
+              <button
+                className="relative px-10 py-3.5 font-sans font-extrabold tracking-wide text-[15px] text-white bg-[#FF00FF]/20 border border-[#FFD700]/50 transition-all hover:bg-[#FFD700] hover:text-[#050a14] group shadow-[0_0_30px_rgba(255,0,255,0.18)]"
+                style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+              >
+                <span className="relative z-10">OPEN SNAP MAP</span>
+              </button>
+            </Link>
           </div>
         </div>
       </section>

@@ -75,13 +75,15 @@ model User {
 
 // ─── Mini Event ──────────────────────────────────────────────────────────────
 model MiniEvent {
-  id        String   @id @default(uuid())
-  creatorId String
-  title     String
-  lat       Float
-  lng       Float
-  createdAt DateTime @default(now())
-  expiresAt DateTime
+  id          String   @id @default(uuid())
+  creatorId   String
+  title       String
+  description String?
+  lat         Float
+  lng         Float
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime @db.Timestamptz
 
   creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
