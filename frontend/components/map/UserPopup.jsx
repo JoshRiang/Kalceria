@@ -13,11 +13,12 @@ function avatar(seed) {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
 }
 
-export function userPopup(user, contactUrl) {
-  const contact = contactUrl(user.socialPlatform, user.socialLink);
+export function userPopup(user) {
   const message = user.broadcast?.message;
   const status = message ? `<div class="popup-status active"><span style="background:${user.color}; box-shadow:0 0 5px ${user.color};"></span><p>"${esc(message)}"</p></div>` : `<div class="popup-status"><span></span><p>[NO TRANSMISSION]</p></div>`;
-  const action = contact ? `<a class="popup-action" href="${esc(contact)}" target="_blank" rel="noreferrer">VIEW PROFILE</a>` : `<div class="popup-action disabled">PROFILE UNAVAILABLE</div>`;
+  const action = `<a class="popup-action" href="/user/${esc(user.id)}" style="color: ${user.color}; border-color: ${user.color}44; background: ${user.color}11;">VISIT PROFILE</a>`;
+
+
 
   return `
     <div class="tactical-card" style="--border-color:${user.color}">

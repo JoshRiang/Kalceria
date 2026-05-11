@@ -30,22 +30,15 @@ async function loadLeaflet() {
   return L;
 }
 
-export default function SnapMap({ users, events, onMapReady }) {
+export default function SnapMap({ users, events, hqPoint, onMapReady }) {
+
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
   const layerRef = useRef(null);
   const markerRefs = useRef({});
   const [isReady, setIsReady] = useState(false);
 
-  const hqPoint = {
-    id: "hq_bintaro",
-    title: "KALCERIA HEADQUARTER",
-    role: "Meet Center",
-    description: "Place where people meet",
-    lat: -6.2715,
-    lng: 106.7135,
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-  };
+
 
   useEffect(() => {
     let alive = true;
@@ -114,10 +107,11 @@ export default function SnapMap({ users, events, onMapReady }) {
       const marker = L.marker([user.lat, user.lng], { 
         icon: createUserIcon(L, user), 
         userData: user 
-      }).bindPopup(userPopup(user, () => null), { 
+      }).bindPopup(userPopup(user), { 
         className: "tactical-popup", 
         offset: [0, -60] 
       });
+
       markerRefs.current[user.id] = marker;
       layer.addLayer(marker);
     });
@@ -125,25 +119,30 @@ export default function SnapMap({ users, events, onMapReady }) {
     (events || []).forEach((item) => {
       if (!Number.isFinite(item.lat) || !Number.isFinite(item.lng)) return;
       layer.addLayer(L.marker([item.lat, item.lng], { 
-        icon: createEventIcon(L), 
-        userData: { color: "#ffd60a" } 
-      }).bindPopup(eventPopup(item), { 
+        icon: createEventIcon(L, item), 
+        userData: { color: "#ff006e" } 
+      })
+.bindPopup(eventPopup(item), { 
         className: "tactical-popup", 
         offset: [0, -34] 
       }));
     });
 
-    const hqMarker = L.marker([hqPoint.lat, hqPoint.lng], {
-      icon: createHqIcon(L),
-      userData: { color: "#ffd60a", nickname: "HQ", avatarSeed: "hq" },
-    }).bindPopup(hqPopup(hqPoint), { 
-      className: "tactical-popup hq-tactical-popup", 
-      offset: [0, -30] 
-    });
-    layer.addLayer(hqMarker);
+    if (hqPoint) {
+      const hqMarker = L.marker([hqPoint.lat, hqPoint.lng], {
+        icon: createHqIcon(L),
+        userData: { color: "#ffd60a", nickname: "HQ", avatarSeed: "hq" },
+      }).bindPopup(hqPopup(hqPoint), { 
+        className: "tactical-popup hq-tactical-popup", 
+        offset: [0, -30] 
+      });
+      layer.addLayer(hqMarker);
+    }
+
 
     layer.addTo(mapRef.current);
-  }, [users, events, isReady]);
+  }, [users, events, hqPoint, isReady]);
+
 
   return (
     <div className="fixed inset-0 z-0">
@@ -152,7 +151,7 @@ export default function SnapMap({ users, events, onMapReady }) {
       <style jsx global>{`
         .snap-tactical-map .leaflet-pane,
         .snap-tactical-map .leaflet-tile-pane {
-          opacity: 0.86;
+          opacity: 0.95;
         }
 
         .snap-tactical-map .leaflet-tile-container {
@@ -219,21 +218,28 @@ export default function SnapMap({ users, events, onMapReady }) {
           bottom: -4px;
           z-index: 3;
           padding: 2px 6px;
-          border: 2px solid var(--user-color);
+          border: 2px solid #ffffff;
           background: #050714;
-          color: var(--user-color);
+          color: #ffffff;
           font-family: monospace;
           font-weight: 900;
           font-size: 12px;
           clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
         }
 
+
         @keyframes radarPing {
           0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
           100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
         }
 
+        @keyframes hqPing {
+          0% { transform: scale(1); opacity: 0.8; }
+          100% { transform: scale(1.8); opacity: 0; }
+        }
+
         .radar-pulse, .cluster-pulse, .event-pulse {
+
           position: absolute;
           top: 24px;
           left: 24px;
@@ -319,6 +325,7 @@ export default function SnapMap({ users, events, onMapReady }) {
         }
 
         .popup-profile small {
+          font-family: sans-serif;
           font-size: 9px;
           font-weight: 900;
           text-transform: uppercase;
@@ -329,6 +336,7 @@ export default function SnapMap({ users, events, onMapReady }) {
           margin-top: 4px;
           display: inline-block;
         }
+
 
         .popup-status {
           padding: 12px;
