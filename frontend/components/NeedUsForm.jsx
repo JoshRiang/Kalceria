@@ -61,12 +61,24 @@ export default function NeedUsForm({ userEmail, userName }) {
         <div className="h-px w-16 bg-[#FF00FF] mb-8" />
       </motion.div>
 
-      {/* Step bar */}
-      <div className="flex items-center gap-2 mb-8">
+      {/* Phase indicator - Sync with IdeaCommentModal */}
+      <div className="flex items-center gap-3 mb-10">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Step n={i + 1} active={step === i} done={step > i} />
-            {i < 2 && <div className={`h-px w-8 transition-all duration-500 ${step > i ? "bg-[#FF00FF]" : "bg-slate-800"}`} />}
+          <div key={i} className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black font-mono transition-all duration-500 border ${
+              step > i 
+                ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
+                : step === i 
+                  ? "bg-white/10 border-white/40 text-white" 
+                  : "bg-white/5 border-white/10 text-white/20"
+            }`}>
+              {step > i ? "✓" : i + 1}
+            </div>
+            {i < 2 && (
+              <div className={`h-[2px] w-12 rounded-full transition-all duration-700 ${
+                step > i ? "bg-white" : "bg-white/10"
+              }`} />
+            )}
           </div>
         ))}
       </div>

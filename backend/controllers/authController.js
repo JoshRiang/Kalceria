@@ -162,3 +162,23 @@ export async function resetPassword(req, res, next) {
     next(err);
   }
 }
+
+// ─── Check Username Existence ────────────────────────────────────────────────
+export async function checkUsername(req, res, next) {
+  try {
+    const { username } = req.params;
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { name: { equals: username, mode: 'insensitive' } },
+          { nickname: { equals: username, mode: 'insensitive' } }
+        ]
+      }
+    });
+
+    if (!user) return res.status(404).json({ exists: false });
+    res.json({ exists: true, email: user.email });
+  } catch (err) {
+    next(err);
+  }
+}

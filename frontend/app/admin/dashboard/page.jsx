@@ -851,6 +851,141 @@ function SystemHealth() {
   );
 }
 
+// ─── Comments Panel ──────────────────────────────────────────────────────────
+function CommentsPanel() {
+  const [comments, setComments] = useState([]);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState(["All"]); // Max 2
+
+  const load = useCallback(async () => {
+    let pinned = filters.includes("Pinned") ? "true" : "";
+    let type = filters.find(f => f === "Advice" || f === "Idea") || "All";
+    
+    const r = await api.get("/admin/comments", {
+      params: { search, pinned, type }
+    });
+    setComments(r.data.comments || []);
+  }, [search, filters]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggleFilter = (f) => {
+    setFilters(prev => {
+      if (f === "All") return ["All"];
+      let next = prev.filter(x => x !== "All");
+      if (next.includes(f)) {
+        next = next.filter(x => x !== f);
+        return next.length === 0 ? ["All"] : next;
+      }
+      if (next.length >= 2) next.shift();
+      return [...next, f];
+    });
+  };
+
+  async function togglePin(id) {
+    await api.patch(`/admin/comments/${id}/pin`);
+    load();
+  }
+
+  async function del(id) {
+    if (!confirm("Delete this comment?")) return;
+    await api.delete(`/admin/comments/${id}`);
+    load();
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full md:w-72">
+          <input 
+            className={INPUT} 
+            placeholder="SEARCH USERNAME..." 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+          />
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {["All", "Pinned", "Advice", "Idea"].map(f => (
+            <button
+              key={f}
+              onClick={() => toggleFilter(f)}
+              className={`px-3 py-1 rounded-full text-[10px] font-mono font-black uppercase tracking-widest border transition-all ${
+                filters.includes(f) 
+                  ? "bg-white text-black border-white" 
+                  : "bg-white/5 text-slate-500 border-white/10 hover:border-white/30"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {comments.map((c) => (
+          <motion.div 
+            key={c.id} 
+            layout
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={`${CARD} rounded-2xl p-5 group relative transition-all duration-300 ${getCardHoverStyle(c.id)}`}
+          >
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 overflow-hidden flex-shrink-0">
+                    <img 
+                      src={c.user?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.username || 'anon'}`} 
+                      alt="" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-sans font-black text-sm text-white tracking-tight leading-none uppercase">
+                      {c.username || "ANONYMOUS"}
+                    </p>
+                    <p className="font-mono text-[9px] text-slate-500 mt-1 uppercase tracking-widest">
+                      {c.type} · {c.category} · {formatDate(c.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                <p className="font-sans text-[13px] text-slate-300 leading-relaxed font-medium">
+                  {c.content}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => togglePin(c.id)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-all ${
+                    c.isPinned 
+                      ? "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]" 
+                      : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:border-white/20 hover:text-white"
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" />
+                  </svg>
+                </button>
+                <button 
+                  onClick={() => del(c.id)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/40 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-all"
+                >
+                  <TrashIcon />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+        {!comments.length && (
+          <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl">
+            <p className="font-mono text-xs text-slate-600 uppercase tracking-[0.2em]">No comments found</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PANEL: USERS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -910,13 +1045,14 @@ const TABS = [
   { id: "registrations", label: "Registrations" },
   { id: "products", label: "Products" },
   { id: "users", label: "Users" },
+  { id: "comments", label: "Comments" },
 ];
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [tab, setTab] = useState("events");
-  const [stats, setStats] = useState({ events: 0, users: 0, regs: 0, products: 0 });
-  const [data, setData] = useState({ events: [], users: [], regs: [], products: [] });
+  const [stats, setStats] = useState({ events: 0, users: 0, regs: 0, products: 0, comments: 0 });
+  const [data, setData] = useState({ events: [], users: [], regs: [], products: [], comments: [] });
   const [mounted, setMounted] = useState(false);
   const [wibTime, setWibTime] = useState("");
 
@@ -938,10 +1074,12 @@ export default function AdminDashboard() {
       api.get("/admin/events").catch(() => ({ data: { events: [] } })),
       api.get("/admin/users").catch(() => ({ data: { users: [] } })),
       api.get("/admin/registrations").catch(() => ({ data: { registrations: [] } })),
-    ]).then(([ev, us, re]) => {
+      api.get("/admin/comments").catch(() => ({ data: { comments: [] } })),
+    ]).then(([ev, us, re, co]) => {
       const eList = ev.data.events || [];
       const uList = us.data.users || [];
       const rList = re.data.registrations || [];
+      const cList = co.data.comments || [];
       
       const savedProducts = JSON.parse(localStorage.getItem("kalceria_dummy_products") || "[]");
       const pList = savedProducts.length ? savedProducts : INITIAL_DUMMIES;
@@ -951,6 +1089,7 @@ export default function AdminDashboard() {
         users: uList.length,
         regs: rList.length,
         products: pList.length,
+        comments: cList.length,
       });
 
       setData({
@@ -958,6 +1097,7 @@ export default function AdminDashboard() {
         users: uList,
         regs: rList,
         products: pList,
+        comments: cList,
       });
     });
   }, []);
@@ -1007,7 +1147,7 @@ export default function AdminDashboard() {
               <StatCard label="Events" value={stats.events} />
               <StatCard label="Users" value={stats.users} />
               <StatCard label="Registrations" value={stats.regs} />
-              <StatCard label="Products" value={stats.products} />
+              <StatCard label="Comments" value={stats.comments} />
             </div>
 
             {/* Tab bar */}
@@ -1046,6 +1186,7 @@ export default function AdminDashboard() {
                 {tab === "registrations" && <RegistrationsPanel initialRegs={data.regs} onRefresh={loadAll} />}
                 {tab === "products" && <ProductsPanel onRefresh={loadAll} />}
                 {tab === "users" && <UsersPanel initialUsers={data.users} onRefresh={loadAll} />}
+                {tab === "comments" && <CommentsPanel onRefresh={loadAll} />}
               </motion.div>
             </AnimatePresence>
           </div>

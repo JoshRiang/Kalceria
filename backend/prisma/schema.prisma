@@ -50,6 +50,11 @@ enum PaymentStatus {
   REJECTED
 }
 
+enum CommentType {
+  ADVICE
+  IDEA
+}
+
 enum Role {
   USER
   ADMIN
@@ -82,6 +87,7 @@ model User {
   bookings           Booking[]
   broadcast          UserBroadcast?
   eventRegistrations EventRegistration[]
+  comments           Comment[]
 
   @@map("users")
 }
@@ -217,4 +223,20 @@ model UserBroadcast {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_broadcasts")
+}
+
+// ─── Comment (Landing Page Feedback) ─────────────────────────────────────────
+model Comment {
+  id        String      @id @default(uuid())
+  userId    String?
+  username  String?
+  content   String
+  category  String?     @default("Other")
+  type      CommentType
+  isPinned  Boolean     @default(false)
+  createdAt DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("comments")
 }

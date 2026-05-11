@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import ServiceRequestModal from "./ServiceRequestModal";
+import api from "@/lib/api";
 
 // ─── Typewriter Component ─────────────────────────────
 function Typewriter({ text, mode = "letter", delay = 0 }) {
@@ -1019,6 +1020,7 @@ export default function LandingPage({ onNavigateAuth }) {
   const [mascotFrame, setMascotFrame] = useState(1);
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showIdeaModal, setShowIdeaModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const displayedMerch = useMerchRandomizer();
   const [merchInitial, setMerchInitial] = useState(true);
@@ -1891,6 +1893,94 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
       </section>
 
+      {/* ── Section 9: The Legacy ── */}
+      <section className="relative w-full aspect-square bg-[#02040a] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
+        {/* Background Atmosphere - Simplified Astral Divine (Lightweight) */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+           {/* Cyan Core Glow */}
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] rounded-full blur-[160px] bg-cyan-950/40" />
+           {/* Magenta Bloom */}
+           <div className="absolute -bottom-1/4 -right-1/4 w-full h-full rounded-full blur-[180px] bg-purple-950/30" />
+           {/* Blue Sweep */}
+           <div className="absolute -top-1/4 -left-1/4 w-full h-full rounded-full blur-[180px] bg-blue-950/20" />
+        </div>
+
+        {/* Dynamic Comet Effect - Replacing Portal */}
+        <CometEffect />
+ 
+        {/* Community Quotes - Floating Text */}
+        <CommunityQuotes />
+ 
+        {/* Night Background at Bottom */}
+        <img 
+          src="/night.png" 
+          alt="Night Sky" 
+          className="absolute bottom-0 left-0 w-full h-auto object-cover z-[10] opacity-90"
+          style={{ maskImage: "linear-gradient(to top, black 80%, transparent)" }}
+        />
+        
+        {/* Astronaut - Semi-transparent, Massive and Lowered, Behind Night */}
+        <img 
+          src="/astronaut.png" 
+          alt="Astronaut" 
+          className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[105%] h-auto object-contain z-[5] opacity-40 mix-blend-screen pointer-events-none" 
+        />
+
+        {/* Micro Particles - Layered Higher than Night */}
+        <div className="absolute inset-0 z-[20]">
+          <GeminiSparkParticles />
+        </div>
+
+        {/* Floating Car & Sticker Assets - Concentrated near Center */}
+        <FloatingAssets />
+
+        <div className="relative z-30 flex flex-col items-center text-center gap-12">
+           <motion.div
+             initial={{ opacity: 0, y: 30 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true }}
+             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+           >
+             <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter text-white"
+                 style={{ 
+                   textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
+                   filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
+                 }}>
+               Make Us Better !
+             </h2>
+           </motion.div>
+
+           {/* The Box - Clean Rounded Rectangle, Hover Only Affects Rectangle */}
+           <motion.button
+             onClick={() => setShowIdeaModal(true)}
+             whileTap={{ scale: 0.95 }}
+             className="relative group cursor-pointer z-40 focus:outline-none"
+           >
+              <div className="relative w-48 md:w-[240px] py-4 md:py-6 bg-white/8 backdrop-blur-3xl border border-white/15 rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] group-hover:bg-white/12 group-hover:border-white/25 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-500 flex items-center justify-center">
+                {/* Glassmorphism Blobs - always visible, subtle */}
+                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-20 group-hover:opacity-30 transition-opacity duration-500">
+                   <motion.div 
+                     animate={{ x: [-10, 30, -10], y: [-10, 10, -10], scale: [1, 1.2, 1] }}
+                     transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                     className="absolute -top-4 -left-4 w-24 h-24 bg-[#00FFFF] rounded-full blur-[30px]" 
+                   />
+                   <motion.div 
+                     animate={{ x: [10, -30, 10], y: [10, -10, 10], scale: [1.2, 1, 1.2] }}
+                     transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                     className="absolute -bottom-4 -right-4 w-28 h-28 bg-[#D946EF] rounded-full blur-[40px]" 
+                   />
+                </div>
+                
+                <div className="relative z-10 flex flex-col items-center">
+                  <span className="font-sans font-black text-white uppercase tracking-widest text-lg md:text-xl text-center px-4">
+                    Leave it here
+                  </span>
+                </div>
+              </div>
+           </motion.button>
+        </div>
+      </section>
+
       <AnimatePresence>
         {showServiceModal && (
           <ServiceRequestModal onClose={() => setShowServiceModal(false)} />
@@ -1900,6 +1990,9 @@ export default function LandingPage({ onNavigateAuth }) {
             onConfirm={handleLogout} 
             onCancel={() => setShowLogoutConfirm(false)} 
           />
+        )}
+        {showIdeaModal && (
+          <IdeaCommentModal onClose={() => setShowIdeaModal(false)} />
         )}
       </AnimatePresence>
 
@@ -2088,6 +2181,732 @@ function LogoutConfirmModal({ onConfirm, onCancel }) {
             <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg opacity-80">
               LOGGING OUT
             </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Comet Effect ────────────────────────────────────────────────────────
+function CometEffect() {
+  const [comets, setComets] = useState([]);
+
+  useEffect(() => {
+    const spawnComet = () => {
+      const id = Math.random();
+      const isLeft = Math.random() > 0.5;
+      const startX = isLeft ? -20 : 120;
+      const startY = Math.random() * 30;
+      const endX = 20 + Math.random() * 60;
+      const endY = 110;
+      
+      const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+
+      setComets(prev => [...prev, { id, startX, startY, endX, endY, angle }]);
+      
+      setTimeout(() => {
+        setComets(prev => prev.filter(c => c.id !== id));
+      }, 1000);
+
+      setTimeout(spawnComet, 1500 + Math.random() * 1000);
+    };
+
+    spawnComet();
+  }, []);
+
+  return (
+    <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden">
+      <AnimatePresence>
+        {comets.map((c) => (
+          <motion.div
+            key={c.id}
+            initial={{ left: `${c.startX}%`, top: `${c.startY}%`, opacity: 0 }}
+            animate={{ left: `${c.endX}%`, top: `${c.endY}%`, opacity: [0, 1, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: "linear" }}
+            className="absolute"
+          >
+            <div 
+              className="w-32 md:w-64 h-[1px] md:h-[2px] bg-gradient-to-r from-transparent via-cyan-300 to-white blur-[0.5px]"
+              style={{ transform: `rotate(${c.angle}deg)`, transformOrigin: "left center" }}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Floating Assets (Cars & Stickers) ──────────────────────────────────
+function FloatingAssets() {
+  const assets = useMemo(() => {
+    const assetDefinitions = [
+      // ccar_1 & ccar_2 shifted more left
+      { src: '/ccar_1.png', x: 5, y: 18, w: "w-32 md:w-56", rot: -35, dX: 60, dY: 45, rS: 55 },
+      { src: '/ccar_2.png', x: 8, y: 62, w: "w-24 md:w-36", rot: 45, dX: -70, dY: -65, rS: -60 },
+      { src: '/ccar_3.png', x: 85, y: 18, w: "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
+      { src: '/ccar_4.png', x: 82, y: 62, w: "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
+      // stikermobil_3 — lower-middle left
+      { src: '/stikermobil_3.png', x: 36, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
+      // stikermobil_1 — beside stikermobil_3, shifted right, mirrored rotation
+      { src: '/stikermobil_1.png', x: 55, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
+    ];
+    
+    return assetDefinitions.map((def, i) => ({
+      src: def.src,
+      id: i,
+      x: def.x,
+      y: def.y,
+      widthClass: def.w,
+      rotate: def.rot,
+      duration: 25 + (i * 3),
+      delay: i * 2,
+      xDrift: def.dX,
+      yDrift: def.dY,
+      rotationSpeed: def.rS,
+    }));
+  }, []);
+
+  return (
+    <div className="absolute inset-0 z-[15] pointer-events-none overflow-hidden">
+      {assets.map((a) => (
+        <motion.img
+          key={a.id}
+          src={a.src}
+          alt=""
+          className={`absolute object-contain drop-shadow-2xl ${a.widthClass}`}
+          style={{
+            left: `${a.x}%`,
+            top: `${a.y}%`,
+          }}
+          animate={{
+            x: [0, a.xDrift],
+            y: [0, a.yDrift],
+            rotate: [a.rotate, a.rotate + a.rotationSpeed],
+          }}
+          transition={{
+            duration: a.duration,
+            repeat: Infinity,
+            repeatType: "mirror",
+            ease: "easeInOut",
+            delay: a.delay,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Community Quotes ──────────────────────────────────────────────────
+function CommunityQuotes() {
+  const quotes = [
+    "Kak mau photoo!", "Woi Wahib mana woi!", "Kak mau colabbb", 
+    "Coki ganteng, no gay tho", "Otniel jelek wleee", "Aku mau Kalceria menjadi....",
+    "Tolong diet lagi ya mas", "Kak main UMINGLE yuk!", "Cok, lagi dimana, sama siapa?",
+    "Keren bangetttt!!", "GG, Speechless"
+  ];
+
+  // Two bands: above heading (25-40% Y) and below button (68-80% Y)
+  // Horizontal constrained to 32-68% to stay clear of corner cars
+  const floatingQuotes = useMemo(() => quotes.map((text, i) => {
+    const inUpperBand = i % 2 === 0;
+    return {
+      id: i,
+      text,
+      left: `${32 + Math.random() * 36}%`,
+      top: inUpperBand ? `${25 + Math.random() * 15}%` : `${68 + Math.random() * 12}%`,
+      delay: i * 3.5 + Math.random() * 2,
+      duration: 8 + Math.random() * 8,
+      xDrift: (Math.random() - 0.5) * 40,  // small drift to stay in zone
+      yDrift: (Math.random() - 0.5) * 30,
+      rotate: (Math.random() - 0.5) * 20,
+      fontSize: Math.random() * 8 + 13,
+      bold: Math.random() > 0.5,
+      italic: Math.random() > 0.4,
+      under: Math.random() > 0.7,
+    };
+  }), []);
+
+  return (
+    <div className="absolute inset-0 z-[14] pointer-events-none overflow-hidden select-none">
+      {floatingQuotes.map((q) => (
+        <motion.div
+          key={q.id}
+          className={`absolute font-sans text-white whitespace-nowrap drop-shadow-lg
+            ${q.bold ? 'font-black' : 'font-medium'} 
+            ${q.italic ? 'italic' : ''} 
+            ${q.under ? 'underline underline-offset-4 decoration-white' : ''}`}
+          style={{
+            left: q.left,
+            top: q.top,
+            fontSize: q.fontSize,
+          }}
+          animate={{
+            x: [0, q.xDrift],
+            y: [0, q.yDrift],
+            rotate: [q.rotate, q.rotate + 12],
+            opacity: [0, 1, 1, 0],
+          }}
+          transition={{
+            duration: q.duration,
+            repeat: Infinity,
+            repeatDelay: 15 + Math.random() * 10, // rest time between appearances
+            ease: "easeInOut",
+            delay: q.delay,
+          }}
+        >
+          {q.text}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Gemini Spark Particles (Rounded Blue/Golden/Magenta Micro-Particles) ────
+function GeminiSparkParticles() {
+  const particles = useMemo(() => Array.from({ length: 60 }).map((_, i) => {
+    const r = Math.random();
+    let color = '#60A5FA'; 
+    if (r > 0.8) color = '#FBBF24';
+    else if (r > 0.6) color = '#D946EF';
+    else if (r > 0.3) color = '#38BDF8';
+
+    return {
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      size: Math.random() * 3 + 1, 
+      color,
+      delay: Math.random() * 5,
+      duration: 3 + Math.random() * 5,
+      xDrift: (Math.random() - 0.5) * 60,
+      yDrift: (Math.random() - 0.5) * 60,
+    };
+  }), []);
+
+  return (
+    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full"
+          style={{
+            width: p.size,
+            height: p.size,
+            left: p.left,
+            top: p.top,
+            backgroundColor: p.color,
+            boxShadow: `0 0 12px ${p.color}, 0 0 24px ${p.color}44`,
+          }}
+          animate={{
+            x: [0, p.xDrift, 0],
+            y: [0, p.yDrift, 0],
+            opacity: [0.3, 1, 0.3],
+            scale: [0.5, 1.2, 0.5],
+          }}
+          transition={{
+            duration: p.duration,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: p.delay,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Idea / Advice Comment Modal ─────────────────────────────────────────────
+function IdeaCommentModal({ onClose }) {
+  const [step, setStep] = useState(0); // 0=Choice, 1=Identity, 2=Category, 3=Content, 4=done
+  const [mainType, setMainType] = useState(null); 
+  const [identity, setIdentity] = useState("Anonymous");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [userFound, setUserFound] = useState(false);
+  const [error, setError] = useState("");
+  const [ideaType, setIdeaType] = useState(null); 
+  const [adviceText, setAdviceText] = useState("");
+  const [successText, setSuccessText] = useState("");
+  const [showFinalBuffer, setShowFinalBuffer] = useState(false);
+
+  // Typewriter for success screen
+  useEffect(() => {
+    if (step !== 4) return;
+    const msg = "Successfully Submitted!";
+    let i = 0;
+    setSuccessText("");
+    // ~130ms interval * 23 chars = ~3 seconds. To get 4-5s, let's use 180ms.
+    const iv = setInterval(() => {
+      setSuccessText(msg.slice(0, i + 1));
+      i++;
+      if (i >= msg.length) {
+        clearInterval(iv);
+        // Blur out immediately after typing (small delay for legibility)
+        setTimeout(onClose, 800);
+      }
+    }, 180);
+    return () => clearInterval(iv);
+  }, [step]);
+
+  const checkUser = async () => {
+    setError("");
+    if (!username) return;
+    setIsVerifying(true);
+    try {
+      const res = await api.get(`/auth/check-username/${username}`);
+      if (res.data.exists) {
+        setUserFound(true);
+        // If already logged in, we can proceed
+        const token = localStorage.getItem("token");
+        if (token) {
+          setStep(2);
+        }
+      }
+    } catch (err) {
+      setError("User not found");
+      setUsername("");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const verifyPassword = async () => {
+    setError("");
+    setIsVerifying(true);
+    try {
+      // Need to find the email first since login uses email
+      const checkRes = await api.get(`/auth/check-username/${username}`);
+      const email = checkRes.data.email;
+      
+      const loginRes = await api.post('/auth/login', { email, password });
+      if (loginRes.data.token) {
+        localStorage.setItem("token", loginRes.data.token);
+        setStep(2);
+      }
+    } catch (err) {
+      setError("Invalid password");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setError("");
+    try {
+      await api.post('/comments', {
+        content: adviceText,
+        category: ideaType,
+        type: mainType.toUpperCase(), // ADVICE or IDEA
+        username: identity === 'User' ? username : identity,
+        identity
+      });
+      setStep(4); // Success blur
+    } catch (err) {
+      setError("Failed to submit. Please try again.");
+      console.error(err);
+    }
+  };
+
+  const canSubmit = adviceText.trim().length >= 5;
+
+  // Blobs shared across steps
+  const Blobs = () => (
+    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none rounded-3xl">
+      <motion.div
+        animate={{ x: [-20, 40, -20], y: [-20, 20, -20], scale: [1, 1.3, 1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -top-16 -left-16 w-64 h-64 bg-[#00FFFF] rounded-full blur-[80px] opacity-25"
+      />
+      <motion.div
+        animate={{ x: [20, -50, 20], y: [20, -20, 20], scale: [1.2, 1, 1.2] }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
+        className="absolute top-1/2 -right-16 w-72 h-72 bg-[#D946EF] rounded-full blur-[90px] opacity-20"
+      />
+      <motion.div
+        animate={{ x: [0, 30, 0], y: [30, -30, 30], scale: [1, 1.15, 1] }}
+        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+        className="absolute -bottom-16 left-1/4 w-56 h-56 bg-[#06B6D4] rounded-full blur-[70px] opacity-20"
+      />
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={step < 4 ? onClose : undefined}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      />
+
+      {/* Full-screen processing blur overlay */}
+      <AnimatePresence>
+        {step === 4 && (
+          <motion.div
+            key="blur-overlay"
+            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            animate={{ opacity: 1, backdropFilter: "blur(20px)" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 z-[1000] bg-black/60 flex items-center justify-center"
+            style={{ backdropFilter: "blur(20px)" }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col items-center gap-8 text-center px-8"
+            >
+              <div className="relative">
+                <motion.div
+                  animate={{ scale: [1, 1.02, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight"
+                  style={{
+                    fontFamily: "'Google Sans', 'Inter', sans-serif",
+                    textShadow: "0 0 15px rgba(74,222,128,0.6), 0 0 30px rgba(74,222,128,0.4)",
+                  }}
+                >
+                  {successText}
+                  <span className="animate-pulse ml-1 font-light text-green-400">|</span>
+                </motion.div>
+              </div>
+
+              {/* Buffer removed as requested */}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Card */}
+      <AnimatePresence mode="wait">
+        {step < 4 && (
+          <motion.div
+            key={`step-${step}`}
+            initial={{ opacity: 0, scale: 0.92, y: 24 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="relative w-full max-w-[480px] z-[1001]"
+          >
+            <div className="relative bg-[#060d1f]/90 backdrop-blur-3xl border border-cyan-500/20 rounded-3xl p-8 md:p-10 overflow-hidden shadow-[0_0_60px_rgba(0,255,255,0.1),0_0_120px_rgba(217,70,239,0.08),0_30px_80px_rgba(0,0,0,0.6)]">
+              <Blobs />
+
+              {/* Glow border top */}
+              <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent rounded-t-3xl" />
+
+              {/* Close button */}
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white transition-all text-sm"
+              >
+                ✕
+              </button>
+
+              {/* Phase Indicator - 4 Steps */}
+              <div className="relative z-10 flex items-center gap-2 mb-10 justify-center">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black font-mono transition-all duration-500 border ${
+                      step > i 
+                        ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
+                        : step === i 
+                          ? "bg-white/10 border-white/40 text-white" 
+                          : "bg-white/5 border-white/10 text-white/20"
+                    }`}>
+                      {step > i ? "✓" : i + 1}
+                    </div>
+                    {i < 3 && (
+                      <div className={`h-[1px] w-6 md:w-10 rounded-full transition-all duration-700 ${
+                        step > i ? "bg-white" : "bg-white/10"
+                      }`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Step 0: Advice or Idea ── */}
+              {step === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 flex flex-col gap-6"
+                >
+                  <div>
+                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                      What's The Type?
+                    </h3>
+                    <p className="text-white/40 text-sm font-sans mt-1">What would you like to share?</p>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {["Advice", "Idea"].map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => setMainType(opt)}
+                        className={`w-full py-4 px-5 rounded-xl border text-left font-sans font-black text-sm uppercase tracking-widest transition-all duration-300 ${
+                          mainType === opt
+                            ? "bg-white/15 border-white/30 text-white"
+                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/8 hover:border-white/20 hover:text-white/70"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <motion.button
+                    whileHover={mainType ? { scale: 1.02 } : {}}
+                    whileTap={mainType ? { scale: 0.98 } : {}}
+                    onClick={() => mainType && setStep(1)}
+                    disabled={!mainType}
+                    className={`w-full py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${
+                      mainType 
+                        ? "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"
+                        : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
+                    }`}
+                  >
+                    Continue
+                  </motion.button>
+                </motion.div>
+              )}
+
+              {/* ── Step 1: Identity ── */}
+              {step === 1 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 flex flex-col gap-6"
+                >
+                  <div>
+                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                      Share As...
+                    </h3>
+                    <p className="text-white/40 text-sm font-sans mt-1">Who are you sharing as?</p>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {["Anonymous", "User"].map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => setIdentity(opt)}
+                        className={`w-full py-3.5 px-5 rounded-xl border text-left font-sans font-bold text-sm uppercase tracking-wider transition-all duration-300 ${
+                          identity === opt
+                            ? "bg-white/15 border-white/30 text-white"
+                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/8 hover:border-white/20 hover:text-white/70"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <AnimatePresence>
+                    {identity === 'User' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden flex flex-col gap-3"
+                      >
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Enter username"
+                            value={username}
+                            onChange={(e) => {
+                              setUsername(e.target.value);
+                              setError("");
+                              setUserFound(false);
+                            }}
+                            className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white font-sans text-sm focus:outline-none transition-all ${
+                              error ? "border-red-500/50 focus:border-red-500" : "border-white/20 focus:border-white/40"
+                            }`}
+                          />
+                          {error && (
+                            <p className="text-[10px] text-red-500 font-sans mt-1 ml-1">{error}</p>
+                          )}
+                        </div>
+
+                        {userFound && !localStorage.getItem("token") && (
+                          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                            <input
+                              type="password"
+                              placeholder="Password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white font-sans text-sm focus:outline-none focus:border-white/40 transition-all"
+                            />
+                          </motion.div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setStep(0)}
+                      className="flex-1 py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20 hover:text-white/60 transition-all"
+                    >
+                      Back
+                    </button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        if (identity === 'Anonymous') setStep(2);
+                        else if (!userFound) checkUser();
+                        else if (!localStorage.getItem("token")) verifyPassword();
+                        else setStep(2);
+                      }}
+                      disabled={isVerifying || (identity === 'User' && !username)}
+                      className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${
+                        isVerifying || (identity === 'User' && !username)
+                          ? "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
+                          : "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"
+                      }`}
+                    >
+                      {isVerifying ? "..." : (identity === 'User' && !userFound) ? "Check" : "Continue"}
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── Step 2: Category ── */}
+              {step === 2 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 flex flex-col gap-6"
+                >
+                  <div>
+                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                      What is it?
+                    </h3>
+                    <p className="text-white/40 text-sm font-sans mt-1">
+                      {mainType === "Idea" ? "What type of idea is this?" : "What category does this advice fall into?"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {[
+                      { key: "Event", desc: "Community events, meetups, gatherings" },
+                      { key: "Web Development", desc: "Features, UI/UX, tech improvements" },
+                      { key: "Other", desc: "Anything else on your mind" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() => setIdeaType(opt.key)}
+                        className={`w-full py-3.5 px-5 rounded-xl border text-left transition-all duration-300 ${
+                          ideaType === opt.key
+                            ? "bg-white/15 border-white/30"
+                            : "bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/20"
+                        }`}
+                      >
+                        <span className={`font-sans font-bold text-sm uppercase tracking-wider block ${
+                          ideaType === opt.key ? "text-white" : "text-white/50"
+                        }`}>
+                          {opt.key}
+                        </span>
+                        <span className="font-sans text-xs text-white/30 mt-0.5 block">{opt.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setStep(1)}
+                      className="flex-1 py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20 hover:text-white/60 transition-all"
+                    >
+                      Back
+                    </button>
+                    <motion.button
+                      whileHover={ideaType ? { scale: 1.02 } : {}}
+                      whileTap={ideaType ? { scale: 0.98 } : {}}
+                      onClick={() => ideaType && setStep(3)}
+                      className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${
+                        ideaType
+                          ? "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"
+                          : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
+                      }`}
+                    >
+                      Continue
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── Step 3: Content ── */}
+              {step === 3 && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 flex flex-col gap-6"
+                >
+                  <div>
+                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                      Let us hear your thoughts!
+                    </h3>
+                    <p className="text-white/40 text-sm font-sans mt-1">
+                      {mainType === "Idea" ? "Describe your idea below" : "Share your advice with us"}
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <textarea
+                      value={adviceText}
+                      onChange={(e) => setAdviceText(e.target.value.slice(0, 200))}
+                      placeholder={
+                        ideaType === "Event"
+                          ? "Describe your event idea..."
+                          : ideaType === "Web Development"
+                          ? "Describe your web development idea..."
+                          : "Share your thoughts with us..."
+                      }
+                      rows={5}
+                      maxLength={200}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pb-8 text-white text-sm font-sans resize-none focus:outline-none focus:border-white/25 focus:bg-white/8 placeholder-white/20 transition-all"
+                      style={{ backdropFilter: "blur(10px)" }}
+                    />
+                    <div className="absolute bottom-3 right-4 text-xs font-mono">
+                      <span className={adviceText.trim().length < 5 ? "text-white/25" : "text-white/40"}>
+                        {adviceText.length}
+                      </span>
+                      <span className="text-white/20">/200</span>
+                    </div>
+                    {error && (
+                      <p className="text-[10px] text-red-500 font-sans mt-1 ml-1">{error}</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setStep(2)}
+                      className="flex-1 py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20 hover:text-white/60 transition-all"
+                    >
+                      Back
+                    </button>
+                    <motion.button
+                      whileHover={canSubmit ? { scale: 1.02 } : {}}
+                      whileTap={canSubmit ? { scale: 0.98 } : {}}
+                      onClick={canSubmit ? handleSubmit : undefined}
+                      className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all duration-500 ${
+                        canSubmit
+                          ? "text-white bg-white/15 border border-white/30 hover:bg-white/20 hover:border-white/40"
+                          : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
+                      }`}
+                    >
+                      Submit
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -364,9 +364,8 @@ export default function SeeEvent() {
         {/* ─── SECTION 3: COMMUNITY INTERACTION ────────────────────────────── */}
         <section className="relative w-full pb-32 pt-12 z-20 pointer-events-none">
           <div className="container mx-auto px-6 md:px-12 pointer-events-auto max-w-4xl">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-              
-              <motion.div whileHover={{ scale: 1.02 }} className="relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[320px]">
+            <div className="flex justify-center">
+              <motion.div whileHover={{ scale: 1.02 }} className="relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[320px] w-full max-w-md">
                 <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white mb-6 text-center">Wanna Join?</h3>
                 <div className="flex-1 flex items-center justify-center">
                    <button onClick={() => setApplyModalOpen(true)} className="relative w-full py-5 font-sans font-black uppercase tracking-tighter text-black bg-white border border-white transition-all hover:bg-white/90 group cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.2)]" style={CLIP}>
@@ -375,19 +374,6 @@ export default function SeeEvent() {
                   </button>
                 </div>
               </motion.div>
-
-              <motion.div whileHover={{ scale: 1.02 }} className="relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl h-[320px] flex flex-col justify-between">
-                <img src="/otniel_event.png" alt="Otniel" className="absolute top-0 right-8 -translate-y-full w-32 md:w-40 z-30 drop-shadow-2xl pointer-events-none" />
-                <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white mb-6 text-center">Any Idea?</h3>
-                <form className="flex flex-col gap-4 flex-1 justify-end" onSubmit={(e) => e.preventDefault()}>
-                  <textarea value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="Drop your event suggestions here..." className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all resize-none h-20 text-xs font-light placeholder:text-slate-600" />
-                  <button type="button" className="relative w-full py-4 font-sans font-black uppercase tracking-tighter text-black bg-white border border-white transition-all hover:bg-white/90 group cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.1)]" style={CLIP}>
-                    <span className="relative z-10 text-xl">SUBMIT IDEA</span>
-                    <div className="absolute inset-0 bg-black/5 scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300 z-0" />
-                  </button>
-                </form>
-              </motion.div>
-
             </div>
           </div>
         </section>

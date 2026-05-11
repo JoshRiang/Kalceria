@@ -1,7 +1,7 @@
 import express from 'express';
 import {
   register, login, requestOtp, verifyOtp,
-  requestPasswordReset, resetPassword,
+  requestPasswordReset, resetPassword, checkUsername
 } from '../controllers/authController.js';
 import { updateLiveLocation, getNearbyUsers } from '../controllers/locationController.js';
 import { getMedia, createMedia } from '../controllers/mediaController.js';
@@ -11,7 +11,7 @@ import { saveTelemetry, getMapUsers } from '../controllers/telemetryController.j
 import { createBroadcast, updateBroadcast, deleteBroadcast } from '../controllers/broadcastController.js';
 import { redirectEvent } from '../controllers/redirectController.js';
 import { cleanupExpiredBroadcasts } from '../utils/cronWorker.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/admin.js';
 import {
   createEvent, listEvents, updateEvent, deleteEvent,
@@ -30,6 +30,8 @@ import {
 import {
   listUsers, getUser, setUserRole, deleteUser,
 } from '../controllers/adminUserController.js';
+import { createComment } from '../controllers/commentController.js';
+import { listComments, togglePinComment, deleteComment } from '../controllers/adminCommentController.js';
 
 const router = express.Router();
 
@@ -43,6 +45,7 @@ router.post('/auth/otp/request', requestOtp);
 router.post('/auth/otp/verify', verifyOtp);
 router.post('/auth/password/reset-request', requestPasswordReset);
 router.post('/auth/password/reset', resetPassword);
+router.get('/auth/check-username/:username', checkUsername);
 
 // ─── Events (Public) ─────────────────────────────────────────────────────────
 router.get('/events', listPublicEvents);
@@ -116,6 +119,12 @@ router.get('/admin/users', requireAdmin, listUsers);
 router.get('/admin/users/:id', requireAdmin, getUser);
 router.patch('/admin/users/:id/role', requireAdmin, setUserRole);
 router.delete('/admin/users/:id', requireAdmin, deleteUser);
+
+// ─── Comments ───────────────────────────────────────────────────────────────
+router.post('/comments', optionalAuth, createComment);
+router.get('/admin/comments', requireAdmin, listComments);
+router.patch('/admin/comments/:id/pin', requireAdmin, togglePinComment);
+router.delete('/admin/comments/:id', requireAdmin, deleteComment);
 
 // ─── Cron ────────────────────────────────────────────────────────────────────
 router.get('/cron/cleanup', async (_req, res) => {
