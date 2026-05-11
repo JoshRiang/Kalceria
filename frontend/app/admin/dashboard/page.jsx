@@ -18,6 +18,15 @@ const BTN_ICON_SUCCESS = "p-1.5 bg-emerald-900/50 border border-emerald-700/60 r
 
 const CheckIcon = () => <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>;
 const TrashIcon = () => <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const XIcon = () => <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>;
+
+function LocalBlob({ color }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none opacity-20 overflow-hidden rounded-3xl">
+      <div className={`absolute top-[-20%] left-[-20%] w-[120%] h-[120%] ${color} blur-[40px] animate-pulse`} />
+    </div>
+  );
+}
 
 const CLIP_BTN = { clipPath: "polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)" };
 
@@ -29,20 +38,20 @@ function getCardHoverStyle(id) {
     : "hover:shadow-[0_0_20px_rgba(250,204,21,0.4)] hover:border-yellow-500/50 hover:bg-yellow-900/10";
 }
 
-function Badge({ label, color }) {
+function Badge({ label }) {
   const map = {
-    PENDING: "bg-yellow-900/30 border-yellow-700/40 text-yellow-400",
-    CONFIRMED: "bg-emerald-900/30 border-emerald-700/40 text-emerald-400",
-    REJECTED: "bg-red-900/30 border-red-700/40 text-red-400",
-    OPEN: "bg-cyan-900/30 border-cyan-700/40 text-cyan-400",
-    CLOSED: "bg-slate-800 border-slate-700 text-slate-400",
-    DRAFT: "bg-slate-800 border-slate-700 text-slate-500",
-    PROCESSED: "bg-blue-900/30 border-blue-700/40 text-blue-400",
-    ADMIN: "bg-red-900/30 border-red-700/40 text-red-400",
-    USER: "bg-slate-800 border-slate-700 text-slate-400",
+    PENDING: "text-amber-600",
+    CONFIRMED: "text-emerald-600",
+    REJECTED: "text-red-600",
+    OPEN: "text-cyan-600",
+    CLOSED: "text-slate-500",
+    DRAFT: "text-slate-400",
+    PROCESSED: "text-blue-600",
+    ADMIN: "text-red-500/80",
+    USER: "text-slate-500",
   };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider ${map[label] || map.CLOSED}`}>
+    <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-[0.15em] ${map[label] || map.CLOSED}`}>
       {label}
     </span>
   );
@@ -375,33 +384,44 @@ function RegistrationsPanel() {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {regs.map((r) => (
-        <div key={r.id} className={`${CARD} rounded-xl p-4 group transition-all duration-300 ${getCardHoverStyle(r.id)}`}>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <p className="font-mono font-bold text-sm text-white">{r.user?.name}</p>
-                <Badge label={r.paymentStatus} />
-                {r.pdfExported && <span className="font-mono text-[10px] text-slate-600 group-hover:text-white transition-colors duration-300">PDF ✓</span>}
-              </div>
-              <p className="font-sans text-xs text-slate-500 group-hover:text-white transition-colors duration-300">{r.user?.email} · {r.event?.title}</p>
-              <p className="font-sans text-xs text-slate-600 mt-1 uppercase group-hover:text-white transition-colors duration-300">Session: {r.selectedSession} · {formatDate(r.createdAt)} · {formatRp(r.event?.price)}</p>
+        <div key={r.id} className="relative aspect-square bg-white/70 backdrop-blur-xl rounded-3xl p-6 group transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/40 overflow-hidden flex flex-col justify-between">
+          <LocalBlob color="bg-cyan-400" />
+          
+          <div className="relative z-10 space-y-4">
+            <div className="flex justify-between items-start">
+              <p className="font-sans font-black text-sm text-black tracking-tight leading-none uppercase">{r.user?.name}</p>
+              <Badge label={r.paymentStatus} />
             </div>
-            <div className="flex gap-2 flex-wrap items-center">
-              {r.paymentStatus === "PENDING" && <>
-                <button onClick={() => confirmPayment(r.id, "CONFIRMED")} className={BTN_ICON_SUCCESS}><CheckIcon /></button>
-                <button onClick={() => confirmPayment(r.id, "REJECTED")} className={BTN_DANGER}>Reject</button>
-              </>}
-              {r.paymentStatus === "CONFIRMED" && !r.pdfExported && (
-                <button onClick={() => exportPdf(r.id)} className="px-3 py-1.5 bg-blue-900/50 border border-blue-700/60 text-blue-100 font-bold text-xs uppercase rounded hover:bg-blue-800/60 transition-colors">PDF</button>
-              )}
-              <button onClick={() => del(r.id)} className={BTN_ICON_DANGER}><TrashIcon /></button>
+            
+            <div className="space-y-1">
+              <p className="font-sans text-[10px] text-black/70 group-hover:text-black transition-colors duration-300 truncate">{r.user?.email}</p>
+              <p className="font-sans text-[10px] text-black/70 group-hover:text-black transition-colors duration-300">{r.event?.title}</p>
             </div>
+
+            <div className="pt-2 border-t border-black/5 space-y-1">
+              <p className="font-sans text-[10px] text-black/60 group-hover:text-black transition-colors duration-300">Session: {r.selectedSession}</p>
+              <p className="font-sans text-[10px] text-black/60 group-hover:text-black transition-colors duration-300">{formatDate(r.createdAt)}</p>
+              <p className="font-sans text-[10px] text-black/60 group-hover:text-black transition-colors duration-300 font-bold">{formatRp(r.event?.price)}</p>
+            </div>
+          </div>
+
+          <div className="relative z-10 flex gap-2 pt-4">
+            {r.paymentStatus === "PENDING" && (
+              <>
+                <button onClick={() => confirmPayment(r.id, "CONFIRMED")} title="Confirm Payment" className="flex-1 h-10 flex items-center justify-center bg-emerald-500 rounded-2xl text-white shadow-[0_5px_15px_rgba(16,185,129,0.3)] hover:scale-105 transition-transform"><CheckIcon /></button>
+                <button onClick={() => confirmPayment(r.id, "REJECTED")} title="Reject Payment" className="flex-1 h-10 flex items-center justify-center bg-red-500 rounded-2xl text-white shadow-[0_5px_15px_rgba(239,68,68,0.3)] hover:scale-105 transition-transform"><XIcon /></button>
+              </>
+            )}
+            {r.paymentStatus === "CONFIRMED" && !r.pdfExported && (
+              <button onClick={() => exportPdf(r.id)} className="flex-1 h-10 bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-[0_5px_15px_rgba(59,130,246,0.3)] hover:scale-105 transition-transform">EXPORT PDF</button>
+            )}
+            <button onClick={() => del(r.id)} className="w-10 h-10 flex items-center justify-center bg-black/5 rounded-2xl text-black/40 hover:bg-red-500 hover:text-white transition-all"><TrashIcon /></button>
           </div>
         </div>
       ))}
-      {!regs.length && <p className="font-mono text-sm text-slate-500">No registrations.</p>}
+      {!regs.length && <p className="font-mono text-sm text-slate-500 col-span-full py-10 text-center">No registrations.</p>}
     </div>
   );
 }
@@ -660,7 +680,7 @@ function SystemLog({ registrations = [], products = [] }) {
   }, [registrations, products]);
 
   return (
-    <div className="p-5 overflow-hidden h-[450px] flex flex-col border-b border-white/10 bg-black/40">
+    <div className="p-5 overflow-hidden h-[450px] flex flex-col border-b border-white/10 bg-transparent">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-mono font-black text-sm uppercase tracking-tighter text-white flex items-center gap-2">
           LIVE SYSTEM FEED
@@ -831,7 +851,7 @@ function LoomBackground() {
 
 function SystemHealth() {
   return (
-    <div className="p-5 bg-black/40">
+    <div className="p-5 bg-transparent">
        <h3 className="font-mono font-black text-sm uppercase tracking-tighter text-white mb-6">SYSTEM HEALTH</h3>
        <div className="space-y-6">
           <div className="flex justify-between items-center">
@@ -921,63 +941,82 @@ function CommentsPanel() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {comments.map((c) => (
           <motion.div 
             key={c.id} 
             layout
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`${CARD} rounded-2xl p-5 group relative transition-all duration-300 ${getCardHoverStyle(c.id)}`}
+            className="relative aspect-square bg-white/70 backdrop-blur-xl rounded-3xl p-6 group transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/40 overflow-hidden flex flex-col justify-between"
           >
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 overflow-hidden flex-shrink-0">
-                    <img 
-                      src={c.user?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.username || 'anon'}`} 
-                      alt="" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div>
-                    <p className="font-sans font-black text-sm text-white tracking-tight leading-none uppercase">
-                      {c.username || "ANONYMOUS"}
-                    </p>
-                    <p className="font-mono text-[9px] text-slate-500 mt-1 uppercase tracking-widest">
-                      {c.type} · {c.category} · {formatDate(c.createdAt)}
-                    </p>
+            <LocalBlob color="bg-fuchsia-400" />
+            
+            <div className="relative z-10 flex-1 flex flex-col">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-2xl bg-black/5 border border-black/10 overflow-hidden flex-shrink-0">
+                  <img 
+                    src={c.user?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.username || 'anon'}`} 
+                    alt="" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-sans font-black text-sm text-black tracking-tight leading-none uppercase truncate">
+                    {c.username || "ANONYMOUS"}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className={`font-sans font-black text-[9px] uppercase tracking-tighter ${
+                      c.type === 'ADVICE' ? 'text-[#1a365d]' : 'text-red-600'
+                    }`}>
+                      {c.type}
+                    </span>
+                    <span className="text-black/20 text-[9px]">-</span>
+                    <span className={`font-sans font-black text-[9px] uppercase tracking-tighter ${
+                      c.category?.toUpperCase() === 'EVENT' ? 'text-fuchsia-600' : 
+                      c.category?.toUpperCase() === 'WEB DEV' ? 'text-yellow-600' : 'text-emerald-600'
+                    }`}>
+                      {c.category || 'OTHER'}
+                    </span>
                   </div>
                 </div>
-                <p className="font-sans text-[13px] text-slate-300 leading-relaxed font-medium">
+              </div>
+              
+              <div className="flex-1 overflow-y-auto scrollbar-hide">
+                <p className="font-sans text-[12px] text-black/80 leading-relaxed font-medium group-hover:text-black transition-colors duration-300">
                   {c.content}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => togglePin(c.id)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-all ${
-                    c.isPinned 
-                      ? "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]" 
-                      : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:border-white/20 hover:text-white"
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" />
-                  </svg>
-                </button>
-                <button 
-                  onClick={() => del(c.id)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/40 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-all"
-                >
-                  <TrashIcon />
-                </button>
-              </div>
+              
+              <p className="font-sans text-[10px] text-black/40 mt-4 uppercase tracking-widest">
+                {formatDate(c.createdAt)}
+              </p>
+            </div>
+
+            <div className="relative z-10 flex gap-2 pt-4">
+              <button 
+                onClick={() => togglePin(c.id)}
+                className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${
+                  c.isPinned 
+                    ? "bg-emerald-500 text-white shadow-[0_5px_15px_rgba(34,197,94,0.3)]" 
+                    : "bg-black/5 text-black/30 hover:bg-black/10 hover:text-black"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" />
+                </svg>
+              </button>
+              <button 
+                onClick={() => del(c.id)}
+                className="w-10 h-10 flex items-center justify-center rounded-2xl bg-black/5 text-black/30 hover:bg-red-500 hover:text-white transition-all"
+              >
+                <TrashIcon />
+              </button>
             </div>
           </motion.div>
         ))}
         {!comments.length && (
-          <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl">
+          <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-3xl">
             <p className="font-mono text-xs text-slate-600 uppercase tracking-[0.2em]">No comments found</p>
           </div>
         )}
@@ -1003,36 +1042,46 @@ function UsersPanel() {
   async function del(id) { if (!confirm("Delete user?")) return; await api.delete(`/admin/users/${id}`); load(); }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {users.map((u) => (
-        <div key={u.id} className={`${CARD} rounded-xl p-4 group transition-all duration-300 ${getCardHoverStyle(u.id)}`}>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <p className="font-mono font-bold text-sm text-white truncate">{u.name}</p>
-                <Badge label={u.role} />
-                {u.isEmailVerified && <span className="font-mono text-[10px] text-emerald-600 group-hover:text-emerald-400 transition-colors duration-300">✓ Verified</span>}
-              </div>
-              <p className="font-sans text-xs text-slate-500 group-hover:text-white transition-colors duration-300">{u.email} · {u.phone}</p>
-              <div className="flex gap-4 mt-1 text-[10px] text-slate-600 font-sans uppercase flex-wrap group-hover:text-white transition-colors duration-300">
-                <span>Bookings: {u._count?.bookings}</span>
-                <span>Events: {u._count?.eventRegistrations}</span>
-                <span>Services: {u._count?.serviceBookings}</span>
-                <span>Joined: {formatDate(u.createdAt)}</span>
+        <div key={u.id} className="relative aspect-square bg-white/70 backdrop-blur-xl rounded-3xl p-6 group transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/40 overflow-hidden flex flex-col justify-between">
+          <LocalBlob color="bg-orange-400" />
+          
+          <div className="relative z-10 space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="min-w-0">
+                <p className="font-sans font-black text-sm text-black tracking-tight leading-none uppercase truncate">{u.name}</p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Badge label={u.role} />
+                  {u.isEmailVerified && <span className="font-sans text-[10px] text-emerald-600 uppercase tracking-[0.15em] font-black">Verified</span>}
+                </div>
               </div>
             </div>
-            <div className="flex gap-2 flex-wrap items-center">
-              {u.role === "USER" ? (
-                <button onClick={() => setRole(u.id, "ADMIN")} className="px-3 py-1.5 bg-red-900/30 border border-red-700/40 text-red-400 font-bold text-xs uppercase rounded hover:bg-red-800/40 transition-colors">→ Admin</button>
-              ) : (
-                <button onClick={() => setRole(u.id, "USER")} className="px-3 py-1.5 bg-slate-800 text-slate-400 text-xs font-bold uppercase rounded hover:bg-slate-700 transition-colors">→ User</button>
-              )}
-              <button onClick={() => del(u.id)} className={BTN_ICON_DANGER}><TrashIcon /></button>
+            
+            <div className="space-y-1">
+              <p className="font-sans text-[10px] text-black/70 group-hover:text-black transition-colors duration-300 truncate">{u.email}</p>
+              <p className="font-sans text-[10px] text-black/70 group-hover:text-black transition-colors duration-300">{u.phone}</p>
             </div>
+
+            <div className="pt-2 border-t border-black/5 grid grid-cols-2 gap-y-1">
+              <span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Bookings: {u._count?.bookings}</span>
+              <span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Events: {u._count?.eventRegistrations}</span>
+              <span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Services: {u._count?.serviceBookings}</span>
+              <span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Since: {formatDate(u.createdAt)}</span>
+            </div>
+          </div>
+
+          <div className="relative z-10 flex gap-2 pt-4">
+            {u.role === "USER" ? (
+              <button onClick={() => setRole(u.id, "ADMIN")} title="Promote to Admin" className="w-10 h-10 flex items-center justify-center bg-red-500 rounded-2xl text-white shadow-[0_5px_15px_rgba(239,68,68,0.2)] hover:scale-105 transition-transform font-black text-lg">↑</button>
+            ) : (
+              <button onClick={() => setRole(u.id, "USER")} title="Demote to User" className="w-10 h-10 flex items-center justify-center bg-black/5 rounded-2xl text-black hover:bg-black/10 transition-colors font-black text-lg">→</button>
+            )}
+            <button onClick={() => del(u.id)} className="w-10 h-10 flex items-center justify-center bg-black/5 rounded-2xl text-black/40 hover:bg-red-500 hover:text-white transition-all"><TrashIcon /></button>
           </div>
         </div>
       ))}
-      {!users.length && <p className="font-mono text-sm text-slate-600">No users.</p>}
+      {!users.length && <p className="font-mono text-sm text-slate-600 col-span-full py-10 text-center">No users.</p>}
     </div>
   );
 }
@@ -1180,6 +1229,7 @@ export default function AdminDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
+                className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[40px] p-8 shadow-[0_30px_60px_rgba(0,0,0,0.4)]"
               >
                 <SectionTitle>{TABS.find((t) => t.id === tab)?.label}</SectionTitle>
                 {tab === "events" && <EventsPanel initialEvents={data.events} onRefresh={loadAll} />}
@@ -1193,7 +1243,7 @@ export default function AdminDashboard() {
 
           {/* Right Sidebar: Combined Classic Box */}
           <div className="hidden lg:block relative z-10">
-            <div className="border border-white/20 bg-transparent flex flex-col p-[2px] backdrop-blur-sm" style={{ boxShadow: "0 0 20px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.05)" }}>
+            <div className="border border-white/10 bg-black/20 flex flex-col p-[2px] backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.4)]">
               <SystemLog 
                 registrations={data.regs} 
                 products={data.products} 

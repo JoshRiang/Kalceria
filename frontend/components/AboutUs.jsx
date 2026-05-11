@@ -268,6 +268,40 @@ function FloatingQuotesLayer() {
   );
 }
 
+// ─── Dangling Symbols Component ───
+function DanglingSymbols({ char, color, side = "left", configs = [] }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {configs.map((s, i) => (
+        <motion.div
+          key={i}
+          animate={{ 
+            y: [0, -20, 0],
+            rotate: [s.rotate || 0, (s.rotate || 0) + 12, (s.rotate || 0) - 6, s.rotate || 0]
+          }}
+          transition={{ 
+            duration: 3.5 + i,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: s.delay || 0
+          }}
+          className="absolute text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter select-none z-[60]"
+          style={{ 
+            color: color, 
+            top: s.top,
+            [side === "left" ? "left" : "right"]: `${s.offset}px`,
+            textShadow: `0 0 20px ${color}, 0 0 40px ${color}`,
+            filter: `drop-shadow(0 0 25px ${color}aa)`,
+            opacity: 0.95
+          }}
+        >
+          {char}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 export default function AboutUs() {
   const [mounted, setMounted] = useState(false);
   
@@ -508,6 +542,17 @@ export default function AboutUs() {
               alt="Reii Left" 
               className="w-[12rem] md:w-[17.25rem] max-w-none relative z-10 opacity-90" 
             />
+
+            {/* Dangling ? Symbols beside Left Reii (on its right side) */}
+            <DanglingSymbols 
+              char="?" 
+              color="#FFD700" 
+              side="left" 
+              configs={[
+                { delay: 0, rotate: -15, top: "-15%", offset: 145 }, // Upper: another 10% lefter
+                { delay: 0.8, rotate: 10, top: "35%", offset: 200 }  // Lower: another 5% righter
+              ]} 
+            />
           </div>
 
           {/* 3. RIGHT REII IMAGE (Shrunken by 25%, Magenta-Cyan Glow) */}
@@ -531,6 +576,18 @@ export default function AboutUs() {
               src={imgToggle ? "/reii3.png" : "/reii2.png"} 
               alt="Reii Right" 
               className="w-[12rem] md:w-[17.25rem] max-w-none relative z-10 opacity-90" 
+            />
+
+            {/* Dangling ! Symbols beside Right Reii2 (on its left side) */}
+            <DanglingSymbols 
+              char="!" 
+              color="#00FFFF" 
+              side="right" 
+              configs={[
+                { delay: 0, rotate: -15, top: "-15%", offset: 145 }, // Upper: another 10% righter
+                { delay: 0.8, rotate: 10, top: "30%", offset: 200 }, // Lower 1: another 5% lefter
+                { delay: 1.5, rotate: -5, top: "65%", offset: 250 }  // Lower 2: another 5% lefter
+              ]} 
             />
           </div>
 

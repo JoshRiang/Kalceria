@@ -2248,9 +2248,9 @@ function FloatingAssets() {
       { src: '/ccar_3.png', x: 85, y: 18, w: "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
       { src: '/ccar_4.png', x: 82, y: 62, w: "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
       // stikermobil_3 — lower-middle left
-      { src: '/stikermobil_3.png', x: 36, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
+      { src: '/stikermobil_3.png', x: 28.5, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
       // stikermobil_1 — beside stikermobil_3, shifted right, mirrored rotation
-      { src: '/stikermobil_1.png', x: 55, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
+      { src: '/stikermobil_1.png', x: 65, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
     ];
     
     return assetDefinitions.map((def, i) => ({
