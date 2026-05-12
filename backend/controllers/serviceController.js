@@ -108,6 +108,8 @@ export async function createBooking(req, res, next) {
     } finally {
       // Release lock immediately after DB write
       await redis.del(lockKey);
+      // Invalidate public bookings cache
+      await redis.del('cache:public_bookings');
     }
   } catch (err) {
     next(err);
@@ -119,6 +121,10 @@ export async function createServiceRequest(req, res, next) {
   try {
     const userId = req.user.userId;
     const { serviceType, serviceName, contactPerson, whatsapp, location, additionalNotes, slots } = req.body;
+
+    if (slots && slots.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 slots allowed per booking request.' });
+    }
 
     if (!['EO', 'SHOOTING', 'HOST_EVENT'].includes(serviceType)) {
       return res.status(400).json({ error: 'Invalid serviceType.' });
@@ -150,6 +156,9 @@ export async function createServiceRequest(req, res, next) {
       include: { slots: true }
     });
 
+    // Invalidate public bookings cache
+    await redis.del('cache:public_bookings');
+
     const firstSlot = slots && slots.length > 0 ? slots[0] : null;
     const dateStr = firstSlot ? new Date(firstSlot.date).toLocaleDateString('id-ID', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -180,6 +189,12 @@ export async function createServiceRequest(req, res, next) {
 // ─── GET /services/bookings (Public for Heatmap) ───────────────────────────
 export async function listPublicServiceBookings(req, res, next) {
   try {
+    const cacheKey = 'cache:public_bookings';
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return res.json(JSON.parse(cached));
+    }
+
     const slots = await prisma.serviceBookingSlot.findMany({
       include: {
         serviceBooking: {
@@ -201,7 +216,12 @@ export async function listPublicServiceBookings(req, res, next) {
       status: s.serviceBooking.status
     }));
 
-    res.json({ bookings: formatted });
+    const response = { bookings: formatted };
+    
+    // Cache for 30 seconds (short for "real-time" feel but saves DB hits)
+    await redis.set(cacheKey, JSON.stringify(response), 'EX', 30);
+
+    res.json(response);
   } catch (err) {
     next(err);
   }

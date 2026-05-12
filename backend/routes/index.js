@@ -32,6 +32,7 @@ import {
 } from '../controllers/adminUserController.js';
 import { createComment } from '../controllers/commentController.js';
 import { listComments, togglePinComment, deleteComment } from '../controllers/adminCommentController.js';
+import { getEarnings } from '../controllers/adminEarningsController.js';
 
 const router = express.Router();
 
@@ -127,6 +128,7 @@ router.post('/comments', optionalAuth, createComment);
 router.get('/admin/comments', requireAdmin, listComments);
 router.patch('/admin/comments/:id/pin', requireAdmin, togglePinComment);
 router.delete('/admin/comments/:id', requireAdmin, deleteComment);
+router.get('/admin/earnings', requireAdmin, getEarnings);
 
 // ─── Cron ────────────────────────────────────────────────────────────────────
 router.get('/cron/cleanup', async (_req, res) => {

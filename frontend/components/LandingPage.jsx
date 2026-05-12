@@ -2617,13 +2617,13 @@ function IdeaCommentModal({ onClose }) {
                         ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
                         : step === i 
                           ? "bg-white/10 border-white/40 text-white" 
-                          : "bg-white/5 border-white/10 text-white/20"
+                          : "bg-white/5 backdrop-blur-md border-white/5 text-white/20"
                     }`}>
-                      {step > i ? "✓" : i + 1}
+                      {i + 1}
                     </div>
                     {i < 3 && (
                       <div className={`h-[1px] w-6 md:w-10 rounded-full transition-all duration-700 ${
-                        step > i ? "bg-white" : "bg-white/10"
+                        step > i ? "bg-white" : "bg-white/5 backdrop-blur-sm"
                       }`} />
                     )}
                   </div>

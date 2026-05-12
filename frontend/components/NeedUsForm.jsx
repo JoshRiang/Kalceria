@@ -34,18 +34,50 @@ export default function NeedUsForm({ userEmail, userName }) {
   const [publicBookings, setPublicBookings] = useState([]);
   const [weekOffset, setWeekOffset] = useState(0);
 
-  useEffect(() => {
-    api.get("/services/bookings").then(res => setPublicBookings(res.data.bookings || [])).catch(console.error);
+  const fetchBookings = useCallback(() => {
+    api.get("/services/bookings")
+      .then(res => setPublicBookings(res.data.bookings || []))
+      .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    fetchBookings();
+    // Background polling every 20s to stay "real-time" without excessive load
+    const interval = setInterval(fetchBookings, 20000);
+    return () => clearInterval(interval);
+  }, [fetchBookings]);
+
+  // Distribute computing: Pre-index bookings for O(1) lookup during render
+  const bookingMap = useMemo(() => {
+    const map = {};
+    publicBookings.forEach(b => {
+      const bDate = new Date(b.targetDate).toISOString().split('T')[0];
+      // Store a range or discrete hours
+      const startH = parseInt(b.startTime.split(':')[0]);
+      const endH = parseInt(b.endTime.split(':')[0]);
+      for (let h = startH; h < endH; h++) {
+        map[`${bDate}-${h}`] = b.status;
+      }
+    });
+    return map;
+  }, [publicBookings]);
 
   function setField(k, v) { setForm((p) => ({ ...p, [k]: v })); setError(""); }
 
   const toggleSlot = (dStr, hour) => {
     const key = `${dStr}-${hour}`;
+    const currentlySelectedCount = Object.values(selectedSlots).filter(Boolean).length;
+    
+    if (!selectedSlots[key] && currentlySelectedCount >= 10) {
+      setError("Maximum 10 slots per booking. Please create another order for additional slots.");
+      return;
+    }
+
     setSelectedSlots((prev) => ({
       ...prev,
       [key]: !prev[key]
     }));
+    setError("");
   };
 
   async function handleSubmit(e) {
@@ -86,13 +118,9 @@ export default function NeedUsForm({ userEmail, userName }) {
 
   const getSlotStatus = (dStr, hour, dayOfWeek) => {
     if (dayOfWeek === 1) return "BUSY"; // Closed on Monday
-    const hourStr = hour.toString().padStart(2, '0') + ":00";
     
-    const isPublic = publicBookings.some(b => {
-      const bDate = new Date(b.targetDate).toISOString().split('T')[0];
-      return bDate === dStr && b.startTime <= hourStr && b.endTime > hourStr;
-    });
-    if (isPublic) return "BUSY";
+    const status = bookingMap[`${dStr}-${hour}`];
+    if (status) return "BUSY";
 
     if (selectedSlots[`${dStr}-${hour}`]) return "LOCK";
 
@@ -102,7 +130,7 @@ export default function NeedUsForm({ userEmail, userName }) {
   const isLoggedIn = !!localStorage.getItem("token");
 
   return (
-    <section className="w-full max-w-xl mx-auto px-4 py-16">
+    <section className={`w-full ${step === 1 ? 'max-w-4xl' : 'max-w-xl'} mx-auto px-4 py-16 transition-all duration-500`}>
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
         <p className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-2">Kalceria Services</p>
@@ -119,13 +147,13 @@ export default function NeedUsForm({ userEmail, userName }) {
                 ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
                 : step === i 
                   ? "bg-white/10 border-white/40 text-white" 
-                  : "bg-white/5 border-white/10 text-white/20"
+                  : "bg-white/5 backdrop-blur-md border-white/5 text-white/20"
             }`}>
               {step > i ? "✓" : i + 1}
             </div>
             {i < 2 && (
               <div className={`h-[2px] w-12 rounded-full transition-all duration-700 ${
-                step > i ? "bg-white" : "bg-white/10"
+                step > i ? "bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]" : "bg-white/5 backdrop-blur-sm"
               }`} />
             )}
           </div>
@@ -187,8 +215,8 @@ export default function NeedUsForm({ userEmail, userName }) {
               ))}
 
               {/* Multi-Slot Heatmap Selection */}
-              <div className="mt-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
-                <div className="flex flex-col md:flex-row gap-6 mb-6">
+              <div className="mt-4 p-6 bg-white/[0.03] border border-white/10 rounded-3xl shadow-2xl">
+                <div className="flex flex-col lg:flex-row gap-10 mb-8">
                   {/* AM Grid */}
                   <div className="flex-1">
                     <p className="font-sans text-xs font-bold uppercase tracking-widest text-white mb-3">09.00 - 16.00</p>
@@ -201,14 +229,14 @@ export default function NeedUsForm({ userEmail, userName }) {
                         const dayLabel = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()];
                         return (
                           <div key={i} className="flex flex-col items-center gap-1">
-                            <span className="font-mono text-[7px] text-slate-500">{dayLabel}</span>
+                            <span className="font-mono text-[7px] text-white/40">{dayLabel}</span>
                             <span className="font-mono text-[8px] text-white">{date.getDate()}</span>
                           </div>
                         );
                       })}
                       {HOURS_AM.map(h => (
                         <div key={h} className="contents">
-                          <span className="font-mono text-[7px] text-slate-600 flex items-center justify-end pr-1">{h.toString().padStart(2, '0')}</span>
+                          <span className="font-mono text-[7px] text-white/50 flex items-center justify-end pr-1">{h.toString().padStart(2, '0')}</span>
                           {Array.from({ length: 7 }).map((_, i) => {
                             const date = new Date();
                             date.setDate(date.getDate() + i + (weekOffset * 7));
@@ -245,14 +273,14 @@ export default function NeedUsForm({ userEmail, userName }) {
                         const dayLabel = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()];
                         return (
                           <div key={i} className="flex flex-col items-center gap-1">
-                            <span className="font-mono text-[7px] text-slate-500">{dayLabel}</span>
+                            <span className="font-mono text-[7px] text-white/40">{dayLabel}</span>
                             <span className="font-mono text-[8px] text-white">{date.getDate()}</span>
                           </div>
                         );
                       })}
                       {HOURS_PM.map(h => (
                         <div key={h} className="contents">
-                          <span className="font-mono text-[7px] text-slate-600 flex items-center justify-end pr-1">{h.toString().padStart(2, '0')}</span>
+                          <span className="font-mono text-[7px] text-white/50 flex items-center justify-end pr-1">{h === 0 ? "00" : h.toString().padStart(2, '0')}</span>
                           {Array.from({ length: 7 }).map((_, i) => {
                             const date = new Date();
                             date.setDate(date.getDate() + i + (weekOffset * 7));
@@ -279,27 +307,29 @@ export default function NeedUsForm({ userEmail, userName }) {
                   </div>
                 </div>
 
-                {/* Heatmap Footer */}
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-white/5">
-                  <div className="flex gap-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/20 border border-emerald-500/30" />
-                      <span className="font-mono text-[8px] uppercase text-slate-500 tracking-widest">READY</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-[2px] bg-red-500/20 border border-red-500/30" />
-                      <span className="font-mono text-[8px] uppercase text-slate-500 tracking-widest">BUSY</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-[2px] bg-[#FF00FF] shadow-[0_0_5px_rgba(255,0,255,0.5)]" />
-                      <span className="font-mono text-[8px] uppercase text-slate-500 tracking-widest">LOCK</span>
-                    </div>
+                {/* Legend: Just under the map */}
+                <div className="flex flex-wrap justify-center gap-10 mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3.5 h-3.5 rounded-[4px] bg-emerald-500/20 border border-emerald-500/30" />
+                    <span className="font-mono text-[10px] uppercase text-slate-400 tracking-[0.2em] font-black">READY</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-[8px] text-white tracking-widest italic">Week {weekOffset + 1}</span>
-                    <div className="flex gap-1">
-                      <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="p-1 hover:bg-white/10 rounded transition-colors text-xs">←</button>
-                      <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="p-1 hover:bg-white/10 rounded transition-colors text-xs">→</button>
+                    <div className="w-3.5 h-3.5 rounded-[4px] bg-red-500/20 border border-red-500/30" />
+                    <span className="font-mono text-[10px] uppercase text-slate-400 tracking-[0.2em] font-black">BUSY</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3.5 h-3.5 rounded-[4px] bg-[#FF00FF] shadow-[0_0_12px_rgba(255,0,255,0.7)]" />
+                    <span className="font-mono text-[10px] uppercase text-slate-400 tracking-[0.2em] font-black">LOCK</span>
+                  </div>
+                </div>
+
+                {/* Heatmap Footer: Week Navigation */}
+                <div className="pt-6 border-t border-white/10">
+                  <div className="flex items-center justify-between bg-white/5 px-6 py-3 rounded-xl border border-white/5 shadow-inner">
+                    <span className="font-mono text-[11px] text-white tracking-[0.3em] uppercase font-black italic">Temporal Segment: Week {weekOffset + 1}</span>
+                    <div className="flex gap-3">
+                      <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full transition-all text-base border border-white/10 bg-black/20">←</button>
+                      <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full transition-all text-base border border-white/10 bg-black/20">→</button>
                     </div>
                   </div>
                 </div>

@@ -23,10 +23,15 @@ export async function saveTelemetry(req, res, next) {
 // ─── GET /map/users ───────────────────────────────────────────────────────────
 export async function getMapUsers(req, res, next) {
   try {
+    const globalCacheKey = 'cache:map_users_enriched';
+    const cachedGlobal = await redis.get(globalCacheKey);
+    if (cachedGlobal) return res.json(JSON.parse(cachedGlobal));
+
     // Get all active user IDs from Redis geo set
     const members = await redis.zrange('active_users', 0, -1);
     if (!members.length) return res.json({ users: [] });
 
+    // Batch fetch user profiles
     const users = await prisma.user.findMany({
       where: {
         id: { in: members },
@@ -39,26 +44,32 @@ export async function getMapUsers(req, res, next) {
         profilePicture: true,
         socialPlatform: true,
         socialLink: true,
-        domicileLat: true,
-        domicileLng: true,
       },
     });
 
-    // Get precise coords from Redis and mask them
-    const enriched = await Promise.all(
-      users.map(async (u) => {
-        const pos = await redis.geopos('active_users', u.id);
-        let district = null;
-        if (pos && pos[0]) {
-          const [lng, lat] = pos[0];
-          district = maskLocationToDistrict(parseFloat(lat), parseFloat(lng));
-        }
-        const { domicileLat, domicileLng, ...safe } = u;
-        return { ...safe, district };
-      })
-    );
+    if (!users.length) return res.json({ users: [] });
 
-    res.json({ users: enriched });
+    // Batch fetch all positions in ONE call
+    const userIds = users.map(u => u.id);
+    const positions = await redis.geopos('active_users', ...userIds);
+
+    // Map results efficiently
+    const enriched = users.map((u, index) => {
+      const pos = positions[index];
+      let district = null;
+      if (pos && pos[0]) {
+        const [lng, lat] = pos;
+        district = maskLocationToDistrict(parseFloat(lat), parseFloat(lng));
+      }
+      return { ...u, district };
+    });
+
+    const response = { users: enriched };
+    
+    // Cache for 5 seconds - keeps the map responsive while slashing heavy compute
+    await redis.set(globalCacheKey, JSON.stringify(response), 'EX', 5);
+
+    res.json(response);
   } catch (err) {
     next(err);
   }

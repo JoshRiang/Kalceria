@@ -22,12 +22,12 @@ function StepIndicator({ total, current }) {
           <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-black font-sans transition-all duration-500 border ${
             i < current ? "bg-[#FF00FF] border-[#FF00FF] text-white shadow-[0_0_12px_rgba(255,0,255,0.4)]" :
             i === current ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]" :
-            "bg-slate-900 border-slate-800 text-slate-600"
+            "bg-white/5 backdrop-blur-md border-white/5 text-white/30"
           }`}>
-            {i < current ? <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"></path></svg> : i + 1}
+            {i + 1}
           </div>
           {i < total - 1 && (
-            <div className="relative h-[2px] w-6 bg-slate-800 overflow-hidden rounded-full">
+            <div className="relative h-[1.5px] w-6 bg-white/5 backdrop-blur-sm overflow-hidden rounded-full">
               <motion.div 
                 initial={{ x: "-100%" }}
                 animate={{ x: i < current ? "0%" : "-100%" }}
@@ -119,6 +119,34 @@ export default function ServiceRequestModal({ onClose, userName }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
+  const [publicBookings, setPublicBookings] = useState([]);
+
+  const fetchBookings = useCallback(() => {
+    api.get("/services/bookings")
+      .then(res => setPublicBookings(res.data.bookings || []))
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    fetchBookings();
+    const interval = setInterval(fetchBookings, 20000);
+    return () => clearInterval(interval);
+  }, [fetchBookings]);
+
+  // Distribute computing: Pre-index bookings
+  const bookingMap = useMemo(() => {
+    const map = {};
+    publicBookings.forEach(b => {
+      const bDate = new Date(b.targetDate).toISOString().split('T')[0];
+      const startH = parseInt(b.startTime.split(':')[0]);
+      const endH = parseInt(b.endTime.split(':')[0]);
+      // Handle midnight wrap if necessary, though our slots are usually day-based
+      for (let h = startH; h < (endH === 0 ? 24 : endH); h++) {
+        map[`${bDate}-${h}`] = b.status;
+      }
+    });
+    return map;
+  }, [publicBookings]);
 
   // Form Validation (now includes checking if targetDate/time is selected)
   // Form Validation
@@ -198,7 +226,15 @@ export default function ServiceRequestModal({ onClose, userName }) {
 
   const toggleSlot = (dStr, hour) => {
     const key = `${dStr}-${hour}`;
+    const currentlySelectedCount = Object.values(selectedSlots).filter(Boolean).length;
+
+    if (!selectedSlots[key] && currentlySelectedCount >= 10) {
+      setError("Maximum 10 slots per order. Please complete this transaction first.");
+      return;
+    }
+
     setSelectedSlots(prev => ({ ...prev, [key]: !prev[key] }));
+    setError("");
   };
 
   const renderGrid = (hourList) => {
@@ -220,8 +256,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
               const isMonday = d.isMonday;
               const slotKey = `${d.date}-${h}`;
               const isSelected = !!selectedSlots[slotKey];
-              const idx = (h * 7) + i;
-              const isBooked = !isMonday && (idx % 13 === 0 || idx % 21 === 0); 
+              const isBooked = !!bookingMap[slotKey]; 
 
               return (
                 <div
@@ -275,7 +310,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
         animate={{ opacity: 1, scale: 0.9, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-        className={`relative z-10 w-full ${step === 1 ? "max-w-[820px]" : "max-w-[500px]"}`}
+        className={`relative z-10 w-full ${step === 1 ? "max-w-[1320px]" : "max-w-[500px]"}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Animated Conic Glow Overlay */}
@@ -442,7 +477,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
                   <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full items-center">
                     <div className="flex gap-6 items-start justify-center">
                       {/* Column 1: Intel Hub */}
-                      <div className="w-[280px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-[28px] p-6 shadow-2xl relative overflow-hidden">
+                      <div className="w-[384px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-10 shadow-2xl relative overflow-hidden">
                         {/* Internal Red-Orange Atmospheric Blob */}
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/10 blur-[40px] rounded-full pointer-events-none" />
                         <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-red-500/10 blur-[40px] rounded-full pointer-events-none" />
@@ -461,28 +496,28 @@ export default function ServiceRequestModal({ onClose, userName }) {
                       <div className="flex flex-col gap-6">
                         <div className="flex gap-4">
                           {/* Shift 1 */}
-                          <div className="w-[200px] bg-white/5 border border-white/10 rounded-[24px] p-4 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
+                          <div className="w-[360px] bg-white/5 border border-white/10 rounded-[28px] p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
                             {/* Internal Red-Orange Atmospheric Blob */}
                             <div className="absolute -top-5 -left-5 w-24 h-24 bg-red-500/10 blur-[30px] rounded-full pointer-events-none" />
                             
                             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-white/20 to-transparent opacity-20" />
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[11px] font-bold mb-3 tracking-widest uppercase">09.00 - 16.00</p>
-                              <div className="overflow-y-auto max-h-[220px] pr-1 custom-scrollbar">
+                              <p className="font-sans text-white text-[13px] font-bold mb-4 tracking-widest uppercase">09.00 - 16.00</p>
+                              <div className="overflow-y-auto max-h-[320px] pr-2 custom-scrollbar">
                                 {mounted ? renderGrid(hoursA) : null}
                               </div>
                             </div>
                           </div>
 
                           {/* Shift 2 */}
-                          <div className="w-[200px] bg-white/5 border border-white/10 rounded-[24px] p-4 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
+                          <div className="w-[360px] bg-white/5 border border-white/10 rounded-[28px] p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
                             {/* Internal Red-Orange Atmospheric Blob */}
                             <div className="absolute -bottom-5 -right-5 w-24 h-24 bg-orange-500/10 blur-[30px] rounded-full pointer-events-none" />
                             
                             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-white/20 to-transparent opacity-20" />
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[11px] font-bold mb-3 tracking-widest uppercase">17.00 - 00.00</p>
-                              <div className="overflow-y-auto max-h-[220px] pr-1 custom-scrollbar">
+                              <p className="font-sans text-white text-[13px] font-bold mb-4 tracking-widest uppercase">17.00 - 00.00</p>
+                              <div className="overflow-y-auto max-h-[320px] pr-2 custom-scrollbar">
                                 {mounted ? renderGrid(hoursB) : null}
                               </div>
                             </div>
@@ -490,28 +525,28 @@ export default function ServiceRequestModal({ onClose, userName }) {
                         </div>
 
                         {/* Extended Legend & Counter */}
-                        <div className="flex items-center justify-between gap-5 text-[10px] font-black text-white font-sans uppercase tracking-[0.1em] bg-white/5 px-6 py-4 rounded-full border border-white/10 shadow-2xl w-full">
-                          <div className="flex items-center gap-5">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-emerald-500 border border-emerald-400 rounded-[2px]" /> 
+                        <div className="flex items-center justify-between gap-5 text-[11px] font-black text-white font-sans uppercase tracking-[0.1em] bg-white/5 px-10 py-6 rounded-full border border-white/10 shadow-2xl w-full mt-4">
+                          <div className="flex items-center gap-8">
+                            <div className="flex items-center gap-4">
+                              <div className="w-3 h-3 bg-emerald-500 border border-emerald-400 rounded-[4px]" /> 
                               READY
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-red-500 border border-red-400 rounded-[2px]" /> 
+                            <div className="flex items-center gap-4">
+                              <div className="w-3 h-3 bg-red-500 border border-red-400 rounded-[4px]" /> 
                               BUSY
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-[#FF00FF] border border-[#FF00FF] shadow-[0_0_10px_#FF00FF] rounded-[2px]" /> 
+                            <div className="flex items-center gap-4">
+                              <div className="w-3 h-3 bg-[#FF00FF] border border-[#FF00FF] shadow-[0_0_15px_#FF00FF] rounded-[4px]" /> 
                               LOCK
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-4">
-                            <div className="w-[1px] h-4 bg-white/10" />
-                            <span className="text-white font-sans italic normal-case tracking-normal text-[11px] opacity-100">Week {weekOffset + 1}</span>
+                          <div className="flex items-center gap-5">
+                            <div className="w-[1px] h-5 bg-white/20" />
+                            <span className="text-white font-sans italic normal-case tracking-normal text-[12px] opacity-100">Week {weekOffset + 1}</span>
                             <div className="flex gap-2">
-                              <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="p-1 hover:text-white transition-colors"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg></button>
-                              <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="p-1 hover:text-white transition-colors"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg></button>
+                              <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg></button>
+                              <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg></button>
                             </div>
                           </div>
                         </div>
