@@ -113,15 +113,16 @@ export default function ServiceRequestModal({ onClose, userName }) {
     contactPerson: userName || "", 
     whatsapp: "", 
     location: "", 
-    targetDate: "", 
     additionalNotes: "" 
   });
+  const [selectedSlots, setSelectedSlots] = useState({}); // { "date-hour": true }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
 
   // Form Validation (now includes checking if targetDate/time is selected)
-  const isFormValid = form.serviceName && form.contactPerson && form.whatsapp && form.location && form.targetDate;
+  // Form Validation
+  const isFormValid = form.serviceName && form.contactPerson && form.whatsapp && form.location && Object.values(selectedSlots).filter(Boolean).length > 0;
 
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem("token");
 
@@ -148,7 +149,23 @@ export default function ServiceRequestModal({ onClose, userName }) {
 
     setLoading(true);
     try {
-      const res = await api.post("/services/request", form);
+      const selectedArray = Object.entries(selectedSlots)
+        .filter(([_, val]) => val)
+        .map(([key]) => {
+          const [date, hour] = key.split(/-(?=\d+$)/);
+          return { date, hour: parseInt(hour) };
+        });
+
+      const slots = selectedArray.map(s => ({
+        date: s.date,
+        startTime: s.hour.toString().padStart(2, '0') + ":00",
+        endTime: (s.hour === 23 ? 0 : s.hour + 1).toString().padStart(2, '0') + ":00"
+      }));
+
+      const res = await api.post("/services/request", {
+        ...form,
+        slots
+      });
       setDone(res.data);
       setStep(2);
     } catch (err) {
@@ -179,6 +196,11 @@ export default function ServiceRequestModal({ onClose, userName }) {
     return days;
   };
 
+  const toggleSlot = (dStr, hour) => {
+    const key = `${dStr}-${hour}`;
+    setSelectedSlots(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const renderGrid = (hourList) => {
     const days = getDays();
     return (
@@ -195,22 +217,22 @@ export default function ServiceRequestModal({ onClose, userName }) {
               {h === 24 ? "00" : h.toString().padStart(2, '0')}
             </div>
             {days.map((d, i) => {
-              const hourStr = `${h === 24 ? "00" : h.toString().padStart(2, '0')}:00`;
-              const fullDate = `${d.date}T${hourStr}`;
-              const isSelected = form.targetDate === fullDate;
               const isMonday = d.isMonday;
+              const slotKey = `${d.date}-${h}`;
+              const isSelected = !!selectedSlots[slotKey];
               const idx = (h * 7) + i;
               const isBooked = !isMonday && (idx % 13 === 0 || idx % 21 === 0); 
 
               return (
                 <div
                   key={i}
-                  onClick={() => !isMonday && !isBooked && setField("targetDate", fullDate)}
+                  onClick={() => !isMonday && !isBooked && toggleSlot(d.date, h)}
+                  onDoubleClick={() => !isMonday && !isBooked && toggleSlot(d.date, h)}
                   className={`
                     aspect-square w-full rounded-[2px] transition-all duration-200 cursor-pointer relative
-                    ${isMonday ? "bg-red-500/30 border border-red-500/20" : 
-                      isBooked ? "bg-white/5 opacity-5" :
-                      isSelected ? "bg-[#FF00FF] shadow-[0_0_12px_#FF00FF] z-10" :
+                    ${isMonday ? "bg-red-500/30 border border-red-500/20 cursor-not-allowed" : 
+                      isBooked ? "bg-white/5 opacity-5 cursor-not-allowed" :
+                      isSelected ? "bg-[#FF00FF] shadow-[0_0_12px_#FF00FF] z-10 scale-110" :
                       "bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/40"
                     }
                   `}
@@ -311,15 +333,10 @@ export default function ServiceRequestModal({ onClose, userName }) {
           </div>
 
           <style jsx>{`
-            @keyframes gradientMove {
-            @keyframes shimmer {
-              0% { background-position: 0% 50%; }
-              100% { background-position: 200% 50%; }
-            }
-            .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+            .custom-scrollbar::-webkit-scrollbar { width: 3px; }
             .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-            .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.1); }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
           `}</style>
 
           {/* Header Section */}
@@ -450,8 +467,8 @@ export default function ServiceRequestModal({ onClose, userName }) {
                             
                             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-white/20 to-transparent opacity-20" />
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[11px] font-black mb-3 tracking-tighter opacity-90">09.00 - 16.00</p>
-                              <div className="overflow-hidden">
+                              <p className="font-sans text-white text-[11px] font-bold mb-3 tracking-widest uppercase">09.00 - 16.00</p>
+                              <div className="overflow-y-auto max-h-[220px] pr-1 custom-scrollbar">
                                 {mounted ? renderGrid(hoursA) : null}
                               </div>
                             </div>
@@ -464,15 +481,15 @@ export default function ServiceRequestModal({ onClose, userName }) {
                             
                             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-white/20 to-transparent opacity-20" />
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[11px] font-black mb-3 tracking-tighter opacity-90">17.00 - 00.00 AM</p>
-                              <div className="overflow-hidden">
+                              <p className="font-sans text-white text-[11px] font-bold mb-3 tracking-widest uppercase">17.00 - 00.00</p>
+                              <div className="overflow-y-auto max-h-[220px] pr-1 custom-scrollbar">
                                 {mounted ? renderGrid(hoursB) : null}
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Extended Legend */}
+                        {/* Extended Legend & Counter */}
                         <div className="flex items-center justify-between gap-5 text-[10px] font-black text-white font-sans uppercase tracking-[0.1em] bg-white/5 px-6 py-4 rounded-full border border-white/10 shadow-2xl w-full">
                           <div className="flex items-center gap-5">
                             <div className="flex items-center gap-2">
@@ -488,6 +505,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
                               LOCK
                             </div>
                           </div>
+                          
                           <div className="flex items-center gap-4">
                             <div className="w-[1px] h-4 bg-white/10" />
                             <span className="text-white font-sans italic normal-case tracking-normal text-[11px] opacity-100">Week {weekOffset + 1}</span>
@@ -559,42 +577,58 @@ export default function ServiceRequestModal({ onClose, userName }) {
                       </p>
                     </div>
 
-                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText("0811811811");
+                          alert("WA Number copied to clipboard: 0811811811");
+                        }}
+                        className="group relative flex flex-col items-center"
+                      >
+                        <div className="absolute inset-0 bg-emerald-500/20 blur-[50px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                        <motion.span 
+                          animate={{ y: [0, -8, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                          className="mt-2 font-sans text-[14px] text-[#3b82f6] underline underline-offset-8 decoration-[#3b82f6]/30 hover:decoration-[#3b82f6] font-light transition-all uppercase tracking-[0.2em] cursor-pointer"
+                        >
+                          CLICK ME !
+                        </motion.span>
+                      </button>
                       <a 
                         href={done.whatsappUrl} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="group relative flex flex-col items-center"
+                        className="relative z-10 hover:scale-110 transition-transform duration-500"
                       >
-                        <div className="absolute inset-0 bg-emerald-500/20 blur-[50px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                         <img 
                           src="/wa_logo.png" 
                           alt="WhatsApp" 
-                          className="w-48 h-48 object-contain relative z-10 transition-all duration-700 group-hover:scale-110 group-hover:rotate-[8deg]" 
+                          className="w-40 h-40 object-contain" 
                         />
-                        <motion.span 
-                          animate={{ y: [0, -8, 0] }}
-                          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                          className="mt-6 font-sans text-[14px] text-[#3b82f6] underline underline-offset-8 decoration-[#3b82f6]/30 hover:decoration-[#3b82f6] font-light transition-all uppercase tracking-[0.2em]"
-                        >
-                          CLICK ME !
-                        </motion.span>
                       </a>
-                    </div>
                   </div>
 
-                  <div className="mt-12 flex justify-center">
+                  <div className="mt-12 flex justify-center gap-4">
+                    <button 
+                      onClick={onClose}
+                      className="group relative px-20 py-6 rounded-[24px] overflow-hidden transition-all duration-500"
+                    >
+                      <div className="absolute inset-0 bg-emerald-500/20 group-hover:bg-emerald-500/30 transition-colors shadow-[0_0_40px_rgba(16,185,129,0.3)]" />
+                      <div className="absolute inset-0 border border-emerald-500/40 group-hover:border-emerald-500/60 rounded-[24px]" />
+                      <span className="relative z-10 font-sans font-black text-white uppercase tracking-tight text-[18px]">
+                        OK
+                      </span>
+                    </button>
+
                     <button 
                       onClick={handleCancel}
                       disabled={loading}
-                      className="group relative px-16 py-6 rounded-[24px] overflow-hidden transition-all duration-500"
+                      className="group relative px-8 py-6 rounded-[24px] overflow-hidden transition-all duration-500"
                     >
-                      <div className="absolute inset-0 bg-red-500/10 group-hover:bg-red-500/20 transition-colors" />
-                      <div className="absolute inset-0 border border-red-500/20 group-hover:border-red-500/40 rounded-[24px]" />
-                      <div className="absolute inset-0 shadow-[0_0_40px_rgba(239,68,68,0.05)] group-hover:shadow-[0_0_60px_rgba(239,68,68,0.1)] transition-all" />
+                      <div className="absolute inset-0 bg-red-500/5 group-hover:bg-red-500/10 transition-colors" />
+                      <div className="absolute inset-0 border border-white/10 group-hover:border-red-500/20 rounded-[24px]" />
                       
-                      <span className="relative z-10 font-sans font-black text-white uppercase tracking-tight text-[18px]">
-                        {loading ? "CANCELING..." : "NO"}
+                      <span className="relative z-10 font-sans font-black text-white/40 group-hover:text-red-500 uppercase tracking-tight text-[14px]">
+                        {loading ? "..." : "NO"}
                       </span>
                     </button>
                   </div>

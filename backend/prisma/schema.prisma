@@ -30,11 +30,13 @@ enum ServiceType {
 enum BookingStatus {
   PENDING
   CONFIRMED
+  CANCELLED
 }
 
 enum ServiceBookingStatus {
   PENDING
   PROCESSED
+  CANCELLED
 }
 
 enum EventStatus {
@@ -116,7 +118,6 @@ model ServiceBooking {
   contactPerson   String?
   whatsapp        String?
   location        String?
-  targetDate      DateTime
   locationString  String
   additionalNotes String?
   status          ServiceBookingStatus @default(PENDING)
@@ -124,9 +125,22 @@ model ServiceBooking {
   pdfExported     Boolean              @default(false)
   createdAt       DateTime             @default(now())
 
-  requestor User @relation(fields: [requestorId], references: [id], onDelete: Cascade)
+  requestor User                 @relation(fields: [requestorId], references: [id], onDelete: Cascade)
+  slots     ServiceBookingSlot[]
 
   @@map("service_bookings")
+}
+
+model ServiceBookingSlot {
+  id               String   @id @default(uuid())
+  serviceBookingId String
+  date             DateTime
+  startTime        String
+  endTime          String
+
+  serviceBooking ServiceBooking @relation(fields: [serviceBookingId], references: [id], onDelete: Cascade)
+
+  @@map("service_booking_slots")
 }
 
 // ─── Booking (Need Us? - Timekeeper) ─────────────────────────────────────────

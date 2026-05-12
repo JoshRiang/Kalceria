@@ -26,20 +26,51 @@ function Step({ n, active, done }) {
 export default function NeedUsForm({ userEmail, userName }) {
   const [step, setStep] = useState(0); // 0: type, 1: details, 2: done
   const [serviceType, setServiceType] = useState("");
-  const [form, setForm] = useState({ serviceName: "", contactPerson: userName || "", whatsapp: "", location: "", targetDate: "", additionalNotes: "" });
+  const [form, setForm] = useState({ serviceName: "", contactPerson: userName || "", whatsapp: "", location: "", additionalNotes: "" });
+  const [selectedSlots, setSelectedSlots] = useState({}); // { "date-hour": true }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
+  const [publicBookings, setPublicBookings] = useState([]);
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  useEffect(() => {
+    api.get("/services/bookings").then(res => setPublicBookings(res.data.bookings || [])).catch(console.error);
+  }, []);
 
   function setField(k, v) { setForm((p) => ({ ...p, [k]: v })); setError(""); }
 
+  const toggleSlot = (dStr, hour) => {
+    const key = `${dStr}-${hour}`;
+    setSelectedSlots((prev) => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
+    const selectedArray = Object.entries(selectedSlots)
+      .filter(([_, val]) => val)
+      .map(([key]) => {
+        const [date, hour] = key.split(/-(?=\d+$)/); // Split on last dash
+        return { date, hour: parseInt(hour) };
+      });
+
+    if (selectedArray.length === 0) return setError("Please select at least one time slot.");
     setError(""); setLoading(true);
     try {
+      // Map slots to backend format
+      const slots = selectedArray.map(s => ({
+        date: s.date,
+        startTime: s.hour.toString().padStart(2, '0') + ":00",
+        endTime: (s.hour + 1).toString().padStart(2, '0') + ":00"
+      }));
+
       const res = await api.post("/services/request", {
         serviceType,
         ...form,
+        slots
       });
       setDone(res.data);
       setStep(2);
@@ -49,6 +80,24 @@ export default function NeedUsForm({ userEmail, userName }) {
       setLoading(false);
     }
   }
+
+  const HOURS_AM = [9, 10, 11, 12, 13, 14, 15, 16];
+  const HOURS_PM = [17, 18, 19, 20, 21, 22, 23, 0];
+
+  const getSlotStatus = (dStr, hour, dayOfWeek) => {
+    if (dayOfWeek === 1) return "BUSY"; // Closed on Monday
+    const hourStr = hour.toString().padStart(2, '0') + ":00";
+    
+    const isPublic = publicBookings.some(b => {
+      const bDate = new Date(b.targetDate).toISOString().split('T')[0];
+      return bDate === dStr && b.startTime <= hourStr && b.endTime > hourStr;
+    });
+    if (isPublic) return "BUSY";
+
+    if (selectedSlots[`${dStr}-${hour}`]) return "LOCK";
+
+    return "READY";
+  };
 
   const isLoggedIn = !!localStorage.getItem("token");
 
@@ -61,7 +110,7 @@ export default function NeedUsForm({ userEmail, userName }) {
         <div className="h-px w-16 bg-[#FF00FF] mb-8" />
       </motion.div>
 
-      {/* Phase indicator - Sync with IdeaCommentModal */}
+      {/* Phase indicator */}
       <div className="flex items-center gap-3 mb-10">
         {[0, 1, 2].map((i) => (
           <div key={i} className="flex items-center gap-3">
@@ -137,10 +186,123 @@ export default function NeedUsForm({ userEmail, userName }) {
                 </div>
               ))}
 
-              <div>
-                <label className={LABEL}>Target Date</label>
-                <input type="date" className={INPUT} value={form.targetDate}
-                  onChange={(e) => setField("targetDate", e.target.value)} required />
+              {/* Multi-Slot Heatmap Selection */}
+              <div className="mt-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                <div className="flex flex-col md:flex-row gap-6 mb-6">
+                  {/* AM Grid */}
+                  <div className="flex-1">
+                    <p className="font-sans text-xs font-bold uppercase tracking-widest text-white mb-3">09.00 - 16.00</p>
+                    <div className="grid grid-cols-8 gap-1.5">
+                      <div />
+                      {Array.from({ length: 7 }).map((_, i) => {
+                        const date = new Date();
+                        date.setDate(date.getDate() + i + (weekOffset * 7));
+                        const dStr = date.toISOString().split('T')[0];
+                        const dayLabel = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()];
+                        return (
+                          <div key={i} className="flex flex-col items-center gap-1">
+                            <span className="font-mono text-[7px] text-slate-500">{dayLabel}</span>
+                            <span className="font-mono text-[8px] text-white">{date.getDate()}</span>
+                          </div>
+                        );
+                      })}
+                      {HOURS_AM.map(h => (
+                        <div key={h} className="contents">
+                          <span className="font-mono text-[7px] text-slate-600 flex items-center justify-end pr-1">{h.toString().padStart(2, '0')}</span>
+                          {Array.from({ length: 7 }).map((_, i) => {
+                            const date = new Date();
+                            date.setDate(date.getDate() + i + (weekOffset * 7));
+                            const dStr = date.toISOString().split('T')[0];
+                            const status = getSlotStatus(dStr, h, date.getDay());
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                disabled={status === "BUSY"}
+                                onClick={() => toggleSlot(dStr, h)}
+                                onDoubleClick={() => toggleSlot(dStr, h)}
+                                className={`aspect-square w-full rounded-[3px] border border-white/5 transition-all duration-300 cursor-pointer ${
+                                  status === "BUSY" ? "bg-red-500/20 opacity-50 cursor-not-allowed" :
+                                  status === "LOCK" ? "bg-[#FF00FF] shadow-[0_0_10px_rgba(255,0,255,0.5)] scale-105 z-10" :
+                                  "bg-emerald-500/10 hover:bg-emerald-500/20 hover:scale-105"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* PM Grid */}
+                  <div className="flex-1">
+                    <p className="font-sans text-xs font-bold uppercase tracking-widest text-white mb-3">17.00 - 00.00</p>
+                    <div className="grid grid-cols-8 gap-1.5">
+                      <div />
+                      {Array.from({ length: 7 }).map((_, i) => {
+                        const date = new Date();
+                        date.setDate(date.getDate() + i + (weekOffset * 7));
+                        const dayLabel = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()];
+                        return (
+                          <div key={i} className="flex flex-col items-center gap-1">
+                            <span className="font-mono text-[7px] text-slate-500">{dayLabel}</span>
+                            <span className="font-mono text-[8px] text-white">{date.getDate()}</span>
+                          </div>
+                        );
+                      })}
+                      {HOURS_PM.map(h => (
+                        <div key={h} className="contents">
+                          <span className="font-mono text-[7px] text-slate-600 flex items-center justify-end pr-1">{h.toString().padStart(2, '0')}</span>
+                          {Array.from({ length: 7 }).map((_, i) => {
+                            const date = new Date();
+                            date.setDate(date.getDate() + i + (weekOffset * 7));
+                            const dStr = date.toISOString().split('T')[0];
+                            const status = getSlotStatus(dStr, h, date.getDay());
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                disabled={status === "BUSY"}
+                                onClick={() => toggleSlot(dStr, h)}
+                                onDoubleClick={() => toggleSlot(dStr, h)}
+                                className={`aspect-square w-full rounded-[3px] border border-white/5 transition-all duration-300 cursor-pointer ${
+                                  status === "BUSY" ? "bg-red-500/20 opacity-50 cursor-not-allowed" :
+                                  status === "LOCK" ? "bg-[#FF00FF] shadow-[0_0_10px_rgba(255,0,255,0.5)] scale-105 z-10" :
+                                  "bg-emerald-500/10 hover:bg-emerald-500/20 hover:scale-105"
+                                }`}
+                              />
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Heatmap Footer */}
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-white/5">
+                  <div className="flex gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/20 border border-emerald-500/30" />
+                      <span className="font-mono text-[8px] uppercase text-slate-500 tracking-widest">READY</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-[2px] bg-red-500/20 border border-red-500/30" />
+                      <span className="font-mono text-[8px] uppercase text-slate-500 tracking-widest">BUSY</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-[2px] bg-[#FF00FF] shadow-[0_0_5px_rgba(255,0,255,0.5)]" />
+                      <span className="font-mono text-[8px] uppercase text-slate-500 tracking-widest">LOCK</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-[8px] text-white tracking-widest italic">Week {weekOffset + 1}</span>
+                    <div className="flex gap-1">
+                      <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="p-1 hover:bg-white/10 rounded transition-colors text-xs">←</button>
+                      <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="p-1 hover:bg-white/10 rounded transition-colors text-xs">→</button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -160,15 +322,16 @@ export default function NeedUsForm({ userEmail, userName }) {
                 )}
               </AnimatePresence>
 
+
               <div className="flex gap-3 mt-2">
                 <button type="button" onClick={() => setStep(0)}
                   className="flex-1 py-3 font-sans font-bold text-xs uppercase tracking-wider text-slate-500 bg-slate-800 hover:bg-slate-700 transition-colors rounded">
                   ← Back
                 </button>
-                <button type="submit" disabled={loading || !isLoggedIn}
+                <button type="submit" disabled={loading || !isLoggedIn || Object.values(selectedSlots).filter(Boolean).length === 0}
                   className="flex-[2] py-3.5 font-sans font-extrabold text-sm uppercase tracking-wider text-black bg-white hover:bg-[#FF00FF] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   style={CLIP}>
-                  {loading ? "Submitting..." : "Submit Request"}
+                  {loading ? "Submitting..." : Object.values(selectedSlots).filter(Boolean).length === 0 ? "Select Hours" : "Submit Request"}
                 </button>
               </div>
             </form>
@@ -179,17 +342,40 @@ export default function NeedUsForm({ userEmail, userName }) {
         {step === 2 && done && (
           <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}>
             <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-emerald-900/30 border border-emerald-700/40 flex items-center justify-center text-2xl mx-auto mb-6">✓</div>
-              <h3 className="font-mono font-black text-xl uppercase tracking-tighter text-white mb-2">Request Submitted</h3>
-              <p className="font-mono text-sm text-slate-400 mb-8">Complete the process via WhatsApp.</p>
-              <a href={done.whatsappUrl} target="_blank" rel="noopener noreferrer"
-                className="block w-full py-4 font-sans font-extrabold uppercase tracking-wider text-sm bg-green-600 hover:bg-green-500 text-white transition-all mb-4 rounded">
-                Continue to WhatsApp →
-              </a>
-              <button onClick={() => { setStep(0); setServiceType(""); setForm({ serviceName: "", contactPerson: userName || "", whatsapp: "", location: "", targetDate: "", additionalNotes: "" }); setDone(null); }}
-                className="font-mono text-xs text-slate-600 hover:text-slate-400 transition-colors">
-                Submit another request
-              </button>
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-2xl mx-auto mb-6 shadow-[0_0_20px_rgba(16,185,129,0.3)]">✓</div>
+              <h3 className="font-sans font-black text-2xl uppercase tracking-tighter text-white mb-2">Transmission Received</h3>
+              <p className="font-sans text-sm text-slate-400 mb-8">Redirecting to operational headquarters.</p>
+              
+              <div className="flex flex-col items-center gap-6 mb-10">
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText("0811811811");
+                    alert("WA Number copied to clipboard: 0811811811");
+                  }}
+                  className="font-sans text-xs text-[#3b82f6] underline underline-offset-4 decoration-[#3b82f6]/30 hover:decoration-[#3b82f6] uppercase tracking-widest transition-all"
+                >
+                  CLICK ME !
+                </button>
+
+                <a href={done.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:scale-105 transition-transform duration-500">
+                  <img src="/wa_logo.png" alt="WhatsApp" className="w-32 h-32 object-contain" />
+                </a>
+              </div>
+
+              <div className="flex justify-center gap-4">
+                <button 
+                  onClick={() => { setStep(0); setServiceType(""); setForm({ serviceName: "", contactPerson: userName || "", whatsapp: "", location: "", additionalNotes: "" }); setDone(null); }}
+                  className="px-12 py-3 bg-emerald-500 text-black font-sans font-black uppercase text-sm rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:bg-emerald-400 transition-all"
+                >
+                  OK
+                </button>
+                <button 
+                  onClick={() => { /* Close logic if any */ }}
+                  className="px-6 py-3 bg-white/5 text-slate-500 font-sans font-black uppercase text-xs rounded-xl border border-white/5 hover:text-red-500 transition-all"
+                >
+                  NO
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

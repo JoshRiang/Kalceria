@@ -6,7 +6,7 @@ import {
 import { updateLiveLocation, getNearbyUsers } from '../controllers/locationController.js';
 import { getMedia, createMedia } from '../controllers/mediaController.js';
 import { createMiniEvent, getActiveMiniEvents } from '../controllers/miniEventController.js';
-import { createBooking, createServiceRequest, deleteOwnServiceRequest } from '../controllers/serviceController.js';
+import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from '../controllers/serviceController.js';
 import { saveTelemetry, getMapUsers } from '../controllers/telemetryController.js';
 import { createBroadcast, updateBroadcast, deleteBroadcast } from '../controllers/broadcastController.js';
 import { redirectEvent } from '../controllers/redirectController.js';
@@ -25,7 +25,7 @@ import {
 } from '../controllers/eventRegistrationController.js';
 import {
   listServiceBookings, confirmServicePayment, deleteServiceBooking, markServicePdf,
-  listBookings, confirmBookingPayment, deleteBooking, markBookingPdf,
+  listBookings, confirmBookingPayment, deleteBooking, markBookingPdf, updateServiceStatus,
 } from '../controllers/adminServiceController.js';
 import {
   listUsers, getUser, setUserRole, deleteUser,
@@ -69,6 +69,7 @@ router.get('/mini-events/active', getActiveMiniEvents);
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
 router.post('/services/book', requireAuth, createBooking);
 router.post('/services/request', requireAuth, createServiceRequest);
+router.get('/services/bookings', listPublicServiceBookings);
 router.delete('/services/request/:id', requireAuth, deleteOwnServiceRequest);
 
 // ─── Telemetry & Map ─────────────────────────────────────────────────────────
@@ -105,6 +106,7 @@ router.patch('/admin/registrations/:id/pdf', requireAdmin, markPdfExported);
 // ─── Admin: Service Bookings ──────────────────────────────────────────────────
 router.get('/admin/services', requireAdmin, listServiceBookings);
 router.patch('/admin/services/:id/payment', requireAdmin, confirmServicePayment);
+router.patch('/admin/services/:id/status', requireAdmin, updateServiceStatus);
 router.delete('/admin/services/:id', requireAdmin, deleteServiceBooking);
 router.patch('/admin/services/:id/pdf', requireAdmin, markServicePdf);
 

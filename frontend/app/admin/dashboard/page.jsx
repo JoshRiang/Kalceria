@@ -1026,6 +1026,265 @@ function CommentsPanel() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PANEL: BOOKINGS (HEATMAP + CARDS)
+// ─────────────────────────────────────────────────────────────────────────────
+function BookingsPanel({ onRefresh }) {
+  const [bookings, setBookings] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [viewDate, setViewDate] = useState(new Date(2026, 0, 1)); // Start of 2026
+  
+  const load = useCallback(async () => {
+    try {
+      const r = await api.get("/admin/services");
+      setBookings(r.data.bookings || []);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const updateStatus = async (id, status) => {
+    await api.patch(`/admin/services/${id}/status`, { status });
+    load();
+    onRefresh();
+  };
+
+  const del = async (id) => {
+    if (!confirm("Delete booking?")) return;
+    await api.delete(`/admin/services/${id}`);
+    load();
+    onRefresh();
+  };
+
+  // Heatmap Logic: Week based
+  const startOfWeek = new Date(viewDate);
+  startOfWeek.setDate(viewDate.getDate() - viewDate.getDay());
+  
+  const HOURS = Array.from({ length: 15 }, (_, i) => 9 + i); // 09:00 to 23:00
+
+  const getSlotColor = (dayOffset, hour) => {
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate() + dayOffset);
+    
+    if (d.getDay() === 1) return "bg-red-900/20 opacity-40"; // Closed
+    
+    const dStr = d.toISOString().split('T')[0];
+    const hourStr = hour.toString().padStart(2, '0') + ":00";
+    
+    // Check if any booking's slot matches
+    const activeBooking = bookings.find(b => 
+      b.slots?.some(s => {
+        const sDate = new Date(s.date).toISOString().split('T')[0];
+        return sDate === dStr && s.startTime <= hourStr && s.endTime > hourStr;
+      })
+    );
+
+    if (!activeBooking) return "bg-emerald-500/10"; // Available
+    if (activeBooking.id === selectedId) return "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.6)] z-10 scale-105";
+    if (activeBooking.status === "PROCESSED") return "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.4)]";
+    if (activeBooking.status === "PENDING") return "bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]";
+    return "bg-emerald-500/10";
+  };
+
+  const shiftWeek = (n) => {
+    const next = new Date(viewDate);
+    next.setDate(viewDate.getDate() + (n * 7));
+    setViewDate(next);
+  };
+
+  const shiftMonth = (n) => {
+    const next = new Date(viewDate);
+    next.setMonth(viewDate.getMonth() + n);
+    setViewDate(next);
+  };
+
+  const selectBooking = (b) => {
+    if (selectedId === b.id) {
+      setSelectedId(null);
+    } else {
+      setSelectedId(b.id);
+      if (b.slots?.length > 0) {
+        setViewDate(new Date(b.slots[0].date));
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* External Navigation - Glassmorphic */}
+      <div className="flex justify-center gap-3">
+        {/* Month Nav */}
+        <div className="flex items-center gap-1 bg-white/5 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-lg">
+          <button onClick={() => shiftMonth(-1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-xs text-white">←</button>
+          <span className="font-mono font-black text-[10px] uppercase w-24 text-center text-white/80 tracking-widest">
+            {new Intl.DateTimeFormat('en-US', { month: 'long' }).format(viewDate)}
+          </span>
+          <button onClick={() => shiftMonth(1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-xs text-white">→</button>
+        </div>
+
+        {/* Week Nav */}
+        <div className="flex items-center gap-1 bg-white/5 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-lg">
+          <button onClick={() => shiftWeek(-1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-xs text-white">←</button>
+          <span className="font-mono font-black text-[10px] uppercase w-28 text-center text-white/80 tracking-widest">
+            Week {startOfWeek.getDate()}
+          </span>
+          <button onClick={() => shiftWeek(1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-xs text-white">→</button>
+        </div>
+      </div>
+
+      {/* Heatmap Section - Dual Satellite View */}
+      <div className="flex flex-col xl:flex-row items-center justify-center gap-4 max-w-5xl mx-auto">
+        {[0, 1].map((weekOffset) => {
+          const currentStart = new Date(startOfWeek);
+          currentStart.setDate(startOfWeek.getDate() + (weekOffset * 7));
+          
+          return (
+            <div key={weekOffset} className={`${CARD} rounded-[20px] p-4 border-white/5 bg-white/[0.02] flex-1 min-w-[320px] overflow-hidden`}>
+              <div className="flex flex-col gap-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-mono font-black text-[10px] uppercase tracking-tighter text-white">
+                    {weekOffset === 0 ? "Current Week" : "Next Week"}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-[40px_repeat(7,1fr)] gap-1 mb-2">
+                <div />
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => {
+                  const dateObj = new Date(currentStart);
+                  dateObj.setDate(currentStart.getDate() + i);
+                  return (
+                    <div key={i} className="flex flex-col items-center">
+                      <span className="font-mono text-[7px] font-black text-slate-700">{d}</span>
+                      <span className={`font-mono text-[8px] font-black ${dateObj.getDate() === new Date().getDate() ? 'text-white' : 'text-slate-500'}`}>
+                        {dateObj.getDate()}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="space-y-1">
+                {HOURS.map(h => (
+                  <div key={h} className="grid grid-cols-[40px_repeat(7,1fr)] gap-1">
+                    <div className="flex items-center justify-end pr-2 font-mono text-[7px] font-bold text-slate-700">{h}:00</div>
+                    {Array.from({ length: 7 }).map((_, i) => (
+                      <div key={i} className={`aspect-square w-full rounded-[4px] border border-white/5 transition-all duration-300 ${getSlotColor(i + (weekOffset * 7), h)}`} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Cards Section - Larger 2-Column Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {bookings.map((b) => (
+          <div 
+            key={b.id} 
+            onClick={() => selectBooking(b)}
+            className={`relative min-h-[680px] bg-[#d6cdc2] rounded-[50px] p-10 group transition-all duration-500 cursor-pointer overflow-hidden flex flex-col justify-between border-none ${
+              selectedId === b.id ? "shadow-[0_0_50px_rgba(249,115,22,0.4)] scale-[1.01]" : "hover:shadow-[0_40px_80px_rgba(0,0,0,0.2)]"
+            }`}
+          >
+            {/* Minimalist Image 2 Aesthetic: Beige background, no blobs */}
+            
+            <div className="relative z-10 space-y-4 h-full flex flex-col">
+              <div className="flex justify-between items-start">
+                <div className="min-w-0">
+                  <h3 className="font-sans font-black text-4xl text-black tracking-tight leading-tight uppercase">{b.requestor?.name}</h3>
+                  <div className="flex items-center gap-3 mt-3">
+                    <span className="font-sans text-[11px] font-black text-red-500 uppercase tracking-widest">ADMIN</span>
+                    <span className={`font-sans text-[11px] font-black uppercase tracking-widest ${
+                      b.status === 'PROCESSED' ? 'text-emerald-600' : 'text-orange-500'
+                    }`}>
+                      {b.status === 'PROCESSED' ? 'VERIFIED' : 'PENDING'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex-1 py-8 space-y-8">
+                <div>
+                  <p className="font-sans text-sm text-black/80 font-medium mb-1 truncate">{b.requestor?.email || "admin@gmail.com"}</p>
+                  <p className="font-sans text-sm text-black/80 font-medium tracking-widest">0000000000</p>
+                </div>
+                
+                <div className="w-full h-px bg-black/5" />
+                
+                <div>
+                  <p className="font-sans text-[10px] text-black/40 uppercase font-black tracking-widest mb-1">Schedule ({b.slots?.length || 0} Slots)</p>
+                  <div className="space-y-1">
+                    {(b.slots || []).slice(0, 3).map((s, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-1">
+                        <span className="font-sans text-[11px] font-bold text-black/60">{formatDate(s.date)}</span>
+                        <span className="font-sans text-[11px] font-black text-black tracking-tighter">{s.startTime}-{s.endTime}</span>
+                      </div>
+                    ))}
+                    {b.slots?.length > 3 && (
+                      <p className="text-[9px] font-black text-black/30 italic text-center">+{b.slots.length - 3} more slots</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                  <div>
+                    <span className="font-sans text-[13px] text-black/40 font-medium">Bookings: 0</span>
+                  </div>
+                  <div>
+                    <span className="font-sans text-[13px] text-black/40 font-medium">Events: 0</span>
+                  </div>
+                  <div>
+                    <span className="font-sans text-[13px] text-black/40 font-medium">Services: 0</span>
+                  </div>
+                  <div>
+                    <span className="font-sans text-[13px] text-black/40 font-medium">Since: {new Date(b.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                  </div>
+                  
+                  <div className="col-span-1 pt-4">
+                    <p className="font-sans text-[13px] text-black/40 font-medium mb-1">PIC: <span className="text-black/80">{b.contactPerson}</span></p>
+                  </div>
+                  <div className="col-span-1 pt-4">
+                    <p className="font-sans text-[13px] text-black/40 font-medium mb-1">Location: <span className="text-black/80">{b.locationString}</span></p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-6 mt-auto border-t border-black/5">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); updateStatus(b.id, 'PROCESSED'); }} 
+                  className="w-14 h-14 flex items-center justify-center bg-emerald-500 rounded-full text-white shadow-lg hover:scale-110 transition-all"
+                >
+                  <CheckIcon />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); updateStatus(b.id, 'CANCELLED'); }} 
+                  className="w-14 h-14 flex items-center justify-center bg-red-500 rounded-full text-white shadow-lg hover:scale-110 transition-all"
+                >
+                  <XIcon />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); del(b.id); }} 
+                  className="w-14 h-14 flex items-center justify-center bg-black/10 rounded-full text-black/40 hover:bg-red-500 hover:text-white transition-all shadow-md"
+                >
+                  <TrashIcon />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+        {!bookings.length && (
+          <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-[40px]">
+            <p className="font-mono text-xs text-slate-600 uppercase tracking-[0.2em]">No booking requests found</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PANEL: USERS
 // ─────────────────────────────────────────────────────────────────────────────
 function UsersPanel() {
@@ -1093,6 +1352,7 @@ const TABS = [
   { id: "events", label: "Events" },
   { id: "registrations", label: "Registrations" },
   { id: "products", label: "Products" },
+  { id: "bookings", label: "Bookings" },
   { id: "users", label: "Users" },
   { id: "comments", label: "Comments" },
 ];
@@ -1124,11 +1384,13 @@ export default function AdminDashboard() {
       api.get("/admin/users").catch(() => ({ data: { users: [] } })),
       api.get("/admin/registrations").catch(() => ({ data: { registrations: [] } })),
       api.get("/admin/comments").catch(() => ({ data: { comments: [] } })),
-    ]).then(([ev, us, re, co]) => {
+      api.get("/admin/services").catch(() => ({ data: { bookings: [] } })),
+    ]).then(([ev, us, re, co, bk]) => {
       const eList = ev.data.events || [];
       const uList = us.data.users || [];
       const rList = re.data.registrations || [];
       const cList = co.data.comments || [];
+      const bList = bk.data.bookings || [];
       
       const savedProducts = JSON.parse(localStorage.getItem("kalceria_dummy_products") || "[]");
       const pList = savedProducts.length ? savedProducts : INITIAL_DUMMIES;
@@ -1139,6 +1401,7 @@ export default function AdminDashboard() {
         regs: rList.length,
         products: pList.length,
         comments: cList.length,
+        bookings: bList.length,
       });
 
       setData({
@@ -1147,6 +1410,7 @@ export default function AdminDashboard() {
         regs: rList,
         products: pList,
         comments: cList,
+        bookings: bList,
       });
     });
   }, []);
@@ -1192,11 +1456,12 @@ export default function AdminDashboard() {
         <div className="grid lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3">
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
               <StatCard label="Events" value={stats.events} />
               <StatCard label="Users" value={stats.users} />
               <StatCard label="Registrations" value={stats.regs} />
               <StatCard label="Comments" value={stats.comments} />
+              <StatCard label="Bookings" value={stats.bookings} />
             </div>
 
             {/* Tab bar */}
@@ -1235,6 +1500,7 @@ export default function AdminDashboard() {
                 {tab === "events" && <EventsPanel initialEvents={data.events} onRefresh={loadAll} />}
                 {tab === "registrations" && <RegistrationsPanel initialRegs={data.regs} onRefresh={loadAll} />}
                 {tab === "products" && <ProductsPanel onRefresh={loadAll} />}
+                {tab === "bookings" && <BookingsPanel onRefresh={loadAll} />}
                 {tab === "users" && <UsersPanel initialUsers={data.users} onRefresh={loadAll} />}
                 {tab === "comments" && <CommentsPanel onRefresh={loadAll} />}
               </motion.div>

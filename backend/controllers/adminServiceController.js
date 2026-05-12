@@ -6,10 +6,25 @@ const prisma = new PrismaClient();
 export async function listServiceBookings(req, res, next) {
   try {
     const bookings = await prisma.serviceBooking.findMany({
-      include: { requestor: { select: { id: true, name: true, email: true, phone: true } } },
+      include: { 
+        requestor: { select: { id: true, name: true, email: true, phone: true } },
+        slots: true
+      },
       orderBy: { createdAt: 'desc' },
     });
     res.json({ bookings });
+  } catch (err) { next(err); }
+}
+
+// ─── PATCH /admin/services/:id/status ───────────────────────────────────────
+export async function updateServiceStatus(req, res, next) {
+  try {
+    const { status } = req.body; // 'PENDING' | 'PROCESSED' | 'CANCELLED'
+    const booking = await prisma.serviceBooking.update({
+      where: { id: req.params.id },
+      data: { status },
+    });
+    res.json({ booking });
   } catch (err) { next(err); }
 }
 

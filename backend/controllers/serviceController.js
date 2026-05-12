@@ -118,7 +118,7 @@ export async function createBooking(req, res, next) {
 export async function createServiceRequest(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { serviceType, serviceName, contactPerson, whatsapp, location, targetDate, additionalNotes } = req.body;
+    const { serviceType, serviceName, contactPerson, whatsapp, location, additionalNotes, slots } = req.body;
 
     if (!['EO', 'SHOOTING', 'HOST_EVENT'].includes(serviceType)) {
       return res.status(400).json({ error: 'Invalid serviceType.' });
@@ -137,15 +137,23 @@ export async function createServiceRequest(req, res, next) {
         contactPerson: contactPerson || user.name,
         whatsapp: whatsapp || null,
         location: location || null,
-        targetDate: new Date(targetDate),
         locationString: location || 'TBD',
         additionalNotes: additionalNotes || null,
+        slots: {
+          create: (slots || []).map(s => ({
+            date: new Date(s.date),
+            startTime: s.startTime,
+            endTime: s.endTime,
+          }))
+        }
       },
+      include: { slots: true }
     });
 
-    const dateStr = new Date(targetDate).toLocaleDateString('id-ID', {
+    const firstSlot = slots && slots.length > 0 ? slots[0] : null;
+    const dateStr = firstSlot ? new Date(firstSlot.date).toLocaleDateString('id-ID', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    });
+    }) : 'Multiple Dates';
 
     const msg = [
       `📋 SERVICE REQUEST BARU`,
@@ -155,7 +163,8 @@ export async function createServiceRequest(req, res, next) {
       `PIC: ${contactPerson || user.name}`,
       `WA: ${whatsapp || '—'}`,
       `Lokasi: ${location || '—'}`,
-      `Tanggal: ${dateStr}`,
+      `Jadwal: ${slots?.length || 0} slot dipilih`,
+      `Tanggal Mulai: ${dateStr}`,
       `Catatan: ${additionalNotes || '—'}`,
       ``,
       `Dari: ${user.name} (${user.email})`,
@@ -163,6 +172,36 @@ export async function createServiceRequest(req, res, next) {
 
     const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
     res.status(201).json({ bookingId: booking.id, whatsappUrl });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── GET /services/bookings (Public for Heatmap) ───────────────────────────
+export async function listPublicServiceBookings(req, res, next) {
+  try {
+    const slots = await prisma.serviceBookingSlot.findMany({
+      include: {
+        serviceBooking: {
+          select: { status: true }
+        }
+      },
+      where: {
+        serviceBooking: {
+          status: { in: ['PENDING', 'PROCESSED'] }
+        }
+      }
+    });
+
+    const formatted = slots.map(s => ({
+      id: s.serviceBookingId,
+      targetDate: s.date,
+      startTime: s.startTime,
+      endTime: s.endTime,
+      status: s.serviceBooking.status
+    }));
+
+    res.json({ bookings: formatted });
   } catch (err) {
     next(err);
   }
