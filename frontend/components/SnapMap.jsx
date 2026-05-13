@@ -149,14 +149,27 @@ export default function SnapMap({ users, events, hqPoint, onMapReady }) {
       <div ref={mapNodeRef} className="w-full h-full bg-transparent snap-tactical-map" />
 
       <style jsx global>{`
-        .snap-tactical-map .leaflet-pane,
+        .snap-tactical-map,
+        .snap-tactical-map .leaflet-container,
+        .snap-tactical-map .leaflet-pane {
+          background: transparent !important;
+        }
+
         .snap-tactical-map .leaflet-tile-pane {
-          opacity: 0.95;
+          opacity: 0.75;
+        }
+
+        .snap-tactical-map .leaflet-marker-pane,
+        .snap-tactical-map .leaflet-popup-pane {
+          opacity: 1 !important;
         }
 
         .snap-tactical-map .leaflet-tile-container {
           filter: sepia(58%) saturate(170%) hue-rotate(-10deg) brightness(1.22) contrast(1.08);
+          background: transparent !important;
         }
+
+
 
         /* Marker Styles */
         .radar-node {
@@ -265,15 +278,31 @@ export default function SnapMap({ users, events, hqPoint, onMapReady }) {
 
         .tactical-card {
           position: relative;
-          width: 260px;
+          width: 280px;
           overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: #0a0e27;
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.6));
+          backdrop-filter: blur(25px) saturate(180%);
           color: #fff;
-          clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
-          box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-          border-left: 4px solid var(--border-color, #ff006e);
+          clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+          box-shadow: 
+            0 20px 50px rgba(0,0,0,0.8),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+          border-left: 5px solid var(--border-color, #ff006e);
         }
+
+        .tactical-card::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+          opacity: 0.03;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+
+
 
         .scanlines {
           position: absolute;
@@ -292,7 +321,8 @@ export default function SnapMap({ users, events, hqPoint, onMapReady }) {
           background: rgba(0, 0, 0, 0.4);
           position: relative;
           z-index: 10;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
         .popup-avatar, .hq-badge, .event-badge {
@@ -318,10 +348,13 @@ export default function SnapMap({ users, events, hqPoint, onMapReady }) {
         }
 
         .popup-profile strong {
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 900;
           text-transform: uppercase;
           display: block;
+          letter-spacing: 0.05em;
+          text-shadow: 0 0 10px rgba(0,0,0,1);
+
         }
 
         .popup-profile small {
@@ -340,7 +373,10 @@ export default function SnapMap({ users, events, hqPoint, onMapReady }) {
 
         .popup-status {
           padding: 12px;
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(0, 0, 0, 0.5);
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+
           font-size: 10px;
           font-style: italic;
           color: rgba(255, 255, 255, 0.4);
@@ -352,7 +388,8 @@ export default function SnapMap({ users, events, hqPoint, onMapReady }) {
         }
 
         .popup-status.active {
-          background: #111633;
+          background: rgba(255, 255, 255, 0.05);
+
           color: rgba(255, 255, 255, 0.8);
           border-left: 2px solid var(--border-color, #fff);
         }
@@ -369,7 +406,8 @@ export default function SnapMap({ users, events, hqPoint, onMapReady }) {
           padding: 12px;
           position: relative;
           z-index: 10;
-          background: rgba(0, 0, 0, 0.6);
+          background: transparent;
+
           border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 

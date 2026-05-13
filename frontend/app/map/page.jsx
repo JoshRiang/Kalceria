@@ -53,7 +53,109 @@ const hqPoint = {
   videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
 };
 
+// ☁️ Static Pixel Cloud Definitions for consistent transition
+const STATIC_CLOUDS = [
+  { w: 400, h: 180, x: 5, y: 10 },
+  { w: 350, h: 150, x: 60, y: 5 },
+  { w: 280, h: 120, x: 30, y: 40 },
+  { w: 420, h: 200, x: 75, y: 45 },
+  { w: 320, h: 140, x: 10, y: 70 },
+  { w: 500, h: 250, x: 55, y: 80 },
+  { w: 250, h: 100, x: 85, y: 25 },
+  { w: 380, h: 160, x: -5, y: 50 },
+];
+
+// 🛰 Optimized Tactical Network (Canvas-based Particles & Links)
+
+const TacticalNet = () => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let animationFrameId;
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    const particles = [];
+    const particleCount = 80;
+    const maxDist = 150;
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        size: Math.random() * 2 + 1,
+        color: i % 7 === 0 ? "#ffd60a" : i % 5 === 0 ? "#ff006e" : "rgba(255,255,255,0.6)",
+      });
+    }
+
+    const animate = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        // Move
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Wrap edges
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+        if (p.y < 0) p.y = height;
+        if (p.y > height) p.y = 0;
+
+        // Draw particle
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 🔗 Distance-based Linking (User Logic)
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dx = p.x - p2.x;
+          const dy = p.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < maxDist) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 * (1 - dist / maxDist)})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    const handleResize = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    };
+
+    window.addEventListener("resize", handleResize);
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" style={{ opacity: 0.6 }} />;
+};
+
 export default function MapPage() {
+
   // State
   const [users, setUsers] = useState(mockUsers);
   const [events, setEvents] = useState(mockEvents);
@@ -73,9 +175,24 @@ export default function MapPage() {
   const [isGlitching, setIsGlitching] = useState(false);
   const [showPirate, setShowPirate] = useState(false);
   const [showStartup, setShowStartup] = useState(true);
+  const [showClouds, setShowClouds] = useState(true);
   const [startupStep, setStartupStep] = useState(0);
   const [startupProgress, setStartupProgress] = useState(0);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  // Handle Hydration
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  // Cloud reveal timing
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowClouds(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
 
 
 
@@ -283,26 +400,56 @@ export default function MapPage() {
 
 
   return (
-    <div className="min-h-screen text-white selection:bg-[#ffd60a] selection:text-black font-sans overflow-hidden bg-[#050a14]">
+    <div className="relative min-h-screen bg-[#0a0e27] overflow-hidden text-white font-sans selection:bg-[#ffd60a] selection:text-black">
       
-      {/* Background Layer: Animated Glowing Blobs (Behind Map) */}
-      <div className="fixed inset-0 z-[5] overflow-hidden pointer-events-none" aria-hidden="true">
-        {/* Gold Blobs - Now moving across all screen */}
-        <div className="absolute top-[-20%] left-[-20%] w-[70vw] h-[70vw] bg-[#ffd60a] rounded-full blur-[140px] opacity-[0.35] animate-[float-wide_30s_infinite_linear]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-[#ffc300] rounded-full blur-[120px] opacity-[0.25] animate-[float-wide_40s_infinite_reverse_linear]" />
-        
-        {/* Purple Blobs */}
-        <div className="absolute right-[-5%] top-[0%] w-[65vw] h-[65vw] bg-[#b762dd] rounded-full blur-[130px] opacity-[0.4] animate-[float_18s_infinite_alternate_ease-in-out]" />
-        <div className="absolute right-[10%] bottom-[-10%] w-[55vw] h-[55vw] bg-[#742baf] rounded-full blur-[110px] opacity-[0.45] animate-[float_22s_infinite_alternate-reverse_ease-in-out]" />
+      {/* 🌌 Atmospheric Tactical Background (Behind Map) */}
+      <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden">
+        {/* Animated Blobs */}
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.5, 1],
+            rotate: [0, 180, 0],
+            x: [-150, 150, -150],
+            y: [-80, 80, -80]
+          }}
+          transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+          className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] bg-[#ff006e]/25 rounded-full blur-[120px]"
+        />
+        <motion.div 
+          animate={{ 
+            scale: [1.5, 1, 1.5],
+            rotate: [0, -180, 0],
+            x: [150, -150, 150],
+            y: [80, -80, 80]
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-[#ffd60a]/15 rounded-full blur-[120px]"
+        />
+        <motion.div 
+          animate={{ 
+            opacity: [0.2, 0.7, 0.2],
+            scale: [1, 1.3, 1],
+            x: [0, 100, 0],
+            y: [0, -100, 0]
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-[20%] left-[30%] w-[50%] h-[50%] bg-purple-600/15 rounded-full blur-[100px]"
+        />
+
+        {/* 🛰 High-Performance Tactical Link System (Canvas-based Neural Net) */}
+        <TacticalNet />
       </div>
 
 
-      {/* SnapMap Component */}
+
+
+
+      {/* SnapMap Component (Semi-Transparent for Glass Effect) */}
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1.5, ease: "easeOut" }}
-        className="fixed inset-0 z-[10] w-full h-full opacity-[0.8]"
+        className="fixed inset-0 z-[10] w-full h-full"
       >
         <SnapMap 
           users={mapUsers} 
@@ -311,6 +458,7 @@ export default function MapPage() {
           onMapReady={handleMapReady} 
         />
       </motion.div>
+
 
 
 
@@ -339,7 +487,8 @@ export default function MapPage() {
         <Link 
           href="/" 
           aria-label="Back to home"
-          className="pointer-events-auto inline-flex items-center justify-center gap-2 min-h-[48px] px-6 bg-[#0a0e27]/95 border border-white/10 text-[11px] font-black tracking-[0.2em] text-white/60 hover:text-[#ffd60a] hover:border-[#ffd60a] transition-all [clip-path:polygon(12px_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%,0_12px)] shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md hover:bg-[#ffd60a]/10 focus-visible:ring-2 focus-visible:ring-[#ffd60a] outline-none"
+          className="pointer-events-auto inline-flex items-center justify-center gap-2 min-h-[48px] px-6 bg-white/[0.01] border border-white/10 text-[11px] font-black tracking-[0.2em] text-white/60 hover:text-white transition-all [clip-path:polygon(12px_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%,0_12px)] shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-sm hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white outline-none"
+
         >
           <span className="text-lg">←</span>
           BACK
@@ -347,7 +496,7 @@ export default function MapPage() {
 
 
 
-        <div className="relative flex items-start gap-4">
+        <div className="relative flex items-center gap-4">
           {/* Forza-Style Telemetry HUD */}
           <motion.div 
             initial={{ x: 50, opacity: 0 }}
@@ -355,7 +504,8 @@ export default function MapPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="hidden min-[1100px]:flex flex-col items-end gap-1 pointer-events-auto"
           >
-            <div className="flex items-center gap-3 bg-[#0a0e27]/90 px-4 py-2 border border-white/10 skew-x-[-12deg] backdrop-blur-md shadow-2xl">
+            <div className="flex items-center gap-3 bg-white/[0.01] px-4 h-[48px] border border-white/10 skew-x-[-12deg] backdrop-blur-sm shadow-2xl">
+
               <div className="flex flex-col items-start skew-x-[12deg]">
                 <span className="text-[9px] font-black text-gray-200 uppercase tracking-widest italic">Live Telemetry</span>
                 <div className="flex gap-4 items-baseline">
@@ -404,17 +554,15 @@ export default function MapPage() {
             </div> */}
           </motion.div>
 
-          <div className="relative flex items-start">
-
             <button
               type="button"
               aria-label="Quick Actions Menu"
               aria-expanded={actionMenuOpen}
               aria-haspopup="true"
-              className={`pointer-events-auto w-[48px] h-[48px] flex items-center justify-center border transition-all [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)] backdrop-blur-md focus-visible:ring-2 focus-visible:ring-[#22c55e] outline-none ${
+              className={`pointer-events-auto flex items-center justify-center w-[54px] h-[48px] border transition-all [clip-path:polygon(12px_0,100%_0,100%_calc(100%-12px),calc(100%-12px)_100%,0_100%,0_12px)] backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-[#22c55e] outline-none group ${
                 actionMenuOpen 
-                  ? "bg-[#22c55e] border-[#22c55e] text-black shadow-[0_0_20px_#22c55e]" 
-                  : "bg-[#0a0e27]/95 border-[#22c55e]/40 text-[#22c55e] hover:bg-[#22c55e]/10 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                  ? "bg-[#22c55e] border-[#22c55e] text-black shadow-[0_0_30px_#22c55e]" 
+                  : "bg-white/[0.02] border-white/20 text-white hover:bg-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.6)]"
               }`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -422,16 +570,27 @@ export default function MapPage() {
                 setMenuOpen(false);
               }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="filter drop-shadow-[0_0_5px_currentColor]">
-                <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              {/* <div className="flex flex-col items-start leading-none">
+                <span className={`text-[9px] font-black uppercase tracking-[0.2em] italic ${actionMenuOpen ? 'text-black/60' : 'text-[#22c55e]'}`}>System</span>
+                <b className="text-[13px] font-black uppercase tracking-tighter italic">Actions</b>
+              </div> */}
+              
+              {/* <div className="w-[1px] h-6 bg-white/10 mx-1" /> */}
+
+              <div className="relative flex items-center justify-center">
+                <span className={`absolute inset-0 rounded-full animate-ping bg-[#22c55e] opacity-40 ${actionMenuOpen ? 'hidden' : ''}`} />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className={`relative z-10 transition-transform duration-300 ${actionMenuOpen ? 'rotate-45' : ''}`}>
+                  <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
             </button>
 
 
 
-            <div className={`absolute top-[58px] right-0 z-[1001] w-[240px] p-2 bg-[#0a0e27]/98 border border-[#ffd60a]/20 border-t-[#ffd60a] shadow-[0_15px_30px_rgba(0,0,0,0.8)] [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,12px_100%,0_calc(100%-12px))] transition-all duration-300 origin-top-right ${
+            <div className={`absolute top-[58px] right-0 z-[1001] w-[240px] p-2 bg-white/[0.01] backdrop-blur-md border border-white/10 border-t-[#ffd60a] shadow-[0_20px_50px_rgba(0,0,0,0.8)] [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,12px_100%,0_calc(100%-12px))] transition-all duration-300 origin-top-right ${
               actionMenuOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"
             }`}>
+
               <p className="px-3 py-1 text-[9px] font-black tracking-[0.2em] text-[#ffd60a]/70 uppercase">Quick Actions</p>
               <div className="flex flex-col gap-1 mt-1">
                 <button 
@@ -460,15 +619,15 @@ export default function MapPage() {
                 </button>
               </div>
             </div>
-          </div>
 
-          <div className="relative flex items-start gap-3">
+          <div className="relative flex items-center gap-3">
             <button
               type="button"
               aria-label="User Profile and Radar Status"
               aria-expanded={menuOpen}
               aria-haspopup="true"
-              className="pointer-events-auto w-[48px] h-[48px] flex items-center justify-center bg-[#0a0e27]/95 border border-white/10 hover:border-[#ffd60a]/50 transition-all [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)] shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md relative group focus-visible:ring-2 focus-visible:ring-[#ffd60a] outline-none"
+              className="pointer-events-auto w-[48px] h-[48px] flex items-center justify-center bg-white/[0.01] border border-white/10 hover:border-white/30 transition-all [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)] shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-sm relative group focus-visible:ring-2 focus-visible:ring-[#ffd60a] outline-none"
+
               onClick={(e) => {
                 e.stopPropagation();
                 setMenuOpen((prev) => !prev);
@@ -484,7 +643,8 @@ export default function MapPage() {
             </button>
 
 
-            <div className={`absolute top-[58px] right-0 z-[1001] w-[230px] p-2 bg-[#0a0e27]/98 border border-[#ffd60a]/20 border-t-[#ffd60a] shadow-[0_15px_30px_rgba(0,0,0,0.8)] [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,12px_100%,0_calc(100%-12px))] transition-all duration-300 origin-top-right ${
+            <div className={`absolute top-[58px] right-0 z-[1001] w-[230px] p-2 bg-white/[0.01] backdrop-blur-md border border-white/10 border-t-[#ffd60a] shadow-[0_20px_50px_rgba(0,0,0,0.8)] [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,12px_100%,0_calc(100%-12px))] transition-all duration-300 origin-top-right ${
+
               menuOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"
             }`}>
               <p className="px-3 py-1 text-[9px] font-black tracking-[0.2em] text-[#ffd60a]/70 uppercase">Radar Visibility</p>
@@ -525,9 +685,14 @@ export default function MapPage() {
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
-        aria-label="Kalcerians Sidebar Panel"
-        className="absolute z-[1000] top-[100px] left-4 bottom-6 w-[340px] bg-[#0a0e27]/10 backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.9)] [clip-path:polygon(0_0,calc(100%-20px)_0,100%_20px,100%_100%,20px_100%,0_calc(100%-20px))] flex flex-col transition-all duration-500 -translate-x-[calc(100%-42px)] peer-checked:translate-x-0 max-[860px]:top-auto max-[860px]:bottom-0 max-[860px]:left-0 max-[860px]:w-full max-[860px]:h-[72vh] max-[860px]:border-r-0 max-[860px]:border-t-[3px] max-[860px]:[clip-path:polygon(25px_0,calc(100%-25px)_0,100%_25px,100%_100%,0_100%,0_25px)] max-[860px]:translate-x-0 max-[860px]:translate-y-[calc(100%-104px)] max-[860px]:peer-checked:translate-y-0"
+        className="absolute z-[1000] top-[100px] left-4 bottom-6 w-[340px] bg-white/[0.01] backdrop-blur-sm border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] [clip-path:polygon(0_0,calc(100%-20px)_0,100%_20px,100%_100%,20px_100%,0_calc(100%-20px))] flex flex-col transition-all duration-500 -translate-x-[calc(100%-42px)] peer-checked:translate-x-0 max-[860px]:top-auto max-[860px]:bottom-0 max-[860px]:left-0 max-[860px]:w-full max-[860px]:h-[72vh] max-[860px]:border-r-0 max-[860px]:border-t-[3px] max-[860px]:[clip-path:polygon(25px_0,calc(100%-25px)_0,100%_25px,100%_100%,0_100%,0_25px)] max-[860px]:translate-x-0 max-[860px]:translate-y-[calc(100%-104px)] max-[860px]:peer-checked:translate-y-0"
       >
+
+
+
+
+
+
         {/* Dynamic Gradient Border Line */}
         <div className="absolute top-0 right-0 bottom-0 w-[3px] z-20 bg-gradient-to-b from-[#ffd60a] via-orange-300 via-purple-500 via-[#ff006e] to-[#ffd60a] bg-[length:100%_200%] animate-border-flow max-[860px]:top-0 max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-auto max-[860px]:w-full max-[860px]:h-[3px] max-[860px]:bg-gradient-to-r" />
 
@@ -541,8 +706,9 @@ export default function MapPage() {
         
         <label htmlFor="panel-toggle" className="px-5 py-4 bg-[#2a2d42]/40 border-b border-white/5 cursor-pointer group flex justify-between items-center">
           <div className="flex flex-col">
-            <h1 className="text-2xl font-black italic tracking-tighter uppercase bg-gradient-to-b from-[#d9723d] via-[#edce60] to-[#b762dd] bg-clip-text text-transparent leading-none">KALCERIANS</h1>
-            <p className="text-[10px] font-bold text-[#8896aa] tracking-[0.1em] uppercase">Find other Kalcerians</p>
+            <h1 className="text-2xl font-black italic tracking-tighter uppercase bg-gradient-to-b from-[#d9723d] via-[#edce60] to-[#b762dd] bg-clip-text text-transparent leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">KALCERIANS</h1>
+
+            <p className="text-[10px] font-bold text-gray-200 tracking-[0.1em] uppercase">Find other Kalcerians</p>
           </div>
 
           <div className="w-10 h-10 flex items-center justify-center">
@@ -618,12 +784,14 @@ export default function MapPage() {
           )}
 
           {/* Operatives Section Header */}
-          <div className="px-5 py-2 bg-[#2a2d42]/60 border-b border-white/5 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md">
+          <div className="px-5 py-2 bg-transparent border-b border-white/5 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md">
+
             <span className="text-[10px] font-black tracking-[0.2em] text-gray uppercase">Kalcerians</span>
             <span className="text-[12px] font-mono text-gray-400 uppercase">Total: {sidebarUsers.length}</span>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#050714]/40">
+          <div className="flex-1 overflow-y-auto custom-scrollbar bg-transparent">
+
             {isDataLoading ? (
               <div className="flex flex-col gap-[1px]">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -650,7 +818,7 @@ export default function MapPage() {
                   key={user.id} 
                   type="button" 
                   aria-label={`Focus radar on operative: ${user.name}`}
-                  className="w-full grid grid-cols-[44px_1fr_auto] items-center gap-4 px-5 py-4 bg-transparent hover:bg-white/5 text-left transition-all border-b border-white/[0.03] group focus-visible:bg-white/10 outline-none"
+                  className="w-full grid grid-cols-[44px_1fr_auto] items-center gap-4 px-5 py-4 hover:bg-white/5 text-left transition-all border-b border-white/[0.03] bg-black/10 group focus-visible:bg-white/10 outline-none mb-1"
                   onClick={() => focusUser(user)}
                 >
 
@@ -695,7 +863,8 @@ export default function MapPage() {
       {/* Recenter Button Bottom Right */}
       <button 
         type="button" 
-        className="fixed p-2 z-[1000] bottom-8 right-8 w-14 h-14 bg-[#0a0e27]/95 border border-[#ffd60a]/40 text-[#ffd60a] flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md transition-all hover:bg-[#ffd60a] hover:text-black hover:border-[#ffd60a] [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)] group active:scale-95 focus-visible:ring-2 focus-visible:ring-[#ffd60a] outline-none"
+        className="fixed p-2 z-[1000] bottom-8 right-8 w-14 h-14 bg-white/[0.01] border border-white/10 text-[#ffd60a] flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-all hover:bg-white/10 hover:border-[#ffd60a] [clip-path:polygon(10px_0,100%_0,100%_calc(100%-10px),calc(100%-10px)_100%,0_100%,0_10px)] group active:scale-95 focus-visible:ring-2 focus-visible:ring-[#ffd60a] outline-none"
+
         onClick={recenterMap}
         aria-label="Recenter Map Radar"
         title="Recenter Map"
@@ -711,16 +880,20 @@ export default function MapPage() {
         </svg>
       </button>
       
-      {/* Bottom Center Brand */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none select-none">
-        <h2 className={`text-xl font-black italic tracking-[0.3em] uppercase bg-gradient-to-b from-[#d9723d] via-[#edce60] to-[#b762dd] bg-clip-text text-transparent leading-none ${isGlitching ? 'glitch-active' : ''}`}>
-          Kalcerian Maps
-        </h2>
+        <div className="bg-white/[0.01] backdrop-blur-sm border border-white/10 px-8 py-3 [clip-path:polygon(15px_0,100%_0,100%_calc(100%-15px),calc(100%-15px)_100%,0_100%,0_15px)] shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+          <h2 className={`text-xl font-black italic tracking-[0.4em] uppercase bg-gradient-to-b from-white via-white/80 to-white/20 bg-clip-text text-transparent leading-none drop-shadow-[0_0_12px_rgba(255,255,255,0.4)] ${isGlitching ? 'glitch-active' : ''}`}>
+
+            Kalcerian Maps
+          </h2>
+        </div>
       </div>
+
       
       {/* Randomized Pirate Interception Overlay */}
       {showPirate && (
-        <div className="fixed bottom-0 right-0 z-[900] w-[440px] max-w-[60vw] pointer-events-none animate-in fade-in slide-in-from-bottom-20 duration-1000">
+        <div className="fixed bottom-0 right-0 z-[900] w-[15vw] pointer-events-none animate-in fade-in slide-in-from-bottom-20 duration-1000">
+
           <img 
             key={pirateKey}
             src="/map/pirate_overview_looped.gif" 
@@ -906,19 +1079,128 @@ export default function MapPage() {
       <AnimatePresence>
         {showStartup && (
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.1, filter: "blur(40px)" }}
-            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[10000] bg-[#050a14] flex flex-col items-center justify-center overflow-hidden"
+            key="startup-overlay"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, filter: "blur(40px)" }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className={`fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden transition-colors duration-[3000ms] ease-in-out ${startupProgress < 50 ? 'bg-[#e2e8f0]' : 'bg-[#050a14]'}`}
           >
-            {/* Forza Style Atmospheric Background */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#ff006e]/20 via-transparent to-[#ffd60a]/20" />
+            {/* ☁️ Pixel Clouds Overlay */}
+            <AnimatePresence>
+              {showClouds && (
+                <motion.div 
+                  key="pixel-clouds"
+                  exit={{ scale: 1.5, opacity: 0, filter: "blur(40px)" }}
+                  transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute inset-0 z-[10001] flex items-center justify-center bg-white"
+                >
+                  <div className="relative w-full h-full overflow-hidden">
+                    {STATIC_CLOUDS.map((cloud, i) => {
+                      const exitX = (cloud.x - 50) * 5;
+                      const exitY = (cloud.y - 50) * 5;
+                      const dist = Math.sqrt(Math.pow(cloud.x - 50, 2) + Math.pow(cloud.y - 50, 2));
+                      const delay = (1 - dist / 70) * 0.5; // Ripple out from center
+                      
+                      return (
+                        <div key={i} className="absolute" style={{ left: `${cloud.x}%`, top: `${cloud.y}%` }}>
+                          {/* 🌠 Cosmic Trail */}
+                          <motion.div 
+                            exit={{ 
+                              width: ["0px", "400px", "0px"],
+                              opacity: [0, 0.8, 0],
+                              x: `${exitX}vw`, 
+                              y: `${exitY}vh`,
+                            }}
+                            transition={{ duration: 3, ease: [0.16, 1, 0.3, 1], delay }}
+                            className="absolute z-[-1] h-[2px] bg-gradient-to-r from-transparent via-[#ff006e] to-[#ffd60a] origin-left"
+                            style={{ 
+                              transform: `rotate(${Math.atan2(exitY, exitX)}rad)`,
+                              width: 0
+                            }}
+                          />
+                          {/* Main Cloud Block */}
+                          <motion.div 
+                            exit={{ 
+                              x: `${exitX}vw`, 
+                              y: `${exitY}vh`, 
+                              opacity: 0,
+                              scale: 0.8,
+                              rotate: (cloud.x - 50) * 0.2
+                            }}
+                            transition={{ duration: 3, ease: [0.16, 1, 0.3, 1], delay }}
+                            className="bg-[#cbd5e1] opacity-70"
+                            style={{
+                              width: `${cloud.w}px`,
+                              height: `${cloud.h}px`,
+                              boxShadow: "12px 12px 0 #94a3b8"
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                    {/* Secondary Layer for density */}
+                    {STATIC_CLOUDS.map((cloud, i) => {
+                      const exitX = (cloud.x - 50) * 7;
+                      const exitY = (cloud.y - 50) * 7;
+                      const dist = Math.sqrt(Math.pow(cloud.x - 50, 2) + Math.pow(cloud.y - 50, 2));
+                      const delay = (1 - dist / 70) * 0.5 + 0.2;
+                      
+                      return (
+                        <motion.div 
+                          key={`sec-${i}`}
+                          exit={{ 
+                            x: `${exitX}vw`, 
+                            y: `${exitY}vh`, 
+                            opacity: 0,
+                            scale: 0.5,
+                            filter: "blur(15px)"
+                          }}
+                          transition={{ duration: 3.2, ease: [0.16, 1, 0.3, 1], delay }}
+                          className="absolute bg-[#f1f5f9] opacity-30 blur-[2px]"
+                          style={{
+                            width: `${cloud.w * 0.8}px`,
+                            height: `${cloud.h * 0.8}px`,
+                            left: `${cloud.x + 5}%`,
+                            top: `${cloud.y + 5}%`,
+                          }}
+                        />
+                      );
+                    })}
+
+
+
+
+
+
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <motion.h2 
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        className="text-4xl font-black text-slate-800 tracking-[0.4em] uppercase mb-4"
+                      >
+                        Entering Sector
+                      </motion.h2>
+                      <div className="w-64 h-2 bg-slate-300 relative overflow-hidden">
+                        <motion.div 
+                          animate={{ x: ["-100%", "100%"] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                          className="absolute inset-0 bg-slate-600"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Adaptive Atmospheric Background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
+              <div className={`absolute inset-0 transition-colors duration-1000 ${startupProgress < 50 ? 'bg-slate-200' : 'bg-gradient-to-br from-[#ff006e]/20 via-transparent to-[#ffd60a]/20'}`} />
+
               
               {/* Dynamic Speed Lines */}
               <div className="absolute inset-0 opacity-20">
-                {[...Array(20)].map((_, i) => (
+                {hasMounted && [...Array(20)].map((_, i) => (
                   <motion.div
                     key={i}
                     initial={{ x: "-100%", opacity: 0 }}
@@ -929,7 +1211,7 @@ export default function MapPage() {
                       delay: Math.random() * 2,
                       ease: "linear"
                     }}
-                    className="absolute h-[1px] bg-white"
+                    className={`absolute h-[1px] transition-colors duration-1000 ${startupProgress < 50 ? 'bg-slate-400' : 'bg-white'}`}
                     style={{ 
                       top: `${Math.random() * 100}%`, 
                       width: `${Math.random() * 300 + 100}px`,
@@ -939,10 +1221,12 @@ export default function MapPage() {
                 ))}
               </div>
 
-              {/* Large Background Brand Label (Faded) */}
+
+
               <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none">
-                <h2 className="text-[25vw] font-black italic tracking-tighter uppercase leading-none">KALCERIA</h2>
+                <h2 className={`text-[25vw] font-black italic tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? 'text-slate-900' : 'text-white'}`}>KALCERIA</h2>
               </div>
+
             </div>
 
             <div className="relative z-10 w-full flex flex-col items-center">
@@ -954,14 +1238,15 @@ export default function MapPage() {
                 className="flex flex-col items-center mb-12"
               >
                 <div className="flex items-center gap-4 mb-2">
-                  <div className="w-12 h-[3px] bg-[#ffd60a]" />
-                  <span className="text-[12px] font-black text-[#ffd60a] uppercase tracking-[0.6em] italic">Your network onload</span>
-                  <div className="w-12 h-[3px] bg-[#ffd60a]" />
+                  <div className={`w-12 h-[3px] transition-colors duration-1000 ${startupProgress < 50 ? 'bg-slate-800' : 'bg-[#ffffff]'}`} />
+                  <span className={`text-[12px] font-black uppercase tracking-[0.6em] italic transition-colors duration-1000 ${startupProgress < 50 ? 'text-slate-800' : 'text-gray-200'}`}>Your network onload</span>
+                  <div className={`w-12 h-[3px] transition-colors duration-1000 ${startupProgress < 50 ? 'bg-slate-800' : 'bg-[#ffffff]'}`} />
                 </div>
-                <h1 className="text-8xl font-sans font-black text-white italic tracking-tighter uppercase leading-none drop-shadow-[0_10px_30px_rgba(0,0,0,1)]">
-                  Kalcerians Map<span className="text-[#ff006e]">.</span>
+                <h1 className={`text-8xl font-sans font-black italic tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? 'text-slate-900' : 'text-white'}`}>
+                  Kalcerians Map<span className="text-orange-500">.</span>
                 </h1>
               </motion.div>
+
 
               {/* High Impact Progress Section */}
               <div className="w-full max-w-[800px] px-8">
@@ -973,45 +1258,48 @@ export default function MapPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="text-[14px] font-black text-white italic uppercase tracking-widest"
+                        className={`text-[14px] font-black italic uppercase tracking-widest transition-colors duration-1000 ${startupProgress < 50 ? 'text-slate-700' : 'text-white'}`}
                       >
                         {startupMessages[startupStep]}
                       </motion.p>
                     </AnimatePresence>
                   </div>
                   <div className="text-right">
-                    <span className="text-5xl font-sans font-black text-white italic tracking-tighter leading-none">
-                      {Math.round(startupProgress)}<span className="text-[20px] ml-1 text-white/40">%</span>
+                    <span className={`text-5xl font-sans font-black italic tracking-tighter leading-none transition-colors duration-1000 ${startupProgress < 50 ? 'text-slate-900' : 'text-white'}`}>
+                      {Math.round(startupProgress)}<span className="text-[20px] ml-1 opacity-40">%</span>
                     </span>
                   </div>
+
                 </div>
 
                 {/* The "Forza Stripe" Progress Bar */}
-                <div className="relative h-4 w-full bg-white/5 skew-x-[-12deg] overflow-hidden border border-white/10">
+                <div className={`relative h-4 w-full skew-x-[-12deg] overflow-hidden border transition-colors duration-1000 ${startupProgress < 50 ? 'bg-slate-300 border-slate-400' : 'bg-white/5 border-white/10'}`}>
                   <motion.div 
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ff006e] via-[#ffd60a] to-[#ffc300] shadow-[0_0_30px_#ffd60a]" 
+                    className={`absolute top-0 left-0 h-full transition-colors duration-1000 ${startupProgress < 50 ? 'bg-slate-600' : 'bg-gradient-to-r from-[#ff6f00] via-[#ffd60a] to-[#ffc300] shadow-[0_0_30px_#ffd60a]'}`} 
                     initial={{ width: "0%" }}
                     animate={{ width: `${startupProgress}%` }}
                     transition={{ type: "spring", stiffness: 40, damping: 15 }}
                   />
                   {/* Subtle stripes over progress */}
-                  <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.2)_50%,transparent_100%)] bg-[length:20px_100%] pointer-events-none" />
+                  <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.1)_50%,transparent_100%)] bg-[length:20px_100%] pointer-events-none" />
                 </div>
+
 
                 {/* Technical Footnote */}
                 <div className="mt-8 flex justify-between items-start opacity-40">
                   <div className="flex flex-col gap-2">
-                    <div className="flex gap-4 text-[10px] font-black uppercase italic tracking-widest">
+                    <div className={`flex gap-4 text-[10px] font-black uppercase italic tracking-widest transition-colors duration-1000 ${startupProgress < 50 ? 'text-slate-900' : 'text-white'}`}>
                       <span>Syncing Signals</span>
                       <span>//</span>
                       <span>Finding others</span>
                     </div>
                   </div>
-                  <div className="text-[10px] font-mono text-right space-y-1">
+                  <div className={`text-[10px] font-mono text-right space-y-1 transition-colors duration-1000 ${startupProgress < 50 ? 'text-slate-900' : 'text-white'}`}>
                     <p>KALCER RADAR</p>
                     <p>ENCRYPTED STABLE</p>
                   </div>
                 </div>
+
               </div>
             </div>
 
