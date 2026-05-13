@@ -89,7 +89,13 @@ function PhotoCollage() {
 // ─── Individual Video Cell ───
 function VideoCell({ initialSrc, allVids, index }) {
   const [src, setSrc] = useState(initialSrc);
+  const [glowColor, setGlowColor] = useState("#fbbf24");
   const videoRef = useRef(null);
+
+  useEffect(() => {
+    const colors = ["#ef4444", "#fbbf24", "#22c55e"]; // Red, Yellow, Green
+    setGlowColor(colors[Math.floor(Math.random() * colors.length)]);
+  }, [src]);
 
   const handleEnded = () => {
     const others = allVids.filter(v => v !== src);
@@ -98,7 +104,15 @@ function VideoCell({ initialSrc, allVids, index }) {
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-slate-900/50 border border-white/10">
+    <div className="relative w-full h-full overflow-hidden bg-slate-950 border border-white/10">
+      {/* Randomized Traffic Light Glow (Fills empty transition slots) */}
+      <motion.div 
+        animate={{ opacity: [0.4, 0.8, 0.4], scale: [1, 1.2, 1] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute inset-0 z-0 blur-[30px]"
+        style={{ backgroundColor: glowColor }}
+      />
+
       <video 
         ref={videoRef}
         src={src} 
@@ -106,13 +120,7 @@ function VideoCell({ initialSrc, allVids, index }) {
         muted 
         playsInline 
         onEnded={handleEnded}
-        className="w-full h-full object-cover filter saturate-[1.4] contrast-125 brightness-110"
-      />
-      {/* Subtle Glitch */}
-      <motion.div 
-        animate={{ opacity: [0, 0.1, 0] }}
-        transition={{ duration: 0.2, repeat: Infinity, repeatDelay: (index % 4) + 3 }}
-        className="absolute inset-0 bg-white mix-blend-overlay pointer-events-none"
+        className="relative z-10 w-full h-full object-cover opacity-90"
       />
     </div>
   );
@@ -124,8 +132,8 @@ function VideoCollage() {
   const vids = useRef(Array.from({ length: 8 }, (_, i) => `/vid_abt${i + 1}.mp4`));
   
   useEffect(() => {
-    // Create the initial 4x5 grid
-    const base = Array.from({ length: 20 }, (_, i) => vids.current[i % vids.current.length]);
+    // Reduced grid size from 20 to 12 for performance optimization
+    const base = Array.from({ length: 12 }, (_, i) => vids.current[i % vids.current.length]);
     setInitialGrid(base.sort(() => Math.random() - 0.5));
   }, []);
 
@@ -260,6 +268,40 @@ function FloatingQuotesLayer() {
   );
 }
 
+// ─── Dangling Symbols Component ───
+function DanglingSymbols({ char, color, side = "left", configs = [] }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {configs.map((s, i) => (
+        <motion.div
+          key={i}
+          animate={{ 
+            y: [0, -20, 0],
+            rotate: [s.rotate || 0, (s.rotate || 0) + 12, (s.rotate || 0) - 6, s.rotate || 0]
+          }}
+          transition={{ 
+            duration: 3.5 + i,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: s.delay || 0
+          }}
+          className="absolute text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter select-none z-[60]"
+          style={{ 
+            color: color, 
+            top: s.top,
+            [side === "left" ? "left" : "right"]: `${s.offset}px`,
+            textShadow: `0 0 20px ${color}, 0 0 40px ${color}`,
+            filter: `drop-shadow(0 0 25px ${color}aa)`,
+            opacity: 0.95
+          }}
+        >
+          {char}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 export default function AboutUs() {
   const [mounted, setMounted] = useState(false);
   
@@ -286,6 +328,13 @@ export default function AboutUs() {
   // FAQ state
   const [masterFaqOpen, setMasterFaqOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
+
+  // Image toggle state
+  const [imgToggle, setImgToggle] = useState(false);
+  useEffect(() => {
+    const itv = setInterval(() => setImgToggle(prev => !prev), 1000);
+    return () => clearInterval(itv);
+  }, []);
 
   const faqs = [
     {
@@ -342,8 +391,8 @@ export default function AboutUs() {
             viewport={{ once: true }}
             className="text-3xl md:text-5xl italic font-medium tracking-wide text-slate-300 font-serif mb-16"
           >
-            Ālea iacta est
-            <span className="block mt-2 text-slate-500 text-lg md:text-xl tracking-widest">(The die is cast)</span>
+            De bello
+            <span className="block mt-2 text-slate-500 text-lg md:text-xl tracking-widest">(About)</span>
           </motion.h2>
           
           <motion.div 
@@ -466,8 +515,84 @@ export default function AboutUs() {
           viewport={{ once: true, margin: "-50px" }}
           className="relative z-10 w-[90%] max-w-4xl flex flex-col"
         >
-          {/* MASTER FAQ CARD */}
-          <div className="flex flex-col border border-white/10 bg-white/5 backdrop-blur-xl overflow-hidden transition-all duration-300 shadow-[0_0_80px_rgba(0,0,0,0.8)]" style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }}>
+          {/* 1. GLASS BACKGROUND LAYER (Blurs the quotes behind it) */}
+          <div 
+            className="absolute inset-0 border border-white/10 bg-white/5 backdrop-blur-md shadow-[0_0_80px_rgba(0,0,0,0.8)] z-0 pointer-events-none" 
+            style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }} 
+          />
+
+          {/* 2. LEFT REII IMAGE (Shrunken by 25%, Gold-Cyan Glow) */}
+          <div className="absolute -bottom-40 right-[95%] md:right-full mr-0 md:mr-6 pointer-events-none flex items-end justify-center z-10">
+            {/* Dynamic Gold-Cyan Glow */}
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.3, 1],
+                opacity: [0.3, 0.6, 0.3]
+              }}
+              transition={{ 
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="absolute w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-gradient-to-tr from-[#FFD700]/40 to-cyan-500/40 blur-[70px] rounded-full z-[-1]" 
+            />
+            {/* Reii Image */}
+            <img 
+              src={imgToggle ? "/reii2.png" : "/reii.png"} 
+              alt="Reii Left" 
+              className="w-[12rem] md:w-[17.25rem] max-w-none relative z-10 opacity-90" 
+            />
+
+            {/* Dangling ? Symbols beside Left Reii (on its right side) */}
+            <DanglingSymbols 
+              char="?" 
+              color="#FFD700" 
+              side="left" 
+              configs={[
+                { delay: 0, rotate: -15, top: "-15%", offset: 145 }, // Upper: another 10% lefter
+                { delay: 0.8, rotate: 10, top: "35%", offset: 200 }  // Lower: another 5% righter
+              ]} 
+            />
+          </div>
+
+          {/* 3. RIGHT REII IMAGE (Shrunken by 25%, Magenta-Cyan Glow) */}
+          <div className="absolute -bottom-40 left-[95%] md:left-full ml-0 md:ml-6 pointer-events-none flex items-end justify-center z-10">
+            {/* Dynamic Magenta-Cyan Glow */}
+            <motion.div 
+              animate={{ 
+                scale: [1.3, 1, 1.3],
+                opacity: [0.6, 0.3, 0.6]
+              }}
+              transition={{ 
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 2 // Offset delay
+              }}
+              className="absolute w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-gradient-to-tl from-[#FF00FF]/40 to-cyan-500/40 blur-[70px] rounded-full z-[-1]" 
+            />
+            {/* Reii 2 Image */}
+            <img 
+              src={imgToggle ? "/reii3.png" : "/reii2.png"} 
+              alt="Reii Right" 
+              className="w-[12rem] md:w-[17.25rem] max-w-none relative z-10 opacity-90" 
+            />
+
+            {/* Dangling ! Symbols beside Right Reii2 (on its left side) */}
+            <DanglingSymbols 
+              char="!" 
+              color="#00FFFF" 
+              side="right" 
+              configs={[
+                { delay: 0, rotate: -15, top: "-15%", offset: 145 }, // Upper: another 10% righter
+                { delay: 0.8, rotate: 10, top: "30%", offset: 200 }, // Lower 1: another 5% lefter
+                { delay: 1.5, rotate: -5, top: "65%", offset: 250 }  // Lower 2: another 5% lefter
+              ]} 
+            />
+          </div>
+
+          {/* 3. CONTENT LAYER (Text and buttons) */}
+          <div className="relative z-20 flex flex-col w-full h-full transition-all duration-300">
             <button 
               onClick={() => setMasterFaqOpen(!masterFaqOpen)}
               className="w-full px-8 py-10 text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none"
@@ -488,7 +613,7 @@ export default function AboutUs() {
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.4, ease: "easeInOut" }}
-                  className="bg-transparent border-t border-white/10"
+                  className="bg-transparent border-t border-white/10 overflow-hidden"
                 >
                   <div className="p-4 md:p-8 flex flex-col gap-4">
                     
@@ -519,7 +644,7 @@ export default function AboutUs() {
                               animate={{ height: "auto", opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.3, ease: "easeInOut" }}
-                              className="border-t border-slate-800"
+                              className="border-t border-slate-800 overflow-hidden"
                             >
                               <div className="px-6 py-6 font-sans text-slate-400 text-sm md:text-base leading-relaxed bg-[#060c18]">
                                 {faq.a}

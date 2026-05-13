@@ -79,7 +79,8 @@ export async function login(req, res, next) {
       { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
-    res.json({ token, userId: user.id, username: user.name });
+    // Return role so frontend can handle admin redirect easily
+    res.json({ token, userId: user.id, username: user.name, role: user.role });
   } catch (err) {
     next(err);
   }
@@ -157,6 +158,26 @@ export async function resetPassword(req, res, next) {
     await redis.del(`reset:${token}`);
 
     res.json({ message: 'Password reset successful.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Check Username Existence ────────────────────────────────────────────────
+export async function checkUsername(req, res, next) {
+  try {
+    const { username } = req.params;
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { name: { equals: username, mode: 'insensitive' } },
+          { nickname: { equals: username, mode: 'insensitive' } }
+        ]
+      }
+    });
+
+    if (!user) return res.status(404).json({ exists: false });
+    res.json({ exists: true, email: user.email });
   } catch (err) {
     next(err);
   }

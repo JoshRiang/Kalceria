@@ -149,8 +149,8 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
               />
             </div>
 
-            {/* Inner Content Box */}
-            <div className="relative z-10 w-full bg-[#070d1a]/90 backdrop-blur-xl border border-slate-800/80 rounded-xl overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Inner Content Box — Semi-transparent like FAQ but less */}
+            <div className="relative z-10 w-full bg-[#070d1a]/40 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden flex flex-col max-h-[85vh]">
               {/* Scrollable inner container */}
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar px-8 py-10 md:px-10">
 

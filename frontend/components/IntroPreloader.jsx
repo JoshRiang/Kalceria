@@ -268,7 +268,7 @@ function WakingUpText() {
     if (!showDots) return;
     let dotCount = 1;
     const dotInterval = setInterval(() => {
-      setDots(" .".repeat(dotCount));
+      setDots(".".repeat(dotCount));
       dotCount = (dotCount % 3) + 1;
     }, 400);
 
@@ -277,7 +277,7 @@ function WakingUpText() {
 
   return (
     <div 
-      className="mt-6 flex" 
+      className="mt-6 flex relative w-fit" 
       style={{ 
         color: "rgba(255,255,255,0.7)", 
         fontFamily: "'Inter', sans-serif",
@@ -288,10 +288,109 @@ function WakingUpText() {
       }}
     >
       <span>{text}</span>
-      <span style={{ minWidth: "3em", textAlign: "left", whiteSpace: "pre" }}>
+      <span style={{ position: "absolute", left: "100%", whiteSpace: "pre" }}>
         {showDots ? dots : ""}
       </span>
     </div>
+  );
+}
+
+// ─── Tiled Video Canvas (MCU Optimization) ─────────────────────────
+function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (!active) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Set high-res canvas
+    const ctx = canvas.getContext("2d");
+    const updateSize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
+
+    // Load all 3 videos into memory
+    const videos = [1, 2, 3].map(num => {
+      const v = document.createElement("video");
+      v.src = `/vid_login${num}.mp4`;
+      v.muted = true;
+      v.loop = true;
+      v.playsInline = true;
+      v.play().catch(() => {});
+      return v;
+    });
+
+    let raf;
+    const cols = window.innerWidth > 768 ? 7 : 6;
+    const rows = window.innerWidth > 768 ? 6 : 7;
+    const totalCells = cols * rows;
+
+    // Randomize initial assignments
+    const cellAssignments = Array.from({ length: totalCells }).map(() => Math.floor(Math.random() * videos.length));
+
+    // Dynamic MCU flip effect
+    const switchInterval = setInterval(() => {
+      // Flip up to 6 cells every 150ms
+      const flips = Math.floor(Math.random() * 6) + 1;
+      for (let i = 0; i < flips; i++) {
+        const cellIdx = Math.floor(Math.random() * totalCells);
+        cellAssignments[cellIdx] = Math.floor(Math.random() * videos.length);
+      }
+    }, 150);
+
+    const draw = () => {
+      const w = canvas.width;
+      const h = canvas.height;
+      const cellW = w / cols;
+      const cellH = h / rows;
+
+      ctx.clearRect(0, 0, w, h);
+      
+      let cellIdx = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          let v = videos[cellAssignments[cellIdx]];
+          // Fallback if the assigned video is not ready (prevents empty slots)
+          if (!v || v.readyState < 2) {
+            v = videos.find(vid => vid && vid.readyState >= 2);
+          }
+
+          // Draw video scaled down into cell if it has enough data
+          if (v) {
+            ctx.drawImage(v, c * cellW, r * cellH, cellW, cellH);
+          }
+          
+          // Draw border
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(c * cellW, r * cellH, cellW, cellH);
+          cellIdx++;
+        }
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      window.removeEventListener("resize", updateSize);
+      clearInterval(switchInterval);
+      cancelAnimationFrame(raf);
+      videos.forEach(v => {
+        v.pause();
+        v.src = "";
+      });
+    };
+  }, [active]);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      className="absolute inset-0 w-full h-full object-cover filter grayscale contrast-125 bg-black/50" 
+    />
   );
 }
 
@@ -333,18 +432,18 @@ export default function IntroPreloader({ onComplete }) {
     // t = 1.0s → logo
     const t1 = setTimeout(() => setShowLogo(true), 1000);
 
-    // t = 2.5s → subtitle + gears
+    // t = 2.5s → subtitle + gears + MCU video collage
     const t2 = setTimeout(() => {
       setShowSubtitle(true);
       setShowGears(true);
     }, 2500);
 
-    let t3, t4, checkInterval;
+    let t3, t4;
 
-    // t = 5.5s → check backend, fire lasers only when ready
+    // t = 9.5s → exactly 7s after subtitle appears, fire lasers (ignoring backend status)
     const fireLasers = () => {
       setLaserActive(true);
-      // t = 5.5 + 3.7 + 0.2 = 9.4s (from start) → onComplete
+      // t = 9.5 + 3.9 = 13.4s (from start) → onComplete
       t4 = setTimeout(() => {
         setDone(true);
         onComplete?.();
@@ -352,24 +451,13 @@ export default function IntroPreloader({ onComplete }) {
     };
 
     t3 = setTimeout(() => {
-      if (backendReady) {
-        fireLasers();
-      } else {
-        // Wait until backend is ready
-        checkInterval = setInterval(() => {
-          if (backendReady) {
-            clearInterval(checkInterval);
-            fireLasers();
-          }
-        }, 500);
-      }
-    }, 5500);
+      fireLasers();
+    }, 9500);
 
     return () => { 
       clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4);
-      if (checkInterval) clearInterval(checkInterval);
     };
-  }, [onComplete, backendReady]);
+  }, [onComplete]);
 
   if (done) return null;
 
@@ -384,6 +472,33 @@ export default function IntroPreloader({ onComplete }) {
         userSelect: "none",
       }}
     >
+      {/* ── Background Videos (MCU-Style Canvas Render) ── */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        {/* Base Layer: Normal B&W Collage outside the K shape */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: showSubtitle ? 0.15 : 0, scale: showSubtitle ? 1 : 0.98 }}
+          transition={{ duration: 3, ease: "easeInOut" }}
+          className="absolute inset-0"
+        >
+          <MCUVideoGridCanvas active={true} />
+        </motion.div>
+
+        {/* Top Layer: Peach-Magenta Gradient masked strictly to the K shape */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: showSubtitle ? 0.35 : 0, scale: showSubtitle ? 1 : 0.98 }}
+          transition={{ duration: 3, ease: "easeInOut" }}
+          className="absolute inset-0"
+          style={{ clipPath: "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)" }}
+        >
+          <MCUVideoGridCanvas active={true} />
+          {/* Gradient Tint Overlays */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-color opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-overlay opacity-40" />
+        </motion.div>
+      </div>
+
       {/* ── Golden spiral threads canvas ── */}
       <canvas
         ref={threadsCanvasRef}

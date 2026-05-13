@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-import { redis } from '../lib/redis.js';
-import { maskLocationToDistrict } from '../utils/privacyMask.js';
+import { PrismaClient } from "@prisma/client";
+import { redis } from "../lib/redis.js";
+import { maskLocationToDistrict } from "../utils/privacyMask.js";
 
 const prisma = new PrismaClient();
 const DISTRICT_OFFSET = 0.012;
@@ -24,7 +24,7 @@ export async function saveTelemetry(req, res, next) {
     const lng = parseCoordinate(req.body.lng);
 
     if (lat === null || lng === null) {
-      return res.status(400).json({ error: 'Valid lat and lng are required.' });
+      return res.status(400).json({ error: "Valid lat and lng are required." });
     }
 
     const key = `telemetry:${userId}`;
@@ -33,7 +33,7 @@ export async function saveTelemetry(req, res, next) {
     await redis.lpush(key, record);
     await redis.ltrim(key, 0, 4);
 
-    res.json({ message: 'Telemetry saved.' });
+    res.json({ message: "Telemetry saved." });
   } catch (err) {
     next(err);
   }
@@ -41,10 +41,15 @@ export async function saveTelemetry(req, res, next) {
 
 export async function getMapUsers(req, res, next) {
   try {
-    const members = await redis.zrange('active_users', 0, -1);
+    const globalCacheKey = "cache:map_users_enriched";
+    const cachedGlobal = await redis.get(globalCacheKey);
+    if (cachedGlobal) return res.json(JSON.parse(cachedGlobal));
+
+    // Get all active user IDs from Redis geo set
+    const members = await redis.zrange("active_users", 0, -1);
     if (!members.length) return res.json({ users: [] });
 
-    const now = new Date();
+    // Batch fetch user profiles
     const users = await prisma.user.findMany({
       where: {
         id: { in: members },
@@ -63,33 +68,31 @@ export async function getMapUsers(req, res, next) {
       },
     });
 
-    const visibleUsers = [];
+    if (!users.length) return res.json({ users: [] });
 
-    for (const user of users) {
-      const liveRaw = await redis.get(`live:user:${user.id}`);
-      if (!liveRaw) continue;
+    // Batch fetch all positions in ONE call
+    const userIds = users.map((u) => u.id);
+    const positions = await redis.geopos("active_users", ...userIds);
 
-      const live = JSON.parse(liveRaw);
-      if (live.isStale) continue;
+    // Map results efficiently
+    const now = new Date();
+    const enriched = users.map((u, index) => {
+      const pos = positions[index];
+      let district = null;
+      if (pos && pos[0]) {
+        const [lng, lat] = pos;
+        district = maskLocationToDistrict(parseFloat(lat), parseFloat(lng));
+      }
+      // broadcast logic: only show if not expired
+      const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
+      return { ...u, district, broadcast };
+    });
 
-      const broadcast = user.broadcast && user.broadcast.expiresAt > now ? user.broadcast : null;
-      const approx = approximateCoordinate(live.lat, live.lng);
+    const response = { users: enriched };
+    // Cache for 5 seconds - keeps the map responsive while slashing heavy compute
+    await redis.set(globalCacheKey, JSON.stringify(response), "EX", 5);
 
-      visibleUsers.push({
-        id: user.id,
-        name: user.name,
-        nickname: user.nickname,
-        profilePicture: user.profilePicture,
-        socialPlatform: user.socialPlatform,
-        socialLink: user.socialLink,
-        district: live.district || maskLocationToDistrict(live.lat, live.lng),
-        lat: approx.lat,
-        lng: approx.lng,
-        broadcast,
-      });
-    }
-
-    res.json({ users: visibleUsers });
+    res.json(response);
   } catch (err) {
     next(err);
   }

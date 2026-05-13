@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
+import { redis } from '../lib/redis.js';
+
 const prisma = new PrismaClient();
 const RATE_PER_HOUR = 120000;
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
@@ -62,22 +64,184 @@ export async function createBooking(req, res, next) {
       return res.status(400).json({ error: 'endTime must be after startTime.' });
     }
 
-    // ── Cost Calculation ──────────────────────────────────────────────────────
-    const hours = calcHours(startTime, endTime);
-    const totalAmount = hours * RATE_PER_HOUR;
+    // ── Race Condition Protection (Redis Lock) ──────────────────────────────
+    const lockKey = `lock:booking:${bookingDate}:${startTime}:${endTime}`;
+    const acquired = await redis.set(lockKey, userId, 'EX', 10, 'NX'); 
+    if (!acquired) {
+      return res.status(423).json({ error: 'This slot is currently being processed by another user. Try again in 10 seconds.' });
+    }
+
+    try {
+      // ── Check DB for Overlaps ──────────────────────────────────────────────
+      const existing = await prisma.booking.findFirst({
+        where: {
+          bookingDate: target,
+          status: 'CONFIRMED',
+          OR: [
+            { startTime: { lte: startTime }, endTime: { gt: startTime } },
+            { startTime: { lt: endTime }, endTime: { gte: endTime } },
+            { startTime: { gte: startTime }, endTime: { lte: endTime } }
+          ]
+        }
+      });
+
+      if (existing) {
+        return res.status(409).json({ error: 'Slot already booked and confirmed.' });
+      }
+
+      // ── Cost Calculation ──────────────────────────────────────────────────────
+      const hours = calcHours(startTime, endTime);
+      const totalAmount = hours * RATE_PER_HOUR;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, email: true },
+      });
+
+      const booking = await prisma.booking.create({
+        data: { userId, serviceType, bookingDate: target, startTime, endTime, totalAmount },
+      });
+
+      const whatsappUrl = buildWaUrl(booking, user);
+
+      res.status(201).json({ bookingId: booking.id, totalAmount, whatsappUrl });
+    } finally {
+      // Release lock immediately after DB write
+      await redis.del(lockKey);
+      // Invalidate public bookings cache
+      await redis.del('cache:public_bookings');
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── POST /services/request (EO / Car Shoot — ServiceBooking) ─────────────────
+export async function createServiceRequest(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { serviceType, serviceName, contactPerson, whatsapp, location, additionalNotes, slots } = req.body;
+
+    if (slots && slots.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 slots allowed per booking request.' });
+    }
+
+    if (!['EO', 'SHOOTING', 'HOST_EVENT'].includes(serviceType)) {
+      return res.status(400).json({ error: 'Invalid serviceType.' });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { name: true, email: true },
     });
 
-    const booking = await prisma.booking.create({
-      data: { userId, serviceType, bookingDate: target, startTime, endTime, totalAmount },
+    const booking = await prisma.serviceBooking.create({
+      data: {
+        requestorId: userId,
+        serviceType,
+        serviceName: serviceName || null,
+        contactPerson: contactPerson || user.name,
+        whatsapp: whatsapp || null,
+        location: location || null,
+        locationString: location || 'TBD',
+        additionalNotes: additionalNotes || null,
+        slots: {
+          create: (slots || []).map(s => ({
+            date: new Date(s.date),
+            startTime: s.startTime,
+            endTime: s.endTime,
+          }))
+        }
+      },
+      include: { slots: true }
     });
 
-    const whatsappUrl = buildWaUrl(booking, user);
+    // Invalidate public bookings cache
+    await redis.del('cache:public_bookings');
 
-    res.status(201).json({ bookingId: booking.id, totalAmount, whatsappUrl });
+    const firstSlot = slots && slots.length > 0 ? slots[0] : null;
+    const dateStr = firstSlot ? new Date(firstSlot.date).toLocaleDateString('id-ID', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    }) : 'Multiple Dates';
+
+    const msg = [
+      `📋 SERVICE REQUEST BARU`,
+      ``,
+      `Layanan: ${serviceType}`,
+      `Nama: ${serviceName || '—'}`,
+      `PIC: ${contactPerson || user.name}`,
+      `WA: ${whatsapp || '—'}`,
+      `Lokasi: ${location || '—'}`,
+      `Jadwal: ${slots?.length || 0} slot dipilih`,
+      `Tanggal Mulai: ${dateStr}`,
+      `Catatan: ${additionalNotes || '—'}`,
+      ``,
+      `Dari: ${user.name} (${user.email})`,
+    ].join('\n');
+
+    const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
+    res.status(201).json({ bookingId: booking.id, whatsappUrl });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── GET /services/bookings (Public for Heatmap) ───────────────────────────
+export async function listPublicServiceBookings(req, res, next) {
+  try {
+    const cacheKey = 'cache:public_bookings';
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return res.json(JSON.parse(cached));
+    }
+
+    const slots = await prisma.serviceBookingSlot.findMany({
+      include: {
+        serviceBooking: {
+          select: { status: true }
+        }
+      },
+      where: {
+        serviceBooking: {
+          status: { in: ['PENDING', 'PROCESSED'] }
+        }
+      }
+    });
+
+    const formatted = slots.map(s => ({
+      id: s.serviceBookingId,
+      targetDate: s.date,
+      startTime: s.startTime,
+      endTime: s.endTime,
+      status: s.serviceBooking.status
+    }));
+
+    const response = { bookings: formatted };
+    
+    // Cache for 30 seconds (short for "real-time" feel but saves DB hits)
+    await redis.set(cacheKey, JSON.stringify(response), 'EX', 30);
+
+    res.json(response);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── DELETE /services/request/:id (User cancels their own) ───────────────────
+export async function deleteOwnServiceRequest(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    const booking = await prisma.serviceBooking.findUnique({ where: { id } });
+    if (!booking) return res.status(404).json({ error: 'Request not found.' });
+
+    if (booking.requestorId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized to delete this request.' });
+    }
+
+    await prisma.serviceBooking.delete({ where: { id } });
+    res.json({ message: 'Request deleted successfully.' });
   } catch (err) {
     next(err);
   }

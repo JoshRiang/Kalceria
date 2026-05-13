@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider          = "postgresql"
-  url               = env("DATABASE_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
@@ -31,11 +30,31 @@ enum ServiceType {
 enum BookingStatus {
   PENDING
   CONFIRMED
+  CANCELLED
 }
 
 enum ServiceBookingStatus {
   PENDING
   PROCESSED
+  CANCELLED
+}
+
+enum EventStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum CommentType {
+  ADVICE
+  IDEA
 }
 
 enum Role {
@@ -65,10 +84,12 @@ model User {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
-  miniEvents       MiniEvent[]
-  serviceBookings  ServiceBooking[]
-  bookings         Booking[]
-  broadcast        UserBroadcast?
+  miniEvents         MiniEvent[]
+  serviceBookings    ServiceBooking[]
+  bookings           Booking[]
+  broadcast          UserBroadcast?
+  eventRegistrations EventRegistration[]
+  comments           Comment[]
 
   @@map("users")
 }
@@ -90,33 +111,53 @@ model MiniEvent {
   @@map("mini_events")
 }
 
-// ─── Service Booking (Jasa - WA based) ───────────────────────────────────────
+// ─── Service Booking (EO / Car Shoot) ────────────────────────────────────────
 model ServiceBooking {
   id              String               @id @default(uuid())
   requestorId     String
   serviceType     ServiceType
-  targetDate      DateTime
+  serviceName     String?
+  contactPerson   String?
+  whatsapp        String?
+  location        String?
   locationString  String
   additionalNotes String?
   status          ServiceBookingStatus @default(PENDING)
+  paymentStatus   PaymentStatus        @default(PENDING)
+  pdfExported     Boolean              @default(false)
   createdAt       DateTime             @default(now())
 
-  requestor User @relation(fields: [requestorId], references: [id], onDelete: Cascade)
+  requestor User                 @relation(fields: [requestorId], references: [id], onDelete: Cascade)
+  slots     ServiceBookingSlot[]
 
   @@map("service_bookings")
 }
 
+model ServiceBookingSlot {
+  id               String   @id @default(uuid())
+  serviceBookingId String
+  date             DateTime
+  startTime        String
+  endTime          String
+
+  serviceBooking ServiceBooking @relation(fields: [serviceBookingId], references: [id], onDelete: Cascade)
+
+  @@map("service_booking_slots")
+}
+
 // ─── Booking (Need Us? - Timekeeper) ─────────────────────────────────────────
 model Booking {
-  id          String        @id @default(uuid())
-  userId      String
-  serviceType String        @default("SHOOTING")
-  bookingDate DateTime
-  startTime   String
-  endTime     String
-  totalAmount Float
-  status      BookingStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
+  id            String        @id @default(uuid())
+  userId        String
+  serviceType   String        @default("SHOOTING")
+  bookingDate   DateTime
+  startTime     String
+  endTime       String
+  totalAmount   Float
+  status        BookingStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  pdfExported   Boolean       @default(false)
+  createdAt     DateTime      @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -152,16 +193,39 @@ model Merch {
 
 // ─── Event (Admin managed) ───────────────────────────────────────────────────
 model Event {
-  id             String   @id
-  title          String
+  id              String      @id
+  title           String
+  description     String?
   displayPhotoUrl String
-  regStartTime   DateTime
-  regEndTime     DateTime
-  sessionOptions Json
-  price          Float
-  createdAt      DateTime @default(now())
+  location        String?
+  regStartTime    DateTime
+  regEndTime      DateTime
+  sessionOptions  Json
+  price           Float
+  quota           Int         @default(100)
+  status          EventStatus @default(OPEN)
+  createdAt       DateTime    @default(now())
+
+  registrations EventRegistration[]
 
   @@map("events")
+}
+
+// ─── Event Registration ───────────────────────────────────────────────────────
+model EventRegistration {
+  id            String        @id @default(uuid())
+  userId        String
+  eventId       String
+  selectedSession String
+  paymentStatus PaymentStatus @default(PENDING)
+  pdfExported   Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@map("event_registrations")
 }
 
 // ─── User Broadcast ──────────────────────────────────────────────────────────
@@ -175,4 +239,20 @@ model UserBroadcast {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_broadcasts")
+}
+
+// ─── Comment (Landing Page Feedback) ─────────────────────────────────────────
+model Comment {
+  id        String      @id @default(uuid())
+  userId    String?
+  username  String?
+  content   String
+  category  String?     @default("Other")
+  type      CommentType
+  isPinned  Boolean     @default(false)
+  createdAt DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("comments")
 }
