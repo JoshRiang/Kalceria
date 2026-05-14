@@ -52,14 +52,24 @@ function Field({ id, label, type, placeholder, options, val, onChange }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AuthPage({ onAuthSuccess, onBack }) {
-  const [mode, setMode] = useState("login");   // "login" | "register"
+  const [mode, setMode] = useState("login");   // "login" | "register" | "verify"
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [otpEmail, setOtpEmail] = useState("");  // email pending OTP verification
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
   function setField(id, val) {
     setForm(p => ({ ...p, [id]: val }));
@@ -68,11 +78,73 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
   function switchMode(m) {
     setMode(m); setForm({}); setError(""); setSuccess("");
+    if (m !== "verify") { setOtp(["", "", "", "", "", ""]); setOtpEmail(""); }
+  }
+
+  // OTP input handler — auto-focus next box
+  function handleOtpChange(index, value) {
+    if (!/^\d*$/.test(value)) return; // digits only
+    const next = [...otp];
+    next[index] = value.slice(-1);
+    setOtp(next);
+    setError("");
+    if (value && index < 5) {
+      document.getElementById(`otp-${index + 1}`)?.focus();
+    }
+  }
+
+  function handleOtpKeyDown(index, e) {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      document.getElementById(`otp-${index - 1}`)?.focus();
+    }
+  }
+
+  // Handle OTP paste
+  function handleOtpPaste(e) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const next = [...otp];
+    for (let i = 0; i < 6; i++) next[i] = pasted[i] || "";
+    setOtp(next);
+    const focusIdx = Math.min(pasted.length, 5);
+    document.getElementById(`otp-${focusIdx}`)?.focus();
+  }
+
+  async function handleResendOtp() {
+    if (resendCooldown > 0) return;
+    setLoading(true); setError("");
+    try {
+      await api.post("/auth/otp/request", { email: otpEmail });
+      setSuccess("OTP baru telah dikirim ke email kamu.");
+      setResendCooldown(60);
+    } catch (err) {
+      setError(err.message || "Gagal mengirim ulang OTP.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    const code = otp.join("");
+    if (code.length < 6) { setError("Masukkan 6 digit kode OTP."); return; }
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      await api.post("/auth/otp/verify", { email: otpEmail, otp: code });
+      setSuccess("Email terverifikasi! Silakan login.");
+      setTimeout(() => switchMode("login"), 1200);
+    } catch (err) {
+      setError(err.message || "OTP salah atau expired.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError(""); setSuccess("");
+
+    if (mode === "verify") { handleVerifyOtp(); return; }
 
     if (mode === "register" && form.password?.length < 8) {
       setError("Password must be at least 8 characters."); return;
@@ -92,8 +164,13 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
           domicile: form.domicile, gender: form.gender,
           phone: form.phone, password: form.password,
         });
-        setSuccess("Registration complete. You may now log in.");
-        setTimeout(() => switchMode("login"), 1200);
+        // Transition to OTP verification
+        setOtpEmail(form.email);
+        setOtp(["", "", "", "", "", ""]);
+        setResendCooldown(60);
+        setMode("verify");
+        setForm({});
+        setSuccess("Kode OTP telah dikirim ke email kamu.");
       }
     } catch (err) {
       setError(err.message || "An error occurred.");
@@ -167,7 +244,8 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
               <img src="/logologin.png" alt="Kalceria" className="h-10 object-contain inline-block" draggable={false} />
             </div>
 
-            {/* ── Mode toggle ── */}
+            {/* ── Mode toggle (hidden during OTP verify) ── */}
+            {mode !== "verify" && (
             <div className="flex mb-8 bg-[#040810]/80 rounded-lg border border-slate-800/60 p-1 relative">
               {/* Active pill background */}
               <motion.div
@@ -195,14 +273,15 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                 Register
               </button>
             </div>
+            )}
 
             {/* ── Section heading ── */}
             <div className="mb-8">
               <h1 className="font-sans text-2xl font-extrabold text-white tracking-tight">
-                {mode === "login" ? "Welcome Back" : "Create Account"}
+                {mode === "login" ? "Welcome Back" : mode === "register" ? "Create Account" : "Verify Email"}
               </h1>
               <p className="font-mono text-sm text-slate-500 mt-1">
-                {mode === "login" ? "Enter your credentials to access the portal." : "Complete all fields to register."}
+                {mode === "login" ? "Enter your credentials to access the portal." : mode === "register" ? "Complete all fields to register." : `Masukkan 6 digit kode OTP yang dikirim ke ${otpEmail}`}
               </p>
             </div>
 
@@ -221,7 +300,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                       <Field id="email" label="Email Address" type="email" placeholder="user@domain.com" val={form.email || ""} onChange={setField} />
                       <Field id="password" label="Password" type="password" placeholder="••••••••" val={form.password || ""} onChange={setField} />
                     </>
-                  ) : (
+                  ) : mode === "register" ? (
                     <>
                       <Field id="name" label="Full Name" type="text" placeholder="John Doe" val={form.name || ""} onChange={setField} />
                       <Field id="profilePhoto" label="Profile Photo" type="file" val={form.profilePhoto || ""} onChange={setField} />
@@ -251,6 +330,55 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             {req.label}
                           </div>
                         ))}
+                      </div>
+                    </>
+                  ) : (
+                    /* ── OTP Verification UI ── */
+                    <>
+                      {/* Email icon */}
+                      <div className="flex justify-center mb-6">
+                        <div className="w-16 h-16 rounded-full bg-[#4F46E5]/10 border border-[#4F46E5]/30 flex items-center justify-center">
+                          <svg className="w-8 h-8 text-[#4F46E5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* 6-digit OTP input boxes */}
+                      <div className="flex justify-center gap-2.5 mb-6" onPaste={handleOtpPaste}>
+                        {otp.map((digit, i) => (
+                          <input
+                            key={i}
+                            id={`otp-${i}`}
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={1}
+                            value={digit}
+                            onChange={(e) => handleOtpChange(i, e.target.value)}
+                            onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                            autoFocus={i === 0}
+                            className={`
+                              w-11 h-14 text-center text-xl font-bold text-white
+                              bg-[#0c1528] border rounded-lg outline-none transition-all
+                              focus:border-[#4F46E5] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2)]
+                              ${digit ? "border-[#4F46E5]/50" : "border-slate-700"}
+                            `}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Resend OTP */}
+                      <div className="text-center mb-4">
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          disabled={resendCooldown > 0 || loading}
+                          className={`font-mono text-xs transition-colors ${
+                            resendCooldown > 0 ? "text-slate-600 cursor-not-allowed" : "text-[#4F46E5] hover:text-[#6366f1] cursor-pointer"
+                          }`}
+                        >
+                          {resendCooldown > 0 ? `Kirim ulang dalam ${resendCooldown}s` : "Kirim ulang kode OTP"}
+                        </button>
                       </div>
                     </>
                   )}
@@ -283,19 +411,19 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                 disabled={loading}
                 className="mt-2 w-full bg-white text-black font-extrabold text-[13px] uppercase tracking-wider py-3.5 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Authenticating..." : (mode === "login" ? "Sign In" : "Register Account")}
+                {loading ? "Processing..." : mode === "login" ? "Sign In" : mode === "register" ? "Register Account" : "Verify OTP"}
               </button>
             </form>
 
             {/* ── Footer ── */}
             <div className="mt-8 text-center">
               <p className="font-mono text-xs text-slate-500">
-                {mode === "login" ? "Don't have an account? " : "Already have an account? "}
+                {mode === "verify" ? "Sudah verifikasi? " : mode === "login" ? "Don't have an account? " : "Already have an account? "}
                 <button 
-                  onClick={() => switchMode(mode === "login" ? "register" : "login")}
+                  onClick={() => switchMode(mode === "verify" ? "login" : mode === "login" ? "register" : "login")}
                   className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4"
                 >
-                  {mode === "login" ? "Register now" : "Sign in"}
+                  {mode === "verify" ? "Sign in" : mode === "login" ? "Register now" : "Sign in"}
                 </button>
               </p>
             </div>

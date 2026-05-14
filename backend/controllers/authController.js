@@ -35,11 +35,10 @@ export async function register(req, res, next) {
         passwordHash, 
         domicileLat: parseFloat(domicileLat) || 0.0, 
         domicileLng: parseFloat(domicileLng) || 0.0,
-        isEmailVerified: true // [DEV] Auto-verify so we don't need Redis/Email right now
       },
     });
 
-    // Generate and send OTP (Wrapped in try-catch so it doesn't block registration if Redis/Email is down)
+    // Generate and send OTP via Resend
     try {
       await sendVerificationOtp(user.email);
     } catch (err) {
@@ -47,9 +46,9 @@ export async function register(req, res, next) {
     }
 
     res.status(201).json({ 
-      message: 'Registered successfully (Auto-verified for Dev).', 
+      message: 'Registered. Check email for OTP.', 
       userId: user.id,
-      username: user.name // Passing username back for the Welcome screen
+      username: user.name
     });
   } catch (err) {
     next(err);
@@ -67,11 +66,7 @@ export async function login(req, res, next) {
     const valid = await argon2.verify(user.passwordHash, password);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials.' });
 
-    /* [DEV BYPASS] 
-    if (!user.isEmailVerified) {
-      return res.status(403).json({ error: 'Email not verified. Check OTP.' });
-    }
-    */
+    // Note: login does NOT enforce isEmailVerified — OTP is registration-only
 
     const token = jwt.sign(
       { userId: user.id, email: user.email },

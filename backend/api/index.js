@@ -1,13 +1,6 @@
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+import "./env.js";
 import express from "express";
 import cors from "cors";
-
-// Load .env from root (monorepo pattern)
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.resolve(__dirname, "../../");
-dotenv.config({ path: path.join(rootDir, ".env") });
 import cookieParser from "cookie-parser";
 import { PrismaClient } from "@prisma/client";
 import { redis } from "../lib/redis.js";

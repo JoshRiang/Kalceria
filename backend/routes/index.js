@@ -18,6 +18,7 @@ import { listUsers, getUser, setUserRole, deleteUser } from "../controllers/admi
 import { createComment } from "../controllers/commentController.js";
 import { listComments, togglePinComment, deleteComment } from "../controllers/adminCommentController.js";
 import { getEarnings } from "../controllers/adminEarningsController.js";
+import { sendGeneralEmail } from "../controllers/emailController.js";
 
 const router = express.Router();
 
@@ -125,6 +126,9 @@ router.get("/admin/comments", requireAdmin, listComments);
 router.patch("/admin/comments/:id/pin", requireAdmin, togglePinComment);
 router.delete("/admin/comments/:id", requireAdmin, deleteComment);
 router.get("/admin/earnings", requireAdmin, getEarnings);
+
+// ─── Email (Admin utility) ──────────────────────────────────────────────────
+router.post("/email", requireAdmin, sendGeneralEmail);
 
 // ─── Cron ────────────────────────────────────────────────────────────────────
 router.get("/cron/cleanup", async (_req, res) => {

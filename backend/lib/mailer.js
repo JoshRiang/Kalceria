@@ -1,17 +1,31 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS, // Gmail App Password
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const DEFAULT_FROM = process.env.EMAIL_FROM || 'Kalceria <onboarding@resend.dev>';
+
+// ─── General Send Email ──────────────────────────────────────────────────────
+// Single point of contact to Resend API. All other functions call this.
+export async function sendEmail({ to, subject, html, text, from }) {
+  const { data, error } = await resend.emails.send({
+    from: from || DEFAULT_FROM,
+    to: Array.isArray(to) ? to : [to],
+    subject,
+    html,
+    ...(text && { text }),
+  });
+
+  if (error) {
+    console.error('[Mailer] Resend error:', error);
+    throw new Error(error.message || 'Failed to send email');
+  }
+
+  return data;
+}
 
 // ─── OTP Email ────────────────────────────────────────────────────────────────
 export async function sendOtpEmail(toEmail, otp) {
-  await transporter.sendMail({
-    from: `"Kalceria" <${process.env.SMTP_USER}>`,
+  return sendEmail({
     to: toEmail,
     subject: 'Kode Verifikasi Kalceria',
     text: `Hai Kalcerian! Ini adalah kode verifikasi mu: ${otp}. Harap jangan bagikan kode ini.`,
@@ -30,8 +44,7 @@ export async function sendOtpEmail(toEmail, otp) {
 // ─── Password Reset Email ─────────────────────────────────────────────────────
 export async function sendPasswordResetEmail(toEmail, token) {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-  await transporter.sendMail({
-    from: `"Kalceria" <${process.env.SMTP_USER}>`,
+  return sendEmail({
     to: toEmail,
     subject: 'Reset Password Kalceria',
     html: `
@@ -48,8 +61,7 @@ export async function sendPasswordResetEmail(toEmail, token) {
 // ─── Event Notification Email ─────────────────────────────────────────────────
 export async function sendEventNotificationEmail(toEmail, eventDetail, eventId) {
   const redirectUrl = `https://api.kalceria.com/redirect/event/${eventId}`;
-  await transporter.sendMail({
-    from: `"Kalceria Events" <${process.env.SMTP_USER}>`,
+  return sendEmail({
     to: toEmail,
     subject: `[Kalceria] ${eventDetail.title}`,
     html: `
