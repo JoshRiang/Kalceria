@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const MINI_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
 
 function cleanText(value) {
-  return typeof value === 'string' ? value.trim() : '';
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function parseCoordinate(value) {
@@ -13,11 +13,13 @@ function parseCoordinate(value) {
 }
 
 function validateMiniEvent({ title, description, lat, lng }) {
-  if (!title) return 'Title is required.';
-  if (title.length > 80) return 'Title must be 80 characters or less.';
-  if (description.length > 240) return 'Description must be 240 characters or less.';
-  if (lat === null || lng === null) return 'Valid lat and lng are required.';
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return 'Valid lat and lng are required.';
+  if (!title) return "Title is required.";
+  if (title.length > 80) return "Title must be 80 characters or less.";
+  if (description.length > 240)
+    return "Description must be 240 characters or less.";
+  if (lat === null || lng === null) return "Valid lat and lng are required.";
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180)
+    return "Valid lat and lng are required.";
   return null;
 }
 
@@ -41,7 +43,9 @@ export async function createMiniEvent(req, res, next) {
     });
 
     if (existing) {
-      return res.status(409).json({ error: 'Mini event already exists. Use PUT to update.' });
+      return res
+        .status(409)
+        .json({ error: "Mini event already exists. Use PUT to update." });
     }
 
     await prisma.miniEvent.deleteMany({
@@ -53,7 +57,12 @@ export async function createMiniEvent(req, res, next) {
       data: { creatorId, title, description, lat, lng, expiresAt },
       include: {
         creator: {
-          select: { id: true, name: true, nickname: true, profilePicture: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            profilePicture: true,
+          },
         },
       },
     });
@@ -73,13 +82,36 @@ export async function getActiveMiniEvents(_req, res, next) {
       },
       include: {
         creator: {
-          select: { id: true, name: true, nickname: true, profilePicture: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            profilePicture: true,
+          },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
-    res.json({ events });
+    const mockEvent = {
+      id: "mock_event_1",
+      title: "Sunday Morning Ride",
+      description:
+        "Meeting at HQ for a quick ride around the sector. All Kalcerians welcome!",
+      lat: -6.2715,
+      lng: 105.7132,
+      isActive: true,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 86400000),
+      creator: {
+        id: "mock_1",
+        name: "Ahmad Bintaro",
+        nickname: "Ahmad",
+        profilePicture: null,
+      },
+    };
+
+    res.json({ events: [...events, mockEvent] });
   } catch (err) {
     next(err);
   }
@@ -101,14 +133,20 @@ export async function updateMiniEvent(req, res, next) {
       where: { id, creatorId, isActive: true, expiresAt: { gt: new Date() } },
     });
 
-    if (!existing) return res.status(404).json({ error: 'No active mini event found.' });
+    if (!existing)
+      return res.status(404).json({ error: "No active mini event found." });
 
     const event = await prisma.miniEvent.update({
       where: { id },
       data: { title, description, lat, lng },
       include: {
         creator: {
-          select: { id: true, name: true, nickname: true, profilePicture: true },
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            profilePicture: true,
+          },
         },
       },
     });
@@ -127,14 +165,14 @@ export async function deleteMiniEvent(req, res, next) {
       where: { id, creatorId, isActive: true },
     });
 
-    if (!event) return res.status(404).json({ error: 'No mini event found.' });
+    if (!event) return res.status(404).json({ error: "No mini event found." });
 
     await prisma.miniEvent.update({
       where: { id },
       data: { isActive: false, expiresAt: new Date(0) },
     });
 
-    res.json({ message: 'Mini event deleted.' });
+    res.json({ message: "Mini event deleted." });
   } catch (err) {
     next(err);
   }

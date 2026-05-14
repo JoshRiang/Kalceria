@@ -985,7 +985,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
           <div className="relative z-10 flex flex-col items-center gap-10 px-4 w-full">
             <motion.img src="/logo_landing.png" alt="Kalceria" className="w-[85%] md:w-[70%] max-w-3xl h-auto object-contain drop-shadow-2xl" draggable={false} animate={{ y: [-6, 6, -6] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} />
-        
+
             {isLoggedIn ? (
               <button onClick={() => setShowLogoutConfirm(true)} className="group relative px-12 py-3.5 rounded-[20px] overflow-hidden transition-all duration-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
                 <div className="absolute inset-0 bg-red-500/20 group-hover:bg-red-500/30 transition-colors" />
@@ -1339,7 +1339,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
           {/* Find The Others Button */}
           <motion.button
-            onClick={() => document.getElementById("user-map")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() => (window.location.href = "/map")}
             whileHover={{
               scale: 1.05,
               boxShadow: "0 0 40px rgba(255,255,255,0.3), inset 0 0 20px rgba(255,255,255,0.2)",

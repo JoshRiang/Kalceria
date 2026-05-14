@@ -45,11 +45,9 @@ export async function getMapUsers(req, res, next) {
     const cachedGlobal = await redis.get(globalCacheKey);
     if (cachedGlobal) return res.json(JSON.parse(cachedGlobal));
 
-    // Get all active user IDs from Redis geo set
     const members = await redis.zrange("active_users", 0, -1);
     if (!members.length) return res.json({ users: [] });
 
-    // Batch fetch user profiles
     const users = await prisma.user.findMany({
       where: {
         id: { in: members },
@@ -70,26 +68,56 @@ export async function getMapUsers(req, res, next) {
 
     if (!users.length) return res.json({ users: [] });
 
-    // Batch fetch all positions in ONE call
     const userIds = users.map((u) => u.id);
     const positions = await redis.geopos("active_users", ...userIds);
 
-    // Map results efficiently
     const now = new Date();
     const enriched = users.map((u, index) => {
       const pos = positions[index];
       let district = null;
+      let lat = null;
+      let lng = null;
       if (pos && pos[0]) {
-        const [lng, lat] = pos;
-        district = maskLocationToDistrict(parseFloat(lat), parseFloat(lng));
+        const rawLng = parseFloat(pos[0]);
+        const rawLat = parseFloat(pos[1]);
+        district = maskLocationToDistrict(rawLat, rawLng);
+        // approximate coords for privacy
+        const approx = approximateCoordinate(rawLat, rawLng);
+        lat = approx.lat;
+        lng = approx.lng;
       }
-      // broadcast logic: only show if not expired
       const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
-      return { ...u, district, broadcast };
+      return { ...u, district, lat, lng, broadcast };
     });
 
-    const response = { users: enriched };
-    // Cache for 5 seconds - keeps the map responsive while slashing heavy compute
+    const mockMapUsers = [
+      {
+        id: "mock_1",
+        name: "Ahmad Bintaro",
+        nickname: "Ahmad",
+        profilePicture: null,
+        socialPlatform: "IG",
+        socialLink: "ahmadbintaro",
+        district: "Bintaro",
+        lat: -6.2730,
+        lng: 106.7140,
+        broadcast: { message: "Riding around Sector 9!", expiresAt: new Date(now.getTime() + 86400000) }
+      },
+      {
+        id: "mock_2",
+        name: "Kalcerian Alpha",
+        nickname: "Alpha",
+        profilePicture: null,
+        socialPlatform: "WA",
+        socialLink: null,
+        district: "Pondok Indah",
+        lat: -6.2800,
+        lng: 106.7200,
+        broadcast: null
+      }
+    ];
+
+    const response = { users: [...enriched, ...mockMapUsers] };
     await redis.set(globalCacheKey, JSON.stringify(response), "EX", 5);
 
     res.json(response);
@@ -97,3 +125,59 @@ export async function getMapUsers(req, res, next) {
     next(err);
   }
 }
+
+// all kalcerians (online + offline) for the panel
+export async function getAllKalcerians(req, res, next) {
+  try {
+    const cacheKey = "cache:all_kalcerians";
+    const cached = await redis.get(cacheKey);
+    if (cached) return res.json(JSON.parse(cached));
+
+    // get online user ids from redis
+    const onlineIds = await redis.zrange("active_users", 0, -1);
+    const onlineSet = new Set(onlineIds);
+
+    // fetch all users — only safe public fields
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        profilePicture: true,
+        allowLiveLocation: true,
+        broadcast: {
+          select: { id: true, message: true, expiresAt: true },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    const now = new Date();
+    const result = users.map((u) => {
+      const isOnline = u.allowLiveLocation && onlineSet.has(u.id);
+      const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
+      return {
+        id: u.id,
+        name: u.name,
+        nickname: u.nickname,
+        profilePicture: u.profilePicture,
+        isOnline,
+        broadcast,
+      };
+    });
+
+    const mockKalcerians = [
+      { id: "mock_1", name: "Ahmad Bintaro", nickname: "Ahmad", profilePicture: null, isOnline: true, broadcast: { message: "Riding around Sector 9!" } },
+      { id: "mock_2", name: "Kalcerian Alpha", nickname: "Alpha", profilePicture: null, isOnline: true, broadcast: null },
+      { id: "mock_3", name: "Ghost Rider", nickname: "Ghost", profilePicture: null, isOnline: false, broadcast: null }
+    ];
+
+    const response = { kalcerians: [...result, ...mockKalcerians] };
+    await redis.set(cacheKey, JSON.stringify(response), "EX", 10);
+
+    res.json(response);
+  } catch (err) {
+    next(err);
+  }
+}
+

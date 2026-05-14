@@ -182,3 +182,37 @@ export async function checkUsername(req, res, next) {
     next(err);
   }
 }
+
+// get current user profile (for map page etc)
+export async function getMe(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        profilePicture: true,
+        allowLiveLocation: true,
+        domicileLat: true,
+        domicileLng: true,
+        socialPlatform: true,
+        socialLink: true,
+        broadcast: {
+          select: { id: true, message: true, expiresAt: true },
+        },
+      },
+    });
+
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // only return broadcast if not expired
+    const now = new Date();
+    const broadcast = user.broadcast && user.broadcast.expiresAt > now ? user.broadcast : null;
+
+    res.json({ user: { ...user, broadcast } });
+  } catch (err) {
+    next(err);
+  }
+}

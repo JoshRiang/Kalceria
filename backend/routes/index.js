@@ -1,12 +1,10 @@
 import express from "express";
-import { register, login, requestOtp, verifyOtp, requestPasswordReset, resetPassword, checkUsername } from "../controllers/authController.js";
+import { register, login, requestOtp, verifyOtp, requestPasswordReset, resetPassword, checkUsername, getMe } from "../controllers/authController.js";
 import { updateLiveLocation, getNearbyUsers, setLiveLocationPreference } from "../controllers/locationController.js";
 import { getMedia, createMedia } from "../controllers/mediaController.js";
 import { createMiniEvent, getActiveMiniEvents, updateMiniEvent, deleteMiniEvent } from "../controllers/miniEventController.js";
 import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from "../controllers/serviceController.js";
-import { createMiniEvent, getActiveMiniEvents } from "../controllers/miniEventController.js";
-import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from "../controllers/serviceController.js";
-import { saveTelemetry, getMapUsers } from "../controllers/telemetryController.js";
+import { saveTelemetry, getMapUsers, getAllKalcerians } from "../controllers/telemetryController.js";
 import { getMyBroadcast, createBroadcast, updateBroadcast, deleteBroadcast } from "../controllers/broadcastController.js";
 import { redirectEvent } from "../controllers/redirectController.js";
 import { cleanupExpiredBroadcasts } from "../utils/cronWorker.js";
@@ -35,6 +33,9 @@ router.post("/auth/password/reset-request", requestPasswordReset);
 router.post("/auth/password/reset", resetPassword);
 router.get("/auth/check-username/:username", checkUsername);
 
+// ─── User Profile ────────────────────────────────────────────────────────────
+router.get("/users/me", requireAuth, getMe);
+
 // ─── Events (Public) ─────────────────────────────────────────────────────────
 router.get("/events", listPublicEvents);
 router.get("/events/:eventId", getPublicEvent);
@@ -59,10 +60,6 @@ router.put("/mini-events/:id", requireAuth, updateMiniEvent);
 router.delete("/mini-events/:id", requireAuth, deleteMiniEvent);
 
 // Booking (Need Us? Timekeeper)
-router.post("/services/book", requireAuth, createBooking);
-router.post("/services/request", requireAuth, createServiceRequest);
-router.get("/services/bookings", listPublicServiceBookings);
-router.delete("/services/request/:id", requireAuth, deleteOwnServiceRequest);
 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
 router.post("/services/book", requireAuth, createBooking);
@@ -73,6 +70,7 @@ router.delete("/services/request/:id", requireAuth, deleteOwnServiceRequest);
 // ─── Telemetry & Map ─────────────────────────────────────────────────────────
 router.post("/map/telemetry", requireAuth, saveTelemetry);
 router.get("/map/users", requireAuth, getMapUsers);
+router.get("/map/kalcerians", requireAuth, getAllKalcerians);
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────
 router.post("/broadcast", requireAuth, createBroadcast);

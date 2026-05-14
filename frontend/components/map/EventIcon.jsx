@@ -15,13 +15,13 @@ export function getEventIconHtml(name = "??") {
       <div class="event-pulse" style="position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; border-radius: 50%; border: 2.5px solid #ff006e; opacity: 0; animation: radarPing 2.5s infinite cubic-bezier(0, 0, 0.2, 1); transform: translate(-50%, -50%); pointer-events: none;"></div>
       <div class="event-bg" style="position: absolute; inset: 0; z-index: 1;">
 
-        <svg viewBox="0 0 60 60" fill="none" style="width: 100%; height: 100%; filter: drop-shadow(0 0 10px rgba(255, 0, 110, 0.4));">
+        <svg viewBox="0 0 60 60" fill="none" style="width: 100%; height: 100%; filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.25));">
           <!-- Tactical Shield Shape (matching HQ) -->
           <path 
             d="M30 2 C10 2 4 12 4 30 C4 45 30 58 30 58 C30 58 56 45 56 30 C56 12 50 2 30 2 Z" 
             fill="#0a0e27" 
             stroke="#ff006e" 
-            stroke-width="3" 
+            stroke-width="1.5" 
             stroke-linejoin="round"
           />
           <path 
@@ -34,7 +34,7 @@ export function getEventIconHtml(name = "??") {
           />
         </svg>
       </div>
-      <div class="event-initials" style="position: relative; z-index: 2; transform: translateY(-3px) translateX(2px); font-family: 'ROGBOLD', 'Inter', sans-serif; font-size: 18px; font-weight: 900; color: #ff006e; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 12px rgba(255, 0, 110, 1);">
+      <div class="event-initials" style="position: relative; z-index: 2; transform: translateY(-3px) translateX(2px); font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; color: #ec4899; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 6px rgba(236, 72, 153, 0.5);">
         ${initials}
       </div>
 
