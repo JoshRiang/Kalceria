@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 
@@ -382,13 +382,14 @@ export default function NeedUsForm({ userEmail, userName }) {
                     navigator.clipboard.writeText("0811811811");
                     alert("WA Number copied to clipboard: 0811811811");
                   }}
-                  className="font-sans text-xs text-[#3b82f6] underline underline-offset-4 decoration-[#3b82f6]/30 hover:decoration-[#3b82f6] uppercase tracking-widest transition-all"
+                  className="font-sans text-xs text-cyan-400 underline underline-offset-4 decoration-cyan-400/30 hover:decoration-cyan-400 uppercase tracking-widest transition-all"
                 >
                   CLICK ME !
                 </button>
 
                 <a href={done.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:scale-105 transition-transform duration-500">
-                  <img src="/wa_logo.png" alt="WhatsApp" className="w-32 h-32 object-contain" />
+                  <img src="/wa_logo.png" alt="WhatsApp" className="w-32 h-32 object-contain mx-auto" />
+                </a>
                 </a>
               </div>
 

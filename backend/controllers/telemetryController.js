@@ -48,6 +48,7 @@ export async function getMapUsers(req, res, next) {
     const members = await redis.zrange("active_users", 0, -1);
     if (!members.length) return res.json({ users: [] });
 
+    // Batch fetch user profiles
     const users = await prisma.user.findMany({
       where: {
         id: { in: members },
@@ -119,6 +120,7 @@ export async function getMapUsers(req, res, next) {
 
     const response = { users: [...enriched, ...mockMapUsers] };
     await redis.set(globalCacheKey, JSON.stringify(response), "EX", 5);
+
 
     res.json(response);
   } catch (err) {

@@ -6,35 +6,40 @@ import ServiceRequestModal from "./ServiceRequestModal";
 import api from "@/lib/api";
 
 // ─── Typewriter Component ─────────────────────────────
-function Typewriter({ text, mode = "letter", delay = 0 }) {
+function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false }) {
   const [displayText, setDisplayText] = useState("");
-
+  
   useEffect(() => {
+    if (skipAnim) {
+      setDisplayText(text);
+      return;
+    }
+
     let isCancelled = false;
     let timeoutIds = [];
     let loop;
-
+    
     const playAnim = () => {
       // 1. Type forward (0 to ~1500ms)
       const chars = text.split("");
       chars.forEach((char, i) => {
         const t = setTimeout(() => {
-          if (!isCancelled) setDisplayText(text.slice(0, i + 1));
+          if(!isCancelled) setDisplayText(text.slice(0, i + 1));
         }, i * 100);
         timeoutIds.push(t);
       });
-
+      
       // 2. Wait until 3000ms, then backspace
       if (mode === "none") {
         const tReset = setTimeout(() => {
-          if (!isCancelled) setDisplayText("");
+          if(!isCancelled) setDisplayText("");
         }, 5900);
         timeoutIds.push(tReset);
       } else if (mode === "letter") {
         const tStartBack = setTimeout(() => {
           chars.forEach((_, i) => {
             const t = setTimeout(() => {
-              if (!isCancelled) setDisplayText(text.slice(0, chars.length - 1 - i));
+              if(!isCancelled) setDisplayText(text.slice(0, chars.length - 1 - i));
             }, i * 100);
             timeoutIds.push(t);
           });
@@ -47,7 +52,7 @@ function Typewriter({ text, mode = "letter", delay = 0 }) {
           let currentWords = [...words];
           words.forEach((_, i) => {
             const t = setTimeout(() => {
-              if (!isCancelled) {
+              if(!isCancelled) {
                 // remove the last word/space chunk
                 currentWords.pop();
                 setDisplayText(currentWords.join(""));
@@ -59,21 +64,21 @@ function Typewriter({ text, mode = "letter", delay = 0 }) {
         timeoutIds.push(tStartBack);
       }
     };
-
+    
     // Initial start delay to stagger the animations
     const startDelay = setTimeout(() => {
-      if (isCancelled) return;
+      if(isCancelled) return;
       playAnim();
       loop = setInterval(() => {
-        if (!isCancelled) setDisplayText("");
+        if(!isCancelled) setDisplayText("");
         playAnim();
       }, 6000); // Base loop is 6 seconds
     }, delay);
-
+    
     return () => {
       isCancelled = true;
       clearTimeout(startDelay);
-      if (loop) clearInterval(loop);
+      if(loop) clearInterval(loop);
       timeoutIds.forEach(clearTimeout);
     };
   }, [text, mode, delay]);
@@ -97,16 +102,24 @@ function Typewriter({ text, mode = "letter", delay = 0 }) {
 
 // ─── Rolling Film Roll Components ─────────────────────
 function FilmLane({ rotation, top, left, height = "h-16 md:h-24" }) {
-  return <div className={`absolute w-[300%] ${height} bg-white shadow-[0_0_40px_rgba(255,255,255,0.8)] pointer-events-none`} style={{ top, left, transform: `rotate(${rotation}deg)`, transformOrigin: "left center" }} />;
+  return (
+    <div 
+      className={`absolute w-[300%] ${height} bg-white shadow-[0_0_40px_rgba(255,255,255,0.8)] pointer-events-none`}
+      style={{ top, left, transform: `rotate(${rotation}deg)`, transformOrigin: "left center" }}
+    />
+  );
 }
 
 function FilmStrip({ rotation, top, left, speed = 40, height = "h-16 md:h-24" }) {
   return (
-    <div className={`absolute w-[300%] ${height} pointer-events-none overflow-hidden`} style={{ top, left, transform: `rotate(${rotation}deg)`, transformOrigin: "left center" }}>
+    <div 
+      className={`absolute w-[300%] ${height} pointer-events-none overflow-hidden`}
+      style={{ top, left, transform: `rotate(${rotation}deg)`, transformOrigin: "left center" }}
+    >
       <div className="flex w-full h-full opacity-70 animate-film-scroll">
-        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: "url(/filmroll.png)", backgroundSize: "contain", backgroundRepeat: "repeat-x" }} />
-        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: "url(/filmroll.png)", backgroundSize: "contain", backgroundRepeat: "repeat-x" }} />
-        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: "url(/filmroll.png)", backgroundSize: "contain", backgroundRepeat: "repeat-x" }} />
+        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.png)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
+        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.png)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
+        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.png)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
       </div>
       <style>{`
         @keyframes film-scroll {
@@ -130,7 +143,7 @@ function EventSlider() {
 
   useEffect(() => {
     const int = setInterval(() => {
-      setIndex((prev) => (prev + 1) % n);
+      setIndex(prev => (prev + 1) % n);
     }, 4000);
     return () => clearInterval(int);
   }, [n]);
@@ -138,13 +151,21 @@ function EventSlider() {
   const variants = {
     enter: { x: "100%" },
     center: { x: "0%", transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
-    exit: { x: "-100%", transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+    exit: { x: "-100%", transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
   };
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#0c1528]">
       <AnimatePresence initial={false} custom={index}>
-        <motion.img key={index} src={EVENT_IMAGES[index]} variants={variants} initial="enter" animate="center" exit="exit" className="absolute inset-0 w-full h-full object-cover" />
+        <motion.img
+          key={index}
+          src={EVENT_IMAGES[index]}
+          variants={variants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       </AnimatePresence>
     </div>
   );
@@ -159,11 +180,11 @@ function useMerchRandomizer() {
     const loadAndPick = () => {
       const raw = localStorage.getItem("kalceria_dummy_products");
       let items = raw ? JSON.parse(raw) : [];
-
+      
       if (!items.length) return;
 
       setInventory((prev) => {
-        // Track picked items in the current session if needed,
+        // Track picked items in the current session if needed, 
         // but simple random pick is fine for showcase.
         const shuffled = [...items].sort(() => 0.5 - Math.random());
         const picked = shuffled.slice(0, 4);
@@ -182,7 +203,7 @@ function useMerchRandomizer() {
 
 function ShowcaseTypewriter({ text }) {
   const [displayed, setDisplayed] = useState("");
-
+  
   useEffect(() => {
     setDisplayed("");
     let i = 0;
@@ -199,46 +220,86 @@ function ShowcaseTypewriter({ text }) {
 
 function MerchCard({ item, isInitial, index }) {
   const bg = item.imageUrl || `https://picsum.photos/seed/${item.id}/600/800`;
-
+  
   // Dynamic Blobs based on Index
   const blobConfigs = [
     { c1: "bg-red-500", c2: "bg-emerald-500" }, // Index 0: Red - Green
-    { c1: "bg-yellow-500", c2: "bg-red-500" }, // Index 1: Gold - Red
+    { c1: "bg-yellow-500", c2: "bg-red-500" },   // Index 1: Gold - Red
     { c1: "bg-yellow-500", c2: "bg-emerald-500" }, // Index 2: Gold - Green
-    { c1: "bg-yellow-500", c2: "bg-cyan-500" }, // Index 3: Gold - Blue Sea
+    { c1: "bg-yellow-500", c2: "bg-cyan-500" }     // Index 3: Gold - Blue Sea
   ];
   const blobs = blobConfigs[index % 4];
 
   return (
-    <motion.div layout initial={isInitial ? { opacity: 0, y: 30 } : false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }} className="relative flex flex-col bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden group min-h-[374px]" style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }}>
+    <motion.div
+      layout
+      initial={isInitial ? { opacity: 0, y: 30 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+      className="relative flex flex-col bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden group min-h-[374px]"
+      style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }}
+    >
       {/* Background Blobs */}
       <div className="absolute inset-0 pointer-events-none z-0 opacity-30">
-        <motion.div animate={{ x: [0, 15, 0], y: [0, -15, 0], scale: [1, 1.1, 1] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className={`absolute -top-8 -left-8 w-32 h-32 rounded-full blur-[35px] ${blobs.c1}`} />
-        <motion.div animate={{ x: [0, -15, 0], y: [0, 15, 0], scale: [1.1, 0.9, 1.1] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }} className={`absolute -bottom-8 -right-8 w-32 h-32 rounded-full blur-[35px] ${blobs.c2}`} />
+        <motion.div 
+          animate={{ x: [0, 15, 0], y: [0, -15, 0], scale: [1, 1.1, 1] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          className={`absolute -top-8 -left-8 w-32 h-32 rounded-full blur-[35px] ${blobs.c1}`} 
+        />
+        <motion.div 
+          animate={{ x: [0, -15, 0], y: [0, 15, 0], scale: [1.1, 0.9, 1.1] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          className={`absolute -bottom-8 -right-8 w-32 h-32 rounded-full blur-[35px] ${blobs.c2}`} 
+        />
       </div>
 
       {/* Invisible Frame for Image */}
       <div className="p-3 relative z-10">
         <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-black/60 border border-white/5 shadow-inner">
           <AnimatePresence mode="wait">
-            <motion.img key={item.id} initial={{ opacity: 0, x: 30, filter: "blur(8px)" }} animate={{ opacity: 1, x: 0, filter: "blur(0px)" }} exit={{ opacity: 0, x: -30, filter: "blur(8px)" }} transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }} src={bg} alt={item.name} className="absolute inset-0 w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-700" />
+            <motion.img 
+              key={item.id}
+              initial={{ opacity: 0, x: 30, filter: "blur(8px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, x: -30, filter: "blur(8px)" }}
+              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+              src={bg} 
+              alt={item.name} 
+              className="absolute inset-0 w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-700" 
+            />
           </AnimatePresence>
-
+          
           <AnimatePresence mode="wait">
-            <motion.div key={item.id} initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }} transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }} className="absolute top-3 left-3 z-20">
+            <motion.div 
+              key={item.id}
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -15 }}
+              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+              className="absolute top-3 left-3 z-20"
+            >
               {item.label === "HOT DEALS" && (
-                <span className="text-[12px] font-mono font-black uppercase tracking-tighter text-yellow-400" style={{ textShadow: "1px 1.2px 0px #854d0e, 2px 2.5px 0px #713f12, 2.5px 4px 6px rgba(0,0,0,0.6)" }}>
+                <span 
+                  className="text-[12px] font-mono font-black uppercase tracking-tighter text-yellow-400"
+                  style={{ textShadow: "1px 1.2px 0px #854d0e, 2px 2.5px 0px #713f12, 2.5px 4px 6px rgba(0,0,0,0.6)" }}
+                >
                   HOT DEALS
                 </span>
               )}
               {item.label === "AVAILABLE" && (
-                <span className="text-[10px] font-mono font-black uppercase tracking-tighter text-[#ffe2d1]" style={{ textShadow: "1px 0.8px 0px #94a3b8, 1.5px 1.5px 0px #64748b, 2px 2px 5px rgba(0,0,0,0.4)" }}>
+                <span 
+                  className="text-[10px] font-mono font-black uppercase tracking-tighter text-[#ffe2d1]"
+                  style={{ textShadow: "1px 0.8px 0px #94a3b8, 1.5px 1.5px 0px #64748b, 2px 2px 5px rgba(0,0,0,0.4)" }}
+                >
                   AVAILABLE
                 </span>
               )}
               {item.label === "SOLD OUT" && (
                 <div className="relative inline-block">
-                  <span className="text-[10px] font-mono font-black uppercase tracking-tighter text-white" style={{ textShadow: "1px 0.8px 0px #475569, 1.5px 1.5px 0px #334155, 2px 2px 5px rgba(0,0,0,0.5)" }}>
+                  <span 
+                    className="text-[10px] font-mono font-black uppercase tracking-tighter text-white"
+                    style={{ textShadow: "1px 0.8px 0px #475569, 1.5px 1.5px 0px #334155, 2px 2px 5px rgba(0,0,0,0.5)" }}
+                  >
                     SOLD OUT
                   </span>
                   <div className="absolute top-[55%] left-[-2px] w-[calc(100%+4px)] h-[1.2px] bg-red-600 shadow-[0_0_5px_rgba(220,38,38,0.5)]" />
@@ -252,7 +313,13 @@ function MerchCard({ item, isInitial, index }) {
       <div className="px-5 pb-6 flex flex-col flex-1 relative z-10">
         <div className="mt-3 mb-2 h-14 overflow-hidden">
           <AnimatePresence mode="wait">
-            <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+            >
               <h3 className="font-sans font-black text-base tracking-tight text-white uppercase leading-tight">
                 <ShowcaseTypewriter text={item.name} />
               </h3>
@@ -264,15 +331,16 @@ function MerchCard({ item, isInitial, index }) {
   );
 }
 
+
 // ─── Find More Slider Component ──────────────────────
-const FINDMORE_VIDEOS = Array.from({ length: 10 }, (_, i) => `/vit_tt${i + 1}.mp4`);
+const FINDMORE_VIDEOS = Array.from({length: 10}, (_, i) => `/vit_tt${i+1}.mp4`);
 
 function FindMoreSlider() {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
     const int = setInterval(() => {
-      setIndex((prev) => (prev + 1) % FINDMORE_VIDEOS.length);
+      setIndex(prev => (prev + 1) % FINDMORE_VIDEOS.length);
     }, 5000);
     return () => clearInterval(int);
   }, []);
@@ -280,13 +348,25 @@ function FindMoreSlider() {
   const variants = {
     enter: { y: "100%" },
     center: { y: "0%", transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
-    exit: { y: "-100%", transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+    exit: { y: "-100%", transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
   };
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-black">
       <AnimatePresence initial={false} custom={index}>
-        <motion.video key={index} src={FINDMORE_VIDEOS[index]} autoPlay muted playsInline loop={false} variants={variants} initial="enter" animate="center" exit="exit" className="absolute inset-0 w-full h-full object-cover" />
+        <motion.video
+          key={index}
+          src={FINDMORE_VIDEOS[index]}
+          autoPlay
+          muted
+          playsInline
+          loop={false}
+          variants={variants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       </AnimatePresence>
     </div>
   );
@@ -306,15 +386,15 @@ function GoldenDust() {
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 0 }}
-            animate={{
-              opacity: [0, 1, 0],
-              y: [0, -15, 0],
+            animate={{ 
+              opacity: [0, 1, 0], 
+              y: [0, -15, 0]
             }}
             transition={{
               repeat: Infinity,
               duration: duration,
               delay: delay,
-              ease: "easeInOut",
+              ease: "easeInOut"
             }}
             className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full shadow-[0_0_8px_rgba(250,204,21,0.8)]"
             style={{ left: `${x}%`, top: `${y}%` }}
@@ -335,32 +415,31 @@ function StarDust() {
         const y = Math.random() * 100;
         const delay = Math.random() * 5;
         const duration = 2 + Math.random() * 3;
-
+        
         // 50/50 logic for Violet and Gold
         const isViolet = Math.random() > 0.5;
         const bgColor = isViolet ? "bg-[#D946EF]" : "bg-[#FACC15]";
         const shadowColor = isViolet ? "rgba(217,70,239,0.8)" : "rgba(250,204,21,0.8)";
-
+        
         return (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 0, scale: 0.5 }}
-            animate={{
-              opacity: [0, 1, 0],
+            animate={{ 
+              opacity: [0, 1, 0], 
               y: [0, -20, 0],
-              scale: [0.5, 1, 0.5],
+              scale: [0.5, 1, 0.5]
             }}
             transition={{
               repeat: Infinity,
               duration: duration,
               delay: delay,
-              ease: "easeInOut",
+              ease: "easeInOut"
             }}
             className={`absolute w-1 h-1 rounded-full ${bgColor}`}
-            style={{
-              left: `${x}%`,
-              top: `${y}%`,
-              filter: `drop-shadow(0 0 4px ${shadowColor})`,
+            style={{ 
+              left: `${x}%`, top: `${y}%`,
+              filter: `drop-shadow(0 0 4px ${shadowColor})`
             }}
           />
         );
@@ -389,7 +468,7 @@ function FloatingSpareParts() {
           <motion.img
             key={i}
             src={part.src}
-            className={`absolute ${part.pos} ${sizeClass} h-auto ${(isSmaller && i === 2) || i === 3 ? "opacity-100" : "opacity-70"}`}
+            className={`absolute ${part.pos} ${sizeClass} h-auto ${isSmaller && i === 2 || i === 3 ? "opacity-100" : "opacity-70"}`}
             initial={{ rotate: part.rot }}
             animate={{
               y: [0, -20, 0],
@@ -410,21 +489,17 @@ function FloatingSpareParts() {
 
 // ─── Tropical Particles Component (Lush Greenery) ────────
 function TropicalParticles() {
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 40 }).map((_, i) => ({
-        id: i,
-        left: `${10 + Math.random() * 80}%`, // Wider spread
-        bottom: `${40 + Math.random() * 30}%`, // Spawning from middle/top of bush
-        size: Math.random() * 4 + 2,
-        color: ["#bef264", "#4ade80", "#22c55e", "#166534", "#86efac"][Math.floor(Math.random() * 5)], // Varied greens
-        delay: Math.random() * 5,
-        duration: 4 + Math.random() * 4, // Calmer rise
-        xDrift: (Math.random() - 0.5) * 60,
-        yRise: -(120 + Math.random() * 180),
-      })),
-    [],
-  );
+  const particles = useMemo(() => Array.from({ length: 40 }).map((_, i) => ({
+    id: i,
+    left: `${10 + Math.random() * 80}%`, // Wider spread
+    bottom: `${40 + Math.random() * 30}%`, // Spawning from middle/top of bush
+    size: Math.random() * 4 + 2, 
+    color: ['#bef264', '#4ade80', '#22c55e', '#166534', '#86efac'][Math.floor(Math.random() * 5)], // Varied greens
+    delay: Math.random() * 5,
+    duration: 4 + Math.random() * 4, // Calmer rise
+    xDrift: (Math.random() - 0.5) * 60,
+    yRise: -(120 + Math.random() * 180),
+  })), []);
 
   return (
     <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
@@ -465,7 +540,7 @@ function AuroraParticles() {
     const spawnPillar = () => {
       const id = Date.now() + Math.random();
       // Organic aurora color spectrum
-      const colors = ["#4ade80", "#10b981", "#d946ef", "#a855f7", "#06b6d4", "#4ade80"];
+      const colors = ['#4ade80', '#10b981', '#d946ef', '#a855f7', '#06b6d4', '#4ade80'];
       const newPillar = {
         id,
         left: `${Math.random() * 140 - 20}%`,
@@ -475,39 +550,39 @@ function AuroraParticles() {
         skew: (Math.random() - 0.5) * 40,
         blur: Math.random() * 50 + 80, // High blur for feathering
       };
-      setPillars((prev) => [...prev, newPillar]);
+      setPillars(prev => [...prev, newPillar]);
       setTimeout(() => {
-        setPillars((prev) => prev.filter((p) => p.id !== id));
+        setPillars(prev => prev.filter(p => p.id !== id));
       }, newPillar.duration * 1000);
     };
 
     // Initial scattered start
-    for (let i = 0; i < 8; i++) {
+    for(let i=0; i<8; i++) {
       setTimeout(spawnPillar, i * 600);
     }
 
-    const interval = setInterval(spawnPillar, 4000);
+    const interval = setInterval(spawnPillar, 4000); 
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="absolute inset-0 z-1 pointer-events-none overflow-hidden mix-blend-screen opacity-60">
       <AnimatePresence>
-        {pillars.map((p) => (
+        {pillars.map(p => (
           <motion.div
             key={p.id}
             initial={{ opacity: 0, scaleX: 0.8 }}
-            animate={{
-              opacity: [0, 0.4, 0.5, 0.4, 0],
+            animate={{ 
+              opacity: [0, 0.4, 0.5, 0.4, 0], 
               x: [0, 80, -40, 40], // Natural drifting
               skewX: [p.skew, p.skew + 12, p.skew - 8, p.skew], // Organic swaying
               scaleY: [1, 1.05, 0.98, 1.02, 1], // Breathing effect
             }}
             exit={{ opacity: 0 }}
-            transition={{
-              duration: p.duration,
+            transition={{ 
+              duration: p.duration, 
               ease: "easeInOut",
-              times: [0, 0.15, 0.5, 0.85, 1],
+              times: [0, 0.15, 0.5, 0.85, 1] 
             }}
             className="absolute top-[-30%] h-[160%]"
             style={{
@@ -515,7 +590,7 @@ function AuroraParticles() {
               left: p.left,
               filter: `blur(${p.blur}px)`,
               background: `linear-gradient(to bottom, transparent, ${p.color}22 20%, ${p.color} 50%, ${p.color}22 80%, transparent)`,
-              maskImage: "linear-gradient(to right, transparent, black 15%, black 85%, transparent)",
+              maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)',
             }}
           />
         ))}
@@ -527,20 +602,20 @@ function AuroraParticles() {
 // ─── Dynamic Collage Component ────────────────────────
 function DynamicCollage() {
   const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.jpeg`);
-
+  
   return (
     <div className="absolute inset-0 z-0 overflow-hidden opacity-45 pointer-events-none">
       <div className="flex w-[200%] h-full animate-roll">
-        <div className="grid grid-cols-5 grid-rows-4 w-1/2 h-full">
-          {photos.map((src, i) => (
-            <img key={i} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
-          ))}
-        </div>
-        <div className="grid grid-cols-5 grid-rows-4 w-1/2 h-full">
-          {photos.map((src, i) => (
-            <img key={`loop-${i}`} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
-          ))}
-        </div>
+         <div className="grid grid-cols-5 grid-rows-4 w-1/2 h-full">
+            {photos.map((src, i) => (
+              <img key={i} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
+            ))}
+         </div>
+         <div className="grid grid-cols-5 grid-rows-4 w-1/2 h-full">
+            {photos.map((src, i) => (
+              <img key={`loop-${i}`} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
+            ))}
+         </div>
       </div>
       <style>{`
         @keyframes roll {
@@ -563,16 +638,16 @@ function PrinceRupertDropInstance({ position }) {
   const dots = useMemo(() => {
     const generatedDots = [];
     for (let i = 0; i < PR_DOT_COUNT; i++) {
-      const t = Math.pow(i / (PR_DOT_COUNT - 1), 1.5);
+      const t = Math.pow(i / (PR_DOT_COUNT - 1), 1.5); 
       const curveX = Math.sin(t * Math.PI * 1.5) * 180 * t;
       const curveY = -t * 400 + 100;
       const maxRadius = 130;
       const radiusAtT = Math.max((1 - t) * maxRadius * Math.exp(-t * 2.5), 2);
       const angle = Math.random() * Math.PI * 2;
-      const r = Math.sqrt(Math.random()) * radiusAtT;
+      const r = Math.sqrt(Math.random()) * radiusAtT; 
       const x = curveX + r * Math.cos(angle);
       const y = curveY + r * Math.sin(angle);
-      const size = Math.random() * 5 + 3;
+      const size = Math.random() * 5 + 3; 
       const color = PR_COLORS[Math.floor(Math.random() * PR_COLORS.length)];
       const duration = 2 + Math.random() * 3;
       const delay = Math.random() * duration;
@@ -611,7 +686,7 @@ function PrinceRupertDropInstance({ position }) {
             className="w-full h-full rounded-full"
             style={{
               backgroundColor: dot.color,
-              boxShadow: `0 0 ${dot.size * 2}px ${dot.color}`,
+              boxShadow: `0 0 ${dot.size * 2}px ${dot.color}`
             }}
             animate={{
               x: [0, dot.xOscillation, 0],
@@ -643,28 +718,28 @@ function PrinceRupertDrop() {
         rotation: Math.random() * 360,
         scale: Math.random() * 0.4 + 0.6, // Scale between 0.6 and 1.0
       };
-
-      setDrops((prev) => [...prev, newDrop]);
-
+      
+      setDrops(prev => [...prev, newDrop]);
+      
       // TTL is 4 seconds. Remove after 4000ms.
       setTimeout(() => {
-        setDrops((prev) => prev.filter((d) => d.id !== newDrop.id));
+        setDrops(prev => prev.filter(d => d.id !== newDrop.id));
       }, 4000);
     };
 
     // Spawn first
     spawnDrop();
-
+    
     // Spawn new one every 3 seconds (1 second overlap with the 4s TTL)
     const interval = setInterval(spawnDrop, 3000);
-
+    
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden mix-blend-screen">
       <AnimatePresence>
-        {drops.map((drop) => (
+        {drops.map(drop => (
           <PrinceRupertDropInstance key={drop.id} position={drop} />
         ))}
       </AnimatePresence>
@@ -681,37 +756,37 @@ function SupportUsBackground() {
   useEffect(() => {
     let startTime = Date.now();
     let rafId;
-
+    
     const updatePaths = () => {
       let mPath = `M0,100`;
       let yPath = `M0,100`;
       const POINT_COUNT = 80;
       const widthStep = 2000 / POINT_COUNT;
-
+      
       const elapsed = Date.now() - startTime;
       const cycleDuration = 8000; // 8s loop (4s rise, 4s fall)
       const phase = (elapsed % cycleDuration) / cycleDuration;
-
+      
       // Envelope: Sine wave from 0 to 1 and back to 0
       const envelope = Math.sin(phase * Math.PI);
-
+      
       // Amplitude modulation: 4px base, ramping up to ~140px max
-      const currentAmplitude = 4 + 136 * envelope;
-
+      const currentAmplitude = 4 + (136 * envelope);
+      
       for (let i = 1; i <= POINT_COUNT; i++) {
         const x = i * widthStep;
-
+        
         // Randomization scaled dynamically by the continuous envelope
         const mAmplitude = (Math.random() - 0.5) * currentAmplitude;
         const yAmplitude = (Math.random() - 0.5) * currentAmplitude;
-
+        
         mPath += ` L${x},${100 + mAmplitude}`;
         yPath += ` L${x},${100 + yAmplitude}`;
       }
-
+      
       // Flicker intensity scales with the envelope
-      const mOpacity = 0.8 - Math.random() * 0.6 * envelope;
-      const yOpacity = 0.8 - Math.random() * 0.6 * envelope;
+      const mOpacity = 0.8 - (Math.random() * 0.6 * envelope);
+      const yOpacity = 0.8 - (Math.random() * 0.6 * envelope);
 
       if (magentaRef.current) {
         magentaRef.current.setAttribute("d", mPath);
@@ -721,10 +796,10 @@ function SupportUsBackground() {
         yellowRef.current.setAttribute("d", yPath);
         yellowRef.current.style.opacity = yOpacity;
       }
-
+      
       rafId = requestAnimationFrame(updatePaths);
     };
-
+    
     rafId = requestAnimationFrame(updatePaths);
     return () => cancelAnimationFrame(rafId);
   }, []);
@@ -735,22 +810,22 @@ function SupportUsBackground() {
       <div className="absolute inset-0 bg-[#050a14] z-[-10]" />
 
       {/* Dynamic Blobs (Z: -5) - Unaffected by Glitch */}
-      <motion.div
+      <motion.div 
         className="absolute top-[-10%] left-[5%] w-[60vw] h-[60vw] rounded-full bg-[#D946EF] mix-blend-screen blur-[140px] z-[-5]"
         animate={{
           x: ["0%", "15%", "-10%", "0%"],
           y: ["0%", "-10%", "20%", "0%"],
-          opacity: [0.15, 0.2, 0.15],
+          opacity: [0.15, 0.2, 0.15]
         }}
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
         style={{ willChange: "transform, opacity" }}
       />
-      <motion.div
+      <motion.div 
         className="absolute bottom-[-10%] right-[5%] w-[55vw] h-[55vw] rounded-full bg-[#F97316] mix-blend-screen blur-[130px] z-[-5]"
         animate={{
           x: ["0%", "-20%", "10%", "0%"],
           y: ["0%", "15%", "-15%", "0%"],
-          opacity: [0.15, 0.2, 0.15],
+          opacity: [0.15, 0.2, 0.15]
         }}
         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
         style={{ willChange: "transform, opacity" }}
@@ -766,9 +841,9 @@ function SupportUsBackground() {
             fill="none"
             stroke="#D946EF"
             strokeWidth="1.5"
-            style={{
+            style={{ 
               opacity: 0.8,
-              filter: "drop-shadow(0 0 10px rgba(217,70,239,0.9))",
+              filter: "drop-shadow(0 0 10px rgba(217,70,239,0.9))" 
             }}
           />
           {/* Yellow-Golden Wave */}
@@ -778,9 +853,9 @@ function SupportUsBackground() {
             fill="none"
             stroke="#FACC15"
             strokeWidth="1.5"
-            style={{
+            style={{ 
               opacity: 0.8,
-              filter: "drop-shadow(0 0 10px rgba(250,204,21,0.9))",
+              filter: "drop-shadow(0 0 10px rgba(250,204,21,0.9))" 
             }}
           />
         </svg>
@@ -790,67 +865,99 @@ function SupportUsBackground() {
 }
 
 function SolarPhoenix() {
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 50 }).map((_, i) => ({
-        id: i,
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        size: Math.random() > 0.8 ? "12px" : "6px", // Much larger
-        color: ["#ffffff", "#fbbf24", "#ff8c00", "#ffed4a"][Math.floor(Math.random() * 4)],
-        delay: Math.random() * 5,
-        duration: 3 + Math.random() * 4,
-        xDrift: (Math.random() - 0.5) * 100, // Bigger drift
-        yDrift: (Math.random() - 0.5) * 100,
-      })),
-    [],
-  );
+  const particles = useMemo(() => Array.from({ length: 50 }).map((_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    top: `${Math.random() * 100}%`,
+    size: Math.random() > 0.8 ? '12px' : '6px', // Much larger
+    color: ['#ffffff', '#fbbf24', '#ff8c00', '#ffed4a'][Math.floor(Math.random() * 4)],
+    delay: Math.random() * 5,
+    duration: 3 + Math.random() * 4,
+    xDrift: (Math.random() - 0.5) * 100, // Bigger drift
+    yDrift: (Math.random() - 0.5) * 100,
+  })), []);
 
   const flares = [
     {
       id: 1, // Top Left
-      paths: ["M 38 38 C 25 15, 15 40, -5 5", "M 36 36 C 22 12, 12 38, -8 2", "M 40 40 C 28 18, 18 42, -2 8"],
-      colors: ["#FFA07A", "#ff8c00", "#ffd700"],
+      paths: [
+        "M 38 38 C 25 15, 15 40, -5 5",
+        "M 36 36 C 22 12, 12 38, -8 2",
+        "M 40 40 C 28 18, 18 42, -2 8"
+      ],
+      colors: ["#FFA07A", "#ff8c00", "#ffd700"]
     },
     {
       id: 2, // Top Right
-      paths: ["M 62 38 C 75 15, 85 40, 105 5", "M 64 36 C 78 12, 88 38, 108 2", "M 60 40 C 72 18, 82 42, 102 8"],
-      colors: ["#FFA07A", "#ffd700", "#ff8c00"],
+      paths: [
+        "M 62 38 C 75 15, 85 40, 105 5",
+        "M 64 36 C 78 12, 88 38, 108 2",
+        "M 60 40 C 72 18, 82 42, 102 8"
+      ],
+      colors: ["#FFA07A", "#ffd700", "#ff8c00"]
     },
     {
       id: 3, // Bottom Left
-      paths: ["M 38 62 C 25 85, 15 60, -5 95", "M 36 64 C 22 88, 12 62, -8 98", "M 40 60 C 28 82, 18 58, -2 92"],
-      colors: ["#ffd700", "#FFA07A", "#FFB07C"],
+      paths: [
+        "M 38 62 C 25 85, 15 60, -5 95",
+        "M 36 64 C 22 88, 12 62, -8 98",
+        "M 40 60 C 28 82, 18 58, -2 92"
+      ],
+      colors: ["#ffd700", "#FFA07A", "#FFB07C"]
     },
     {
       id: 4, // Bottom Right
-      paths: ["M 62 62 C 75 85, 85 60, 105 95", "M 64 64 C 78 88, 88 62, 108 98", "M 60 60 C 72 82, 82 58, 102 92"],
-      colors: ["#ff8c00", "#FFB07C", "#ffd700"],
+      paths: [
+        "M 62 62 C 75 85, 85 60, 105 95",
+        "M 64 64 C 78 88, 88 62, 108 98",
+        "M 60 60 C 72 82, 82 58, 102 92"
+      ],
+      colors: ["#ff8c00", "#FFB07C", "#ffd700"]
     },
     {
       id: 5, // Asymmetrical Sci-Fi Sweep 1
-      paths: ["M -10 30 C 30 50, 60 10, 110 -10", "M -15 32 C 28 55, 62 15, 108 -5", "M -5 28 C 32 45, 58 5, 112 -15"],
-      colors: ["#ffd700", "#FFA07A", "#ff8c00"],
+      paths: [
+        "M -10 30 C 30 50, 60 10, 110 -10",
+        "M -15 32 C 28 55, 62 15, 108 -5",
+        "M -5 28 C 32 45, 58 5, 112 -15"
+      ],
+      colors: ["#ffd700", "#FFA07A", "#ff8c00"]
     },
     {
       id: 6, // Asymmetrical Sci-Fi Sweep 2
-      paths: ["M 110 90 C 70 70, 40 20, 50 -20", "M 115 88 C 72 75, 45 22, 52 -25", "M 105 92 C 68 65, 35 18, 48 -15"],
-      colors: ["#ff8c00", "#FFB07C", "#ffd700"],
+      paths: [
+        "M 110 90 C 70 70, 40 20, 50 -20",
+        "M 115 88 C 72 75, 45 22, 52 -25",
+        "M 105 92 C 68 65, 35 18, 48 -15"
+      ],
+      colors: ["#ff8c00", "#FFB07C", "#ffd700"]
     },
     {
       id: 7, // Massive Deep U-Loop (Sci-fi Prominence)
-      paths: ["M 115 5 C 80 110, 20 110, -15 5", "M 110 0 C 75 105, 25 105, -10 0", "M 120 -5 C 85 115, 15 115, -20 -5"],
-      colors: ["#FFB07C", "#FFA07A", "#ff8c00"],
-    },
+      paths: [
+        "M 115 5 C 80 110, 20 110, -15 5",
+        "M 110 0 C 75 105, 25 105, -10 0",
+        "M 120 -5 C 85 115, 15 115, -20 -5"
+      ],
+      colors: ["#FFB07C", "#FFA07A", "#ff8c00"]
+    }
   ];
 
   return (
     <div className="absolute inset-0 z-[1] flex items-center justify-center pointer-events-none overflow-hidden">
       {/* Deep Red Corona Backdrop */}
-      <motion.div animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.9, 0.6] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute w-[60vw] h-[60vw] rounded-full bg-red-600 blur-[120px]" />
-
+      <motion.div
+        animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.9, 0.6] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute w-[60vw] h-[60vw] rounded-full bg-red-600 blur-[120px]"
+      />
+      
       {/* Intense Yellow Core */}
-      <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="absolute w-[25vw] h-[25vw] rounded-full bg-gradient-to-t from-yellow-500 to-white blur-[60px] mix-blend-add" />
+      <motion.div
+        animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute w-[25vw] h-[25vw] rounded-full bg-gradient-to-t from-yellow-500 to-white blur-[60px] mix-blend-add"
+      />
 
       {/* Micro Pixel Fire Particles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -895,15 +1002,13 @@ function SolarPhoenix() {
                 strokeLinecap="round"
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1, opacity: [0.4, 1, 0.4] }}
-                transition={{
+                transition={{ 
                   pathLength: { duration: 3, ease: "easeOut" },
-                  opacity: { duration: 2 + Math.random() * 2, repeat: Infinity, ease: "easeInOut", delay: Math.random() },
+                  opacity: { duration: 2 + Math.random() * 2, repeat: Infinity, ease: "easeInOut", delay: Math.random() }
                 }}
-                style={
-                  {
-                    // Removed drop-shadow to stop heavy browser repainting
-                  }
-                }
+                style={{ 
+                  // Removed drop-shadow to stop heavy browser repainting
+                }}
               />
             ))}
           </g>
@@ -922,6 +1027,7 @@ export default function LandingPage({ onNavigateAuth }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showIdeaModal, setShowIdeaModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [skipAnim, setSkipAnim] = useState(false);
   const displayedMerch = useMerchRandomizer();
   const [merchInitial, setMerchInitial] = useState(true);
 
@@ -932,9 +1038,19 @@ export default function LandingPage({ onNavigateAuth }) {
     }
   }, [displayedMerch.length]);
 
-  const ABOUT_IMAGES = ["/aboutus_bg1.png", "/aboutus_bg2.png", "/aboutus_bg3.png", "/aboutus_bg4.png"];
+  const ABOUT_IMAGES = [
+    "/aboutus_bg1.png",
+    "/aboutus_bg2.png",
+    "/aboutus_bg3.png",
+    "/aboutus_bg4.png"
+  ];
 
   useEffect(() => {
+    if (sessionStorage.getItem("landingSeen")) {
+      setSkipAnim(true);
+    } else {
+      sessionStorage.setItem("landingSeen", "true");
+    }
     setMounted(true);
     // Check login status
     const token = localStorage.getItem("token");
@@ -957,7 +1073,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
   useEffect(() => {
     const mascotInterval = setInterval(() => {
-      setMascotFrame((prev) => (prev === 1 ? 2 : 1));
+      setMascotFrame(prev => prev === 1 ? 2 : 1);
     }, 2000);
     return () => clearInterval(mascotInterval);
   }, []);
@@ -965,11 +1081,16 @@ export default function LandingPage({ onNavigateAuth }) {
   const slideVariants = {
     enter: { x: "100%", opacity: 0 },
     center: { x: "0%", opacity: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
-    exit: { x: "-100%", opacity: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+    exit: { x: "-100%", opacity: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: mounted ? 1 : 0 }} transition={{ duration: 1.5, ease: "easeOut" }} className="relative w-full bg-[#050a14] text-white font-mono overflow-x-hidden selection:bg-[#FF00FF] selection:text-white">
+    <motion.div
+      initial={{ opacity: skipAnim ? 1 : 0 }}
+      animate={{ opacity: mounted ? 1 : 0 }}
+      transition={{ duration: skipAnim ? 0 : 1.5, ease: "easeOut" }}
+      className="relative w-full bg-[#050a14] text-white font-mono overflow-x-hidden selection:bg-[#FF00FF] selection:text-white"
+    >
       {/* ── Section 1: Hero ── */}
       <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center overflow-hidden py-24 z-10">
         <DynamicCollage />
@@ -980,22 +1101,38 @@ export default function LandingPage({ onNavigateAuth }) {
           <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
             <source src="/video_landingatas.mp4" type="video/mp4" />
           </video>
-
+          
           <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
           <div className="relative z-10 flex flex-col items-center gap-10 px-4 w-full">
-            <motion.img src="/logo_landing.png" alt="Kalceria" className="w-[85%] md:w-[70%] max-w-3xl h-auto object-contain drop-shadow-2xl" draggable={false} animate={{ y: [-6, 6, -6] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} />
-
+            <motion.img 
+              src="/logo_landing.png" 
+              alt="Kalceria" 
+              className="w-[85%] md:w-[70%] max-w-3xl h-auto object-contain drop-shadow-2xl" 
+              draggable={false}
+              animate={{ y: [-6, 6, -6] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            />
+            
             {isLoggedIn ? (
-              <button onClick={() => setShowLogoutConfirm(true)} className="group relative px-12 py-3.5 rounded-[20px] overflow-hidden transition-all duration-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="group relative px-12 py-3.5 rounded-[20px] overflow-hidden transition-all duration-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]"
+              >
                 <div className="absolute inset-0 bg-red-500/20 group-hover:bg-red-500/30 transition-colors" />
                 <div className="absolute inset-0 border border-red-500/30 group-hover:border-red-500/50 rounded-[20px]" />
                 <div className="absolute inset-0 shadow-[0_0_40px_rgba(239,68,68,0.1)] group-hover:shadow-[0_0_60px_rgba(239,68,68,0.2)] transition-all" />
-
-                <span className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-[15px]">LOGOUT</span>
+                
+                <span className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-[15px]">
+                  LOGOUT
+                </span>
               </button>
             ) : (
-              <button onClick={onNavigateAuth} className="relative px-10 py-3.5 font-sans font-extrabold tracking-wide text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_30px_rgba(255,255,255,0.15)]" style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}>
+              <button
+                onClick={onNavigateAuth}
+                className="relative px-10 py-3.5 font-sans font-extrabold tracking-wide text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_30px_rgba(255,255,255,0.15)]"
+                style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+              >
                 <span className="relative z-10">LOGIN / REGISTER</span>
                 <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
               </button>
@@ -1018,10 +1155,13 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Left Content (Absolute for no shift) */}
         <div className="absolute left-8 md:left-24 top-1/2 -translate-y-1/2 z-20 flex flex-col items-start gap-6">
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
-            <Typewriter text="SEE EVENT" mode="letter" delay={0} />
+            <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={skipAnim} />
           </h2>
           <Link href="/events">
-            <button className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer" style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}>
+            <button
+              className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer"
+              style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
+            >
               <span className="relative z-10">EXPLORE</span>
               <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
             </button>
@@ -1035,18 +1175,43 @@ export default function LandingPage({ onNavigateAuth }) {
 
         {/* Floating Crystal 2 Instances */}
         <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-          {/* Bottom (Smallest) */}
-          <motion.img src="/crystal_2.png" className="absolute h-[20px] md:h-[28px] object-contain opacity-70" style={{ left: "35%", bottom: "5%", translateX: "-50%" }} animate={{ y: [0, -8, 0], rotate: [55, 65, 55] }} transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }} />
-          {/* Left Small */}
-          <motion.img src="/crystal_2.png" className="absolute h-[26px] md:h-[36px] object-contain opacity-70" style={{ left: "calc(50% - 260px)", top: "55%" }} animate={{ y: [0, -10, 0], rotate: [-35, -25, -35] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} />
-          {/* Right Medium */}
-          <motion.img src="/crystal_2.png" className="absolute h-[34px] md:h-[47px] object-contain opacity-70" style={{ left: "calc(50% + 175px)", top: "18%" }} animate={{ y: [0, -15, 0], rotate: [30, 40, 30] }} transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }} />
-          {/* Right Large */}
-          <motion.img src="/crystal_2.png" className="absolute h-[45px] md:h-[63px] object-contain opacity-70" style={{ left: "calc(50% + 200px)", top: "50%" }} animate={{ y: [0, -18, 0], rotate: [0, 10, 0] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }} />
+           {/* Bottom (Smallest) */}
+           <motion.img 
+             src="/crystal_2.png" 
+             className="absolute h-[20px] md:h-[28px] object-contain opacity-70"
+             style={{ left: "35%", bottom: "5%", translateX: "-50%" }}
+             animate={{ y: [0, -8, 0], rotate: [55, 65, 55] }}
+             transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+           />
+           {/* Left Small */}
+           <motion.img 
+             src="/crystal_2.png" 
+             className="absolute h-[26px] md:h-[36px] object-contain opacity-70"
+             style={{ left: "calc(50% - 260px)", top: "55%" }}
+             animate={{ y: [0, -10, 0], rotate: [-35, -25, -35] }}
+             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+           />
+           {/* Right Medium */}
+           <motion.img 
+             src="/crystal_2.png" 
+             className="absolute h-[34px] md:h-[47px] object-contain opacity-70"
+             style={{ left: "calc(50% + 175px)", top: "18%" }}
+             animate={{ y: [0, -15, 0], rotate: [30, 40, 30] }}
+             transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+           />
+           {/* Right Large */}
+           <motion.img 
+             src="/crystal_2.png" 
+             className="absolute h-[45px] md:h-[63px] object-contain opacity-70"
+             style={{ left: "calc(50% + 200px)", top: "50%" }}
+             animate={{ y: [0, -18, 0], rotate: [0, 10, 0] }}
+             transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+           />
         </div>
 
         {/* Silhouettes - Static Background */}
         <div className="absolute bottom-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden px-8 md:px-24">
+          
           {/* Crystal 3 Top Right (Truncated at Top) */}
           <div className="absolute top-[-20px] md:top-[-40px] right-12 md:right-40 flex flex-col items-center pointer-events-none opacity-80">
             <img src="/crystal_3.png" alt="Crystal 3" className="h-[75px] md:h-[120px] object-contain rotate-180" />
@@ -1061,7 +1226,10 @@ export default function LandingPage({ onNavigateAuth }) {
 
           <div className="absolute bottom-0 right-4 md:right-10 opacity-50 flex flex-col items-center pointer-events-none">
             {/* Magenta Tapakan (Base) - Wedge Shape from Sketch */}
-            <div className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[22px] z-0 opacity-80" style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%, 0 100%)" }} />
+            <div 
+              className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[22px] z-0 opacity-80"
+              style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%, 0 100%)" }}
+            />
             <img src="/brio_black.png" alt="Brio" className="relative z-10 h-[150px] md:h-[240px] object-contain translate-y-[2.5px]" />
           </div>
         </div>
@@ -1079,10 +1247,13 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="relative z-20 w-full max-w-6xl px-8 flex justify-start">
           <div className="flex flex-col items-start gap-6 border-l-2 border-[#FF00FF] pl-8">
             <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-white">
-              <Typewriter text="ABOUT US" mode="word" delay={3000} />
+              <Typewriter text="ABOUT US" mode="word" delay={3000} skipAnim={skipAnim} />
             </h2>
             <Link href="/about">
-              <button className="relative px-10 py-3.5 font-sans font-extrabold uppercase tracking-wide text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)]" style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}>
+              <button
+                className="relative px-10 py-3.5 font-sans font-extrabold uppercase tracking-wide text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+              >
                 <span className="relative z-10">Get to Know More</span>
                 <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
               </button>
@@ -1095,10 +1266,10 @@ export default function LandingPage({ onNavigateAuth }) {
       <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center py-20 z-40 border-t border-white/10 bg-transparent isolate overflow-hidden">
         {/* Golden Glow Border Aura - Aggressive */}
         <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_50px_rgba(251,191,36,0.7)] z-50 pointer-events-none" />
-
+        
         {/* The Ultimate Background */}
         <SupportUsBackground />
-
+        
         {/* Altar Border Element (Reversed 180, Truncated at Border) */}
         <div className="absolute top-[-130px] md:top-[-220px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-5 opacity-80">
           <img src="/altar.png" alt="Altar" className="h-[320px] md:h-[540px] object-contain rotate-180 drop-shadow-[0_10px_70px_rgba(255,255,255,0.05)]" />
@@ -1113,19 +1284,19 @@ export default function LandingPage({ onNavigateAuth }) {
         <FloatingSpareParts />
 
         <div className="relative z-10 mb-24 flex justify-center w-full">
-          <motion.h2
-            className="relative text-6xl md:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text"
-            style={{
-              backgroundColor: "white",
-              backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
-              backgroundSize: "100% 200%",
-              textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)",
-            }}
-            animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Typewriter text="SUPPORT US" mode="none" delay={6000} />
-          </motion.h2>
+           <motion.h2 
+             className="relative text-6xl md:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text"
+             style={{ 
+               backgroundColor: "white",
+               backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
+               backgroundSize: "100% 200%",
+               textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)" 
+             }}
+             animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
+             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+           >
+             <Typewriter text="SUPPORT US" mode="none" delay={6000} skipAnim={skipAnim} />
+           </motion.h2>
         </div>
 
         <div className="relative z-10 w-full max-w-6xl px-4 mb-20">
@@ -1135,9 +1306,9 @@ export default function LandingPage({ onNavigateAuth }) {
               <MerchCard key={idx} item={item} isInitial={merchInitial} index={idx} />
             ))}
             {!displayedMerch.length && (
-              <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-3xl">
-                <p className="font-mono text-slate-500 uppercase tracking-widest text-sm">Synchronizing Inventory...</p>
-              </div>
+               <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-3xl">
+                 <p className="font-mono text-slate-500 uppercase tracking-widest text-sm">Synchronizing Inventory...</p>
+               </div>
             )}
           </div>
         </div>
@@ -1170,6 +1341,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
       {/* ── Section 5: Find More ── */}
       <section className="relative w-full min-h-[90vh] bg-[#050a14] flex flex-col items-center justify-center py-20 z-50 border-t border-slate-900 overflow-hidden">
+        
         {/* Ambient Blobs */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-50 mix-blend-screen">
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[20%] left-[30%] w-[30vw] h-[30vw] rounded-full blur-[120px] bg-[#00FFFF]" />
@@ -1180,33 +1352,74 @@ export default function LandingPage({ onNavigateAuth }) {
         <PrinceRupertDrop />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 items-center gap-10">
+          
           {/* Left Column: Typography */}
           <div className="relative flex flex-col items-start justify-center text-left p-4">
             <GoldenDust />
             <div className="relative z-10">
-              <motion.h2 animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }} className="text-6xl md:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-8 font-mono">
+              <motion.h2 
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                className="text-6xl md:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-8 font-mono"
+              >
                 FIND MORE
               </motion.h2>
-              <p className="font-sans text-gray-300 text-lg max-w-md text-left leading-relaxed">Wahib embut keren banget wowowowow. Kalceria is the ultimate destination for automotive euphoria.</p>
+              <p className="font-sans text-gray-300 text-lg max-w-md text-left leading-relaxed">
+                Wahib embut keren banget wowowowow. Kalceria is the ultimate destination for automotive euphoria.
+              </p>
 
               {/* Social Media Icon List - Vertical Style */}
               <div className="flex flex-col gap-6 mt-8">
                 {/* Instagram Icon */}
-                <a href="https://www.instagram.com/kalceria/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 group cursor-pointer">
+                <a 
+                  href="https://www.instagram.com/kalceria/" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center gap-4 group cursor-pointer"
+                >
                   <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">
-                    <img src="/ig_gray.png" alt="Instagram" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.4]" draggable={false} />
-                    <img src="/ig.png" alt="Instagram Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.4]" draggable={false} />
+                    <img 
+                      src="/ig_gray.png" 
+                      alt="Instagram" 
+                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.4]" 
+                      draggable={false}
+                    />
+                    <img 
+                      src="/ig.png" 
+                      alt="Instagram Colored" 
+                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.4]" 
+                      draggable={false}
+                    />
                   </div>
-                  <span className="font-sans text-sm text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">Instagram - kalceria</span>
+                  <span className="font-sans text-sm text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">
+                    Instagram - kalceria
+                  </span>
                 </a>
 
                 {/* TikTok Icon */}
-                <a href="https://www.tiktok.com/@gallerykalceria" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 group cursor-pointer">
+                <a 
+                  href="https://www.tiktok.com/@gallerykalceria" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center gap-4 group cursor-pointer"
+                >
                   <div className="relative w-10 h-10 shrink-0">
-                    <img src="/tiktok_gray.png" alt="TikTok" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
-                    <img src="/tiktok.png" alt="TikTok Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" draggable={false} />
+                    <img 
+                      src="/tiktok_gray.png" 
+                      alt="TikTok" 
+                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" 
+                      draggable={false}
+                    />
+                    <img 
+                      src="/tiktok.png" 
+                      alt="TikTok Colored" 
+                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" 
+                      draggable={false}
+                    />
                   </div>
-                  <span className="font-sans text-sm text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">tiktok kalceria</span>
+                  <span className="font-sans text-sm text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">
+                    tiktok kalceria
+                  </span>
                 </a>
               </div>
             </div>
@@ -1220,49 +1433,63 @@ export default function LandingPage({ onNavigateAuth }) {
               <FindMoreSlider />
             </div>
           </div>
+
         </div>
 
         {/* Looping 8-Bit Mascot (Fixed Corner Position) */}
         <div className="absolute bottom-0 right-0 w-56 md:w-80 z-20 pointer-events-none">
           {/* Hat placed above the head */}
-          <img src="/kalcer_hat.png" alt="Kalcer Hat" className="absolute top-[-30%] left-1/2 -translate-x-[56%] w-[185%] h-auto z-30 drop-shadow-[0_15px_10px_rgba(0,0,0,0.5)]" />
-
-          <img src={mascotFrame === 1 ? "/kalcer_man.png" : "/kalcer_man2.png"} alt="Kalcer Mascot" className="relative z-10 w-full h-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,255,0.3)]" />
+          <img 
+            src="/kalcer_hat.png" 
+            alt="Kalcer Hat" 
+            className="absolute top-[-30%] left-1/2 -translate-x-[56%] w-[185%] h-auto z-30 drop-shadow-[0_15px_10px_rgba(0,0,0,0.5)]"
+          />
+          
+          <img 
+            src={mascotFrame === 1 ? "/kalcer_man.png" : "/kalcer_man2.png"} 
+            alt="Kalcer Mascot" 
+            className="relative z-10 w-full h-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,255,0.3)]"
+          />
 
           {/* Static Favicon Overlay to cover Gemini Logo in the absolute corner */}
-          <img src="/favicon.png" alt="Favicon" className="absolute bottom-1 right-1 w-6 md:w-8 h-auto z-50 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+          <img
+            src="/favicon.png"
+            alt="Favicon"
+            className="absolute bottom-1 right-1 w-6 md:w-8 h-auto z-50 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+          />
         </div>
       </section>
 
       {/* ── Section 6: Need Help? ── */}
       <section className="relative w-full min-h-[107vh] bg-white flex flex-col items-center justify-center py-32 z-50 overflow-hidden">
+        
         {/* Solid Section Divider */}
         <div className="absolute top-0 left-0 w-full h-[2px] bg-[#050a14] z-[70]" />
 
         {/* Layer 1: Subtle geometry background (Dark dots for white base) */}
         <div className="absolute inset-0 opacity-[0.15] pointer-events-none z-0">
-          <div className="absolute inset-0" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, rgba(0,0,0,0.1) 1px, transparent 0)`, backgroundSize: "40px 40px" }} />
+          <div className="absolute inset-0" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, rgba(0,0,0,0.1) 1px, transparent 0)`, backgroundSize: '40px 40px' }} />
         </div>
 
         {/* Dynamic Aggressive Blobs (Magenta & Gold) */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          <motion.div
-            animate={{
-              scale: [1, 1.4, 1],
-              x: ["-15%", "25%", "-15%"],
-              y: ["-10%", "15%", "-10%"],
-            }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-0 left-0 w-[70vw] h-[70vw] rounded-full blur-[140px] bg-[#D946EF] opacity-40 mix-blend-multiply"
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.4, 1], 
+              x: ["-15%", "25%", "-15%"], 
+              y: ["-10%", "15%", "-10%"]
+            }} 
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} 
+            className="absolute top-0 left-0 w-[70vw] h-[70vw] rounded-full blur-[140px] bg-[#D946EF] opacity-40 mix-blend-multiply" 
           />
-          <motion.div
-            animate={{
-              scale: [1.2, 1.6, 1.2],
-              x: ["20%", "-20%", "20%"],
-              y: ["20%", "-5%", "20%"],
-            }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-            className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#FACC15] opacity-40 mix-blend-multiply"
+          <motion.div 
+            animate={{ 
+              scale: [1.2, 1.6, 1.2], 
+              x: ["20%", "-20%", "20%"], 
+              y: ["20%", "-5%", "20%"]
+            }} 
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }} 
+            className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#FACC15] opacity-40 mix-blend-multiply" 
           />
         </div>
 
@@ -1285,39 +1512,79 @@ export default function LandingPage({ onNavigateAuth }) {
           </div>
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative z-10 flex flex-col items-center justify-center w-full h-full">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative z-10 flex flex-col items-center justify-center w-full h-full"
+        >
           {/* Shrunk square box, centered perfectly with Moto photographers (Dark translucent for white bg) */}
           <div className="relative bg-black/[0.08] border border-black/10 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 aspect-square w-full max-w-[420px] flex flex-col items-center justify-center shadow-[0_40px_100px_rgba(0,0,0,0.1)]">
-            {/* Moto Figures: Locked tightly to box edges using wrappers for perfect alignment */}
+             
+             {/* Moto Figures: Locked tightly to box edges using wrappers for perfect alignment */}
+             
+             {/* TOP (Normal, 0deg) */}
+             <div className="absolute inset-0 pointer-events-none z-20">
+               <motion.img 
+                 src="/moto_1.png" 
+                 alt="Moto 1"
+                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 whileInView={{ opacity: 1, scale: 1 }}
+                 viewport={{ once: true }}
+               />
+             </div>
 
-            {/* TOP (Normal, 0deg) */}
-            <div className="absolute inset-0 pointer-events-none z-20">
-              <motion.img src="/moto_1.png" alt="Moto 1" className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom" initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} />
-            </div>
+             {/* RIGHT (90deg) */}
+             <div className="absolute inset-0 rotate-90 pointer-events-none z-20">
+               <motion.img 
+                 src="/moto_2.png" 
+                 alt="Moto 2"
+                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 whileInView={{ opacity: 1, scale: 1 }}
+                 viewport={{ once: true }}
+               />
+             </div>
 
-            {/* RIGHT (90deg) */}
-            <div className="absolute inset-0 rotate-90 pointer-events-none z-20">
-              <motion.img src="/moto_2.png" alt="Moto 2" className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom" initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} />
-            </div>
+             {/* BOTTOM (180deg) */}
+             <div className="absolute inset-0 rotate-180 pointer-events-none z-20">
+               <motion.img 
+                 src="/moto_3.png" 
+                 alt="Moto 3"
+                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-44 md:h-60 w-auto object-contain origin-bottom"
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 whileInView={{ opacity: 1, scale: 1 }}
+                 viewport={{ once: true }}
+               />
+             </div>
 
-            {/* BOTTOM (180deg) */}
-            <div className="absolute inset-0 rotate-180 pointer-events-none z-20">
-              <motion.img src="/moto_3.png" alt="Moto 3" className="absolute bottom-full left-1/2 -translate-x-1/2 h-44 md:h-60 w-auto object-contain origin-bottom" initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} />
-            </div>
+             {/* LEFT (-90deg) */}
+             <div className="absolute inset-0 -rotate-90 pointer-events-none z-20">
+               <motion.img 
+                 src="/moto_4.png" 
+                 alt="Moto 4"
+                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 whileInView={{ opacity: 1, scale: 1 }}
+                 viewport={{ once: true }}
+               />
+             </div>
 
-            {/* LEFT (-90deg) */}
-            <div className="absolute inset-0 -rotate-90 pointer-events-none z-20">
-              <motion.img src="/moto_4.png" alt="Moto 4" className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom" initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} />
-            </div>
-
-            <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-white mb-10 text-center leading-none" style={{ textShadow: "0 0 20px rgba(255,255,255,0.3)" }}>
-              Need Our Help?
-            </h2>
-
-            <motion.button onClick={() => setShowServiceModal(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative px-12 py-4 font-sans font-black uppercase tracking-tighter text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]" style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}>
-              <span className="relative z-10">APPLY A REQUEST</span>
-              <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
-            </motion.button>
+             <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-white mb-10 text-center leading-none" style={{ textShadow: "0 0 20px rgba(255,255,255,0.3)" }}>
+               Need Our Help?
+             </h2>
+             
+             <motion.button
+               onClick={() => setShowServiceModal(true)}
+               whileHover={{ scale: 1.05 }}
+               whileTap={{ scale: 0.95 }}
+               className="relative px-12 py-4 font-sans font-black uppercase tracking-tighter text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+               style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+             >
+               <span className="relative z-10">APPLY A REQUEST</span>
+               <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+             </motion.button>
           </div>
         </motion.div>
       </section>
@@ -1326,37 +1593,63 @@ export default function LandingPage({ onNavigateAuth }) {
       <section className="relative w-full aspect-square bg-[#0c1528] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
         {/* Background Blobs (Cyan, Magenta, Gold) */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
-          <motion.div animate={{ scale: [1, 1.25, 1], x: ["-15%", "15%", "-15%"], y: ["-10%", "10%", "-10%"] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute top-0 left-0 w-[60vw] h-[60vw] rounded-full blur-[140px] bg-[#00FFFF]" />
-          <motion.div animate={{ scale: [1.1, 1.35, 1.1], x: ["15%", "-15%", "15%"], y: ["10%", "-10%", "10%"] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }} className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#D946EF]" />
-          <motion.div animate={{ scale: [1, 1.4, 1], x: ["0%", "10%", "0%"], y: ["20%", "-20%", "20%"] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 4 }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55vw] h-[55vw] rounded-full blur-[160px] bg-[#FACC15]" />
+          <motion.div 
+            animate={{ scale: [1, 1.25, 1], x: ["-15%", "15%", "-15%"], y: ["-10%", "10%", "-10%"] }} 
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} 
+            className="absolute top-0 left-0 w-[60vw] h-[60vw] rounded-full blur-[140px] bg-[#00FFFF]" 
+          />
+          <motion.div 
+            animate={{ scale: [1.1, 1.35, 1.1], x: ["15%", "-15%", "15%"], y: ["10%", "-10%", "10%"] }} 
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }} 
+            className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#D946EF]" 
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.4, 1], x: ["0%", "10%", "0%"], y: ["20%", "-20%", "20%"] }} 
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 4 }} 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55vw] h-[55vw] rounded-full blur-[160px] bg-[#FACC15]" 
+          />
         </div>
 
         <SolarPhoenix />
 
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
           {/* Earth - Core Centerpiece */}
-          <motion.img src="/earth.png" alt="Earth" className="absolute h-[30%] md:h-[40%] object-contain opacity-90 z-0 drop-shadow-[0_0_50px_rgba(0,255,255,0.2)]" animate={{ rotate: 360 }} transition={{ duration: 180, repeat: Infinity, ease: "linear" }} />
+          <motion.img 
+            src="/earth.png" 
+            alt="Earth" 
+            className="absolute h-[30%] md:h-[40%] object-contain opacity-90 z-0 drop-shadow-[0_0_50px_rgba(0,255,255,0.2)]"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 180, repeat: Infinity, ease: "linear" }}
+          />
 
           {/* Find The Others Button */}
           <motion.button
             onClick={() => (window.location.href = "/map")}
-            whileHover={{
+            whileHover={{ 
               scale: 1.05,
               boxShadow: "0 0 40px rgba(255,255,255,0.3), inset 0 0 20px rgba(255,255,255,0.2)",
-              backgroundColor: "rgba(255,255,255,0.15)",
+              backgroundColor: "rgba(255,255,255,0.15)"
             }}
             whileTap={{ scale: 0.95 }}
             className="absolute z-30 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white font-black uppercase tracking-tighter text-xl md:text-3xl px-8 py-4 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-colors duration-300"
           >
             {/* Peach Blob */}
-            <motion.div animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute -top-8 -left-4 w-24 h-24 bg-[#FFB07C] rounded-full blur-[24px] opacity-70 z-0 pointer-events-none" />
+            <motion.div 
+              animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -top-8 -left-4 w-24 h-24 bg-[#FFB07C] rounded-full blur-[24px] opacity-70 z-0 pointer-events-none"
+            />
             {/* Green Blob */}
-            <motion.div animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute -bottom-8 -right-4 w-24 h-24 bg-green-400 rounded-full blur-[24px] opacity-60 z-0 pointer-events-none" />
-
-            <span
+            <motion.div 
+              animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              className="absolute -bottom-8 -right-4 w-24 h-24 bg-green-400 rounded-full blur-[24px] opacity-60 z-0 pointer-events-none"
+            />
+            
+            <span 
               className="relative z-10"
               style={{
-                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)",
+                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
               }}
             >
               FIND THE OTHERS !
@@ -1364,95 +1657,103 @@ export default function LandingPage({ onNavigateAuth }) {
           </motion.button>
 
           {/* Earthman - Hero Figure at Bottom - Fine-tuned Position */}
-          <motion.img src="/earthman.png" alt="Earthman" className="absolute bottom-[-4%] h-[40%] md:h-[54%] object-contain z-20 pointer-events-none" initial={{ y: 60, opacity: 0, rotate: 0, scale: 1 }} whileInView={{ y: 0, opacity: 1, rotate: 0, scale: 1 }} viewport={{ once: true }} transition={{ duration: 1, ease: "easeOut" }} />
+          <motion.img 
+            src="/earthman.png" 
+            alt="Earthman" 
+            className="absolute bottom-[-4%] h-[40%] md:h-[54%] object-contain z-20 pointer-events-none"
+            initial={{ y: 60, opacity: 0, rotate: 0, scale: 1 }}
+            whileInView={{ y: 0, opacity: 1, rotate: 0, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          />
 
           {/* Asteroid Field - Grouped Clusters */}
           {[
             // Cluster 1: Top Left (2x A1, 1x A2)
-            { id: 1, src: "/asteroid_1.png", top: "5%", left: "5%", size: "42px", delay: 0, rot: 45 },
-            { id: 2, src: "/asteroid_1.png", top: "15%", left: "18%", size: "49px", delay: 1.2, rot: -30 },
-            { id: 3, src: "/asteroid_2.png", top: "22%", left: "8%", size: "31px", delay: 2.5, rot: 115 },
-
+            { id: 1, src: '/asteroid_1.png', top: '5%', left: '5%', size: '42px', delay: 0, rot: 45 },
+            { id: 2, src: '/asteroid_1.png', top: '15%', left: '18%', size: '49px', delay: 1.2, rot: -30 },
+            { id: 3, src: '/asteroid_2.png', top: '22%', left: '8%', size: '31px', delay: 2.5, rot: 115 },
+            
             // Cluster 2: Top Right (2x A1, 2x A2)
-            { id: 4, src: "/asteroid_1.png", top: "10%", right: "10%", size: "55px", delay: 0.8, rot: -80 },
-            { id: 14, src: "/asteroid_1.png", top: "3%", right: "22%", size: "38px", delay: 1.4, rot: 25 },
-            { id: 5, src: "/asteroid_2.png", top: "18%", right: "15%", size: "28px", delay: 1.8, rot: 12 },
-            { id: 10, src: "/asteroid_2.png", top: "5%", right: "30%", size: "34px", delay: 0.9, rot: 55 },
-
+            { id: 4, src: '/asteroid_1.png', top: '10%', right: '10%', size: '55px', delay: 0.8, rot: -80 },
+            { id: 14, src: '/asteroid_1.png', top: '3%', right: '22%', size: '38px', delay: 1.4, rot: 25 },
+            { id: 5, src: '/asteroid_2.png', top: '18%', right: '15%', size: '28px', delay: 1.8, rot: 12 },
+            { id: 10, src: '/asteroid_2.png', top: '5%', right: '30%', size: '34px', delay: 0.9, rot: 55 },
+            
             // Cluster 3: Bottom Left (2x A1, 2x A2)
-            { id: 6, src: "/asteroid_1.png", bottom: "18%", left: "10%", size: "35px", delay: 3.2, rot: 155 },
-            { id: 15, src: "/asteroid_1.png", bottom: "5%", left: "22%", size: "44px", delay: 0.5, rot: -60 },
-            { id: 7, src: "/asteroid_2.png", bottom: "25%", left: "5%", size: "44px", delay: 0.4, rot: -40 },
-            { id: 12, src: "/asteroid_2.png", bottom: "12%", left: "28%", size: "24px", delay: 3.5, rot: 190 },
-
+            { id: 6, src: '/asteroid_1.png', bottom: '18%', left: '10%', size: '35px', delay: 3.2, rot: 155 },
+            { id: 15, src: '/asteroid_1.png', bottom: '5%', left: '22%', size: '44px', delay: 0.5, rot: -60 },
+            { id: 7, src: '/asteroid_2.png', bottom: '25%', left: '5%', size: '44px', delay: 0.4, rot: -40 },
+            { id: 12, src: '/asteroid_2.png', bottom: '12%', left: '28%', size: '24px', delay: 3.5, rot: 190 },
+            
             // Cluster 4: Bottom Right (2x A1, 3x A2)
-            { id: 8, src: "/asteroid_1.png", bottom: "22%", right: "10%", size: "52px", delay: 1.5, rot: 100 },
-            { id: 16, src: "/asteroid_1.png", bottom: "30%", right: "25%", size: "39px", delay: 2.2, rot: 10 },
-            { id: 9, src: "/asteroid_2.png", bottom: "35%", right: "12%", size: "37px", delay: 2.8, rot: -120 },
-            { id: 11, src: "/asteroid_2.png", bottom: "10%", right: "32%", size: "43px", delay: 2.1, rot: -20 },
-            { id: 13, src: "/asteroid_2.png", bottom: "5%", right: "40%", size: "49px", delay: 0.6, rot: -10 },
+            { id: 8, src: '/asteroid_1.png', bottom: '22%', right: '10%', size: '52px', delay: 1.5, rot: 100 },
+            { id: 16, src: '/asteroid_1.png', bottom: '30%', right: '25%', size: '39px', delay: 2.2, rot: 10 },
+            { id: 9, src: '/asteroid_2.png', bottom: '35%', right: '12%', size: '37px', delay: 2.8, rot: -120 },
+            { id: 11, src: '/asteroid_2.png', bottom: '10%', right: '32%', size: '43px', delay: 2.1, rot: -20 },
+            { id: 13, src: '/asteroid_2.png', bottom: '5%', right: '40%', size: '49px', delay: 0.6, rot: -10 }
           ].map((ast) => (
             <motion.img
               key={ast.id}
               src={ast.src}
               alt="Asteroid"
               className="absolute pointer-events-none opacity-60 z-[5]"
-              style={{
-                top: ast.top,
-                left: ast.left,
-                right: ast.right,
-                bottom: ast.bottom,
-                width: ast.size,
+              style={{ 
+                top: ast.top, 
+                left: ast.left, 
+                right: ast.right, 
+                bottom: ast.bottom, 
+                width: ast.size
               }}
-              animate={{
+              animate={{ 
                 y: [0, -12, 0],
-                rotate: [ast.rot - 15, ast.rot + 15, ast.rot - 15],
+                rotate: [ast.rot - 15, ast.rot + 15, ast.rot - 15]
               }}
-              transition={{
-                duration: 6 + (ast.id % 4),
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: ast.delay,
+              transition={{ 
+                duration: 6 + (ast.id % 4), 
+                repeat: Infinity, 
+                ease: "easeInOut", 
+                delay: ast.delay 
               }}
             />
           ))}
 
           {/* Floating Clouds Assembly */}
           {/* Left Cloud: awan_3 - Now fully opaque */}
-          <motion.img
-            src="/awan_3.png"
+          <motion.img 
+            src="/awan_3.png" 
             alt="Cloud Left"
             className="absolute left-[23%] bottom-[27%] h-[103px] md:h-[184px] object-contain opacity-100 z-30 pointer-events-none"
-            animate={{
-              y: [0, -15, 0],
+            animate={{ 
+              y: [0, -15, 0], 
               rotate: [-37, -33, -37],
-              scale: [1, 1.05, 1],
+              scale: [1, 1.05, 1]
             }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
           />
 
           {/* Right Top Cloud: awan_1 - Duplicated awan_2 but in awan_1 position */}
-          <motion.img
-            src="/awan_2.png"
+          <motion.img 
+            src="/awan_2.png" 
             alt="Cloud Right Top"
             className="absolute right-[28%] top-[27%] h-[76px] md:h-[131px] object-contain opacity-100 z-30 pointer-events-none"
-            animate={{
-              y: [0, -12, 0],
+            animate={{ 
+              y: [0, -12, 0], 
               rotate: [1, -3, 1],
-              scale: [1, 1.08, 1],
+              scale: [1, 1.08, 1]
             }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
           />
 
           {/* Right Middle Cloud: awan_2 - 2% lefter */}
-          <motion.img
-            src="/awan_2.png"
+          <motion.img 
+            src="/awan_2.png" 
             alt="Cloud Right Middle"
             className="absolute right-[21%] bottom-[33%] h-[66px] md:h-[121px] object-contain opacity-100 z-30 pointer-events-none"
-            animate={{
-              y: [0, -20, 0],
+            animate={{ 
+              y: [0, -20, 0], 
               rotate: [-1, 1, -1],
-              scale: [1, 1.03, 1],
+              scale: [1, 1.03, 1]
             }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
           />
@@ -1464,22 +1765,33 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Tokyo Night Background - ABSOLUTE BACK */}
         <img src="/bg_tokyo.png" alt="Tokyo Night" className="absolute inset-0 w-full h-full object-cover opacity-50 z-[-2] pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050a14] via-transparent to-[#050a14] z-[-2] pointer-events-none" />
-
+        
         {/* Battle Glows (Anakin vs Obi-Wan Vibe) - BEHIND LOGOS */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          {/* Red Dynamic Glow (Left / Kalceria) */}
-          <motion.div animate={{ opacity: [0.3, 0.5, 0.3] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-10%] left-[-15%] w-[60%] h-[120%] bg-red-600/30 blur-[130px] rounded-full will-change-transform" />
-          {/* Cyan Dynamic Glow (Right / DSL) */}
-          <motion.div animate={{ opacity: [0.3, 0.5, 0.3] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.5 }} className="absolute top-[-10%] right-[-15%] w-[60%] h-[120%] bg-cyan-500/30 blur-[130px] rounded-full will-change-transform" />
+           {/* Red Dynamic Glow (Left / Kalceria) */}
+           <motion.div 
+             animate={{ opacity: [0.3, 0.5, 0.3] }}
+             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+             className="absolute top-[-10%] left-[-15%] w-[60%] h-[120%] bg-red-600/30 blur-[130px] rounded-full will-change-transform"
+           />
+           {/* Cyan Dynamic Glow (Right / DSL) */}
+           <motion.div 
+             animate={{ opacity: [0.3, 0.5, 0.3] }}
+             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.5 }}
+             className="absolute top-[-10%] right-[-15%] w-[60%] h-[120%] bg-cyan-500/30 blur-[130px] rounded-full will-change-transform"
+           />
         </div>
 
         {/* Static Star Wars Backdrop Focal Point */}
-        <div className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl h-full flex items-center justify-center z-[5] pointer-events-none" style={{ opacity: 0.7 }}>
-          <img
-            src="/starwarr.png"
-            alt="Battle of Heroes"
+        <div 
+          className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl h-full flex items-center justify-center z-[5] pointer-events-none"
+          style={{ opacity: 0.7 }}
+        >
+          <img 
+            src="/starwarr.png" 
+            alt="Battle of Heroes" 
             className="w-full h-auto max-h-[85vh] object-contain scale-[1.4]"
-            style={{
+            style={{ 
               filter: "contrast(1.2) brightness(0.9) saturate(1.1) drop-shadow(0 0 80px rgba(0,0,0,0.8))",
             }}
           />
@@ -1489,93 +1801,140 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="absolute inset-0 z-40 pointer-events-none">
           <AuroraParticles />
         </div>
-
+        
         <div className="relative z-10 w-full max-w-6xl px-8 flex flex-col items-center gap-16">
-          {/* Collaboration Header - Shifted 15% Under */}
-          <div className="flex items-center justify-center gap-6 md:gap-10" style={{ transform: "translateY(15%)" }}>
-            {/* Kalceria Logo - Shifted 15% Under */}
-            <motion.img
-              src="/logologin.png"
-              alt="Kalceria"
-              className="h-18 md:h-24 w-auto object-contain -rotate-[12deg] drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform"
-              animate={{ y: [75, 69, 75], x: "20%" }}
-              transition={{
-                y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-                default: { duration: 0.8 },
-              }}
-            />
+           {/* Collaboration Header - Shifted 15% Under */}
+           <div 
+             className="flex items-center justify-center gap-6 md:gap-10"
+             style={{ transform: "translateY(15%)" }}
+           >
+              {/* Kalceria Logo - Shifted 15% Under */}
+              <motion.img 
+                src="/logologin.png" 
+                alt="Kalceria" 
+                className="h-18 md:h-24 w-auto object-contain -rotate-[12deg] drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform"
+                animate={{ y: [75, 69, 75], x: '20%' }}
+                transition={{ 
+                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                  default: { duration: 0.8 }
+                }}
+              />
 
-            {/* The "X" as an SVG Clipped Glass Artifact (Stabilized) */}
-            <div className="relative flex items-center justify-center group z-20">
-              {/* X-Backglow */}
-              <div className="absolute inset-0 bg-white/10 blur-[40px] rounded-full scale-110 opacity-30 pointer-events-none" />
+              {/* The "X" as an SVG Clipped Glass Artifact (Stabilized) */}
+              <div className="relative flex items-center justify-center group z-20">
+                 {/* X-Backglow */}
+                 <div className="absolute inset-0 bg-white/10 blur-[40px] rounded-full scale-110 opacity-30 pointer-events-none" />
 
-              {/* Golden-Red Corona Dynamic Flare */}
-              <motion.div animate={{ scale: [1, 1.1, 1], rotate: [0, 360], opacity: [0.2, 0.4, 0.2] }} transition={{ duration: 15, repeat: Infinity, ease: "linear" }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] md:w-[340px] h-[240px] md:h-[340px] rounded-full blur-[80px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform" />
+                 {/* Golden-Red Corona Dynamic Flare */}
+                 <motion.div 
+                   animate={{ scale: [1, 1.1, 1], rotate: [0, 360], opacity: [0.2, 0.4, 0.2] }}
+                   transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] md:w-[340px] h-[240px] md:h-[340px] rounded-full blur-[80px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform"
+                 />
 
-              <svg width="220" height="220" viewBox="0 0 220 220" className="relative z-10 transform-gpu">
-                <defs>
-                  <clipPath id="collab-x-clip-v3">
-                    <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" style={{ fontFamily: "Arial Black, sans-serif" }}>
-                      X
-                    </text>
-                  </clipPath>
-                </defs>
+                 <svg width="220" height="220" viewBox="0 0 220 220" className="relative z-10 transform-gpu">
+                    <defs>
+                      <clipPath id="collab-x-clip-v3">
+                        <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" style={{ fontFamily: 'Arial Black, sans-serif' }}>X</text>
+                      </clipPath>
+                    </defs>
+                    
+                    <g clipPath="url(#collab-x-clip-v3)">
+                       {/* Glass Fill */}
+                       <rect width="100%" height="100%" fill="rgba(255,255,255,0.18)" />
+                       
+                       {/* Internal Energy Blobs */}
+                       <motion.circle 
+                         animate={{ cx: [30, 190], cy: [30, 190], r: [45, 75, 45] }}
+                         transition={{ duration: 6, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+                         fill="#FF00FF" style={{ filter: 'blur(35px)', opacity: 0.9 }}
+                         className="will-change-[cx,cy]"
+                       />
+                       <motion.circle 
+                         animate={{ cx: [190, 30], cy: [190, 30], r: [75, 45, 75] }}
+                         transition={{ duration: 7, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+                         fill="#FFD700" style={{ filter: 'blur(35px)', opacity: 0.9 }}
+                         className="will-change-[cx,cy]"
+                       />
+                    </g>
+                    
+                    {/* HD Stroke */}
+                    <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" style={{ fontFamily: 'Arial Black, sans-serif' }}>X</text>
+                 </svg>
+              </div>
 
-                <g clipPath="url(#collab-x-clip-v3)">
-                  {/* Glass Fill */}
-                  <rect width="100%" height="100%" fill="rgba(255,255,255,0.18)" />
+              {/* DSL Logo - Shifted 15% Under */}
+              <motion.img 
+                src="/dsl.png" 
+                alt="DSL" 
+                className="h-18 md:h-24 w-auto object-contain rotate-[12deg] drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform"
+                animate={{ y: [80, 86, 80], x: '-20%' }}
+                transition={{ 
+                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+                  default: { duration: 0.8 }
+                }}
+              />
+           </div>
+           
+           <div className="flex flex-col items-center gap-8">
+              <motion.h2 
+                initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
+                whileInView={{ opacity: 1, y: 0, x: '4%', scale: 0.85, filter: "blur(0px)" }}
+                viewport={{ once: false, amount: 0.5 }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white text-center"
+                style={{ 
+                  textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)"
+                }}
+              >
+                JOIN US?
+              </motion.h2>
 
-                  {/* Internal Energy Blobs */}
-                  <motion.circle animate={{ cx: [30, 190], cy: [30, 190], r: [45, 75, 45] }} transition={{ duration: 6, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }} fill="#FF00FF" style={{ filter: "blur(35px)", opacity: 0.9 }} className="will-change-[cx,cy]" />
-                  <motion.circle animate={{ cx: [190, 30], cy: [190, 30], r: [75, 45, 75] }} transition={{ duration: 7, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }} fill="#FFD700" style={{ filter: "blur(35px)", opacity: 0.9 }} className="will-change-[cx,cy]" />
-                </g>
+              <motion.img 
+                src="/wa_logo.png" 
+                alt="WhatsApp" 
+                className="h-16 md:h-28 w-auto object-contain drop-shadow-[0_0_40px_rgba(37,211,102,0.5)] z-20"
+                animate={{ y: [0, -6, 0], x: '22%' }}
+                transition={{ 
+                  y: { duration: 5, repeat: Infinity, ease: "easeInOut" },
+                  default: { duration: 0.8 }
+                }}
+              />
 
-                {/* HD Stroke */}
-                <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" style={{ fontFamily: "Arial Black, sans-serif" }}>
-                  X
-                </text>
-              </svg>
-            </div>
-
-            {/* DSL Logo - Shifted 15% Under */}
-            <motion.img
-              src="/dsl.png"
-              alt="DSL"
-              className="h-18 md:h-24 w-auto object-contain rotate-[12deg] drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform"
-              animate={{ y: [80, 86, 80], x: "-20%" }}
-              transition={{
-                y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-                default: { duration: 0.8 },
-              }}
-            />
-          </div>
-
-          <div className="flex flex-col items-center gap-8">
-            <motion.h2
-              initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
-              whileInView={{ opacity: 1, y: 0, x: "4%", scale: 0.85, filter: "blur(0px)" }}
-              viewport={{ once: false, amount: 0.5 }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white text-center"
-              style={{
-                textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)",
-              }}
-            >
-              JOIN US?
-            </motion.h2>
-
-            <motion.img
-              src="/wa_logo.png"
-              alt="WhatsApp"
-              className="h-16 md:h-28 w-auto object-contain drop-shadow-[0_0_40px_rgba(37,211,102,0.5)] z-20"
-              animate={{ y: [0, -6, 0], x: "22%" }}
-              transition={{
-                y: { duration: 5, repeat: Infinity, ease: "easeInOut" },
-                default: { duration: 0.8 },
-              }}
-            />
-          </div>
+              <Link href="/journey">
+                <motion.button
+                  whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: "0 0 40px rgba(255,255,255,0.3), inset 0 0 20px rgba(255,255,255,0.2)",
+                    backgroundColor: "rgba(255,255,255,0.15)"
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  className="relative mt-4 ml-6 md:ml-10 z-30 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white font-black uppercase tracking-tighter text-xl md:text-3xl px-8 py-4 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-colors duration-300"
+                >
+                  {/* Peach Blob */}
+                  <motion.div 
+                    animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute -top-8 -left-4 w-24 h-24 bg-[#FFB07C] rounded-full blur-[24px] opacity-70 z-0 pointer-events-none"
+                  />
+                  {/* Green Blob */}
+                  <motion.div 
+                    animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    className="absolute -bottom-8 -right-4 w-24 h-24 bg-green-400 rounded-full blur-[24px] opacity-60 z-0 pointer-events-none"
+                  />
+                  
+                  <span 
+                    className="relative z-10 whitespace-nowrap"
+                    style={{
+                      textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
+                    }}
+                  >
+                    SEE THE JOURNEY
+                  </span>
+                </motion.button>
+              </Link>
+           </div>
         </div>
       </section>
 
@@ -1583,25 +1942,34 @@ export default function LandingPage({ onNavigateAuth }) {
       <section className="relative w-full aspect-square bg-[#02040a] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
         {/* Background Atmosphere - Simplified Astral Divine (Lightweight) */}
         <div className="absolute inset-0 z-0 pointer-events-none">
-          {/* Cyan Core Glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] rounded-full blur-[160px] bg-cyan-950/40" />
-          {/* Magenta Bloom */}
-          <div className="absolute -bottom-1/4 -right-1/4 w-full h-full rounded-full blur-[180px] bg-purple-950/30" />
-          {/* Blue Sweep */}
-          <div className="absolute -top-1/4 -left-1/4 w-full h-full rounded-full blur-[180px] bg-blue-950/20" />
+           {/* Cyan Core Glow */}
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] rounded-full blur-[160px] bg-cyan-950/40" />
+           {/* Magenta Bloom */}
+           <div className="absolute -bottom-1/4 -right-1/4 w-full h-full rounded-full blur-[180px] bg-purple-950/30" />
+           {/* Blue Sweep */}
+           <div className="absolute -top-1/4 -left-1/4 w-full h-full rounded-full blur-[180px] bg-blue-950/20" />
         </div>
 
         {/* Dynamic Comet Effect - Replacing Portal */}
         <CometEffect />
-
+ 
         {/* Community Quotes - Floating Text */}
         <CommunityQuotes />
-
+ 
         {/* Night Background at Bottom */}
-        <img src="/night.png" alt="Night Sky" className="absolute bottom-0 left-0 w-full h-auto object-cover z-[10] opacity-90" style={{ maskImage: "linear-gradient(to top, black 80%, transparent)" }} />
-
+        <img 
+          src="/night.png" 
+          alt="Night Sky" 
+          className="absolute bottom-0 left-0 w-full h-auto object-cover z-[10] opacity-90"
+          style={{ maskImage: "linear-gradient(to top, black 80%, transparent)" }}
+        />
+        
         {/* Astronaut - Semi-transparent, Massive and Lowered, Behind Night */}
-        <img src="/astronaut.png" alt="Astronaut" className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[105%] h-auto object-contain z-[5] opacity-40 mix-blend-screen pointer-events-none" />
+        <img 
+          src="/astronaut.png" 
+          alt="Astronaut" 
+          className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[105%] h-auto object-contain z-[5] opacity-40 mix-blend-screen pointer-events-none" 
+        />
 
         {/* Micro Particles - Layered Higher than Night */}
         <div className="absolute inset-0 z-[20]">
@@ -1612,40 +1980,68 @@ export default function LandingPage({ onNavigateAuth }) {
         <FloatingAssets />
 
         <div className="relative z-30 flex flex-col items-center text-center gap-12">
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}>
-            <h2
-              className="text-4xl md:text-7xl font-black uppercase tracking-tighter text-white"
-              style={{
-                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
-                filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))",
-              }}
-            >
-              Make Us Better !
-            </h2>
-          </motion.div>
+           <motion.div
+             initial={{ opacity: 0, y: 30 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true }}
+             transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+           >
+             <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter text-white"
+                 style={{ 
+                   textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
+                   filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
+                 }}>
+               Make Us Better !
+             </h2>
+           </motion.div>
 
-          {/* The Box - Clean Rounded Rectangle, Hover Only Affects Rectangle */}
-          <motion.button onClick={() => setShowIdeaModal(true)} whileTap={{ scale: 0.95 }} className="relative group cursor-pointer z-40 focus:outline-none">
-            <div className="relative w-48 md:w-[240px] py-4 md:py-6 bg-white/8 backdrop-blur-3xl border border-white/15 rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] group-hover:bg-white/12 group-hover:border-white/25 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-500 flex items-center justify-center">
-              {/* Glassmorphism Blobs - always visible, subtle */}
-              <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-20 group-hover:opacity-30 transition-opacity duration-500">
-                <motion.div animate={{ x: [-10, 30, -10], y: [-10, 10, -10], scale: [1, 1.2, 1] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="absolute -top-4 -left-4 w-24 h-24 bg-[#00FFFF] rounded-full blur-[30px]" />
-                <motion.div animate={{ x: [10, -30, 10], y: [10, -10, 10], scale: [1.2, 1, 1.2] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute -bottom-4 -right-4 w-28 h-28 bg-[#D946EF] rounded-full blur-[40px]" />
+           {/* The Box - Clean Rounded Rectangle, Hover Only Affects Rectangle */}
+           <motion.button
+             onClick={() => setShowIdeaModal(true)}
+             whileTap={{ scale: 0.95 }}
+             className="relative group cursor-pointer z-40 focus:outline-none"
+           >
+              <div className="relative w-48 md:w-[240px] py-4 md:py-6 bg-white/8 backdrop-blur-3xl border border-white/15 rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)] group-hover:bg-white/12 group-hover:border-white/25 group-hover:shadow-[0_12px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-500 flex items-center justify-center">
+                {/* Glassmorphism Blobs - always visible, subtle */}
+                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-20 group-hover:opacity-30 transition-opacity duration-500">
+                   <motion.div 
+                     animate={{ x: [-10, 30, -10], y: [-10, 10, -10], scale: [1, 1.2, 1] }}
+                     transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                     className="absolute -top-4 -left-4 w-24 h-24 bg-[#00FFFF] rounded-full blur-[30px]" 
+                   />
+                   <motion.div 
+                     animate={{ x: [10, -30, 10], y: [10, -10, 10], scale: [1.2, 1, 1.2] }}
+                     transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                     className="absolute -bottom-4 -right-4 w-28 h-28 bg-[#D946EF] rounded-full blur-[40px]" 
+                   />
+                </div>
+                
+                <div className="relative z-10 flex flex-col items-center">
+                  <span className="font-sans font-black text-white uppercase tracking-widest text-lg md:text-xl text-center px-4">
+                    Leave it here
+                  </span>
+                </div>
               </div>
-
-              <div className="relative z-10 flex flex-col items-center">
-                <span className="font-sans font-black text-white uppercase tracking-widest text-lg md:text-xl text-center px-4">Leave it here</span>
-              </div>
-            </div>
-          </motion.button>
-        </div>
-      </section>
+            </motion.button>
+          </div>
+          <DungeonGate />
+        </section>
 
       <AnimatePresence>
-        {showServiceModal && <ServiceRequestModal onClose={() => setShowServiceModal(false)} />}
-        {showLogoutConfirm && <LogoutConfirmModal onConfirm={handleLogout} onCancel={() => setShowLogoutConfirm(false)} />}
-        {showIdeaModal && <IdeaCommentModal onClose={() => setShowIdeaModal(false)} />}
+        {showServiceModal && (
+          <ServiceRequestModal onClose={() => setShowServiceModal(false)} />
+        )}
+        {showLogoutConfirm && (
+          <LogoutConfirmModal 
+            onConfirm={handleLogout} 
+            onCancel={() => setShowLogoutConfirm(false)} 
+          />
+        )}
+        {showIdeaModal && (
+          <IdeaCommentModal onClose={() => setShowIdeaModal(false)} />
+        )}
       </AnimatePresence>
+
     </motion.div>
   );
 }
@@ -1653,23 +2049,24 @@ export default function LandingPage({ onNavigateAuth }) {
 // ─── Sub-Components ────────────────────────────────────────────────────────
 function LineParticles() {
   const colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"];
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 25 }).map(() => ({
-        x: Math.random() * 20,
-        y: Math.random() * 100,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        size: Math.random() * 5 + 2,
-        duration: 1.5 + Math.random() * 2.5,
-        delay: Math.random() * 5,
-        xDrift: 20 + Math.random() * 60,
-        yDrift: (Math.random() - 0.5) * 120,
-      })),
-    [],
-  );
+  const particles = useMemo(() => Array.from({ length: 25 }).map(() => ({
+    x: Math.random() * 20,
+    y: Math.random() * 100,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    size: Math.random() * 5 + 2,
+    duration: 1.5 + Math.random() * 2.5,
+    delay: Math.random() * 5,
+    xDrift: 20 + Math.random() * 60,
+    yDrift: (Math.random() - 0.5) * 120
+  })), []);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="absolute inset-0 pointer-events-none overflow-visible">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="absolute inset-0 pointer-events-none overflow-visible"
+    >
       {particles.map((p, i) => (
         <motion.div
           key={i}
@@ -1680,19 +2077,19 @@ function LineParticles() {
             width: p.size,
             height: p.size,
             backgroundColor: p.color,
-            boxShadow: `0 0 12px ${p.color}`,
+            boxShadow: `0 0 12px ${p.color}`
           }}
           animate={{
             x: [0, p.xDrift],
             y: [0, p.yDrift],
             opacity: [0, 1, 0],
-            scale: [0.5, 1.5, 0.5],
+            scale: [0.5, 1.5, 0.5]
           }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            ease: "circOut",
-            delay: p.delay,
+          transition={{ 
+            duration: p.duration, 
+            repeat: Infinity, 
+            ease: "circOut", 
+            delay: p.delay 
           }}
         />
       ))}
@@ -1717,7 +2114,7 @@ function LogoutConfirmModal({ onConfirm, onCancel }) {
     } else {
       // Normal toggling cats every 1s
       interval = setInterval(() => {
-        setCatFrame((prev) => (prev === 1 ? 2 : 1));
+        setCatFrame(prev => (prev === 1 ? 2 : 1));
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -1730,36 +2127,66 @@ function LogoutConfirmModal({ onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
       {/* Background Overlay */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={!isLoggingOut ? onCancel : undefined} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={!isLoggingOut ? onCancel : undefined}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      />
 
       <AnimatePresence mode="wait">
         {!isLoggingOut ? (
-          <motion.div key="confirm-box" initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }} className="relative w-full max-w-[450px] rounded-[30px] overflow-visible border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.6)]">
+          <motion.div
+            key="confirm-box"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+            className="relative w-full max-w-[450px] rounded-[30px] overflow-visible border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.6)]"
+          >
             {/* Cat Mascot Area */}
             <div className="absolute bottom-[100%] left-1/2 -translate-x-[55%] w-32 h-32 z-50 pointer-events-none">
-              <motion.div
+              <motion.div 
                 initial={{ opacity: 0 }}
-                animate={{
+                animate={{ 
                   opacity: [0, 1, 0.5, 1], // Entry then start pulse
-                  boxShadow: ["0 0 15px #fff, 0 0 30px #D946EF, 0 0 45px #FACC15", "0 0 25px #fff, 0 0 50px #D946EF, 0 0 75px #FACC15", "0 0 15px #fff, 0 0 30px #D946EF, 0 0 45px #FACC15"],
+                  boxShadow: [
+                    "0 0 15px #fff, 0 0 30px #D946EF, 0 0 45px #FACC15",
+                    "0 0 25px #fff, 0 0 50px #D946EF, 0 0 75px #FACC15",
+                    "0 0 15px #fff, 0 0 30px #D946EF, 0 0 45px #FACC15"
+                  ]
                 }}
-                transition={{
+                transition={{ 
                   opacity: { duration: 0.8, times: [0, 0.2, 0.6, 1], delay: 0.2 },
-                  boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
+                  boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
                 }}
-                className="absolute left-[1%] top-[0%] bottom-0 w-[10px] bg-white z-30"
+                className="absolute left-[1%] top-[0%] bottom-0 w-[10px] bg-white z-30" 
               >
                 <LineParticles />
               </motion.div>
-
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }} className="w-full h-full">
-                <img src={`/kucing${catFrame}.png`} alt="Cat" className="w-full h-full object-contain object-bottom drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)] z-10" />
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                className="w-full h-full"
+              >
+                <img
+                  src={`/kucing${catFrame}.png`}
+                  alt="Cat"
+                  className="w-full h-full object-contain object-bottom drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)] z-10"
+                />
               </motion.div>
             </div>
 
             {/* Modal Card Content */}
             <div className="relative bg-[#0c1528]/90 backdrop-blur-2xl rounded-[30px] p-10 flex flex-col items-center text-center">
-              <motion.div animate={{ x: [-20, 20], opacity: [0.1, 0.2] }} transition={{ duration: 8, repeat: Infinity, repeatType: "mirror" }} className="absolute -top-20 -left-20 w-64 h-64 bg-red-600 rounded-full blur-[80px] pointer-events-none" />
+              <motion.div
+                animate={{ x: [-20, 20], opacity: [0.1, 0.2] }}
+                transition={{ duration: 8, repeat: Infinity, repeatType: "mirror" }}
+                className="absolute -top-20 -left-20 w-64 h-64 bg-red-600 rounded-full blur-[80px] pointer-events-none"
+              />
               <h3 className="relative z-10 font-sans text-2xl font-black text-white uppercase tracking-tight mt-4 mb-12">
                 You sure want to <span className="text-red-500">Log -Out?</span>
               </h3>
@@ -1776,15 +2203,30 @@ function LogoutConfirmModal({ onConfirm, onCancel }) {
             </div>
           </motion.div>
         ) : (
-          <motion.div key="logout-loading" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center z-[1000]">
+          <motion.div
+            key="logout-loading"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center justify-center z-[1000]"
+          >
             <div className="relative w-24 h-24 mb-6">
               <div className="absolute inset-0 flex items-center justify-center">
                 <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeWidth="4" strokeDasharray="70 200" strokeLinecap="round" className="opacity-90 shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+                  <circle 
+                    cx="50" cy="50" r="45" 
+                    fill="none" 
+                    stroke="white" 
+                    strokeWidth="4" 
+                    strokeDasharray="70 200" 
+                    strokeLinecap="round"
+                    className="opacity-90 shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                  />
                 </svg>
               </div>
             </div>
-            <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg opacity-80">LOGGING OUT</p>
+            <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg opacity-80">
+              LOGGING OUT
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1804,13 +2246,13 @@ function CometEffect() {
       const startY = Math.random() * 30;
       const endX = 20 + Math.random() * 60;
       const endY = 110;
+      
+      const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
 
-      const angle = (Math.atan2(endY - startY, endX - startX) * 180) / Math.PI;
-
-      setComets((prev) => [...prev, { id, startX, startY, endX, endY, angle }]);
-
+      setComets(prev => [...prev, { id, startX, startY, endX, endY, angle }]);
+      
       setTimeout(() => {
-        setComets((prev) => prev.filter((c) => c.id !== id));
+        setComets(prev => prev.filter(c => c.id !== id));
       }, 1000);
 
       setTimeout(spawnComet, 1500 + Math.random() * 1000);
@@ -1823,8 +2265,18 @@ function CometEffect() {
     <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden">
       <AnimatePresence>
         {comets.map((c) => (
-          <motion.div key={c.id} initial={{ left: `${c.startX}%`, top: `${c.startY}%`, opacity: 0 }} animate={{ left: `${c.endX}%`, top: `${c.endY}%`, opacity: [0, 1, 0] }} exit={{ opacity: 0 }} transition={{ duration: 0.7, ease: "linear" }} className="absolute">
-            <div className="w-32 md:w-64 h-[1px] md:h-[2px] bg-gradient-to-r from-transparent via-cyan-300 to-white blur-[0.5px]" style={{ transform: `rotate(${c.angle}deg)`, transformOrigin: "left center" }} />
+          <motion.div
+            key={c.id}
+            initial={{ left: `${c.startX}%`, top: `${c.startY}%`, opacity: 0 }}
+            animate={{ left: `${c.endX}%`, top: `${c.endY}%`, opacity: [0, 1, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: "linear" }}
+            className="absolute"
+          >
+            <div 
+              className="w-32 md:w-64 h-[1px] md:h-[2px] bg-gradient-to-r from-transparent via-cyan-300 to-white blur-[0.5px]"
+              style={{ transform: `rotate(${c.angle}deg)`, transformOrigin: "left center" }}
+            />
           </motion.div>
         ))}
       </AnimatePresence>
@@ -1837,16 +2289,16 @@ function FloatingAssets() {
   const assets = useMemo(() => {
     const assetDefinitions = [
       // ccar_1 & ccar_2 shifted more left
-      { src: "/ccar_1.png", x: 5, y: 18, w: "w-32 md:w-56", rot: -35, dX: 60, dY: 45, rS: 55 },
-      { src: "/ccar_2.png", x: 8, y: 62, w: "w-24 md:w-36", rot: 45, dX: -70, dY: -65, rS: -60 },
-      { src: "/ccar_3.png", x: 85, y: 18, w: "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
-      { src: "/ccar_4.png", x: 82, y: 62, w: "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
+      { src: '/ccar_1.png', x: 5, y: 18, w: "w-32 md:w-56", rot: -35, dX: 60, dY: 45, rS: 55 },
+      { src: '/ccar_2.png', x: 8, y: 62, w: "w-24 md:w-36", rot: 45, dX: -70, dY: -65, rS: -60 },
+      { src: '/ccar_3.png', x: 85, y: 18, w: "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
+      { src: '/ccar_4.png', x: 82, y: 62, w: "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
       // stikermobil_3 — lower-middle left
-      { src: "/stikermobil_3.png", x: 28.5, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
+      { src: '/stikermobil_3.png', x: 28.5, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
       // stikermobil_1 — beside stikermobil_3, shifted right, mirrored rotation
-      { src: "/stikermobil_1.png", x: 65, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
+      { src: '/stikermobil_1.png', x: 65, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
     ];
-
+    
     return assetDefinitions.map((def, i) => ({
       src: def.src,
       id: i,
@@ -1854,7 +2306,7 @@ function FloatingAssets() {
       y: def.y,
       widthClass: def.w,
       rotate: def.rot,
-      duration: 25 + i * 3,
+      duration: 25 + (i * 3),
       delay: i * 2,
       xDrift: def.dX,
       yDrift: def.dY,
@@ -1894,32 +2346,33 @@ function FloatingAssets() {
 
 // ─── Community Quotes ──────────────────────────────────────────────────
 function CommunityQuotes() {
-  const quotes = ["Kak mau photoo!", "Woi Wahib mana woi!", "Kak mau colabbb", "Coki ganteng, no gay tho", "Otniel jelek wleee", "Aku mau Kalceria menjadi....", "Tolong diet lagi ya mas", "Kak main UMINGLE yuk!", "Cok, lagi dimana, sama siapa?", "Keren bangetttt!!", "GG, Speechless"];
+  const quotes = [
+    "Kak mau photoo!", "Woi Wahib mana woi!", "Kak mau colabbb", 
+    "Coki ganteng, no gay tho", "Otniel jelek wleee", "Aku mau Kalceria menjadi....",
+    "Tolong diet lagi ya mas", "Kak main UMINGLE yuk!", "Cok, lagi dimana, sama siapa?",
+    "Keren bangetttt!!", "GG, Speechless"
+  ];
 
   // Two bands: above heading (25-40% Y) and below button (68-80% Y)
   // Horizontal constrained to 32-68% to stay clear of corner cars
-  const floatingQuotes = useMemo(
-    () =>
-      quotes.map((text, i) => {
-        const inUpperBand = i % 2 === 0;
-        return {
-          id: i,
-          text,
-          left: `${32 + Math.random() * 36}%`,
-          top: inUpperBand ? `${25 + Math.random() * 15}%` : `${68 + Math.random() * 12}%`,
-          delay: i * 3.5 + Math.random() * 2,
-          duration: 8 + Math.random() * 8,
-          xDrift: (Math.random() - 0.5) * 40, // small drift to stay in zone
-          yDrift: (Math.random() - 0.5) * 30,
-          rotate: (Math.random() - 0.5) * 20,
-          fontSize: Math.random() * 8 + 13,
-          bold: Math.random() > 0.5,
-          italic: Math.random() > 0.4,
-          under: Math.random() > 0.7,
-        };
-      }),
-    [],
-  );
+  const floatingQuotes = useMemo(() => quotes.map((text, i) => {
+    const inUpperBand = i % 2 === 0;
+    return {
+      id: i,
+      text,
+      left: `${32 + Math.random() * 36}%`,
+      top: inUpperBand ? `${25 + Math.random() * 15}%` : `${68 + Math.random() * 12}%`,
+      delay: i * 3.5 + Math.random() * 2,
+      duration: 8 + Math.random() * 8,
+      xDrift: (Math.random() - 0.5) * 40,  // small drift to stay in zone
+      yDrift: (Math.random() - 0.5) * 30,
+      rotate: (Math.random() - 0.5) * 20,
+      fontSize: Math.random() * 8 + 13,
+      bold: Math.random() > 0.5,
+      italic: Math.random() > 0.4,
+      under: Math.random() > 0.7,
+    };
+  }), []);
 
   return (
     <div className="absolute inset-0 z-[14] pointer-events-none overflow-hidden select-none">
@@ -1927,9 +2380,9 @@ function CommunityQuotes() {
         <motion.div
           key={q.id}
           className={`absolute font-sans text-white whitespace-nowrap drop-shadow-lg
-            ${q.bold ? "font-black" : "font-medium"} 
-            ${q.italic ? "italic" : ""} 
-            ${q.under ? "underline underline-offset-4 decoration-white" : ""}`}
+            ${q.bold ? 'font-black' : 'font-medium'} 
+            ${q.italic ? 'italic' : ''} 
+            ${q.under ? 'underline underline-offset-4 decoration-white' : ''}`}
           style={{
             left: q.left,
             top: q.top,
@@ -1958,29 +2411,25 @@ function CommunityQuotes() {
 
 // ─── Gemini Spark Particles (Rounded Blue/Golden/Magenta Micro-Particles) ────
 function GeminiSparkParticles() {
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 60 }).map((_, i) => {
-        const r = Math.random();
-        let color = "#60A5FA";
-        if (r > 0.8) color = "#FBBF24";
-        else if (r > 0.6) color = "#D946EF";
-        else if (r > 0.3) color = "#38BDF8";
+  const particles = useMemo(() => Array.from({ length: 60 }).map((_, i) => {
+    const r = Math.random();
+    let color = '#60A5FA'; 
+    if (r > 0.8) color = '#FBBF24';
+    else if (r > 0.6) color = '#D946EF';
+    else if (r > 0.3) color = '#38BDF8';
 
-        return {
-          id: i,
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-          size: Math.random() * 3 + 1,
-          color,
-          delay: Math.random() * 5,
-          duration: 3 + Math.random() * 5,
-          xDrift: (Math.random() - 0.5) * 60,
-          yDrift: (Math.random() - 0.5) * 60,
-        };
-      }),
-    [],
-  );
+    return {
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      size: Math.random() * 3 + 1, 
+      color,
+      delay: Math.random() * 5,
+      duration: 3 + Math.random() * 5,
+      xDrift: (Math.random() - 0.5) * 60,
+      yDrift: (Math.random() - 0.5) * 60,
+    };
+  }), []);
 
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
@@ -2017,14 +2466,14 @@ function GeminiSparkParticles() {
 // ─── Idea / Advice Comment Modal ─────────────────────────────────────────────
 function IdeaCommentModal({ onClose }) {
   const [step, setStep] = useState(0); // 0=Choice, 1=Identity, 2=Category, 3=Content, 4=done
-  const [mainType, setMainType] = useState(null);
+  const [mainType, setMainType] = useState(null); 
   const [identity, setIdentity] = useState("Anonymous");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [userFound, setUserFound] = useState(false);
   const [error, setError] = useState("");
-  const [ideaType, setIdeaType] = useState(null);
+  const [ideaType, setIdeaType] = useState(null); 
   const [adviceText, setAdviceText] = useState("");
   const [successText, setSuccessText] = useState("");
   const [showFinalBuffer, setShowFinalBuffer] = useState(false);
@@ -2077,8 +2526,8 @@ function IdeaCommentModal({ onClose }) {
       // Need to find the email first since login uses email
       const checkRes = await api.get(`/auth/check-username/${username}`);
       const email = checkRes.data.email;
-
-      const loginRes = await api.post("/auth/login", { email, password });
+      
+      const loginRes = await api.post('/auth/login', { email, password });
       if (loginRes.data.token) {
         localStorage.setItem("token", loginRes.data.token);
         setStep(2);
@@ -2093,12 +2542,12 @@ function IdeaCommentModal({ onClose }) {
   const handleSubmit = async () => {
     setError("");
     try {
-      await api.post("/comments", {
+      await api.post('/comments', {
         content: adviceText,
         category: ideaType,
         type: mainType.toUpperCase(), // ADVICE or IDEA
-        username: identity === "User" ? username : identity,
-        identity,
+        username: identity === 'User' ? username : identity,
+        identity
       });
       setStep(4); // Success blur
     } catch (err) {
@@ -2112,22 +2561,53 @@ function IdeaCommentModal({ onClose }) {
   // Blobs shared across steps
   const Blobs = () => (
     <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none rounded-3xl">
-      <motion.div animate={{ x: [-20, 40, -20], y: [-20, 20, -20], scale: [1, 1.3, 1] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute -top-16 -left-16 w-64 h-64 bg-[#00FFFF] rounded-full blur-[80px] opacity-25" />
-      <motion.div animate={{ x: [20, -50, 20], y: [20, -20, 20], scale: [1.2, 1, 1.2] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1.5 }} className="absolute top-1/2 -right-16 w-72 h-72 bg-[#D946EF] rounded-full blur-[90px] opacity-20" />
-      <motion.div animate={{ x: [0, 30, 0], y: [30, -30, 30], scale: [1, 1.15, 1] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 0.5 }} className="absolute -bottom-16 left-1/4 w-56 h-56 bg-[#06B6D4] rounded-full blur-[70px] opacity-20" />
+      <motion.div
+        animate={{ x: [-20, 40, -20], y: [-20, 20, -20], scale: [1, 1.3, 1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -top-16 -left-16 w-64 h-64 bg-[#00FFFF] rounded-full blur-[80px] opacity-25"
+      />
+      <motion.div
+        animate={{ x: [20, -50, 20], y: [20, -20, 20], scale: [1.2, 1, 1.2] }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
+        className="absolute top-1/2 -right-16 w-72 h-72 bg-[#D946EF] rounded-full blur-[90px] opacity-20"
+      />
+      <motion.div
+        animate={{ x: [0, 30, 0], y: [30, -30, 30], scale: [1, 1.15, 1] }}
+        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+        className="absolute -bottom-16 left-1/4 w-56 h-56 bg-[#06B6D4] rounded-full blur-[70px] opacity-20"
+      />
     </div>
   );
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={step < 4 ? onClose : undefined} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={step < 4 ? onClose : undefined}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+      />
 
       {/* Full-screen processing blur overlay */}
       <AnimatePresence>
         {step === 4 && (
-          <motion.div key="blur-overlay" initial={{ opacity: 0, backdropFilter: "blur(0px)" }} animate={{ opacity: 1, backdropFilter: "blur(20px)" }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }} className="absolute inset-0 z-[1000] bg-black/60 flex items-center justify-center" style={{ backdropFilter: "blur(20px)" }}>
-            <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="flex flex-col items-center gap-8 text-center px-8">
+          <motion.div
+            key="blur-overlay"
+            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            animate={{ opacity: 1, backdropFilter: "blur(20px)" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 z-[1000] bg-black/60 flex items-center justify-center"
+            style={{ backdropFilter: "blur(20px)" }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col items-center gap-8 text-center px-8"
+            >
               <div className="relative">
                 <motion.div
                   animate={{ scale: [1, 1.02, 1] }}
@@ -2152,7 +2632,14 @@ function IdeaCommentModal({ onClose }) {
       {/* Modal Card */}
       <AnimatePresence mode="wait">
         {step < 4 && (
-          <motion.div key={`step-${step}`} initial={{ opacity: 0, scale: 0.92, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="relative w-full max-w-[480px] z-[1001]">
+          <motion.div
+            key={`step-${step}`}
+            initial={{ opacity: 0, scale: 0.92, y: 24 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="relative w-full max-w-[480px] z-[1001]"
+          >
             <div className="relative bg-[#060d1f]/90 backdrop-blur-3xl border border-cyan-500/20 rounded-3xl p-8 md:p-10 overflow-hidden shadow-[0_0_60px_rgba(0,255,255,0.1),0_0_120px_rgba(217,70,239,0.08),0_30px_80px_rgba(0,0,0,0.6)]">
               <Blobs />
 
@@ -2160,7 +2647,10 @@ function IdeaCommentModal({ onClose }) {
               <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent rounded-t-3xl" />
 
               {/* Close button */}
-              <button onClick={onClose} className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white transition-all text-sm">
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white transition-all text-sm"
+              >
                 ✕
               </button>
 
@@ -2168,29 +2658,65 @@ function IdeaCommentModal({ onClose }) {
               <div className="relative z-10 flex items-center gap-2 mb-10 justify-center">
                 {[0, 1, 2, 3].map((i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black font-mono transition-all duration-500 border ${step > i ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" : step === i ? "bg-white/10 border-white/40 text-white" : "bg-white/5 backdrop-blur-md border-white/5 text-white/20"}`}>{i + 1}</div>
-                    {i < 3 && <div className={`h-[1px] w-6 md:w-10 rounded-full transition-all duration-700 ${step > i ? "bg-white" : "bg-white/5 backdrop-blur-sm"}`} />}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black font-mono transition-all duration-500 border ${
+                      step > i 
+                        ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
+                        : step === i 
+                          ? "bg-white/10 border-white/40 text-white" 
+                          : "bg-white/5 backdrop-blur-md border-white/5 text-white/20"
+                    }`}>
+                      {i + 1}
+                    </div>
+                    {i < 3 && (
+                      <div className={`h-[1px] w-6 md:w-10 rounded-full transition-all duration-700 ${
+                        step > i ? "bg-white" : "bg-white/5 backdrop-blur-sm"
+                      }`} />
+                    )}
                   </div>
                 ))}
               </div>
 
               {/* ── Step 0: Advice or Idea ── */}
               {step === 0 && (
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="relative z-10 flex flex-col gap-6">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 flex flex-col gap-6"
+                >
                   <div>
-                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">What's The Type?</h3>
+                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                      What's The Type?
+                    </h3>
                     <p className="text-white/40 text-sm font-sans mt-1">What would you like to share?</p>
                   </div>
 
                   <div className="flex flex-col gap-3">
                     {["Advice", "Idea"].map((opt) => (
-                      <button key={opt} onClick={() => setMainType(opt)} className={`w-full py-4 px-5 rounded-xl border text-left font-sans font-black text-sm uppercase tracking-widest transition-all duration-300 ${mainType === opt ? "bg-white/15 border-white/30 text-white" : "bg-white/5 border-white/10 text-white/50 hover:bg-white/8 hover:border-white/20 hover:text-white/70"}`}>
+                      <button
+                        key={opt}
+                        onClick={() => setMainType(opt)}
+                        className={`w-full py-4 px-5 rounded-xl border text-left font-sans font-black text-sm uppercase tracking-widest transition-all duration-300 ${
+                          mainType === opt
+                            ? "bg-white/15 border-white/30 text-white"
+                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/8 hover:border-white/20 hover:text-white/70"
+                        }`}
+                      >
                         {opt}
                       </button>
                     ))}
                   </div>
 
-                  <motion.button whileHover={mainType ? { scale: 1.02 } : {}} whileTap={mainType ? { scale: 0.98 } : {}} onClick={() => mainType && setStep(1)} disabled={!mainType} className={`w-full py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${mainType ? "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30" : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"}`}>
+                  <motion.button
+                    whileHover={mainType ? { scale: 1.02 } : {}}
+                    whileTap={mainType ? { scale: 0.98 } : {}}
+                    onClick={() => mainType && setStep(1)}
+                    disabled={!mainType}
+                    className={`w-full py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${
+                      mainType 
+                        ? "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"
+                        : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
+                    }`}
+                  >
                     Continue
                   </motion.button>
                 </motion.div>
@@ -2198,23 +2724,42 @@ function IdeaCommentModal({ onClose }) {
 
               {/* ── Step 1: Identity ── */}
               {step === 1 && (
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="relative z-10 flex flex-col gap-6">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 flex flex-col gap-6"
+                >
                   <div>
-                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Share As...</h3>
+                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                      Share As...
+                    </h3>
                     <p className="text-white/40 text-sm font-sans mt-1">Who are you sharing as?</p>
                   </div>
 
                   <div className="flex flex-col gap-3">
                     {["Anonymous", "User"].map((opt) => (
-                      <button key={opt} onClick={() => setIdentity(opt)} className={`w-full py-3.5 px-5 rounded-xl border text-left font-sans font-bold text-sm uppercase tracking-wider transition-all duration-300 ${identity === opt ? "bg-white/15 border-white/30 text-white" : "bg-white/5 border-white/10 text-white/50 hover:bg-white/8 hover:border-white/20 hover:text-white/70"}`}>
+                      <button
+                        key={opt}
+                        onClick={() => setIdentity(opt)}
+                        className={`w-full py-3.5 px-5 rounded-xl border text-left font-sans font-bold text-sm uppercase tracking-wider transition-all duration-300 ${
+                          identity === opt
+                            ? "bg-white/15 border-white/30 text-white"
+                            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/8 hover:border-white/20 hover:text-white/70"
+                        }`}
+                      >
                         {opt}
                       </button>
                     ))}
                   </div>
 
                   <AnimatePresence>
-                    {identity === "User" && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden flex flex-col gap-3">
+                    {identity === 'User' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden flex flex-col gap-3"
+                      >
                         <div className="relative">
                           <input
                             type="text"
@@ -2225,14 +2770,24 @@ function IdeaCommentModal({ onClose }) {
                               setError("");
                               setUserFound(false);
                             }}
-                            className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white font-sans text-sm focus:outline-none transition-all ${error ? "border-red-500/50 focus:border-red-500" : "border-white/20 focus:border-white/40"}`}
+                            className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white font-sans text-sm focus:outline-none transition-all ${
+                              error ? "border-red-500/50 focus:border-red-500" : "border-white/20 focus:border-white/40"
+                            }`}
                           />
-                          {error && <p className="text-[10px] text-red-500 font-sans mt-1 ml-1">{error}</p>}
+                          {error && (
+                            <p className="text-[10px] text-red-500 font-sans mt-1 ml-1">{error}</p>
+                          )}
                         </div>
 
                         {userFound && !localStorage.getItem("token") && (
                           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-                            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white font-sans text-sm focus:outline-none focus:border-white/40 transition-all" />
+                            <input
+                              type="password"
+                              placeholder="Password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white font-sans text-sm focus:outline-none focus:border-white/40 transition-all"
+                            />
                           </motion.div>
                         )}
                       </motion.div>
@@ -2240,22 +2795,29 @@ function IdeaCommentModal({ onClose }) {
                   </AnimatePresence>
 
                   <div className="flex gap-3">
-                    <button onClick={() => setStep(0)} className="flex-1 py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20 hover:text-white/60 transition-all">
+                    <button
+                      onClick={() => setStep(0)}
+                      className="flex-1 py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20 hover:text-white/60 transition-all"
+                    >
                       Back
                     </button>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => {
-                        if (identity === "Anonymous") setStep(2);
+                        if (identity === 'Anonymous') setStep(2);
                         else if (!userFound) checkUser();
                         else if (!localStorage.getItem("token")) verifyPassword();
                         else setStep(2);
                       }}
-                      disabled={isVerifying || (identity === "User" && !username)}
-                      className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${isVerifying || (identity === "User" && !username) ? "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed" : "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"}`}
+                      disabled={isVerifying || (identity === 'User' && !username)}
+                      className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${
+                        isVerifying || (identity === 'User' && !username)
+                          ? "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
+                          : "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"
+                      }`}
                     >
-                      {isVerifying ? "..." : identity === "User" && !userFound ? "Check" : "Continue"}
+                      {isVerifying ? "..." : (identity === 'User' && !userFound) ? "Check" : "Continue"}
                     </motion.button>
                   </div>
                 </motion.div>
@@ -2263,10 +2825,18 @@ function IdeaCommentModal({ onClose }) {
 
               {/* ── Step 2: Category ── */}
               {step === 2 && (
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="relative z-10 flex flex-col gap-6">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 flex flex-col gap-6"
+                >
                   <div>
-                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">What is it?</h3>
-                    <p className="text-white/40 text-sm font-sans mt-1">{mainType === "Idea" ? "What type of idea is this?" : "What category does this advice fall into?"}</p>
+                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                      What is it?
+                    </h3>
+                    <p className="text-white/40 text-sm font-sans mt-1">
+                      {mainType === "Idea" ? "What type of idea is this?" : "What category does this advice fall into?"}
+                    </p>
                   </div>
 
                   <div className="flex flex-col gap-3">
@@ -2275,18 +2845,42 @@ function IdeaCommentModal({ onClose }) {
                       { key: "Web Development", desc: "Features, UI/UX, tech improvements" },
                       { key: "Other", desc: "Anything else on your mind" },
                     ].map((opt) => (
-                      <button key={opt.key} onClick={() => setIdeaType(opt.key)} className={`w-full py-3.5 px-5 rounded-xl border text-left transition-all duration-300 ${ideaType === opt.key ? "bg-white/15 border-white/30" : "bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/20"}`}>
-                        <span className={`font-sans font-bold text-sm uppercase tracking-wider block ${ideaType === opt.key ? "text-white" : "text-white/50"}`}>{opt.key}</span>
+                      <button
+                        key={opt.key}
+                        onClick={() => setIdeaType(opt.key)}
+                        className={`w-full py-3.5 px-5 rounded-xl border text-left transition-all duration-300 ${
+                          ideaType === opt.key
+                            ? "bg-white/15 border-white/30"
+                            : "bg-white/5 border-white/10 hover:bg-white/8 hover:border-white/20"
+                        }`}
+                      >
+                        <span className={`font-sans font-bold text-sm uppercase tracking-wider block ${
+                          ideaType === opt.key ? "text-white" : "text-white/50"
+                        }`}>
+                          {opt.key}
+                        </span>
                         <span className="font-sans text-xs text-white/30 mt-0.5 block">{opt.desc}</span>
                       </button>
                     ))}
                   </div>
 
                   <div className="flex gap-3">
-                    <button onClick={() => setStep(1)} className="flex-1 py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20 hover:text-white/60 transition-all">
+                    <button
+                      onClick={() => setStep(1)}
+                      className="flex-1 py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20 hover:text-white/60 transition-all"
+                    >
                       Back
                     </button>
-                    <motion.button whileHover={ideaType ? { scale: 1.02 } : {}} whileTap={ideaType ? { scale: 0.98 } : {}} onClick={() => ideaType && setStep(3)} className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${ideaType ? "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30" : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"}`}>
+                    <motion.button
+                      whileHover={ideaType ? { scale: 1.02 } : {}}
+                      whileTap={ideaType ? { scale: 0.98 } : {}}
+                      onClick={() => ideaType && setStep(3)}
+                      className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${
+                        ideaType
+                          ? "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"
+                          : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
+                      }`}
+                    >
                       Continue
                     </motion.button>
                   </div>
@@ -2295,34 +2889,64 @@ function IdeaCommentModal({ onClose }) {
 
               {/* ── Step 3: Content ── */}
               {step === 3 && (
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="relative z-10 flex flex-col gap-6">
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="relative z-10 flex flex-col gap-6"
+                >
                   <div>
-                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">Let us hear your thoughts!</h3>
-                    <p className="text-white/40 text-sm font-sans mt-1">{mainType === "Idea" ? "Describe your idea below" : "Share your advice with us"}</p>
+                    <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
+                      Let us hear your thoughts!
+                    </h3>
+                    <p className="text-white/40 text-sm font-sans mt-1">
+                      {mainType === "Idea" ? "Describe your idea below" : "Share your advice with us"}
+                    </p>
                   </div>
 
                   <div className="relative">
                     <textarea
                       value={adviceText}
                       onChange={(e) => setAdviceText(e.target.value.slice(0, 200))}
-                      placeholder={ideaType === "Event" ? "Describe your event idea..." : ideaType === "Web Development" ? "Describe your web development idea..." : "Share your thoughts with us..."}
+                      placeholder={
+                        ideaType === "Event"
+                          ? "Describe your event idea..."
+                          : ideaType === "Web Development"
+                          ? "Describe your web development idea..."
+                          : "Share your thoughts with us..."
+                      }
                       rows={5}
                       maxLength={200}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 pb-8 text-white text-sm font-sans resize-none focus:outline-none focus:border-white/25 focus:bg-white/8 placeholder-white/20 transition-all"
                       style={{ backdropFilter: "blur(10px)" }}
                     />
                     <div className="absolute bottom-3 right-4 text-xs font-mono">
-                      <span className={adviceText.trim().length < 5 ? "text-white/25" : "text-white/40"}>{adviceText.length}</span>
+                      <span className={adviceText.trim().length < 5 ? "text-white/25" : "text-white/40"}>
+                        {adviceText.length}
+                      </span>
                       <span className="text-white/20">/200</span>
                     </div>
-                    {error && <p className="text-[10px] text-red-500 font-sans mt-1 ml-1">{error}</p>}
+                    {error && (
+                      <p className="text-[10px] text-red-500 font-sans mt-1 ml-1">{error}</p>
+                    )}
                   </div>
 
                   <div className="flex gap-3">
-                    <button onClick={() => setStep(2)} className="flex-1 py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20 hover:text-white/60 transition-all">
+                    <button
+                      onClick={() => setStep(2)}
+                      className="flex-1 py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest text-white/40 bg-white/5 border border-white/10 hover:bg-white/8 hover:border-white/20 hover:text-white/60 transition-all"
+                    >
                       Back
                     </button>
-                    <motion.button whileHover={canSubmit ? { scale: 1.02 } : {}} whileTap={canSubmit ? { scale: 0.98 } : {}} onClick={canSubmit ? handleSubmit : undefined} className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all duration-500 ${canSubmit ? "text-white bg-white/15 border border-white/30 hover:bg-white/20 hover:border-white/40" : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"}`}>
+                    <motion.button
+                      whileHover={canSubmit ? { scale: 1.02 } : {}}
+                      whileTap={canSubmit ? { scale: 0.98 } : {}}
+                      onClick={canSubmit ? handleSubmit : undefined}
+                      className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all duration-500 ${
+                        canSubmit
+                          ? "text-white bg-white/15 border border-white/30 hover:bg-white/20 hover:border-white/40"
+                          : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
+                      }`}
+                    >
                       Submit
                     </motion.button>
                   </div>
@@ -2333,5 +2957,195 @@ function IdeaCommentModal({ onClose }) {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// ─── Dungeon Gate Component ──────────────────────────────────────────
+function DungeonGate() {
+  const [isLocked, setIsLocked] = useState(false); // Dummy: Event has started
+  const [showPopup, setShowPopup] = useState(false);
+  const [timeLeft, setTimeLeft] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const router = require('next/navigation').useRouter();
+
+  // Check login status on mount
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+  }, []);
+
+  // Dummy target: Past date to keep it unlocked
+  const targetDate = useMemo(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 1); // Set to last year
+    return d;
+  }, []);
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const diff = targetDate - now;
+      if (diff <= 0) {
+        setIsLocked(false);
+        setTimeLeft("00:00:00:00"); // Reset display for auth check
+      } else {
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / 1000 / 60) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+        setTimeLeft(`${d}d ${h}h ${m}m ${s}s`);
+      }
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  const handleGateClick = (e) => {
+    e.preventDefault();
+    if (!isLoggedIn) {
+      setShowPopup(true);
+      setTimeout(() => setShowPopup(false), 5000);
+    } else {
+      // Dramatic Blackout Transition
+      setIsNavigating(true);
+      setTimeout(() => {
+        router.push("/minigame");
+      }, 1000);
+    }
+  };
+
+  return (
+    <>
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[3000] bg-black pointer-events-auto"
+          />
+        )}
+        {showPopup && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-md pointer-events-none"
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="absolute bottom-0 right-4 z-[100] flex flex-col items-end pointer-events-none">
+        <AnimatePresence>
+          {showPopup && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8, x: 40, filter: "blur(15px)" }}
+              animate={{ opacity: 1, scale: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, scale: 0.8, x: 40, filter: "blur(15px)" }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="mb-6 flex items-center gap-4 pointer-events-auto"
+            >
+              {/* Floating dgf_2.png */}
+              <motion.div
+                animate={{ 
+                  y: [0, -10, 0],
+                  rotate: [-5, 5, -5]
+                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="relative"
+              >
+                <img 
+                  src="/dgf_2.png" 
+                  alt="Guide" 
+                  className="w-20 md:w-28 h-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+                />
+                <div className="absolute -inset-4 bg-red-500/20 blur-2xl rounded-full z-[-1] opacity-50" />
+              </motion.div>
+              
+              {/* Glassmorphic Popup Box - Black 3D Style */}
+              <div className="relative w-[240px] md:w-[300px] p-6 flex flex-col items-center justify-center overflow-hidden rounded-[2rem]">
+                {/* Dynamic Animated Blobs - Black */}
+                <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
+                  <motion.div 
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute top-[-50%] left-[-20%] w-[140%] h-[200%] bg-black rounded-full blur-[60px]" 
+                  />
+                  <motion.div 
+                    animate={{ scale: [1.2, 1, 1.2], opacity: [0.3, 0.7, 0.3] }}
+                    transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    className="absolute bottom-[-50%] right-[-20%] w-[140%] h-[200%] bg-black rounded-full blur-[70px]" 
+                  />
+                </div>
+
+                {/* Box Shape & Border */}
+                <div className="absolute inset-0 border border-white/20 bg-white/5 backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.1)] z-0 pointer-events-none rounded-[2rem]" />
+                
+                <div className="relative z-10 w-full text-center">
+                  <h4 
+                    className="text-sm md:text-base font-black uppercase tracking-tighter mb-2 text-white"
+                    style={{ 
+                      textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
+                    }}
+                  >
+                    LOGIN FIRST
+                  </h4>
+                  <div className="py-2 px-4 bg-black/40 rounded-xl border border-white/5 backdrop-blur-sm">
+                    <span className="text-lg md:text-xl font-mono font-bold text-white tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+                      00:00:00:00
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="pointer-events-auto transform translate-y-[10%]">
+          {isLocked ? (
+            <button 
+              onClick={() => {
+                setShowPopup(true);
+                setTimeout(() => setShowPopup(false), 5000);
+              }}
+              className="group relative cursor-pointer outline-none border-none ring-0 active:scale-95 transition-transform bg-transparent p-0"
+            >
+              {/* Glow Aura */}
+              <div className="absolute inset-[-20%] bg-red-500/10 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              
+              <img 
+                src="/dg_1.png" 
+                alt="Locked Gate" 
+                className="w-24 md:w-36 h-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] group-hover:brightness-110 transition-all duration-500 border-none outline-none ring-0"
+              />
+              
+              {/* Status Indicator */}
+              <div className="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border-2 border-white animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+            </button>
+          ) : (
+            <button onClick={handleGateClick} className="outline-none border-none ring-0 no-underline block bg-transparent group">
+              <div className="relative cursor-pointer outline-none border-none ring-0 active:scale-95 transition-transform bg-transparent p-0">
+                {/* Golden Glow Aura */}
+                <motion.div 
+                  animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.1, 1] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-[-30%] bg-yellow-400/20 blur-[60px] rounded-full" 
+                />
+                
+                <img 
+                  src="/dg_2.png" 
+                  alt="Dungeon Gate" 
+                  className="w-24 md:w-36 h-auto object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] group-hover:scale-110 group-hover:brightness-125 transition-all duration-700 border-none outline-none ring-0"
+                />
+                
+                {/* Ready Indicator */}
+                <div className="absolute -top-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white animate-bounce shadow-[0_0_15px_rgba(34,197,94,0.8)]" />
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

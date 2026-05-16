@@ -54,13 +54,10 @@ router.get("/media", getMedia);
 router.post("/media", requireAuth, createMedia);
 
 // ─── Mini Events ─────────────────────────────────────────────────────────────
-
 router.post("/mini-events", requireAuth, createMiniEvent);
 router.get("/mini-events/active", getActiveMiniEvents);
 router.put("/mini-events/:id", requireAuth, updateMiniEvent);
 router.delete("/mini-events/:id", requireAuth, deleteMiniEvent);
-
-// Booking (Need Us? Timekeeper)
 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
 router.post("/services/book", requireAuth, createBooking);

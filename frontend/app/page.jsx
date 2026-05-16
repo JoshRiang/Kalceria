@@ -7,7 +7,7 @@ import WelcomeTransition from "@/components/WelcomeTransition";
 import LandingPage from "@/components/LandingPage";
 
 export default function Home() {
-  const [phase, setPhase] = useState("intro"); // "intro" | "landing" | "auth" | "welcome" | "app"
+  const [phase, setPhase] = useState("loading"); // "intro" | "landing" | "auth" | "welcome" | "app"
   const [username, setUsername] = useState("User");
 
   useEffect(() => {
@@ -15,6 +15,8 @@ export default function Home() {
     const hasSeenIntro = sessionStorage.getItem("introSeen");
     if (hasSeenIntro) {
       setPhase("landing");
+    } else {
+      setPhase("intro");
     }
   }, []);
 
@@ -22,6 +24,10 @@ export default function Home() {
     sessionStorage.setItem("introSeen", "true");
     setPhase("landing");
   };
+
+  if (phase === "loading") {
+    return <div style={{ background: "#000", minHeight: "100vh" }} />;
+  }
 
   if (phase === "intro") {
     return <IntroPreloader onComplete={handleIntroComplete} />;
