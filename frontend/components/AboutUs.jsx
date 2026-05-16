@@ -3,15 +3,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Simple Static Typewriter for long text ───
-function StaticTypewriter({ text, speed = 20, delay = 0 }) {
+function StaticTypewriter({ text, speed = 20, delay = 0, highlights = [] }) {
   const [started, setStarted] = useState(false);
 
-  // Styling ranges for specific words
   const getStyle = (i) => {
-    // "Reyhan Batara" (indices 0-12)
-    if (i >= 0 && i <= 12) return "font-bold underline text-slate-100";
-    // "Coki" (indices 29-32)
-    if (i >= 29 && i <= 32) return "font-bold underline text-slate-100";
+    for (const h of highlights) {
+      if (i >= h.start && i <= h.end) return "font-bold underline text-slate-100";
+    }
     return "";
   };
 
@@ -595,7 +593,15 @@ export default function AboutUs() {
           />
 
           <div className="text-slate-400 font-mono text-xs md:text-sm tracking-widest max-w-2xl min-h-[2em]">
-            <StaticTypewriter text="Reyhan Batara, also known as Coki, was a revolutionary car enthusiast. He spent his life blending mechanical engineering with digital innovation to create the most stunning automotive experiences. His vision remains the driving force behind every project we undertake." speed={20} delay={1000} />
+            <StaticTypewriter 
+              text="Reyhan Batara, also known as Coki, was a revolutionary car enthusiast. He spent his life blending mechanical engineering with digital innovation to create the most stunning automotive experiences. His vision remains the driving force behind every project we undertake." 
+              speed={20} 
+              delay={1000} 
+              highlights={[
+                { start: 0, end: 12 },  // Reyhan Batara
+                { start: 29, end: 32 }  // Coki
+              ]}
+            />
           </div>
         </div>
 
@@ -618,6 +624,41 @@ export default function AboutUs() {
             className="absolute inset-0 w-full h-full object-cover filter grayscale opacity-40 transition-all duration-500" 
             draggable={false}
           />
+
+          {/* OWNER HIGHLIGHT: Golden-Magenta Chromatic Aberration (Inspired by Preloader 'K') */}
+          <div 
+            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+            style={{
+              WebkitMaskImage: `radial-gradient(ellipse 20% 70% at 50% 50%, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 90%)`,
+              maskImage: `radial-gradient(ellipse 20% 70% at 50% 50%, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 90%)`
+            }}
+          >
+            {/* Sharp Grayscale Anchor (Ensures face clarity) */}
+            <img 
+              src="/man.png" 
+              className="absolute inset-0 w-full h-full object-cover filter grayscale contrast-125 brightness-110" 
+              draggable={false}
+            />
+
+            {/* Magenta Shifted Layer (Reduced offset) */}
+            <motion.img 
+              src="/man.png" 
+              animate={{ x: [-1, -2, -1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-50" 
+              style={{ filter: "sepia(1) saturate(10) hue-rotate(280deg) brightness(1.1)" }} 
+              draggable={false}
+            />
+            {/* Golden Shifted Layer (Reduced offset) */}
+            <motion.img 
+              src="/man.png" 
+              animate={{ x: [1, 2, 1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+              className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-50" 
+              style={{ filter: "sepia(1) saturate(10) hue-rotate(15deg) brightness(1.1)" }} 
+              draggable={false}
+            />
+          </div>
           
           {/* Reveal Layer: Full Color with Dynamic Mask via Mouse */}
           <motion.div 
