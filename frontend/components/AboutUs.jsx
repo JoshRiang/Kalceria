@@ -4,21 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Simple Static Typewriter for long text ───
 function StaticTypewriter({ text, speed = 20, delay = 0 }) {
-  const [displayed, setDisplayed] = useState("");
   const [started, setStarted] = useState(false);
 
-  useEffect(() => {
-    let t;
-    if (started) {
-      let i = 0;
-      t = setInterval(() => {
-        setDisplayed(text.substring(0, i));
-        i++;
-        if (i > text.length) clearInterval(t);
-      }, speed);
-    }
-    return () => clearInterval(t);
-  }, [text, speed, started]);
+  // Styling ranges for specific words
+  const getStyle = (i) => {
+    // "Reyhan Batara" (indices 0-12)
+    if (i >= 0 && i <= 12) return "font-bold underline text-slate-100";
+    // "Coki" (indices 29-32)
+    if (i >= 29 && i <= 32) return "font-bold underline text-slate-100";
+    return "";
+  };
 
   return (
     <motion.span
@@ -28,8 +23,23 @@ function StaticTypewriter({ text, speed = 20, delay = 0 }) {
         setTimeout(() => setStarted(true), delay);
       }}
       viewport={{ once: true }}
+      className="inline-block"
     >
-      {displayed}
+      {text.split("").map((char, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0 }}
+          animate={started ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ 
+            duration: 0.1, 
+            delay: i * (speed / 1000),
+            ease: "easeOut"
+          }}
+          className={getStyle(i)}
+        >
+          {char}
+        </motion.span>
+      ))}
     </motion.span>
   );
 }
@@ -268,6 +278,60 @@ function FloatingQuotesLayer() {
   );
 }
 
+// ─── Golden Ambient Sparks (Free Floating) ────
+function GoldenAmbientSparks() {
+  const [sparks, setSparks] = useState([]);
+  
+  useEffect(() => {
+    const generated = [];
+    for (let i = 0; i < 18; i++) {
+      const size = Math.random() * 4 + 2; 
+      const top = Math.random() * 100;
+      const left = Math.random() * 100;
+      const duration = Math.random() * 6 + 10; // Even slower
+      const delay = Math.random() * 12;
+      const driftX = (Math.random() - 0.5) * 150;
+      const driftY = (Math.random() - 0.5) * 150;
+      generated.push({ id: i, size, top, left, duration, delay, driftX, driftY });
+    }
+    setSparks(generated);
+  }, []);
+
+  return (
+    <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
+      {sparks.map((s) => (
+        <motion.div
+          key={s.id}
+          className="absolute rounded-full"
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ 
+            opacity: [0, 0.7, 0.7, 0],
+            scale: [0.3, 1, 1, 0.3],
+            x: [0, s.driftX * 0.5, s.driftX, s.driftX * 0.5, 0],
+            y: [0, s.driftY * 0.5, s.driftY, s.driftY * 0.5, 0],
+          }}
+          transition={{
+            duration: s.duration,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: -s.delay,
+            times: [0, 0.2, 0.8, 1] // Spends 60% of time fully visible
+          }}
+          style={{
+            width: `${s.size}px`,
+            height: `${s.size}px`,
+            top: `${s.top}%`,
+            left: `${s.left}%`,
+            backgroundColor: '#FFD700',
+            willChange: "transform, opacity",
+            boxShadow: `0 0 ${s.size * 3}px #FFD700, 0 0 ${s.size * 6}px rgba(255, 215, 0, 0.4)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ─── Dangling Symbols Component ───
 function DanglingSymbols({ char, color, side = "left", configs = [] }) {
   return (
@@ -302,8 +366,88 @@ function DanglingSymbols({ char, color, side = "left", configs = [] }) {
   );
 }
 
+// ─── WebDev Section Entry Sequence ────
+const FULL_TEXT1 = `"Kalian Kelompok 5 SBD kan, sama Gw kan ya?"`;
+const FULL_TEXT2 = `"Kerjain Web-nya Woi!"`;
+
+function WebDevEntrySequence({ onComplete }) {
+  const [phase, setPhase] = useState('typing1'); 
+  const [text, setText] = useState('');
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    let i = 0;
+    let interval;
+    const targetText = phase === 'typing1' ? FULL_TEXT1 : FULL_TEXT2;
+
+    interval = setInterval(() => {
+      setText(targetText.slice(0, i + 1));
+      i++;
+      if (i >= targetText.length) {
+        clearInterval(interval);
+        if (phase === 'typing1') {
+          setTimeout(() => {
+            setPhase('angry');
+            setText('');
+          }, 1000);
+        } else {
+          setTimeout(() => onCompleteRef.current(), 2000);
+        }
+      }
+    }, 70); 
+    return () => clearInterval(interval);
+  }, [phase]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/40 backdrop-blur-md"
+    >
+      <div className="relative flex flex-col items-center">
+        {/* Animated Character */}
+        <motion.img 
+          src={phase === 'angry' ? "/dy_02.png" : "/dy_01.png"}
+          alt="DY"
+          animate={{ rotate: [0, 15, 0] }}
+          transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+          className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+        />
+
+        {/* Typing/Angry Text */}
+        <div className="h-20 mt-6 text-center px-6">
+          <motion.h3 
+            key={phase}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`text-xl md:text-3xl font-normal tracking-tight ${phase === 'angry' ? 'text-red-500 scale-110 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-white'}`}
+            style={{ fontFamily: "'Times New Roman', Times, serif" }}
+          >
+            {text}
+          </motion.h3>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── THE CORE SECTION COMPONENT ────
 export default function AboutUs() {
+  const [showEntry, setShowEntry] = useState(false);
+  const [entryDone, setEntryDone] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  // Character Hover states
+  const [hoverMentor, setHoverMentor] = useState(false);
+  const [hoverRei, setHoverRei] = useState(false);
+  const [hoverJosh, setHoverJosh] = useState(false);
+  const [hoverOtniel, setHoverOtniel] = useState(false);
+  
+  const handleEntryComplete = useCallback(() => {
+    setShowEntry(false);
+    setEntryDone(true);
+  }, []);
   
   // ─── Mouse Tracking for Masking ───
   const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
@@ -451,7 +595,7 @@ export default function AboutUs() {
           />
 
           <div className="text-slate-400 font-mono text-xs md:text-sm tracking-widest max-w-2xl min-h-[2em]">
-            <StaticTypewriter text="LOREM IPSUM DOLOR SIT AMET, CONSECTETUR ADIPISCING ELIT. THE ARCHITECTS OF MOTION AND LUXURY. WE DO NOT JUST DRIVE, WE ENGINEER THE EXPERIENCE." speed={20} delay={1000} />
+            <StaticTypewriter text="Reyhan Batara, also known as Coki, was a revolutionary car enthusiast. He spent his life blending mechanical engineering with digital innovation to create the most stunning automotive experiences. His vision remains the driving force behind every project we undertake." speed={20} delay={1000} />
           </div>
         </div>
 
@@ -493,6 +637,295 @@ export default function AboutUs() {
           </motion.div>
         </motion.div>
       </section>
+
+      {/* Dynamic Cyan Separator Line */}
+      <div className="w-full h-[1px] bg-cyan-500/50 animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_15px_#00FFFF] relative z-40" />
+
+      {/* ── SECTION: THE GOLDEN CORE ── */}
+      <motion.section 
+        onViewportEnter={() => {
+          if (!entryDone && !showEntry) {
+            setShowEntry(true);
+          }
+        }}
+        className="relative w-full min-h-[150vh] flex flex-col items-center justify-center overflow-hidden z-25 border-t border-slate-900"
+      >
+        
+        {/* Entry Sequence Overlay */}
+        <AnimatePresence>
+          {showEntry && (
+            <WebDevEntrySequence onComplete={handleEntryComplete} />
+          )}
+        </AnimatePresence>
+
+        {/* Base Background: Deep Mix of Red & Black */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1a0505] via-black to-[#050000]" />
+        
+        {/* Dynamic Random Blobs (Gold & Orange-Gold) */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-50 mix-blend-screen">
+          {/* Golden Blob */}
+          <motion.div 
+            animate={{ 
+              x: ["-10%", "30%", "10%", "-10%"],
+              y: ["-20%", "20%", "40%", "-20%"],
+              scale: [1, 1.4, 1.2, 1]
+            }} 
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} 
+            className="absolute top-1/4 left-1/4 w-[60vw] h-[60vw] rounded-full blur-[140px] bg-[#f59e0b]/30" 
+          />
+          {/* Orange-Gold Blob 1 */}
+          <motion.div 
+            animate={{ 
+              x: ["40%", "-20%", "0%", "40%"],
+              y: ["10%", "-10%", "-40%", "10%"],
+              scale: [1.2, 1, 1.3, 1.2]
+            }} 
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 1 }} 
+            className="absolute bottom-1/4 right-1/4 w-[65vw] h-[65vw] rounded-full blur-[160px] bg-[#fbbf24]/30" 
+          />
+          {/* Orange-Gold Blob 2 (Aggressive Burnt Orange) */}
+          <motion.div 
+            animate={{ 
+              x: ["0%", "50%", "-30%", "0%"],
+              y: ["50%", "0%", "50%", "50%"],
+              scale: [0.8, 1.5, 1, 0.8]
+            }} 
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 3 }} 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55vw] h-[55vw] rounded-full blur-[180px] bg-[#ea580c]/25" 
+          />
+        </div>
+
+        {/* Golden Shine Effect - Rising from the plateau */}
+        <motion.div 
+          animate={{ opacity: [0.4, 0.7, 0.4], scale: [1, 1.1, 1] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[40vh] z-[3] pointer-events-none transform translate-y-[10%]"
+          style={{ 
+            background: "radial-gradient(ellipse at center, rgba(255, 215, 0, 0.4) 0%, transparent 70%)",
+            filter: "blur(60px)"
+          }}
+        />
+
+        {/* Character Group Behind Plateau */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-auto z-[4] pointer-events-none transform translate-y-[15%]">
+           {/* Rei - Center Bottom Layer */}
+           <div 
+             className="absolute left-1/2 -translate-x-1/2 h-[102vh] w-auto z-[1] pointer-events-auto"
+             style={{ bottom: "-25vh" }}
+             onMouseEnter={() => setHoverRei(true)}
+             onMouseLeave={() => setHoverRei(false)}
+           >
+             <img 
+               src="/rei.png" 
+               alt="Rei" 
+               className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.2)] cursor-help"
+             />
+             <AnimatePresence>
+                {hoverRei && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                    className="absolute bottom-[68%] left-[70%] p-5 bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max rounded-[2rem] flex flex-col items-start"
+                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                  >
+                    {/* Photo Box */}
+                    <div className="w-[136px] h-[136px] rounded-[1rem] overflow-hidden mb-4 border border-white/10 bg-black/20">
+                      <img src="/reifo.jpeg" alt="Rei Photo" className="w-full h-full object-cover" />
+                    </div>
+                    
+                    <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
+                    <p className="text-white text-sm md:text-base font-normal leading-relaxed relative z-10">
+                      <span className="underline font-bold">Our beloved friend,</span><br />
+                      Reinathan Ezkhiel K.
+                    </p>
+                  </motion.div>
+                )}
+             </AnimatePresence>
+           </div>
+
+           {/* Josh - Left Upper Layer */}
+           <div 
+             className="absolute bottom-0 left-[25%] -translate-x-1/2 h-[63vh] w-auto z-[2] pointer-events-auto"
+             onMouseEnter={() => setHoverJosh(true)}
+             onMouseLeave={() => setHoverJosh(false)}
+           >
+             <img 
+               src="/josh.png" 
+               alt="Josh" 
+               className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help"
+             />
+             <AnimatePresence>
+                {hoverJosh && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                    className="absolute top-[40%] right-[85%] p-5 bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max rounded-[2rem] flex flex-col items-start"
+                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                  >
+                    {/* Photo Box */}
+                    <div className="w-[136px] h-[136px] rounded-[1rem] overflow-hidden mb-4 border border-white/10 bg-black/20">
+                      <img src="/jofo.jpeg" alt="Josh Photo" className="w-full h-full object-cover" />
+                    </div>
+
+                    <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
+                    <p className="text-white text-sm md:text-base font-normal leading-relaxed relative z-10">
+                      <span className="underline font-bold">Our beloved friend,</span><br />
+                      Joshua Ricardo R.
+                    </p>
+                  </motion.div>
+                )}
+             </AnimatePresence>
+           </div>
+
+           {/* Otniel - Right Upper Layer */}
+           <div 
+             className="absolute left-[75%] -translate-x-1/2 h-[63vh] w-auto z-[2] pointer-events-auto"
+             style={{ bottom: "-8vh" }}
+             onMouseEnter={() => setHoverOtniel(true)}
+             onMouseLeave={() => setHoverOtniel(false)}
+           >
+             <img 
+               src="/otniel.png" 
+               alt="Otniel" 
+               className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help"
+             />
+             <AnimatePresence>
+                {hoverOtniel && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -20, scale: 0.9 }}
+                    className="absolute top-[25%] left-[95%] p-5 bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max rounded-[2rem] flex flex-col items-start"
+                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                  >
+                    {/* Photo Box */}
+                    <div className="w-[136px] h-[136px] rounded-[1rem] overflow-hidden mb-4 border border-white/10 bg-black/20">
+                      <img src="/ofo.jpeg" alt="Otniel Photo" className="w-full h-full object-cover" />
+                    </div>
+
+                    <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
+                    <p className="text-white text-sm md:text-base font-normal leading-relaxed relative z-10">
+                      <span className="underline font-bold">Our beloved friend,</span><br />
+                      Otniel Kristian S.
+                    </p>
+                  </motion.div>
+                )}
+             </AnimatePresence>
+           </div>
+        </div>
+
+        {/* Plateau Centerpiece - Adjusted Height */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-auto h-auto z-[10] pointer-events-none transform translate-y-[40%]">
+          <img 
+            src="/plateau.webp" 
+            alt="Plateau" 
+            className="w-auto h-auto object-contain opacity-90 brightness-75 contrast-125"
+            style={{ 
+              maskImage: "linear-gradient(to top, black 50%, transparent 100%), radial-gradient(ellipse at center, black 80%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to top, black 50%, transparent 100%), radial-gradient(ellipse at center, black 80%, transparent 100%)"
+            }}
+          />
+
+          {/* Floating Logolden - Above Plateau Layer (Tight Steady Float) */}
+          <motion.div
+            animate={{ 
+              y: [0, -6, 0] 
+            }}
+            transition={{ 
+              duration: 8, 
+              repeat: Infinity, 
+              ease: "easeInOut" 
+            }}
+            className="absolute top-0 left-1/2 -translate-x-1/2 translate-y-[179%] z-[20] w-[232px] md:w-[323px] h-auto drop-shadow-[0_0_50px_rgba(255,215,0,0.6)]"
+            style={{ 
+              rotate: "0deg",
+              willChange: "transform" // Performance optimization
+            }}
+          >
+            <img 
+              src="/logolden.png" 
+              alt="Golden Logo" 
+              className="w-full h-auto object-contain brightness-110 contrast-125" 
+            />
+          </motion.div>
+        </div>
+
+        {/* Golden Ambient Sparks (Free Floating) */}
+        <GoldenAmbientSparks />
+
+        {/* Section Title at the top */}
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10 text-center w-full px-8 flex flex-col items-center">
+           <motion.h2 
+             initial={{ opacity: 0, y: -30 }}
+             whileInView={{ opacity: 1, y: 0 }}
+             viewport={{ once: true }}
+             transition={{ duration: 1, ease: "easeOut" }}
+             className="text-5xl md:text-7xl font-normal tracking-tighter text-white leading-none"
+             style={{ 
+               fontFamily: "'Times New Roman', Times, serif",
+               textShadow: `
+                 1px 1px 0px #ccc,
+                 2px 2px 0px #bbb,
+                 3px 3px 0px #aaa,
+                 4px 4px 0px #999,
+                 5px 5px 0px #888,
+                 6px 6px 15px rgba(0,0,0,0.5)
+               `
+             }}
+           >
+             Webdev Team
+           </motion.h2>
+        </div>
+
+        {/* Static Paragraph on the left */}
+        <p 
+          className="absolute top-[12.5rem] left-[29%] md:left-[32%] max-w-[220px] md:max-w-[280px] text-slate-300 text-base md:text-lg font-normal leading-relaxed pointer-events-none z-20 text-justify"
+          style={{ fontFamily: "'Times New Roman', Times, serif" }}
+        >
+          Kalceria used to be a Final Project, now it is becoming a legacy of digital craftsmanship and automotive passion. It stands as a testament to the boundary-pushing creativity of our development team.
+        </p>
+        
+        {/* dy_3 image at the right half of under the Webdev Team title */}
+        <div 
+          className="absolute top-[5.88rem] left-[50.4%] z-20"
+          onMouseEnter={() => setHoverMentor(true)}
+          onMouseLeave={() => setHoverMentor(false)}
+        >
+          <img 
+            src="/dy_3.png" 
+            alt="DY 3"
+            className="w-44 h-44 md:w-[18.6rem] md:h-[18.6rem] object-contain pointer-events-auto opacity-80 cursor-help"
+            style={{ rotate: "-10.5deg" }}
+          />
+          
+          <AnimatePresence>
+            {hoverMentor && (
+              <motion.div
+                initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -20, scale: 0.9 }}
+                className="absolute top-[20%] left-[95%] p-6 bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] min-w-[200px] rounded-[2rem]"
+                style={{ 
+                  fontFamily: "'Times New Roman', Times, serif"
+                }}
+              >
+                {/* Black Blob effect inside */}
+                <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
+                
+                <p className="text-white text-lg md:text-xl font-normal leading-tight relative z-10">
+                  <span className="underline font-bold block mb-2">Our Mentor,</span>
+                  Ditya Alif K.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Aesthetic Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/60 pointer-events-none" />
+      </motion.section>
 
       {/* Dynamic Cyan Separator Line */}
       <div className="w-full h-[1px] bg-cyan-500/50 animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_15px_#00FFFF] relative z-40" />

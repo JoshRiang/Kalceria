@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 
@@ -595,51 +595,51 @@ export default function ServiceRequestModal({ onClose, userName }) {
                   initial={{ opacity: 0, scale: 0.9 }} 
                   animate={{ opacity: 1, scale: 1 }} 
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="py-6"
+                  className="py-6 flex flex-col items-center text-center"
                 >
-                  <div className="grid grid-cols-2 gap-8 items-center">
-                    <div className="space-y-6">
-                      <div className="w-20 h-20 rounded-[28px] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center relative">
-                        <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full animate-pulse" />
-                        <svg className="w-10 h-10 text-emerald-500 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                      </div>
-                      
-                      <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Transmission<br/>Received</h3>
-                      <p className="text-slate-400 text-[12px] leading-relaxed font-sans pr-6">
-                        System link established. Redirecting to operational headquarters via WhatsApp.
-                      </p>
+                  <div className="space-y-6 flex flex-col items-center">
+                    <div className="w-20 h-20 rounded-[28px] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center relative transform translate-x-[10%]">
+                      <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full animate-pulse" />
+                      <svg className="w-10 h-10 text-emerald-500 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
+                      </svg>
                     </div>
+                    
+                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Transmission<br/>Received</h3>
+                    <p className="text-slate-400 text-[12px] leading-relaxed font-sans max-w-[320px]">
+                      System link established. Redirecting to operational headquarters via WhatsApp.
+                    </p>
+                  </div>
 
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText("0811811811");
-                          alert("WA Number copied to clipboard: 0811811811");
-                        }}
-                        className="group relative flex flex-col items-center"
+                  <div className="mt-8 flex flex-col items-center gap-6">
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText("0811811811");
+                        alert("WA Number copied to clipboard: 0811811811");
+                      }}
+                      className="group relative flex flex-col items-center"
+                    >
+                      <div className="absolute inset-0 bg-emerald-500/20 blur-[50px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                      <motion.span 
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="font-sans text-[14px] text-cyan-400 underline underline-offset-8 decoration-cyan-400/30 hover:decoration-cyan-400 font-light transition-all uppercase tracking-[0.2em] cursor-pointer"
                       >
-                        <div className="absolute inset-0 bg-emerald-500/20 blur-[50px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                        <motion.span 
-                          animate={{ y: [0, -8, 0] }}
-                          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                          className="mt-2 font-sans text-[14px] text-[#3b82f6] underline underline-offset-8 decoration-[#3b82f6]/30 hover:decoration-[#3b82f6] font-light transition-all uppercase tracking-[0.2em] cursor-pointer"
-                        >
-                          CLICK ME !
-                        </motion.span>
-                      </button>
-                      <a 
-                        href={done.whatsappUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="relative z-10 hover:scale-110 transition-transform duration-500"
-                      >
-                        <img 
-                          src="/wa_logo.png" 
-                          alt="WhatsApp" 
-                          className="w-40 h-40 object-contain" 
-                        />
-                      </a>
+                        CLICK ME !
+                      </motion.span>
+                    </button>
+                    <a 
+                      href={done.whatsappUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="relative z-10 hover:scale-110 transition-transform duration-500"
+                    >
+                      <img 
+                        src="/wa_logo.png" 
+                        alt="WhatsApp" 
+                        className="w-40 h-40 object-contain" 
+                      />
+                    </a>
                   </div>
 
                   <div className="mt-12 flex justify-center gap-4">

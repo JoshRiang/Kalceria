@@ -66,6 +66,19 @@ function formatDate(d) {
 }
 
 // ─── Utilities ──────────────────────────────────────────────────────────────
+function Clock({ className }) {
+  const [wibTime, setWibTime] = useState("");
+  useEffect(() => {
+    const updateTime = () => setWibTime(new Date().toLocaleTimeString('id-ID', { 
+      timeZone: 'Asia/Jakarta', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }) + " WIB");
+    updateTime();
+    const t = setInterval(updateTime, 1000);
+    return () => clearInterval(t);
+  }, []);
+  return <span className={className}>{wibTime}</span>;
+}
+
 function HoverTypewriter({ text, speed = 40, hover }) {
   const [displayed, setDisplayed] = useState(text);
 
@@ -669,7 +682,6 @@ function RealTimeGraph({ active }) {
 
 function SystemLog({ registrations = [], products = [] }) {
   const [logs, setLogs] = useState([]);
-  const [wibTime, setWibTime] = useState("");
 
   useEffect(() => {
     const all = [
@@ -684,13 +696,10 @@ function SystemLog({ registrations = [], products = [] }) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-mono font-black text-sm uppercase tracking-tighter text-white flex items-center gap-2">
           LIVE SYSTEM FEED
-          <span className="text-[10px] text-fuchsia-500/80 font-bold ml-2 opacity-80 border-l border-white/20 pl-2">
-            {wibTime}
-          </span>
         </h3>
         <RealTimeGraph active={logs.length > 0} />
       </div>
-      <div className="flex-1 overflow-y-auto space-y-2 font-mono text-[10px] scrollbar-hide">
+      <div className="flex-1 overflow-y-auto space-y-2 font-mono text-[10px] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {logs.map((log, i) => (
           <motion.div 
             key={i} 
@@ -1043,9 +1052,14 @@ function BookingsPanel({ onRefresh }) {
   useEffect(() => { load(); }, [load]);
 
   const updateStatus = async (id, status) => {
-    await api.patch(`/admin/services/${id}/status`, { status });
-    load();
-    onRefresh();
+    try {
+      await api.patch(`/admin/services/${id}/status`, { status });
+      load();
+      onRefresh();
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert("Failed to update status. Please try again.");
+    }
   };
 
   const del = async (id) => {
@@ -1248,8 +1262,12 @@ function BookingsPanel({ onRefresh }) {
 
               <div className="flex gap-2 pt-3 mt-2 border-t border-black/5">
                 <button 
-                  onClick={(e) => { e.stopPropagation(); updateStatus(b.id, 'PROCESSED'); }} 
-                  className="w-9 h-9 flex items-center justify-center bg-emerald-500 rounded-full text-white shadow-md hover:scale-105 transition-all"
+                  onClick={(e) => { e.stopPropagation(); updateStatus(b.id, b.status === 'PROCESSED' ? 'PENDING' : 'PROCESSED'); }} 
+                  className={`w-9 h-9 flex items-center justify-center rounded-full text-white shadow-md hover:scale-105 transition-all outline-none ${
+                    b.status === 'PROCESSED' 
+                      ? 'bg-emerald-600 ring-2 ring-black ring-offset-2 ring-offset-[#d6cdc2]' 
+                      : 'bg-emerald-500'
+                  }`}
                 >
                   <CheckIcon />
                 </button>
@@ -1441,7 +1459,7 @@ function EarningsPanel({ data }) {
               {useIntelligence && (
                 <path
                   d={`M ${chartData.map((p, i) => `${(i / (chartData.length - 1)) * 1000},${400 - (p.projected / maxVal * 400)}`).join(' L ')}`}
-                  fill="none" stroke="#00FFFF" strokeWidth="2" strokeDasharray="4 4" className="opacity-60"
+                  fill="none" stroke="#00FFFF" strokeWidth="4" className="opacity-80"
                 />
               )}
 
@@ -1555,20 +1573,6 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ events: 0, users: 0, regs: 0, products: 0, comments: 0, bookings: 0 });
   const [data, setData] = useState({ events: [], users: [], regs: [], products: [], comments: [], bookings: [], earnings: { daily: [], total: 0 } });
   const [mounted, setMounted] = useState(false);
-  const [wibTime, setWibTime] = useState("");
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setWibTime(new Date().toLocaleTimeString('id-ID', { 
-        timeZone: 'Asia/Jakarta', 
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      }) + " WIB");
-    }, 1000);
-    return () => clearInterval(t);
-  }, []);
 
   const loadAll = useCallback(() => {
     Promise.all([
@@ -1637,9 +1641,7 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-4">
           <img src="/logologin.png" alt="Kalceria" className="h-7 object-contain" draggable={false} />
           <div className="h-4 w-px bg-white/20 ml-2" />
-          <div className="font-sans text-[11px] text-white font-medium underline tracking-widest opacity-90">
-            {wibTime}
-          </div>
+          <Clock className="font-sans text-[11px] text-white font-medium underline tracking-widest opacity-90" />
         </div>
         <button onClick={logout} className="font-mono text-xs text-slate-600 hover:text-white transition-colors uppercase tracking-widest">
           Logout

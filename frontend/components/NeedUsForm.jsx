@@ -372,7 +372,7 @@ export default function NeedUsForm({ userEmail, userName }) {
         {step === 2 && done && (
           <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}>
             <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-2xl mx-auto mb-6 shadow-[0_0_20px_rgba(16,185,129,0.3)]">✓</div>
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-2xl mx-auto mb-6 shadow-[0_0_20px_rgba(16,185,129,0.3)] transform translate-x-[10%]">✓</div>
               <h3 className="font-sans font-black text-2xl uppercase tracking-tighter text-white mb-2">Transmission Received</h3>
               <p className="font-sans text-sm text-slate-400 mb-8">Redirecting to operational headquarters.</p>
               
@@ -382,13 +382,13 @@ export default function NeedUsForm({ userEmail, userName }) {
                     navigator.clipboard.writeText("0811811811");
                     alert("WA Number copied to clipboard: 0811811811");
                   }}
-                  className="font-sans text-xs text-[#3b82f6] underline underline-offset-4 decoration-[#3b82f6]/30 hover:decoration-[#3b82f6] uppercase tracking-widest transition-all"
+                  className="font-sans text-xs text-cyan-400 underline underline-offset-4 decoration-cyan-400/30 hover:decoration-cyan-400 uppercase tracking-widest transition-all"
                 >
                   CLICK ME !
                 </button>
 
-                <a href={done.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:scale-105 transition-transform duration-500">
-                  <img src="/wa_logo.png" alt="WhatsApp" className="w-32 h-32 object-contain" />
+                <a href={done.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:scale-105 transition-transform duration-500 flex justify-center">
+                  <img src="/wa_logo.png" alt="WhatsApp" className="w-32 h-32 object-contain mx-auto" />
                 </a>
               </div>
 
