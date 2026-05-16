@@ -61,16 +61,24 @@ function StatCounter({ target, label, suffix = "", align = "start", active = fal
 
 // ─── Components ──────────────────────────────────────────────────────────────
 function RainbowPixels() {
-  const colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"];
-  const particles = useMemo(() => Array.from({ length: 30 }).map(() => ({
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    size: Math.random() * 6 + 4,
-    duration: 15 + Math.random() * 20,
-    delay: Math.random() * 5,
-    xDrift: (Math.random() - 0.5) * 150
-  })), []);
+  const [mounted, setMounted] = useState(false);
+  const [particles, setParticles] = useState([]);
+
+  useEffect(() => {
+    const colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"];
+    setParticles(Array.from({ length: 30 }).map(() => ({
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: Math.random() * 6 + 4,
+      duration: 15 + Math.random() * 20,
+      delay: Math.random() * 5,
+      xDrift: (Math.random() - 0.5) * 150
+    })));
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden mix-blend-screen opacity-50">
@@ -100,14 +108,22 @@ function RainbowPixels() {
 }
 
 function MicroParticles() {
-  const particles = useMemo(() => Array.from({ length: 60 }).map(() => ({
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 2 + 0.5,
-    duration: 8 + Math.random() * 12,
-    delay: -Math.random() * 20,
-    driftX: (Math.random() - 0.5) * 80
-  })), []);
+  const [mounted, setMounted] = useState(false);
+  const [particles, setParticles] = useState([]);
+
+  useEffect(() => {
+    setParticles(Array.from({ length: 60 }).map(() => ({
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 2 + 0.5,
+      duration: 8 + Math.random() * 12,
+      delay: -Math.random() * 20,
+      driftX: (Math.random() - 0.5) * 80
+    })));
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30">

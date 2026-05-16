@@ -374,76 +374,91 @@ function FindMoreSlider() {
 
 // ─── Golden Dust Particle System ─────────────────────
 function GoldenDust() {
-  const particles = Array.from({ length: 20 });
+  const [mounted, setMounted] = useState(false);
+  const [particles, setParticles] = useState([]);
+
+  useEffect(() => {
+    setParticles(Array.from({ length: 20 }).map(() => ({
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      delay: Math.random() * 5,
+      duration: 2 + Math.random() * 3
+    })));
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-visible mix-blend-screen">
-      {particles.map((_, i) => {
-        const x = Math.random() * 100;
-        const y = Math.random() * 100;
-        const delay = Math.random() * 5;
-        const duration = 2 + Math.random() * 3;
-        return (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 0 }}
-            animate={{ 
-              opacity: [0, 1, 0], 
-              y: [0, -15, 0]
-            }}
-            transition={{
-              repeat: Infinity,
-              duration: duration,
-              delay: delay,
-              ease: "easeInOut"
-            }}
-            className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full shadow-[0_0_8px_rgba(250,204,21,0.8)]"
-            style={{ left: `${x}%`, top: `${y}%` }}
-          />
-        );
-      })}
+      {particles.map((p, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 0 }}
+          animate={{ 
+            opacity: [0, 1, 0], 
+            y: [0, -15, 0]
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: p.duration,
+            delay: p.delay,
+            ease: "easeInOut"
+          }}
+          className="absolute w-1.5 h-1.5 bg-yellow-400 rounded-full shadow-[0_0_8px_rgba(250,204,21,0.8)]"
+          style={{ left: `${p.x}%`, top: `${p.y}%` }}
+        />
+      ))}
     </div>
   );
 }
 
 // ─── Star Dust Particle System (50/50 Violet & Gold - Circular Micro Dust) ──
 function StarDust() {
-  const particles = Array.from({ length: 30 });
+  const [mounted, setMounted] = useState(false);
+  const [particles, setParticles] = useState([]);
+
+  useEffect(() => {
+    setParticles(Array.from({ length: 30 }).map(() => {
+      const isViolet = Math.random() > 0.5;
+      return {
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        delay: Math.random() * 5,
+        duration: 2 + Math.random() * 3,
+        bgColor: isViolet ? "bg-[#D946EF]" : "bg-[#FACC15]",
+        shadowColor: isViolet ? "rgba(217,70,239,0.8)" : "rgba(250,204,21,0.8)"
+      };
+    }));
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <div className="absolute inset-[-10%] z-0 pointer-events-none overflow-visible mix-blend-screen">
-      {particles.map((_, i) => {
-        const x = Math.random() * 100;
-        const y = Math.random() * 100;
-        const delay = Math.random() * 5;
-        const duration = 2 + Math.random() * 3;
-        
-        // 50/50 logic for Violet and Gold
-        const isViolet = Math.random() > 0.5;
-        const bgColor = isViolet ? "bg-[#D946EF]" : "bg-[#FACC15]";
-        const shadowColor = isViolet ? "rgba(217,70,239,0.8)" : "rgba(250,204,21,0.8)";
-        
-        return (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 0, scale: 0.5 }}
-            animate={{ 
-              opacity: [0, 1, 0], 
-              y: [0, -20, 0],
-              scale: [0.5, 1, 0.5]
-            }}
-            transition={{
-              repeat: Infinity,
-              duration: duration,
-              delay: delay,
-              ease: "easeInOut"
-            }}
-            className={`absolute w-1 h-1 rounded-full ${bgColor}`}
-            style={{ 
-              left: `${x}%`, top: `${y}%`,
-              filter: `drop-shadow(0 0 4px ${shadowColor})`
-            }}
-          />
-        );
-      })}
+      {particles.map((p, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 0, scale: 0.5 }}
+          animate={{ 
+            opacity: [0, 1, 0], 
+            y: [0, -20, 0],
+            scale: [0.5, 1, 0.5]
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: p.duration,
+            delay: p.delay,
+            ease: "easeInOut"
+          }}
+          className={`absolute w-1 h-1 rounded-full ${p.bgColor}`}
+          style={{ 
+            left: `${p.x}%`, top: `${p.y}%`,
+            filter: `drop-shadow(0 0 4px ${p.shadowColor})`
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -489,17 +504,25 @@ function FloatingSpareParts() {
 
 // ─── Tropical Particles Component (Lush Greenery) ────────
 function TropicalParticles() {
-  const particles = useMemo(() => Array.from({ length: 40 }).map((_, i) => ({
-    id: i,
-    left: `${10 + Math.random() * 80}%`, // Wider spread
-    bottom: `${40 + Math.random() * 30}%`, // Spawning from middle/top of bush
-    size: Math.random() * 4 + 2, 
-    color: ['#bef264', '#4ade80', '#22c55e', '#166534', '#86efac'][Math.floor(Math.random() * 5)], // Varied greens
-    delay: Math.random() * 5,
-    duration: 4 + Math.random() * 4, // Calmer rise
-    xDrift: (Math.random() - 0.5) * 60,
-    yRise: -(120 + Math.random() * 180),
-  })), []);
+  const [mounted, setMounted] = useState(false);
+  const [particles, setParticles] = useState([]);
+
+  useEffect(() => {
+    setParticles(Array.from({ length: 40 }).map((_, i) => ({
+      id: i,
+      left: `${10 + Math.random() * 80}%`,
+      bottom: `${40 + Math.random() * 30}%`,
+      size: Math.random() * 4 + 2, 
+      color: ['#bef264', '#4ade80', '#22c55e', '#166534', '#86efac'][Math.floor(Math.random() * 5)],
+      delay: Math.random() * 5,
+      duration: 4 + Math.random() * 4,
+      xDrift: (Math.random() - 0.5) * 60,
+      yRise: -(120 + Math.random() * 180),
+    })));
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">

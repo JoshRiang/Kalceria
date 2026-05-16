@@ -5,6 +5,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import RadialPing from "@/components/map/RadialPing";
+import { userPopup } from "@/components/map/UserPopup";
 import {
   fetchMe,
   fetchMapUsers,
@@ -188,6 +189,9 @@ export default function MapPage() {
   const [hoveredKalcerian, setHoveredKalcerian] = useState(null);
   const [selectedKalcerian, setSelectedKalcerian] = useState(null);
   const [hasInitialCentered, setHasInitialCentered] = useState(false);
+  const [isStatusBusy, setIsStatusBusy] = useState(false);
+  const [focusedUserId, setFocusedUserId] = useState(null);
+  const [selectedOfflineUser, setSelectedOfflineUser] = useState(null);
 
   // Handle Hydration
   useEffect(() => {
@@ -429,6 +433,7 @@ export default function MapPage() {
   // toggle visibility (broadcast status on/off)
   async function handlePresenceChange(mode) {
     const isOnline = mode === "online";
+    setIsStatusBusy(true);
     setPresence(mode);
     setMenuOpen(false);
     try {
@@ -463,6 +468,8 @@ export default function MapPage() {
       );
     } catch (err) {
       setNotice(err.message || "Failed to update visibility.");
+    } finally {
+      setIsStatusBusy(false);
     }
   }
 
@@ -599,6 +606,8 @@ export default function MapPage() {
     );
   }
 
+  const offlineUserObj = selectedOfflineUser ? sidebarKalcerians.find((k) => k.id === selectedOfflineUser) : null;
+
   return (
     <div className="relative min-h-screen bg-[#0a0e27] overflow-hidden text-white font-sans selection:bg-[#ffd60a] selection:text-black">
       {/* 🌌 Atmospheric Tactical Background (Behind Map) */}
@@ -651,6 +660,7 @@ export default function MapPage() {
           events={events}
           hqPoint={hqPoint}
           onMapReady={handleMapReady}
+          focusUserId={focusedUserId}
         />
       </motion.div>
 
@@ -663,6 +673,24 @@ export default function MapPage() {
             "radial-gradient(circle at center, transparent 0%, transparent 50%, rgba(10, 14, 39, 0.5) 100%)",
         }}
       />
+
+      {/* 📡 Status Syncing Progress Bar */}
+      <AnimatePresence>
+        {isStatusBusy && (
+          <motion.div
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: "circOut" }}
+            className="fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500 via-cyan-400 to-emerald-500 z-[2000] origin-left"
+            style={{ 
+              boxShadow: "0 0 10px rgba(16, 185, 129, 0.5)",
+              backgroundSize: "200% 100%",
+              animation: "gradientMove 2s linear infinite"
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Header HUD */}
       <motion.header
@@ -893,7 +921,16 @@ export default function MapPage() {
                 setActionMenuOpen(false);
               }}
             >
-              <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/20">
+              <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/20 relative">
+                {isStatusBusy && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10 backdrop-blur-[2px]">
+                    <motion.div 
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full"
+                    />
+                  </div>
+                )}
                 <img
                   src={avatarUrl(currentUser)}
                   alt="Profile"
@@ -902,7 +939,7 @@ export default function MapPage() {
               </div>
               <span
                 className={`absolute bottom-1.5 right-1.5 w-2.5 h-2.5 border-[1.5px] border-[#0a0e27] rounded-full ${
-                  presence === "online" ? "bg-emerald-400" : "bg-pink-500"
+                  isStatusBusy ? "bg-amber-400" : (presence === "online" ? "bg-emerald-400" : "bg-slate-500")
                 }`}
               />
             </button>
@@ -928,16 +965,17 @@ export default function MapPage() {
                   <button
                     key={item}
                     type="button"
+                    disabled={isStatusBusy}
                     className={`w-full grid grid-cols-[12px_1fr] gap-3 px-3 py-2.5 text-left transition-all rounded-lg ${
                       presence === item
                         ? "bg-white/10 text-white"
                         : "text-white/40 hover:bg-white/5 hover:text-white/70"
-                    }`}
+                    } ${isStatusBusy ? "opacity-50 cursor-not-allowed" : ""}`}
                     onClick={() => handlePresenceChange(item)}
                   >
                     <span
                       className={`w-[10px] h-[10px] rounded-full self-center ${
-                        item === "online" ? "bg-emerald-400" : "bg-pink-500"
+                        item === "online" ? "bg-emerald-400" : "bg-slate-500"
                       }`}
                     />
                     <div className="flex flex-col">
@@ -945,9 +983,7 @@ export default function MapPage() {
                         {item}
                       </b>
                       <small className="text-[8px] text-white/30 uppercase">
-                        {item === "online"
-                          ? "Visible to public"
-                          : "Stealth mode"}
+                        {isStatusBusy && presence === item ? "Syncing..." : (item === "online" ? "Visible to public" : "Stealth mode")}
                       </small>
                     </div>
                   </button>
@@ -1141,48 +1177,57 @@ export default function MapPage() {
               sidebarKalcerians.map((user) => (
                 <div key={user.id} className="border-b border-white/[0.03]">
                   <div
-                    className={`relative w-full grid grid-cols-[44px_1fr_auto] items-center gap-4 px-5 py-3.5 hover:bg-white/[0.04] text-left transition-all group cursor-pointer ${selectedKalcerian === user.id ? 'bg-white/[0.04]' : ''}`}
+                    className="relative w-full grid grid-cols-[44px_1fr_auto] items-center gap-4 px-5 py-3.5 hover:bg-white/[0.04] text-left transition-all group cursor-pointer"
                     onMouseEnter={() => setHoveredKalcerian(user.id)}
                     onMouseLeave={() => setHoveredKalcerian(null)}
-                    onClick={() => setSelectedKalcerian(prev => prev === user.id ? null : user.id)}
+                    onClick={() => {
+                      if (user.isOnline) {
+                        setFocusedUserId(user.id);
+                        // Clear after a moment so it can be re-triggered
+                        setTimeout(() => setFocusedUserId(null), 100);
+                        if (window.innerWidth < 860) setDrawerOpen(false);
+                      } else {
+                        setSelectedOfflineUser(prev => prev === user.id ? null : user.id);
+                      }
+                    }}
                   >
-                  <div className="relative">
-                    <div
-                      className={`w-10 h-10 border overflow-hidden rounded-full transition-transform group-hover:scale-105 ${user.isOnline ? "border-emerald-500/40" : "border-white/10 opacity-50"}`}
-                    >
-                      <img
-                        className="w-full h-full object-cover"
-                        src={avatarUrl(user)}
-                        alt={user.nickname || user.name}
+                    <div className="relative">
+                      <div
+                        className={`w-10 h-10 border overflow-hidden rounded-full transition-transform group-hover:scale-105 ${user.isOnline ? "border-emerald-500/40" : "border-white/10 opacity-50"}`}
+                      >
+                        <img
+                          className="w-full h-full object-cover"
+                          src={avatarUrl(user)}
+                          alt={user.nickname || user.name}
+                        />
+                      </div>
+                      <span
+                        className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-[1.5px] border-[#0a0f1a] rounded-full ${user.isOnline ? "bg-emerald-400" : "bg-gray-500"}`}
                       />
                     </div>
-                    <span
-                      className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-[1.5px] border-[#0a0f1a] rounded-full ${user.isOnline ? "bg-emerald-400" : "bg-gray-500"}`}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-start flex-col">
-                      <b
-                        className={`text-sm font-bold tracking-tight truncate leading-relaxed transition-all ${user.isOnline ? "text-gray-300 group-hover:text-yellow-400" : "text-white/40"}`}
+                    <div className="min-w-0">
+                      <div className="flex items-start flex-col">
+                        <b
+                          className={`text-sm font-bold tracking-tight truncate leading-relaxed transition-all ${user.isOnline ? "text-gray-300 group-hover:text-yellow-400" : "text-white/40"}`}
+                        >
+                          {user.name}
+                        </b>
+                        <span className="mt-1 px-2 py-1 rounded-md border border-white/10 bg-gray-600/5 backdrop-blur-md text-gray-400 text-[10px] font-bold tracking-wider  leading-none shadow-[0_0_10px_rgba(255,255,255,0.02)]">
+                          {mapUsersData.find((u) => u.id === user.id)?.district ||
+                            (user.isOnline ? "Scanning..." : "Unknown")}
+                        </span>
+                      </div>
+                      <small
+                        className={`block mt-1 text-[11px] italic truncate ${user.isOnline ? "text-gray-400" : "text-gray-600"}`}
                       >
-                        {user.name}
-                      </b>
-                      <span className="mt-1 px-2 py-1 rounded-md border border-white/10 bg-gray-600/5 backdrop-blur-md text-gray-400 text-[10px] font-bold tracking-wider  leading-none shadow-[0_0_10px_rgba(255,255,255,0.02)]">
-                        {mapUsersData.find((u) => u.id === user.id)?.district ||
-                          (user.isOnline ? "Scanning..." : "Unknown")}
-                      </span>
+                        {user.broadcast?.message
+                          ? `"${user.broadcast.message}"`
+                          : ""}
+                      </small>
                     </div>
-                    <small
-                      className={`block mt-1 text-[11px] italic truncate ${user.isOnline ? "text-gray-400" : "text-gray-600"}`}
-                    >
-                      {user.broadcast?.message
-                        ? `"${user.broadcast.message}"`
-                        : ""}
-                    </small>
                   </div>
-                </div>
-                {/* hover popup card (for desktop hover) */}
-                {hoveredKalcerian === user.id && selectedKalcerian !== user.id && (
+                  {/* hover popup card (for desktop hover) */}
+                  {hoveredKalcerian === user.id && (
                     <div
                       className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 w-[220px] bg-[#0a0f1a]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl p-4 flex flex-col gap-3 pointer-events-auto hidden md:flex"
                       onClick={(e) => e.stopPropagation()}
@@ -1223,7 +1268,8 @@ export default function MapPage() {
                             type="button"
                             className="flex-1 py-2 text-center text-[9px] font-bold uppercase tracking-wider bg-[#ffd60a]/10 hover:bg-[#ffd60a]/20 border border-[#ffd60a]/20 rounded-lg text-[#ffd60a] transition-all"
                             onClick={() => {
-                              focusUser(user);
+                              setFocusedUserId(user.id);
+                              setTimeout(() => setFocusedUserId(null), 100);
                               setHoveredKalcerian(null);
                             }}
                           >
@@ -1233,40 +1279,8 @@ export default function MapPage() {
                       </div>
                     </div>
                   )}
-                  
-                  {/* Expanded Mobile Menu */}
-                  <AnimatePresence>
-                    {selectedKalcerian === user.id && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden bg-[#0a0f1a]/80"
-                      >
-                        <div className="flex items-center gap-2 px-5 py-4 ">
-                          <Link
-                            href={`/user/${user.id}`}
-                            className="flex-1 text-center py-2 text-[10px] font-bold tracking-wider uppercase text-white/70 bg-white/5 hover:bg-white/10 hover:text-white rounded-lg border border-white/10 transition-all"
-                          >
-                            View Profile
-                          </Link>
-                          <button
-                            type="button"
-                            className={`flex-1 py-2 text-[10px] font-bold tracking-wider uppercase rounded-lg border transition-all ${user.isOnline ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20 hover:bg-emerald-400/20 hover:text-emerald-300" : "text-gray-500 bg-gray-500/10 border-gray-500/20 cursor-not-allowed"}`}
-                            onClick={() => {
-                              if (user.isOnline) {
-                                focusUser(user);
-                                if (window.innerWidth < 860) setDrawerOpen(false);
-                              }
-                            }}
-                            disabled={!user.isOnline}
-                          >
-                            Go To
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+
+
                 </div>
               ))
             ) : (
@@ -1353,6 +1367,21 @@ export default function MapPage() {
       )}
 
       {/* Modals with enhanced HUD design */}
+      
+      {/* Offline User Global Popup */}
+      {offlineUserObj && !offlineUserObj.isOnline && (
+        <div
+          className="fixed inset-0 md:inset-auto md:left-[380px] md:top-1/2 md:-translate-y-1/2 z-[3000] flex items-center justify-center md:block pointer-events-auto bg-black/60 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none"
+          onClick={() => setSelectedOfflineUser(null)}
+        >
+          <div 
+             onClick={(e) => e.stopPropagation()}
+             className="relative [&>.popup-tail]:hidden shadow-2xl rounded-[16px] overflow-hidden bg-[#0a0e27]/40 backdrop-blur-3xl" 
+             dangerouslySetInnerHTML={{ __html: userPopup(offlineUserObj) }} 
+          />
+        </div>
+      )}
+
       {showStatusModal && (
         <div
           className="fixed inset-0 z-[2000] grid place-items-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-300"
@@ -1616,6 +1645,11 @@ export default function MapPage() {
             transform: translate(0, 0) scale(1);
             opacity: 0.2;
           }
+        }
+
+        @keyframes gradientMove {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
         }
 
         #panel-toggle:checked ~ section .toggle-arrow {

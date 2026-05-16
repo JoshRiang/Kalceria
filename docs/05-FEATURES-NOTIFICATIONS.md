@@ -6,8 +6,8 @@ Sistem notifikasi email terautomasi dengan template profesional.
 
 ## 📧 Email System Overview
 
-**Provider**: Gmail (kalceria@gmail.com)
-**Service**: Nodemailer dengan SMTP
+**Provider**: Resend (API-based)
+**Service**: Resend Node SDK
 **Frequency**: Event-driven (real-time)
 
 ---
@@ -31,29 +31,19 @@ DMARC (Domain-based Message Authentication):
 v=DMARC1; p=quarantine; rua=mailto:admin@kalceria.co.id
 ```
 
-### Nodemailer Configuration
+### Resend Configuration
 
 ```javascript
-// backend/lib/mailer.js
-const nodemailer = require("nodemailer");
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER, // kalceria@gmail.com
-    pass: process.env.GMAIL_APP_PASSWORD, // App-specific password
-  },
-});
-
-module.exports = transporter;
+// backend/lib/email.js
+import { Resend } from 'resend';
+export const resend = new Resend(process.env.RESEND_API_KEY);
 ```
 
 ### Environment Variables
 
 ```bash
-GMAIL_USER=kalceria@gmail.com
-GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx  # 16-char app password
-GMAIL_FROM_NAME="Kalceria Community"
+RESEND_API_KEY=re_xxxx_xxxx
+EMAIL_FROM="Kalceria Community <onboarding@resend.dev>"
 ```
 
 ---
@@ -116,37 +106,35 @@ Kalceria © 2026 - Automotive Community Platform
 ═══════════════════════════════════════════════
 ```
 
-### 2. Email Verification (On Registration)
+### 2. Email Verification (OTP On Registration)
 
 **Trigger**: New user signs up
 **To**: Registered email
+**Tech**: Uses Redis to cache OTP for 15 minutes.
 
 ```
-From: kalceria@gmail.com
+From: onboarding@resend.dev
 To: newuser@example.com
-Subject: ✅ Verify Your Kalceria Account
+Subject: Your Kalceria Verification Code
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    KALCERIA EMAIL VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Hi there! 👋
+Hi Kalcerian! 👋
 
 Welcome to Kalceria! To complete your registration,
-please verify your email address using the PIN below:
+please verify your email address using the 6-digit OTP below:
 
 ╔════════════════════════════════════╗
-║         YOUR VERIFICATION PIN      ║
 ║                                    ║
 ║              123456                ║
 ║                                    ║
 ╚════════════════════════════════════╝
 
-⏰ This PIN expires in 15 minutes.
+⏰ This OTP expires in 15 minutes.
 
 Enter this PIN in your browser to activate your account.
-[VERIFY NOW] → https://kalceria.co.id/verify?pin=123456
-
 If you didn't sign up for this account, ignore this email.
 
 Best regards,

@@ -1,6 +1,6 @@
 # Features: Users Map & Live Location Tracking
 
-Real-time location tracking dan community visualization menggunakan Google Maps.
+Real-time location tracking dan community visualization menggunakan **Leaflet (React-Leaflet)**.
 
 ---
 
@@ -21,10 +21,10 @@ Real-time location tracking dan community visualization menggunakan Google Maps.
 
 ```
 ┌─────────────────────────────────────┐
-│ Frontend (Next.js + Google Maps)    │
-│  - Display user markers on map      │
-│  - Show mini-events bubbles         │
-│  - Handle zoom/rotate/pan           │
+│ Frontend (Next.js + Leaflet)        │
+│  - SnapMap.jsx (Tactical HUD)       │
+│  - Cinematic Cloud Split Loading    │
+│  - Global Modal for Offline Users   │
 └──────────────┬──────────────────────┘
                │
 ┌──────────────▼──────────────────────┐
@@ -142,9 +142,9 @@ async function updateLiveLocation(userId, lat, lng) {
 
 ---
 
-## 🎯 Frontend: Google Maps Integration
+## 🎯 Frontend: Leaflet Integration (SnapMap)
 
-### Map Component Features
+### Map Component Features (`SnapMap.jsx` & `app/map/page.jsx`)
 
 **Interactive Controls**:
 
@@ -153,23 +153,22 @@ async function updateLiveLocation(userId, lat, lng) {
 - 📍 Pan (drag)
 - 🎯 Center on current user
 
-**Markers**:
+**Markers & Popups (Discord-Style)**:
 
-- User markers with profile photo
-- Mini-event bubbles (with inner circle + plus sign)
-- Color-coded by district or status
+- Online User Markers: Glowing green dots with radar pulses (`UserIcon.jsx`).
+- Offline User Popups: Rendered as a **Global Modal Overlay** (fixed positioning) to bypass sidebar overflow-clipping.
+- Desain popup mengadopsi gaya Discord (Avatar ring, status dot hijau/abu-abu, neon typography).
 
-**On Click User Marker**:
+**On Click User (Sidebar or Map)**:
 
 ```
-1. Show popup with:
-   - Profile photo
+1. Fly-to animation (jika online) atau Global Popup (jika offline).
+2. Show popup with:
+   - Profile photo & Discord-style status dot
    - Username
-   - District (privacy-masked)
-2. Options:
-   - View profile
+   - District & Status Broadcast
+3. Options:
    - Contact (WhatsApp/Instagram/Facebook links)
-   - Block/Report
 ```
 
 **On Click Mini-Event Bubble**:
@@ -403,23 +402,18 @@ Response:
 
 ```typescript
 // Components needed:
-- GoogleMapComponent
-  - Load map with user markers
-  - Handle marker clusters (if many users)
-  - Zoom/pan/rotate controls
+- SnapMap.jsx (Main Leaflet Renderer)
+  - Load map tiles (CartoDB Dark Matter)
+  - Handle marker clusters (leaflet.markercluster)
+  - Zoom/pan/flyTo controls
+  - Background Atmospheric Blobs (behind map pane)
 
-- UserMarkerPopup
-  - Show user info, district, contact buttons
+- UserPopup.jsx
+  - Discord-style user profile card with offline/online state indicators
+  - Rendered inline on map OR as fixed overlay from sidebar
 
-- MiniEventBubble
-  - Show mini-event title, description, expiry
-
-- ContactMeModal
-  - WhatsApp/Instagram/Facebook links
-
-- LocationPermissionPrompt
-  - Request GPS access on first visit
-  - Store preference in localStorage + backend
+- Cloud Split Loading Screen
+  - Immersive preloader specific to the map page
 ```
 
 ---

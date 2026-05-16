@@ -146,8 +146,19 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
     if (mode === "verify") { handleVerifyOtp(); return; }
 
-    if (mode === "register" && form.password?.length < 8) {
-      setError("Password must be at least 8 characters."); return;
+    if (mode === "register") {
+      if (!form.name || !form.email || !form.password || !form.dob) {
+        setError("All fields are required.");
+        return;
+      }
+      if (form.password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
+      if (isNaN(new Date(form.dob).getTime())) {
+        setError("Invalid Date of Birth format.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -173,7 +184,17 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         setSuccess("Kode OTP telah dikirim ke email kamu.");
       }
     } catch (err) {
-      setError(err.message || "An error occurred.");
+      let msg = err.message || "An error occurred.";
+      if (msg.includes("prisma")) {
+        if (msg.includes("dob") || msg.includes("Invalid Date")) {
+          msg = "Format tanggal lahir tidak valid.";
+        } else if (msg.includes("Unique constraint failed")) {
+          msg = "Email atau nomor telepon sudah terdaftar.";
+        } else {
+          msg = "Terjadi kesalahan pada sistem registrasi. Coba lagi.";
+        }
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -337,10 +358,12 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                     <>
                       {/* Email icon */}
                       <div className="flex justify-center mb-6">
-                        <div className="w-16 h-16 rounded-full bg-[#4F46E5]/10 border border-[#4F46E5]/30 flex items-center justify-center">
-                          <svg className="w-8 h-8 text-[#4F46E5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
+                        <div className="w-20 h-20 flex items-center justify-center">
+                          <img 
+                            src="/register/email_logo.png" 
+                            alt="Email Logo" 
+                            className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(79,70,229,0.3)]" 
+                          />
                         </div>
                       </div>
 

@@ -61,6 +61,7 @@ export async function getMapUsers(req, res, next) {
         profilePicture: true,
         socialPlatform: true,
         socialLink: true,
+        createdAt: true,
         broadcast: {
           select: { id: true, message: true, expiresAt: true },
         },
@@ -147,6 +148,9 @@ export async function getAllKalcerians(req, res, next) {
         nickname: true,
         profilePicture: true,
         allowLiveLocation: true,
+        socialPlatform: true,
+        socialLink: true,
+        createdAt: true,
         broadcast: {
           select: { id: true, message: true, expiresAt: true },
         },

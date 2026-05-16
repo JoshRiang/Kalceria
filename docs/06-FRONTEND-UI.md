@@ -333,29 +333,20 @@ export const rotate = {
 
 ```
 components/
-├── IntroAnimation.tsx      (Intro + gears)
-├── LandingPage.tsx         (Main landing)
-├── MerchShowcase.tsx       (Merch grid + rotation)
-├── SupportUs.tsx           (Phone mockup + social)
-├── AboutUs.tsx             (Founders + FAQ)
-├── AuthPage.tsx            (Login + signup)
-├── GoogleMapComponent.tsx  (Users map)
-├── EventCard.tsx           (Event listing)
-├── ServiceForm.tsx         (Shooting booking)
-├── AdminPanel.tsx          (Admin dashboard)
-├── animations/
-│   ├── FireParticles.tsx
-│   ├── GearAnimation.tsx
-│   ├── GridMaze.tsx
-│   └── ScrollArrow.tsx
-├── hooks/
-│   ├── usePhoenixAurora.ts (Custom animation hook)
-│   └── useMapInteraction.ts
+├── IntroPreloader.jsx      (Intro + gears)
+├── LandingPage.jsx         (Main landing)
+├── MerchShowcase.jsx       (Merch grid + rotation)
+├── AboutUs.jsx             (Founders + FAQ)
+├── AuthPage.jsx            (Login + signup + OTP Verify)
+├── SnapMap.jsx             (Users map via Leaflet)
+├── SeeEvent.jsx            (Event listing)
+├── NeedUsForm.jsx          (Shooting booking)
+├── map/
+│   ├── UserPopup.jsx       (Discord-style profile)
+│   └── UserIcon.jsx
 └── ui/
-    ├── Button.tsx
-    ├── Modal.tsx
-    ├── Card.tsx
-    └── Form.tsx
+    ├── Input.jsx
+    └── Button.jsx
 ```
 
 ---
@@ -392,9 +383,10 @@ public/
 
 - **Image optimization**: Next.js Image component
 - **Lazy loading**: Intersection Observer for off-screen components
-- **Code splitting**: Dynamic imports for heavy components
+- **Code splitting**: Dynamic imports for heavy components (e.g. Leaflet)
 - **Video optimization**: Preload + WebM format
 - **Animation perf**: Use transform/opacity only (GPU accelerated)
+- **Hydration Safety**: Defer all randomized rendering (`Math.random()`, dynamic DOM nodes) to client-side `useEffect` hooks to prevent React HTML hydration mismatches.
 
 ---
 

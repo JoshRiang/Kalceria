@@ -32,13 +32,12 @@ Kalceria adalah platform komunitas otomotif dengan fokus pada pelacakan anggota,
 
 ### Frontend Core Features
 
-- Login page dengan video backgrounds
-- Landing page dengan intro animation
+- Auth page dengan video backgrounds dan sistem verifikasi OTP (Resend + Redis)
+- Landing page dengan intro animation (Gear + Canvas Phoenix) dan pencegahan Hydration Error
+- Kalcerians Map dengan integrasi Leaflet, profil bergaya Discord, dan cinematic loading
+- Admin Dashboard dengan antarmuka Glassmorphism untuk manajemen Event, User, dan Servis
 - Merch showcase dengan random rotation
 - Service form (Shooting) dengan calendar & payment
-- User map dengan Google Maps integration
-- About Us & FAQ pages
-- Support Us section dengan TikTok/Instagram feed
 
 ---
 
@@ -61,9 +60,9 @@ Kalceria adalah platform komunitas otomotif dengan fokus pada pelacakan anggota,
 
 ## 🔐 Security Requirements
 
-- **Authentication**: RSA-based tokens (20-minute validity)
-- **Password**: Min 8 chars, uppercase, numbers, special chars, hashed with Argon2
-- **Email Verification**: PIN-based challenge-response
+- **Authentication**: JWT-based tokens (20-minute validity)
+- **Password**: Hashed with Argon2
+- **Email Verification**: Redis-backed OTP challenge-response
 - **PCI DSS**: Encrypted transaction data (separate table)
 - **Rate Limiting**: Prevent DDOS, SQL Injection, Request Smuggling
 - **DKIM/SPF/DMARC**: Email authentication setup
@@ -76,15 +75,15 @@ Kalceria adalah platform komunitas otomotif dengan fokus pada pelacakan anggota,
 
 - Node.js (Express.js)
 - PostgreSQL (primary DB)
-- Redis (token management, live telemetry)
+- Redis (token management, live telemetry, OTP caching)
 - Prisma (ORM)
-- Nodemailer (email service)
+- Resend (email service API)
 
 **Frontend:**
 
 - Next.js (React framework)
 - Three.js (3D animations)
-- Google Maps API (location tracking)
+- Leaflet & React-Leaflet (location tracking & tactical map)
 - Framer Motion (animations)
 - TailwindCSS (styling)
 
