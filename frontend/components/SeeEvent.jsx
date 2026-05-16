@@ -1,6 +1,8 @@
 "use client";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { motion, AnimatePresence, useInView, useSpring, useTransform, animate } from "framer-motion";
+import { Canvas, useFrame } from "@react-three/fiber";
+import * as THREE from "three";
 import api from "@/lib/api";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -13,6 +15,49 @@ const HERO_IMAGES = [
 
 const CLIP = { clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" };
 const CLIP_CARD = { clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" };
+
+// ─── Stat Counter Component (Watchdog style) ──────────────────────────────
+function StatCounter({ target, label, suffix = "", align = "start", active = false }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (active) {
+      const controls = animate(0, target, {
+        duration: 3, // Slower, more "grave" count-up
+        ease: [0.16, 1, 0.3, 1], // Smooth cinematic ease
+        onUpdate: (value) => setCount(Math.floor(value)),
+      });
+      return () => controls.stop();
+    }
+  }, [active, target]);
+
+  return (
+    <div className={`flex flex-col leading-none ${align === "end" ? "items-end" : "items-start"}`}>
+      <div className="flex items-baseline">
+        <span 
+          className="font-mono font-black tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+          style={{ fontSize: "clamp(2.2rem, 5.5vw, 4.5rem)" }}
+        >
+          {count}
+        </span>
+        {suffix && (
+          <span 
+            className="font-mono font-black tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+            style={{ fontSize: "clamp(1.5rem, 3.5vw, 3rem)", marginLeft: "4px" }}
+          >
+            {suffix}
+          </span>
+        )}
+      </div>
+      <span 
+        className="font-mono font-bold tracking-tight text-white/60"
+        style={{ fontSize: "clamp(0.8rem, 1.8vw, 1.3rem)", marginTop: "6px" }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
 
 // ─── Components ──────────────────────────────────────────────────────────────
 function RainbowPixels() {
@@ -53,6 +98,335 @@ function RainbowPixels() {
     </div>
   );
 }
+
+function MicroParticles() {
+  const particles = useMemo(() => Array.from({ length: 60 }).map(() => ({
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 2 + 0.5,
+    duration: 8 + Math.random() * 12,
+    delay: -Math.random() * 20,
+    driftX: (Math.random() - 0.5) * 80
+  })), []);
+
+  return (
+    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30">
+      {particles.map((p, i) => (
+        <motion.div
+          key={i}
+          className="absolute bg-white rounded-full"
+          style={{
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            width: p.size,
+            height: p.size,
+            boxShadow: `0 0 4px rgba(255,255,255,0.6)`
+          }}
+          animate={{
+            y: [0, -150, 0],
+            x: [0, p.driftX, 0],
+            opacity: [0, 0.7, 0]
+          }}
+          transition={{ duration: p.duration, repeat: Infinity, ease: "linear", delay: p.delay }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Spinning Globe (Accurate Continent Dot Map) ──────────────────────────────
+function SpinningGlobe() {
+  const groupRef = useRef();
+
+
+  // Highly refined continent regions — tighter boxes, many sub-regions to avoid ocean fill
+  const dotPositions = useMemo(() => {
+    const regions = [
+      // ── NORTH AMERICA ──
+      [60, 72, -140, -70],  // Canada west/central
+      [48, 60, -125, -70],  // Canada south strip
+      [25, 50, -125, -65],  // USA main
+      [15, 30, -120, -85],  // Mexico
+      [5,  16, -90,  -75],  // Central America thin strip
+      [55, 72, -130, -100], // Alaska/Yukon
+      [60, 80, -95,  -70],  // Baffin/Nunavut coast
+      // ── SOUTH AMERICA ──
+      [8,  12, -75,  -60],  // Venezuela/Colombia
+      [-5, 8,  -78,  -48],  // Brazil north
+      [-20, -5,-70,  -40],  // Brazil south
+      [-40,-20, -73, -48],  // Argentina/Chile
+      [-55,-40, -75, -60],  // Patagonia
+      // ── EUROPE ──
+      [36, 44, -10, 28],    // Spain/France/Italy
+      [44, 55, -5,  25],    // France/Germany/Poland
+      [55, 65, 5,   30],    // Scandinavia south
+      [60, 70, 15,  30],    // Norway coast
+      [55, 60, 22,  28],    // Baltic states
+      [35, 42, 28,  36],    // Turkey
+      [37, 42, -9,  -5],    // Portugal
+      [36, 38, 12,  16],    // Sicily/S. Italy
+      // ── AFRICA ──
+      [30, 37, -5,  35],    // Morocco/Algeria/Libya/Egypt
+      [15, 30, 15,  35],    // Sudan/Chad/Libya strip
+      [-5, 15, -18, 45],    // West Africa wide
+      [-30,-5, 10,  40],    // Central/East Africa
+      [-35,-25,15,  32],    // South Africa
+      [-26,-15,30,  36],    // Mozambique/Zimbabwe
+      [5,  15, 35,  45],    // Ethiopia/Somalia west
+      // ── ASIA ──
+      [45, 72, 32,  80],    // Russia west/central
+      [50, 72, 80,  130],   // Siberia
+      [35, 55, 32,  80],    // Central Asia
+      [35, 50, 80,  130],   // China north
+      [20, 38, 60,  125],   // China south + India + SEA
+      [8,  25, 68,  100],   // India subcontinent
+      [8,  22, 98,  110],   // Indochina
+      [35, 42, 26,  45],    // Turkey/Caucasus
+      [10, 30, 35,  60],    // Arabian peninsula
+      [22, 40, 45,  60],    // Iran
+      // ── SOUTHEAST ASIA ──
+      [0,  7,  100, 120],   // Sumatra/Malay
+      [-8, 2,  108, 117],   // Java/Bali
+      [-5, 4,  115, 120],   // Borneo east
+      [5,  18, 120, 125],   // Philippines core
+      // ── JAPAN ──
+      [31, 45, 130, 142],
+      // ── AUSTRALIA ──
+      [-10,-5, 130, 140],   // NT top
+      [-35,-10,115, 150],   // Main continent
+      [-45,-38,145, 148],   // Tasmania
+      // ── NEW ZEALAND ──
+      [-47,-34,167, 178],
+      // ── GREENLAND ──
+      [60, 84, -55, -18],
+      // ── ICELAND ──
+      [63, 66, -25, -12],
+      // ── MADAGASCAR ──
+      [-26,-12,43,  51],
+      // ── BRITISH ISLES ──
+      [50, 60, -8,  2],
+      // ── ALASKA ──
+      [54, 64, -168,-140],
+    ];
+
+    const pts = [];
+    // Vary density by region area for even distribution
+    for (const [latMin, latMax, lonMin, lonMax] of regions) {
+      const area = (latMax - latMin) * (lonMax - lonMin);
+      const count = Math.max(40, Math.min(220, Math.floor(area * 0.7)));
+      for (let i = 0; i < count; i++) {
+        const lat = latMin + Math.random() * (latMax - latMin);
+        const lon = lonMin + Math.random() * (lonMax - lonMin);
+        const latR = (lat * Math.PI) / 180;
+        const lonR = (lon * Math.PI) / 180;
+        pts.push(
+          Math.cos(latR) * Math.cos(lonR),
+          Math.sin(latR),
+          Math.cos(latR) * Math.sin(lonR)
+        );
+      }
+    }
+    return new Float32Array(pts);
+  }, []);
+
+  // Earth's axial tilt is approx 23.5 degrees
+  const tiltRad = (23.5 * Math.PI) / 180;
+
+  useFrame((_, delta) => {
+    if (groupRef.current) {
+      // Local rotation (spinning)
+      groupRef.current.rotation.y += delta * 0.15;
+    }
+  });
+
+  return (
+    <group ref={groupRef} rotation={[0, 0, tiltRad]} scale={0.75}>
+      {/* Internal Dynamic Strings (Phage style) */}
+      <GlobeCoreStrings />
+
+      {/* High-visibility stark white grid */}
+      <mesh>
+        <sphereGeometry args={[1, 36, 18]} />
+        <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.4} blending={THREE.AdditiveBlending} />
+      </mesh>
+
+      {/* Continent dot map — now Orange-Gold and glowing */}
+      <points>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" count={dotPositions.length / 3} array={dotPositions} itemSize={3} />
+        </bufferGeometry>
+        <pointsMaterial 
+          size={0.026} 
+          color="#ff9900" 
+          transparent 
+          opacity={1} 
+          sizeAttenuation 
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+    </group>
+  );
+}
+
+// ─── Internal Globe Core Strings (Bacteriophage Style) ────────────────────────
+function GlobeCoreStrings() {
+  // Create 6 independent winding paths with unique movement data
+  const stringData = useMemo(() => {
+    const data = [];
+    for (let j = 0; j < 6; j++) {
+      const pts = [];
+      for (let i = 0; i < 10; i++) {
+        const r = 0.35 + Math.random() * 0.45;
+        const phi = Math.random() * Math.PI * 2;
+        const theta = Math.random() * Math.PI;
+        pts.push(new THREE.Vector3(
+          r * Math.sin(theta) * Math.cos(phi),
+          r * Math.sin(theta) * Math.sin(phi),
+          r * Math.cos(theta)
+        ));
+      }
+      const curve = new THREE.CatmullRomCurve3(pts, true);
+      data.push({
+        geometry: new THREE.BufferGeometry().setFromPoints(curve.getPoints(120)),
+        color: "#ff00ff", // Pure Magenta
+        rotSpeed: [
+          (Math.random() - 0.5) * 0.008, // Much slower, "grave" motion
+          (Math.random() - 0.5) * 0.008,
+          (Math.random() - 0.5) * 0.008
+        ],
+        ref: React.createRef()
+      });
+    }
+    return data;
+  }, []);
+
+  useFrame((state) => {
+    stringData.forEach((sd) => {
+      if (sd.ref.current) {
+        sd.ref.current.rotation.x += sd.rotSpeed[0];
+        sd.ref.current.rotation.y += sd.rotSpeed[1];
+        sd.ref.current.rotation.z += sd.rotSpeed[2];
+        // Dynamic scaling for "pulsing" energy
+        const pulse = 1 + Math.sin(state.clock.elapsedTime * 1.5 + stringData.indexOf(sd)) * 0.08;
+        sd.ref.current.scale.set(pulse, pulse, pulse);
+      }
+    });
+  });
+
+  return (
+    <group>
+      {stringData.map((sd, i) => (
+        <group key={i} ref={sd.ref}>
+          {/* LAYER 1: The core bright magenta filament */}
+          <line geometry={sd.geometry}>
+            <lineBasicMaterial 
+              color="#ff88ff" 
+              transparent 
+              opacity={1.0} 
+              linewidth={1} 
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </line>
+          {/* LAYER 2: The vibrant magenta body */}
+          <line geometry={sd.geometry}>
+            <lineBasicMaterial 
+              color="#ff00ff" 
+              transparent 
+              opacity={0.8} 
+              linewidth={3} 
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </line>
+          {/* LAYER 3: The deep magenta outer glow */}
+          <line geometry={sd.geometry}>
+            <lineBasicMaterial 
+              color="#aa00aa" 
+              transparent 
+              opacity={0.4} 
+              linewidth={6} 
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </line>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+
+
+// ─── Floating Photos around the Globe ─────────────────────────────────────────
+const FLOAT_PHOTOS = [
+  { src: "/ven_3.jpeg", top: "23%",   left: "26%",   rotate: -12, delay: 0.6  }, // Top Left
+  { src: "/ven_2.jpeg", top: "23%",   right: "26%",  rotate:  12, delay: 1.1  }, // Top Right
+  { src: "/ven_5.jpeg", bottom: "23%", left: "26%",   rotate: -12, delay: 0.3  }, // Bottom Left
+  { src: "/ven_6.jpeg", bottom: "23%", right: "26%",  rotate:  12, delay: 2.2  }, // Bottom Right
+];
+
+function FloatingPhotoCard({ initialSrc, config, index }) {
+  const [src, setSrc] = useState(initialSrc);
+  const photos = useMemo(() => Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.jpeg`), []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const others = photos.filter(p => p !== src);
+      const next = others[Math.floor(Math.random() * others.length)];
+      setSrc(next);
+    }, 3000 + Math.random() * 1000);
+    return () => clearInterval(interval);
+  }, [photos, src]);
+
+  return (
+    <motion.div
+      className="absolute z-30 pointer-events-none"
+      style={{ top: config.top, left: config.left, right: config.right, bottom: config.bottom }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: [0, -14, 0] }}
+      transition={{
+        opacity: { duration: 1.2, delay: config.delay },
+        y: { duration: 4 + index * 0.4, repeat: Infinity, ease: "easeInOut", delay: config.delay },
+      }}
+    >
+      <div 
+        className="relative overflow-hidden" 
+        style={{ 
+          width: 112, 
+          height: 77, 
+          borderRadius: 14, 
+          transform: `rotate(${config.rotate}deg)`,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08)"
+        }}
+      >
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={src}
+            src={src}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+            className="absolute inset-0 w-full h-full object-cover"
+            alt=""
+          />
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
+function FloatingPhotos() {
+  return (
+    <>
+      {FLOAT_PHOTOS.map((p, i) => (
+        <FloatingPhotoCard key={i} index={i} config={p} initialSrc={p.src} />
+      ))}
+    </>
+  );
+}
+
 
 const Typewriter = ({ text, speed = 50, delay = 0 }) => {
   const [displayed, setDisplayed] = useState("");
@@ -255,6 +629,8 @@ export default function SeeEvent() {
   }, [events]);
 
   const activeEvent = events[eventIdx];
+  const atmosRef = useRef(null);
+  const isAtmosView = useInView(atmosRef, { once: true, margin: "-100px" });
 
   return (
     <div className="w-full min-h-screen bg-[#0B0C10] text-white font-sans overflow-x-hidden">
@@ -295,8 +671,103 @@ export default function SeeEvent() {
       {/* ─── SECTION 2 & 3 WRAPPER ─────────────────────────────────────────── */}
       <div className="relative w-full bg-[#0B0C10]">
         <RainbowPixels />
+        <MicroParticles />
         <img src="/stikermobil_5.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] -rotate-3 opacity-80 drop-shadow-xl pointer-events-none" />
         <img src="/stikermobil_2.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] rotate-6 opacity-80 drop-shadow-xl pointer-events-none" />
+
+        {/* ─── SECTION 1.5: ATMOSPHERIC BREAK ────────────────────────────────── */}
+        <section ref={atmosRef} className="relative w-full py-[60vh] z-20 overflow-hidden">
+          {/* Section Title with 3D Effect */}
+          <div className="absolute top-[5%] left-1/2 -translate-x-1/2 z-30 text-center w-full px-4">
+             <motion.h2 
+               initial={{ opacity: 0, y: 30, filter: "blur(20px)" }}
+               animate={isAtmosView ? { opacity: 1, y: 0, filter: "blur(0px)" } : { opacity: 0, y: 30, filter: "blur(20px)" }}
+               transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+               className="font-rog font-black tracking-tighter text-white uppercase relative inline-block select-none drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+               style={{ 
+                 fontSize: "clamp(2rem, 6vw, 5rem)",
+                 WebkitTextStroke: "1px rgba(255,255,255,0.1)",
+                 textShadow: `
+                   0 1px 0 #ccc, 
+                   0 2px 0 #c9c9c9, 
+                   0 3px 0 #bbb, 
+                   0 4px 0 #b9b9b9, 
+                   0 5px 0 #aaa, 
+                   0 6px 1px rgba(0,0,0,.1), 
+                   0 0 5px rgba(0,0,0,.1), 
+                   0 1px 3px rgba(0,0,0,.3), 
+                   0 3px 5px rgba(0,0,0,.2), 
+                   0 5px 10px rgba(0,0,0,.25), 
+                   0 10px 10px rgba(0,0,0,.2), 
+                   0 20px 20px rgba(0,0,0,.15)
+                 `
+               }}
+             >
+               <span className="text-[#ffcc00]">KALCER's</span> AROUND <span className="text-red-600">INDONESIA</span>
+             </motion.h2>
+          </div>
+
+          {/* Enhanced Dynamic Background Blobs (25% Aggressiveness, Higher Placement) */}
+          <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.38] mix-blend-screen">
+             {/* Green Blob - Higher and more active */}
+             <motion.div 
+               animate={{ 
+                 x: ["-10%", "20%", "5%", "-10%"],
+                 y: ["-15%", "15%", "30%", "-15%"],
+                 scale: [1, 1.3, 1.15, 1],
+                 rotate: [0, 50, -50, 0]
+               }}
+               transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+               className="absolute top-[5%] left-[10%] w-[52vw] h-[52vw] rounded-full blur-[140px] bg-[#00ff88]/20"
+             />
+             {/* Gold Blob - Higher and more active */}
+             <motion.div 
+               animate={{ 
+                 x: ["15%", "-15%", "10%", "15%"],
+                 y: ["10%", "-10%", "-25%", "10%"],
+                 scale: [1, 1.35, 1.2, 1],
+                 rotate: [0, -60, 60, 0]
+               }}
+               transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+               className="absolute top-[10%] right-[10%] w-[58vw] h-[58vw] rounded-full blur-[160px] bg-[#ffcc00]/20"
+             />
+          </div>
+
+          {/* Indonesia Map Background Behind Globe */}
+          <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
+             <img 
+               src="/indo.png" 
+               alt="Indonesia Map" 
+               className="w-[151vw] md:w-[100vw] h-auto object-contain opacity-20 filter brightness-125" 
+             />
+          </div>
+
+          {/* 3D Spinning Globe */}
+          <div className="absolute inset-0 z-0">
+             <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }} style={{ pointerEvents: 'none' }}>
+                <ambientLight intensity={0.5} />
+                <pointLight position={[10, 10, 10]} />
+                <SpinningGlobe />
+             </Canvas>
+          </div>
+          {/* Aggressive Edge Blending for Seamless Transitions */}
+          <div className="absolute top-0 left-0 w-full h-[30vh] bg-gradient-to-b from-[#0B0C10] to-transparent z-10 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-full h-[30vh] bg-gradient-to-t from-[#0B0C10] to-transparent z-10 pointer-events-none" />
+          {/* Floating ven photos */}
+          <FloatingPhotos />
+
+          {/* ── LEFT STATS ── */}
+          <div className="absolute left-6 md:left-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-12 pointer-events-none">
+            <StatCounter target={10} label="Users" suffix="" active={isAtmosView} />
+            <StatCounter target={10} label="Events" suffix="+" active={isAtmosView} />
+          </div>
+
+          {/* ── RIGHT STATS ── */}
+          <div className="absolute right-6 md:right-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-12 pointer-events-none items-end">
+            <StatCounter target={100}  label="Hours Streamed" suffix="+" align="end" active={isAtmosView} />
+            <StatCounter target={1000} label="Days Created" suffix="" align="end" active={isAtmosView} />
+          </div>
+        </section>
 
         {/* ─── SECTION 2: DYNAMIC EVENT CARDS ──────────────────────────────── */}
         <section className="relative w-full py-24 z-20 pointer-events-none">
