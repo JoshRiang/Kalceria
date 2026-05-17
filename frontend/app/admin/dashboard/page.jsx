@@ -78,19 +78,6 @@ function formatDate(d) {
 }
 
 // ─── Utilities ──────────────────────────────────────────────────────────────
-function Clock({ className }) {
-  const [wibTime, setWibTime] = useState("");
-  useEffect(() => {
-    const updateTime = () => setWibTime(new Date().toLocaleTimeString('id-ID', { 
-      timeZone: 'Asia/Jakarta', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
-    }) + " WIB");
-    updateTime();
-    const t = setInterval(updateTime, 1000);
-    return () => clearInterval(t);
-  }, []);
-  return <span className={className}>{wibTime}</span>;
-}
-
 function HoverTypewriter({ text, speed = 40, hover }) {
   const [displayed, setDisplayed] = useState(text);
 
@@ -543,6 +530,7 @@ function EventsPanel({ initialEvents = [], onRefresh }) {
   return (
     <div className="grid lg:grid-cols-3 gap-10">
       <div className="lg:col-span-1 space-y-8">
+        {/* Form */}
         <div className={`${CARD} rounded p-6`} style={CLIP_BTN}>
           <h3 className="font-mono font-black text-sm uppercase tracking-widest text-slate-400 mb-5">
             {editing ? editing.title : "New Event"}
@@ -640,8 +628,8 @@ function EventsPanel({ initialEvents = [], onRefresh }) {
   );
 }
 
-function RegistrationsPanel({ initialRegs = [], onRefresh, lowPowerMode }) {
-  const [regs, setRegs] = useState(initialRegs);
+function RegistrationsPanel({ lowPowerMode }) {
+  const [regs, setRegs] = useState([]);
   const [receiptModal, setReceiptModal] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [jitAction, setJitAction] = useState(null);
@@ -657,11 +645,15 @@ function RegistrationsPanel({ initialRegs = [], onRefresh, lowPowerMode }) {
     });
   }, [regs, debouncedSearchQuery]);
 
-  useEffect(() => { setRegs(initialRegs); }, [initialRegs]);
+  const load = useCallback(async () => {
+    const r = await api.get("/admin/registrations").catch(() => ({ data: { registrations: [] } }));
+    setRegs(r.data.registrations || []);
+  }, []);
+  useEffect(() => { load(); }, [load]);
 
   async function confirmPayment(id, status, version) {
     await api.patch(`/admin/registrations/${id}/payment`, { status, version });
-    if (onRefresh) onRefresh();
+    load();
   }
   function del(id, name, version) {
     setJitAction({ id, version, label: name || `Registration #${id.slice(0, 8).toUpperCase()}` });
@@ -672,11 +664,11 @@ function RegistrationsPanel({ initialRegs = [], onRefresh, lowPowerMode }) {
       data: { version: jitAction.version },
     });
     setJitAction(null);
-    if (onRefresh) onRefresh();
+    load();
   };
   function exportPdf(r) {
     setReceiptModal({ type: "REGISTRATION", data: r });
-    setTimeout(() => { if (onRefresh) onRefresh(); }, 1000); 
+    setTimeout(() => load(), 1000); // Reload slightly later so modal can mark it exported in BG
   }
 
   return (
@@ -971,8 +963,6 @@ function ProductsPanel({ onRefresh }) {
   const [products, setProducts] = useState([]);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ productId: "", name: "", imageUrl: "", label: "AVAILABLE" });
-<<<<<<< HEAD
-=======
   const [loading, setLoading] = useState(false);
   const [saleModal, setSaleModal] = useState(null); // null | product object
   const [searchQuery, setSearchQuery] = useState("");
@@ -987,9 +977,9 @@ function ProductsPanel({ onRefresh }) {
       return terms.every((term) => searchString.includes(term));
     });
   }, [products, debouncedSearchQuery]);
->>>>>>> origin/PushFinalBukanPunyaRei
 
   useEffect(() => {
+    // Load dummies or from localStorage for persistence in this session
     const saved = localStorage.getItem("kalceria_dummy_products");
     if (saved) {
       setProducts(JSON.parse(saved));
@@ -1143,6 +1133,7 @@ function RealTimeGraph({ active }) {
 
   return (
     <div className="h-14 w-28 relative border border-white/5 bg-white/[0.02] rounded overflow-hidden shadow-inner flex-shrink-0">
+      {/* Grid Lines */}
       <div className="absolute inset-0 flex flex-col justify-between p-1 opacity-20">
         {[1, 2, 3].map(i => <div key={i} className="w-full h-[0.5px] bg-white/40" />)}
       </div>
@@ -1178,6 +1169,7 @@ function RealTimeGraph({ active }) {
 
 function SystemLog({ registrations = [], products = [] }) {
   const [logs, setLogs] = useState([]);
+  const [wibTime, setWibTime] = useState("");
 
   useEffect(() => {
     const all = [
@@ -1192,11 +1184,13 @@ function SystemLog({ registrations = [], products = [] }) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-mono font-black text-sm uppercase tracking-tighter text-white flex items-center gap-2">
           LIVE SYSTEM FEED
-          <Clock className="text-[10px] text-fuchsia-500/80 font-bold ml-2 opacity-80 border-l border-white/20 pl-2" />
+          <span className="text-[10px] text-fuchsia-500/80 font-bold ml-2 opacity-80 border-l border-white/20 pl-2">
+            {wibTime}
+          </span>
         </h3>
         <RealTimeGraph active={logs.length > 0} />
       </div>
-      <div className="flex-1 overflow-y-auto space-y-2 font-mono text-[10px] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="flex-1 overflow-y-auto space-y-2 font-mono text-[10px] scrollbar-hide">
         {logs.map((log, i) => (
           <motion.div
             key={i}
@@ -1220,6 +1214,7 @@ function SystemLog({ registrations = [], products = [] }) {
 function BatteryStatus({ connected }) {
   const [key, setKey] = useState(0);
   useEffect(() => {
+    // Slower polling for a more professional, "steady" system feel
     const t = setInterval(() => setKey(k => k + 1), 15000);
     return () => clearInterval(t);
   }, []);
@@ -1236,6 +1231,7 @@ function BatteryStatus({ connected }) {
 
   return (
     <div key={key} className="relative flex items-center group scale-90">
+      {/* Battery Body */}
       <div className="w-24 h-10 border-[2px] border-white/20 rounded-[4px] p-[3px] flex gap-1 relative overflow-hidden bg-black/60 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
         {segments.map((seg, i) => (
           <motion.div
@@ -1247,35 +1243,21 @@ function BatteryStatus({ connected }) {
             style={{ boxShadow: `0 0 10px ${seg.glow}` }}
           />
         ))}
-<<<<<<< HEAD
-        <motion.div 
-=======
         {/* Slow fill-up sweep */}
         <motion.div
->>>>>>> origin/PushFinalBukanPunyaRei
           initial={{ x: "-150%" }}
           animate={{ x: "150%" }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 3 }}
           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-[-20deg]"
         />
       </div>
+      {/* Battery Tip */}
       <div className="w-[5px] h-5 bg-white/20 rounded-r-[1px] ml-[2px] shadow-[2px_0_10px_rgba(255,255,255,0.1)]" />
     </div>
   );
 }
 
 function MailerStatus() {
-<<<<<<< HEAD
-  const [ready] = useState(true);
-  
-  return (
-    <div className="relative group">
-      <span className={`text-xs font-black uppercase tracking-tighter bg-clip-text text-transparent ${ready ? "bg-gradient-to-r from-cyan-400 to-blue-500 animate-pulse" : "bg-gradient-to-r from-red-600 to-red-900"}`}>
-        {ready ? "READY" : "NOT READY"}
-      </span>
-    </div>
-  );
-=======
   const [ready, setReady] = useState(true);
 
   if (ready) {
@@ -1295,7 +1277,6 @@ function MailerStatus() {
       </div>
     );
   }
->>>>>>> origin/PushFinalBukanPunyaRei
 }
 
 function LoomBackground() {
@@ -1390,15 +1371,11 @@ function SystemHealth() {
   );
 }
 
-<<<<<<< HEAD
-function CommentsPanel({ onRefresh }) {
-=======
 // ─── Comments Panel ──────────────────────────────────────────────────────────
 function CommentsPanel({ lowPowerMode }) {
->>>>>>> origin/PushFinalBukanPunyaRei
   const [comments, setComments] = useState([]);
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState(["All"]);
+  const [filters, setFilters] = useState(["All"]); // Max 2
 
   const load = useCallback(async () => {
     let pinned = filters.includes("Pinned") ? "true" : "";
@@ -1427,14 +1404,12 @@ function CommentsPanel({ lowPowerMode }) {
 
   async function togglePin(id) {
     await api.patch(`/admin/comments/${id}/pin`);
-    onRefresh();
     load();
   }
 
   async function del(id) {
     if (!confirm("Delete this comment?")) return;
     await api.delete(`/admin/comments/${id}`);
-    onRefresh();
     load();
   }
 
@@ -1442,13 +1417,6 @@ function CommentsPanel({ lowPowerMode }) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:w-72">
-<<<<<<< HEAD
-          <input className={INPUT} placeholder="SEARCH USERNAME..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {["All", "Pinned", "Advice", "Idea"].map(f => (
-            <button key={f} onClick={() => toggleFilter(f)} className={`px-3 py-1 rounded-full text-[10px] font-mono font-black uppercase tracking-widest border transition-all ${filters.includes(f) ? "bg-white text-black border-white" : "bg-white/5 text-slate-500 border-white/10 hover:border-white/30"}`}>{f}</button>
-=======
           <input
             className={INPUT}
             placeholder="SEARCH USERNAME..."
@@ -1468,21 +1436,12 @@ function CommentsPanel({ lowPowerMode }) {
             >
               {f}
             </button>
->>>>>>> origin/PushFinalBukanPunyaRei
           ))}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {comments.map((c) => (
-<<<<<<< HEAD
-          <motion.div key={c.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative aspect-square bg-white/70 backdrop-blur-xl rounded-3xl p-6 group transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/40 overflow-hidden flex flex-col justify-between">
-            <LocalBlob color="bg-fuchsia-400" />
-            <div className="relative z-10 flex-1 flex flex-col">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-2xl bg-black/5 border border-black/10 overflow-hidden flex-shrink-0">
-                  <img src={c.user?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.username || 'anon'}`} alt="" className="w-full h-full object-cover" />
-=======
           <motion.div
             key={c.id}
             layout
@@ -1502,19 +1461,12 @@ function CommentsPanel({ lowPowerMode }) {
                     alt=""
                     className="w-full h-full object-cover"
                   />
->>>>>>> origin/PushFinalBukanPunyaRei
                 </div>
                 <div className="min-w-0">
-                  <p className="font-sans font-black text-sm text-black tracking-tight leading-none uppercase truncate">{c.username || "ANONYMOUS"}</p>
+                  <p className="font-sans font-black text-sm text-black tracking-tight leading-none uppercase truncate">
+                    {c.username || "ANONYMOUS"}
+                  </p>
                   <div className="flex items-center gap-1.5 mt-1.5">
-<<<<<<< HEAD
-                    <span className={`font-sans font-black text-[9px] uppercase tracking-tighter ${c.type === 'ADVICE' ? 'text-[#1a365d]' : 'text-red-600'}`}>{c.type}</span>
-                    <span className="text-black/20 text-[9px]">-</span>
-                    <span className={`font-sans font-black text-[9px] uppercase tracking-tighter ${c.category?.toUpperCase() === 'EVENT' ? 'text-fuchsia-600' : c.category?.toUpperCase() === 'WEB DEV' ? 'text-yellow-600' : 'text-emerald-600'}`}>{c.category || 'OTHER'}</span>
-                  </div>
-                </div>
-              </div>
-=======
                     <span className={`font-sans font-black text-[9px] uppercase tracking-tighter ${c.type === 'ADVICE' ? 'text-[#1a365d]' : 'text-red-600'
                       }`}>
                       {c.type}
@@ -1529,24 +1481,18 @@ function CommentsPanel({ lowPowerMode }) {
                 </div>
               </div>
 
->>>>>>> origin/PushFinalBukanPunyaRei
               <div className="flex-1 overflow-y-auto scrollbar-hide">
-                <p className="font-sans text-[12px] text-black/80 leading-relaxed font-medium group-hover:text-black transition-colors duration-300">{c.content}</p>
+                <p className="font-sans text-[12px] text-black/80 leading-relaxed font-medium group-hover:text-black transition-colors duration-300">
+                  {c.content}
+                </p>
               </div>
-<<<<<<< HEAD
-              <p className="font-sans text-[10px] text-black/40 mt-4 uppercase tracking-widest">{formatDate(c.createdAt)}</p>
-=======
 
               <p className="font-sans text-[10px] text-black/40 mt-4 uppercase tracking-widest">
                 {formatDate(c.createdAt)}
               </p>
->>>>>>> origin/PushFinalBukanPunyaRei
             </div>
+
             <div className="relative z-10 flex gap-2 pt-4">
-<<<<<<< HEAD
-              <button onClick={() => togglePin(c.id)} className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${c.isPinned ? "bg-emerald-500 text-white shadow-[0_5px_15px_rgba(34,197,94,0.3)]" : "bg-black/5 text-black/30 hover:bg-black/10 hover:text-black"}`}>
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>
-=======
               <button
                 onClick={() => togglePin(c.id)}
                 className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${c.isPinned
@@ -1563,9 +1509,7 @@ function CommentsPanel({ lowPowerMode }) {
                 className="w-10 h-10 flex items-center justify-center rounded-2xl bg-black/5 text-black/30 hover:bg-red-500 hover:text-white transition-all"
               >
                 <TrashIcon />
->>>>>>> origin/PushFinalBukanPunyaRei
               </button>
-              <button onClick={() => del(c.id)} className="w-10 h-10 flex items-center justify-center rounded-2xl bg-black/5 text-black/30 hover:bg-red-500 hover:text-white transition-all"><TrashIcon /></button>
             </div>
           </motion.div>
         ))}
@@ -1579,12 +1523,6 @@ function CommentsPanel({ lowPowerMode }) {
   );
 }
 
-<<<<<<< HEAD
-function BookingsPanel({ onRefresh }) {
-  const [bookings, setBookings] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
-  const [viewDate, setViewDate] = useState(new Date(2026, 0, 1));
-=======
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT: ACCEPT BOOKING MODAL (Phase 3 - Financial Acceptance Workflow)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1776,7 +1714,6 @@ function BookingsPanel({ onRefresh }) {
       return terms.every((term) => searchString.includes(term));
     });
   }, [bookings, debouncedSearchQuery]);
->>>>>>> origin/PushFinalBukanPunyaRei
   
   // Math Setup
   const today = new Date();
@@ -1808,17 +1745,6 @@ function BookingsPanel({ onRefresh }) {
 
   useEffect(() => { load(); }, [load]);
 
-<<<<<<< HEAD
-  const updateStatus = async (id, status) => {
-    try {
-      await api.patch(`/admin/services/${id}/status`, { status });
-      load();
-      onRefresh();
-    } catch (err) {
-      console.error("Failed to update status:", err);
-      alert("Failed to update status. Please try again.");
-    }
-=======
   const updateStatus = async (id, status, version, extraData = {}) => {
     try {
       await api.patch(`/admin/services/${id}/status`, { status, version, ...extraData });
@@ -1855,7 +1781,6 @@ function BookingsPanel({ onRefresh }) {
     setJitAction(null);
     load();
     onRefresh();
->>>>>>> origin/PushFinalBukanPunyaRei
   };
 
   const getWeek1OfMonth = (y, m) => {
@@ -1869,27 +1794,6 @@ function BookingsPanel({ onRefresh }) {
     return Math.floor(diffDays / 7) + 1;
   };
 
-<<<<<<< HEAD
-  const startOfWeek = new Date(viewDate);
-  startOfWeek.setDate(viewDate.getDate() - viewDate.getDay());
-  const HOURS = [...Array.from({ length: 15 }, (_, i) => 9 + i), 0];
-
-  const getSlotColor = (dayOffset, hour) => {
-    const d = new Date(startOfWeek);
-    d.setDate(startOfWeek.getDate() + dayOffset);
-    if (d.getDay() === 1) return "bg-red-900/20 opacity-40";
-    const dStr = d.toISOString().split('T')[0];
-    const hourStr = hour.toString().padStart(2, '0') + ":00";
-    const activeBooking = bookings.find(b => b.slots?.some(s => {
-      const sDate = new Date(s.date).toISOString().split('T')[0];
-      return sDate === dStr && s.startTime <= hourStr && s.endTime > hourStr;
-    }));
-    if (!activeBooking) return "bg-emerald-500/10";
-    if (activeBooking.id === selectedId) return "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.6)] z-10 scale-105";
-    if (activeBooking.status === "PROCESSED") return "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.4)]";
-    if (activeBooking.status === "PENDING") return "bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]";
-    return "bg-emerald-500/10";
-=======
   const HOURS = [...Array.from({ length: 15 }, (_, i) => 9 + i), 0]; // 09:00 to 00:00
 
   const getSlotColor = (dayOffset, hour) => {
@@ -1934,7 +1838,6 @@ function BookingsPanel({ onRefresh }) {
     }
 
     return `${colorClass} ${borderClass}`;
->>>>>>> origin/PushFinalBukanPunyaRei
   };
 
   const shiftWeek = (n) => {
@@ -1953,6 +1856,7 @@ function BookingsPanel({ onRefresh }) {
       setViewYear(wednesday.getFullYear());
     }
   };
+
   const shiftMonth = (n) => {
     const nextMonthDate = new Date(viewYear, viewMonth + n, 1);
     const nextM = nextMonthDate.getMonth();
@@ -1977,13 +1881,12 @@ function BookingsPanel({ onRefresh }) {
       }
     }
   };
+
   const selectBooking = (b) => {
-    if (selectedId === b.id) { setSelectedId(null); }
-    else {
+    if (selectedId === b.id) {
+      setSelectedId(null);
+    } else {
       setSelectedId(b.id);
-<<<<<<< HEAD
-      if (b.slots?.length > 0) setViewDate(new Date(b.slots[0].date));
-=======
       if (b.slots?.length > 0) {
         const slotDate = new Date(b.slots[0].date);
         slotDate.setHours(0,0,0,0);
@@ -1996,35 +1899,11 @@ function BookingsPanel({ onRefresh }) {
           setViewYear(wednesday.getFullYear());
         }
       }
->>>>>>> origin/PushFinalBukanPunyaRei
     }
   };
 
   return (
     <div className="space-y-6">
-<<<<<<< HEAD
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-w-5xl mx-auto items-start">
-        <div className="hidden xl:flex justify-end">
-          <div className="flex items-center gap-1 bg-white/5 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-lg">
-            <button onClick={() => shiftMonth(-1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-sm text-white">←</button>
-            <span className="font-mono font-black text-[16px] uppercase w-32 text-center text-white/80 tracking-widest">{new Intl.DateTimeFormat('en-US', { month: 'long' }).format(viewDate)}</span>
-            <button onClick={() => shiftMonth(1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-sm text-white">→</button>
-          </div>
-        </div>
-        <div className="hidden xl:flex justify-start">
-          <div className="flex items-center gap-1 bg-white/5 backdrop-blur-md rounded-xl p-1 border border-white/10 shadow-lg">
-            <button onClick={() => shiftWeek(-1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-sm text-white">←</button>
-            <span className="font-mono font-black text-[16px] uppercase w-40 text-center text-white/80 tracking-widest">Week {startOfWeek.getDate()}</span>
-            <button onClick={() => shiftWeek(1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-sm text-white">→</button>
-          </div>
-        </div>
-        {[0, 1].map((weekOffset) => {
-          const currentStart = new Date(startOfWeek);
-          currentStart.setDate(startOfWeek.getDate() + (weekOffset * 7));
-          return (
-            <div key={weekOffset} className={`${CARD} rounded-[20px] p-4 border-white/5 bg-white/[0.02] w-full overflow-hidden`}>
-              <div className="flex flex-col gap-4 mb-4"><h3 className="font-mono font-black text-[16px] uppercase tracking-tighter text-white">{weekOffset === 0 ? "Current Week" : "Next Week"}</h3></div>
-=======
       {/* Navigation Header Area */}
       <div className="relative w-full max-w-5xl mx-auto mb-4">
         {/* Centered Navigation Boxes */}
@@ -2095,38 +1974,26 @@ function BookingsPanel({ onRefresh }) {
                 </div>
               </div>
 
->>>>>>> origin/PushFinalBukanPunyaRei
               <div className="grid grid-cols-[40px_repeat(7,1fr)] gap-1 mb-2">
                 <div />
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => {
-                  const dateObj = new Date(currentStart); dateObj.setDate(currentStart.getDate() + i);
+                  const dateObj = new Date(currentStart);
+                  dateObj.setDate(currentStart.getDate() + i);
                   return (
-<<<<<<< HEAD
-                    <div key={i} className="flex flex-col items-center">
-                      <span className="font-mono text-[11px] font-black text-white/50">{d}</span>
-                      <span className={`font-mono text-[11px] font-black ${dateObj.getDate() === new Date().getDate() ? 'text-white' : 'text-white/70'}`}>{dateObj.getDate()}</span>
-=======
           <div key={i} className="flex flex-col items-center">
                        <span className="font-mono text-[11px] font-black text-white/50">{d}</span>
                       <span className={`font-mono text-[11px] font-black ${dateObj.getTime() === today.getTime() ? 'text-orange-500 scale-125 drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]' : (dateObj < today || dateObj.getMonth() !== viewMonth) ? 'text-white/20' : 'text-white/70'}`}>
                         {dateObj.getDate()}
                       </span>
->>>>>>> origin/PushFinalBukanPunyaRei
                     </div>
                   );
                 })}
               </div>
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/PushFinalBukanPunyaRei
               <div className="space-y-1">
                 {HOURS.map(h => (
                   <div key={h} className="grid grid-cols-[40px_repeat(7,1fr)] gap-1">
                     <div className="flex items-center justify-end pr-2 font-mono text-[11px] font-black text-white/60">{h.toString().padStart(2, '0')}:00</div>
-<<<<<<< HEAD
-                    {Array.from({ length: 7 }).map((_, i) => (<div key={i} className={`aspect-square w-full rounded-[4px] border border-white/5 transition-all duration-300 ${getSlotColor(i + (weekOffset * 7), h)}`} />))}
-=======
                     {Array.from({ length: 7 }).map((_, i) => {
                       const slotDay = new Date(currentStart);
                       slotDay.setDate(currentStart.getDate() + i);
@@ -2134,7 +2001,6 @@ function BookingsPanel({ onRefresh }) {
                         <div key={i} className={`aspect-square w-full rounded-[4px] transition-all duration-300 ${getSlotColor(i + (weekOffset * 7), h)}`} />
                       );
                     })}
->>>>>>> origin/PushFinalBukanPunyaRei
                   </div>
                 ))}
               </div>
@@ -2142,18 +2008,6 @@ function BookingsPanel({ onRefresh }) {
           );
         })}
       </div>
-<<<<<<< HEAD
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {bookings.map((b) => (
-          <div key={b.id} onClick={() => selectBooking(b)} className={`relative bg-[#d6cdc2] rounded-[32px] p-6 group transition-all duration-500 cursor-pointer overflow-hidden flex flex-col border-none ${selectedId === b.id ? "shadow-[0_0_30px_rgba(249,115,22,0.2)] scale-[1.002]" : "hover:shadow-[0_15px_30px_rgba(0,0,0,0.1)]"}`}>
-            <div className="relative z-10 space-y-1.5 flex flex-col">
-              <div className="flex justify-between items-start"><div className="min-w-0"><h3 className="font-sans font-black text-xl text-black tracking-tight leading-tight uppercase">{b.requestor?.name}</h3><div className="flex items-center gap-2 mt-1"><span className="font-sans text-[8px] font-black text-red-500 uppercase tracking-widest">ADMIN</span><span className={`font-sans text-[8px] font-black uppercase tracking-widest ${b.status === 'PROCESSED' ? 'text-emerald-600' : 'text-orange-500'}`}>{b.status === 'PROCESSED' ? 'VERIFIED' : 'PENDING'}</span></div></div></div>
-              <div className="py-3 space-y-3">
-                <div><p className="font-sans text-[10px] text-black/70 font-medium mb-0 truncate">{b.requestor?.email || "admin@gmail.com"}</p><p className="font-sans text-[10px] text-black/70 font-medium tracking-widest">0000000000</p></div>
-                <div className="w-full h-px bg-black/5" />
-                <div className="max-h-[160px] overflow-y-auto scrollbar-hide"><p className="font-sans text-[8px] text-black/30 uppercase font-black tracking-widest mb-1">Schedule ({b.slots?.length || 0} Slots)</p><div className="space-y-0.5">{(b.slots || []).map((s, idx) => (<div key={idx} className="flex items-center justify-between py-0.5"><span className="font-sans text-[9px] font-bold text-black/50">{formatDate(s.date)}</span><span className="font-sans text-[9px] font-black text-black tracking-tighter">{s.startTime}-{s.endTime}</span></div>))}</div></div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2"><span className="font-sans text-[10px] text-black/40 font-medium">Book: 0</span><span className="font-sans text-[10px] text-black/40 font-medium">Ev: 0</span><span className="font-sans text-[10px] text-black/40 font-medium">Svc: 0</span><span className="font-sans text-[10px] text-black/40 font-medium">Since: {new Date(b.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}</span><div className="col-span-1"><p className="font-sans text-[10px] text-black/40 font-medium">PIC: <span className="text-black/70">{b.contactPerson?.split(' ')[0]}</span></p></div><div className="col-span-1"><p className="font-sans text-[10px] text-black/40 font-medium">Loc: <span className="text-black/70">{b.locationString}</span></p></div></div>
-=======
 
       {/* Cards Section - with search header */}
       <div className="flex items-center justify-between mb-4">
@@ -2226,14 +2080,9 @@ function BookingsPanel({ onRefresh }) {
                     <p className="font-sans text-[10px] text-black/40 font-medium">Loc: <span className="text-black/70">{b.locationString}</span></p>
                   </div>
                 </div>
->>>>>>> origin/PushFinalBukanPunyaRei
               </div>
+
               <div className="flex gap-2 pt-3 mt-2 border-t border-black/5">
-<<<<<<< HEAD
-                <button onClick={(e) => { e.stopPropagation(); updateStatus(b.id, b.status === 'PROCESSED' ? 'PENDING' : 'PROCESSED'); }} className={`w-9 h-9 flex items-center justify-center rounded-full text-white shadow-md hover:scale-105 transition-all outline-none ${b.status === 'PROCESSED' ? 'bg-emerald-600 ring-2 ring-black ring-offset-2 ring-offset-[#d6cdc2]' : 'bg-emerald-500'}`}><CheckIcon /></button>
-                <button onClick={(e) => { e.stopPropagation(); updateStatus(b.id, 'CANCELLED'); }} className="w-9 h-9 flex items-center justify-center bg-red-500 rounded-full text-white shadow-md hover:scale-105 transition-all"><XIcon /></button>
-                <button onClick={(e) => { e.stopPropagation(); del(b.id); }} className="w-9 h-9 flex items-center justify-center bg-black/5 rounded-full text-black/40 hover:bg-red-500 hover:text-white transition-all"><TrashIcon /></button>
-=======
                 {b.status === 'PENDING' && (
                   <>
                     <button
@@ -2270,20 +2119,15 @@ function BookingsPanel({ onRefresh }) {
                 >
                   <TrashIcon />
                 </button>
->>>>>>> origin/PushFinalBukanPunyaRei
               </div>
             </div>
           </div>
         ))}
-<<<<<<< HEAD
-        {!bookings.length && (<div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-[40px]"><p className="font-mono text-xs text-slate-600 uppercase tracking-[0.2em]">No booking requests found</p></div>)}
-=======
         {!filteredBookings.length && (
           <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-[40px]">
             <p className="font-mono text-xs text-slate-600 uppercase tracking-[0.2em]">{searchQuery ? `No requests matching "${searchQuery}"` : "No booking requests found"}</p>
           </div>
         )}
->>>>>>> origin/PushFinalBukanPunyaRei
       </div>
 
       {/* Accept Booking Modal — Phase 3 Financial Acceptance Workflow */}
@@ -2319,27 +2163,6 @@ function BookingsPanel({ onRefresh }) {
   );
 }
 
-<<<<<<< HEAD
-function EarningsPanel({ data }) {
-  const [target, setTarget] = useState(10);
-  const [range, setRange] = useState({ start: "2026-01-01", end: "2026-12-31" });
-  const [granularity, setGranularity] = useState("month");
-  const [useIntelligence, setUseIntelligence] = useState(false);
-  const historicalAvg = 2.5;
-  
-  const chartData = useMemo(() => {
-    let length = 12; let labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    if (granularity === "day") { length = 7; labels = ["M", "T", "W", "T", "F", "S", "S"]; }
-    else if (granularity === "week") { length = 4; labels = ["W1", "W2", "W3", "W4"]; }
-    const baseline = 1.2; const growth = (i) => i * (granularity === "day" ? 0.05 : 0.45);
-    return Array.from({ length }, (_, i) => {
-      const realVal = data.daily?.[i]?.amount || (baseline + growth(i) + (Math.random() * 0.5));
-      const baseAvg = data.average || historicalAvg;
-      const projection = baseAvg + (i * (granularity === "day" ? 0.08 : 0.4)) + (Math.sin(i * 0.3) * 0.2);
-      return { label: labels[i % labels.length], value: realVal, projected: projection };
-    });
-  }, [granularity, data]);
-=======
 // ─────────────────────────────────────────────────────────────────────────────
 // PANEL: EARNINGS (FINANCIAL INTELLIGENCE)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2411,7 +2234,6 @@ function EarningsPanel({ data: initialData }) {
     if (points.length === 0) return [{ label: "No Data", value: 0, projected: 0 }];
     return points;
   }, [range, granularity, earningsData, useIntelligence]);
->>>>>>> origin/PushFinalBukanPunyaRei
 
   const maxVal = Math.max(...chartData.map(p => Math.max(p.value, p.projected)), target, 1) * 1.2;
 
@@ -2422,9 +2244,6 @@ function EarningsPanel({ data: initialData }) {
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 
   return (
-<<<<<<< HEAD
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-=======
     <div className="space-y-8">
       {/* ── Real-Time KPI Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -2444,15 +2263,10 @@ function EarningsPanel({ data: initialData }) {
       {/* ── Config + Chart Grid ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
       {/* Target Form */}
->>>>>>> origin/PushFinalBukanPunyaRei
       <div className={`${CARD} p-8 space-y-6 bg-white/[0.03] border-white/5 rounded-3xl`}>
-        <h3 className="font-sans font-black text-xs text-white uppercase tracking-tighter mb-6">Target Configuration</h3>
-        <div className="space-y-4">
+        <div>
+          <h3 className="font-sans font-black text-xs text-white uppercase tracking-tighter mb-6">Target Configuration</h3>
           <div className="space-y-4">
-<<<<<<< HEAD
-            <div className="space-y-1"><label className="font-sans font-bold text-[9px] text-white/20 uppercase tracking-widest block ml-1">Start Period</label><input type="date" className={INPUT} value={range.start} onChange={e => setRange({...range, start: e.target.value})} /></div>
-            <div className="space-y-1"><label className="font-sans font-bold text-[9px] text-white/20 uppercase tracking-widest block ml-1">End Period</label><input type="date" className={INPUT} value={range.end} onChange={e => setRange({...range, end: e.target.value})} /></div>
-=======
             <div>
               <div className="space-y-4">
                 <div className="space-y-1">
@@ -2516,19 +2330,12 @@ function EarningsPanel({ data: initialData }) {
                 ))}
               </div>
             </div>
->>>>>>> origin/PushFinalBukanPunyaRei
           </div>
-          <div><label className="font-sans font-bold text-[10px] text-white/40 mb-2 block">Profit Target (Juta IDR)</label><div className="relative group/input"><input type="number" className={INPUT} value={target} onChange={e => setTarget(Number(e.target.value))} /><div className="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 z-20"><button onClick={() => setTarget(prev => prev + 1)} className="text-white/20 hover:text-white transition-colors p-0.5"><svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 15l7-7 7 7" /></svg></button><button onClick={() => setTarget(prev => Math.max(0, prev - 1))} className="text-white/20 hover:text-white transition-colors p-0.5"><svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M19 9l-7 7-7-7" /></svg></button></div></div></div>
-          <div><label className="font-sans font-bold text-[10px] text-white/40 mb-2 block">Growth Intelligence</label><button onClick={() => setUseIntelligence(!useIntelligence)} className={`relative w-full py-4 px-6 rounded-2xl border transition-all font-sans font-medium text-[10px] flex items-center justify-between overflow-hidden group shadow-[0_10px_30px_rgba(0,0,0,0.5)] ${useIntelligence ? "border-white/40 bg-white/10 ring-1 ring-white/20" : "border-white/10 bg-white/5 hover:bg-white/10"}`}><div className="absolute -left-10 -top-10 w-24 h-24 bg-red-600/20 blur-[40px] rounded-full group-hover:bg-red-600/40 transition-all duration-700" /><div className="absolute -right-10 -bottom-10 w-24 h-24 bg-amber-500/20 blur-[40px] rounded-full group-hover:bg-amber-500/40 transition-all duration-700" /><span className="relative z-10 text-white shadow-sm">Use Historical Avg</span><div className={`relative z-10 w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] ${useIntelligence ? "bg-white animate-pulse scale-110" : "bg-white/20"}`} /></button></div>
-          <div><label className="font-sans font-bold text-[10px] text-white/40 mb-2 block">Display Metric</label><div className="flex gap-2">{["Day", "Week", "Month"].map(g => (<button key={g} onClick={() => setGranularity(g.toLowerCase())} className={`flex-1 py-2 rounded-lg border font-sans font-bold text-[9px] tracking-widest transition-all ${granularity === g.toLowerCase() ? "bg-white text-black border-white" : "border-white/10 text-white/40 hover:text-white"}`}>{g}</button>))}</div></div>
         </div>
       </div>
+
+      {/* Line Chart Visualization */}
       <div className="xl:col-span-2 relative min-h-[500px] bg-white/[0.01] backdrop-blur-3xl rounded-[40px] border border-white/5 overflow-hidden p-10 group">
-<<<<<<< HEAD
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
-        <div className="relative h-full flex flex-col">
-          <div className="flex justify-between items-start mb-10"><h3 className="font-sans font-black text-sm text-white uppercase tracking-tighter">Earnings Growth <span className="text-white/20 font-sans font-black tracking-tighter uppercase">/ Rp. X1000</span></h3><div className="text-right"><p className="font-mono text-[10px] text-white/40 uppercase">Projected Profit</p><p className="font-sans text-2xl font-black text-white tracking-tighter">Rp {chartData[chartData.length-1].value.toFixed(2)}M</p></div></div>
-=======
         {/* Geometric Background Pattern */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
           style={{ backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`, backgroundSize: '24px 24px' }} />
@@ -2542,18 +2349,9 @@ function EarningsPanel({ data: initialData }) {
             </div>
           </div>
 
->>>>>>> origin/PushFinalBukanPunyaRei
           <div className="flex-1 relative">
+            {/* SVG Chart */}
             <svg viewBox="0 0 1000 400" className="w-full h-full preserve-3d overflow-visible">
-<<<<<<< HEAD
-              {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (<g key={i}><line x1="0" y1={400 - (p * 400)} x2="1000" y2={400 - (p * 400)} stroke="white" strokeOpacity="0.05" strokeDasharray="4 4" /><text x="-10" y={400 - (p * 400)} className="fill-white/20 font-mono text-[10px]" textAnchor="end">{(p * maxVal).toFixed(1)}</text></g>))}
-              <line x1="0" y1={400 - (target / maxVal * 400)} x2="1000" y2={400 - (target / maxVal * 400)} stroke="#FF0000" strokeOpacity="0.8" strokeWidth="2" /><text x="1000" y={400 - (target / maxVal * 400) - 10} fill="white" className="font-mono text-[16px] uppercase font-black" textAnchor="end">Target</text>
-              {useIntelligence && (<path d={`M ${chartData.map((p, i) => `${(i / (chartData.length - 1)) * 1000},${400 - (p.projected / maxVal * 400)}`).join(' L ')}`} fill="none" stroke="#00FFFF" strokeWidth="4" className="opacity-80" />)}
-              <path d={`M ${chartData.map((p, i) => `${(i / (chartData.length - 1)) * 1000},${400 - (p.value / maxVal * 400)}`).join(' L ')}`} fill="none" stroke="#FFFF00" strokeWidth="3" className="drop-shadow-[0_0_15px_rgba(255,255,0,0.4)]" />
-              {chartData.map((p, i) => (<circle key={i} cx={(i / (chartData.length - 1)) * 1000} cy={400 - (p.value / maxVal * 400)} r="4" className="fill-yellow-400 group-hover:r-6 transition-all cursor-crosshair" />))}
-            </svg>
-            <div className="flex justify-between mt-4">{chartData.map((p, i) => (<span key={i} className="font-mono text-[9px] text-white/30 uppercase">{p.label}</span>))}</div>
-=======
               {/* Horizontal Y-Lines (Targets) */}
               {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (
                 <g key={i}>
@@ -2600,7 +2398,6 @@ function EarningsPanel({ data: initialData }) {
                 <span key={i} className="font-mono text-[9px] text-white/30 uppercase">{p.label}</span>
               ))}
             </div>
->>>>>>> origin/PushFinalBukanPunyaRei
           </div>
         </div>
       </div>
@@ -2662,13 +2459,6 @@ function EarningsPanel({ data: initialData }) {
   );
 }
 
-<<<<<<< HEAD
-function UsersPanel({ initialUsers = [], onRefresh }) {
-  const [users, setUsers] = useState(initialUsers);
-  useEffect(() => { setUsers(initialUsers); }, [initialUsers]);
-  async function setRole(id, role) { await api.patch(`/admin/users/${id}/role`, { role }); onRefresh(); }
-  async function del(id) { if (!confirm("Delete user?")) return; await api.delete(`/admin/users/${id}`); onRefresh(); }
-=======
 // ─────────────────────────────────────────────────────────────────────────────
 // PANEL: USERS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2706,7 +2496,6 @@ function UsersPanel({ lowPowerMode }) {
     setJitAction(null);
     load();
   };
->>>>>>> origin/PushFinalBukanPunyaRei
 
   return (
     <div className="flex flex-col gap-4">
@@ -2719,11 +2508,6 @@ function UsersPanel({ lowPowerMode }) {
             lowPowerMode ? "bg-[#d6cdc2]" : "bg-white/70 backdrop-blur-xl"
           }`}>
           <LocalBlob color="bg-orange-400" />
-<<<<<<< HEAD
-          <div className="relative z-10 space-y-4">
-            <div className="flex justify-between items-start">
-              <div className="min-w-0"><p className="font-sans font-black text-sm text-black tracking-tight leading-none uppercase truncate">{u.name}</p><div className="flex items-center gap-2 mt-1.5"><Badge label={u.role} />{u.isEmailVerified && <span className="font-sans text-[10px] text-emerald-600 uppercase tracking-[0.15em] font-black">Verified</span>}</div></div>
-=======
 
           <div className="relative z-10 space-y-4">
             <div className="flex justify-between items-start">
@@ -2746,14 +2530,8 @@ function UsersPanel({ lowPowerMode }) {
               <span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Events: {u._count?.eventRegistrations}</span>
               <span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Services: {u._count?.serviceBookings}</span>
               <span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Since: {formatDate(u.createdAt)}</span>
->>>>>>> origin/PushFinalBukanPunyaRei
             </div>
-            <div className="space-y-1"><p className="font-sans text-[10px] text-black/70 group-hover:text-black transition-colors duration-300 truncate">{u.email}</p><p className="font-sans text-[10px] text-black/70 group-hover:text-black transition-colors duration-300">{u.phone}</p></div>
-            <div className="pt-2 border-t border-black/5 grid grid-cols-2 gap-y-1"><span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Bookings: {u._count?.bookings}</span><span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Events: {u._count?.eventRegistrations}</span><span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Services: {u._count?.serviceBookings}</span><span className="font-sans text-[9px] text-black/50 group-hover:text-black transition-colors">Since: {formatDate(u.createdAt)}</span></div>
           </div>
-<<<<<<< HEAD
-          <div className="relative z-10 flex gap-2 pt-4">{u.role === "USER" ? (<button onClick={() => setRole(u.id, "ADMIN")} title="Promote to Admin" className="w-10 h-10 flex items-center justify-center bg-red-500 rounded-2xl text-white shadow-[0_5px_15px_rgba(239,68,68,0.2)] hover:scale-105 transition-transform font-black text-lg">↑</button>) : (<button onClick={() => setRole(u.id, "USER")} title="Demote to User" className="w-10 h-10 flex items-center justify-center bg-black/5 rounded-2xl text-black hover:bg-black/10 transition-colors font-black text-lg">→</button>)}<button onClick={() => del(u.id)} className="w-10 h-10 flex items-center justify-center bg-black/5 rounded-2xl text-black/40 hover:bg-red-500 hover:text-white transition-all"><TrashIcon /></button></div>
-=======
 
           <div className="relative z-10 flex gap-2 pt-4">
             {u.role === "USER" ? (
@@ -2763,7 +2541,6 @@ function UsersPanel({ lowPowerMode }) {
             )}
             <button onClick={() => del(u.id, u.name)} className="w-10 h-10 flex items-center justify-center bg-black/5 rounded-2xl text-black/40 hover:bg-red-500 hover:text-white transition-all"><TrashIcon /></button>
           </div>
->>>>>>> origin/PushFinalBukanPunyaRei
         </div>
       ))}
       {!filteredUsers.length && <p className="font-mono text-sm text-slate-600 col-span-full py-10 text-center">{searchQuery ? `No users matching "${searchQuery}"` : "No users."}</p>}
@@ -2782,9 +2559,17 @@ function UsersPanel({ lowPowerMode }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN DASHBOARD
+// ─────────────────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "events", label: "Events" }, { id: "registrations", label: "Registrations" }, { id: "products", label: "Products" },
-  { id: "bookings", label: "Bookings" }, { id: "earnings", label: "Earnings" }, { id: "users", label: "Users" }, { id: "comments", label: "Comments" },
+  { id: "events", label: "Events" },
+  { id: "registrations", label: "Registrations" },
+  { id: "products", label: "Products" },
+  { id: "bookings", label: "Bookings" },
+  { id: "earnings", label: "Earnings" },
+  { id: "users", label: "Users" },
+  { id: "comments", label: "Comments" },
 ];
 
 export default function AdminDashboard() {
@@ -2793,8 +2578,6 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ events: 0, users: 0, regs: 0, products: 0, comments: 0, bookings: 0 });
   const [data, setData] = useState({ events: [], users: [], regs: [], products: [], comments: [], bookings: [], earnings: { daily: [], total: 0, totalRaw: 0, average: 0, breakdown: { serviceBookings: 0, eventRegistrations: 0, timekeeperBookings: 0, merch: 0 } } });
   const [mounted, setMounted] = useState(false);
-<<<<<<< HEAD
-=======
   const [wibTime, setWibTime] = useState("");
   const [lowPowerMode, setLowPowerMode] = useState(false);
 
@@ -2889,7 +2672,6 @@ export default function AdminDashboard() {
     }, 1000);
     return () => clearInterval(t);
   }, []);
->>>>>>> origin/PushFinalBukanPunyaRei
 
   const loadAll = useCallback(() => {
     Promise.all([
@@ -2900,14 +2682,6 @@ export default function AdminDashboard() {
       api.get("/admin/services").catch(() => ({ data: { bookings: [] } })),
       api.get("/admin/earnings").catch(() => ({ data: { daily: [], total: 0, totalRaw: 0, average: 0, breakdown: { serviceBookings: 0, eventRegistrations: 0, timekeeperBookings: 0, merch: 0 } } })),
     ]).then(([ev, us, re, co, bk, ea]) => {
-<<<<<<< HEAD
-      const eList = ev.data.events || []; const uList = us.data.users || []; const rList = re.data.registrations || [];
-      const cList = co.data.comments || []; const bList = bk.data.bookings || [];
-      const savedProducts = JSON.parse(localStorage.getItem("kalceria_dummy_products") || "[]");
-      const pList = savedProducts.length ? savedProducts : INITIAL_DUMMIES;
-      setStats({ events: eList.length, users: uList.length, regs: rList.length, products: pList.length, comments: cList.length, bookings: bList.length });
-      setData({ events: eList, users: uList, regs: rList, products: pList, comments: cList, bookings: bList, earnings: ea.data || { daily: [], total: 0 } });
-=======
       const eList = ev.data.events || [];
       const uList = us.data.users || [];
       const rList = re.data.registrations || [];
@@ -2935,7 +2709,6 @@ export default function AdminDashboard() {
         bookings: bList,
         earnings: ea.data || { daily: [], total: 0, totalRaw: 0, average: 0, breakdown: {} },
       });
->>>>>>> origin/PushFinalBukanPunyaRei
     });
   }, []);
 
@@ -2978,13 +2751,13 @@ export default function AdminDashboard() {
     return () => clearInterval(logInterval);
   }, [router, loadAll, fetchLogs]);
 
-  function logout() { localStorage.removeItem("adminToken"); localStorage.removeItem("token"); router.replace("/admin/login"); }
+  function logout() {
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("token");
+    router.replace("/admin/login");
+  }
 
   return (
-<<<<<<< HEAD
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: mounted ? 1 : 0 }} transition={{ duration: 0.8 }} className={`min-h-screen ${DARK} text-white`}>
-      <DynamicBlobs /><LoomBackground />
-=======
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: mounted ? 1 : 0 }}
@@ -3017,15 +2790,14 @@ export default function AdminDashboard() {
       )}
 
       {/* Top nav */}
->>>>>>> origin/PushFinalBukanPunyaRei
       <header className="relative z-10 border-b border-slate-900 px-6 md:px-12 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <img src="/logologin.png" alt="Kalceria" className="h-7 object-contain" draggable={false} /><div className="h-4 w-px bg-white/20 ml-2" />
-          <Clock className="font-sans text-[11px] text-white font-medium underline tracking-widest opacity-90" />
+          <img src="/logologin.png" alt="Kalceria" className="h-7 object-contain" draggable={false} />
+          <div className="h-4 w-px bg-white/20 ml-2" />
+          <div className="font-sans text-[11px] text-white font-medium underline tracking-widest opacity-90">
+            {wibTime}
+          </div>
         </div>
-<<<<<<< HEAD
-        <button onClick={logout} className="font-mono text-xs text-slate-600 hover:text-white transition-colors uppercase tracking-widest">Logout</button>
-=======
         <div className="flex items-center gap-4">
           <button
             onClick={() => {
@@ -3072,26 +2844,23 @@ export default function AdminDashboard() {
             Logout
           </button>
         </div>
->>>>>>> origin/PushFinalBukanPunyaRei
       </header>
+
       <div className="relative z-10 px-6 md:px-12 py-8 max-w-7xl mx-auto">
-<<<<<<< HEAD
-        <div className="grid lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-3">
-=======
         <div className="grid grid-cols-1 gap-8">
           <div className="col-span-1">
             {/* Stats */}
->>>>>>> origin/PushFinalBukanPunyaRei
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-              <StatCard label="Events" value={stats.events} /><StatCard label="Users" value={stats.users} /><StatCard label="Registrations" value={stats.regs} /><StatCard label="Comments" value={stats.comments} /><StatCard label="Bookings" value={stats.bookings} />
+              <StatCard label="Events" value={stats.events} />
+              <StatCard label="Users" value={stats.users} />
+              <StatCard label="Registrations" value={stats.regs} />
+              <StatCard label="Comments" value={stats.comments} />
+              <StatCard label="Bookings" value={stats.bookings} />
             </div>
+
+            {/* Tab bar */}
             <div className="flex gap-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded p-1 mb-8 w-fit shadow-[0_0_30px_rgba(0,0,0,0.5)]">
               {TABS.map((t) => (
-<<<<<<< HEAD
-                <button key={t.id} onClick={() => setTab(t.id)} className={`relative px-5 py-2 text-xs font-mono font-black uppercase tracking-widest transition-colors rounded ${tab === t.id ? "text-white" : "text-slate-500 hover:text-slate-300"}`}>
-                  {tab === t.id && <motion.div layoutId="admin-tab-pill" className="absolute inset-0 bg-white/10 rounded" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
-=======
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
@@ -3105,13 +2874,21 @@ export default function AdminDashboard() {
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
                   )}
->>>>>>> origin/PushFinalBukanPunyaRei
                   <span className="relative z-10">{t.label}</span>
                 </button>
               ))}
             </div>
+
+            {/* Panel */}
             <AnimatePresence mode="wait">
-              <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[40px] p-8 shadow-[0_30px_60px_rgba(0,0,0,0.4)]">
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[40px] p-8 shadow-[0_30px_60px_rgba(0,0,0,0.4)]"
+              >
                 <SectionTitle>{TABS.find((t) => t.id === tab)?.label}</SectionTitle>
                 {tab === "events" && <EventsPanel initialEvents={data.events} onRefresh={loadAll} />}
                 {tab === "registrations" && <RegistrationsPanel initialRegs={data.regs} onRefresh={loadAll} lowPowerMode={lowPowerMode} />}
@@ -3123,14 +2900,6 @@ export default function AdminDashboard() {
               </motion.div>
             </AnimatePresence>
           </div>
-<<<<<<< HEAD
-          <div className="hidden lg:block relative z-10">
-            <div className="border border-white/10 bg-black/20 flex flex-col p-[2px] backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.4)]">
-              <SystemLog registrations={data.regs} products={data.products} /><SystemHealth />
-            </div>
-          </div>
-=======
->>>>>>> origin/PushFinalBukanPunyaRei
         </div>
       </div>
 
