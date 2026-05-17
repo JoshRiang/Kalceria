@@ -90,7 +90,7 @@ function GearShape({ id, cx, cy, pitchR, toothH, teeth, angleOffset = 0, duratio
   );
 }
 
-function StaticGears({ visible }) {
+function StaticGears({ visible, isMobile }) {
   const p1 = 36, p2 = Math.round(36 * 0.618), p3 = Math.round(36 * 0.618 * 0.618);
   const h1 = 9,  h2 = Math.round(9 * 0.618),  h3 = Math.max(3, Math.round(h2 * 0.618));
 
@@ -120,7 +120,11 @@ function StaticGears({ visible }) {
       <svg
         width={svgW} height={svgH}
         viewBox={`0 0 ${svgW} ${svgH}`}
-        style={{ filter: "drop-shadow(0 4px 18px rgba(180,120,0,0.7))" }}
+        style={{ 
+          filter: "drop-shadow(0 4px 18px rgba(180,120,0,0.7))",
+          transform: isMobile ? "scale(0.85)" : "none",
+          transformOrigin: "center center"
+        }}
       >
         <GearShape id="A" cx={cx1} cy={cy1} pitchR={p1} toothH={h1} teeth={t1} angleOffset={0}           duration={4}           spinDir={1}  />
         <GearShape id="B" cx={cx2} cy={cy2} pitchR={p2} toothH={h2} teeth={t2} angleOffset={Math.PI/t2} duration={4*(t2/t1)}  spinDir={-1} />
@@ -182,7 +186,7 @@ function LaserGrid({ active }) {
       const el = ts - start;
 
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "#050a14";
+      ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, W, H);
 
       for (const ln of lines) {
@@ -218,7 +222,7 @@ function LaserGrid({ active }) {
         rafRef.current = requestAnimationFrame(draw);
       } else {
         ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = "#050a14";
+        ctx.fillStyle = "#000000";
         ctx.fillRect(0, 0, W, H);
       }
     };
@@ -277,12 +281,12 @@ function WakingUpText() {
 
   return (
     <div 
-      className="mt-6 flex relative w-fit" 
+      className="mt-4 flex relative w-fit justify-center" 
       style={{ 
         color: "rgba(255,255,255,0.7)", 
         fontFamily: "'Inter', sans-serif",
-        fontSize: "9px",
-        letterSpacing: "0.8em",
+        fontSize: "8px",
+        letterSpacing: "0.7em",
         textTransform: "uppercase",
         fontWeight: 300,
       }}
@@ -296,7 +300,7 @@ function WakingUpText() {
 }
 
 // ─── Tiled Video Canvas (MCU Optimization) ─────────────────────────
-function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
+function MCUVideoGridCanvas({ active, isMobile }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -313,10 +317,26 @@ function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
     updateSize();
     window.addEventListener("resize", updateSize);
 
-    // Load all 3 videos into memory
-    const videos = [1, 2, 3].map(num => {
+    // Dynamic video sources: Collaborate HP + Public files when on mobile!
+    const sources = isMobile 
+      ? [
+          "/hp/vid_login_hp.mp4",
+          "/hp/vid_login_hp2.mp4",
+          "/hp/vid_login_hp3.mp4",
+          "/vid_login1.mp4",
+          "/vid_login2.mp4",
+          "/vid_login3.mp4"
+        ]
+      : [
+          "/vid_login1.mp4",
+          "/vid_login2.mp4",
+          "/vid_login3.mp4"
+        ];
+
+    // Load all videos into memory
+    const videos = sources.map(src => {
       const v = document.createElement("video");
-      v.src = `/vid_login${num}.mp4`;
+      v.src = src;
       v.muted = true;
       v.loop = true;
       v.playsInline = true;
@@ -325,8 +345,8 @@ function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
     });
 
     let raf;
-    const cols = window.innerWidth > 768 ? 7 : 6;
-    const rows = window.innerWidth > 768 ? 6 : 7;
+    const cols = window.innerWidth > 768 ? 7 : 2;
+    const rows = window.innerWidth > 768 ? 6 : 5;
     const totalCells = cols * rows;
 
     // Randomize initial assignments
@@ -354,7 +374,7 @@ function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           let v = videos[cellAssignments[cellIdx]];
-          // Fallback if the assigned video is not ready (prevents empty slots)
+          // Fallback if the assigned video is not ready
           if (!v || v.readyState < 2) {
             v = videos.find(vid => vid && vid.readyState >= 2);
           }
@@ -384,12 +404,13 @@ function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
         v.src = "";
       });
     };
-  }, [active]);
+  }, [active, isMobile]);
 
   return (
     <canvas 
       ref={canvasRef} 
       className="absolute inset-0 w-full h-full object-cover filter grayscale contrast-125 bg-black/50" 
+      style={{ zIndex: 1 }} // Stacking context fix: guarantees canvas remains below central logo container
     />
   );
 }
@@ -399,51 +420,34 @@ function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function IntroPreloader({ onComplete }) {
   const [showLogo,     setShowLogo]     = useState(false);
-  const [showSubtitle, setShowSubtitle] = useState(false);
-  const [showGears,    setShowGears]    = useState(false);
   const [laserActive,  setLaserActive]  = useState(false);
   const [done,         setDone]         = useState(false);
-  const [backendReady, setBackendReady] = useState(false);
+  const [isMobile,     setIsMobile]     = useState(false);
 
-  const threadsCanvasRef = useRef(null);
-  usePhoenixAurora(threadsCanvasRef, !done);
-
-  // Ping backend health
+  // Responsive device check
   useEffect(() => {
-    let isMounted = true;
-    const checkBackend = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-        const res = await fetch(`${apiUrl}/health`);
-        if (res.ok) {
-          if (isMounted) setBackendReady(true);
-        } else {
-          if (isMounted) setTimeout(checkBackend, 2000);
-        }
-      } catch (err) {
-        if (isMounted) setTimeout(checkBackend, 2000);
-      }
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
     };
-    checkBackend();
-    return () => { isMounted = false; };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
-    // t = 1.0s → logo
-    const t1 = setTimeout(() => setShowLogo(true), 1000);
+    // t = 0.5s → start logo fade in
+    const t1 = setTimeout(() => setShowLogo(true), 500);
 
-    // t = 2.5s → subtitle + gears + MCU video collage
-    const t2 = setTimeout(() => {
-      setShowSubtitle(true);
-      setShowGears(true);
-    }, 2500);
+    let t2, t3, t4;
 
-    let t3, t4;
+    // t = 3.0s → start logo fade out (fades out over 1.0s, completely gone by t = 4.0s)
+    t2 = setTimeout(() => {
+      setShowLogo(false);
+    }, 3000);
 
-    // t = 9.5s → exactly 7s after subtitle appears, fire lasers (ignoring backend status)
+    // Fire lasers at t = 4.0s
     const fireLasers = () => {
       setLaserActive(true);
-      // t = 9.5 + 3.9 = 13.4s (from start) → onComplete
       t4 = setTimeout(() => {
         setDone(true);
         onComplete?.();
@@ -452,7 +456,7 @@ export default function IntroPreloader({ onComplete }) {
 
     t3 = setTimeout(() => {
       fireLasers();
-    }, 9500);
+    }, 4000);
 
     return () => { 
       clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4);
@@ -466,91 +470,43 @@ export default function IntroPreloader({ onComplete }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "#050a14",
+        background: "#000000", // Pure black for the ultimate premium minimalist feel
         zIndex: 9999,
         overflow: "hidden",
         userSelect: "none",
       }}
     >
-      {/* ── Background Videos (MCU-Style Canvas Render) ── */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        {/* Base Layer: Normal B&W Collage outside the K shape */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: showSubtitle ? 0.15 : 0, scale: showSubtitle ? 1 : 0.98 }}
-          transition={{ duration: 3, ease: "easeInOut" }}
-          className="absolute inset-0"
-        >
-          <MCUVideoGridCanvas active={true} />
-        </motion.div>
-
-        {/* Top Layer: Peach-Magenta Gradient masked strictly to the K shape */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: showSubtitle ? 0.35 : 0, scale: showSubtitle ? 1 : 0.98 }}
-          transition={{ duration: 3, ease: "easeInOut" }}
-          className="absolute inset-0"
-          style={{ clipPath: "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)" }}
-        >
-          <MCUVideoGridCanvas active={true} />
-          {/* Gradient Tint Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-color opacity-80" />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-overlay opacity-40" />
-        </motion.div>
-      </div>
-
-      {/* ── Golden spiral threads canvas ── */}
-      <canvas
-        ref={threadsCanvasRef}
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-          zIndex: 10,
-          mixBlendMode: "screen",
-        }}
-      />
-
       {/* ── Laser grid (PWM exit) ── */}
       <LaserGrid active={laserActive} />
 
-      {/* ── Central content — strictly fixed, no layout shift ── */}
+      {/* ── Central content — logo only, lot bigger, centered perfectly ── */}
       <div
         style={{
           position: "absolute",
-          top: "35%", // Fixed top position to prevent vertical shifting
+          top: "50%",
           left: "50%",
-          transform: "translateX(-50%)", // Only center horizontally
+          transform: "translate(-50%, -50%)",
           zIndex: 20,
           display: "flex",
-          flexDirection: "column",
+          justifyContent: "center",
           alignItems: "center",
-          width: "400px", // Slightly wider to ensure no wrapping
+          width: isMobile ? "90%" : "600px",
         }}
       >
-        {/* KALCERIA Logo */}
         <motion.img
-          src="/logointofadein.png"
+          src={isMobile ? "/hp/logointro_hp.png" : "/logointofadein.png"}
           alt="KALCERIA"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showLogo ? 1 : 0 }}
-          transition={{ duration: 1.4, ease: "easeInOut" }}
-          style={{ width: "280px", pointerEvents: "none", display: "block", flexShrink: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: showLogo ? 1 : 0, scale: showLogo ? 1 : 0.95 }}
+          transition={{ duration: 1.0, ease: "easeInOut" }} // Highly optimized 1.0s smooth transition for fade-in and fade-out
+          style={{ 
+            width: isMobile ? "310px" : "480px", // A LOT bigger!
+            pointerEvents: "none", 
+            display: "block", 
+            filter: "drop-shadow(0 0 35px rgba(255, 255, 255, 0.12))", // Subtle premium white glow
+          }}
           draggable={false}
         />
-
-        {/* Subtitle + Gears */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showSubtitle ? 1 : 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          style={{ marginTop: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}
-        >
-          <StaticGears visible={showGears} />
-          {showGears && !laserActive && <WakingUpText />}
-        </motion.div>
       </div>
     </div>
   );

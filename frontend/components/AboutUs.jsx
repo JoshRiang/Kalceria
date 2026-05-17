@@ -21,7 +21,7 @@ function StaticTypewriter({ text, speed = 20, delay = 0, highlights = [] }) {
         setTimeout(() => setStarted(true), delay);
       }}
       viewport={{ once: true }}
-      className="inline-block"
+      className="inline-block whitespace-pre-wrap"
     >
       {text.split("").map((char, i) => (
         <motion.span
@@ -43,10 +43,9 @@ function StaticTypewriter({ text, speed = 20, delay = 0, highlights = [] }) {
 }
 
 // ─── Photo Collage Background (Section 2) ───
-function PhotoCollage() {
+function PhotoCollage({ isMobile }) {
   const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.jpeg`);
-  // Double the photos for seamless rolling
-  const rollingPhotos = [...photos, ...photos];
+  const activePhotos = isMobile ? photos.slice(0, 9) : photos;
 
   return (
     <div className="absolute inset-0 z-0 overflow-hidden bg-[#050a14]">
@@ -64,10 +63,10 @@ function PhotoCollage() {
           className="flex h-full animate-[roll_80s_linear_infinite]"
           style={{ width: "200%" }}
         >
-          {/* Each "half" is a 5x4 grid */}
+          {/* Each "half" is a grid */}
           {[0, 1].map((setIndex) => (
-            <div key={setIndex} className="grid grid-cols-5 w-1/2 h-full gap-1">
-              {photos.map((src, i) => (
+            <div key={setIndex} className={`grid w-1/2 h-full gap-1 ${isMobile ? "grid-cols-3" : "grid-cols-5"}`}>
+              {activePhotos.map((src, i) => (
                 <div key={i} className="relative w-full h-full overflow-hidden bg-slate-900 border border-white/5">
                   <img 
                     src={src} 
@@ -135,15 +134,15 @@ function VideoCell({ initialSrc, allVids, index }) {
 }
 
 // ─── Video Collage Background (Section 1) ───
-function VideoCollage() {
+function VideoCollage({ isMobile }) {
   const [initialGrid, setInitialGrid] = useState([]);
   const vids = useRef(Array.from({ length: 8 }, (_, i) => `/vid_abt${i + 1}.mp4`));
   
   useEffect(() => {
-    // Reduced grid size from 20 to 12 for performance optimization
-    const base = Array.from({ length: 12 }, (_, i) => vids.current[i % vids.current.length]);
+    const size = isMobile ? 6 : 12;
+    const base = Array.from({ length: size }, (_, i) => vids.current[i % vids.current.length]);
     setInitialGrid(base.sort(() => Math.random() - 0.5));
-  }, []);
+  }, [isMobile]);
 
   if (initialGrid.length === 0) return null;
 
@@ -331,7 +330,7 @@ function GoldenAmbientSparks() {
 }
 
 // ─── Dangling Symbols Component ───
-function DanglingSymbols({ char, color, side = "left", configs = [] }) {
+function DanglingSymbols({ char, color, side = "left", configs = [], isMobile = false }) {
   return (
     <div className="absolute inset-0 pointer-events-none">
       {configs.map((s, i) => (
@@ -347,11 +346,11 @@ function DanglingSymbols({ char, color, side = "left", configs = [] }) {
             ease: "easeInOut",
             delay: s.delay || 0
           }}
-          className="absolute text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter select-none z-[60]"
+          className="absolute text-3xl md:text-5xl lg:text-7xl font-mono font-black uppercase tracking-tighter select-none z-[60]"
           style={{ 
             color: color, 
             top: s.top,
-            [side === "left" ? "left" : "right"]: `${s.offset}px`,
+            [side === "left" ? "left" : "right"]: isMobile ? `${s.offset * 0.7}px` : `${s.offset}px`,
             textShadow: `0 0 20px ${color}, 0 0 40px ${color}`,
             filter: `drop-shadow(0 0 25px ${color}aa)`,
             opacity: 0.95
@@ -451,6 +450,17 @@ export default function AboutUs() {
   const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
   const containerRef = useRef(null);
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -507,7 +517,7 @@ export default function AboutUs() {
       <section className="relative w-full min-h-screen flex flex-col items-center justify-center px-8 py-32 overflow-hidden z-10">
         
         {/* Video Collage Background */}
-        <VideoCollage />
+        <VideoCollage isMobile={isMobile} />
 
         <div className="absolute inset-0 z-0 pointer-events-none opacity-30 mix-blend-screen">
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[20%] left-[10%] w-[30vw] h-[30vw] rounded-full blur-[130px] bg-[#00FFFF]" />
@@ -565,7 +575,7 @@ export default function AboutUs() {
       <section className="relative w-full py-40 flex flex-col items-center overflow-hidden z-20 bg-[#050a14]">
         
         {/* Photo Collage Background */}
-        <PhotoCollage />
+        <PhotoCollage isMobile={isMobile} />
 
         {/* Ambient Blobs: Golden & Cyan */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-30 mix-blend-screen">
@@ -689,7 +699,7 @@ export default function AboutUs() {
             setShowEntry(true);
           }
         }}
-        className="relative w-full min-h-[150vh] flex flex-col items-center justify-center overflow-hidden z-25 border-t border-slate-900"
+        className={`relative w-full flex flex-col items-center justify-center overflow-hidden z-25 border-t border-slate-900 ${isMobile ? "min-h-[112.5vh]" : "min-h-[150vh]"}`}
       >
         
         {/* Entry Sequence Overlay */}
@@ -752,7 +762,7 @@ export default function AboutUs() {
            {/* Rei - Center Bottom Layer */}
            <div 
              className="absolute left-1/2 -translate-x-1/2 h-[102vh] w-auto z-[1] pointer-events-auto"
-             style={{ bottom: "-25vh" }}
+             style={{ bottom: isMobile ? "-34vh" : "-25vh" }}
              onMouseEnter={() => setHoverRei(true)}
              onMouseLeave={() => setHoverRei(false)}
            >
@@ -767,16 +777,16 @@ export default function AboutUs() {
                     initial={{ opacity: 0, y: 20, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                    className="absolute bottom-[68%] left-[70%] p-5 bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max rounded-[2rem] flex flex-col items-start"
+                    className={`absolute bottom-[68%] left-[70%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start ${isMobile ? "p-3 rounded-[1rem]" : "p-5 rounded-[2rem]"}`}
                     style={{ fontFamily: "'Times New Roman', Times, serif" }}
                   >
                     {/* Photo Box */}
-                    <div className="w-[136px] h-[136px] rounded-[1rem] overflow-hidden mb-4 border border-white/10 bg-black/20">
+                    <div className={`overflow-hidden border border-white/10 bg-black/20 ${isMobile ? "w-[80px] h-[80px] rounded-[0.5rem] mb-2" : "w-[136px] h-[136px] rounded-[1rem] mb-4"}`}>
                       <img src="/reifo.jpeg" alt="Rei Photo" className="w-full h-full object-cover" />
                     </div>
                     
                     <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
-                    <p className="text-white text-sm md:text-base font-normal leading-relaxed relative z-10">
+                    <p className={`text-white font-normal leading-relaxed relative z-10 ${isMobile ? "text-xs" : "text-sm md:text-base"}`}>
                       <span className="underline font-bold">Our beloved friend,</span><br />
                       Reinathan Ezkhiel K.
                     </p>
@@ -787,14 +797,14 @@ export default function AboutUs() {
 
            {/* Josh - Left Upper Layer */}
            <div 
-             className="absolute bottom-0 left-[25%] -translate-x-1/2 h-[63vh] w-auto z-[2] pointer-events-auto"
+             className={`absolute -translate-x-1/2 z-[2] pointer-events-auto ${isMobile ? "left-[25%] w-[34vw] h-auto bottom-0" : "left-[30%] h-[63vh] w-auto bottom-0"}`}
              onMouseEnter={() => setHoverJosh(true)}
              onMouseLeave={() => setHoverJosh(false)}
            >
              <img 
                src="/josh.png" 
                alt="Josh" 
-               className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help"
+               className={`object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help ${isMobile ? "w-full h-auto" : "h-full w-auto"}`}
              />
              <AnimatePresence>
                 {hoverJosh && (
@@ -802,16 +812,16 @@ export default function AboutUs() {
                     initial={{ opacity: 0, x: 20, scale: 0.9 }}
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: 20, scale: 0.9 }}
-                    className="absolute top-[40%] right-[85%] p-5 bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max rounded-[2rem] flex flex-col items-start"
+                    className={`absolute bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start ${isMobile ? "top-[30%] right-[80%] p-3 rounded-[1rem]" : "top-[40%] right-[85%] p-5 rounded-[2rem]"}`}
                     style={{ fontFamily: "'Times New Roman', Times, serif" }}
                   >
                     {/* Photo Box */}
-                    <div className="w-[136px] h-[136px] rounded-[1rem] overflow-hidden mb-4 border border-white/10 bg-black/20">
+                    <div className={`overflow-hidden border border-white/10 bg-black/20 ${isMobile ? "w-[80px] h-[80px] rounded-[0.5rem] mb-2" : "w-[136px] h-[136px] rounded-[1rem] mb-4"}`}>
                       <img src="/jofo.jpeg" alt="Josh Photo" className="w-full h-full object-cover" />
                     </div>
 
                     <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
-                    <p className="text-white text-sm md:text-base font-normal leading-relaxed relative z-10">
+                    <p className={`text-white font-normal leading-relaxed relative z-10 ${isMobile ? "text-xs" : "text-sm md:text-base"}`}>
                       <span className="underline font-bold">Our beloved friend,</span><br />
                       Joshua Ricardo R.
                     </p>
@@ -822,15 +832,15 @@ export default function AboutUs() {
 
            {/* Otniel - Right Upper Layer */}
            <div 
-             className="absolute left-[75%] -translate-x-1/2 h-[63vh] w-auto z-[2] pointer-events-auto"
-             style={{ bottom: "-8vh" }}
+             className={`absolute -translate-x-1/2 z-[2] pointer-events-auto ${isMobile ? "left-[75%] w-[28vw] h-auto" : "left-[75%] h-[63vh] w-auto"}`}
+             style={{ bottom: isMobile ? "0vh" : "-18vh" }}
              onMouseEnter={() => setHoverOtniel(true)}
              onMouseLeave={() => setHoverOtniel(false)}
            >
              <img 
                src="/otniel.png" 
                alt="Otniel" 
-               className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help"
+               className={`object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help ${isMobile ? "w-full h-auto" : "h-full w-auto md:scale-[1.3] md:origin-bottom"}`}
              />
              <AnimatePresence>
                 {hoverOtniel && (
@@ -838,16 +848,16 @@ export default function AboutUs() {
                     initial={{ opacity: 0, x: -20, scale: 0.9 }}
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: -20, scale: 0.9 }}
-                    className="absolute top-[25%] left-[95%] p-5 bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max rounded-[2rem] flex flex-col items-start"
+                    className={`absolute top-[25%] left-[95%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start ${isMobile ? "p-3 rounded-[1rem]" : "p-5 rounded-[2rem]"}`}
                     style={{ fontFamily: "'Times New Roman', Times, serif" }}
                   >
                     {/* Photo Box */}
-                    <div className="w-[136px] h-[136px] rounded-[1rem] overflow-hidden mb-4 border border-white/10 bg-black/20">
+                    <div className={`overflow-hidden border border-white/10 bg-black/20 ${isMobile ? "w-[80px] h-[80px] rounded-[0.5rem] mb-2" : "w-[136px] h-[136px] rounded-[1rem] mb-4"}`}>
                       <img src="/ofo.jpeg" alt="Otniel Photo" className="w-full h-full object-cover" />
                     </div>
 
                     <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
-                    <p className="text-white text-sm md:text-base font-normal leading-relaxed relative z-10">
+                    <p className={`text-white font-normal leading-relaxed relative z-10 ${isMobile ? "text-xs" : "text-sm md:text-base"}`}>
                       <span className="underline font-bold">Our beloved friend,</span><br />
                       Otniel Kristian S.
                     </p>
@@ -879,7 +889,7 @@ export default function AboutUs() {
               repeat: Infinity, 
               ease: "easeInOut" 
             }}
-            className="absolute top-0 left-1/2 -translate-x-1/2 translate-y-[179%] z-[20] w-[232px] md:w-[323px] h-auto drop-shadow-[0_0_50px_rgba(255,215,0,0.6)]"
+            className={`absolute top-0 left-1/2 -translate-x-1/2 z-[20] w-[232px] md:w-[323px] h-auto drop-shadow-[0_0_50px_rgba(255,215,0,0.6)] ${isMobile ? "translate-y-[112%]" : "translate-y-[143%]"}`}
             style={{ 
               rotate: "0deg",
               willChange: "transform" // Performance optimization
@@ -922,7 +932,7 @@ export default function AboutUs() {
 
         {/* Static Paragraph on the left */}
         <p 
-          className="absolute top-[12.5rem] left-[29%] md:left-[32%] max-w-[220px] md:max-w-[280px] text-slate-300 text-base md:text-lg font-normal leading-relaxed pointer-events-none z-20 text-justify"
+          className={`absolute top-[12.5rem] max-w-[220px] md:max-w-[280px] text-slate-300 text-base md:text-lg font-normal leading-relaxed pointer-events-none z-20 text-justify ${isMobile ? "left-[14%]" : "left-[29%] md:left-[32%]"}`}
           style={{ fontFamily: "'Times New Roman', Times, serif" }}
         >
           Kalceria used to be a Final Project, now it is becoming a legacy of digital craftsmanship and automotive passion. It stands as a testament to the boundary-pushing creativity of our development team.
@@ -930,14 +940,14 @@ export default function AboutUs() {
         
         {/* dy_3 image at the right half of under the Webdev Team title */}
         <div 
-          className="absolute top-[5.88rem] left-[50.4%] z-20"
+          className={`absolute left-[50.4%] z-20 ${isMobile ? "top-[8.38rem]" : "top-[5.88rem]"}`}
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
         >
           <img 
             src="/dy_3.png" 
             alt="DY 3"
-            className="w-44 h-44 md:w-[18.6rem] md:h-[18.6rem] object-contain pointer-events-auto opacity-80 cursor-help"
+            className="object-contain pointer-events-auto opacity-80 cursor-help w-[220px] h-[220px] md:w-[23.25rem] md:h-[23.25rem]"
             style={{ rotate: "-10.5deg" }}
           />
           
@@ -947,7 +957,7 @@ export default function AboutUs() {
                 initial={{ opacity: 0, x: -20, scale: 0.9 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: -20, scale: 0.9 }}
-                className="absolute top-[20%] left-[95%] p-6 bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] min-w-[200px] rounded-[2rem]"
+                className={`absolute top-[20%] left-[95%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max rounded-[1.5rem] ${isMobile ? "px-4 py-2.5" : "px-6 py-4"}`}
                 style={{ 
                   fontFamily: "'Times New Roman', Times, serif"
                 }}
@@ -955,7 +965,7 @@ export default function AboutUs() {
                 {/* Black Blob effect inside */}
                 <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
                 
-                <p className="text-white text-lg md:text-xl font-normal leading-tight relative z-10">
+                <p className={`text-white font-normal leading-tight relative z-10 ${isMobile ? "text-xs" : "text-lg md:text-xl"}`}>
                   <span className="underline font-bold block mb-2">Our Mentor,</span>
                   Ditya Alif K.
                 </p>
@@ -996,7 +1006,7 @@ export default function AboutUs() {
           />
 
           {/* 2. LEFT REII IMAGE (Shrunken by 25%, Gold-Cyan Glow) */}
-          <div className="absolute -bottom-40 right-[95%] md:right-full mr-0 md:mr-6 pointer-events-none flex items-end justify-center z-10">
+          <div className={`absolute -bottom-40 mr-0 md:mr-6 pointer-events-none flex items-end justify-center z-10 ${isMobile ? "right-[82%]" : "right-[95%] md:right-full"}`}>
             {/* Dynamic Gold-Cyan Glow */}
             <motion.div 
               animate={{ 
@@ -1014,7 +1024,7 @@ export default function AboutUs() {
             <img 
               src={imgToggle ? "/reii2.png" : "/reii.png"} 
               alt="Reii Left" 
-              className="w-[12rem] md:w-[17.25rem] max-w-none relative z-10 opacity-90" 
+              className={`max-w-none relative z-10 opacity-90 ${isMobile ? "w-[9.6rem]" : "w-[12rem] md:w-[17.25rem]"}`} 
             />
 
             {/* Dangling ? Symbols beside Left Reii (on its right side) */}
@@ -1022,15 +1032,16 @@ export default function AboutUs() {
               char="?" 
               color="#FFD700" 
               side="left" 
+              isMobile={isMobile}
               configs={[
-                { delay: 0, rotate: -15, top: "-15%", offset: 145 }, // Upper: another 10% lefter
-                { delay: 0.8, rotate: 10, top: "35%", offset: 200 }  // Lower: another 5% righter
+                { delay: 0, rotate: -15, top: isMobile ? "5%" : "-15%", offset: 145 }, // Upper: another 10% lefter
+                { delay: 0.8, rotate: 10, top: isMobile ? "55%" : "35%", offset: 200 }  // Lower: another 5% righter
               ]} 
             />
           </div>
 
           {/* 3. RIGHT REII IMAGE (Shrunken by 25%, Magenta-Cyan Glow) */}
-          <div className="absolute -bottom-40 left-[95%] md:left-full ml-0 md:ml-6 pointer-events-none flex items-end justify-center z-10">
+          <div className={`absolute -bottom-40 ml-0 md:ml-6 pointer-events-none flex items-end justify-center z-10 ${isMobile ? "left-[82%]" : "left-[95%] md:left-full"}`}>
             {/* Dynamic Magenta-Cyan Glow */}
             <motion.div 
               animate={{ 
@@ -1049,7 +1060,7 @@ export default function AboutUs() {
             <img 
               src={imgToggle ? "/reii3.png" : "/reii2.png"} 
               alt="Reii Right" 
-              className="w-[12rem] md:w-[17.25rem] max-w-none relative z-10 opacity-90" 
+              className={`max-w-none relative z-10 opacity-90 ${isMobile ? "w-[9.6rem]" : "w-[12rem] md:w-[17.25rem]"}`} 
             />
 
             {/* Dangling ! Symbols beside Right Reii2 (on its left side) */}
@@ -1057,6 +1068,7 @@ export default function AboutUs() {
               char="!" 
               color="#00FFFF" 
               side="right" 
+              isMobile={isMobile}
               configs={[
                 { delay: 0, rotate: -15, top: "-15%", offset: 145 }, // Upper: another 10% righter
                 { delay: 0.8, rotate: 10, top: "30%", offset: 200 }, // Lower 1: another 5% lefter
@@ -1069,12 +1081,12 @@ export default function AboutUs() {
           <div className="relative z-20 flex flex-col w-full h-full transition-all duration-300">
             <button 
               onClick={() => setMasterFaqOpen(!masterFaqOpen)}
-              className="w-full px-8 py-10 text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none"
+              className={`w-full text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none ${isMobile ? "px-5 py-6" : "px-8 py-10"}`}
             >
-              <span className="font-mono font-black uppercase tracking-tighter text-3xl md:text-5xl text-white transition-colors drop-shadow-2xl">
+              <span className={`font-mono font-black uppercase tracking-tighter text-white transition-colors drop-shadow-2xl ${isMobile ? "text-xl" : "text-3xl md:text-5xl"}`}>
                 FREQUENTLY ASKED QUESTIONS
               </span>
-              <span className="font-mono text-4xl text-white transition-transform duration-300" style={{ transform: masterFaqOpen ? "rotate(45deg)" : "rotate(0deg)" }}>
+              <span className={`font-mono text-white transition-transform duration-300 ${isMobile ? "text-2xl" : "text-4xl"}`} style={{ transform: masterFaqOpen ? "rotate(45deg)" : "rotate(0deg)" }}>
                 +
               </span>
             </button>
@@ -1089,7 +1101,7 @@ export default function AboutUs() {
                   transition={{ duration: 0.4, ease: "easeInOut" }}
                   className="bg-transparent border-t border-white/10 overflow-hidden"
                 >
-                  <div className="p-4 md:p-8 flex flex-col gap-4">
+                  <div className={`flex flex-col ${isMobile ? "p-3 gap-3" : "p-4 md:p-8 gap-4"}`}>
                     
                     {faqs.map((faq, i) => (
                       <motion.div 
@@ -1101,12 +1113,12 @@ export default function AboutUs() {
                       >
                         <button 
                           onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                          className="w-full px-6 py-6 text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none"
+                          className={`w-full text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none ${isMobile ? "px-4 py-4" : "px-6 py-6"}`}
                         >
-                          <span className="font-mono font-black uppercase tracking-tighter text-base md:text-xl text-slate-300 group-hover:text-white transition-colors pr-8">
+                          <span className={`font-mono font-black uppercase tracking-tighter text-slate-300 group-hover:text-white transition-colors pr-8 ${isMobile ? "text-sm" : "text-base md:text-xl"}`}>
                             {faq.q}
                           </span>
-                          <span className="font-mono text-2xl text-white transition-colors flex-shrink-0">
+                          <span className={`font-mono text-white transition-colors flex-shrink-0 ${isMobile ? "text-lg" : "text-2xl"}`}>
                             {openFaq === i ? "—" : "+"}
                           </span>
                         </button>
@@ -1120,7 +1132,7 @@ export default function AboutUs() {
                               transition={{ duration: 0.3, ease: "easeInOut" }}
                               className="border-t border-slate-800 overflow-hidden"
                             >
-                              <div className="px-6 py-6 font-sans text-slate-400 text-sm md:text-base leading-relaxed bg-[#060c18]">
+                              <div className={`font-sans text-slate-400 leading-relaxed bg-[#060c18] ${isMobile ? "px-4 py-4 text-xs" : "px-6 py-6 text-sm md:text-base"}`}>
                                 {faq.a}
                               </div>
                             </motion.div>

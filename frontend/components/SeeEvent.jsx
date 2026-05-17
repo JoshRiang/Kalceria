@@ -73,7 +73,7 @@ function RainbowPixels() {
   })), []);
 
   return (
-    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden mix-blend-screen opacity-50">
+    <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden mix-blend-screen opacity-50">
       {particles.map((p, i) => (
         <motion.div
           key={i}
@@ -110,7 +110,7 @@ function MicroParticles() {
   })), []);
 
   return (
-    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30">
+    <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden opacity-30">
       {particles.map((p, i) => (
         <motion.div
           key={i}
@@ -256,7 +256,7 @@ function SpinningGlobe() {
           <bufferAttribute attach="attributes-position" count={dotPositions.length / 3} array={dotPositions} itemSize={3} />
         </bufferGeometry>
         <pointsMaterial 
-          size={0.026} 
+          size={0.028} 
           color="#ff9900" 
           transparent 
           opacity={1} 
@@ -320,7 +320,7 @@ function GlobeCoreStrings() {
           {/* LAYER 1: The core bright magenta filament */}
           <line geometry={sd.geometry}>
             <lineBasicMaterial 
-              color="#ff88ff" 
+              color="#ffffff" 
               transparent 
               opacity={1.0} 
               linewidth={1} 
@@ -329,23 +329,23 @@ function GlobeCoreStrings() {
             />
           </line>
           {/* LAYER 2: The vibrant magenta body */}
-          <line geometry={sd.geometry}>
+          <line geometry={sd.geometry} scale={1.01}>
             <lineBasicMaterial 
               color="#ff00ff" 
               transparent 
-              opacity={0.8} 
-              linewidth={3} 
+              opacity={0.6} 
+              linewidth={1} 
               blending={THREE.AdditiveBlending}
               depthWrite={false}
             />
           </line>
           {/* LAYER 3: The deep magenta outer glow */}
-          <line geometry={sd.geometry}>
+          <line geometry={sd.geometry} scale={1.025}>
             <lineBasicMaterial 
-              color="#aa00aa" 
+              color="#ff00ff" 
               transparent 
-              opacity={0.4} 
-              linewidth={6} 
+              opacity={0.25} 
+              linewidth={1} 
               blending={THREE.AdditiveBlending}
               depthWrite={false}
             />
@@ -417,10 +417,17 @@ function FloatingPhotoCard({ initialSrc, config, index }) {
   );
 }
 
-function FloatingPhotos() {
+function FloatingPhotos({ isMobile }) {
+  const configs = [
+    { src: "/ven_3.jpeg", top: "23%",   left: isMobile ? "11%" : "26%",   rotate: -12, delay: 0.6  }, // Top Left
+    { src: "/ven_2.jpeg", top: "23%",   right: isMobile ? "11%" : "26%",  rotate:  12, delay: 1.1  }, // Top Right
+    { src: "/ven_5.jpeg", bottom: "23%", left: isMobile ? "11%" : "26%",   rotate: -12, delay: 0.3  }, // Bottom Left
+    { src: "/ven_6.jpeg", bottom: "23%", right: isMobile ? "11%" : "26%",  rotate:  12, delay: 2.2  }, // Bottom Right
+  ];
+
   return (
     <>
-      {FLOAT_PHOTOS.map((p, i) => (
+      {configs.map((p, i) => (
         <FloatingPhotoCard key={i} index={i} config={p} initialSrc={p.src} />
       ))}
     </>
@@ -460,7 +467,7 @@ const ChevronRight = () => (
   </svg>
 );
 
-function ApplyModal({ events, startIndex, onClose }) {
+function ApplyModal({ events, startIndex, isMobile, onClose }) {
   const [idx, setIdx] = useState(startIndex);
   const [mode, setMode] = useState("account");
   const [loading, setLoading] = useState(false);
@@ -497,7 +504,7 @@ function ApplyModal({ events, startIndex, onClose }) {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
-      <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-[#0B0C10]/85 border border-white/10 w-full max-w-lg relative overflow-hidden backdrop-blur-2xl shadow-[0_0_100px_rgba(0,0,0,0.8)] p-6 md:p-8" style={CLIP}>
+      <motion.div initial={{ scale: isMobile ? 0.78 : 0.9, y: 20 }} animate={{ scale: isMobile ? 0.825 : 1, y: 0 }} className="bg-[#0B0C10]/85 border border-white/10 w-full max-w-lg relative overflow-hidden backdrop-blur-2xl shadow-[0_0_100px_rgba(0,0,0,0.8)] p-6 md:p-8 transition-transform duration-500" style={CLIP}>
         
         {/* Dynamic Blobs */}
         <motion.div 
@@ -515,7 +522,7 @@ function ApplyModal({ events, startIndex, onClose }) {
 
         {/* Mini Carousel Header */}
         <div className="relative z-30 mb-6">
-           <div className="flex items-center justify-between mb-4">
+           <div className={`flex items-center justify-between mb-4 ${isMobile ? "px-10" : ""}`}>
               <button onClick={prev} className="w-10 h-10 flex items-center justify-center border border-white/20 text-white/40 hover:text-white hover:border-white transition-all bg-white/5 rounded-lg">
                 <ChevronLeft />
               </button>
@@ -528,8 +535,8 @@ function ApplyModal({ events, startIndex, onClose }) {
               </button>
            </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-              <motion.div key={event?.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="relative w-full aspect-[3/4] bg-white/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)]" style={CLIP_CARD}>
+           <div className="grid grid-cols-2 gap-4 md:gap-6 items-center">
+              <motion.div key={event?.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className={`relative w-full bg-white/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] ${isMobile ? "aspect-square" : "aspect-[3/4]"}`} style={CLIP_CARD}>
                  <img src={event?.displayPhotoUrl} className="w-full h-full object-cover" alt="" />
                  <div className="absolute inset-0 border-2 border-white/10 pointer-events-none" style={CLIP_CARD} />
               </motion.div>
@@ -599,6 +606,14 @@ function ApplyModal({ events, startIndex, onClose }) {
 }
 
 export default function SeeEvent() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const [heroIdx, setHeroIdx] = useState(0);
   const [eventIdx, setEventIdx] = useState(0);
   const [events, setEvents] = useState([]);
@@ -633,36 +648,84 @@ export default function SeeEvent() {
   const isAtmosView = useInView(atmosRef, { once: true, margin: "-100px" });
 
   return (
-    <div className="w-full min-h-screen bg-[#0B0C10] text-white font-sans overflow-x-hidden">
+    <div className="w-full min-h-screen bg-[#0B0C10] text-white font-sans overflow-x-hidden relative">
       
       {/* ─── SECTION 1: HERO CAROUSEL ────────────────────────────────────────── */}
-      <section className="relative w-full h-screen overflow-hidden flex items-center">
-        <AnimatePresence mode="sync">
-          {HERO_IMAGES.map((src, idx) => (
-            idx === heroIdx && (
-              <motion.div key={src} initial={{ opacity: 0, x: "10%" }} animate={{ opacity: 1, x: "0%", transition: { duration: 1.5, ease: "easeOut" } }} exit={{ opacity: 0, x: "-10%", transition: { duration: 1.5 } }} className="absolute inset-0 w-full h-full">
-                <motion.div animate={{ x: ["0%", "-5%"] }} transition={{ duration: 10, ease: "linear", repeat: Infinity, repeatType: "mirror" }} className="w-[110%] h-full bg-cover bg-center bg-[#1a1c23]" style={{ backgroundImage: `url(${src})` }} />
-              </motion.div>
-            )
-          ))}
-        </AnimatePresence>
+      <section className="relative w-full h-screen overflow-hidden flex items-center justify-center">
 
-        <div className="absolute inset-0 bg-orange-400/20 mix-blend-overlay z-0 pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0B0C10] z-0 pointer-events-none" />
+        {/* Full-bleed raw slideshow: bg-cover spans full screen, slowly panning left like desktop */}
+        <div className="absolute inset-0 z-0 overflow-hidden bg-[#0B0C10] flex items-center justify-center">
+          {isMobile ? (
+            <div 
+              className="relative w-[90%] aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 backdrop-blur-md bg-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] flex items-center justify-center"
+              style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }}
+            >
+              <AnimatePresence mode="sync">
+                {HERO_IMAGES.map((src, idx) => (
+                  idx === heroIdx && (
+                    <motion.div 
+                      key={src} 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
+                      exit={{ opacity: 0 }} 
+                      transition={{ duration: 1.2 }} 
+                      className="absolute inset-0 w-full h-full"
+                    >
+                      <motion.div 
+                        animate={{ x: ["0%", "-15%"] }} 
+                        transition={{ duration: 15, ease: "linear", repeat: Infinity, repeatType: "mirror" }} 
+                        className="w-[120%] h-full bg-cover bg-center bg-no-repeat absolute left-0 top-0 opacity-80" 
+                        style={{ backgroundImage: `url(${src})` }} 
+                      />
+                    </motion.div>
+                  )
+                ))}
+              </AnimatePresence>
+              <div className="absolute inset-0 bg-orange-400/10 mix-blend-overlay z-10 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10 pointer-events-none" />
+            </div>
+          ) : (
+            <>
+              <AnimatePresence mode="sync">
+                {HERO_IMAGES.map((src, idx) => (
+                  idx === heroIdx && (
+                    <motion.div 
+                      key={src} 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
+                      exit={{ opacity: 0 }} 
+                      transition={{ duration: 1.2 }} 
+                      className="absolute inset-0 w-full h-full flex items-center justify-center"
+                    >
+                      <motion.div 
+                        animate={{ x: ["0%", "-15%"] }} 
+                        transition={{ duration: 15, ease: "linear", repeat: Infinity, repeatType: "mirror" }} 
+                        className="w-[120%] h-full bg-cover bg-center bg-no-repeat absolute left-0 top-0" 
+                        style={{ backgroundImage: `url(${src})` }} 
+                      />
+                    </motion.div>
+                  )
+                ))}
+              </AnimatePresence>
+              <div className="absolute inset-0 bg-orange-400/20 mix-blend-overlay z-10 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0B0C10] z-10 pointer-events-none" />
+            </>
+          )}
+        </div>
 
-        <div className="relative z-10 container mx-auto px-6 md:px-12 pt-20">
-          <div className="relative inline-block">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className="relative mb-4 w-max flex items-end group">
-               <img src="/coki_event.png" alt="Coki Event" className="w-32 md:w-48 block relative z-10 drop-shadow-2xl" />
+        <div className={`relative z-10 container mx-auto px-6 md:px-12 flex flex-col ${isMobile ? "items-center text-center justify-center" : "items-start text-left justify-center h-full"}`}>
+          <div className={`relative inline-block ${isMobile ? "text-center flex flex-col items-center justify-center" : "text-left flex flex-col items-start justify-center"}`}>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className={`relative mb-6 w-max flex items-end justify-center group ${isMobile ? "mx-auto" : "ml-0"}`}>
+               <img src="/coki_event.png" alt="Coki Event" className="w-24 md:w-36 block relative z-10 drop-shadow-2xl" />
                <div className="absolute left-0 bottom-0 w-[4px] h-[50%] bg-white z-20" />
                <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20" />
             </motion.div>
 
-            <motion.h1 initial={{ x: '-100vw' }} animate={{ x: 0 }} transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }} className="text-6xl md:text-8xl font-black tracking-tighter text-left text-white drop-shadow-2xl font-rog mb-6 relative z-10" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
+            <motion.h1 initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }} className={`text-5xl md:text-7xl font-black tracking-tighter text-white drop-shadow-2xl font-rog mb-6 relative z-10 ${isMobile ? "text-center" : "text-left"}`} style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
               SEE EVENT
             </motion.h1>
           </div>
-          <div className="max-w-2xl text-lg md:text-xl font-medium text-gray-200 leading-relaxed drop-shadow-lg h-[150px]">
+          <div className={`max-w-2xl text-base md:text-lg font-medium text-gray-200 leading-relaxed drop-shadow-lg h-[150px] ${isMobile ? "text-center mx-auto" : "text-left ml-0"}`}>
             <Typewriter text="This Event hosted by Kalceria and by the use of community. We bring automotive enthusiasts together to share the same obsession. Prepare your engines for the ultimate street euphoria." delay={800} speed={40} />
           </div>
         </div>
@@ -672,8 +735,8 @@ export default function SeeEvent() {
       <div className="relative w-full bg-[#0B0C10]">
         <RainbowPixels />
         <MicroParticles />
-        <img src="/stikermobil_5.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] -rotate-3 opacity-80 drop-shadow-xl pointer-events-none" />
-        <img src="/stikermobil_2.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] rotate-6 opacity-80 drop-shadow-xl pointer-events-none" />
+        <img src="/stikermobil_5.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-65%) rotate(-3deg)" : "rotate(-3deg)" }} />
+        <img src="/stikermobil_2.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-65%) scale(0.8) rotate(6deg)" : "rotate(6deg)" }} />
 
         {/* ─── SECTION 1.5: ATMOSPHERIC BREAK ────────────────────────────────── */}
         <section ref={atmosRef} className="relative w-full py-[60vh] z-20 overflow-hidden">
@@ -685,7 +748,7 @@ export default function SeeEvent() {
                transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
                className="font-rog font-black tracking-tighter text-white uppercase relative inline-block select-none drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                style={{ 
-                 fontSize: "clamp(2rem, 6vw, 5rem)",
+                 fontSize: isMobile ? "clamp(2.4rem, 7.2vw, 6rem)" : "clamp(2rem, 6vw, 5rem)",
                  WebkitTextStroke: "1px rgba(255,255,255,0.1)",
                  textShadow: `
                    0 1px 0 #ccc, 
@@ -707,8 +770,8 @@ export default function SeeEvent() {
              </motion.h2>
           </div>
 
-          {/* Enhanced Dynamic Background Blobs (25% Aggressiveness, Higher Placement) */}
-          <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.38] mix-blend-screen">
+          {/* Enhanced Dynamic Background Blobs (Elegant Washy Wash) */}
+          <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.28] mix-blend-screen">
              {/* Green Blob - Higher and more active */}
              <motion.div 
                animate={{ 
@@ -738,12 +801,12 @@ export default function SeeEvent() {
              <img 
                src="/indo.png" 
                alt="Indonesia Map" 
-               className="w-[151vw] md:w-[100vw] h-auto object-contain opacity-20 filter brightness-125" 
+               className="w-[151vw] md:w-[100vw] h-auto object-contain opacity-25 filter brightness-150 contrast-125" 
              />
           </div>
 
-          {/* 3D Spinning Globe */}
-          <div className="absolute inset-0 z-0">
+          {/* 3D Spinning Globe: scaled 25% smaller, 10% righter, 10% lower on mobile */}
+          <div className={`absolute inset-0 z-0 flex items-center justify-center transition-all duration-700 origin-center ${isMobile ? "scale-[0.75] translate-x-[10%] translate-y-[10%]" : ""}`}>
              <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }} style={{ pointerEvents: 'none' }}>
                 <ambientLight intensity={0.5} />
                 <pointLight position={[10, 10, 10]} />
@@ -753,8 +816,8 @@ export default function SeeEvent() {
           {/* Aggressive Edge Blending for Seamless Transitions */}
           <div className="absolute top-0 left-0 w-full h-[30vh] bg-gradient-to-b from-[#0B0C10] to-transparent z-10 pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-full h-[30vh] bg-gradient-to-t from-[#0B0C10] to-transparent z-10 pointer-events-none" />
-          {/* Floating ven photos */}
-          <FloatingPhotos />
+          {/* Floating ven photos: dynamically spread left-right by 15% on mobile */}
+          <FloatingPhotos isMobile={isMobile} />
 
           {/* ── LEFT STATS ── */}
           <div className="absolute left-6 md:left-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-12 pointer-events-none">
@@ -771,12 +834,14 @@ export default function SeeEvent() {
 
         {/* ─── SECTION 2: DYNAMIC EVENT CARDS ──────────────────────────────── */}
         <section className="relative w-full py-24 z-20 pointer-events-none">
-          <div className="container mx-auto px-6 md:px-12 pointer-events-auto">
+          <div className={`container mx-auto px-6 md:px-12 pointer-events-auto transition-transform duration-700 ${isMobile ? "translate-y-[-27.5%]" : ""}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
               
-              {/* Left: Picture Card Carousel */}
-              <div className="relative w-full aspect-[4/5] rounded-2xl shadow-2xl bg-[#0B0C10] scale-[1.03]">
-                <img src="/stikermobil_4.png" alt="" className="absolute z-30 w-40 md:w-56 -bottom-36 md:-bottom-48 -left-10 md:-left-16 -rotate-3 opacity-90 drop-shadow-2xl pointer-events-none" />
+              {/* Left: Picture Card Carousel - shrunk 50% on mobile */}
+              <div className={`relative aspect-[4/5] rounded-2xl shadow-2xl bg-[#0B0C10] transition-all duration-300 ${isMobile ? "w-1/2 mx-auto scale-[1]" : "w-full scale-[1.03]"}`}>
+                {!isMobile && (
+                  <img src="/stikermobil_4.png" alt="" className="absolute z-30 w-40 md:w-56 -bottom-36 md:-bottom-48 -left-10 md:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
+                )}
                 
                 <div className="relative w-full h-full rounded-2xl overflow-hidden border border-gray-800">
                   <AnimatePresence mode="wait">
@@ -790,14 +855,16 @@ export default function SeeEvent() {
                 </div>
               </div>
 
-              {/* Right: Text Details */}
-              <div className="flex flex-col justify-center min-h-[450px] relative z-20">
-                <img src="/stikermobil_1.png" alt="" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 rotate-6 opacity-90 drop-shadow-2xl z-10 pointer-events-none" />
-                <img src="/stikermobil_3.png" alt="" className="absolute z-10 w-36 md:w-44 bottom-[-110px] md:bottom-[-160px] left-1/2 -translate-x-1/2 rotate-3 opacity-70 drop-shadow-2xl pointer-events-none" />
+              {/* Right: Text Details - centered and placed under card on mobile */}
+              <div className={`flex flex-col justify-center min-h-[450px] relative z-20 ${isMobile ? "items-center text-center mt-12" : ""}`}>
+                {!isMobile && (
+                  <img src="/stikermobil_1.png" alt="" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
+                )}
+                <img src="/stikermobil_3.png" alt="" className={`absolute z-10 w-36 md:w-44 bottom-[-110px] md:bottom-[-160px] opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700 ${isMobile ? "left-[85%]" : "left-1/2"}`} style={{ transform: isMobile ? "translateX(-50%) translateY(60%) rotate(3deg)" : "translateX(-50%) rotate(3deg)" }} />
 
                 <AnimatePresence mode="wait">
                   {activeEvent && (
-                    <motion.div key={activeEvent.id} initial={{ x: 100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3 } }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }} className="flex flex-col text-right items-end relative z-20">
+                    <motion.div key={activeEvent.id} initial={{ x: 100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3 } }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }} className={`flex flex-col relative z-20 ${isMobile ? "text-center items-center" : "text-right items-end"}`}>
                       <motion.h2 
                         animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
                         transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
@@ -812,11 +879,11 @@ export default function SeeEvent() {
                       </motion.h2>
 
                       <div className="relative mb-8">
-                        <p className="text-gray-200 text-lg md:text-xl leading-relaxed max-w-lg drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-medium relative z-20 mb-8">
+                        <p className={`text-gray-200 text-lg md:text-xl leading-relaxed max-w-lg drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-medium relative z-20 mb-8 ${isMobile ? "text-center mx-auto" : "text-right"}`}>
                           {activeEvent.description}
                         </p>
 
-                        <div className="space-y-1 text-sm md:text-base font-medium text-gray-300 text-right">
+                        <div className={`space-y-1 text-sm md:text-base font-medium text-gray-300 ${isMobile ? "text-center" : "text-right"}`}>
                           <p className="border-b border-fuchsia-500/30 shadow-[0_1px_5px_rgba(255,0,255,0.25)] pb-1 inline-block italic">Location: <span className="text-white not-italic font-bold">{activeEvent.location || "TBA"}</span></p><br/>
                           <p className="border-b border-fuchsia-500/30 shadow-[0_1px_5px_rgba(255,0,255,0.25)] pb-1 inline-block italic">Registration Start: <span className="text-white not-italic font-bold">{new Date(activeEvent.regStartTime).toLocaleDateString()} {new Date(activeEvent.regStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></p><br/>
                           <p className="border-b border-fuchsia-500/30 shadow-[0_1px_5px_rgba(255,0,255,0.25)] pb-1 inline-block italic">Registration End: <span className="text-white not-italic font-bold">{new Date(activeEvent.regEndTime).toLocaleDateString()} {new Date(activeEvent.regEndTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></p><br/>
@@ -827,6 +894,14 @@ export default function SeeEvent() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* On mobile, stikermobil_4 and stikermobil_1 sit beautifully centered and STATIC right below the description event */}
+                {isMobile && (
+                  <div className="w-full mt-10 flex items-center justify-center gap-10 pointer-events-none relative z-30">
+                    <img src="/stikermobil_4.png" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(-60%) translateY(-30%) scale(1.4) rotate(-3deg)" }} />
+                    <img src="/stikermobil_1.png" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(40%) scale(1.2) rotate(6deg)" }} />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -836,7 +911,7 @@ export default function SeeEvent() {
         <section className="relative w-full pb-32 pt-12 z-20 pointer-events-none">
           <div className="container mx-auto px-6 md:px-12 pointer-events-auto max-w-4xl">
             <div className="flex justify-center">
-              <motion.div whileHover={{ scale: 1.02 }} className="relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[320px] w-full max-w-md">
+              <motion.div whileHover={{ scale: 1.02 }} className={`relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[320px] w-full max-w-md transition-transform duration-700 ${isMobile ? "translate-y-[-35%]" : ""}`}>
                 <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white mb-6 text-center">Wanna Join?</h3>
                 <div className="flex-1 flex items-center justify-center">
                    <button onClick={() => setApplyModalOpen(true)} className="relative w-full py-5 font-sans font-black uppercase tracking-tighter text-black bg-white border border-white transition-all hover:bg-white/90 group cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.2)]" style={CLIP}>
@@ -851,7 +926,7 @@ export default function SeeEvent() {
 
       </div>
       <AnimatePresence>
-        {applyModalOpen && <ApplyModal events={events} startIndex={eventIdx} onClose={() => setApplyModalOpen(false)} />}
+        {applyModalOpen && <ApplyModal events={events} startIndex={eventIdx} isMobile={isMobile} onClose={() => setApplyModalOpen(false)} />}
       </AnimatePresence>
     </div>
   );

@@ -177,15 +177,31 @@ function useMerchRandomizer() {
   const [displayed, setDisplayed] = useState([]);
 
   useEffect(() => {
+    const INITIAL_DUMMIES = Array.from({ length: 10 }).map((_, i) => ({
+      id: `mock-${i}`,
+      productId: `KLCR-${100 + i}`,
+      name: i === 0 ? "Obsidian Shift Knob" : i === 1 ? "Carbon Fiber Lip" : i === 2 ? "Aero Dynamic Wing" : i === 3 ? "Forged Pistons Set" : i === 4 ? "Titanium Exhaust" : i === 5 ? "Cold Air Intake" : i === 6 ? "Racing Brake Pads" : i === 7 ? "Coilover Suspension" : i === 8 ? "Billet Fuel Rail" : "High Flow Injectors",
+      imageUrl: `https://picsum.photos/seed/kalceria${i}/600/800`,
+      label: i % 4 === 0 ? "HOT DEALS" : i % 4 === 1 ? "SOLD OUT" : "AVAILABLE"
+    }));
+
     const loadAndPick = () => {
-      const raw = localStorage.getItem("kalceria_dummy_products");
-      let items = raw ? JSON.parse(raw) : [];
+      let items = [];
+      try {
+        const raw = localStorage.getItem("kalceria_dummy_products");
+        if (raw && raw !== "undefined" && raw !== "null") {
+          items = JSON.parse(raw);
+        }
+      } catch (e) {
+        console.error("Failed to parse dummy products", e);
+      }
       
-      if (!items.length) return;
+      if (!Array.isArray(items) || items.length === 0) {
+        items = INITIAL_DUMMIES;
+        localStorage.setItem("kalceria_dummy_products", JSON.stringify(INITIAL_DUMMIES));
+      }
 
       setInventory((prev) => {
-        // Track picked items in the current session if needed, 
-        // but simple random pick is fine for showcase.
         const shuffled = [...items].sort(() => 0.5 - Math.random());
         const picked = shuffled.slice(0, 4);
         setDisplayed(picked);
@@ -218,7 +234,7 @@ function ShowcaseTypewriter({ text }) {
   return <span className="font-mono">{displayed}</span>;
 }
 
-function MerchCard({ item, isInitial, index }) {
+function MerchCard({ item, isInitial, index, isMobile }) {
   const bg = item.imageUrl || `https://picsum.photos/seed/${item.id}/600/800`;
   
   // Dynamic Blobs based on Index
@@ -236,8 +252,12 @@ function MerchCard({ item, isInitial, index }) {
       initial={isInitial ? { opacity: 0, y: 30 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-      className="relative flex flex-col bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden group min-h-[374px]"
-      style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }}
+      className={`relative flex flex-col bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden group min-h-[374px] w-full max-w-[280px] sm:max-w-none ${isMobile ? "rounded-2xl" : ""}`}
+      style={{ 
+        clipPath: isMobile 
+          ? "none"
+          : "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)"
+      }}
     >
       {/* Background Blobs */}
       <div className="absolute inset-0 pointer-events-none z-0 opacity-30">
@@ -601,18 +621,30 @@ function AuroraParticles() {
 
 // ─── Dynamic Collage Component ────────────────────────
 function DynamicCollage() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const cols = isMobile ? 3 : 5;
+  const rows = isMobile ? 3 : 4;
+  const limit = cols * rows;
   const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.jpeg`);
+  const activePhotos = photos.slice(0, limit);
   
   return (
     <div className="absolute inset-0 z-0 overflow-hidden opacity-45 pointer-events-none">
       <div className="flex w-[200%] h-full animate-roll">
-         <div className="grid grid-cols-5 grid-rows-4 w-1/2 h-full">
-            {photos.map((src, i) => (
+         <div className="grid w-1/2 h-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
+            {activePhotos.map((src, i) => (
               <img key={i} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
             ))}
          </div>
-         <div className="grid grid-cols-5 grid-rows-4 w-1/2 h-full">
-            {photos.map((src, i) => (
+         <div className="grid w-1/2 h-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
+            {activePhotos.map((src, i) => (
               <img key={`loop-${i}`} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
             ))}
          </div>
@@ -864,7 +896,7 @@ function SupportUsBackground() {
   );
 }
 
-function SolarPhoenix() {
+function SolarPhoenix({ isMobile }) {
   const particles = useMemo(() => Array.from({ length: 50 }).map((_, i) => ({
     id: i,
     left: `${Math.random() * 100}%`,
@@ -944,19 +976,19 @@ function SolarPhoenix() {
   ];
 
   return (
-    <div className="absolute inset-0 z-[1] flex items-center justify-center pointer-events-none overflow-hidden">
+    <div className="absolute inset-0 z-[4] flex items-center justify-center pointer-events-none overflow-hidden">
       {/* Deep Red Corona Backdrop */}
       <motion.div
-        animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.9, 0.6] }}
+        animate={{ scale: [1, 1.15, 1], opacity: isMobile ? [0.42, 0.63, 0.42] : [0.6, 0.9, 0.6] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute w-[60vw] h-[60vw] rounded-full bg-red-600 blur-[120px]"
+        className={`absolute rounded-full bg-red-600 blur-[120px] ${isMobile ? "w-[42vw] h-[42vw]" : "w-[60vw] h-[60vw]"}`}
       />
       
       {/* Intense Yellow Core */}
       <motion.div
-        animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
+        animate={{ scale: [1, 1.3, 1], opacity: isMobile ? [0.56, 0.7, 0.56] : [0.8, 1, 0.8] }}
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute w-[25vw] h-[25vw] rounded-full bg-gradient-to-t from-yellow-500 to-white blur-[60px] mix-blend-add"
+        className={`absolute rounded-full bg-gradient-to-t from-yellow-500 to-white mix-blend-add ${isMobile ? "w-[17vw] h-[17vw] blur-[42px]" : "w-[25vw] h-[25vw] blur-[60px]"}`}
       />
 
       {/* Micro Pixel Fire Particles */}
@@ -989,31 +1021,33 @@ function SolarPhoenix() {
       </div>
 
       {/* Solar Phoenix Flare Strings */}
-      <svg className="absolute w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {flares.map((flare) => (
-          <g key={flare.id}>
-            {flare.paths.map((d, i) => (
-              <motion.path
-                key={i}
-                d={d}
-                stroke={flare.colors[i]}
-                strokeWidth={0.8 + Math.random() * 0.6}
-                fill="none"
-                strokeLinecap="round"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1, opacity: [0.4, 1, 0.4] }}
-                transition={{ 
-                  pathLength: { duration: 3, ease: "easeOut" },
-                  opacity: { duration: 2 + Math.random() * 2, repeat: Infinity, ease: "easeInOut", delay: Math.random() }
-                }}
-                style={{ 
-                  // Removed drop-shadow to stop heavy browser repainting
-                }}
-              />
-            ))}
-          </g>
-        ))}
-      </svg>
+      {!isMobile && (
+        <svg className="absolute w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+          {flares.map((flare) => (
+            <g key={flare.id}>
+              {flare.paths.map((d, i) => (
+                <motion.path
+                  key={i}
+                  d={d}
+                  stroke={flare.colors[i]}
+                  strokeWidth={0.8 + Math.random() * 0.6}
+                  fill="none"
+                  strokeLinecap="round"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1, opacity: [0.4, 1, 0.4] }}
+                  transition={{ 
+                    pathLength: { duration: 3, ease: "easeOut" },
+                    opacity: { duration: 2 + Math.random() * 2, repeat: Infinity, ease: "easeInOut", delay: Math.random() }
+                  }}
+                  style={{ 
+                    // Removed drop-shadow to stop heavy browser repainting
+                  }}
+                />
+              ))}
+            </g>
+          ))}
+        </svg>
+      )}
     </div>
   );
 }
@@ -1038,12 +1072,30 @@ export default function LandingPage({ onNavigateAuth }) {
     }
   }, [displayedMerch.length]);
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const ABOUT_IMAGES = [
     "/aboutus_bg1.png",
     "/aboutus_bg2.png",
     "/aboutus_bg3.png",
     "/aboutus_bg4.png"
   ];
+
+  const ABOUT_IMAGES_HP = [
+    "/hp/abt_landing_hp1.webp",
+    "/hp/abt_landing_hp2.jpg",
+    "/hp/abt_landing_hp3.jpeg"
+  ];
+
+  const currentAboutImages = isMobile ? ABOUT_IMAGES_HP : ABOUT_IMAGES;
 
   useEffect(() => {
     if (sessionStorage.getItem("landingSeen")) {
@@ -1066,10 +1118,10 @@ export default function LandingPage({ onNavigateAuth }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setAboutIndex((prev) => (prev + 1) % ABOUT_IMAGES.length);
+      setAboutIndex((prev) => (prev + 1) % currentAboutImages.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentAboutImages.length]);
 
   useEffect(() => {
     const mascotInterval = setInterval(() => {
@@ -1097,14 +1149,14 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="absolute inset-0 bg-gradient-to-b from-[#050a14]/50 via-[#050a14]/10 to-[#050a14] z-0" />
 
         {/* Video Container */}
-        <div className="relative w-[72%] max-w-4xl aspect-video rounded-lg overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-md flex flex-col items-center justify-center z-10">
-          <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
+        <div className="relative w-[88%] md:w-[72%] max-w-4xl aspect-square md:aspect-video rounded-lg overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-md flex flex-col items-center justify-center z-10">
+          <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover bg-[#000000]/60">
             <source src="/video_landingatas.mp4" type="video/mp4" />
           </video>
           
           <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col items-center gap-10 px-4 w-full">
+          <div className="relative z-10 flex flex-col items-center gap-6 md:gap-10 px-4 w-full">
             <motion.img 
               src="/logo_landing.png" 
               alt="Kalceria" 
@@ -1117,20 +1169,20 @@ export default function LandingPage({ onNavigateAuth }) {
             {isLoggedIn ? (
               <button
                 onClick={() => setShowLogoutConfirm(true)}
-                className="group relative px-12 py-3.5 rounded-[20px] overflow-hidden transition-all duration-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]"
+                className="group relative px-10 md:px-12 py-2.5 md:py-3.5 rounded-[20px] overflow-hidden transition-all duration-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]"
               >
                 <div className="absolute inset-0 bg-red-500/20 group-hover:bg-red-500/30 transition-colors" />
                 <div className="absolute inset-0 border border-red-500/30 group-hover:border-red-500/50 rounded-[20px]" />
                 <div className="absolute inset-0 shadow-[0_0_40px_rgba(239,68,68,0.1)] group-hover:shadow-[0_0_60px_rgba(239,68,68,0.2)] transition-all" />
                 
-                <span className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-[15px]">
+                <span className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-[13px] md:text-[15px]">
                   LOGOUT
                 </span>
               </button>
             ) : (
               <button
                 onClick={onNavigateAuth}
-                className="relative px-10 py-3.5 font-sans font-extrabold tracking-wide text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_30px_rgba(255,255,255,0.15)]"
+                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_30px_rgba(255,255,255,0.15)]"
                 style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
               >
                 <span className="relative z-10">LOGIN / REGISTER</span>
@@ -1142,7 +1194,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 2: Events ── */}
-      <section className="relative w-full min-h-[70vh] flex flex-col md:flex-row items-center justify-between overflow-hidden bg-[#050a14] z-20 px-8 md:px-24 py-20 gap-16">
+      <section className="relative w-full min-h-[70vh] flex flex-col md:flex-row items-center justify-center md:justify-between overflow-hidden bg-[#050a14] z-20 px-8 md:px-24 py-20 gap-12 md:gap-16">
         <StarDust />
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
           <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] rounded-full blur-[100px] bg-[#FF00FF]" />
@@ -1152,9 +1204,22 @@ export default function LandingPage({ onNavigateAuth }) {
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }} className="absolute top-[20%] right-[-10%] w-[45vw] h-[45vw] rounded-full blur-[120px] bg-[#FF8C00]" />
         </div>
 
-        {/* Left Content (Absolute for no shift) */}
-        <div className="absolute left-8 md:left-24 top-1/2 -translate-y-1/2 z-20 flex flex-col items-start gap-6">
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
+        {/* Mobile-only Silhouette: grup_hp.png (on top of background layer z-0 but behind crystal_2 z-10) */}
+        <div className="absolute bottom-0 left-0 w-full h-[300px] pointer-events-none z-[1] overflow-hidden md:hidden flex justify-center items-end">
+          <img src="/hp/grup_hp.png" alt="Group Mobile" className="h-full w-auto object-contain opacity-35" />
+        </div>
+
+        {/* Center: Event Slider Card (Relative on Mobile, Absolutely Centered on Desktop) */}
+        <div 
+          className="relative md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 z-10 w-full max-w-[260px] md:max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm" 
+          style={{ clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" }}
+        >
+          <EventSlider />
+        </div>
+
+        {/* Left Content (Relative on Mobile placed under card, Absolute on Desktop) */}
+        <div className="relative md:absolute left-0 md:left-24 bottom-0 md:top-1/2 md:-translate-y-1/2 z-20 flex flex-col items-center md:items-start gap-4 md:gap-6 mt-8 md:mt-0">
+          <h2 className="text-center md:text-left text-5xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
             <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={skipAnim} />
           </h2>
           <Link href="/events">
@@ -1168,42 +1233,33 @@ export default function LandingPage({ onNavigateAuth }) {
           </Link>
         </div>
 
-        {/* Center: Event Slider Card (Absolutely Centered) */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-full max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm" style={{ clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" }}>
-          <EventSlider />
-        </div>
-
         {/* Floating Crystal 2 Instances */}
         <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
            {/* Bottom (Smallest) */}
            <motion.img 
              src="/crystal_2.png" 
-             className="absolute h-[20px] md:h-[28px] object-contain opacity-70"
-             style={{ left: "35%", bottom: "5%", translateX: "-50%" }}
+             className="absolute h-[20px] md:h-[28px] object-contain opacity-70 left-[20%] md:left-[35%] bottom-[42%] md:bottom-[5%] -translate-x-1/2"
              animate={{ y: [0, -8, 0], rotate: [55, 65, 55] }}
              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
            />
            {/* Left Small */}
            <motion.img 
              src="/crystal_2.png" 
-             className="absolute h-[26px] md:h-[36px] object-contain opacity-70"
-             style={{ left: "calc(50% - 260px)", top: "55%" }}
+             className="absolute h-[26px] md:h-[36px] object-contain opacity-70 left-[calc(50%-185px)] md:left-[calc(50%-260px)] top-[30%] md:top-[55%]"
              animate={{ y: [0, -10, 0], rotate: [-35, -25, -35] }}
              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
            />
            {/* Right Medium */}
            <motion.img 
              src="/crystal_2.png" 
-             className="absolute h-[34px] md:h-[47px] object-contain opacity-70"
-             style={{ left: "calc(50% + 175px)", top: "18%" }}
+             className="absolute h-[34px] md:h-[47px] object-contain opacity-70 left-[calc(50%+165px)] md:left-[calc(50%+175px)] top-[22%] md:top-[18%]"
              animate={{ y: [0, -15, 0], rotate: [30, 40, 30] }}
              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
            />
            {/* Right Large */}
            <motion.img 
              src="/crystal_2.png" 
-             className="absolute h-[45px] md:h-[63px] object-contain opacity-70"
-             style={{ left: "calc(50% + 200px)", top: "50%" }}
+             className="absolute h-[45px] md:h-[63px] object-contain opacity-70 left-[calc(50%+190px)] md:left-[calc(50%+200px)] top-[45%] md:top-[50%]"
              animate={{ y: [0, -18, 0], rotate: [0, 10, 0] }}
              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
            />
@@ -1213,18 +1269,18 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="absolute bottom-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden px-8 md:px-24">
           
           {/* Crystal 3 Top Right (Truncated at Top) */}
-          <div className="absolute top-[-20px] md:top-[-40px] right-12 md:right-40 flex flex-col items-center pointer-events-none opacity-80">
+          <div className="absolute top-[-20px] md:top-[-40px] right-12 md:right-40 hidden md:flex flex-col items-center pointer-events-none opacity-80">
             <img src="/crystal_3.png" alt="Crystal 3" className="h-[75px] md:h-[120px] object-contain rotate-180" />
           </div>
 
           {/* Crystal 1 Bottom Left (Truncated at Bottom) */}
-          <img src="/crystal_1.png" alt="Crystal 1" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-4 h-[80px] md:h-[130px] object-contain opacity-80 z-0" />
+          <img src="/crystal_1.png" alt="Crystal 1" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-4 h-[80px] md:h-[130px] object-contain opacity-80 z-0 hidden md:block" />
 
-          <div className="absolute bottom-0 left-12 md:left-40 flex items-end">
+          <div className="absolute bottom-0 left-12 md:left-40 hidden md:flex items-end">
             <img src="/grup.png" alt="Group" className="relative z-10 h-[180px] md:h-[280px] object-contain translate-y-[2.5px] opacity-35" />
           </div>
 
-          <div className="absolute bottom-0 right-4 md:right-10 opacity-50 flex flex-col items-center pointer-events-none">
+          <div className="absolute bottom-0 right-4 md:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
             {/* Magenta Tapakan (Base) - Wedge Shape from Sketch */}
             <div 
               className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[22px] z-0 opacity-80"
@@ -1239,19 +1295,22 @@ export default function LandingPage({ onNavigateAuth }) {
       <section className="relative w-full h-[70vh] overflow-hidden bg-black flex items-center justify-center border-t border-slate-900 z-30">
         <AnimatePresence initial={false} custom={aboutIndex}>
           <motion.div key={aboutIndex} variants={slideVariants} initial="enter" animate="center" exit="exit" className="absolute inset-0 w-full h-full">
-            <img src={ABOUT_IMAGES[aboutIndex]} alt="About Us BG" className="w-full h-full object-cover opacity-70" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#050a14] via-[#050a14]/60 to-transparent" />
+            <img src={currentAboutImages[aboutIndex % currentAboutImages.length]} alt="About Us BG" className="w-full h-full object-cover opacity-70 grayscale md:grayscale-0" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#050a14] via-[#050a14]/60 to-transparent z-[1]" />
+            {/* Warm Peach & Gold & Magenta Master overlay on mobile */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#ffd700]/35 via-[#ffaa66]/30 to-[#ff00ff]/25 mix-blend-color md:hidden z-[2]" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#ff00ff]/20 via-[#ffaa66]/20 to-[#ffd700]/15 mix-blend-overlay md:hidden z-[3]" />
           </motion.div>
         </AnimatePresence>
 
-        <div className="relative z-20 w-full max-w-6xl px-8 flex justify-start">
-          <div className="flex flex-col items-start gap-6 border-l-2 border-[#FF00FF] pl-8">
-            <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-white">
+        <div className="relative z-20 w-full max-w-6xl px-8 flex justify-center md:justify-start">
+          <div className="flex flex-col items-center md:items-start gap-6 border-l-0 md:border-l-2 pl-0 md:pl-8">
+            <h2 className="text-center md:text-left text-5xl md:text-7xl font-black uppercase tracking-tighter text-white">
               <Typewriter text="ABOUT US" mode="word" delay={3000} skipAnim={skipAnim} />
             </h2>
             <Link href="/about">
               <button
-                className="relative px-10 py-3.5 font-sans font-extrabold uppercase tracking-wide text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)]"
                 style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
               >
                 <span className="relative z-10">Get to Know More</span>
@@ -1271,8 +1330,12 @@ export default function LandingPage({ onNavigateAuth }) {
         <SupportUsBackground />
         
         {/* Altar Border Element (Reversed 180, Truncated at Border) */}
-        <div className="absolute top-[-130px] md:top-[-220px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-5 opacity-80">
-          <img src="/altar.png" alt="Altar" className="h-[320px] md:h-[540px] object-contain rotate-180 drop-shadow-[0_10px_70px_rgba(255,255,255,0.05)]" />
+        <div className="absolute top-[-60px] md:top-[-220px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-5 opacity-80">
+          <img 
+            src={isMobile ? "/hp/altar_hp.png" : "/altar.png"} 
+            alt="Altar" 
+            className={`h-[192px] md:h-[540px] object-contain drop-shadow-[0_10px_70px_rgba(255,255,255,0.05)] ${isMobile ? "" : "rotate-180"}`} 
+          />
         </div>
 
         {/* Architectural Wall Backgrounds */}
@@ -1299,14 +1362,14 @@ export default function LandingPage({ onNavigateAuth }) {
            </motion.h2>
         </div>
 
-        <div className="relative z-10 w-full max-w-6xl px-4 mb-20">
+        <div className="relative z-10 w-full max-w-6xl px-4 mb-20 flex justify-center">
           <StarDust />
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
-            {displayedMerch.map((item, idx) => (
-              <MerchCard key={idx} item={item} isInitial={merchInitial} index={idx} />
+          <div className={`grid gap-8 justify-items-center w-full ${isMobile ? "grid-cols-1 max-w-[280px]" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-4"}`}>
+            {(isMobile ? displayedMerch.slice(0, 1) : displayedMerch).map((item, idx) => (
+              <MerchCard key={idx} item={item} isInitial={merchInitial} index={idx} isMobile={isMobile} />
             ))}
             {!displayedMerch.length && (
-               <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-3xl">
+               <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-3xl w-full">
                  <p className="font-mono text-slate-500 uppercase tracking-widest text-sm">Synchronizing Inventory...</p>
                </div>
             )}
@@ -1321,20 +1384,20 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
 
         {/* Marketplace Links */}
-        <div className="relative z-20 flex gap-16 items-center justify-center mb-24">
+        <div className="relative z-20 flex gap-6 md:gap-16 items-center justify-center mb-24">
           <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
-            <div className="relative w-52 md:w-64 h-[72px] block">
+            <div className="relative w-32 md:w-64 h-[42px] md:h-[72px] block">
               <img src="/logo_tokpedgray.png" alt="Tokopedia" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
               <img src="/logo_tokped.png" alt="Tokopedia Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(3,172,14,0.6)]" draggable={false} />
             </div>
-            <span className="font-sans text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">Tokopedia - Kalceros</span>
+            <span className="font-sans text-[12px] md:text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center">Tokopedia - Kalceros</span>
           </a>
           <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
-            <div className="relative w-52 md:w-64 h-[72px] block">
+            <div className="relative w-32 md:w-64 h-[42px] md:h-[72px] block">
               <img src="/logo_shopeegray.png" alt="Shopee" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
               <img src="/logo_shopee.png" alt="Shopee Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(238,77,45,0.6)]" draggable={false} />
             </div>
-            <span className="font-sans text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">Shopee - Kalcres</span>
+            <span className="font-sans text-[12px] md:text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center">Shopee - Kalcres</span>
           </a>
         </div>
       </section>
@@ -1354,30 +1417,30 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 items-center gap-10">
           
           {/* Left Column: Typography */}
-          <div className="relative flex flex-col items-start justify-center text-left p-4">
+          <div className="relative flex flex-col items-center md:items-start justify-center text-center md:text-left p-4 order-2 md:order-1">
             <GoldenDust />
             <div className="relative z-10">
               <motion.h2 
-                animate={{ opacity: [0.3, 1, 0.3] }}
-                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                className="text-6xl md:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-8 font-mono"
+                animate={isMobile ? { opacity: 1 } : { opacity: [0.3, 1, 0.3] }}
+                transition={isMobile ? { duration: 0 } : { repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-6 font-mono text-center md:text-left"
               >
                 FIND MORE
               </motion.h2>
-              <p className="font-sans text-gray-300 text-lg max-w-md text-left leading-relaxed">
+              <p className="font-sans text-gray-300 text-sm md:text-lg max-w-md text-center md:text-left leading-relaxed px-4 md:px-0">
                 Wahib embut keren banget wowowowow. Kalceria is the ultimate destination for automotive euphoria.
               </p>
 
-              {/* Social Media Icon List - Vertical Style */}
-              <div className="flex flex-col gap-6 mt-8">
+              {/* Social Media Icon List - Horizontal Style on Mobile */}
+              <div className="flex flex-row md:flex-col gap-6 mt-8 items-center justify-center md:items-start w-full">
                 {/* Instagram Icon */}
                 <a 
                   href="https://www.instagram.com/kalceria/" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="flex items-center gap-4 group cursor-pointer"
+                  className="flex flex-col md:flex-row items-center gap-2 md:gap-4 group cursor-pointer"
                 >
-                  <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">
+                  <div className={`relative shrink-0 flex items-center justify-center ${isMobile ? "w-10 h-10" : "w-8 md:w-10 h-8 md:h-10"}`}>
                     <img 
                       src="/ig_gray.png" 
                       alt="Instagram" 
@@ -1391,7 +1454,7 @@ export default function LandingPage({ onNavigateAuth }) {
                       draggable={false}
                     />
                   </div>
-                  <span className="font-sans text-sm text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">
+                  <span className={`font-sans text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center ${isMobile ? "text-[13px]" : "text-[11px] md:text-sm"}`}>
                     Instagram - kalceria
                   </span>
                 </a>
@@ -1401,9 +1464,9 @@ export default function LandingPage({ onNavigateAuth }) {
                   href="https://www.tiktok.com/@gallerykalceria" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="flex items-center gap-4 group cursor-pointer"
+                  className="flex flex-col md:flex-row items-center gap-2 md:gap-4 group cursor-pointer"
                 >
-                  <div className="relative w-10 h-10 shrink-0">
+                  <div className={`relative shrink-0 ${isMobile ? "w-10 h-10" : "w-8 md:w-10 h-8 md:h-10"}`}>
                     <img 
                       src="/tiktok_gray.png" 
                       alt="TikTok" 
@@ -1417,7 +1480,7 @@ export default function LandingPage({ onNavigateAuth }) {
                       draggable={false}
                     />
                   </div>
-                  <span className="font-sans text-sm text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF]">
+                  <span className={`font-sans text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center ${isMobile ? "text-[13px]" : "text-[11px] md:text-sm"}`}>
                     tiktok kalceria
                   </span>
                 </a>
@@ -1426,18 +1489,29 @@ export default function LandingPage({ onNavigateAuth }) {
           </div>
 
           {/* Right Column: TikTok Feed Container */}
-          <div className="relative flex items-center justify-start -ml-[10%] md:-ml-[20%] py-10">
+          <div className="relative flex items-center justify-center md:justify-start ml-0 md:-ml-[20%] py-10 order-1 md:order-2 w-full">
             <GoldenDust />
-            {/* Clean, minimalist video container (15% smaller) */}
-            <div className="relative w-full max-w-[289px] aspect-[340/680] group z-10 rounded-[2.5rem] overflow-hidden border border-white/10 bg-black shadow-2xl">
+            {/* Clean, minimalist video container (shrunk 20% on mobile) */}
+            <div className={`relative w-full ${isMobile ? "max-w-[210px] aspect-[9/16]" : "max-w-[289px] aspect-[340/680]"} group z-10 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 bg-black shadow-2xl`}>
               <FindMoreSlider />
             </div>
           </div>
 
         </div>
 
+        {/* Floating Mobile Mascot Background */}
+        {isMobile && (
+          <motion.div 
+            animate={{ y: [-10, 10, -10], rotate: [-2, 2, -2] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-[5%] right-[25%] w-96 h-auto opacity-90 pointer-events-none z-[1]"
+          >
+            <img src="/hp/kalcer_man_hp.png" alt="Kalcer Mascot HP" className="w-full h-auto object-contain" />
+          </motion.div>
+        )}
+
         {/* Looping 8-Bit Mascot (Fixed Corner Position) */}
-        <div className="absolute bottom-0 right-0 w-56 md:w-80 z-20 pointer-events-none">
+        <div className="hidden md:block absolute bottom-0 right-0 w-56 md:w-80 z-20 pointer-events-none">
           {/* Hat placed above the head */}
           <img 
             src="/kalcer_hat.png" 
@@ -1500,7 +1574,7 @@ export default function LandingPage({ onNavigateAuth }) {
             <FilmLane rotation={15} top="15%" left="-10%" />
             <FilmLane rotation={-3} top="48%" left="-10%" />
             <FilmLane rotation={6} top="75%" left="-10%" />
-            <FilmLane rotation={-55} top="80%" left="10%" height="h-20 md:h-32" />
+            <FilmLane rotation={-55} top="100%" left="15%" height="h-20 md:h-32" />
           </div>
 
           {/* Top Layer: All Scrolling Film Strips */}
@@ -1508,7 +1582,7 @@ export default function LandingPage({ onNavigateAuth }) {
             <FilmStrip rotation={15} top="15%" left="-10%" speed={50} />
             <FilmStrip rotation={-3} top="48%" left="-10%" speed={60} />
             <FilmStrip rotation={6} top="75%" left="-10%" speed={45} />
-            <FilmStrip rotation={-55} top="80%" left="10%" speed={55} height="h-20 md:h-32" />
+            <FilmStrip rotation={-55} top="100%" left="15%" speed={55} height="h-20 md:h-32" />
           </div>
         </div>
 
@@ -1519,12 +1593,12 @@ export default function LandingPage({ onNavigateAuth }) {
           className="relative z-10 flex flex-col items-center justify-center w-full h-full"
         >
           {/* Shrunk square box, centered perfectly with Moto photographers (Dark translucent for white bg) */}
-          <div className="relative bg-black/[0.08] border border-black/10 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 aspect-square w-full max-w-[420px] flex flex-col items-center justify-center shadow-[0_40px_100px_rgba(0,0,0,0.1)]">
+          <div className="relative bg-black/[0.08] border border-black/10 backdrop-blur-xl rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-12 aspect-square w-full max-w-[290px] md:max-w-[420px] flex flex-col items-center justify-center shadow-[0_40px_100px_rgba(0,0,0,0.1)]">
              
              {/* Moto Figures: Locked tightly to box edges using wrappers for perfect alignment */}
              
              {/* TOP (Normal, 0deg) */}
-             <div className="absolute inset-0 pointer-events-none z-20">
+             <div className="hidden md:block absolute inset-0 pointer-events-none z-20">
                <motion.img 
                  src="/moto_1.png" 
                  alt="Moto 1"
@@ -1535,8 +1609,22 @@ export default function LandingPage({ onNavigateAuth }) {
                />
              </div>
 
+             {/* Mobile Cokineed HP on top of the box in the middle top */}
+             {isMobile && (
+               <div className="absolute inset-0 pointer-events-none z-20">
+                 <motion.img 
+                   src="/hp/cokineed_hp.png" 
+                   alt="Cokineed HP" 
+                   animate={{ rotate: [-6, 6, -6], y: [0, -4, 0] }}
+                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                   className="absolute bottom-full left-1/2 -translate-x-1/2 w-28 h-auto object-contain origin-bottom select-none"
+                   draggable={false}
+                 />
+               </div>
+             )}
+
              {/* RIGHT (90deg) */}
-             <div className="absolute inset-0 rotate-90 pointer-events-none z-20">
+             <div className="hidden md:block absolute inset-0 rotate-90 pointer-events-none z-20">
                <motion.img 
                  src="/moto_2.png" 
                  alt="Moto 2"
@@ -1548,7 +1636,7 @@ export default function LandingPage({ onNavigateAuth }) {
              </div>
 
              {/* BOTTOM (180deg) */}
-             <div className="absolute inset-0 rotate-180 pointer-events-none z-20">
+             <div className="hidden md:block absolute inset-0 rotate-180 pointer-events-none z-20">
                <motion.img 
                  src="/moto_3.png" 
                  alt="Moto 3"
@@ -1560,7 +1648,7 @@ export default function LandingPage({ onNavigateAuth }) {
              </div>
 
              {/* LEFT (-90deg) */}
-             <div className="absolute inset-0 -rotate-90 pointer-events-none z-20">
+             <div className="hidden md:block absolute inset-0 -rotate-90 pointer-events-none z-20">
                <motion.img 
                  src="/moto_4.png" 
                  alt="Moto 4"
@@ -1571,7 +1659,7 @@ export default function LandingPage({ onNavigateAuth }) {
                />
              </div>
 
-             <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-white mb-10 text-center leading-none" style={{ textShadow: "0 0 20px rgba(255,255,255,0.3)" }}>
+             <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white mb-8 md:mb-10 text-center leading-none" style={{ textShadow: "0 0 20px rgba(255,255,255,0.3)" }}>
                Need Our Help?
              </h2>
              
@@ -1579,7 +1667,7 @@ export default function LandingPage({ onNavigateAuth }) {
                onClick={() => setShowServiceModal(true)}
                whileHover={{ scale: 1.05 }}
                whileTap={{ scale: 0.95 }}
-               className="relative px-12 py-4 font-sans font-black uppercase tracking-tighter text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+               className="relative px-8 md:px-12 py-3 md:py-4 font-sans font-black uppercase tracking-tighter text-sm md:text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]"
                style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
              >
                <span className="relative z-10">APPLY A REQUEST</span>
@@ -1587,6 +1675,18 @@ export default function LandingPage({ onNavigateAuth }) {
              </motion.button>
           </div>
         </motion.div>
+
+        {isMobile && (
+          <div className="absolute bottom-0 left-0 w-full h-48 pointer-events-none z-30 overflow-visible">
+            {/* Camera HP: Centered at the middle bottom and scaled 75% bigger */}
+            <img 
+              src="/hp/camera_hp.png" 
+              alt="Camera HP" 
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[196px] h-auto object-contain select-none translate-y-[2px]" 
+              draggable={false}
+            />
+          </div>
+        )}
       </section>
 
       {/* ── Section 7: Big Square Concept ── */}
@@ -1610,17 +1710,32 @@ export default function LandingPage({ onNavigateAuth }) {
           />
         </div>
 
-        <SolarPhoenix />
+        {/* Earthman on mobile - sits at z-[3], behind particles (z-[4]) and asteroids (z-10 container wrapper) */}
+        {isMobile && (
+          <motion.img 
+            src="/hp/earthman_hp.png" 
+            alt="Earthman" 
+            className="absolute bottom-[-1%] h-[105%] xs:h-[115%] object-contain z-[3] pointer-events-none"
+            initial={{ y: 60, opacity: 0, rotate: 0, scale: 1 }}
+            whileInView={{ y: 0, opacity: 1, rotate: 0, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          />
+        )}
+
+        <SolarPhoenix isMobile={isMobile} />
 
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
           {/* Earth - Core Centerpiece */}
-          <motion.img 
-            src="/earth.png" 
-            alt="Earth" 
-            className="absolute h-[30%] md:h-[40%] object-contain opacity-90 z-0 drop-shadow-[0_0_50px_rgba(0,255,255,0.2)]"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 180, repeat: Infinity, ease: "linear" }}
-          />
+          {!isMobile && (
+            <motion.img 
+              src="/earth.png" 
+              alt="Earth" 
+              className="absolute h-[30%] md:h-[40%] object-contain opacity-90 z-0 drop-shadow-[0_0_50px_rgba(0,255,255,0.2)]"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 180, repeat: Infinity, ease: "linear" }}
+            />
+          )}
 
           {/* Find The Others Button */}
           <motion.button
@@ -1656,16 +1771,18 @@ export default function LandingPage({ onNavigateAuth }) {
             </span>
           </motion.button>
 
-          {/* Earthman - Hero Figure at Bottom - Fine-tuned Position */}
-          <motion.img 
-            src="/earthman.png" 
-            alt="Earthman" 
-            className="absolute bottom-[-4%] h-[40%] md:h-[54%] object-contain z-20 pointer-events-none"
-            initial={{ y: 60, opacity: 0, rotate: 0, scale: 1 }}
-            whileInView={{ y: 0, opacity: 1, rotate: 0, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, ease: "easeOut" }}
-          />
+          {/* Earthman - Desktop Hero Figure at Bottom */}
+          {!isMobile && (
+            <motion.img 
+              src="/earthman.png" 
+              alt="Earthman" 
+              className="absolute bottom-[-4%] h-[40%] md:h-[54%] object-contain z-20 pointer-events-none"
+              initial={{ y: 60, opacity: 0, rotate: 0, scale: 1 }}
+              whileInView={{ y: 0, opacity: 1, rotate: 0, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, ease: "easeOut" }}
+            />
+          )}
 
           {/* Asteroid Field - Grouped Clusters */}
           {[
@@ -1719,44 +1836,48 @@ export default function LandingPage({ onNavigateAuth }) {
           ))}
 
           {/* Floating Clouds Assembly */}
-          {/* Left Cloud: awan_3 - Now fully opaque */}
-          <motion.img 
-            src="/awan_3.png" 
-            alt="Cloud Left"
-            className="absolute left-[23%] bottom-[27%] h-[103px] md:h-[184px] object-contain opacity-100 z-30 pointer-events-none"
-            animate={{ 
-              y: [0, -15, 0], 
-              rotate: [-37, -33, -37],
-              scale: [1, 1.05, 1]
-            }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          />
+          {!isMobile && (
+            <>
+              {/* Left Cloud: awan_3 - Now fully opaque */}
+              <motion.img 
+                src="/awan_3.png" 
+                alt="Cloud Left"
+                className="absolute left-[23%] bottom-[27%] h-[103px] md:h-[184px] object-contain opacity-100 z-30 pointer-events-none"
+                animate={{ 
+                  y: [0, -15, 0], 
+                  rotate: [-37, -33, -37],
+                  scale: [1, 1.05, 1]
+                }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              />
 
-          {/* Right Top Cloud: awan_1 - Duplicated awan_2 but in awan_1 position */}
-          <motion.img 
-            src="/awan_2.png" 
-            alt="Cloud Right Top"
-            className="absolute right-[28%] top-[27%] h-[76px] md:h-[131px] object-contain opacity-100 z-30 pointer-events-none"
-            animate={{ 
-              y: [0, -12, 0], 
-              rotate: [1, -3, 1],
-              scale: [1, 1.08, 1]
-            }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          />
+              {/* Right Top Cloud: awan_1 - Duplicated awan_2 but in awan_1 position */}
+              <motion.img 
+                src="/awan_2.png" 
+                alt="Cloud Right Top"
+                className="absolute right-[28%] top-[27%] h-[76px] md:h-[131px] object-contain opacity-100 z-30 pointer-events-none"
+                animate={{ 
+                  y: [0, -12, 0], 
+                  rotate: [1, -3, 1],
+                  scale: [1, 1.08, 1]
+                }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              />
 
-          {/* Right Middle Cloud: awan_2 - 2% lefter */}
-          <motion.img 
-            src="/awan_2.png" 
-            alt="Cloud Right Middle"
-            className="absolute right-[21%] bottom-[33%] h-[66px] md:h-[121px] object-contain opacity-100 z-30 pointer-events-none"
-            animate={{ 
-              y: [0, -20, 0], 
-              rotate: [-1, 1, -1],
-              scale: [1, 1.03, 1]
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          />
+              {/* Right Middle Cloud: awan_2 - 2% lefter */}
+              <motion.img 
+                src="/awan_2.png" 
+                alt="Cloud Right Middle"
+                className="absolute right-[21%] bottom-[33%] h-[66px] md:h-[121px] object-contain opacity-100 z-30 pointer-events-none"
+                animate={{ 
+                  y: [0, -20, 0], 
+                  rotate: [-1, 1, -1],
+                  scale: [1, 1.03, 1]
+                }}
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+              />
+            </>
+          )}
         </div>
       </section>
 
@@ -1790,7 +1911,7 @@ export default function LandingPage({ onNavigateAuth }) {
           <img 
             src="/starwarr.png" 
             alt="Battle of Heroes" 
-            className="w-full h-auto max-h-[85vh] object-contain scale-[1.4]"
+            className={`w-full h-auto max-h-[85vh] object-contain ${isMobile ? "scale-[1.12]" : "scale-[1.82]"}`}
             style={{ 
               filter: "contrast(1.2) brightness(0.9) saturate(1.1) drop-shadow(0 0 80px rgba(0,0,0,0.8))",
             }}
@@ -1806,14 +1927,14 @@ export default function LandingPage({ onNavigateAuth }) {
            {/* Collaboration Header - Shifted 15% Under */}
            <div 
              className="flex items-center justify-center gap-6 md:gap-10"
-             style={{ transform: "translateY(15%)" }}
+             style={{ transform: `translateY(${isMobile ? "35%" : "15%"})` }}
            >
               {/* Kalceria Logo - Shifted 15% Under */}
               <motion.img 
                 src="/logologin.png" 
                 alt="Kalceria" 
-                className="h-18 md:h-24 w-auto object-contain -rotate-[12deg] drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform"
-                animate={{ y: [75, 69, 75], x: '20%' }}
+                className={`${isMobile ? "h-[58px]" : "h-18 md:h-24"} w-auto object-contain -rotate-[12deg] drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform`}
+                animate={{ y: isMobile ? [75, 69, 75] : [75, 69, 75], x: '20%' }}
                 transition={{ 
                   y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
                   default: { duration: 0.8 }
@@ -1821,7 +1942,10 @@ export default function LandingPage({ onNavigateAuth }) {
               />
 
               {/* The "X" as an SVG Clipped Glass Artifact (Stabilized) */}
-              <div className="relative flex items-center justify-center group z-20">
+              <div 
+                className="relative flex items-center justify-center group z-20"
+                style={{ transform: `translateY(${isMobile ? "30%" : "0%"})` }}
+              >
                  {/* X-Backglow */}
                  <div className="absolute inset-0 bg-white/10 blur-[40px] rounded-full scale-110 opacity-30 pointer-events-none" />
 
@@ -1829,10 +1953,10 @@ export default function LandingPage({ onNavigateAuth }) {
                  <motion.div 
                    animate={{ scale: [1, 1.1, 1], rotate: [0, 360], opacity: [0.2, 0.4, 0.2] }}
                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] md:w-[340px] h-[240px] md:h-[340px] rounded-full blur-[80px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform"
+                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[80px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform ${isMobile ? "w-[144px] h-[144px]" : "w-[240px] md:w-[340px] h-[240px] md:h-[340px]"}`}
                  />
 
-                 <svg width="220" height="220" viewBox="0 0 220 220" className="relative z-10 transform-gpu">
+                 <svg width={isMobile ? "132" : "220"} height={isMobile ? "132" : "220"} viewBox="0 0 220 220" className="relative z-10 transform-gpu">
                     <defs>
                       <clipPath id="collab-x-clip-v3">
                         <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" style={{ fontFamily: 'Arial Black, sans-serif' }}>X</text>
@@ -1867,8 +1991,8 @@ export default function LandingPage({ onNavigateAuth }) {
               <motion.img 
                 src="/dsl.png" 
                 alt="DSL" 
-                className="h-18 md:h-24 w-auto object-contain rotate-[12deg] drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform"
-                animate={{ y: [80, 86, 80], x: '-20%' }}
+                className={`${isMobile ? "h-[58px]" : "h-18 md:h-24"} w-auto object-contain rotate-[12deg] drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform`}
+                animate={{ y: isMobile ? [64, 70, 64] : [69, 75, 69], x: '-20%' }}
                 transition={{ 
                   y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
                   default: { duration: 0.8 }
@@ -1950,26 +2074,40 @@ export default function LandingPage({ onNavigateAuth }) {
            <div className="absolute -top-1/4 -left-1/4 w-full h-full rounded-full blur-[180px] bg-blue-950/20" />
         </div>
 
+        {isMobile && (
+          <img 
+            src="/hp/bg_astro_hp.png" 
+            alt="Astronaut Background Mobile" 
+            className="absolute inset-0 w-full h-full object-cover z-[1] opacity-70 pointer-events-none"
+          />
+        )}
+
         {/* Dynamic Comet Effect - Replacing Portal */}
         <CometEffect />
  
-        {/* Community Quotes - Floating Text */}
-        <CommunityQuotes />
+        {/* Community Quotes - Floating Text (Ahead of Astronaut Layer) */}
+        <div className="absolute inset-0 z-[40] pointer-events-none">
+          <CommunityQuotes isMobile={isMobile} />
+        </div>
  
         {/* Night Background at Bottom */}
-        <img 
-          src="/night.png" 
-          alt="Night Sky" 
-          className="absolute bottom-0 left-0 w-full h-auto object-cover z-[10] opacity-90"
-          style={{ maskImage: "linear-gradient(to top, black 80%, transparent)" }}
-        />
+        {!isMobile && (
+          <img 
+            src="/night.png" 
+            alt="Night Sky" 
+            className="absolute bottom-0 left-0 w-full h-auto object-cover z-[10] opacity-90"
+            style={{ maskImage: "linear-gradient(to top, black 80%, transparent)" }}
+          />
+        )}
         
         {/* Astronaut - Semi-transparent, Massive and Lowered, Behind Night */}
-        <img 
-          src="/astronaut.png" 
-          alt="Astronaut" 
-          className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[105%] h-auto object-contain z-[5] opacity-40 mix-blend-screen pointer-events-none" 
-        />
+        {!isMobile && (
+          <img 
+            src="/astronaut.png" 
+            alt="Astronaut" 
+            className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[105%] h-auto object-contain z-[5] opacity-40 mix-blend-screen pointer-events-none" 
+          />
+        )}
 
         {/* Micro Particles - Layered Higher than Night */}
         <div className="absolute inset-0 z-[20]">
@@ -1977,10 +2115,23 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
 
         {/* Floating Car & Sticker Assets - Concentrated near Center */}
-        <FloatingAssets />
+        <FloatingAssets isMobile={isMobile} />
 
-        <div className="relative z-30 flex flex-col items-center text-center gap-12">
-           <motion.div
+        <div 
+          className="relative z-30 flex flex-col items-center text-center gap-12"
+          style={{ transform: `translateY(${isMobile ? "120%" : "0%"})` }}
+        >
+          {isMobile && (
+            <motion.img 
+              src="/hp/astronaut_hp.png" 
+              alt="Astronaut Mobile" 
+              className="absolute bottom-[135%] left-1/2 -translate-x-1/2 w-[420px] h-auto object-contain z-10 pointer-events-none"
+              animate={{ y: [-15, 15, -15] }}
+              transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+            />
+          )}
+
+          <motion.div
              initial={{ opacity: 0, y: 30 }}
              whileInView={{ opacity: 1, y: 0 }}
              viewport={{ once: true }}
@@ -2285,18 +2436,21 @@ function CometEffect() {
 }
 
 // ─── Floating Assets (Cars & Stickers) ──────────────────────────────────
-function FloatingAssets() {
+function FloatingAssets({ isMobile }) {
   const assets = useMemo(() => {
     const assetDefinitions = [
       // ccar_1 & ccar_2 shifted more left
-      { src: '/ccar_1.png', x: 5, y: 18, w: "w-32 md:w-56", rot: -35, dX: 60, dY: 45, rS: 55 },
-      { src: '/ccar_2.png', x: 8, y: 62, w: "w-24 md:w-36", rot: 45, dX: -70, dY: -65, rS: -60 },
-      { src: '/ccar_3.png', x: 85, y: 18, w: "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
-      { src: '/ccar_4.png', x: 82, y: 62, w: "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
-      // stikermobil_3 — lower-middle left
-      { src: '/stikermobil_3.png', x: 28.5, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
-      // stikermobil_1 — beside stikermobil_3, shifted right, mirrored rotation
-      { src: '/stikermobil_1.png', x: 65, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
+      ...(!isMobile ? [
+        { src: '/ccar_1.png', x: 5, y: 18, w: "w-32 md:w-56", rot: -35, dX: 60, dY: 45, rS: 55 },
+        { src: '/ccar_2.png', x: 8, y: 62, w: "w-24 md:w-36", rot: 45, dX: -70, dY: -65, rS: -60 },
+      ] : []),
+      { src: '/ccar_3.png', x: isMobile ? 70 : 85, y: isMobile ? 3 : 18, w: isMobile ? "w-[153px] md:w-56" : "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
+      { src: '/ccar_4.png', x: isMobile ? 67 : 82, y: isMobile ? 47 : 62, w: isMobile ? "w-[115px] md:w-36" : "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
+      // stikermobil_3 & stikermobil_1 — only on desktop
+      ...(!isMobile ? [
+        { src: '/stikermobil_3.png', x: 28.5, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
+        { src: '/stikermobil_1.png', x: 65, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
+      ] : []),
     ];
     
     return assetDefinitions.map((def, i) => ({
@@ -2312,7 +2466,7 @@ function FloatingAssets() {
       yDrift: def.dY,
       rotationSpeed: def.rS,
     }));
-  }, []);
+  }, [isMobile]);
 
   return (
     <div className="absolute inset-0 z-[15] pointer-events-none overflow-hidden">
@@ -2345,7 +2499,7 @@ function FloatingAssets() {
 }
 
 // ─── Community Quotes ──────────────────────────────────────────────────
-function CommunityQuotes() {
+function CommunityQuotes({ isMobile }) {
   const quotes = [
     "Kak mau photoo!", "Woi Wahib mana woi!", "Kak mau colabbb", 
     "Coki ganteng, no gay tho", "Otniel jelek wleee", "Aku mau Kalceria menjadi....",
@@ -2355,24 +2509,29 @@ function CommunityQuotes() {
 
   // Two bands: above heading (25-40% Y) and below button (68-80% Y)
   // Horizontal constrained to 32-68% to stay clear of corner cars
-  const floatingQuotes = useMemo(() => quotes.map((text, i) => {
-    const inUpperBand = i % 2 === 0;
-    return {
-      id: i,
-      text,
-      left: `${32 + Math.random() * 36}%`,
-      top: inUpperBand ? `${25 + Math.random() * 15}%` : `${68 + Math.random() * 12}%`,
-      delay: i * 3.5 + Math.random() * 2,
-      duration: 8 + Math.random() * 8,
-      xDrift: (Math.random() - 0.5) * 40,  // small drift to stay in zone
-      yDrift: (Math.random() - 0.5) * 30,
-      rotate: (Math.random() - 0.5) * 20,
-      fontSize: Math.random() * 8 + 13,
-      bold: Math.random() > 0.5,
-      italic: Math.random() > 0.4,
-      under: Math.random() > 0.7,
-    };
-  }), []);
+  const floatingQuotes = useMemo(() => {
+    // If mobile, slice quotes list to spawn 30% less items (ceil(11 * 0.7) = 8 quotes)
+    const activeList = isMobile ? quotes.slice(0, Math.ceil(quotes.length * 0.7)) : quotes;
+
+    return activeList.map((text, i) => {
+      const inUpperBand = i % 2 === 0;
+      return {
+        id: i,
+        text,
+        left: `${32 + Math.random() * 36}%`,
+        top: inUpperBand ? `${25 + Math.random() * 15}%` : `${68 + Math.random() * 12}%`,
+        delay: i * (isMobile ? 5 : 3.5) + Math.random() * 2, // 30% slower delays
+        duration: (8 + Math.random() * 8) * (isMobile ? 1.3 : 1), // 30% longer duration for calmer speed
+        xDrift: (Math.random() - 0.5) * 40,  // small drift to stay in zone
+        yDrift: (Math.random() - 0.5) * 30,
+        rotate: (Math.random() - 0.5) * 20,
+        fontSize: isMobile ? (Math.random() * 6 + 10) : (Math.random() * 8 + 13), // slightly smaller text for mobile elegance
+        bold: Math.random() > 0.5,
+        italic: Math.random() > 0.4,
+        under: Math.random() > 0.7,
+      };
+    });
+  }, [isMobile]);
 
   return (
     <div className="absolute inset-0 z-[14] pointer-events-none overflow-hidden select-none">
@@ -2397,7 +2556,7 @@ function CommunityQuotes() {
           transition={{
             duration: q.duration,
             repeat: Infinity,
-            repeatDelay: 15 + Math.random() * 10, // rest time between appearances
+            repeatDelay: isMobile ? (15 + Math.random() * 10) * 1.5 : (15 + Math.random() * 10), // 50% longer wait time on mobile to reduce density
             ease: "easeInOut",
             delay: q.delay,
           }}

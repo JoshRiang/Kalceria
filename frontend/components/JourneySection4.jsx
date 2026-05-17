@@ -40,7 +40,22 @@ const generateParticles = () => {
 
 const particles = generateParticles();
 
-export default function JourneySection4() {
+export default function JourneySection4({ isMobile: propIsMobile }) {
+  const [localIsMobile, setLocalIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (propIsMobile !== undefined) {
+      setLocalIsMobile(propIsMobile);
+      return;
+    }
+    const checkMobile = () => setLocalIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, [propIsMobile]);
+
+  const isMobile = propIsMobile !== undefined ? propIsMobile : localIsMobile;
+
   return (
     <section className="relative w-full min-h-screen bg-[#050505] overflow-hidden flex flex-col md:flex-row items-center justify-center pt-20 pb-20">
       <style dangerouslySetInnerHTML={{__html: `
@@ -116,17 +131,18 @@ export default function JourneySection4() {
         {/* Left Half: Title & Description */}
         <div className="w-full md:w-1/2 flex flex-col justify-center text-left py-12 md:py-0">
           <div className="relative mb-6 w-full group">
-            {/* Surfer Image Floating above/around Title */}
-            <motion.img 
-              src="/surfer.png" 
-              alt="Surfer"
-              className="absolute -top-[230%] left-[0%] md:left-[5%] h-[244%] z-20 object-contain drop-shadow-[0_10px_30px_rgba(34,211,238,0.4)] pointer-events-none"
-              animate={{ y: [0, -15, 0], rotate: [-2, 2, -2] }}
-              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-            />
             <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-left text-white drop-shadow-2xl font-rog relative z-10" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
               <Typewriter text="WAITING FOR YOU" delay={500} speed={80} />
             </h1>
+            {/* Surfer Image Floating beside Title on Mobile, above Title on Desktop */}
+            <motion.img 
+              src="/surfer.png" 
+              alt="Surfer"
+              className="absolute top-[25%] -translate-y-1/2 right-[2%] h-[200px] z-30 object-contain drop-shadow-[0_10px_30px_rgba(34,211,238,0.4)] pointer-events-none md:-top-[230%] md:left-[5%] md:h-[244%] md:right-auto md:translate-y-0"
+              style={isMobile ? { top: "15%" } : {}}
+              animate={{ y: [0, -15, 0], rotate: [-2, 2, -2] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+            />
           </div>
           
           <div className="max-w-xl text-lg md:text-xl font-medium text-gray-200 leading-relaxed drop-shadow-lg text-justify">

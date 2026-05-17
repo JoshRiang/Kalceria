@@ -193,10 +193,56 @@ function BackgroundBlobs() {
 }
 
 // ─── Domino Chevrons ──────────────────────────────────────────────────────────
-function DominoChevrons({ active }) {
+function DominoChevrons({ active, isMobile }) {
   const colors = ["#facc15", "#f59e0b", "#f97316", "#ea580c", "#dc2626", "#991b1b"];
-  const chevronCount = 18;
+  const chevronCount = isMobile ? 12 : 18;
   
+  if (isMobile) {
+    // Upward vertical sweep from bottom to top spanning full horizontal width for HP design
+    return (
+      <div 
+        className="absolute pointer-events-none z-[5] overflow-hidden flex items-center mix-blend-screen"
+        style={{
+          transform: "rotate(-90deg)",
+          transformOrigin: "center center",
+          width: "100vh",
+          height: "100vw",
+          left: "50%",
+          top: "50%",
+          marginLeft: "-50vh",
+          marginTop: "-50vw",
+        }}
+      >
+        {active && Array.from({ length: chevronCount }).map((_, i) => {
+          const colorIndex = Math.floor((i / chevronCount) * colors.length);
+          const color = colors[colorIndex];
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: "-100%" }}
+              animate={{ 
+                opacity: [0, 0.6, 0],
+                x: ["-100%", "0%", "100%"],
+              }}
+              transition={{ 
+                duration: 2.2, 
+                delay: i * 0.12, 
+                ease: "circOut" 
+              }}
+              className="h-[100vh] -ml-[10vw] flex-shrink-0"
+              style={{ width: "22vw" }}
+            >
+              <svg viewBox="0 0 24 24" preserveAspectRatio="none" className="w-full h-full" style={{ color }}>
+                <path d="M 0 0 L 12 12 L 0 24 L 8 24 L 20 12 L 8 0 Z" fill="currentColor" />
+              </svg>
+            </motion.div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Desktop horizontal sweep
   return (
     <div className="absolute inset-0 pointer-events-none z-[5] overflow-hidden flex items-center mix-blend-screen">
       {active && Array.from({ length: chevronCount }).map((_, i) => {
@@ -232,6 +278,16 @@ function DominoChevrons({ active }) {
 export default function WelcomeTransition({ username, onComplete }) {
   const [showGears, setShowGears] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const tGears = setTimeout(() => setShowGears(true), 2500);
@@ -256,29 +312,31 @@ export default function WelcomeTransition({ username, onComplete }) {
         scale: isExiting ? 1.1 : 1
       }}
       transition={{ duration: 1.2, ease: "easeInOut" }}
-      className="fixed inset-0 bg-[#010204] z-[9999] overflow-hidden flex flex-col items-center justify-center"
+      className={`fixed inset-0 ${isMobile ? "bg-black" : "bg-[#010204]"} z-[9999] overflow-hidden flex flex-col items-center justify-center`}
     >
-      <BackgroundBlobs />
-      <DominoChevrons active={showGears && !isExiting} />
+      {!isMobile && <BackgroundBlobs />}
+      <DominoChevrons active={showGears && !isExiting} isMobile={isMobile} />
       
-      <div className="relative z-20 flex flex-col items-center">
+      <div className="relative z-20 flex flex-col items-center w-full">
         {/* Main Text Container - Fixed Vertical Area to avoid jumping */}
-        <div className="h-[120px] flex flex-col md:flex-row items-center justify-center gap-x-4 gap-y-2 font-sans font-black tracking-tighter">
-          <h1 className="text-4xl md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF4D00] via-[#FFD700] to-[#FFCC00] drop-shadow-[0_0_20px_rgba(255,140,0,0.3)]">
+        <div className="h-[120px] flex flex-row items-center justify-center gap-x-2 sm:gap-x-4 font-sans font-black tracking-tighter w-full px-2 sm:px-4 whitespace-nowrap overflow-hidden">
+          <h1 className="text-[34px] xs:text-[42px] md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF4D00] via-[#FFD700] to-[#FFCC00] drop-shadow-[0_0_20px_rgba(255,140,0,0.3)]">
             <Typewriter text="Welcome Back," delay={800} speed={130} />
           </h1>
-          <h1 className="text-4xl md:text-5xl lg:text-7xl min-w-[350px] text-left md:text-right bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)]">
-             <Typewriter text={`${username} !`} delay={800} speed={130} dir="rtl" />
+          <h1 className="text-[34px] xs:text-[42px] md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)]">
+             <Typewriter text={`${username} !`} delay={800} speed={130} dir="ltr" />
           </h1>
         </div>
         
         {/* Gears & Redirect Status - Fixed Height Container */}
-        <div className="flex flex-col items-center mt-12 h-[160px] justify-start">
-          <StaticGears visible={showGears} />
-          <div className="h-8">
-            {showGears && <RedirectText />}
+        {!isMobile && (
+          <div className="flex flex-col items-center mt-12 h-[160px] justify-start">
+            <StaticGears visible={showGears} />
+            <div className="h-8">
+              {showGears && <RedirectText />}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </motion.div>
   );
