@@ -1,11 +1,11 @@
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { sendOtpEmail, sendPasswordResetEmail } from '../lib/mailer.js';
 
-const prisma = new PrismaClient();
+
 
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
 
@@ -212,3 +212,27 @@ export async function getMe(req, res, next) {
   }
 }
 
+// ─── Just-In-Time (JIT) Verification ─────────────────────────────────────────
+export async function verifyJitPassword(req, res, next) {
+  try {
+    const { password } = req.body;
+    // req.user diset oleh middleware requireAuth/requireAdmin
+    const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+    
+    if (!user) return res.status(401).json({ error: 'User not found.' });
+
+    const valid = await argon2.verify(user.passwordHash, password);
+    if (!valid) return res.status(401).json({ error: 'Incorrect password for JIT access.' });
+
+    // Buat JIT Token yang berumur pendek (15 menit)
+    const jitToken = jwt.sign(
+      { userId: user.id, isJit: true },
+      process.env.JWT_SECRET,
+      { algorithm: 'HS256', expiresIn: '15m' }
+    );
+
+    res.json({ jitToken, message: 'JIT access granted for 15 minutes.' });
+  } catch (err) {
+    next(err);
+  }
+}

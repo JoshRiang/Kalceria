@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import { format } from 'date-fns';
 
-const prisma = new PrismaClient();
+
 
 function generateEventId() {
   const ym = format(new Date(), 'yyyyMM');

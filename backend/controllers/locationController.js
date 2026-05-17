@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { maskLocationToDistrict } from '../utils/privacyMask.js';
 
-const prisma = new PrismaClient();
 const LIVE_TTL_SECONDS = 30 * 60;
 const UPDATE_COOLDOWN_SECONDS = 30;
 

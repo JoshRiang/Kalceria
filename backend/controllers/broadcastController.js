@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 
-const prisma = new PrismaClient();
+
 const BROADCAST_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_MESSAGE_LENGTH = 120;
 

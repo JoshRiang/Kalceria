@@ -2,12 +2,12 @@ import "./env.js";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { PrismaClient } from "@prisma/client";
+import prisma from '../lib/prisma.js';
 import { redis } from "../lib/redis.js";
 import router from "../routes/index.js";
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
-const prisma = new PrismaClient();
+
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 const app = express();
@@ -26,7 +26,7 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-jit-token"],
   }),
 );
 

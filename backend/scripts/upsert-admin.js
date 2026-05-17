@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import argon2 from 'argon2';
 
-const prisma = new PrismaClient();
+
 
 async function main() {
   const email = 'reinathan@gmail.com';

@@ -126,6 +126,12 @@ model ServiceBooking {
   paymentStatus   PaymentStatus        @default(PENDING)
   pdfExported     Boolean              @default(false)
   createdAt       DateTime             @default(now())
+  version         Int                  @default(1)
+
+  // ─── Phase 3: Financial & Acceptance fields ──────────────────────────────────
+  deploymentArea  String?
+  technicalBrief  String?
+  totalPrice      Float?
 
   requestor User                 @relation(fields: [requestorId], references: [id], onDelete: Cascade)
   slots     ServiceBookingSlot[]
@@ -158,6 +164,7 @@ model Booking {
   paymentStatus PaymentStatus @default(PENDING)
   pdfExported   Boolean       @default(false)
   createdAt     DateTime      @default(now())
+  version       Int           @default(1)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -165,6 +172,17 @@ model Booking {
 }
 
 // ─── Media Post ──────────────────────────────────────────────────────────────
+model AuditLog {
+  id          String   @id @default(uuid())
+  adminEmail  String
+  action      String
+  details     String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
 model MediaPost {
   id          String   @id @default(uuid())
   title       String
@@ -180,15 +198,35 @@ model MediaPost {
 
 // ─── Merch (DB-backed, Admin managed) ────────────────────────────────────────
 model Merch {
-  id        String   @id @default(uuid())
-  name      String
-  photoUrl  String
-  link      String
-  price     Float
-  isSoldOut Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  name         String
+  photoUrl     String
+  link         String
+  price        Float
+  isSoldOut    Boolean  @default(false)
+  soldCount    Int      @default(0)    // Cumulative units sold
+  totalRevenue Float    @default(0)    // Cumulative revenue (IDR)
+  createdAt    DateTime @default(now())
+  version      Int      @default(1)
+
+  sales MerchSale[]
 
   @@map("merch")
+}
+
+// ─── Merch Sale Log (one row per sale event) ─────────────────────────────────
+model MerchSale {
+  id           String   @id @default(uuid())
+  merchId      String
+  qty          Int
+  pricePerUnit Float
+  totalAmount  Float
+  recordedBy   String   // admin email
+  createdAt    DateTime @default(now())
+
+  merch Merch @relation(fields: [merchId], references: [id], onDelete: Cascade)
+
+  @@map("merch_sales")
 }
 
 // ─── Event (Admin managed) ───────────────────────────────────────────────────
@@ -205,6 +243,7 @@ model Event {
   quota           Int         @default(100)
   status          EventStatus @default(OPEN)
   createdAt       DateTime    @default(now())
+  version         Int         @default(1)
 
   registrations EventRegistration[]
 
@@ -220,6 +259,7 @@ model EventRegistration {
   paymentStatus PaymentStatus @default(PENDING)
   pdfExported   Boolean       @default(false)
   createdAt     DateTime      @default(now())
+  version       Int           @default(0)
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)

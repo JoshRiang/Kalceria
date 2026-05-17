@@ -1,8 +1,7 @@
-import { PrismaClient } from "@prisma/client";
-import { redis } from "../lib/redis.js";
-import { maskLocationToDistrict } from "../utils/privacyMask.js";
+import { redis } from '../lib/redis.js';
+import prisma from '../lib/prisma.js';
+import { maskLocationToDistrict } from '../utils/privacyMask.js';
 
-const prisma = new PrismaClient();
 const DISTRICT_OFFSET = 0.012;
 
 function parseCoordinate(value) {

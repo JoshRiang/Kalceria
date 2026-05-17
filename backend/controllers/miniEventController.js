@@ -1,6 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from '../lib/prisma.js';
 
-const prisma = new PrismaClient();
 const MINI_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
 
 function cleanText(value) {

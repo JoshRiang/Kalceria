@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 
-const prisma = new PrismaClient();
+
 
 // ─── GET /admin/users ─────────────────────────────────────────────────────────
 export async function listUsers(req, res, next) {
