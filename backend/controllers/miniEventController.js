@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 
-const prisma = new PrismaClient();
+
 
 // ─── POST /mini-events ────────────────────────────────────────────────────────
 export async function createMiniEvent(req, res, next) {

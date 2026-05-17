@@ -1,8 +1,8 @@
 import { redis } from '../lib/redis.js';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import { maskLocationToDistrict } from '../utils/privacyMask.js';
 
-const prisma = new PrismaClient();
+
 
 // ─── POST /map/telemetry ──────────────────────────────────────────────────────
 export async function saveTelemetry(req, res, next) {

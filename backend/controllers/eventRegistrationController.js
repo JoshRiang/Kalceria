@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 
-const prisma = new PrismaClient();
+
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
 
 // ─── POST /events/:eventId/register ──────────────────────────────────────────
@@ -100,14 +100,20 @@ export async function listRegistrations(req, res, next) {
 // ─── ADMIN: PATCH /admin/registrations/:id/payment ───────────────────────────
 export async function confirmRegistrationPayment(req, res, next) {
   try {
-    const { status } = req.body; // 'CONFIRMED' | 'REJECTED'
+    const { status, version } = req.body; // 'CONFIRMED' | 'REJECTED'
+    if (version === undefined || version === null) {
+      return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required.' });
+    }
     const reg = await prisma.eventRegistration.update({
-      where: { id: req.params.id },
-      data: { paymentStatus: status },
+      where: { id: req.params.id, version: Number(version) },
+      data: { paymentStatus: status, version: { increment: 1 } },
       include: { user: { select: { name: true, email: true } }, event: { select: { title: true } } },
     });
     res.json({ registration: reg });
   } catch (err) {
+    if (err.code === 'P2025') {
+      return res.status(409).json({ error: 'Data telah dimodifikasi oleh admin lain. Silakan refresh.' });
+    }
     next(err);
   }
 }
@@ -115,9 +121,16 @@ export async function confirmRegistrationPayment(req, res, next) {
 // ─── ADMIN: DELETE /admin/registrations/:id ───────────────────────────────────
 export async function deleteRegistration(req, res, next) {
   try {
-    await prisma.eventRegistration.delete({ where: { id: req.params.id } });
+    const { version } = req.body;
+    if (version === undefined || version === null) {
+      return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required for delete.' });
+    }
+    await prisma.eventRegistration.delete({ where: { id: req.params.id, version: Number(version) } });
     res.json({ message: 'Deleted.' });
   } catch (err) {
+    if (err.code === 'P2025') {
+      return res.status(409).json({ error: 'Data telah dimodifikasi oleh admin lain. Silakan refresh.' });
+    }
     next(err);
   }
 }

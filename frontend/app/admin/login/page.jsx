@@ -49,13 +49,15 @@ export default function AdminLoginPage() {
       const token = res.data?.token;
       if (!token) throw new Error("No token.");
 
+      // Set token DULUAN agar interceptor axios tidak pakai token dari login sebelumnya
+      localStorage.setItem("token", token);
+
       // Verify admin role via a protected endpoint
       const check = await api.get("/admin/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       // If no error thrown, user is admin
       localStorage.setItem("adminToken", token);
-      localStorage.setItem("token", token);
 
       await new Promise((r) => setTimeout(r, 2200));
       router.replace("/admin/dashboard");

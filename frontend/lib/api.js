@@ -22,9 +22,18 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    const status = err.response?.status;
     const message = err.response?.data?.error || err.message || 'Network Error';
-    console.error('[API Error]', message);
-    return Promise.reject(new Error(message));
+
+    // Silently pass JIT rejections — these are intentional handshakes, not real errors.
+    // The del() function in page.jsx catches them and handles the password prompt flow.
+    const isExpectedJitRejection = status === 403 && typeof message === 'string' && message.includes('JIT');
+
+    if (!isExpectedJitRejection) {
+      console.error('[API Error]', message);
+    }
+
+    return Promise.reject(err); // Always preserve the original error object for status checks
   }
 );
 

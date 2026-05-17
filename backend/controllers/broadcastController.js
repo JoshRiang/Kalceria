@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 
-const prisma = new PrismaClient();
+
 
 // ─── POST /broadcast ──────────────────────────────────────────────────────────
 export async function createBroadcast(req, res, next) {

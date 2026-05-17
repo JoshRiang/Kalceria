@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
-const prisma = new PrismaClient();
+
 
 // ─── Update Live Location ─────────────────────────────────────────────────────
 export async function updateLiveLocation(req, res, next) {

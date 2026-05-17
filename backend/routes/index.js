@@ -1,7 +1,7 @@
 import express from 'express';
 import {
   register, login, requestOtp, verifyOtp,
-  requestPasswordReset, resetPassword, checkUsername
+  requestPasswordReset, resetPassword, checkUsername, verifyJitPassword
 } from '../controllers/authController.js';
 import { updateLiveLocation, getNearbyUsers } from '../controllers/locationController.js';
 import { getMedia, createMedia } from '../controllers/mediaController.js';
@@ -12,12 +12,12 @@ import { createBroadcast, updateBroadcast, deleteBroadcast } from '../controller
 import { redirectEvent } from '../controllers/redirectController.js';
 import { cleanupExpiredBroadcasts } from '../utils/cronWorker.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
-import { requireAdmin } from '../middleware/admin.js';
+import { requireAdmin, requireJIT } from '../middleware/admin.js';
 import {
   createEvent, listEvents, updateEvent, deleteEvent,
 } from '../controllers/adminEventController.js';
 import {
-  createMerch, listMerch, updateMerch, toggleSoldOut, deleteMerch,
+  createMerch, listMerch, updateMerch, toggleSoldOut, deleteMerch, recordMerchSale,
 } from '../controllers/adminMerchController.js';
 import {
   registerEvent, listPublicEvents, getPublicEvent,
@@ -33,6 +33,8 @@ import {
 import { createComment } from '../controllers/commentController.js';
 import { listComments, togglePinComment, deleteComment } from '../controllers/adminCommentController.js';
 import { getEarnings } from '../controllers/adminEarningsController.js';
+import { listLogs } from '../controllers/auditController.js';
+import { exportAllLogs, resetSystem } from '../controllers/adminSystemController.js';
 
 const router = express.Router();
 
@@ -85,6 +87,9 @@ router.delete('/broadcast', requireAuth, deleteBroadcast);
 // ─── Redirect ────────────────────────────────────────────────────────────────
 router.get('/redirect/event/:eventId', redirectEvent);
 
+// ─── Admin: Auth / JIT ────────────────────────────────────────────────────────
+router.post('/admin/verify-jit', requireAdmin, verifyJitPassword);
+
 // ─── Admin: Events ───────────────────────────────────────────────────────────
 router.get('/admin/events', requireAdmin, listEvents);
 router.post('/admin/events', requireAdmin, createEvent);
@@ -96,6 +101,7 @@ router.get('/admin/merch', requireAdmin, listMerch);
 router.post('/admin/merch', requireAdmin, createMerch);
 router.put('/admin/merch/:id', requireAdmin, updateMerch);
 router.patch('/admin/merch/:id/soldout', requireAdmin, toggleSoldOut);
+router.post('/admin/merch/:id/sales', requireAdmin, recordMerchSale);
 router.delete('/admin/merch/:id', requireAdmin, deleteMerch);
 
 // ─── Admin: Event Registrations ──────────────────────────────────────────────
@@ -108,13 +114,14 @@ router.patch('/admin/registrations/:id/pdf', requireAdmin, markPdfExported);
 router.get('/admin/services', requireAdmin, listServiceBookings);
 router.patch('/admin/services/:id/payment', requireAdmin, confirmServicePayment);
 router.patch('/admin/services/:id/status', requireAdmin, updateServiceStatus);
-router.delete('/admin/services/:id', requireAdmin, deleteServiceBooking);
+// Mengamankan aksi destruktif DELETE dengan JIT token
+router.delete('/admin/services/:id', requireAdmin, requireJIT, deleteServiceBooking);
 router.patch('/admin/services/:id/pdf', requireAdmin, markServicePdf);
 
 // ─── Admin: Need Us Bookings ──────────────────────────────────────────────────
 router.get('/admin/bookings', requireAdmin, listBookings);
 router.patch('/admin/bookings/:id/payment', requireAdmin, confirmBookingPayment);
-router.delete('/admin/bookings/:id', requireAdmin, deleteBooking);
+router.delete('/admin/bookings/:id', requireAdmin, requireJIT, deleteBooking);
 router.patch('/admin/bookings/:id/pdf', requireAdmin, markBookingPdf);
 
 // ─── Admin: Users ─────────────────────────────────────────────────────────────
@@ -129,6 +136,11 @@ router.get('/admin/comments', requireAdmin, listComments);
 router.patch('/admin/comments/:id/pin', requireAdmin, togglePinComment);
 router.delete('/admin/comments/:id', requireAdmin, deleteComment);
 router.get('/admin/earnings', requireAdmin, getEarnings);
+router.get('/admin/logs', requireAdmin, listLogs);
+
+// ─── Admin: System ───────────────────────────────────────────────────────────
+router.get('/admin/system/logs', requireAdmin, exportAllLogs);
+router.post('/admin/system/reset', requireAdmin, requireJIT, resetSystem);
 
 // ─── Cron ────────────────────────────────────────────────────────────────────
 router.get('/cron/cleanup', async (_req, res) => {

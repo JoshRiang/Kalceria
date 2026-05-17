@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma.js';
 
 import { redis } from '../lib/redis.js';
 
-const prisma = new PrismaClient();
+
 const RATE_PER_HOUR = 120000;
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
 
