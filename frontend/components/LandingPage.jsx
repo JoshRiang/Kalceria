@@ -117,9 +117,9 @@ function FilmStrip({ rotation, top, left, speed = 40, height = "h-16 md:h-24" })
       style={{ top, left, transform: `rotate(${rotation}deg)`, transformOrigin: "left center" }}
     >
       <div className="flex w-full h-full opacity-70 animate-film-scroll">
-        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.png)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
-        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.png)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
-        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.png)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
+        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.webp)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
+        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.webp)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
+        <div className="flex-shrink-0 w-1/3 h-full" style={{ backgroundImage: 'url(/filmroll.webp)', backgroundSize: 'contain', backgroundRepeat: 'repeat-x' }} />
       </div>
       <style>{`
         @keyframes film-scroll {
@@ -135,7 +135,7 @@ function FilmStrip({ rotation, top, left, speed = 40, height = "h-16 md:h-24" })
 }
 
 // ─── Event Slider Component ──────────────────────────
-const EVENT_IMAGES = ["/event_1.jpeg", "/event_2.jpeg", "/event_3.jpeg"];
+const EVENT_IMAGES = ["/event_1.webp", "/event_2.webp", "/event_3.webp"];
 
 function EventSlider() {
   const [index, setIndex] = useState(0);
@@ -471,10 +471,10 @@ function StarDust() {
 // ─── Floating Spare Parts Component ──────────────────
 function FloatingSpareParts() {
   const parts = [
-    { src: "/support_1.png", pos: "top-10 left-4 md:left-20", rot: 15, delay: 0.2, dur: 7.5 },
-    { src: "/support_2.png", pos: "top-10 right-4 md:right-20", rot: -15, delay: 1.5, dur: 6.2 },
-    { src: "/support_3.png", pos: "bottom-10 left-4 md:left-20", rot: -20, delay: 0.8, dur: 8.4 },
-    { src: "/support_4.png", pos: "bottom-10 right-4 md:right-20", rot: 25, delay: 2.3, dur: 5.8 },
+    { src: "/support_1.webp", pos: "top-10 left-4 md:left-20", rot: 15, delay: 0.2, dur: 7.5 },
+    { src: "/support_2.webp", pos: "top-10 right-4 md:right-20", rot: -15, delay: 1.5, dur: 6.2 },
+    { src: "/support_3.webp", pos: "bottom-10 left-4 md:left-20", rot: -20, delay: 0.8, dur: 8.4 },
+    { src: "/support_4.webp", pos: "bottom-10 right-4 md:right-20", rot: 25, delay: 2.3, dur: 5.8 },
   ];
 
   return (
@@ -632,7 +632,7 @@ function DynamicCollage() {
   const cols = isMobile ? 3 : 5;
   const rows = isMobile ? 3 : 4;
   const limit = cols * rows;
-  const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.jpeg`);
+  const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.webp`);
   const activePhotos = photos.slice(0, limit);
   
   return (
@@ -1083,16 +1083,16 @@ export default function LandingPage({ onNavigateAuth }) {
   }, []);
 
   const ABOUT_IMAGES = [
-    "/aboutus_bg1.png",
-    "/aboutus_bg2.png",
-    "/aboutus_bg3.png",
-    "/aboutus_bg4.png"
+    "/aboutus_bg1.webp",
+    "/aboutus_bg2.webp",
+    "/aboutus_bg3.webp",
+    "/aboutus_bg4.webp"
   ];
 
   const ABOUT_IMAGES_HP = [
     "/hp/abt_landing_hp1.webp",
-    "/hp/abt_landing_hp2.jpg",
-    "/hp/abt_landing_hp3.jpeg"
+    "/hp/abt_landing_hp2.webp",
+    "/hp/abt_landing_hp3.webp"
   ];
 
   const currentAboutImages = isMobile ? ABOUT_IMAGES_HP : ABOUT_IMAGES;
@@ -1180,7 +1180,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
           <div className="relative z-10 flex flex-col items-center gap-6 md:gap-10 px-4 w-full">
             <motion.img 
-              src="/logo_landing.png" 
+              src="/logo_landing.webp" 
               alt="Kalceria" 
               className="w-[85%] md:w-[70%] max-w-3xl h-auto object-contain drop-shadow-2xl" 
               draggable={false}
@@ -1226,9 +1226,9 @@ export default function LandingPage({ onNavigateAuth }) {
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }} className="absolute top-[20%] right-[-10%] w-[45vw] h-[45vw] rounded-full blur-[120px] bg-[#FF8C00]" />
         </div>
 
-        {/* Mobile-only Silhouette: grup_hp.png (on top of background layer z-0 but behind crystal_2 z-10) */}
+        {/* Mobile-only Silhouette: grup_hp.webp (on top of background layer z-0 but behind crystal_2 z-10) */}
         <div className="absolute bottom-0 left-0 w-full h-[300px] pointer-events-none z-[1] overflow-hidden md:hidden flex justify-center items-end">
-          <img src="/hp/grup_hp.png" alt="Group Mobile" className="h-full w-auto object-contain opacity-35" />
+          <img src="/hp/grup_hp.webp" alt="Group Mobile" className="h-full w-auto object-contain opacity-35" />
         </div>
 
         {/* Center: Event Slider Card (Relative on Mobile, Absolutely Centered on Desktop) */}
@@ -1262,28 +1262,28 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
            {/* Bottom (Smallest) */}
            <motion.img 
-             src="/crystal_2.png" 
+             src="/crystal_2.webp" 
              className="absolute h-[20px] md:h-[28px] object-contain opacity-70 left-[20%] md:left-[35%] bottom-[42%] md:bottom-[5%] -translate-x-1/2"
              animate={{ y: [0, -8, 0], rotate: [55, 65, 55] }}
              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
            />
            {/* Left Small */}
            <motion.img 
-             src="/crystal_2.png" 
+             src="/crystal_2.webp" 
              className="absolute h-[26px] md:h-[36px] object-contain opacity-70 left-[calc(50%-185px)] md:left-[calc(50%-260px)] top-[30%] md:top-[55%]"
              animate={{ y: [0, -10, 0], rotate: [-35, -25, -35] }}
              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
            />
            {/* Right Medium */}
            <motion.img 
-             src="/crystal_2.png" 
+             src="/crystal_2.webp" 
              className="absolute h-[34px] md:h-[47px] object-contain opacity-70 left-[calc(50%+165px)] md:left-[calc(50%+175px)] top-[22%] md:top-[18%]"
              animate={{ y: [0, -15, 0], rotate: [30, 40, 30] }}
              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
            />
            {/* Right Large */}
            <motion.img 
-             src="/crystal_2.png" 
+             src="/crystal_2.webp" 
              className="absolute h-[45px] md:h-[63px] object-contain opacity-70 left-[calc(50%+190px)] md:left-[calc(50%+200px)] top-[45%] md:top-[50%]"
              animate={{ y: [0, -18, 0], rotate: [0, 10, 0] }}
              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
@@ -1295,14 +1295,14 @@ export default function LandingPage({ onNavigateAuth }) {
           
           {/* Crystal 3 Top Right (Truncated at Top) */}
           <div className="absolute top-[-20px] md:top-[-40px] right-12 md:right-40 hidden md:flex flex-col items-center pointer-events-none opacity-80">
-            <img src="/crystal_3.png" alt="Crystal 3" className="h-[75px] md:h-[120px] object-contain rotate-180" />
+            <img src="/crystal_3.webp" alt="Crystal 3" className="h-[75px] md:h-[120px] object-contain rotate-180" />
           </div>
 
           {/* Crystal 1 Bottom Left (Truncated at Bottom) */}
-          <img src="/crystal_1.png" alt="Crystal 1" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-4 h-[80px] md:h-[130px] object-contain opacity-80 z-0 hidden md:block" />
+          <img src="/crystal_1.webp" alt="Crystal 1" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-4 h-[80px] md:h-[130px] object-contain opacity-80 z-0 hidden md:block" />
 
           <div className="absolute bottom-0 left-12 md:left-40 hidden md:flex items-end">
-            <img src="/grup.png" alt="Group" className="relative z-10 h-[180px] md:h-[280px] object-contain translate-y-[2.5px] opacity-35" />
+            <img src="/grup.webp" alt="Group" className="relative z-10 h-[180px] md:h-[280px] object-contain translate-y-[2.5px] opacity-35" />
           </div>
 
           <div className="absolute bottom-0 right-4 md:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
@@ -1311,7 +1311,7 @@ export default function LandingPage({ onNavigateAuth }) {
               className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[22px] z-0 opacity-80"
               style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%, 0 100%)" }}
             />
-            <img src="/brio_black.png" alt="Brio" className="relative z-10 h-[150px] md:h-[240px] object-contain translate-y-[2.5px]" />
+            <img src="/brio_black.webp" alt="Brio" className="relative z-10 h-[150px] md:h-[240px] object-contain translate-y-[2.5px]" />
           </div>
         </div>
       </section>
@@ -1360,7 +1360,7 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Altar Border Element (Reversed 180, Truncated at Border) */}
         <div className="absolute top-[-60px] md:top-[-220px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-5 opacity-80">
           <img 
-            src={isMobile ? "/hp/altar_hp.png" : "/altar.png"} 
+            src={isMobile ? "/hp/altar_hp.webp" : "/altar.webp"} 
             alt="Altar" 
             className={`h-[192px] md:h-[540px] object-contain drop-shadow-[0_10px_70px_rgba(255,255,255,0.05)] ${isMobile ? "" : "rotate-180"}`} 
           />
@@ -1368,8 +1368,8 @@ export default function LandingPage({ onNavigateAuth }) {
 
         {/* Architectural Wall Backgrounds */}
         <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
-          <img src="/wall_2.png" alt="Wall 2" className="absolute bottom-0 right-0 h-[215px] md:h-[377px] object-contain opacity-90 brightness-110" />
-          <img src="/wall_1.png" alt="Wall 1" className="absolute bottom-0 left-[-2%] md:left-[9%] h-[175px] md:h-[304px] object-contain opacity-90 brightness-110" />
+          <img src="/wall_2.webp" alt="Wall 2" className="absolute bottom-0 right-0 h-[215px] md:h-[377px] object-contain opacity-90 brightness-110" />
+          <img src="/wall_1.webp" alt="Wall 1" className="absolute bottom-0 left-[-2%] md:left-[9%] h-[175px] md:h-[304px] object-contain opacity-90 brightness-110" />
         </div>
 
         <FloatingSpareParts />
@@ -1407,23 +1407,23 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Bush Footer Decoration (Colliding in Middle, Truncated at Border) */}
         <div className="absolute bottom-[-75px] md:bottom-[-125px] left-1/2 -translate-x-1/2 flex items-end justify-center pointer-events-none z-5 w-screen overflow-hidden opacity-90">
           <TropicalParticles />
-          <img src="/bush_1.png" alt="Bush 1" className="h-[180px] md:h-[320px] object-contain -mr-16 md:-mr-28 -translate-y-6 md:-translate-y-10" />
-          <img src="/bush_2.png" alt="Bush 2" className="h-[180px] md:h-[320px] object-contain -ml-16 md:-ml-28" />
+          <img src="/bush_1.webp" alt="Bush 1" className="h-[180px] md:h-[320px] object-contain -mr-16 md:-mr-28 -translate-y-6 md:-translate-y-10" />
+          <img src="/bush_2.webp" alt="Bush 2" className="h-[180px] md:h-[320px] object-contain -ml-16 md:-ml-28" />
         </div>
 
         {/* Marketplace Links */}
         <div className="relative z-20 flex gap-6 md:gap-16 items-center justify-center mb-24">
           <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
             <div className="relative w-32 md:w-64 h-[42px] md:h-[72px] block">
-              <img src="/logo_tokpedgray.png" alt="Tokopedia" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
-              <img src="/logo_tokped.png" alt="Tokopedia Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(3,172,14,0.6)]" draggable={false} />
+              <img src="/logo_tokpedgray.webp" alt="Tokopedia" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
+              <img src="/logo_tokped.webp" alt="Tokopedia Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(3,172,14,0.6)]" draggable={false} />
             </div>
             <span className="font-sans text-[12px] md:text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center">Tokopedia - Kalceros</span>
           </a>
           <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
             <div className="relative w-32 md:w-64 h-[42px] md:h-[72px] block">
-              <img src="/logo_shopeegray.png" alt="Shopee" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
-              <img src="/logo_shopee.png" alt="Shopee Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(238,77,45,0.6)]" draggable={false} />
+              <img src="/logo_shopeegray.webp" alt="Shopee" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
+              <img src="/logo_shopee.webp" alt="Shopee Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(238,77,45,0.6)]" draggable={false} />
             </div>
             <span className="font-sans text-[12px] md:text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center">Shopee - Kalcres</span>
           </a>
@@ -1470,13 +1470,13 @@ export default function LandingPage({ onNavigateAuth }) {
                 >
                   <div className={`relative shrink-0 flex items-center justify-center ${isMobile ? "w-10 h-10" : "w-8 md:w-10 h-8 md:h-10"}`}>
                     <img 
-                      src="/ig_gray.png" 
+                      src="/ig_gray.webp" 
                       alt="Instagram" 
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.4]" 
                       draggable={false}
                     />
                     <img 
-                      src="/ig.png" 
+                      src="/ig.webp" 
                       alt="Instagram Colored" 
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.4]" 
                       draggable={false}
@@ -1496,13 +1496,13 @@ export default function LandingPage({ onNavigateAuth }) {
                 >
                   <div className={`relative shrink-0 ${isMobile ? "w-10 h-10" : "w-8 md:w-10 h-8 md:h-10"}`}>
                     <img 
-                      src="/tiktok_gray.png" 
+                      src="/tiktok_gray.webp" 
                       alt="TikTok" 
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" 
                       draggable={false}
                     />
                     <img 
-                      src="/tiktok.png" 
+                      src="/tiktok.webp" 
                       alt="TikTok Colored" 
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" 
                       draggable={false}
@@ -1534,7 +1534,7 @@ export default function LandingPage({ onNavigateAuth }) {
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
             className="absolute bottom-[5%] right-[25%] w-96 h-auto opacity-90 pointer-events-none z-[1]"
           >
-            <img src="/hp/kalcer_man_hp.png" alt="Kalcer Mascot HP" className="w-full h-auto object-contain" />
+            <img src="/hp/kalcer_man_hp.webp" alt="Kalcer Mascot HP" className="w-full h-auto object-contain" />
           </motion.div>
         )}
 
@@ -1542,20 +1542,20 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="hidden md:block absolute bottom-0 right-0 w-56 md:w-80 z-20 pointer-events-none">
           {/* Hat placed above the head */}
           <img 
-            src="/kalcer_hat.png" 
+            src="/kalcer_hat.webp" 
             alt="Kalcer Hat" 
             className="absolute top-[-30%] left-1/2 -translate-x-[56%] w-[185%] h-auto z-30 drop-shadow-[0_15px_10px_rgba(0,0,0,0.5)]"
           />
           
           <img 
-            src={mascotFrame === 1 ? "/kalcer_man.png" : "/kalcer_man2.png"} 
+            src={mascotFrame === 1 ? "/kalcer_man.webp" : "/kalcer_man2.webp"} 
             alt="Kalcer Mascot" 
             className="relative z-10 w-full h-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,255,0.3)]"
           />
 
           {/* Static Favicon Overlay to cover Gemini Logo in the absolute corner */}
           <img
-            src="/favicon.png"
+            src="/favicon.webp"
             alt="Favicon"
             className="absolute bottom-1 right-1 w-6 md:w-8 h-auto z-50 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
           />
@@ -1628,7 +1628,7 @@ export default function LandingPage({ onNavigateAuth }) {
              {/* TOP (Normal, 0deg) */}
              <div className="hidden md:block absolute inset-0 pointer-events-none z-20">
                <motion.img 
-                 src="/moto_1.png" 
+                 src="/moto_1.webp" 
                  alt="Moto 1"
                  className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
                  initial={{ opacity: 0, scale: 0.8 }}
@@ -1641,7 +1641,7 @@ export default function LandingPage({ onNavigateAuth }) {
              {isMobile && (
                <div className="absolute inset-0 pointer-events-none z-20">
                  <motion.img 
-                   src="/hp/cokineed_hp.png" 
+                   src="/hp/cokineed_hp.webp" 
                    alt="Cokineed HP" 
                    animate={{ rotate: [-6, 6, -6], y: [0, -4, 0] }}
                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
@@ -1654,7 +1654,7 @@ export default function LandingPage({ onNavigateAuth }) {
              {/* RIGHT (90deg) */}
              <div className="hidden md:block absolute inset-0 rotate-90 pointer-events-none z-20">
                <motion.img 
-                 src="/moto_2.png" 
+                 src="/moto_2.webp" 
                  alt="Moto 2"
                  className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
                  initial={{ opacity: 0, scale: 0.8 }}
@@ -1666,7 +1666,7 @@ export default function LandingPage({ onNavigateAuth }) {
              {/* BOTTOM (180deg) */}
              <div className="hidden md:block absolute inset-0 rotate-180 pointer-events-none z-20">
                <motion.img 
-                 src="/moto_3.png" 
+                 src="/moto_3.webp" 
                  alt="Moto 3"
                  className="absolute bottom-full left-1/2 -translate-x-1/2 h-44 md:h-60 w-auto object-contain origin-bottom"
                  initial={{ opacity: 0, scale: 0.8 }}
@@ -1678,7 +1678,7 @@ export default function LandingPage({ onNavigateAuth }) {
              {/* LEFT (-90deg) */}
              <div className="hidden md:block absolute inset-0 -rotate-90 pointer-events-none z-20">
                <motion.img 
-                 src="/moto_4.png" 
+                 src="/moto_4.webp" 
                  alt="Moto 4"
                  className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
                  initial={{ opacity: 0, scale: 0.8 }}
@@ -1708,7 +1708,7 @@ export default function LandingPage({ onNavigateAuth }) {
           <div className="absolute bottom-0 left-0 w-full h-48 pointer-events-none z-30 overflow-visible">
             {/* Camera HP: Centered at the middle bottom and scaled 75% bigger */}
             <img 
-              src="/hp/camera_hp.png" 
+              src="/hp/camera_hp.webp" 
               alt="Camera HP" 
               className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[196px] h-auto object-contain select-none translate-y-[2px]" 
               draggable={false}
@@ -1741,7 +1741,7 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Earthman on mobile - sits at z-[3], behind particles (z-[4]) and asteroids (z-10 container wrapper) */}
         {isMobile && (
           <motion.img 
-            src="/hp/earthman_hp.png" 
+            src="/hp/earthman_hp.webp" 
             alt="Earthman" 
             className="absolute bottom-[-1%] h-[105%] xs:h-[115%] object-contain z-[3] pointer-events-none"
             initial={{ y: 60, opacity: 0, rotate: 0, scale: 1 }}
@@ -1757,7 +1757,7 @@ export default function LandingPage({ onNavigateAuth }) {
           {/* Earth - Core Centerpiece */}
           {!isMobile && (
             <motion.img 
-              src="/earth.png" 
+              src="/earth.webp" 
               alt="Earth" 
               className="absolute h-[30%] md:h-[40%] object-contain opacity-90 z-0 drop-shadow-[0_0_50px_rgba(0,255,255,0.2)]"
               animate={{ rotate: 360 }}
@@ -1802,7 +1802,7 @@ export default function LandingPage({ onNavigateAuth }) {
           {/* Earthman - Desktop Hero Figure at Bottom */}
           {!isMobile && (
             <motion.img 
-              src="/earthman.png" 
+              src="/earthman.webp" 
               alt="Earthman" 
               className="absolute bottom-[-4%] h-[40%] md:h-[54%] object-contain z-20 pointer-events-none"
               initial={{ y: 60, opacity: 0, rotate: 0, scale: 1 }}
@@ -1815,28 +1815,28 @@ export default function LandingPage({ onNavigateAuth }) {
           {/* Asteroid Field - Grouped Clusters */}
           {[
             // Cluster 1: Top Left (2x A1, 1x A2)
-            { id: 1, src: '/asteroid_1.png', top: '5%', left: '5%', size: '42px', delay: 0, rot: 45 },
-            { id: 2, src: '/asteroid_1.png', top: '15%', left: '18%', size: '49px', delay: 1.2, rot: -30 },
-            { id: 3, src: '/asteroid_2.png', top: '22%', left: '8%', size: '31px', delay: 2.5, rot: 115 },
+            { id: 1, src: '/asteroid_1.webp', top: '5%', left: '5%', size: '42px', delay: 0, rot: 45 },
+            { id: 2, src: '/asteroid_1.webp', top: '15%', left: '18%', size: '49px', delay: 1.2, rot: -30 },
+            { id: 3, src: '/asteroid_2.webp', top: '22%', left: '8%', size: '31px', delay: 2.5, rot: 115 },
             
             // Cluster 2: Top Right (2x A1, 2x A2)
-            { id: 4, src: '/asteroid_1.png', top: '10%', right: '10%', size: '55px', delay: 0.8, rot: -80 },
-            { id: 14, src: '/asteroid_1.png', top: '3%', right: '22%', size: '38px', delay: 1.4, rot: 25 },
-            { id: 5, src: '/asteroid_2.png', top: '18%', right: '15%', size: '28px', delay: 1.8, rot: 12 },
-            { id: 10, src: '/asteroid_2.png', top: '5%', right: '30%', size: '34px', delay: 0.9, rot: 55 },
+            { id: 4, src: '/asteroid_1.webp', top: '10%', right: '10%', size: '55px', delay: 0.8, rot: -80 },
+            { id: 14, src: '/asteroid_1.webp', top: '3%', right: '22%', size: '38px', delay: 1.4, rot: 25 },
+            { id: 5, src: '/asteroid_2.webp', top: '18%', right: '15%', size: '28px', delay: 1.8, rot: 12 },
+            { id: 10, src: '/asteroid_2.webp', top: '5%', right: '30%', size: '34px', delay: 0.9, rot: 55 },
             
             // Cluster 3: Bottom Left (2x A1, 2x A2)
-            { id: 6, src: '/asteroid_1.png', bottom: '18%', left: '10%', size: '35px', delay: 3.2, rot: 155 },
-            { id: 15, src: '/asteroid_1.png', bottom: '5%', left: '22%', size: '44px', delay: 0.5, rot: -60 },
-            { id: 7, src: '/asteroid_2.png', bottom: '25%', left: '5%', size: '44px', delay: 0.4, rot: -40 },
-            { id: 12, src: '/asteroid_2.png', bottom: '12%', left: '28%', size: '24px', delay: 3.5, rot: 190 },
+            { id: 6, src: '/asteroid_1.webp', bottom: '18%', left: '10%', size: '35px', delay: 3.2, rot: 155 },
+            { id: 15, src: '/asteroid_1.webp', bottom: '5%', left: '22%', size: '44px', delay: 0.5, rot: -60 },
+            { id: 7, src: '/asteroid_2.webp', bottom: '25%', left: '5%', size: '44px', delay: 0.4, rot: -40 },
+            { id: 12, src: '/asteroid_2.webp', bottom: '12%', left: '28%', size: '24px', delay: 3.5, rot: 190 },
             
             // Cluster 4: Bottom Right (2x A1, 3x A2)
-            { id: 8, src: '/asteroid_1.png', bottom: '22%', right: '10%', size: '52px', delay: 1.5, rot: 100 },
-            { id: 16, src: '/asteroid_1.png', bottom: '30%', right: '25%', size: '39px', delay: 2.2, rot: 10 },
-            { id: 9, src: '/asteroid_2.png', bottom: '35%', right: '12%', size: '37px', delay: 2.8, rot: -120 },
-            { id: 11, src: '/asteroid_2.png', bottom: '10%', right: '32%', size: '43px', delay: 2.1, rot: -20 },
-            { id: 13, src: '/asteroid_2.png', bottom: '5%', right: '40%', size: '49px', delay: 0.6, rot: -10 }
+            { id: 8, src: '/asteroid_1.webp', bottom: '22%', right: '10%', size: '52px', delay: 1.5, rot: 100 },
+            { id: 16, src: '/asteroid_1.webp', bottom: '30%', right: '25%', size: '39px', delay: 2.2, rot: 10 },
+            { id: 9, src: '/asteroid_2.webp', bottom: '35%', right: '12%', size: '37px', delay: 2.8, rot: -120 },
+            { id: 11, src: '/asteroid_2.webp', bottom: '10%', right: '32%', size: '43px', delay: 2.1, rot: -20 },
+            { id: 13, src: '/asteroid_2.webp', bottom: '5%', right: '40%', size: '49px', delay: 0.6, rot: -10 }
           ].map((ast) => (
             <motion.img
               key={ast.id}
@@ -1868,7 +1868,7 @@ export default function LandingPage({ onNavigateAuth }) {
             <>
               {/* Left Cloud: awan_3 - Now fully opaque */}
               <motion.img 
-                src="/awan_3.png" 
+                src="/awan_3.webp" 
                 alt="Cloud Left"
                 className="absolute left-[23%] bottom-[27%] h-[103px] md:h-[184px] object-contain opacity-100 z-30 pointer-events-none"
                 animate={{ 
@@ -1881,7 +1881,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
               {/* Right Top Cloud: awan_1 - Duplicated awan_2 but in awan_1 position */}
               <motion.img 
-                src="/awan_2.png" 
+                src="/awan_2.webp" 
                 alt="Cloud Right Top"
                 className="absolute right-[28%] top-[27%] h-[76px] md:h-[131px] object-contain opacity-100 z-30 pointer-events-none"
                 animate={{ 
@@ -1894,7 +1894,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
               {/* Right Middle Cloud: awan_2 - 2% lefter */}
               <motion.img 
-                src="/awan_2.png" 
+                src="/awan_2.webp" 
                 alt="Cloud Right Middle"
                 className="absolute right-[21%] bottom-[33%] h-[66px] md:h-[121px] object-contain opacity-100 z-30 pointer-events-none"
                 animate={{ 
@@ -1912,7 +1912,7 @@ export default function LandingPage({ onNavigateAuth }) {
       {/* ── Section 8: Final Scene / Tokyo Nights ── */}
       <section id="section-journey" className="relative w-full min-h-[75vh] flex flex-col items-center justify-center py-20 z-50 border-t border-slate-900 overflow-hidden bg-black isolation-auto">
         {/* Tokyo Night Background - ABSOLUTE BACK */}
-        <img src="/bg_tokyo.png" alt="Tokyo Night" className="absolute inset-0 w-full h-full object-cover opacity-50 z-[-2] pointer-events-none" />
+        <img src="/bg_tokyo.webp" alt="Tokyo Night" className="absolute inset-0 w-full h-full object-cover opacity-50 z-[-2] pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050a14] via-transparent to-[#050a14] z-[-2] pointer-events-none" />
         
         {/* Battle Glows (Anakin vs Obi-Wan Vibe) - BEHIND LOGOS */}
@@ -1937,7 +1937,7 @@ export default function LandingPage({ onNavigateAuth }) {
           style={{ opacity: 0.7 }}
         >
           <img 
-            src="/starwarr.png" 
+            src="/starwarr.webp" 
             alt="Battle of Heroes" 
             className={`w-full h-auto max-h-[85vh] object-contain ${isMobile ? "scale-[1.12]" : "scale-[1.82]"}`}
             style={{ 
@@ -1959,7 +1959,7 @@ export default function LandingPage({ onNavigateAuth }) {
            >
               {/* Kalceria Logo - Shifted 15% Under */}
               <motion.img 
-                src="/logologin.png" 
+                src="/logologin.webp" 
                 alt="Kalceria" 
                 className={`${isMobile ? "h-[58px]" : "h-18 md:h-24"} w-auto object-contain -rotate-[12deg] drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform`}
                 animate={{ y: isMobile ? [75, 69, 75] : [75, 69, 75], x: '20%' }}
@@ -2017,7 +2017,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
               {/* DSL Logo - Shifted 15% Under */}
               <motion.img 
-                src="/dsl.png" 
+                src="/dsl.webp" 
                 alt="DSL" 
                 className={`${isMobile ? "h-[58px]" : "h-18 md:h-24"} w-auto object-contain rotate-[12deg] drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform`}
                 animate={{ y: isMobile ? [64, 70, 64] : [69, 75, 69], x: '-20%' }}
@@ -2043,7 +2043,7 @@ export default function LandingPage({ onNavigateAuth }) {
               </motion.h2>
 
               <motion.img 
-                src="/wa_logo.png" 
+                src="/wa_logo.webp" 
                 alt="WhatsApp" 
                 className="h-16 md:h-28 w-auto object-contain drop-shadow-[0_0_40px_rgba(37,211,102,0.5)] z-20"
                 animate={{ y: [0, -6, 0], x: '22%' }}
@@ -2107,7 +2107,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
         {isMobile && (
           <img 
-            src="/hp/bg_astro_hp.png" 
+            src="/hp/bg_astro_hp.webp" 
             alt="Astronaut Background Mobile" 
             className="absolute inset-0 w-full h-full object-cover z-[1] opacity-70 pointer-events-none"
           />
@@ -2124,7 +2124,7 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Night Background at Bottom */}
         {!isMobile && (
           <img 
-            src="/night.png" 
+            src="/night.webp" 
             alt="Night Sky" 
             className="absolute bottom-0 left-0 w-full h-auto object-cover z-[10] opacity-90"
             style={{ maskImage: "linear-gradient(to top, black 80%, transparent)" }}
@@ -2134,7 +2134,7 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Astronaut - Semi-transparent, Massive and Lowered, Behind Night */}
         {!isMobile && (
           <img 
-            src="/astronaut.png" 
+            src="/astronaut.webp" 
             alt="Astronaut" 
             className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[105%] h-auto object-contain z-[5] opacity-40 mix-blend-screen pointer-events-none" 
           />
@@ -2154,7 +2154,7 @@ export default function LandingPage({ onNavigateAuth }) {
         >
           {isMobile && (
             <motion.img 
-              src="/hp/astronaut_hp.png" 
+              src="/hp/astronaut_hp.webp" 
               alt="Astronaut Mobile" 
               className="absolute bottom-[135%] left-1/2 -translate-x-1/2 w-[420px] h-auto object-contain z-10 pointer-events-none"
               animate={{ y: [-15, 15, -15] }}
@@ -2355,7 +2355,7 @@ function LogoutConfirmModal({ onConfirm, onCancel }) {
                 className="w-full h-full"
               >
                 <img
-                  src={`/kucing${catFrame}.png`}
+                  src={`/kucing${catFrame}.webp`}
                   alt="Cat"
                   className="w-full h-full object-contain object-bottom drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)] z-10"
                 />
@@ -2472,15 +2472,15 @@ function FloatingAssets({ isMobile }) {
     const assetDefinitions = [
       // ccar_1 & ccar_2 shifted more left
       ...(!isMobile ? [
-        { src: '/ccar_1.png', x: 5, y: 18, w: "w-32 md:w-56", rot: -35, dX: 60, dY: 45, rS: 55 },
-        { src: '/ccar_2.png', x: 8, y: 62, w: "w-24 md:w-36", rot: 45, dX: -70, dY: -65, rS: -60 },
+        { src: '/ccar_1.webp', x: 5, y: 18, w: "w-32 md:w-56", rot: -35, dX: 60, dY: 45, rS: 55 },
+        { src: '/ccar_2.webp', x: 8, y: 62, w: "w-24 md:w-36", rot: 45, dX: -70, dY: -65, rS: -60 },
       ] : []),
-      { src: '/ccar_3.png', x: isMobile ? 70 : 85, y: isMobile ? 3 : 18, w: isMobile ? "w-[153px] md:w-56" : "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
-      { src: '/ccar_4.png', x: isMobile ? 67 : 82, y: isMobile ? 47 : 62, w: isMobile ? "w-[115px] md:w-36" : "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
+      { src: '/ccar_3.webp', x: isMobile ? 70 : 85, y: isMobile ? 3 : 18, w: isMobile ? "w-[153px] md:w-56" : "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
+      { src: '/ccar_4.webp', x: isMobile ? 67 : 82, y: isMobile ? 47 : 62, w: isMobile ? "w-[115px] md:w-36" : "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
       // stikermobil_3 & stikermobil_1 — only on desktop
       ...(!isMobile ? [
-        { src: '/stikermobil_3.png', x: 28.5, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
-        { src: '/stikermobil_1.png', x: 65, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
+        { src: '/stikermobil_3.webp', x: 28.5, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
+        { src: '/stikermobil_1.webp', x: 65, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
       ] : []),
     ];
     
@@ -3238,7 +3238,7 @@ function DungeonGate() {
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
               className="mb-6 flex items-center gap-4 pointer-events-auto"
             >
-              {/* Floating dgf_2.png */}
+              {/* Floating dgf_2.webp */}
               <motion.div
                 animate={{ 
                   y: [0, -10, 0],
@@ -3248,7 +3248,7 @@ function DungeonGate() {
                 className="relative"
               >
                 <img 
-                  src="/dgf_2.png" 
+                  src="/dgf_2.webp" 
                   alt="Guide" 
                   className="w-20 md:w-28 h-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
                 />
@@ -3307,7 +3307,7 @@ function DungeonGate() {
               <div className="absolute inset-[-20%] bg-red-500/10 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
               
               <img 
-                src="/dg_1.png" 
+                src="/dg_1.webp" 
                 alt="Locked Gate" 
                 className="w-24 md:w-36 h-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] group-hover:brightness-110 transition-all duration-500 border-none outline-none ring-0"
               />
@@ -3326,7 +3326,7 @@ function DungeonGate() {
                 />
                 
                 <img 
-                  src="/dg_2.png" 
+                  src="/dg_2.webp" 
                   alt="Dungeon Gate" 
                   className="w-24 md:w-36 h-auto object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] group-hover:scale-110 group-hover:brightness-125 transition-all duration-700 border-none outline-none ring-0"
                 />

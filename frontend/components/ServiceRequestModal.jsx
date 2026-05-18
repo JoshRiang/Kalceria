@@ -635,7 +635,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
                       className="relative z-10 hover:scale-110 transition-transform duration-500"
                     >
                       <img 
-                        src="/wa_logo.png" 
+                        src="/wa_logo.webp" 
                         alt="WhatsApp" 
                         className="w-40 h-40 object-contain" 
                       />

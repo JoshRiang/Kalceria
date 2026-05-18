@@ -125,7 +125,7 @@ export default function JourneyPageClient() {
         style={{ pointerEvents: isIntroActive ? 'none' : 'auto' }}
       >
         {/* Section 1 - Left Half */}
-        <section className={`relative w-full h-screen bg-no-repeat flex items-start pt-[7vh] ${isMobile ? "bg-[url('/hp/bgj_1_hp.png')] bg-cover bg-center flex-col pt-[8vh]" : "bg-[url('/bgj_1.png')] bg-[length:100%_100%]"}`}>
+        <section className={`relative w-full h-screen bg-no-repeat flex items-start pt-[7vh] ${isMobile ? "bg-[url('/hp/bgj_1_hp.webp')] bg-cover bg-center flex-col pt-[8vh]" : "bg-[url('/bgj_1.webp')] bg-[length:100%_100%]"}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
               {/* Glass Box Layer */}
@@ -140,7 +140,7 @@ export default function JourneyPageClient() {
 
               {/* Logo Layer (Independent) */}
               <img 
-                src="/se1.png" 
+                src="/se1.webp" 
                 alt="SE1" 
                 className={`absolute top-[33%] z-20 h-24 md:h-32 object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[180px]" : "left-[145px] md:left-[228px]"}`} 
                 style={{ transform: isMobile ? "translateY(-50%) translateX(-30%) scale(0.82)" : "translateY(-50%) translateX(-20%) scale(0.90)" }}
@@ -150,7 +150,7 @@ export default function JourneyPageClient() {
             {/* Mobile Stack for Section 1 */}
             {isMobile && (
               <div className="w-full flex flex-col items-center gap-6 mt-12 z-30">
-                <JourneySlider images={['/mist_1.jpeg', '/mist_1.jpeg']} className="max-w-[280px]" />
+                <JourneySlider images={['/mist_1.webp', '/mist_1.webp']} className="max-w-[280px]" />
                 <JourneyDescriptionBox 
                   description="Mist is a legendary entity in the underground automotive scene, bringing unparalleled style and performance." 
                   delay={1000} 
@@ -162,7 +162,7 @@ export default function JourneyPageClient() {
 
           {!isMobile && (
             <JourneyRightHalf 
-              images={['/mist_1.jpeg', '/mist_1.jpeg']} 
+              images={['/mist_1.webp', '/mist_1.webp']} 
               description="Mist is a legendary entity in the underground automotive scene, bringing unparalleled style and performance." 
               delay={1000} 
               className="absolute right-0 md:right-[5%] top-[7vh] w-1/2"
@@ -171,7 +171,7 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 2 */}
-        <section className={`relative w-full h-screen bg-no-repeat flex flex-col items-start pt-[8vh] overflow-hidden ${isMobile ? "bg-[url('/hp/bgj_2_hp.png')] bg-cover bg-center pt-[2vh]" : "bg-[url('/bgj_2.png')] bg-[length:100%_100%]"}`}>
+        <section className={`relative w-full h-screen bg-no-repeat flex flex-col items-start pt-[8vh] overflow-hidden ${isMobile ? "bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center pt-[2vh]" : "bg-[url('/bgj_2.webp')] bg-[length:100%_100%]"}`}>
           <div className={`container mx-auto px-6 md:px-12 relative z-20 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`flex flex-col md:flex-row justify-start items-start w-full gap-8 ${isMobile ? "items-center" : ""}`}>
               <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
@@ -187,7 +187,7 @@ export default function JourneyPageClient() {
 
                 {/* Logo Layer (Independent) */}
                 <img 
-                  src="/se2.png" 
+                  src="/se2.webp" 
                   alt="SE2" 
                   className={`absolute top-[47%] z-20 h-24 md:h-32 object-contain pointer-events-none drop-shadow-2xl ${isMobile ? "left-[158px]" : "left-[160px] md:left-[215px]"}`} 
                   style={{ transform: isMobile ? "translateY(-50%) translateX(-15%) scale(0.85)" : "translateY(-50%) translateX(-5%)" }}
@@ -206,7 +206,7 @@ export default function JourneyPageClient() {
             {isMobile ? (
               <div className="w-full flex flex-col items-center gap-6 mt-6 z-30">
                 <JourneySlider 
-                  images={['/uims_1.jpeg', '/uims_2.jpeg']} 
+                  images={['/uims_1.webp', '/uims_2.webp']} 
                   className="max-w-[280px]"
                 />
                 <JourneyDescriptionBox 
@@ -219,7 +219,7 @@ export default function JourneyPageClient() {
               /* Photocard Box under WITH box */
               <div className="w-full mt-6 ml-0 relative z-30">
                 <JourneySlider 
-                  images={['/uims_1.jpeg', '/uims_2.jpeg']} 
+                  images={['/uims_1.webp', '/uims_2.webp']} 
                   className="max-w-[400px] aspect-square"
                 />
               </div>
@@ -228,7 +228,7 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 3 - Left Half */}
-        <section className={`relative w-full h-screen bg-no-repeat flex items-start pt-[12vh] ${isMobile ? "bg-[url('/hp/bgj_3_hp.png')] bg-cover bg-center flex-col pt-[8vh]" : "bg-[url('/bgj_3.png')] bg-[length:100%_100%]"}`}>
+        <section className={`relative w-full h-screen bg-no-repeat flex items-start pt-[12vh] ${isMobile ? "bg-[url('/hp/bgj_3_hp.webp')] bg-cover bg-center flex-col pt-[8vh]" : "bg-[url('/bgj_3.webp')] bg-[length:100%_100%]"}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
               {/* Glass Box Layer (Sized for both WITH and DSL area) */}
@@ -243,7 +243,7 @@ export default function JourneyPageClient() {
               
               {/* Logo Layer (Independent of Box Layout) */}
               <img 
-                src="/dsl.png" 
+                src="/dsl.webp" 
                 alt="DSL" 
                 className={`absolute top-[44%] z-20 h-20 md:h-32 object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[118px]" : "left-[114px] md:left-[168px]"}`} 
                 style={{ transform: isMobile ? "translateY(-50%) translateX(-2%) scale(0.82)" : "translateY(-50%) scale(0.90)" }}
@@ -253,7 +253,7 @@ export default function JourneyPageClient() {
             {/* Mobile Stack for Section 3 */}
             {isMobile && (
               <div className="w-full flex flex-col items-center gap-6 mt-12 z-30">
-                <JourneySlider images={['/dsl_1.jpeg', '/dsl_2.jpeg', '/dsl_3.jpeg', '/dsl_4.jpeg', '/dsl_5.jpeg']} className="max-w-[280px]" />
+                <JourneySlider images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} className="max-w-[280px]" />
                 <JourneyDescriptionBox 
                   description="Dream Shift Labs pioneers the digital frontier of automotive culture, crafting immersive experiences that transcend reality." 
                   delay={1400} 
@@ -265,7 +265,7 @@ export default function JourneyPageClient() {
 
           {!isMobile && (
             <JourneyRightHalf 
-              images={['/dsl_1.jpeg', '/dsl_2.jpeg', '/dsl_3.jpeg', '/dsl_4.jpeg', '/dsl_5.jpeg']} 
+              images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} 
               description="Dream Shift Labs pioneers the digital frontier of automotive culture, crafting immersive experiences that transcend reality." 
               delay={1400} 
             />

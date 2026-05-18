@@ -136,7 +136,7 @@ export default function JourneySection4({ isMobile: propIsMobile }) {
             </h1>
             {/* Surfer Image Floating beside Title on Mobile, above Title on Desktop */}
             <motion.img 
-              src="/surfer.png" 
+              src="/surfer.webp" 
               alt="Surfer"
               className="absolute top-[25%] -translate-y-1/2 right-[2%] h-[200px] z-30 object-contain drop-shadow-[0_10px_30px_rgba(34,211,238,0.4)] pointer-events-none md:-top-[230%] md:left-[5%] md:h-[244%] md:right-auto md:translate-y-0"
               style={isMobile ? { top: "15%" } : {}}
@@ -161,12 +161,12 @@ export default function JourneySection4({ isMobile: propIsMobile }) {
           {/* Floating Texts Overlays (Attached to the square box corner, outside overflow-hidden) */}
           <div className="absolute -top-10 -left-6 md:-left-16 md:-top-12 z-50 pointer-events-none drop-shadow-[0_20px_30px_rgba(0,0,0,0.9)] w-40 md:w-56 h-40">
             <img 
-              src="/textfitra.png" 
+              src="/textfitra.webp" 
               alt="Fitra" 
               className="absolute top-0 left-0 w-full animate-text-fitra"
             />
             <img 
-              src="/textmobi.png" 
+              src="/textmobi.webp" 
               alt="Mobi" 
               className="absolute -top-4 md:-top-6 left-0 w-full animate-text-mobi"
             />
@@ -176,8 +176,8 @@ export default function JourneySection4({ isMobile: propIsMobile }) {
           <div className="absolute inset-0 rounded-[2rem] overflow-hidden border-2 border-white/10 shadow-[0_0_60px_rgba(34,211,238,0.15)] bg-black/50 backdrop-blur-sm z-20">
             {/* Auto Scroll Track (200% width) */}
             <div className="absolute inset-0 flex w-[200%] animate-slider">
-              <div className="w-[50%] h-full bg-[url('/fitra.jpeg')] bg-cover bg-center" />
-              <div className="w-[50%] h-full bg-[url('/mobi.jpeg')] bg-cover bg-center" />
+              <div className="w-[50%] h-full bg-[url('/fitra.webp')] bg-cover bg-center" />
+              <div className="w-[50%] h-full bg-[url('/mobi.webp')] bg-cover bg-center" />
             </div>
           </div>
 

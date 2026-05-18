@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   title: "Kalceria's Official",
   description: "Kalceria's Official Website",
   icons: {
-    icon: "/favicon.png",
+    icon: "/favicon.webp",
   },
 };
 

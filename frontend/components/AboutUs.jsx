@@ -44,7 +44,7 @@ function StaticTypewriter({ text, speed = 20, delay = 0, highlights = [] }) {
 
 // ─── Photo Collage Background (Section 2) ───
 function PhotoCollage({ isMobile }) {
-  const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.jpeg`);
+  const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.webp`);
   const activePhotos = isMobile ? photos.slice(0, 9) : photos;
 
   return (
@@ -405,7 +405,7 @@ function WebDevEntrySequence({ onComplete }) {
       <div className="relative flex flex-col items-center">
         {/* Animated Character */}
         <motion.img 
-          src={phase === 'angry' ? "/dy_02.png" : "/dy_01.png"}
+          src={phase === 'angry' ? "/dy_02.webp" : "/dy_01.webp"}
           alt="DY"
           animate={{ rotate: [0, 15, 0] }}
           transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
@@ -629,7 +629,7 @@ export default function AboutUs() {
         >
           {/* Base Layer: Grayscale ONLY (No Blur) */}
           <img 
-            src="/man.png" 
+            src="/man.webp" 
             alt="The Team" 
             className="absolute inset-0 w-full h-full object-cover filter grayscale opacity-40 transition-all duration-500" 
             draggable={false}
@@ -645,14 +645,14 @@ export default function AboutUs() {
           >
             {/* Sharp Grayscale Anchor (Ensures face clarity) */}
             <img 
-              src="/man.png" 
+              src="/man.webp" 
               className="absolute inset-0 w-full h-full object-cover filter grayscale contrast-125 brightness-110" 
               draggable={false}
             />
 
             {/* Magenta Shifted Layer (Reduced offset) */}
             <motion.img 
-              src="/man.png" 
+              src="/man.webp" 
               animate={{ x: [-1, -2, -1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-50" 
@@ -661,7 +661,7 @@ export default function AboutUs() {
             />
             {/* Golden Shifted Layer (Reduced offset) */}
             <motion.img 
-              src="/man.png" 
+              src="/man.webp" 
               animate={{ x: [1, 2, 1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
               className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-50" 
@@ -680,7 +680,7 @@ export default function AboutUs() {
             }}
           >
             <img 
-              src="/man.png" 
+              src="/man.webp" 
               alt="The Team Color" 
               className="w-full h-full object-cover contrast-110 saturate-110" 
               draggable={false}
@@ -767,7 +767,7 @@ export default function AboutUs() {
              onMouseLeave={() => setHoverRei(false)}
            >
              <img 
-               src="/rei.png" 
+               src="/rei.webp" 
                alt="Rei" 
                className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.2)] cursor-help"
              />
@@ -782,7 +782,7 @@ export default function AboutUs() {
                   >
                     {/* Photo Box */}
                     <div className={`overflow-hidden border border-white/10 bg-black/20 ${isMobile ? "w-[80px] h-[80px] rounded-[0.5rem] mb-2" : "w-[136px] h-[136px] rounded-[1rem] mb-4"}`}>
-                      <img src="/reifo.jpeg" alt="Rei Photo" className="w-full h-full object-cover" />
+                      <img src="/reifo.webp" alt="Rei Photo" className="w-full h-full object-cover" />
                     </div>
                     
                     <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
@@ -802,7 +802,7 @@ export default function AboutUs() {
              onMouseLeave={() => setHoverJosh(false)}
            >
              <img 
-               src="/josh.png" 
+               src="/josh.webp" 
                alt="Josh" 
                className={`object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help ${isMobile ? "w-full h-auto" : "h-full w-auto"}`}
              />
@@ -817,7 +817,7 @@ export default function AboutUs() {
                   >
                     {/* Photo Box */}
                     <div className={`overflow-hidden border border-white/10 bg-black/20 ${isMobile ? "w-[80px] h-[80px] rounded-[0.5rem] mb-2" : "w-[136px] h-[136px] rounded-[1rem] mb-4"}`}>
-                      <img src="/jofo.jpeg" alt="Josh Photo" className="w-full h-full object-cover" />
+                      <img src="/jofo.webp" alt="Josh Photo" className="w-full h-full object-cover" />
                     </div>
 
                     <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
@@ -838,7 +838,7 @@ export default function AboutUs() {
              onMouseLeave={() => setHoverOtniel(false)}
            >
              <img 
-               src="/otniel.png" 
+               src="/otniel.webp" 
                alt="Otniel" 
                className={`object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help ${isMobile ? "w-full h-auto" : "h-full w-auto md:scale-[1.3] md:origin-bottom"}`}
              />
@@ -853,7 +853,7 @@ export default function AboutUs() {
                   >
                     {/* Photo Box */}
                     <div className={`overflow-hidden border border-white/10 bg-black/20 ${isMobile ? "w-[80px] h-[80px] rounded-[0.5rem] mb-2" : "w-[136px] h-[136px] rounded-[1rem] mb-4"}`}>
-                      <img src="/ofo.jpeg" alt="Otniel Photo" className="w-full h-full object-cover" />
+                      <img src="/ofo.webp" alt="Otniel Photo" className="w-full h-full object-cover" />
                     </div>
 
                     <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
@@ -896,7 +896,7 @@ export default function AboutUs() {
             }}
           >
             <img 
-              src="/logolden.png" 
+              src="/logolden.webp" 
               alt="Golden Logo" 
               className="w-full h-auto object-contain brightness-110 contrast-125" 
             />
@@ -945,7 +945,7 @@ export default function AboutUs() {
           onMouseLeave={() => setHoverMentor(false)}
         >
           <img 
-            src="/dy_3.png" 
+            src="/dy_3.webp" 
             alt="DY 3"
             className="object-contain pointer-events-auto opacity-80 cursor-help w-[220px] h-[220px] md:w-[23.25rem] md:h-[23.25rem]"
             style={{ rotate: "-10.5deg" }}
@@ -1022,7 +1022,7 @@ export default function AboutUs() {
             />
             {/* Reii Image */}
             <img 
-              src={imgToggle ? "/reii2.png" : "/reii.png"} 
+              src={imgToggle ? "/reii2.webp" : "/reii.webp"} 
               alt="Reii Left" 
               className={`max-w-none relative z-10 opacity-90 ${isMobile ? "w-[9.6rem]" : "w-[12rem] md:w-[17.25rem]"}`} 
             />
@@ -1058,7 +1058,7 @@ export default function AboutUs() {
             />
             {/* Reii 2 Image */}
             <img 
-              src={imgToggle ? "/reii3.png" : "/reii2.png"} 
+              src={imgToggle ? "/reii3.webp" : "/reii2.webp"} 
               alt="Reii Right" 
               className={`max-w-none relative z-10 opacity-90 ${isMobile ? "w-[9.6rem]" : "w-[12rem] md:w-[17.25rem]"}`} 
             />

@@ -1,16 +1,20 @@
 "use client";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useInView, useSpring, useTransform, animate } from "framer-motion";
-import { Canvas, useFrame } from "@react-three/fiber";
-import * as THREE from "three";
+import dynamic from "next/dynamic";
 import api from "@/lib/api";
+
+const SpinningGlobeCanvas = dynamic(() => import("./SpinningGlobeCanvas"), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-transparent" />
+});
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const HERO_IMAGES = [
-  "/bg_s1ev.jpeg",
-  "/bg_s2ev.jpeg",
-  "/bg_s3ev.jpeg",
-  "/bg_s4ev.jpeg",
+  "/bg_s1ev.webp",
+  "/bg_s2ev.webp",
+  "/bg_s3ev.webp",
+  "/bg_s4ev.webp",
 ];
 
 const CLIP = { clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" };
@@ -134,241 +138,21 @@ function MicroParticles() {
   );
 }
 
-// ─── Spinning Globe (Accurate Continent Dot Map) ──────────────────────────────
-function SpinningGlobe() {
-  const groupRef = useRef();
 
-
-  // Highly refined continent regions — tighter boxes, many sub-regions to avoid ocean fill
-  const dotPositions = useMemo(() => {
-    const regions = [
-      // ── NORTH AMERICA ──
-      [60, 72, -140, -70],  // Canada west/central
-      [48, 60, -125, -70],  // Canada south strip
-      [25, 50, -125, -65],  // USA main
-      [15, 30, -120, -85],  // Mexico
-      [5,  16, -90,  -75],  // Central America thin strip
-      [55, 72, -130, -100], // Alaska/Yukon
-      [60, 80, -95,  -70],  // Baffin/Nunavut coast
-      // ── SOUTH AMERICA ──
-      [8,  12, -75,  -60],  // Venezuela/Colombia
-      [-5, 8,  -78,  -48],  // Brazil north
-      [-20, -5,-70,  -40],  // Brazil south
-      [-40,-20, -73, -48],  // Argentina/Chile
-      [-55,-40, -75, -60],  // Patagonia
-      // ── EUROPE ──
-      [36, 44, -10, 28],    // Spain/France/Italy
-      [44, 55, -5,  25],    // France/Germany/Poland
-      [55, 65, 5,   30],    // Scandinavia south
-      [60, 70, 15,  30],    // Norway coast
-      [55, 60, 22,  28],    // Baltic states
-      [35, 42, 28,  36],    // Turkey
-      [37, 42, -9,  -5],    // Portugal
-      [36, 38, 12,  16],    // Sicily/S. Italy
-      // ── AFRICA ──
-      [30, 37, -5,  35],    // Morocco/Algeria/Libya/Egypt
-      [15, 30, 15,  35],    // Sudan/Chad/Libya strip
-      [-5, 15, -18, 45],    // West Africa wide
-      [-30,-5, 10,  40],    // Central/East Africa
-      [-35,-25,15,  32],    // South Africa
-      [-26,-15,30,  36],    // Mozambique/Zimbabwe
-      [5,  15, 35,  45],    // Ethiopia/Somalia west
-      // ── ASIA ──
-      [45, 72, 32,  80],    // Russia west/central
-      [50, 72, 80,  130],   // Siberia
-      [35, 55, 32,  80],    // Central Asia
-      [35, 50, 80,  130],   // China north
-      [20, 38, 60,  125],   // China south + India + SEA
-      [8,  25, 68,  100],   // India subcontinent
-      [8,  22, 98,  110],   // Indochina
-      [35, 42, 26,  45],    // Turkey/Caucasus
-      [10, 30, 35,  60],    // Arabian peninsula
-      [22, 40, 45,  60],    // Iran
-      // ── SOUTHEAST ASIA ──
-      [0,  7,  100, 120],   // Sumatra/Malay
-      [-8, 2,  108, 117],   // Java/Bali
-      [-5, 4,  115, 120],   // Borneo east
-      [5,  18, 120, 125],   // Philippines core
-      // ── JAPAN ──
-      [31, 45, 130, 142],
-      // ── AUSTRALIA ──
-      [-10,-5, 130, 140],   // NT top
-      [-35,-10,115, 150],   // Main continent
-      [-45,-38,145, 148],   // Tasmania
-      // ── NEW ZEALAND ──
-      [-47,-34,167, 178],
-      // ── GREENLAND ──
-      [60, 84, -55, -18],
-      // ── ICELAND ──
-      [63, 66, -25, -12],
-      // ── MADAGASCAR ──
-      [-26,-12,43,  51],
-      // ── BRITISH ISLES ──
-      [50, 60, -8,  2],
-      // ── ALASKA ──
-      [54, 64, -168,-140],
-    ];
-
-    const pts = [];
-    // Vary density by region area for even distribution
-    for (const [latMin, latMax, lonMin, lonMax] of regions) {
-      const area = (latMax - latMin) * (lonMax - lonMin);
-      const count = Math.max(40, Math.min(220, Math.floor(area * 0.7)));
-      for (let i = 0; i < count; i++) {
-        const lat = latMin + Math.random() * (latMax - latMin);
-        const lon = lonMin + Math.random() * (lonMax - lonMin);
-        const latR = (lat * Math.PI) / 180;
-        const lonR = (lon * Math.PI) / 180;
-        pts.push(
-          Math.cos(latR) * Math.cos(lonR),
-          Math.sin(latR),
-          Math.cos(latR) * Math.sin(lonR)
-        );
-      }
-    }
-    return new Float32Array(pts);
-  }, []);
-
-  // Earth's axial tilt is approx 23.5 degrees
-  const tiltRad = (23.5 * Math.PI) / 180;
-
-  useFrame((_, delta) => {
-    if (groupRef.current) {
-      // Local rotation (spinning)
-      groupRef.current.rotation.y += delta * 0.15;
-    }
-  });
-
-  return (
-    <group ref={groupRef} rotation={[0, 0, tiltRad]} scale={0.75}>
-      {/* Internal Dynamic Strings (Phage style) */}
-      <GlobeCoreStrings />
-
-      {/* High-visibility stark white grid */}
-      <mesh>
-        <sphereGeometry args={[1, 36, 18]} />
-        <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.4} blending={THREE.AdditiveBlending} />
-      </mesh>
-
-      {/* Continent dot map — now Orange-Gold and glowing */}
-      <points>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" count={dotPositions.length / 3} array={dotPositions} itemSize={3} />
-        </bufferGeometry>
-        <pointsMaterial 
-          size={0.028} 
-          color="#ff9900" 
-          transparent 
-          opacity={1} 
-          sizeAttenuation 
-          blending={THREE.AdditiveBlending}
-        />
-      </points>
-    </group>
-  );
-}
-
-// ─── Internal Globe Core Strings (Bacteriophage Style) ────────────────────────
-function GlobeCoreStrings() {
-  // Create 6 independent winding paths with unique movement data
-  const stringData = useMemo(() => {
-    const data = [];
-    for (let j = 0; j < 6; j++) {
-      const pts = [];
-      for (let i = 0; i < 10; i++) {
-        const r = 0.35 + Math.random() * 0.45;
-        const phi = Math.random() * Math.PI * 2;
-        const theta = Math.random() * Math.PI;
-        pts.push(new THREE.Vector3(
-          r * Math.sin(theta) * Math.cos(phi),
-          r * Math.sin(theta) * Math.sin(phi),
-          r * Math.cos(theta)
-        ));
-      }
-      const curve = new THREE.CatmullRomCurve3(pts, true);
-      data.push({
-        geometry: new THREE.BufferGeometry().setFromPoints(curve.getPoints(120)),
-        color: "#ff00ff", // Pure Magenta
-        rotSpeed: [
-          (Math.random() - 0.5) * 0.008, // Much slower, "grave" motion
-          (Math.random() - 0.5) * 0.008,
-          (Math.random() - 0.5) * 0.008
-        ],
-        ref: React.createRef()
-      });
-    }
-    return data;
-  }, []);
-
-  useFrame((state) => {
-    stringData.forEach((sd) => {
-      if (sd.ref.current) {
-        sd.ref.current.rotation.x += sd.rotSpeed[0];
-        sd.ref.current.rotation.y += sd.rotSpeed[1];
-        sd.ref.current.rotation.z += sd.rotSpeed[2];
-        // Dynamic scaling for "pulsing" energy
-        const pulse = 1 + Math.sin(state.clock.elapsedTime * 1.5 + stringData.indexOf(sd)) * 0.08;
-        sd.ref.current.scale.set(pulse, pulse, pulse);
-      }
-    });
-  });
-
-  return (
-    <group>
-      {stringData.map((sd, i) => (
-        <group key={i} ref={sd.ref}>
-          {/* LAYER 1: The core bright magenta filament */}
-          <line geometry={sd.geometry}>
-            <lineBasicMaterial 
-              color="#ffffff" 
-              transparent 
-              opacity={1.0} 
-              linewidth={1} 
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-            />
-          </line>
-          {/* LAYER 2: The vibrant magenta body */}
-          <line geometry={sd.geometry} scale={1.01}>
-            <lineBasicMaterial 
-              color="#ff00ff" 
-              transparent 
-              opacity={0.6} 
-              linewidth={1} 
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-            />
-          </line>
-          {/* LAYER 3: The deep magenta outer glow */}
-          <line geometry={sd.geometry} scale={1.025}>
-            <lineBasicMaterial 
-              color="#ff00ff" 
-              transparent 
-              opacity={0.25} 
-              linewidth={1} 
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-            />
-          </line>
-        </group>
-      ))}
-    </group>
-  );
-}
 
 
 
 // ─── Floating Photos around the Globe ─────────────────────────────────────────
 const FLOAT_PHOTOS = [
-  { src: "/ven_3.jpeg", top: "23%",   left: "26%",   rotate: -12, delay: 0.6  }, // Top Left
-  { src: "/ven_2.jpeg", top: "23%",   right: "26%",  rotate:  12, delay: 1.1  }, // Top Right
-  { src: "/ven_5.jpeg", bottom: "23%", left: "26%",   rotate: -12, delay: 0.3  }, // Bottom Left
-  { src: "/ven_6.jpeg", bottom: "23%", right: "26%",  rotate:  12, delay: 2.2  }, // Bottom Right
+  { src: "/ven_3.webp", top: "23%",   left: "26%",   rotate: -12, delay: 0.6  }, // Top Left
+  { src: "/ven_2.webp", top: "23%",   right: "26%",  rotate:  12, delay: 1.1  }, // Top Right
+  { src: "/ven_5.webp", bottom: "23%", left: "26%",   rotate: -12, delay: 0.3  }, // Bottom Left
+  { src: "/ven_6.webp", bottom: "23%", right: "26%",  rotate:  12, delay: 2.2  }, // Bottom Right
 ];
 
 function FloatingPhotoCard({ initialSrc, config, index }) {
   const [src, setSrc] = useState(initialSrc);
-  const photos = useMemo(() => Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.jpeg`), []);
+  const photos = useMemo(() => Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.webp`), []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -419,10 +203,10 @@ function FloatingPhotoCard({ initialSrc, config, index }) {
 
 function FloatingPhotos({ isMobile }) {
   const configs = [
-    { src: "/ven_3.jpeg", top: "23%",   left: isMobile ? "11%" : "26%",   rotate: -12, delay: 0.6  }, // Top Left
-    { src: "/ven_2.jpeg", top: "23%",   right: isMobile ? "11%" : "26%",  rotate:  12, delay: 1.1  }, // Top Right
-    { src: "/ven_5.jpeg", bottom: "23%", left: isMobile ? "11%" : "26%",   rotate: -12, delay: 0.3  }, // Bottom Left
-    { src: "/ven_6.jpeg", bottom: "23%", right: isMobile ? "11%" : "26%",  rotate:  12, delay: 2.2  }, // Bottom Right
+    { src: "/ven_3.webp", top: "23%",   left: isMobile ? "11%" : "26%",   rotate: -12, delay: 0.6  }, // Top Left
+    { src: "/ven_2.webp", top: "23%",   right: isMobile ? "11%" : "26%",  rotate:  12, delay: 1.1  }, // Top Right
+    { src: "/ven_5.webp", bottom: "23%", left: isMobile ? "11%" : "26%",   rotate: -12, delay: 0.3  }, // Bottom Left
+    { src: "/ven_6.webp", bottom: "23%", right: isMobile ? "11%" : "26%",  rotate:  12, delay: 2.2  }, // Bottom Right
   ];
 
   return (
@@ -716,7 +500,7 @@ export default function SeeEvent() {
         <div className={`relative z-10 container mx-auto px-6 md:px-12 flex flex-col ${isMobile ? "items-center text-center justify-center" : "items-start text-left justify-center h-full"}`}>
           <div className={`relative inline-block ${isMobile ? "text-center flex flex-col items-center justify-center" : "text-left flex flex-col items-start justify-center"}`}>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className={`relative mb-6 w-max flex items-end justify-center group ${isMobile ? "mx-auto" : "ml-0"}`}>
-               <img src="/coki_event.png" alt="Coki Event" className="w-24 md:w-36 block relative z-10 drop-shadow-2xl" />
+               <img src="/coki_event.webp" alt="Coki Event" className="w-24 md:w-36 block relative z-10 drop-shadow-2xl" />
                <div className="absolute left-0 bottom-0 w-[4px] h-[50%] bg-white z-20" />
                <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20" />
             </motion.div>
@@ -735,8 +519,8 @@ export default function SeeEvent() {
       <div className="relative w-full bg-[#0B0C10]">
         <RainbowPixels />
         <MicroParticles />
-        <img src="/stikermobil_5.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) rotate(-3deg)" : "rotate(-3deg)" }} />
-        <img src="/stikermobil_2.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) scale(0.8) rotate(6deg)" : "rotate(6deg)" }} />
+        <img src="/stikermobil_5.webp" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) rotate(-3deg)" : "rotate(-3deg)" }} />
+        <img src="/stikermobil_2.webp" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) scale(0.8) rotate(6deg)" : "rotate(6deg)" }} />
 
         {/* ─── SECTION 1.5: ATMOSPHERIC BREAK ────────────────────────────────── */}
         <section ref={atmosRef} className="relative w-full py-[60vh] z-20 overflow-hidden">
@@ -799,7 +583,7 @@ export default function SeeEvent() {
           {/* Indonesia Map Background Behind Globe */}
           <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
              <img 
-               src="/indo.png" 
+               src="/indo.webp" 
                alt="Indonesia Map" 
                className="w-[151vw] md:w-[100vw] h-auto object-contain opacity-25 filter brightness-150 contrast-125" 
              />
@@ -807,11 +591,7 @@ export default function SeeEvent() {
 
           {/* 3D Spinning Globe: scaled 25% smaller, 10% righter, 10% lower on mobile */}
           <div className={`absolute inset-0 z-0 flex items-center justify-center transition-all duration-700 origin-center ${isMobile ? "scale-[0.75] translate-x-[10%] translate-y-[10%]" : ""}`}>
-             <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }} style={{ pointerEvents: 'none' }}>
-                <ambientLight intensity={0.5} />
-                <pointLight position={[10, 10, 10]} />
-                <SpinningGlobe />
-             </Canvas>
+             <SpinningGlobeCanvas />
           </div>
           {/* Aggressive Edge Blending for Seamless Transitions */}
           <div className="absolute top-0 left-0 w-full h-[30vh] bg-gradient-to-b from-[#0B0C10] to-transparent z-10 pointer-events-none" />
@@ -840,7 +620,7 @@ export default function SeeEvent() {
               {/* Left: Picture Card Carousel - shrunk 50% on mobile */}
               <div className={`relative aspect-[4/5] rounded-2xl shadow-2xl bg-[#0B0C10] transition-all duration-300 ${isMobile ? "w-1/2 mx-auto scale-[1]" : "w-full scale-[1.03]"}`}>
                 {!isMobile && (
-                  <img src="/stikermobil_4.png" alt="" className="absolute z-30 w-40 md:w-56 -bottom-36 md:-bottom-48 -left-10 md:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
+                  <img src="/stikermobil_4.webp" alt="" className="absolute z-30 w-40 md:w-56 -bottom-36 md:-bottom-48 -left-10 md:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
                 )}
                 
                 <div className="relative w-full h-full rounded-2xl overflow-hidden border border-gray-800">
@@ -858,9 +638,9 @@ export default function SeeEvent() {
               {/* Right: Text Details - centered and placed under card on mobile */}
               <div className={`flex flex-col justify-center min-h-[450px] relative z-20 ${isMobile ? "items-center text-center mt-12" : ""}`}>
                 {!isMobile && (
-                  <img src="/stikermobil_1.png" alt="" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
+                  <img src="/stikermobil_1.webp" alt="" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
                 )}
-                <img src="/stikermobil_3.png" alt="" className={`absolute z-10 w-36 md:w-44 bottom-[-110px] md:bottom-[-160px] opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700 ${isMobile ? "left-[85%]" : "left-1/2"}`} style={{ transform: isMobile ? "translateX(-50%) translateY(-380%) rotate(3deg)" : "translateX(-50%) rotate(3deg)" }} />
+                <img src="/stikermobil_3.webp" alt="" className={`absolute z-10 w-36 md:w-44 bottom-[-110px] md:bottom-[-160px] opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700 ${isMobile ? "left-[85%]" : "left-1/2"}`} style={{ transform: isMobile ? "translateX(-50%) translateY(-380%) rotate(3deg)" : "translateX(-50%) rotate(3deg)" }} />
 
                 <AnimatePresence mode="wait">
                   {activeEvent && (
@@ -898,8 +678,8 @@ export default function SeeEvent() {
                 {/* On mobile, stikermobil_4 and stikermobil_1 sit beautifully centered and STATIC right below the description event */}
                 {isMobile && (
                   <div className="w-full mt-10 flex items-center justify-center gap-10 pointer-events-none relative z-30">
-                    <img src="/stikermobil_4.png" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(-60%) translateY(10%) scale(1.4) rotate(-3deg)" }} />
-                    <img src="/stikermobil_1.png" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(40%) translateY(-40%) scale(1.2) rotate(6deg)" }} />
+                    <img src="/stikermobil_4.webp" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(-60%) translateY(10%) scale(1.4) rotate(-3deg)" }} />
+                    <img src="/stikermobil_1.webp" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(40%) translateY(-40%) scale(1.2) rotate(6deg)" }} />
                   </div>
                 )}
               </div>

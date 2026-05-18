@@ -186,7 +186,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
               )}
-              <img src="/logologin.png" alt="Kalceria" className="h-10 object-contain inline-block" draggable={false} />
+              <img src="/logologin.webp" alt="Kalceria" className="h-10 object-contain inline-block" draggable={false} />
             </div>
 
             {/* ── Mode toggle ── */}

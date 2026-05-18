@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const CARD_IMAGES = ["/ge_1.png", "/ge_2.png", "/ge_3.png", "/ge_4.png"];
+const CARD_IMAGES = ["/ge_1.webp", "/ge_2.webp", "/ge_3.webp", "/ge_4.webp"];
 
 function shuffleArray(arr) {
   const a = [...arr];
@@ -286,7 +286,7 @@ export default function FlipGame({ onQuit, onFinish }) {
                   border: "1px solid rgba(0,0,0,0.05)",
                   padding: "15px"
                 }}>
-                   <img src="/favicon.png" alt="Logo" className="w-[80px] h-[80px] opacity-40 object-contain" />
+                   <img src="/favicon.webp" alt="Logo" className="w-[80px] h-[80px] opacity-40 object-contain" />
                 </div>
                 {/* Front (Face Image) */}
                 <div style={{

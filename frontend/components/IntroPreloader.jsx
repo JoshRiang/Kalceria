@@ -528,7 +528,7 @@ export default function IntroPreloader({ onComplete }) {
           }}
         >
           <motion.img
-            src="/hp/logointro_hp.png"
+            src="/hp/logointro_hp.webp"
             alt="KALCERIA"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: showLogo ? 1 : 0, scale: showLogo ? 1 : 0.95 }}
@@ -559,7 +559,7 @@ export default function IntroPreloader({ onComplete }) {
         >
           {/* KALCERIA Logo */}
           <motion.img
-            src="/logointofadein.png"
+            src="/logointofadein.webp"
             alt="KALCERIA"
             initial={{ opacity: 0 }}
             animate={{ opacity: showLogo ? 1 : 0 }}

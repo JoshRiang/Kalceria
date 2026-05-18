@@ -388,7 +388,7 @@ export default function NeedUsForm({ userEmail, userName }) {
                 </button>
 
                 <a href={done.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:scale-105 transition-transform duration-500 flex justify-center">
-                  <img src="/wa_logo.png" alt="WhatsApp" className="w-32 h-32 object-contain mx-auto" />
+                  <img src="/wa_logo.webp" alt="WhatsApp" className="w-32 h-32 object-contain mx-auto" />
                 </a>
               </div>
 
