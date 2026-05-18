@@ -1107,6 +1107,28 @@ export default function LandingPage({ onNavigateAuth }) {
     // Check login status
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
+
+    // Smooth scroll restoration on fallback navigation
+    const scrollTarget = sessionStorage.getItem("landingScrollTarget");
+    const scrollY = sessionStorage.getItem("landingScrollY");
+    if (scrollTarget || scrollY) {
+      sessionStorage.removeItem("landingScrollTarget");
+      sessionStorage.removeItem("landingScrollY");
+      const timer = setTimeout(() => {
+        if (scrollY) {
+          window.scrollTo({
+            top: parseInt(scrollY, 10),
+            behavior: "smooth"
+          });
+        } else {
+          const element = document.getElementById(scrollTarget);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }
+      }, 1000); // Trigger smooth scrolling right as the elegant fade-in completes
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const handleLogout = () => {
@@ -1194,7 +1216,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 2: Events ── */}
-      <section className="relative w-full min-h-[70vh] flex flex-col md:flex-row items-center justify-center md:justify-between overflow-hidden bg-[#050a14] z-20 px-8 md:px-24 py-20 gap-12 md:gap-16">
+      <section id="section-events" className="relative w-full min-h-[70vh] flex flex-col md:flex-row items-center justify-center md:justify-between overflow-hidden bg-[#050a14] z-20 px-8 md:px-24 py-20 gap-12 md:gap-16">
         <StarDust />
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
           <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] rounded-full blur-[100px] bg-[#FF00FF]" />
@@ -1222,7 +1244,10 @@ export default function LandingPage({ onNavigateAuth }) {
           <h2 className="text-center md:text-left text-5xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
             <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={skipAnim} />
           </h2>
-          <Link href="/events">
+          <Link href="/events" onClick={() => {
+            sessionStorage.setItem("landingScrollTarget", "section-events");
+            sessionStorage.setItem("landingScrollY", window.scrollY);
+          }}>
             <button
               className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer"
               style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
@@ -1292,7 +1317,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 3: About Us ── */}
-      <section className="relative w-full h-[70vh] overflow-hidden bg-black flex items-center justify-center border-t border-slate-900 z-30">
+      <section id="section-about" className="relative w-full h-[70vh] overflow-hidden bg-black flex items-center justify-center border-t border-slate-900 z-30">
         <AnimatePresence initial={false} custom={aboutIndex}>
           <motion.div key={aboutIndex} variants={slideVariants} initial="enter" animate="center" exit="exit" className="absolute inset-0 w-full h-full">
             <img src={currentAboutImages[aboutIndex % currentAboutImages.length]} alt="About Us BG" className="w-full h-full object-cover opacity-70 grayscale md:grayscale-0" />
@@ -1308,7 +1333,10 @@ export default function LandingPage({ onNavigateAuth }) {
             <h2 className="text-center md:text-left text-5xl md:text-7xl font-black uppercase tracking-tighter text-white">
               <Typewriter text="ABOUT US" mode="word" delay={3000} skipAnim={skipAnim} />
             </h2>
-            <Link href="/about">
+            <Link href="/about" onClick={() => {
+              sessionStorage.setItem("landingScrollTarget", "section-about");
+              sessionStorage.setItem("landingScrollY", window.scrollY);
+            }}>
               <button
                 className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)]"
                 style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
@@ -1882,7 +1910,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 8: Final Scene / Tokyo Nights ── */}
-      <section className="relative w-full min-h-[75vh] flex flex-col items-center justify-center py-20 z-50 border-t border-slate-900 overflow-hidden bg-black isolation-auto">
+      <section id="section-journey" className="relative w-full min-h-[75vh] flex flex-col items-center justify-center py-20 z-50 border-t border-slate-900 overflow-hidden bg-black isolation-auto">
         {/* Tokyo Night Background - ABSOLUTE BACK */}
         <img src="/bg_tokyo.png" alt="Tokyo Night" className="absolute inset-0 w-full h-full object-cover opacity-50 z-[-2] pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050a14] via-transparent to-[#050a14] z-[-2] pointer-events-none" />
@@ -2025,7 +2053,10 @@ export default function LandingPage({ onNavigateAuth }) {
                 }}
               />
 
-              <Link href="/journey">
+              <Link href="/journey" onClick={() => {
+                sessionStorage.setItem("landingScrollTarget", "section-journey");
+                sessionStorage.setItem("landingScrollY", window.scrollY);
+              }}>
                 <motion.button
                   whileHover={{ 
                     scale: 1.05,
@@ -2063,7 +2094,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 9: The Legacy ── */}
-      <section className="relative w-full aspect-square bg-[#02040a] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
+      <section id="section-minigame" className="relative w-full aspect-square bg-[#02040a] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
         {/* Background Atmosphere - Simplified Astral Divine (Lightweight) */}
         <div className="absolute inset-0 z-0 pointer-events-none">
            {/* Cyan Core Glow */}
@@ -3167,6 +3198,8 @@ function DungeonGate() {
       setShowPopup(true);
       setTimeout(() => setShowPopup(false), 5000);
     } else {
+      sessionStorage.setItem("landingScrollTarget", "section-minigame");
+      sessionStorage.setItem("landingScrollY", window.scrollY);
       // Dramatic Blackout Transition
       setIsNavigating(true);
       setTimeout(() => {

@@ -735,8 +735,8 @@ export default function SeeEvent() {
       <div className="relative w-full bg-[#0B0C10]">
         <RainbowPixels />
         <MicroParticles />
-        <img src="/stikermobil_5.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-65%) rotate(-3deg)" : "rotate(-3deg)" }} />
-        <img src="/stikermobil_2.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-65%) scale(0.8) rotate(6deg)" : "rotate(6deg)" }} />
+        <img src="/stikermobil_5.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) rotate(-3deg)" : "rotate(-3deg)" }} />
+        <img src="/stikermobil_2.png" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) scale(0.8) rotate(6deg)" : "rotate(6deg)" }} />
 
         {/* ─── SECTION 1.5: ATMOSPHERIC BREAK ────────────────────────────────── */}
         <section ref={atmosRef} className="relative w-full py-[60vh] z-20 overflow-hidden">
@@ -860,7 +860,7 @@ export default function SeeEvent() {
                 {!isMobile && (
                   <img src="/stikermobil_1.png" alt="" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
                 )}
-                <img src="/stikermobil_3.png" alt="" className={`absolute z-10 w-36 md:w-44 bottom-[-110px] md:bottom-[-160px] opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700 ${isMobile ? "left-[85%]" : "left-1/2"}`} style={{ transform: isMobile ? "translateX(-50%) translateY(60%) rotate(3deg)" : "translateX(-50%) rotate(3deg)" }} />
+                <img src="/stikermobil_3.png" alt="" className={`absolute z-10 w-36 md:w-44 bottom-[-110px] md:bottom-[-160px] opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700 ${isMobile ? "left-[85%]" : "left-1/2"}`} style={{ transform: isMobile ? "translateX(-50%) translateY(-380%) rotate(3deg)" : "translateX(-50%) rotate(3deg)" }} />
 
                 <AnimatePresence mode="wait">
                   {activeEvent && (
@@ -898,8 +898,8 @@ export default function SeeEvent() {
                 {/* On mobile, stikermobil_4 and stikermobil_1 sit beautifully centered and STATIC right below the description event */}
                 {isMobile && (
                   <div className="w-full mt-10 flex items-center justify-center gap-10 pointer-events-none relative z-30">
-                    <img src="/stikermobil_4.png" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(-60%) translateY(-30%) scale(1.4) rotate(-3deg)" }} />
-                    <img src="/stikermobil_1.png" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(40%) scale(1.2) rotate(6deg)" }} />
+                    <img src="/stikermobil_4.png" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(-60%) translateY(10%) scale(1.4) rotate(-3deg)" }} />
+                    <img src="/stikermobil_1.png" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(40%) translateY(-40%) scale(1.2) rotate(6deg)" }} />
                   </div>
                 )}
               </div>
@@ -911,7 +911,7 @@ export default function SeeEvent() {
         <section className="relative w-full pb-32 pt-12 z-20 pointer-events-none">
           <div className="container mx-auto px-6 md:px-12 pointer-events-auto max-w-4xl">
             <div className="flex justify-center">
-              <motion.div whileHover={{ scale: 1.02 }} className={`relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[320px] w-full max-w-md transition-transform duration-700 ${isMobile ? "translate-y-[-35%]" : ""}`}>
+              <motion.div whileHover={{ scale: 1.02 }} className={`relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[320px] w-full max-w-md transition-transform duration-700 ${isMobile ? "translate-y-[-95%]" : ""}`}>
                 <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white mb-6 text-center">Wanna Join?</h3>
                 <div className="flex-1 flex items-center justify-center">
                    <button onClick={() => setApplyModalOpen(true)} className="relative w-full py-5 font-sans font-black uppercase tracking-tighter text-black bg-white border border-white transition-all hover:bg-white/90 group cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.2)]" style={CLIP}>

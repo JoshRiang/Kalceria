@@ -312,7 +312,7 @@ export default function WelcomeTransition({ username, onComplete }) {
         scale: isExiting ? 1.1 : 1
       }}
       transition={{ duration: 1.2, ease: "easeInOut" }}
-      className={`fixed inset-0 ${isMobile ? "bg-black" : "bg-[#010204]"} z-[9999] overflow-hidden flex flex-col items-center justify-center`}
+      className="fixed inset-0 bg-[#010204] z-[9999] overflow-hidden flex flex-col items-center justify-center"
     >
       {!isMobile && <BackgroundBlobs />}
       <DominoChevrons active={showGears && !isExiting} isMobile={isMobile} />
