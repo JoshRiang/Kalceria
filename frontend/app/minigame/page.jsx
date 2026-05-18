@@ -147,7 +147,7 @@ function DecorativeCard() {
         style={{ width: "100%", height: "100%", position: "relative", transformStyle: "preserve-3d" }}
       >
         <div className="absolute inset-0 bg-white rounded-xl flex items-center justify-center p-2 shadow-xl border border-black/5" style={{ backfaceVisibility: "hidden" }}>
-          <img src="/favicon.png" alt="" className="w-8 h-8 opacity-70 object-contain" />
+          <img src="/favicon.webp" alt="" className="w-8 h-8 opacity-70 object-contain" />
         </div>
         <div className="absolute inset-0 bg-white rounded-xl flex items-center justify-center p-2 shadow-xl border border-black/5" style={{ transform: "rotateY(180deg)", backfaceVisibility: "hidden" }}>
           <span className="font-black text-3xl select-none" style={{ 
@@ -180,6 +180,17 @@ export default function MinigamePage() {
   const [attempt, setAttempt] = useState(1); // 1 = has attempt, 0 = used up
   const [showReset, setShowReset] = useState(false);
   const videoRef = useRef(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -239,7 +250,7 @@ export default function MinigamePage() {
         }}
         className="absolute inset-0 z-0"
       >
-        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/bg_game.png')" }} />
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${isMobile ? '/hp/bg_game_hp.webp' : '/bg_game.webp'})` }} />
         <div className="absolute inset-0 bg-black/10" />
       </motion.div>
 
@@ -286,7 +297,7 @@ export default function MinigamePage() {
               y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
               opacity: { duration: 1.5, delay: 0.5, ease: "easeOut" }
             }}
-            className="text-[4rem] md:text-[9rem] font-black tracking-tighter text-white font-rog whitespace-nowrap"
+            className="text-[7.8rem] md:text-[9rem] font-black tracking-tighter text-white font-rog whitespace-nowrap"
             style={{ textShadow: "0 0 20px rgba(255,255,0,0.6), 0 0 40px rgba(255,255,0,0.3), 0 10px 30px rgba(0,0,0,0.5)" }}
           >
             KALCER'S GAME
@@ -327,7 +338,7 @@ export default function MinigamePage() {
                 transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute top-[40%] left-[35%] pointer-events-none opacity-95 -rotate-[20deg] z-[50]"
               >
-                <img src="/hand_point.png" alt="Point" className="w-[6rem] h-[6rem] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
+                <img src="/hand_point.webp" alt="Point" className="w-[6rem] h-[6rem] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
               </motion.div>
             )}
           </div>
@@ -408,10 +419,10 @@ export default function MinigamePage() {
               <div className="relative">
                 {/* Floating ge images around the card - More Spread & Smaller */}
                 {[
-                  { src: "/ge_1.png", pos: "-top-24 -left-40", rot: -15, delay: 0 },
-                  { src: "/ge_2.png", pos: "-top-20 -right-36", rot: 20, delay: 0.5 },
-                  { src: "/ge_3.png", pos: "bottom-[5%] -left-48", rot: 10, delay: 1 },
-                  { src: "/ge_4.png", pos: "bottom-[7%] -right-44", rot: -10, delay: 1.5 },
+                  { src: "/ge_1.webp", pos: isMobile ? "-top-12 -left-26" : "-top-24 -left-40", rot: -15, delay: 0 },
+                  { src: "/ge_2.webp", pos: isMobile ? "-top-10 -right-24" : "-top-20 -right-36", rot: 20, delay: 0.5 },
+                  { src: "/ge_3.webp", pos: isMobile ? "bottom-[-16%] -left-26" : "bottom-[5%] -left-48", rot: 10, delay: 1 },
+                  { src: "/ge_4.webp", pos: isMobile ? "bottom-[-14%] -right-24" : "bottom-[7%] -right-44", rot: -10, delay: 1.5 },
                 ].map((ge, idx) => (
                   <motion.img
                     key={idx}
@@ -430,7 +441,7 @@ export default function MinigamePage() {
                       y: { duration: 4 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay },
                       rotate: { duration: 5 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay }
                     }}
-                    className={`absolute ${ge.pos} w-24 md:w-36 h-auto object-contain z-20 drop-shadow-2xl pointer-events-none`}
+                    className={`absolute ${ge.pos} ${isMobile ? "w-20" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-2xl pointer-events-none`}
                   />
                 ))}
 

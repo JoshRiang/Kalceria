@@ -408,7 +408,7 @@ function JITActionModal({ title, description, onClose, onConfirm }) {
 
 function ForzaCard({ event, onEdit, onDelete }) {
   const [hover, setHover] = useState(false);
-  const bg = event.displayPhotoUrl || "/event_1.jpeg";
+  const bg = event.displayPhotoUrl || "/event_1.webp";
   return (
     <motion.div
       onHoverStart={() => setHover(true)}
@@ -538,7 +538,7 @@ function EventsPanel({ initialEvents = [], onRefresh }) {
           <form onSubmit={handleSave} className="flex flex-col gap-3">
             {[
               { k: "title", label: "Title", ph: "Event title" },
-              { k: "displayPhotoUrl", label: "Photo URL", ph: "/event_1.jpeg" },
+              { k: "displayPhotoUrl", label: "Photo URL", ph: "/event_1.webp" },
               { k: "location", label: "Location", ph: "Jakarta" },
             ].map(({ k, label, ph }) => (
               <div key={k}>
@@ -2792,7 +2792,7 @@ export default function AdminDashboard() {
       {/* Top nav */}
       <header className="relative z-10 border-b border-slate-900 px-6 md:px-12 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <img src="/logologin.png" alt="Kalceria" className="h-7 object-contain" draggable={false} />
+          <img src="/logologin.webp" alt="Kalceria" className="h-7 object-contain" draggable={false} />
           <div className="h-4 w-px bg-white/20 ml-2" />
           <div className="font-sans text-[11px] text-white font-medium underline tracking-widest opacity-90">
             {wibTime}

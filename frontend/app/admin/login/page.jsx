@@ -115,7 +115,7 @@ export default function AdminLoginPage() {
 
             {/* Logo */}
             <div className="text-center mb-10">
-              <img src="/logologin.png" alt="Kalceria" className="h-8 object-contain inline-block mb-3" draggable={false} />
+              <img src="/logologin.webp" alt="Kalceria" className="h-8 object-contain inline-block mb-3" draggable={false} />
             </div>
 
             <div className="mb-8">

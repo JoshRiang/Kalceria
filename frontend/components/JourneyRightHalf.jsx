@@ -7,8 +7,11 @@ export function JourneySlider({ images, className }) {
   const trackWidth = `${count * 100}%`;
   const itemWidth = `${100 / count}%`;
 
+  const hasMaxWidth = className && className.includes("max-w-");
+  const defaultClasses = `relative w-full aspect-square ${hasMaxWidth ? "" : "max-w-[400px]"}`;
+
   return (
-    <div className={`relative w-full max-w-[400px] aspect-square ${className || ""}`}>
+    <div className={`${defaultClasses} ${className || ""}`}>
       <div className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-[0_0_60px_rgba(255,255,255,0.1)] bg-black/50 backdrop-blur-sm z-20">
         <div className={`absolute inset-0 flex ${sliderClass}`} style={{ width: trackWidth }}>
           {images.map((src, i) => (
@@ -21,8 +24,11 @@ export function JourneySlider({ images, className }) {
 }
 
 export function JourneyDescriptionBox({ description, delay = 0, className }) {
+  const hasMaxWidth = className && className.includes("max-w-");
+  const defaultClasses = `relative w-full p-6 flex items-center justify-center overflow-hidden rounded-[2rem] ${hasMaxWidth ? "" : "max-w-[400px]"}`;
+
   return (
-    <div className={`relative w-full max-w-[400px] p-6 flex items-center justify-center overflow-hidden rounded-[2rem] ${className || ""}`}>
+    <div className={`${defaultClasses} ${className || ""}`}>
       {/* Dynamic Blobs */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
         <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-black rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />

@@ -4,16 +4,7 @@ import { motion } from "framer-motion";
 import { usePhoenixAurora } from "@/hooks/usePhoenixAurora";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// FULL TIMER-DRIVEN TIMELINE (no isBackendReady dependency):
-//
-//  t = 0.0s  → Golden spiral threads emerge from left edge
-//  t = 1.0s  → KALCERIA logo fades in
-//  t = 2.5s  → Subtitle + Gears fade in (threads still flowing)
-//  t = 5.5s  → Gears have shown for 3s → Laser grid begins (FILL phase)
-//  t = 7.5s  → HOLD + epilepsy flicker (0.5s)
-//  t = 8.0s  → PWM DRAIN blackout (1.0s)
-//  t = 9.0s  → Pure black hold (0.2s)
-//  t = 9.2s  → onComplete()
+// DYNAMIC MERGED PRELOADER (Desktop = FinalJosh branch, Mobile = Obsidian Black current logic)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // ─── GearShape ───────────────────────────────────────────────────────────────
@@ -139,7 +130,7 @@ const LASER_PALETTE = [
   ...Array(10).fill("#C0C0C0"),
 ];
 
-function LaserGrid({ active }) {
+function LaserGrid({ active, bgColor = "#050a14" }) {
   const canvasRef = useRef(null);
   const rafRef    = useRef(null);
 
@@ -165,11 +156,6 @@ function LaserGrid({ active }) {
       };
     });
 
-    // Phases (ms from laser activation):
-    // 0–2000   : FILL
-    // 2000–2500: HOLD + epilepsy
-    // 2500–3500: PWM DRAIN
-    // 3500–3700: BLACK
     const FILL_END  = 2000;
     const HOLD_END  = 2500;
     const DRAIN_END = 3500;
@@ -182,7 +168,7 @@ function LaserGrid({ active }) {
       const el = ts - start;
 
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "#050a14";
+      ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, W, H);
 
       for (const ln of lines) {
@@ -191,14 +177,13 @@ function LaserGrid({ active }) {
         if (el < FILL_END) {
           if (el >= ln.delay) alpha = Math.min((el - ln.delay) / 300, 1) * 0.9;
         } else if (el < HOLD_END) {
-          alpha = 0.9 * (0.72 + Math.random() * 0.28); // flicker
+          alpha = 0.9 * (0.72 + Math.random() * 0.28);
         } else if (el < DRAIN_END) {
           const drainEl = el - HOLD_END;
           alpha = drainEl < ln.drainDelay
             ? 0.9
             : Math.max(0, 0.9 - (drainEl - ln.drainDelay) / 250);
         }
-        // else: alpha stays 0 (black)
 
         if (alpha <= 0) continue;
         ctx.save();
@@ -218,14 +203,14 @@ function LaserGrid({ active }) {
         rafRef.current = requestAnimationFrame(draw);
       } else {
         ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = "#050a14";
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, W, H);
       }
     };
 
     rafRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [active]);
+  }, [active, bgColor]);
 
   return (
     <canvas
@@ -296,7 +281,7 @@ function WakingUpText() {
 }
 
 // ─── Tiled Video Canvas (MCU Optimization) ─────────────────────────
-function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
+function MCUVideoGridCanvas({ active }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -304,7 +289,6 @@ function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    // Set high-res canvas
     const ctx = canvas.getContext("2d");
     const updateSize = () => {
       canvas.width = window.innerWidth;
@@ -329,12 +313,9 @@ function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
     const rows = window.innerWidth > 768 ? 6 : 7;
     const totalCells = cols * rows;
 
-    // Randomize initial assignments
     const cellAssignments = Array.from({ length: totalCells }).map(() => Math.floor(Math.random() * videos.length));
 
-    // Dynamic MCU flip effect
     const switchInterval = setInterval(() => {
-      // Flip up to 6 cells every 150ms
       const flips = Math.floor(Math.random() * 6) + 1;
       for (let i = 0; i < flips; i++) {
         const cellIdx = Math.floor(Math.random() * totalCells);
@@ -354,17 +335,14 @@ function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           let v = videos[cellAssignments[cellIdx]];
-          // Fallback if the assigned video is not ready (prevents empty slots)
           if (!v || v.readyState < 2) {
             v = videos.find(vid => vid && vid.readyState >= 2);
           }
 
-          // Draw video scaled down into cell if it has enough data
           if (v) {
             ctx.drawImage(v, c * cellW, r * cellH, cellW, cellH);
           }
           
-          // Draw border
           ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
           ctx.lineWidth = 1;
           ctx.strokeRect(c * cellW, r * cellH, cellW, cellH);
@@ -395,163 +373,213 @@ function MCUVideoGridCanvas({ active, colorMode = "bw" }) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// IntroPreloader — fully timer-driven, no isBackendReady
+// IntroPreloader — Dynamic desktop/mobile hybrid
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function IntroPreloader({ onComplete }) {
-  const [showLogo,     setShowLogo]     = useState(false);
-  const [showSubtitle, setShowSubtitle] = useState(false);
-  const [showGears,    setShowGears]    = useState(false);
-  const [laserActive,  setLaserActive]  = useState(false);
-  const [done,         setDone]         = useState(false);
-  const [backendReady, setBackendReady] = useState(false);
+  const [mounted,       setMounted]      = useState(false);
+  const [isMobile,      setIsMobile]     = useState(false);
+  const [showLogo,      setShowLogo]     = useState(false);
+  const [showSubtitle,  setShowSubtitle] = useState(false);
+  const [showGears,     setShowGears]    = useState(false);
+  const [laserActive,   setLaserActive]  = useState(false);
+  const [done,          setDone]         = useState(false);
 
   const threadsCanvasRef = useRef(null);
-  usePhoenixAurora(threadsCanvasRef, !done);
+  usePhoenixAurora(threadsCanvasRef, mounted && !done && !isMobile, 9500);
 
-  // Ping backend health
+  // Responsive device check & mount indicator
   useEffect(() => {
-    let isMounted = true;
-    const checkBackend = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-        const res = await fetch(`${apiUrl}/health`);
-        if (res.ok) {
-          if (isMounted) setBackendReady(true);
-        } else {
-          if (isMounted) setTimeout(checkBackend, 2000);
-        }
-      } catch (err) {
-        if (isMounted) setTimeout(checkBackend, 2000);
-      }
+    setIsMobile(window.innerWidth < 768);
+    setMounted(true);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
     };
-    checkBackend();
-    return () => { isMounted = false; };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Hybrid Timelines
   useEffect(() => {
-    // t = 1.0s → logo
-    const t1 = setTimeout(() => setShowLogo(true), 1000);
+    if (!mounted) return;
 
-    // t = 2.5s → subtitle + gears + MCU video collage
-    const t2 = setTimeout(() => {
-      setShowSubtitle(true);
-      setShowGears(true);
-    }, 2500);
+    let t1, t2, t3, t4;
 
-    let t3, t4;
+    if (isMobile) {
+      // ── MOBILE LOGIC (Original timing + Obsidian Black) ──
+      // t = 0.5s → start logo fade in
+      t1 = setTimeout(() => setShowLogo(true), 500);
 
-    // t = 9.5s → exactly 7s after subtitle appears, fire lasers (ignoring backend status)
-    const fireLasers = () => {
-      setLaserActive(true);
-      // t = 9.5 + 3.9 = 13.4s (from start) → onComplete
-      t4 = setTimeout(() => {
-        setDone(true);
-        onComplete?.();
-      }, 3900); // 3.9s after laser fires
-    };
+      // t = 3.0s → start logo fade out (completely gone by t = 4.0s)
+      t2 = setTimeout(() => {
+        setShowLogo(false);
+      }, 3000);
 
-    t3 = setTimeout(() => {
-      fireLasers();
-    }, 9500);
+      // t = 4.0s → Fire lasers
+      t3 = setTimeout(() => {
+        setLaserActive(true);
+        t4 = setTimeout(() => {
+          setDone(true);
+          onComplete?.();
+        }, 3900); // 3.9s after laser fires (complete at t = 7.9s)
+      }, 4000);
+
+    } else {
+      // ── DESKTOP LOGIC (Fully matching the FinalJosh branch) ──
+      // t = 1.0s → logo fades in
+      t1 = setTimeout(() => setShowLogo(true), 1000);
+
+      // t = 2.5s → subtitle + gears + MCU video collage fade in
+      t2 = setTimeout(() => {
+        setShowSubtitle(true);
+        setShowGears(true);
+      }, 2500);
+
+      // t = 9.5s → fire lasers (exactly 7.0s after subtitle/gears appear)
+      t3 = setTimeout(() => {
+        setLaserActive(true);
+        t4 = setTimeout(() => {
+          setDone(true);
+          onComplete?.();
+        }, 3900); // 3.9s after laser fires (complete at t = 13.4s)
+      }, 9500);
+    }
 
     return () => { 
       clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4);
     };
-  }, [onComplete]);
+  }, [mounted, isMobile, onComplete]);
 
-  if (done) return null;
+  // Prevent flash of plain content during hydration
+  if (!mounted || done) return null;
 
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "#050a14",
+        background: "#050a14", // Deep Prussian Navy for both desktop and mobile
         zIndex: 9999,
         overflow: "hidden",
         userSelect: "none",
       }}
     >
-      {/* ── Background Videos (MCU-Style Canvas Render) ── */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        {/* Base Layer: Normal B&W Collage outside the K shape */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: showSubtitle ? 0.15 : 0, scale: showSubtitle ? 1 : 0.98 }}
-          transition={{ duration: 3, ease: "easeInOut" }}
-          className="absolute inset-0"
-        >
-          <MCUVideoGridCanvas active={true} />
-        </motion.div>
+      {/* ── Background Videos (MCU-Style Canvas Render) — Desktop Only ── */}
+      {!isMobile && (
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          {/* Base Layer: Normal B&W Collage outside the K shape */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: showSubtitle ? 0.15 : 0, scale: showSubtitle ? 1 : 0.98 }}
+            transition={{ duration: 3, ease: "easeInOut" }}
+            className="absolute inset-0"
+          >
+            <MCUVideoGridCanvas active={true} />
+          </motion.div>
 
-        {/* Top Layer: Peach-Magenta Gradient masked strictly to the K shape */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: showSubtitle ? 0.35 : 0, scale: showSubtitle ? 1 : 0.98 }}
-          transition={{ duration: 3, ease: "easeInOut" }}
-          className="absolute inset-0"
-          style={{ clipPath: "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)" }}
-        >
-          <MCUVideoGridCanvas active={true} />
-          {/* Gradient Tint Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-color opacity-80" />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-overlay opacity-40" />
-        </motion.div>
-      </div>
+          {/* Top Layer: Peach-Magenta Gradient masked strictly to the K shape */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: showSubtitle ? 0.35 : 0, scale: showSubtitle ? 1 : 0.98 }}
+            transition={{ duration: 3, ease: "easeInOut" }}
+            className="absolute inset-0"
+            style={{ clipPath: "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)" }}
+          >
+            <MCUVideoGridCanvas active={true} />
+            {/* Gradient Tint Overlays */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-color opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-overlay opacity-40" />
+          </motion.div>
+        </div>
+      )}
 
-      {/* ── Golden spiral threads canvas ── */}
-      <canvas
-        ref={threadsCanvasRef}
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-          zIndex: 10,
-          mixBlendMode: "screen",
-        }}
-      />
+      {/* ── Golden spiral threads canvas — Desktop Only ── */}
+      {!isMobile && (
+        <canvas
+          ref={threadsCanvasRef}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 10,
+            mixBlendMode: "screen",
+          }}
+        />
+      )}
 
       {/* ── Laser grid (PWM exit) ── */}
-      <LaserGrid active={laserActive} />
+      <LaserGrid active={laserActive} bgColor="#050a14" />
 
-      {/* ── Central content — strictly fixed, no layout shift ── */}
-      <div
-        style={{
-          position: "absolute",
-          top: "35%", // Fixed top position to prevent vertical shifting
-          left: "50%",
-          transform: "translateX(-50%)", // Only center horizontally
-          zIndex: 20,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          width: "400px", // Slightly wider to ensure no wrapping
-        }}
-      >
-        {/* KALCERIA Logo */}
-        <motion.img
-          src="/logointofadein.png"
-          alt="KALCERIA"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showLogo ? 1 : 0 }}
-          transition={{ duration: 1.4, ease: "easeInOut" }}
-          style={{ width: "280px", pointerEvents: "none", display: "block", flexShrink: 0 }}
-          draggable={false}
-        />
-
-        {/* Subtitle + Gears */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showSubtitle ? 1 : 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          style={{ marginTop: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}
+      {/* ── Central content (Dynamic Layout) ── */}
+      {isMobile ? (
+        // Mobile Layout (Centered Logo Only)
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 20,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            width: "90%",
+          }}
         >
-          <StaticGears visible={showGears} />
-          {showGears && !laserActive && <WakingUpText />}
-        </motion.div>
-      </div>
+          <motion.img
+            src="/hp/logointro_hp.webp"
+            alt="KALCERIA"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: showLogo ? 1 : 0, scale: showLogo ? 1 : 0.95 }}
+            transition={{ duration: 1.0, ease: "easeInOut" }}
+            style={{ 
+              width: "310px",
+              pointerEvents: "none", 
+              display: "block", 
+              filter: "drop-shadow(0 0 35px rgba(255, 255, 255, 0.12))",
+            }}
+            draggable={false}
+          />
+        </div>
+      ) : (
+        // Desktop Layout (From FinalJosh Branch)
+        <div
+          style={{
+            position: "absolute",
+            top: "35%", // Fixed top position to prevent vertical shifting
+            left: "50%",
+            transform: "translateX(-50%)", // Center horizontally
+            zIndex: 20,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            width: "400px",
+          }}
+        >
+          {/* KALCERIA Logo */}
+          <motion.img
+            src="/logointofadein.webp"
+            alt="KALCERIA"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: showLogo ? 1 : 0 }}
+            transition={{ duration: 1.4, ease: "easeInOut" }}
+            style={{ width: "280px", pointerEvents: "none", display: "block", flexShrink: 0 }}
+            draggable={false}
+          />
+
+          {/* Subtitle + Gears */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: showSubtitle ? 1 : 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            style={{ marginTop: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}
+          >
+            <StaticGears visible={showGears} />
+            {showGears && !laserActive && <WakingUpText />}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 // Colors: white, magenta, gold — per thread.
 // On reaching right edge: thread completely dissolves (full fade to 0).
 
-export function usePhoenixAurora(canvasRef, active) {
+export function usePhoenixAurora(canvasRef, active, duration = 5000) {
   const rafRef = useRef(null);
 
   useEffect(() => {
@@ -22,9 +22,9 @@ export function usePhoenixAurora(canvasRef, active) {
     resize();
     window.addEventListener("resize", resize);
 
-    const TOTAL_MS       = 5000;
+    const TOTAL_MS       = duration;
     const FADE_IN_MS     = 600;
-    const FADE_OUT_START = 3600;
+    const FADE_OUT_START = duration - 1400;
 
     function globalEnv(el) {
       if (el < FADE_IN_MS)     return el / FADE_IN_MS;
@@ -219,5 +219,5 @@ export function usePhoenixAurora(canvasRef, active) {
       startTs = null;
       lastTs  = null;
     };
-  }, [active]);
+  }, [active, duration]);
 }

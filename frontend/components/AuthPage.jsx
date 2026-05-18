@@ -61,8 +61,23 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const [otpEmail, setOtpEmail] = useState("");  // email pending OTP verification
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileVideo, setMobileVideo] = useState("/hp/vid_login_hp.mp4");
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { 
+    setMounted(true); 
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    const vids = ["/hp/vid_login_hp.mp4", "/hp/vid_login_hp2.mp4", "/hp/vid_login_hp3.mp4"];
+    const randomVid = vids[Math.floor(Math.random() * vids.length)];
+    setMobileVideo(randomVid);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -207,8 +222,15 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
       className="fixed inset-0 z-[100] overflow-hidden"
     >
       {/* ── Video Background ── */}
-      <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover -z-10">
-        <source src="/videologin_regris.mp4" type="video/mp4" />
+      <video 
+        key={isMobile ? mobileVideo : "/videologin_regris.mp4"}
+        autoPlay 
+        loop 
+        muted 
+        playsInline 
+        className={`absolute inset-0 w-full h-full object-cover -z-10 ${isMobile ? "filter grayscale contrast-125 brightness-75" : ""}`}
+      >
+        <source src={isMobile ? mobileVideo : "/videologin_regris.mp4"} type="video/mp4" />
       </video>
 
       {/* ── Dark overlay ── */}
@@ -262,7 +284,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
               )}
-              <img src="/logologin.png" alt="Kalceria" className="h-10 object-contain inline-block" draggable={false} />
+              <img src="/logologin.webp" alt="Kalceria" className="h-10 object-contain inline-block" draggable={false} />
             </div>
 
             {/* ── Mode toggle (hidden during OTP verify) ── */}

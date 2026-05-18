@@ -240,16 +240,16 @@ export default function ServiceRequestModal({ onClose, userName }) {
   const renderGrid = (hourList) => {
     const days = getDays();
     return (
-      <div className="grid grid-cols-[25px_repeat(7,1fr)] gap-1">
+      <div className="grid grid-cols-[14px_repeat(7,1fr)] xs:grid-cols-[18px_repeat(7,1fr)] sm:grid-cols-[25px_repeat(7,1fr)] gap-0.5 sm:gap-1">
         <div />
         {days.map((d, i) => (
-          <div key={i} className={`text-center font-sans text-[7px] font-black uppercase ${d.isMonday ? 'text-red-500' : 'text-white'}`}>
+          <div key={i} className={`text-center font-sans text-[5px] xs:text-[6px] sm:text-[7px] font-black uppercase ${d.isMonday ? 'text-red-500' : 'text-white'} leading-tight`}>
             {d.label}<br/>{d.dayNum}
           </div>
         ))}
         {hourList.map((h) => (
           <React.Fragment key={h}>
-            <div className="text-[7px] font-black text-white flex items-center justify-end pr-1.5 font-sans leading-none">
+            <div className="text-[5px] xs:text-[6px] sm:text-[7px] font-black text-white flex items-center justify-end pr-0.5 xs:pr-1 sm:pr-1.5 font-sans leading-none">
               {h === 24 ? "00" : h.toString().padStart(2, '0')}
             </div>
             {days.map((d, i) => {
@@ -310,7 +310,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
         animate={{ opacity: 1, scale: 0.9, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-        className={`relative z-10 w-full ${step === 1 ? "max-w-[1320px]" : "max-w-[500px]"}`}
+        className={`relative z-10 w-full ${step === 1 ? "max-w-[95%] xl:max-w-[1320px]" : "max-w-[95%] sm:max-w-[500px]"}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Animated Conic Glow Overlay */}
@@ -327,7 +327,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
         </div>
 
         {/* Main Card Container */}
-        <div className="relative z-10 w-full bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[30px] overflow-hidden flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.8)]">
+        <div className="relative z-10 w-full max-h-[90vh] overflow-y-auto custom-scrollbar bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[30px] flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.8)]">
           
           {/* Internal Cinematic Blobs (Register Form Style) */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-60">
@@ -475,9 +475,9 @@ export default function ServiceRequestModal({ onClose, userName }) {
                   className="flex flex-col gap-4 items-center origin-top"
                 >
                   <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full items-center">
-                    <div className="flex gap-6 items-start justify-center">
+                    <div className="flex flex-col xl:flex-row gap-6 items-center xl:items-start justify-center w-full">
                       {/* Column 1: Intel Hub */}
-                      <div className="w-[384px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] p-10 shadow-2xl relative overflow-hidden">
+                      <div className="w-full max-w-[384px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-[24px] md:rounded-[32px] p-6 md:p-10 shadow-2xl relative overflow-hidden">
                         {/* Internal Red-Orange Atmospheric Blob */}
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/10 blur-[40px] rounded-full pointer-events-none" />
                         <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-red-500/10 blur-[40px] rounded-full pointer-events-none" />
@@ -493,31 +493,31 @@ export default function ServiceRequestModal({ onClose, userName }) {
                       </div>
                       
                       {/* Temporal Matrix Section - ALIGNED TO HUB TOP */}
-                      <div className="flex flex-col gap-6">
-                        <div className="flex gap-4">
+                      <div className="flex flex-col gap-4 md:gap-6 w-full max-w-[736px] items-center">
+                        <div className="flex flex-row gap-2 sm:gap-4 w-full justify-center items-start">
                           {/* Shift 1 */}
-                          <div className="w-[360px] bg-white/5 border border-white/10 rounded-[28px] p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
+                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-white/5 border border-white/10 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
                             {/* Internal Red-Orange Atmospheric Blob */}
                             <div className="absolute -top-5 -left-5 w-24 h-24 bg-red-500/10 blur-[30px] rounded-full pointer-events-none" />
                             
                             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-white/20 to-transparent opacity-20" />
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[13px] font-bold mb-4 tracking-widest uppercase">09.00 - 16.00</p>
-                              <div className="overflow-y-auto max-h-[320px] pr-2 custom-scrollbar">
+                              <p className="font-sans text-white text-[9px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">09.00 - 16.00</p>
+                              <div className="overflow-y-auto max-h-[180px] sm:max-h-[320px] pr-1 sm:pr-2 custom-scrollbar">
                                 {mounted ? renderGrid(hoursA) : null}
                               </div>
                             </div>
                           </div>
 
                           {/* Shift 2 */}
-                          <div className="w-[360px] bg-white/5 border border-white/10 rounded-[28px] p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
+                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-white/5 border border-white/10 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
                             {/* Internal Red-Orange Atmospheric Blob */}
                             <div className="absolute -bottom-5 -right-5 w-24 h-24 bg-orange-500/10 blur-[30px] rounded-full pointer-events-none" />
                             
                             <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-white/20 to-transparent opacity-20" />
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[13px] font-bold mb-4 tracking-widest uppercase">17.00 - 00.00</p>
-                              <div className="overflow-y-auto max-h-[320px] pr-2 custom-scrollbar">
+                              <p className="font-sans text-white text-[9px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">17.00 - 00.00</p>
+                              <div className="overflow-y-auto max-h-[180px] sm:max-h-[320px] pr-1 sm:pr-2 custom-scrollbar">
                                 {mounted ? renderGrid(hoursB) : null}
                               </div>
                             </div>
@@ -525,28 +525,28 @@ export default function ServiceRequestModal({ onClose, userName }) {
                         </div>
 
                         {/* Extended Legend & Counter */}
-                        <div className="flex items-center justify-between gap-5 text-[11px] font-black text-white font-sans uppercase tracking-[0.1em] bg-white/5 px-10 py-6 rounded-full border border-white/10 shadow-2xl w-full mt-4">
-                          <div className="flex items-center gap-8">
-                            <div className="flex items-center gap-4">
-                              <div className="w-3 h-3 bg-emerald-500 border border-emerald-400 rounded-[4px]" /> 
+                        <div className="flex flex-row items-center justify-between gap-2 sm:gap-5 text-[9px] sm:text-[11px] font-black text-white font-sans uppercase tracking-[0.1em] bg-white/5 px-4 sm:px-10 py-3 sm:py-6 rounded-full border border-white/10 shadow-2xl w-full mt-2 sm:mt-4">
+                          <div className="flex flex-row items-center gap-2 sm:gap-8 flex-wrap">
+                            <div className="flex items-center gap-1 sm:gap-4">
+                              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-emerald-500 border border-emerald-400 rounded-[2px] sm:rounded-[4px]" /> 
                               READY
                             </div>
-                            <div className="flex items-center gap-4">
-                              <div className="w-3 h-3 bg-red-500 border border-red-400 rounded-[4px]" /> 
+                            <div className="flex items-center gap-1 sm:gap-4">
+                              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 border border-red-400 rounded-[2px] sm:rounded-[4px]" /> 
                               BUSY
                             </div>
-                            <div className="flex items-center gap-4">
-                              <div className="w-3 h-3 bg-[#FF00FF] border border-[#FF00FF] shadow-[0_0_15px_#FF00FF] rounded-[4px]" /> 
+                            <div className="flex items-center gap-1 sm:gap-4">
+                              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-[#FF00FF] border border-[#FF00FF] shadow-[0_0_15px_#FF00FF] rounded-[2px] sm:rounded-[4px]" /> 
                               LOCK
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-5">
-                            <div className="w-[1px] h-5 bg-white/20" />
-                            <span className="text-white font-sans italic normal-case tracking-normal text-[12px] opacity-100">Week {weekOffset + 1}</span>
-                            <div className="flex gap-2">
-                              <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg></button>
-                              <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg></button>
+                          <div className="flex flex-row items-center gap-2 sm:gap-5">
+                            <div className="w-[1px] h-5 bg-white/20 hidden sm:block" />
+                            <span className="text-white font-sans italic normal-case tracking-normal text-[10px] sm:text-[12px] opacity-100 whitespace-nowrap">Week {weekOffset + 1}</span>
+                            <div className="flex gap-1">
+                              <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"><svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg></button>
+                              <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"><svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg></button>
                             </div>
                           </div>
                         </div>
@@ -635,7 +635,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
                       className="relative z-10 hover:scale-110 transition-transform duration-500"
                     >
                       <img 
-                        src="/wa_logo.png" 
+                        src="/wa_logo.webp" 
                         alt="WhatsApp" 
                         className="w-40 h-40 object-contain" 
                       />
