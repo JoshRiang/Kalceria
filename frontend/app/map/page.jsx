@@ -180,7 +180,7 @@ export default function MapPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isGlitching, setIsGlitching] = useState(false);
   const [showPirate, setShowPirate] = useState(false);
-  const [showStartup, setShowStartup] = useState(true);
+  const [showStartup, setShowStartup] = useState(false);
   const [startupStep, setStartupStep] = useState(0);
   const [startupProgress, setStartupProgress] = useState(0);
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -277,6 +277,14 @@ export default function MapPage() {
 
   // Startup Sequence Logic
   useEffect(() => {
+    if (sessionStorage.getItem("mapIntroSeen") === "true") {
+      setShowStartup(false);
+      return;
+    }
+    
+    setShowStartup(true);
+    sessionStorage.setItem("mapIntroSeen", "true");
+
     const steps = [
       "INITIALIZING ENCRYPTED UPLINK...",
       "SYNCING OPERATIVE SIGNALS [BINTARO SECTOR]...",
@@ -701,6 +709,9 @@ export default function MapPage() {
       >
         <Link
           href="/"
+          onClick={() => {
+            sessionStorage.setItem("landingScrollTarget", "section-map");
+          }}
           aria-label="Back to home"
           className="relative pointer-events-auto inline-flex items-center justify-center gap-2 min-h-[44px] px-5 bg-[#0a0f1a]/50 border border-white/[0.12] text-[11px] font-semibold tracking-wider text-white/60 hover:text-white transition-all rounded-xl shadow-lg backdrop-blur-xl hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/30 outline-none overflow-hidden"
         >
@@ -1715,23 +1726,10 @@ export default function MapPage() {
                 transition={{ duration: 0.8, ease: "circOut" }}
                 className="flex flex-col items-center mb-12"
               >
-                <div className="flex items-center gap-4 mb-2">
-                  <div
-                    className={`w-12 h-[3px] transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-800" : "bg-[#ffffff]"}`}
-                  />
-                  <span
-                    className={`text-[12px] font-black uppercase tracking-[0.6em] italic transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-800" : "text-gray-200"}`}
-                  >
-                    Your network onload
-                  </span>
-                  <div
-                    className={`w-12 h-[3px] transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-800" : "bg-[#ffffff]"}`}
-                  />
-                </div>
                 <h1
                   className={`text-8xl font-sans font-black italic tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-900" : "text-white"}`}
                 >
-                  Kalcerians Map<span className="text-orange-500">.</span>
+                  Kalcerians Map
                 </h1>
               </motion.div>
 
@@ -1776,18 +1774,9 @@ export default function MapPage() {
                 </div>
 
                 {/* Technical Footnote */}
-                <div className="mt-8 flex justify-between items-start opacity-40">
-                  <div className="flex flex-col gap-2">
-                    <div
-                      className={`flex gap-4 text-[10px] font-black uppercase italic tracking-widest transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-900" : "text-white"}`}
-                    >
-                      <span>Syncing Signals</span>
-                      <span>//</span>
-                      <span>Finding others</span>
-                    </div>
-                  </div>
+                <div className="mt-8 flex justify-end items-start opacity-40">
                   <div
-                    className={`text-[10px] font-mono text-right space-y-1 transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-900" : "text-white"}`}
+                    className={`text-[10px] font-mono text-right space-y-1 italic transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-900" : "text-white"}`}
                   >
                     <p>KALCER RADAR</p>
                     <p>ENCRYPTED STABLE</p>

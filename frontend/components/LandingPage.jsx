@@ -1741,7 +1741,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 7: Big Square Concept ── */}
-      <section className="relative w-full aspect-square bg-[#0c1528] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
+      <section id="section-map" className="relative w-full aspect-square bg-[#0c1528] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
         {/* Background Blobs (Cyan, Magenta, Gold) */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
           <motion.div 
@@ -1790,7 +1790,11 @@ export default function LandingPage({ onNavigateAuth }) {
 
           {/* Find The Others Button */}
           <motion.button
-            onClick={() => (window.location.href = "/map")}
+            onClick={() => {
+              sessionStorage.setItem("landingScrollTarget", "section-map");
+              sessionStorage.setItem("landingScrollY", window.scrollY);
+              window.location.href = "/map";
+            }}
             whileHover={{ 
               scale: 1.05,
               boxShadow: "0 0 40px rgba(255,255,255,0.3), inset 0 0 20px rgba(255,255,255,0.2)",
