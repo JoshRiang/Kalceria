@@ -1344,7 +1344,7 @@ export default function MapPage() {
 
       <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none select-none flex flex-col items-center ">
         <img
-          src="/logologin.png"
+          src="/logologin.webp"
           alt="Kalceria"
           className="h-[48px] w-auto object-contain opacity-80"
           draggable={false}
