@@ -8,6 +8,8 @@ import { userPopup } from "./map/UserPopup";
 import { hqPopup } from "./map/HqPopup";
 import { eventPopup } from "./map/EventPopup";
 
+import "leaflet/dist/leaflet.css";
+
 // Constants & Helpers
 const DEFAULT_CENTER = [-6.2715, 106.7135];
 const avatar = (seed) =>
@@ -27,14 +29,6 @@ async function loadLeaflet() {
   const L = Leaflet.default || Leaflet;
   window.L = L;
   await import("leaflet.markercluster");
-  // Ensure styles are loaded
-  if (!document.getElementById("leaflet-css")) {
-    const link = document.createElement("link");
-    link.id = "leaflet-css";
-    link.rel = "stylesheet";
-    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-    document.head.appendChild(link);
-  }
   return L;
 }
 
@@ -44,12 +38,20 @@ export default function SnapMap({
   hqPoint,
   onMapReady,
   focusUserId,
+  isMapDark = false,
 }) {
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
   const layerRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const markerRefs = useRef({});
   const [isReady, setIsReady] = useState(false);
+
+  // Force tile container size invalidation on theme class transitions
+  useEffect(() => {
+    if (!mapRef.current) return;
+    mapRef.current.invalidateSize();
+  }, [isMapDark]);
 
   // Handle programmatic focus/popup opening
   useEffect(() => {
@@ -78,13 +80,14 @@ export default function SnapMap({
         zoom: 13,
       });
 
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png",
+      const tileLayer = L.tileLayer(
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
           maxZoom: 19,
-          subdomains: "abcd",
         },
       ).addTo(map);
+
+      tileLayerRef.current = tileLayer;
 
       mapRef.current = map;
 
@@ -93,11 +96,12 @@ export default function SnapMap({
         iconCreateFunction(cluster) {
           const firstMarker = cluster.getAllChildMarkers()[0];
           const firstUser = firstMarker.options.userData || {
-            color: "#ffd60a",
+            color: "#ffc300",
             nickname: "Kalcerian",
           };
           const remaining = cluster.getChildCount() - 1;
-          const clusterColor = firstUser.color || "#ffd60a";
+          const rawClusterColor = firstUser.color || "#ffc300";
+          const clusterColor = (rawClusterColor.toLowerCase() === "#ffd60a" || rawClusterColor.toLowerCase() === "#ffea00") ? "#ffc300" : rawClusterColor;
           const clusterAvatar =
             firstUser.profilePicture ||
             `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(firstUser.nickname || "anon")}`;
@@ -234,21 +238,50 @@ export default function SnapMap({
   }, [users, events, hqPoint, isReady]);
 
   return (
-    <div className="fixed inset-0 z-0">
+    <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>
       <div
         ref={mapNodeRef}
-        className="w-full h-full bg-transparent snap-tactical-map"
+        className="w-full h-full bg-transparent"
       />
 
       <style jsx global>{`
-        .snap-tactical-map,
-        .snap-tactical-map .leaflet-container,
+        /* ─── LIGHT MODE ─── */
+        .snap-tactical-map.light-theme {
+          background: #aad3df !important;
+        }
+        .snap-tactical-map.light-theme .leaflet-container {
+          background: #aad3df !important;
+        }
+        .snap-tactical-map.light-theme .leaflet-tile {
+          filter: none !important;
+        }
+
+        /* ─── DARK MODE ─── */
+        .snap-tactical-map.dark-theme {
+          background: #09090c !important;
+        }
+        /* CRITICAL: leaflet-container must be transparent so tiles show through */
+        .snap-tactical-map.dark-theme .leaflet-container {
+          background: transparent !important;
+        }
+
+        /*
+          Classic Inverted Dark Mode.
+          Inverts the standard OSM light tiles directly.
+          hue-rotate(180deg) preserves original water/park colors (blue stays blue, green stays green)
+          while turning the off-white land into dark charcoal!
+        */
+        .snap-tactical-map.dark-theme .leaflet-tile {
+          filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) !important;
+        }
+
+        /* Shared */
         .snap-tactical-map .leaflet-pane {
           background: transparent !important;
         }
 
         .snap-tactical-map .leaflet-tile-pane {
-          opacity: 0.75;
+          opacity: 1.0;
         }
 
         .snap-tactical-map .leaflet-marker-pane,
@@ -257,8 +290,6 @@ export default function SnapMap({
         }
 
         .snap-tactical-map .leaflet-tile-container {
-          filter: sepia(58%) saturate(170%) hue-rotate(-10deg) brightness(1.22)
-            contrast(1.08);
           background: transparent !important;
         }
 
@@ -329,7 +360,7 @@ export default function SnapMap({
           width: 48px;
           height: 48px;
           overflow: hidden;
-          border: 1.5px solid rgba(255, 255, 255, 0.15);
+          border: 1.5px solid #ffffff !important;
           border-radius: 50%;
           background: #0a0e27;
           filter: grayscale(80%) brightness(0.8);
@@ -338,7 +369,7 @@ export default function SnapMap({
 
         .radar-node:hover .radar-avatar,
         .radar-node.active .radar-avatar {
-          border-color: var(--user-color);
+          border-color: #ffffff !important;
           box-shadow: 0 0 12px
             color-mix(in srgb, var(--user-color) 40%, transparent);
           filter: grayscale(0%) brightness(1.1);
@@ -399,7 +430,7 @@ export default function SnapMap({
           width: 48px;
           height: 48px;
           overflow: hidden;
-          border: 1.5px solid var(--user-color);
+          border: 1.5px solid #ffffff !important;
           border-radius: 50%;
           background: #0a0e27;
           box-shadow: 0 0 10px
@@ -478,32 +509,271 @@ export default function SnapMap({
           position: relative;
           width: 300px;
           overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 24px;
-          background: rgba(10, 15, 26, 0.5);
-          backdrop-filter: blur(24px) saturate(160%);
-          color: #fff;
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+          border-radius: 14px !important;
+          transition: all 0.3s ease-in-out;
         }
 
-        /* Banner strip */
-        .dc-banner {
-          height: 30px;
-          background: linear-gradient(
-            135deg,
-            color-mix(in srgb, var(--accent) 40%, #0a0e27),
-            color-mix(in srgb, var(--accent) 15%, #1a1e3a)
-          );
-          position: relative;
+        /* 3D HUD Button style for card - Dark Theme */
+        .snap-tactical-map.dark-theme .dc-card {
+          background: #0c0c0e !important;
+          border: 1px solid #1f2937 !important;
+          color: #ffffff !important;
+          box-shadow: inset 0 2px 4px rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.6), inset 0 -3px 5px rgba(0,0,0,0.8) !important;
         }
+
+        /* 3D HUD Button style for card - Light Theme */
+        .snap-tactical-map:not(.dark-theme) .dc-card {
+          background: #ffffff !important;
+          border: 1px solid #e5e7eb !important;
+          color: #0f172a !important;
+          box-shadow: inset 0 2px 4px rgba(255,255,255,1), 0 4px 12px rgba(0,0,0,0.1), inset 0 -2px 4px rgba(0,0,0,0.15) !important;
+        }
+
+        /* Close Button repositioned more leftward, 15% bigger, and theme-color corrected */
+        .snap-tactical-map .leaflet-popup-close-button {
+          right: 18px !important;
+          top: 14px !important;
+          font-size: 25px !important; /* 15% bigger close button */
+          font-weight: 700 !important;
+          z-index: 1000 !important;
+          transition: all 0.2s ease-in-out !important;
+        }
+        .snap-tactical-map.dark-theme .leaflet-popup-close-button,
+        .dark-theme .leaflet-popup-close-button {
+          color: #ffffff !important;
+          opacity: 1 !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .leaflet-popup-close-button,
+        .light-theme .leaflet-popup-close-button {
+          color: #000000 !important;
+          opacity: 1 !important;
+        }
+        .snap-tactical-map .leaflet-popup-close-button:hover {
+          color: #ef4444 !important;
+          opacity: 1 !important;
+        }
+
+        /* 3D User Name Display Name styles (Arial + heavy 3D pop shadow block) */
+        .dc-display-name {
+          font-family: 'Arial Black', 'Arial Bold', 'Arial', sans-serif !important;
+          font-weight: 900 !important;
+          font-size: 21px !important;
+          letter-spacing: -0.2px !important;
+        }
+
+        .snap-tactical-map.dark-theme .dc-display-name,
+        .dark-theme .dc-display-name {
+          color: #ffffff !important;
+          text-shadow: 1px 1px 0px #000, 2px 2px 0px #000, 3px 3px 0px #000, 4px 4px 6px rgba(0,0,0,0.85) !important;
+        }
+
+        .snap-tactical-map:not(.dark-theme) .dc-display-name,
+        .light-theme .dc-display-name {
+          color: #000000 !important;
+          text-shadow: 1px 1px 0px #fff, 2px 2px 0px #fff, 3px 3px 0px #fff, 4px 4px 6px rgba(0,0,0,0.2) !important;
+        }
+
+        /* Light Mode Readability Overrides */
+        .snap-tactical-map:not(.dark-theme) .dc-username {
+          color: rgba(0, 0, 0, 0.6) !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-sector {
+          color: rgba(0, 0, 0, 0.5) !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-section-label {
+          color: rgba(0, 0, 0, 0.45) !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-since-value {
+          color: rgba(0, 0, 0, 0.8) !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-status-bubble {
+          background: rgba(0, 0, 0, 0.05) !important;
+          border-left-color: var(--accent) !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-status-text {
+          color: rgba(0, 0, 0, 0.85) !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-conn-row {
+          background: rgba(0, 0, 0, 0.03) !important;
+          opacity: 0.5;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-conn-row.connected {
+          background: rgba(0, 0, 0, 0.05) !important;
+          opacity: 1;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-conn-row.connected:hover {
+          background: rgba(0, 0, 0, 0.08) !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-conn-platform {
+          color: rgba(0, 0, 0, 0.8) !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-conn-handle {
+          color: rgba(0, 0, 0, 0.5) !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-action-btn {
+          background: rgba(0, 0, 0, 0.04) !important;
+          border: 1px solid rgba(0, 0, 0, 0.1) !important;
+          color: #000000 !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-action-btn:hover {
+          background: rgba(0, 0, 0, 0.08) !important;
+          border-color: rgba(0, 0, 0, 0.2) !important;
+          color: #000000 !important;
+        }
+        .snap-tactical-map:not(.dark-theme) .dc-divider {
+          background: rgba(0, 0, 0, 0.08) !important;
+        }
+
+
+        /* Banner strip hidden completely per user request */
+        .dc-banner {
+          display: none !important;
+        }
+
+        @keyframes bannerMovingBlob {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        /* ── Dynamic Hover Distributed Blobs for Connections ── */
+        .dc-conn-row {
+          position: relative;
+          z-index: 1;
+          overflow: hidden;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Create two organic blurry floating blobs for each connection row */
+        .dc-conn-row::before,
+        .dc-conn-row::after {
+          content: '' !important;
+          position: absolute !important;
+          border-radius: 50% !important;
+          filter: blur(16px) !important;
+          opacity: 0 !important;
+          transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out !important;
+          pointer-events: none !important;
+          z-index: 0 !important;
+        }
+
+        .dc-conn-row:hover::before,
+        .dc-conn-row:hover::after {
+          opacity: 0.22 !important;
+        }
+
+        /* Ensure texts and icons stay above the background blobs */
+        .dc-conn-icon, .dc-conn-info {
+          position: relative;
+          z-index: 2;
+        }
+
+        /* Instagram Hover: Orange-Magenta dynamic distributed blobs */
+        .dc-conn-IG::before {
+          width: 80px;
+          height: 80px;
+          background: #ff006e !important;
+          left: -15px;
+          top: -20px;
+        }
+        .dc-conn-IG::after {
+          width: 90px;
+          height: 90px;
+          background: #ff5400 !important;
+          right: -10px;
+          bottom: -20px;
+        }
+        .dc-conn-IG:hover::before {
+          transform: translate(25px, 12px) scale(1.25);
+          animation: floatIG1 4s ease-in-out infinite alternate;
+        }
+        .dc-conn-IG:hover::after {
+          transform: translate(-20px, -15px) scale(1.15);
+          animation: floatIG2 4s ease-in-out infinite alternate;
+        }
+
+        /* WhatsApp Hover: Green + Blue Toska dynamic distributed blobs */
+        .dc-conn-WA::before {
+          width: 80px;
+          height: 80px;
+          background: #10b981 !important;
+          left: -10px;
+          top: -20px;
+        }
+        .dc-conn-WA::after {
+          width: 95px;
+          height: 95px;
+          background: #00bacf !important;
+          right: -15px;
+          bottom: -15px;
+        }
+        .dc-conn-WA:hover::before {
+          transform: translate(15px, 18px) scale(1.18);
+          animation: floatWA1 4s ease-in-out infinite alternate;
+        }
+        .dc-conn-WA:hover::after {
+          transform: translate(-22px, -10px) scale(1.22);
+          animation: floatWA2 4s ease-in-out infinite alternate;
+        }
+
+        /* X (Twitter) Hover: Grey distributed blobs */
+        .dc-conn-TW::before {
+          width: 85px;
+          height: 85px;
+          background: #64748b !important;
+          left: -20px;
+          top: -15px;
+        }
+        .dc-conn-TW::after {
+          width: 80px;
+          height: 80px;
+          background: #475569 !important;
+          right: -10px;
+          bottom: -20px;
+        }
+        .dc-conn-TW:hover::before {
+          transform: translate(20px, 10px) scale(1.15);
+          animation: floatTW1 4s ease-in-out infinite alternate;
+        }
+        .dc-conn-TW:hover::after {
+          transform: translate(-15px, -15px) scale(1.2);
+          animation: floatTW2 4s ease-in-out infinite alternate;
+        }
+
+        /* Keyframes for the float-shifting distributed blobs */
+        @keyframes floatIG1 {
+          0% { transform: translate(25px, 12px) scale(1.25) rotate(0deg); }
+          100% { transform: translate(35px, -8px) scale(0.9) rotate(45deg); }
+        }
+        @keyframes floatIG2 {
+          0% { transform: translate(-20px, -15px) scale(1.15) rotate(0deg); }
+          100% { transform: translate(-35px, 10px) scale(1.3) rotate(-45deg); }
+        }
+        @keyframes floatWA1 {
+          0% { transform: translate(15px, 18px) scale(1.18) rotate(0deg); }
+          100% { transform: translate(-8px, -12px) scale(0.95) rotate(-35deg); }
+        }
+        @keyframes floatWA2 {
+          0% { transform: translate(-22px, -10px) scale(1.22) rotate(0deg); }
+          100% { transform: translate(15px, 22px) scale(0.85) rotate(35deg); }
+        }
+        @keyframes floatTW1 {
+          0% { transform: translate(20px, 10px) scale(1.15) rotate(0deg); }
+          100% { transform: translate(8px, -15px) scale(1.3) rotate(40deg); }
+        }
+        @keyframes floatTW2 {
+          0% { transform: translate(-15px, -15px) scale(1.2) rotate(0deg); }
+          100% { transform: translate(20px, 10px) scale(0.9) rotate(-40deg); }
+        }
+
 
         /* Header: Avatar + Name + Sector in one row */
         .dc-header {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 0 16px;
-          margin-top: -4px;
+          padding: 18px 16px 0px 16px !important;
+          margin-top: 0px !important;
           position: relative;
           z-index: 5;
         }
@@ -608,20 +878,57 @@ export default function SnapMap({
         }
 
         .dc-status-bubble {
-          background: rgba(255, 255, 255, 0.08);
-          border-radius: 10px;
-          padding: 0px 12px;
-          border-left: 4px solid var(--accent);
+          position: relative !important;
+          overflow: hidden !important;
+          background: rgba(255, 255, 255, 0.04) !important;
+          backdrop-filter: blur(12px) !important;
+          -webkit-backdrop-filter: blur(12px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          border-radius: 10px !important;
+          padding: 10px 12px 10px 22px !important; /* spacing for blob */
+          border-left: none !important; /* remove static border */
           display: flex;
           align-items: flex-start;
           gap: 12px;
           margin-top: 8px;
-          box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02);
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        /* Large, highly blurred dynamic golden liquid blob - Soft glowing mist covering half the box */
+        .dc-status-bubble::before {
+          content: '' !important;
+          position: absolute !important;
+          left: -40px !important;
+          top: 50% !important;
+          width: 110px !important;
+          height: 110px !important;
+          border-radius: 50% !important;
+          background: radial-gradient(circle, #ffd60a 0%, rgba(255, 214, 10, 0.4) 60%, rgba(255, 214, 10, 0) 100%) !important; /* Pure gold gradient */
+          filter: blur(22px) !important; /* Huge blur for ultra-soft glow mist, spreading to half the box */
+          opacity: 0.55 !important;
+          animation: statusLiquidBlob 5s ease-in-out infinite alternate !important;
+          z-index: 0 !important; /* Layered behind text */
+          pointer-events: none !important;
+        }
+
+        @keyframes statusLiquidBlob {
+          0% {
+            transform: translateY(-50%) scale(1) rotate(0deg);
+            border-radius: 40% 60% 50% 50% / 40% 50% 50% 60% !important;
+            opacity: 0.45 !important;
+          }
+          100% {
+            transform: translateY(-50%) scale(1.3) rotate(180deg);
+            border-radius: 60% 40% 65% 35% / 50% 60% 40% 50% !important;
+            opacity: 0.7 !important;
+          }
         }
 
         .dc-status-text {
+          position: relative !important;
+          z-index: 2 !important; /* Stays above the blurred blob */
           font-size: 12px;
-          font-weight: 300;
+          font-weight: 500;
           color: rgba(255, 255, 255, 0.95);
           line-height: 1.5;
           letter-spacing: 0.01em;
@@ -713,6 +1020,7 @@ export default function SnapMap({
         }
 
         /* CTA button */
+        /* CTA Button styled as a high-fidelity glassmorphic box */
         .dc-action-btn {
           display: block;
           width: 100%;
@@ -720,32 +1028,49 @@ export default function SnapMap({
           margin-top: 14px;
           text-align: center;
           font-size: 13px;
-          font-weight: 200;
+          font-weight: 600;
           letter-spacing: 0.03em;
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(8px);
-          color: #ffffff;
+          border-radius: 10px !important;
+          backdrop-filter: blur(12px) !important;
+          -webkit-backdrop-filter: blur(12px) !important;
           cursor: pointer;
           text-decoration: none;
+          box-shadow: none !important;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .dc-action-btn:hover {
-          background: color-mix(
-            in srgb,
-            var(--accent) 15%,
-            rgba(255, 255, 255, 0.08)
-          );
-          border-color: color-mix(
-            in srgb,
-            var(--accent) 40%,
-            rgba(255, 255, 255, 0.2)
-          );
-          color: #fff;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        /* Dark Mode Button States */
+        .snap-tactical-map.dark-theme .dc-action-btn,
+        .dark-theme .dc-action-btn {
+          background: rgba(255, 255, 255, 0.04) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          color: #ffffff !important;
+        }
+
+        .snap-tactical-map.dark-theme .dc-action-btn:hover,
+        .dark-theme .dc-action-btn:hover {
+          background: rgba(255, 255, 255, 0.08) !important;
+          border-color: rgba(255, 255, 255, 0.18) !important;
+          color: #ffffff !important;
+          transform: translateY(-1.5px) !important;
+          box-shadow: none !important;
+        }
+
+        /* Light Mode Button States */
+        .snap-tactical-map:not(.dark-theme) .dc-action-btn,
+        .light-theme .dc-action-btn {
+          background: rgba(0, 0, 0, 0.03) !important;
+          border: 1px solid rgba(0, 0, 0, 0.06) !important;
+          color: #000000 !important;
+        }
+
+        .snap-tactical-map:not(.dark-theme) .dc-action-btn:hover,
+        .light-theme .dc-action-btn:hover {
+          background: rgba(0, 0, 0, 0.06) !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
+          color: #000000 !important;
+          transform: translateY(-1.5px) !important;
+          box-shadow: none !important;
         }
 
         /* Legacy popup classes kept for HQ & Event popups */

@@ -75,7 +75,7 @@ export function userPopup(user) {
     .map((s) => {
       const connected = !!s.value;
       return `
-      <div class="dc-conn-row ${connected ? "connected" : ""}">
+      <div class="dc-conn-row dc-conn-${s.key} ${connected ? "connected" : ""}">
         <div class="dc-conn-icon" style="color:${s.brandColor}">${s.icon}</div>
         <div class="dc-conn-info">
           <span class="dc-conn-platform">${s.label}</span>

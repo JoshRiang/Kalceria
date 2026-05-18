@@ -7,8 +7,10 @@ function avatarUrl(user) {
 export function getUserIconHtml(user) {
   const displayName = user.nickname || user.name || '';
   const randomDelay = (Math.random() * -2).toFixed(2);
+  const rawColor = user.color || '#ffc300';
+  const cleanColor = (rawColor.toLowerCase() === '#ffd60a' || rawColor.toLowerCase() === '#ffea00') ? '#ffc300' : rawColor;
   return `
-    <div class="radar-node" style="--user-color: ${user.color || '#ffd60a'}">
+    <div class="radar-node" style="--user-color: ${cleanColor}">
       <div class="radar-pulse" style="animation-delay: ${randomDelay}s"></div>
       <div class="radar-nametag">${displayName}</div>
       <div class="radar-float-wrapper" style="animation-delay: ${randomDelay}s">
