@@ -1773,15 +1773,7 @@ export default function MapPage() {
                   <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.1)_50%,transparent_100%)] bg-[length:20px_100%] pointer-events-none" />
                 </div>
 
-                {/* Technical Footnote */}
-                <div className="mt-8 flex justify-end items-start opacity-40">
-                  <div
-                    className={`text-[10px] font-mono text-right space-y-1 italic transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-900" : "text-white"}`}
-                  >
-                    <p>KALCER RADAR</p>
-                    <p>ENCRYPTED STABLE</p>
-                  </div>
-                </div>
+
               </div>
             </div>
 

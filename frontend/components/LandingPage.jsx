@@ -1137,19 +1137,20 @@ export default function LandingPage({ onNavigateAuth }) {
     if (scrollTarget || scrollY) {
       sessionStorage.removeItem("landingScrollTarget");
       sessionStorage.removeItem("landingScrollY");
+      const isQuickRestoration = sessionStorage.getItem("landingSeen") === "true";
       const timer = setTimeout(() => {
         if (scrollY) {
           window.scrollTo({
             top: parseInt(scrollY, 10),
-            behavior: "smooth"
+            behavior: isQuickRestoration ? "auto" : "smooth"
           });
         } else {
           const element = document.getElementById(scrollTarget);
           if (element) {
-            element.scrollIntoView({ behavior: "smooth", block: "center" });
+            element.scrollIntoView({ behavior: isQuickRestoration ? "auto" : "smooth", block: "center" });
           }
         }
-      }, 1000); // Trigger smooth scrolling right as the elegant fade-in completes
+      }, isQuickRestoration ? 50 : 1000); // Trigger instant scrolling if already seen, else wait for fade-in
       return () => clearTimeout(timer);
     }
   }, []);
@@ -1184,7 +1185,7 @@ export default function LandingPage({ onNavigateAuth }) {
   return (
     <motion.div
       initial={{ opacity: skipAnim ? 1 : 0 }}
-      animate={{ opacity: mounted ? 1 : 0 }}
+      animate={{ opacity: skipAnim ? 1 : (mounted ? 1 : 0) }}
       transition={{ duration: skipAnim ? 0 : 1.5, ease: "easeOut" }}
       className="relative w-full bg-[#050a14] text-white font-mono overflow-x-hidden selection:bg-[#FF00FF] selection:text-white"
     >
