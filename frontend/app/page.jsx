@@ -12,11 +12,21 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const hasPlayed = sessionStorage.getItem("introPlayed");
-      if (hasPlayed) {
-        setPhase("landing");
+      const urlParams = new URLSearchParams(window.location.search);
+      const isAuthParam = urlParams.get("auth") === "true";
+      const triggerAuth = sessionStorage.getItem("triggerAuth");
+
+      if (triggerAuth === "true" || isAuthParam) {
+        sessionStorage.removeItem("triggerAuth");
+        sessionStorage.setItem("introPlayed", "true");
+        setPhase("auth");
       } else {
-        setPhase("intro");
+        const hasPlayed = sessionStorage.getItem("introPlayed");
+        if (hasPlayed) {
+          setPhase("landing");
+        } else {
+          setPhase("intro");
+        }
       }
     } else {
       setPhase("intro");

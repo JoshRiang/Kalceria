@@ -1132,26 +1132,48 @@ export default function LandingPage({ onNavigateAuth }) {
     setIsLoggedIn(!!token);
 
     // Smooth scroll restoration on fallback navigation
-    const scrollTarget = sessionStorage.getItem("landingScrollTarget");
+    const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const scrollTarget = urlParams?.get("anchor") || sessionStorage.getItem("landingScrollTarget");
     const scrollY = sessionStorage.getItem("landingScrollY");
     if (scrollTarget || scrollY) {
+      if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "manual";
+      }
+      
       sessionStorage.removeItem("landingScrollTarget");
       sessionStorage.removeItem("landingScrollY");
-      const isQuickRestoration = sessionStorage.getItem("landingSeen") === "true";
-      const timer = setTimeout(() => {
+      
+      // Clean query parameters from address bar to keep UX clean
+      if (typeof window !== "undefined" && window.history.replaceState) {
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+      
+      // Industrial-grade recurring scroll lock to force viewport position through dynamic loading reflows
+      const scrollInterval = setInterval(() => {
         if (scrollY) {
-          window.scrollTo({
-            top: parseInt(scrollY, 10),
-            behavior: isQuickRestoration ? "auto" : "smooth"
-          });
+          window.scrollTo(0, parseInt(scrollY, 10));
         } else {
           const element = document.getElementById(scrollTarget);
           if (element) {
-            element.scrollIntoView({ behavior: isQuickRestoration ? "auto" : "smooth", block: "center" });
+            element.scrollIntoView({ behavior: "auto", block: "start" });
           }
         }
-      }, isQuickRestoration ? 50 : 1000); // Trigger instant scrolling if already seen, else wait for fade-in
-      return () => clearTimeout(timer);
+      }, 150);
+      
+      const timer = setTimeout(() => {
+        clearInterval(scrollInterval);
+        if (!scrollY) {
+          const element = document.getElementById(scrollTarget);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      }, 1600);
+      return () => {
+        clearInterval(scrollInterval);
+        clearTimeout(timer);
+      };
     }
   }, []);
 
@@ -1792,6 +1814,7 @@ export default function LandingPage({ onNavigateAuth }) {
           {/* Find The Others Button */}
           <motion.button
             onClick={() => {
+              sessionStorage.removeItem("mapIntroSeen");
               sessionStorage.setItem("landingScrollTarget", "section-map");
               sessionStorage.setItem("landingScrollY", window.scrollY);
               window.location.href = "/map";

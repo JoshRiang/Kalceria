@@ -183,6 +183,7 @@ export default function MapPage() {
   const [showStartup, setShowStartup] = useState(false);
   const [startupStep, setStartupStep] = useState(0);
   const [startupProgress, setStartupProgress] = useState(0);
+  const [particles, setParticles] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
   const [notLoggedIn, setNotLoggedIn] = useState(false);
@@ -192,6 +193,37 @@ export default function MapPage() {
   const [isStatusBusy, setIsStatusBusy] = useState(false);
   const [focusedUserId, setFocusedUserId] = useState(null);
   const [selectedOfflineUser, setSelectedOfflineUser] = useState(null);
+
+  const [showQuitModal, setShowQuitModal] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+
+  const handleQuitConfirm = () => {
+    setIsExiting(true);
+    setShowQuitModal(false);
+    
+    // Set landing scroll target for session anchoring
+    sessionStorage.setItem("landingScrollTarget", "section-map");
+    // Reset mapIntroSeen to 0 so the intro plays next time
+    sessionStorage.setItem("mapIntroSeen", "0");
+    
+    setTimeout(() => {
+      window.location.href = "/?anchor=section-map";
+    }, 1500); // 1.5s matching the white flash transition
+  };
+
+  const loginGateParticles = useMemo(() => {
+    return Array.from({ length: 50 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      size: Math.random() > 0.85 ? 5 : 2,
+      color: ['#FF0000', '#FF3C00', '#FF7B00', '#FFA600'][Math.floor(Math.random() * 4)],
+      delay: Math.random() * 5,
+      duration: 4 + Math.random() * 5,
+      xDrift: (Math.random() - 0.5) * 80,
+      yDrift: (Math.random() - 0.5) * 80,
+    }));
+  }, []);
 
   // Handle Hydration
   useEffect(() => {
@@ -294,26 +326,50 @@ export default function MapPage() {
     ];
 
     let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += Math.random() * 12;
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        clearInterval(interval);
-        setTimeout(() => {
-          setShowStartup(false);
-        }, 800);
-      }
-      setStartupProgress(currentProgress);
+    let interval;
+    
+    // Slower progress increments and cinematic delay for first step to fade in dramatically
+    const delayTimer = setTimeout(() => {
+      interval = setInterval(() => {
+        currentProgress += Math.random() * 8;
+        if (currentProgress >= 100) {
+          currentProgress = 100;
+          clearInterval(interval);
+          setTimeout(() => {
+            setShowStartup(false);
+          }, 1000);
+        }
+        setStartupProgress(currentProgress);
 
-      const stepIdx = Math.min(
-        Math.floor((currentProgress / 100) * steps.length),
-        steps.length - 1,
-      );
-      setStartupStep(stepIdx);
-    }, 200);
+        const stepIdx = Math.min(
+          Math.floor((currentProgress / 100) * steps.length),
+          steps.length - 1,
+        );
+        setStartupStep(stepIdx);
+      }, 250);
+    }, 1200);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(delayTimer);
+      if (interval) clearInterval(interval);
+    };
   }, []);
+
+  // Spawns premium magenta & golden microparticles once loading progress is >= 10%
+  useEffect(() => {
+    if (startupProgress >= 10 && particles.length === 0) {
+      const generated = Array.from({ length: 42 }).map((_, i) => ({
+        id: i,
+        left: `${Math.random() * 100}%`,
+        size: `${Math.random() * 5 + 3}px`, // 3px to 8px
+        color: Math.random() > 0.5 ? "#ff006e" : (Math.random() > 0.5 ? "#ffd60a" : "#ffc300"), // Neon Magenta, Golden Yellow, Gold
+        duration: Math.random() * 5 + 4, // 4s to 9s
+        delay: Math.random() * 5, // 0s to 5s
+        opacity: Math.random() * 0.4 + 0.4, // 0.4 to 0.8
+      }));
+      setParticles(generated);
+    }
+  }, [startupProgress, particles.length]);
 
   // Map Event Tracking
   const handleMapReady = useCallback((mapInstance) => {
@@ -579,35 +635,87 @@ export default function MapPage() {
   // login gate
   if (notLoggedIn) {
     return (
-      <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center text-white font-sans">
-        <div className="text-center flex flex-col items-center gap-6 max-w-md px-6">
-          <div className="w-16 h-16 border-2 border-[#ffd60a]/30 rounded-full flex items-center justify-center">
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#ffd60a"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+      <div className="min-h-screen bg-[#050a14] relative flex items-center justify-center overflow-hidden text-white font-mono z-50">
+        {/* Animated Background Blobs */}
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], x: ["-10%", "10%", "-10%"], y: ["-5%", "5%", "-5%"] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-[5%] left-[-15%] w-[60vw] h-[60vw] rounded-full blur-[140px] bg-[#00FFFF]/30 pointer-events-none z-0"
+        />
+        <motion.div
+          animate={{ scale: [1.1, 1.3, 1.1], x: ["10%", "-10%", "10%"], y: ["5%", "-5%", "5%"] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute top-[15%] right-[-15%] w-[60vw] h-[60vw] rounded-full blur-[140px] bg-[#ff006e]/40 pointer-events-none z-0"
+        />
+
+        {/* Micro Particle Layer */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
+          {loginGateParticles.map((p) => (
+            <motion.div
+              key={p.id}
+              className="absolute rounded-full"
+              style={{
+                width: p.size,
+                height: p.size,
+                left: p.left,
+                top: p.top,
+                backgroundColor: p.color,
+                boxShadow: `0 0 8px ${p.color}`,
+              }}
+              animate={{
+                x: [0, p.xDrift, 0],
+                y: [0, p.yDrift, 0],
+                opacity: [0, 0.8, 0],
+              }}
+              transition={{
+                duration: p.duration,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: p.delay,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="relative z-10 text-center flex flex-col items-center gap-8 max-w-lg px-6">
+          {/* mapman.webp replacing door box, static */}
+          <img 
+            src="/mapman.webp"
+            alt="Mapman"
+            className="w-48 h-48 object-contain drop-shadow-[0_0_30px_rgba(0,255,255,0.35)]"
+          />
+
+          <div className="space-y-4">
+            <h1 
+              className="font-sans font-black uppercase tracking-tighter text-4xl md:text-5xl lg:text-6xl text-white"
+              style={{
+                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
+              }}
             >
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-              <polyline points="10 17 15 12 10 7" />
-              <line x1="15" y1="12" x2="3" y2="12" />
-            </svg>
+              Authentication Required
+            </h1>
+            <p className="font-sans text-white text-sm md:text-base font-semibold tracking-wide max-w-sm mx-auto opacity-90">
+              You need to login first to access the Kalcerians Map.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold uppercase tracking-wider">
-            Authentication Required
-          </h1>
-          <p className="text-white/50 text-sm">
-            You need to login first to access the Kalcerians Map.
-          </p>
-          <Link
-            href="/"
-            className="px-8 py-3 bg-[#ffd60a] text-black font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-[#ffc300] transition-all"
+
+          {/* Go to Login - Styled 100% same as see event explore button */}
+          <Link 
+            href="/?auth=true" 
+            className="pointer-events-auto mt-2"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                sessionStorage.setItem("triggerAuth", "true");
+              }
+            }}
           >
-            Go to Login
+            <button
+              className="relative px-12 py-4 font-sans font-extrabold uppercase tracking-widest text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.15)]"
+              style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
+            >
+              <span className="relative z-10">GO TO LOGIN</span>
+              <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+            </button>
           </Link>
         </div>
       </div>
@@ -617,7 +725,13 @@ export default function MapPage() {
   const offlineUserObj = selectedOfflineUser ? sidebarKalcerians.find((k) => k.id === selectedOfflineUser) : null;
 
   return (
-    <div className="relative min-h-screen bg-[#0a0e27] overflow-hidden text-white font-sans selection:bg-[#ffd60a] selection:text-black">
+    <div 
+      className="relative min-h-screen bg-[#0a0e27] overflow-hidden text-white font-sans selection:bg-[#ffd60a] selection:text-black transition-all"
+      style={{
+        filter: isExiting ? "blur(30px)" : "none",
+        transition: "filter 1.2s ease-in-out"
+      }}
+    >
       {/* 🌌 Atmospheric Tactical Background (Behind Map) */}
       <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden">
         {/* Animated Blobs */}
@@ -659,9 +773,13 @@ export default function MapPage() {
       {/* SnapMap Component (Semi-Transparent for Glass Effect) */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
+        animate={{ opacity: showStartup ? 0 : 1 }}
+        transition={{ duration: 1.2, ease: "easeOut" }}
         className="fixed inset-0 z-[10] w-full h-full"
+        style={{
+          visibility: showStartup ? "hidden" : "visible",
+          pointerEvents: showStartup ? "none" : "auto",
+        }}
       >
         <SnapMap
           users={mapUsers}
@@ -707,26 +825,22 @@ export default function MapPage() {
         transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
         className="absolute z-[1000] top-4 left-4 right-4 flex justify-between items-start gap-3 pointer-events-none max-[860px]:top-3 max-[860px]:left-3 max-[860px]:right-3"
       >
-        <Link
-          href="/"
-          onClick={() => {
-            sessionStorage.setItem("landingScrollTarget", "section-map");
-          }}
+        <button
+          onClick={() => setShowQuitModal(true)}
           aria-label="Back to home"
-          className="relative pointer-events-auto inline-flex items-center justify-center gap-2 min-h-[44px] px-5 bg-[#0a0f1a]/50 border border-white/[0.12] text-[11px] font-semibold tracking-wider text-white/60 hover:text-white transition-all rounded-xl shadow-lg backdrop-blur-xl hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/30 outline-none overflow-hidden"
+          className="relative pointer-events-auto inline-flex items-center justify-center w-[44px] h-[44px] bg-red-950/40 border border-red-500/30 text-red-200 hover:text-white transition-all rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/20 backdrop-blur-xl focus-visible:ring-2 focus-visible:ring-red-500/30 outline-none overflow-hidden group"
         >
           {/* Internal Glows */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-[20%] -left-[20%] w-[100%] h-[100%] bg-cyan-600/[0.05] rounded-full blur-[20px]" />
-            <div className="absolute -bottom-[20%] -right-[20%] w-[100%] h-[100%] bg-purple-900/[0.05] rounded-full blur-[20px]" />
+            <div className="absolute -top-[20%] -left-[20%] w-[100%] h-[100%] bg-red-600/[0.1] rounded-full blur-[20px]" />
           </div>
 
           <svg
-            width="14"
-            height="14"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
-            className="relative z-10 transition-transform group-hover:-translate-x-1"
+            className="relative z-10 transition-transform group-hover:-translate-x-0.5"
           >
             <path
               d="M19 12H5M5 12L12 19M5 12L12 5"
@@ -736,8 +850,7 @@ export default function MapPage() {
               strokeLinejoin="round"
             />
           </svg>
-          <span className="relative z-10 uppercase tracking-widest">back</span>
-        </Link>
+        </button>
 
         <div className="relative flex items-center gap-4">
           {/* Telemetry HUD */}
@@ -1018,12 +1131,12 @@ export default function MapPage() {
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
-        className="absolute z-[1000] top-[100px] left-4 bottom-6 w-[340px] bg-[#0a0f1a]/50 backdrop-blur-xl border border-white/[0.12] rounded-[24px] shadow-2xl flex flex-col transition-all duration-500 -translate-x-[calc(100%-42px)] peer-checked:translate-x-0 max-[860px]:top-auto max-[860px]:bottom-0 max-[860px]:left-0 max-[860px]:w-full max-[860px]:h-[72vh] max-[860px]:border-r-0 max-[860px]:border-t max-[860px]:rounded-none max-[860px]:rounded-t-2xl max-[860px]:translate-x-0 max-[860px]:translate-y-[calc(100%-104px)] max-[860px]:peer-checked:translate-y-0 overflow-hidden"
+        className="absolute z-[1000] top-[100px] left-4 bottom-6 w-[340px] bg-[#0a0f1a]/40 backdrop-blur-2xl border border-white/[0.12] rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_40px_rgba(255,0,110,0.08)] flex flex-col transition-all duration-500 -translate-x-[calc(100%-42px)] peer-checked:translate-x-0 max-[860px]:top-auto max-[860px]:bottom-0 max-[860px]:left-0 max-[860px]:w-full max-[860px]:h-[72vh] max-[860px]:border-r-0 max-[860px]:border-t max-[860px]:rounded-none max-[860px]:rounded-t-2xl max-[860px]:translate-x-0 max-[860px]:translate-y-[calc(100%-104px)] max-[860px]:peer-checked:translate-y-0 overflow-hidden"
       >
-        {/* Internal Glows to match reference image */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[50%] bg-cyan-600/[0.07] rounded-full blur-[60px]" />
-          <div className="absolute -bottom-[15%] -right-[10%] w-[60%] h-[50%] bg-purple-900/[0.07] rounded-full blur-[70px]" />
+        {/* Magenta-Golden Blob Glassmorphism Glows (Matches Login Page) */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+          <div className="absolute -top-[15%] -left-[15%] w-[80%] h-[60%] bg-[#ff006e]/[0.15] rounded-full blur-[80px]" />
+          <div className="absolute -bottom-[20%] -right-[15%] w-[80%] h-[60%] bg-[#ffd60a]/[0.15] rounded-full blur-[90px]" />
         </div>
 
         <label
@@ -1663,6 +1776,23 @@ export default function MapPage() {
           100% { background-position: 200% 50%; }
         }
 
+        @keyframes floatUp {
+          0% {
+            transform: translateY(10px);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.8;
+          }
+          90% {
+            opacity: 0.8;
+          }
+          100% {
+            transform: translateY(-115vh);
+            opacity: 0;
+          }
+        }
+
         #panel-toggle:checked ~ section .toggle-arrow {
           transform: rotate(180deg);
         }
@@ -1675,14 +1805,14 @@ export default function MapPage() {
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, filter: "blur(40px)" }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
-            className={`fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden transition-colors duration-[3000ms] ease-in-out ${startupProgress < 50 ? "bg-[#e2e8f0]" : "bg-[#050a14]"}`}
+            className={`fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden transition-colors duration-[3000ms] ease-in-out ${startupProgress < 50 ? "bg-white" : "bg-[#050a14]"}`}
           >
 
 
             {/* Adaptive Atmospheric Background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
               <div
-                className={`absolute inset-0 transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-200" : "bg-gradient-to-br from-[#ff006e]/20 via-transparent to-[#ffd60a]/20"}`}
+                className={`absolute inset-0 transition-colors duration-1000 ${startupProgress < 50 ? "bg-white" : "bg-gradient-to-br from-[#ff006e]/20 via-transparent to-[#ffd60a]/20"}`}
               />
 
               {/* Dynamic Speed Lines */}
@@ -1699,7 +1829,7 @@ export default function MapPage() {
                         delay: Math.random() * 2,
                         ease: "linear",
                       }}
-                      className={`absolute h-[1px] transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-400" : "bg-white"}`}
+                      className={`absolute h-[1px] transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-200" : "bg-white"}`}
                       style={{
                         top: `${Math.random() * 100}%`,
                         width: `${Math.random() * 300 + 100}px`,
@@ -1711,47 +1841,132 @@ export default function MapPage() {
 
               <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none">
                 <h2
-                  className={`text-[25vw] font-black italic tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-900" : "text-white"}`}
+                  className={`text-[25vw] font-black tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-200" : "text-white"}`}
                 >
                   KALCERIA
                 </h2>
               </div>
             </div>
 
-            <div className="relative z-10 w-full flex flex-col items-center">
+            {/* Ambient Golden & Magenta Microparticles (Spawns at 10% progress and morphs dynamically on black background) */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-[5]">
+              {startupProgress >= 10 && particles.map((p) => {
+                const isDark = startupProgress >= 50;
+                // Dynamically morph Neon Magenta (#ff006e) into Cyan (#00f0ff) once screen is black!
+                const activeColor = isDark
+                  ? (p.color === "#ff006e" ? "#00f0ff" : p.color)
+                  : p.color;
+
+                return (
+                  <div
+                    key={p.id}
+                    className="absolute rounded-full blur-[0.5px] pointer-events-none"
+                    style={{
+                      left: p.left,
+                      bottom: "-20px", // Pinned below visible boundary to prevent traffic jams
+                      width: p.size,
+                      height: p.size,
+                      backgroundColor: activeColor,
+                      boxShadow: `0 0 8px ${activeColor}, 0 0 16px ${activeColor}`,
+                      animation: `floatUp ${p.duration}s linear ${p.delay}s infinite both`,
+                      opacity: 0, // Fully transparent during positive delays
+                      transition: "background-color 1.5s ease-in-out, box-shadow 1.5s ease-in-out", // Smooth morphing
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Inner Content that fades in dramatically over solid background */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              className="relative z-10 w-full h-screen flex flex-col items-center pt-24"
+            >
               {/* Main Title Section */}
               <motion.div
                 initial={{ x: -100, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.8, ease: "circOut" }}
-                className="flex flex-col items-center mb-12"
+                className="flex flex-col items-center mb-4"
               >
                 <h1
-                  className={`text-8xl font-sans font-black italic tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-900" : "text-white"}`}
+                  className={`text-8xl font-sans font-black italic tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
                 >
                   Kalcerians Map
                 </h1>
               </motion.div>
 
-              {/* High Impact Progress Section */}
-              <div className="w-full max-w-[800px] px-8">
-                <div className="flex justify-between items-end mb-4">
-                  <div className="flex flex-col gap-1">
-                    <AnimatePresence mode="wait">
-                      <motion.p
-                        key={startupStep}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className={`text-[14px] font-black italic uppercase tracking-widest transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-700" : "text-white"}`}
-                      >
-                        {startupMessages[startupStep]}
-                      </motion.p>
-                    </AnimatePresence>
+              {/* Floating Kalcerman Image (Slides in from left when background turns black) */}
+              <AnimatePresence>
+                {startupProgress >= 50 && (
+                  <div className="relative w-[440px] h-[450px] flex flex-col items-center justify-center my-4 z-20 -translate-x-[20%] -translate-y-[20%]">
+                    {/* Fixed Position Portal: Fades in statically (no slide-in) and spins slowly */}
+                    <motion.img
+                      key="portal-bg"
+                      src="/portal.webp"
+                      alt="Portal background"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{
+                        opacity: 0.7,
+                        scale: 1,
+                        rotate: 360,
+                      }}
+                      exit={{ opacity: 0 }}
+                      transition={{
+                        opacity: { duration: 1.2, ease: "easeOut" },
+                        scale: { duration: 1.2, ease: "easeOut" },
+                        rotate: { duration: 22, repeat: Infinity, ease: "linear" },
+                      }}
+                      className="absolute top-2 left-[56%] -translate-x-0 w-[400px] h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)] z-0"
+                    />
+
+                    {/* Floating Character & Subtitle Subgroup (Slides in from left and floats) */}
+                    <motion.div
+                      key="kalcerman-character"
+                      initial={{ x: "-100vw", opacity: 0, scale: 0.7 }}
+                      animate={{
+                        x: 0,
+                        opacity: 0.9,
+                        scale: 1,
+                        y: [0, -15, 0],
+                      }}
+                      exit={{ x: "100vw", opacity: 0 }}
+                      transition={{
+                        x: { type: "spring", stiffness: 60, damping: 14 },
+                        opacity: { duration: 0.5 },
+                        scale: { duration: 0.5 },
+                        y: {
+                          repeat: Infinity,
+                          duration: 3,
+                          ease: "easeInOut",
+                        },
+                      }}
+                      className="relative z-10 w-full flex flex-col items-center justify-center"
+                    >
+                      {/* Character Sprite (Positioned in front, z-10, 25% bigger) */}
+                      <img
+                        src="/kalcermanmap.png"
+                        alt="Kalcerman Map"
+                        className="relative w-[275px] h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-6 z-10"
+                      />
+
+                      {/* Dialog Subtitle (Positioned in front, z-10) */}
+                      <p className="relative text-white font-sans font-bold text-[22px] tracking-wide text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] z-10">
+                        &quot;Let me in, Coki!&quot;
+                      </p>
+                    </motion.div>
                   </div>
+                )}
+              </AnimatePresence>
+
+              {/* High Impact Progress Section (Absolutely positioned at bottom so it never shifts!) */}
+              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[800px] px-8">
+                <div className="flex justify-end items-end mb-4">
                   <div className="text-right">
                     <span
-                      className={`text-5xl font-sans font-black italic tracking-tighter leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-900" : "text-white"}`}
+                      className={`text-5xl font-sans font-black tracking-tighter leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
                     >
                       {Math.round(startupProgress)}
                       <span className="text-[20px] ml-1 opacity-40">%</span>
@@ -1761,7 +1976,7 @@ export default function MapPage() {
 
                 {/* The "Forza Stripe" Progress Bar */}
                 <div
-                  className={`relative h-4 w-full skew-x-[-12deg] overflow-hidden border transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-300 border-slate-400" : "bg-white/5 border-white/10"}`}
+                  className={`relative h-4 w-full overflow-hidden border transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-100 border-slate-200" : "bg-white/5 border-white/10"}`}
                 >
                   <motion.div
                     className={`absolute top-0 left-0 h-full transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-600" : "bg-gradient-to-r from-[#ff6f00] via-[#ffd60a] to-[#ffc300] shadow-[0_0_30px_#ffd60a]"}`}
@@ -1775,12 +1990,91 @@ export default function MapPage() {
 
 
               </div>
-            </div>
+            </motion.div>
 
             {/* Corner Decorative Elements */}
             <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-[#ffd60a]/10 to-transparent rounded-br-full blur-3xl" />
             <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-[#ff006e]/10 to-transparent rounded-tl-full blur-3xl" />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Cinematic Solid White Light Flash Layer */}
+      <AnimatePresence>
+        {isExiting && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.0, ease: "easeInOut" }}
+            className="fixed inset-0 bg-white z-[9999] pointer-events-none"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Quit Modal */}
+      <AnimatePresence>
+        {showQuitModal && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center">
+            {/* Backdrop with near-zero dimming to let map colors fully bleed through */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/[0.05]" 
+              onClick={() => setShowQuitModal(false)} 
+            />
+            
+            {/* Modal Glass Box */}
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 0 }}
+              animate={{ 
+                scale: 1, 
+                opacity: 1,
+                y: [0, -8, 0]
+              }}
+              exit={{ scale: 0.9, opacity: 0, y: 0 }}
+              transition={{ 
+                type: "spring", 
+                duration: 0.5,
+                y: {
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }
+              }}
+              className="relative z-[2010] w-[90%] max-w-[400px] p-8 rounded-2xl flex flex-col items-center justify-center backdrop-blur-xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.6),0_0_50px_rgba(0,255,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.3)] border border-white/[0.2]"
+              style={{
+                background: "rgba(255, 255, 255, 0.05)",
+              }}
+            >
+              {/* Cyan Blob */}
+              <motion.div 
+                animate={{ x: [0, 20, 0], y: [0, 20, 0], scale: [1, 1.2, 1] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -top-16 -left-16 w-44 h-44 bg-[#00FFFF] rounded-full blur-[40px] opacity-40 z-0 pointer-events-none"
+              />
+              
+              <h3 className="relative z-10 text-xl font-sans font-black text-white mb-8 tracking-tighter text-center uppercase">
+                Wanna quit the map?
+              </h3>
+              
+              <div className="relative z-10 w-full flex items-center gap-4">
+                <button 
+                  onClick={handleQuitConfirm} 
+                  className="flex-1 py-4 bg-red-600 rounded-xl text-white font-black uppercase tracking-tighter hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                >
+                  Yes
+                </button>
+                <button 
+                  onClick={() => setShowQuitModal(false)} 
+                  className="flex-1 py-4 bg-white/10 rounded-xl text-white font-black uppercase tracking-tighter hover:bg-white/20 transition-all"
+                >
+                  No
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
