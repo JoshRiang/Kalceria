@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api',
-  timeout: 10000,
+  timeout: 20000,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -12,7 +12,14 @@ const api = axios.create({
 // Attach JWT from localStorage on every request
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
+    // If request is to /admin, prefer adminToken. Otherwise, use token.
+    const isAdminUrl = config.url && config.url.includes('/admin');
+    let token = isAdminUrl ? localStorage.getItem('adminToken') : localStorage.getItem('token');
+    
+    // Fallbacks
+    if (!token && isAdminUrl) token = localStorage.getItem('token');
+    if (!token && !isAdminUrl) token = localStorage.getItem('adminToken');
+
     if (token) config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -25,11 +32,11 @@ api.interceptors.response.use(
     const status = err.response?.status;
     const message = err.response?.data?.error || err.message || 'Network Error';
 
-    // Silently pass JIT rejections — these are intentional handshakes, not real errors.
-    // The del() function in page.jsx catches them and handles the password prompt flow.
+    // Silently pass JIT rejections and Auth token errors to prevent console spam
     const isExpectedJitRejection = status === 403 && typeof message === 'string' && message.includes('JIT');
+    const isAuthError = (status === 401 || status === 403) && (message.includes('No token') || message.includes('Invalid'));
 
-    if (!isExpectedJitRejection) {
+    if (!isExpectedJitRejection && !isAuthError) {
       console.error('[API Error]', message);
     }
 
