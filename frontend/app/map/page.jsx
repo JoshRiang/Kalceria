@@ -2001,28 +2001,7 @@ export default function MapPage() {
         </div>
       </motion.aside>
 
-      {/* Floating Coki Map Image beside the Kalcerian box */}
-      <div 
-        className={`absolute z-[999] top-[100px] w-[140px] h-[140px] pointer-events-none transition-all duration-500 max-[860px]:hidden ${
-          drawerOpen ? "left-[380px]" : "left-[60px]"
-        }`}
-      >
-        <motion.img
-          src="/cokimap.png"
-          alt="Coki Map Floating"
-          className="w-full h-full object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.35)]"
-          style={{ transformOrigin: "center" }}
-          animate={{ 
-            y: [0, -8, 0],
-            rotate: [13, 17, 13] /* breathes tipis-tipis around 15 degrees */
-          }}
-          transition={{ 
-            duration: 6, 
-            repeat: Infinity, 
-            ease: "easeInOut" 
-          }}
-        />
-      </div>
+
 
       {/* Recenter Button Bottom Right */}
       <button
