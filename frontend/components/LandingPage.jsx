@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import ServiceRequestModal from "./ServiceRequestModal";
 import { Typewriter, FilmLane, FilmStrip, EventSlider, useMerchRandomizer, MerchCard, FindMoreSlider } from "./landing/showcase";
@@ -397,15 +398,15 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="relative z-20 flex gap-6 md:gap-16 items-center justify-center mb-24">
           <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
             <div className="relative w-32 md:w-64 h-[42px] md:h-[72px] block">
-              <img src="/logo_tokpedgray.webp" alt="Tokopedia" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
-              <img src="/logo_tokped.webp" alt="Tokopedia Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(3,172,14,0.6)]" draggable={false} />
+              <Image src="/logo_tokpedgray.webp" alt="Tokopedia" width={992} height={1070} unoptimized loading="eager" decoding="auto" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
+              <Image src="/logo_tokped.webp" alt="Tokopedia Colored" width={1008} height={1049} unoptimized loading="eager" decoding="auto" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(3,172,14,0.6)]" draggable={false} />
             </div>
             <span className="font-sans text-[12px] md:text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center">Tokopedia - Kalceros</span>
           </a>
           <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
             <div className="relative w-32 md:w-64 h-[42px] md:h-[72px] block">
-              <img src="/logo_shopeegray.webp" alt="Shopee" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
-              <img src="/logo_shopee.webp" alt="Shopee Colored" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(238,77,45,0.6)]" draggable={false} />
+              <Image src="/logo_shopeegray.webp" alt="Shopee" width={1008} height={1043} unoptimized loading="eager" decoding="auto" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
+              <Image src="/logo_shopee.webp" alt="Shopee Colored" width={1053} height={1024} unoptimized loading="eager" decoding="auto" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(238,77,45,0.6)]" draggable={false} />
             </div>
             <span className="font-sans text-[12px] md:text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center">Shopee - Kalcres</span>
           </a>
