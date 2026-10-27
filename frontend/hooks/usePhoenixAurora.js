@@ -219,5 +219,5 @@ export function usePhoenixAurora(canvasRef, active, duration = 5000) {
       startTs = null;
       lastTs  = null;
     };
-  }, [active, duration]);
+  }, [active, duration, canvasRef]);
 }
