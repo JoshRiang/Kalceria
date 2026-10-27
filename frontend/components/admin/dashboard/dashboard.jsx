@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
@@ -246,7 +247,7 @@ export default function AdminDashboard() {
       {/* Top nav */}
       <header className="relative z-10 border-b border-slate-900 px-6 md:px-12 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <img src="/logologin.webp" alt="Kalceria" className="h-7 object-contain" draggable={false} />
+          <Image src="/logologin.webp" alt="Kalceria" width={1874} height={560} unoptimized loading="eager" decoding="auto" className="h-7 w-auto object-contain" draggable={false} />
           <div className="h-4 w-px bg-white/20 ml-2" />
           <div className="font-sans text-[11px] text-white font-medium underline tracking-widest opacity-90">
             {wibTime}

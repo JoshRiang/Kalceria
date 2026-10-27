@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
 
@@ -115,7 +116,7 @@ export default function AdminLoginPage() {
 
             {/* Logo */}
             <div className="text-center mb-10">
-              <img src="/logologin.webp" alt="Kalceria" className="h-8 object-contain inline-block mb-3" draggable={false} />
+              <Image src="/logologin.webp" alt="Kalceria" width={1874} height={560} unoptimized loading="eager" decoding="auto" className="h-8 w-auto object-contain inline-block mb-3" draggable={false} />
             </div>
 
             <div className="mb-8">
