@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { StaticTypewriter } from "./about/typewriter";
 import { PhotoCollage, VideoCollage } from "./about/collage";
 import { FloatingQuotesLayer } from "./about/quotes";
@@ -205,9 +206,14 @@ export default function AboutUs() {
           style={{ clipPath: "polygon(40px 0, 100% 0, 100% calc(100% - 40px), calc(100% - 40px) 100%, 0 100%, 0 40px)" }}
         >
           {/* Base Layer: Grayscale ONLY (No Blur) */}
-          <img 
+          <Image
             src="/man.webp" 
             alt="The Team" 
+            width={1193}
+            height={761}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className="absolute inset-0 w-full h-full object-cover filter grayscale opacity-40 transition-all duration-500" 
             draggable={false}
           />
@@ -221,10 +227,15 @@ export default function AboutUs() {
             }}
           >
             {/* Sharp Grayscale Anchor (Ensures face clarity) */}
-            <img 
+            <Image
               src="/man.webp" 
               alt=""
               aria-hidden="true"
+              width={1193}
+              height={761}
+              unoptimized
+              loading="eager"
+              decoding="auto"
               className="absolute inset-0 w-full h-full object-cover filter grayscale contrast-125 brightness-110" 
               draggable={false}
             />
@@ -258,9 +269,14 @@ export default function AboutUs() {
               maskImage: `radial-gradient(circle 200px at ${mousePos.x}px ${mousePos.y}px, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)`
             }}
           >
-            <img 
+            <Image
               src="/man.webp" 
               alt="The Team Color" 
+              width={1193}
+              height={761}
+              unoptimized
+              loading="eager"
+              decoding="auto"
               className="w-full h-full object-cover contrast-110 saturate-110" 
               draggable={false}
             />
@@ -345,9 +361,14 @@ export default function AboutUs() {
              onMouseEnter={() => setHoverRei(true)}
              onMouseLeave={() => setHoverRei(false)}
            >
-             <img 
+             <Image
                src="/rei.webp" 
                alt="Rei" 
+               width={1536}
+               height={2736}
+               unoptimized
+               loading="eager"
+               decoding="auto"
                className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.2)] cursor-help"
              />
              <AnimatePresence>
@@ -361,7 +382,7 @@ export default function AboutUs() {
                   >
                     {/* Photo Box */}
                     <div className={`overflow-hidden border border-white/10 bg-black/20 ${isMobile ? "w-[80px] h-[80px] rounded-[0.5rem] mb-2" : "w-[136px] h-[136px] rounded-[1rem] mb-4"}`}>
-                      <img src="/reifo.webp" alt="Rei Photo" className="w-full h-full object-cover" />
+                      <Image src="/reifo.webp" alt="Rei Photo" width={481} height={572} unoptimized loading="eager" decoding="auto" className="w-full h-full object-cover" />
                     </div>
                     
                     <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
@@ -380,9 +401,14 @@ export default function AboutUs() {
              onMouseEnter={() => setHoverJosh(true)}
              onMouseLeave={() => setHoverJosh(false)}
            >
-             <img 
+             <Image
                src="/josh.webp" 
                alt="Josh" 
+               width={2016}
+               height={2130}
+               unoptimized
+               loading="eager"
+               decoding="auto"
                className={`object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help ${isMobile ? "w-full h-auto" : "h-full w-auto"}`}
              />
              <AnimatePresence>
@@ -396,7 +422,7 @@ export default function AboutUs() {
                   >
                     {/* Photo Box */}
                     <div className={`overflow-hidden border border-white/10 bg-black/20 ${isMobile ? "w-[80px] h-[80px] rounded-[0.5rem] mb-2" : "w-[136px] h-[136px] rounded-[1rem] mb-4"}`}>
-                      <img src="/jofo.webp" alt="Josh Photo" className="w-full h-full object-cover" />
+                      <Image src="/jofo.webp" alt="Josh Photo" width={433} height={416} unoptimized loading="eager" decoding="auto" className="w-full h-full object-cover" />
                     </div>
 
                     <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
@@ -416,9 +442,14 @@ export default function AboutUs() {
              onMouseEnter={() => setHoverOtniel(true)}
              onMouseLeave={() => setHoverOtniel(false)}
            >
-             <img 
+             <Image
                src="/otniel.webp" 
                alt="Otniel" 
+               width={1888}
+               height={2234}
+               unoptimized
+               loading="eager"
+               decoding="auto"
                className={`object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help ${isMobile ? "w-full h-auto" : "h-full w-auto md:scale-[1.3] md:origin-bottom"}`}
              />
              <AnimatePresence>
@@ -432,7 +463,7 @@ export default function AboutUs() {
                   >
                     {/* Photo Box */}
                     <div className={`overflow-hidden border border-white/10 bg-black/20 ${isMobile ? "w-[80px] h-[80px] rounded-[0.5rem] mb-2" : "w-[136px] h-[136px] rounded-[1rem] mb-4"}`}>
-                      <img src="/ofo.webp" alt="Otniel Photo" className="w-full h-full object-cover" />
+                      <Image src="/ofo.webp" alt="Otniel Photo" width={664} height={622} unoptimized loading="eager" decoding="auto" className="w-full h-full object-cover" />
                     </div>
 
                     <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
@@ -448,9 +479,14 @@ export default function AboutUs() {
 
         {/* Plateau Centerpiece - Adjusted Height */}
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-auto h-auto z-[10] pointer-events-none transform translate-y-[40%]">
-          <img 
+          <Image
             src="/plateau.webp" 
             alt="Plateau" 
+            width={1050}
+            height={700}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className="w-auto h-auto object-contain opacity-90 brightness-75 contrast-125"
             style={{ 
               maskImage: "linear-gradient(to top, black 50%, transparent 100%), radial-gradient(ellipse at center, black 80%, transparent 100%)",
@@ -474,9 +510,14 @@ export default function AboutUs() {
               willChange: "transform" // Performance optimization
             }}
           >
-            <img 
+            <Image
               src="/logolden.webp" 
               alt="Golden Logo" 
+              width={2400}
+              height={715}
+              unoptimized
+              loading="eager"
+              decoding="auto"
               className="w-full h-auto object-contain brightness-110 contrast-125" 
             />
           </motion.div>
@@ -523,9 +564,14 @@ export default function AboutUs() {
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
         >
-          <img 
+          <Image
             src="/dy_3.webp" 
             alt="DY 3"
+            width={1536}
+            height={2729}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className="object-contain pointer-events-auto opacity-80 cursor-help w-[220px] h-[220px] md:w-[23.25rem] md:h-[23.25rem]"
             style={{ rotate: "-10.5deg" }}
           />
@@ -600,9 +646,14 @@ export default function AboutUs() {
               className="absolute w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-gradient-to-tr from-[#FFD700]/40 to-cyan-500/40 blur-[70px] rounded-full z-[-1]" 
             />
             {/* Reii Image */}
-            <img 
+            <Image
               src={imgToggle ? "/reii2.webp" : "/reii.webp"} 
               alt="Reii Left" 
+              width={imgToggle ? 768 : 1792}
+              height={imgToggle ? 905 : 2160}
+              unoptimized
+              loading="eager"
+              decoding="auto"
               className={`max-w-none relative z-10 opacity-90 ${isMobile ? "w-[9.6rem]" : "w-[12rem] md:w-[17.25rem]"}`} 
             />
 
@@ -636,9 +687,14 @@ export default function AboutUs() {
               className="absolute w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-gradient-to-tl from-[#FF00FF]/40 to-cyan-500/40 blur-[70px] rounded-full z-[-1]" 
             />
             {/* Reii 2 Image */}
-            <img 
+            <Image
               src={imgToggle ? "/reii3.webp" : "/reii2.webp"} 
               alt="Reii Right" 
+              width={imgToggle ? 1792 : 768}
+              height={imgToggle ? 2119 : 905}
+              unoptimized
+              loading="eager"
+              decoding="auto"
               className={`max-w-none relative z-10 opacity-90 ${isMobile ? "w-[9.6rem]" : "w-[12rem] md:w-[17.25rem]"}`} 
             />
 
