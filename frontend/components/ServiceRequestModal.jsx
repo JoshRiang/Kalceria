@@ -1,101 +1,16 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { StepIndicator, Field } from "./service-request/FormControls";
 import api from "@/lib/api";
 
 // ── Shared Components ────────────────────────────────────────────────────────
 
-const ICONS = {
-  title: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 7h10M7 12h10m-10 5h7"></path></svg>,
-  user: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>,
-  whatsapp: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>,
-  location: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>,
-  calendar: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>,
-  notes: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>,
-};
 
-function StepIndicator({ total, current }) {
-  return (
-    <div className="flex items-center gap-2.5 mb-6">
-      {Array.from({ length: total }).map((_, i) => (
-        <div key={i} className="flex items-center gap-2.5">
-          <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-black font-sans transition-all duration-500 border ${
-            i < current ? "bg-[#FF00FF] border-[#FF00FF] text-white shadow-[0_0_12px_rgba(255,0,255,0.4)]" :
-            i === current ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]" :
-            "bg-white/5 backdrop-blur-md border-white/5 text-white/30"
-          }`}>
-            {i + 1}
-          </div>
-          {i < total - 1 && (
-            <div className="relative h-[1.5px] w-6 bg-white/5 backdrop-blur-sm overflow-hidden rounded-full">
-              <motion.div 
-                initial={{ x: "-100%" }}
-                animate={{ x: i < current ? "0%" : "-100%" }}
-                transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="absolute inset-0 bg-gradient-to-r from-[#FF00FF] to-[#FACC15]"
-              />
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
 
-function Field({ label, type, placeholder, options, val, onChange, id, required = false }) {
-  const [focused, setFocused] = useState(false);
-  const isSelect = type === "select";
-  const isTextarea = type === "textarea";
 
-  const baseClasses = `
-    w-full bg-[#0c1528]/50 border rounded-xl px-4 py-3 
-    font-sans text-[12px] text-white outline-none transition-all duration-300 placeholder:text-slate-600
-    ${focused ? "border-[#FF00FF] shadow-[0_0_15px_rgba(255,0,255,0.15)] bg-[#0f1a30]" : "border-slate-800/50 hover:border-slate-700 bg-[#0c1528]/30"}
-  `;
 
-  return (
-    <div className="flex flex-col mb-4">
-      <label className="mb-1.5 font-sans text-[11px] font-bold text-slate-400 flex items-center gap-1">
-        {label}
-      </label>
-      {isSelect ? (
-        <select 
-          value={val} 
-          onChange={(e) => onChange(id, e.target.value)} 
-          onFocus={() => setFocused(true)} 
-          onBlur={() => setFocused(false)} 
-          className={baseClasses}
-          required={required}
-        >
-          <option value="">Select Option…</option>
-          {options.map((o) => <option key={o.id || o} value={o.id || o}>{o.label || o}</option>)}
-        </select>
-      ) : isTextarea ? (
-        <textarea 
-          rows={3} 
-          placeholder={placeholder} 
-          value={val} 
-          onChange={(e) => onChange(id, e.target.value)} 
-          onFocus={() => setFocused(true)} 
-          onBlur={() => setFocused(false)} 
-          className={baseClasses} 
-          required={required}
-        />
-      ) : (
-        <input 
-          type={type} 
-          placeholder={placeholder} 
-          value={val} 
-          onChange={(e) => onChange(id, e.target.value)} 
-          onFocus={() => setFocused(true)} 
-          onBlur={() => setFocused(false)} 
-          className={baseClasses} 
-          required={required} 
-        />
-      )}
-    </div>
-  );
-}
+
 
 const SERVICE_TYPES = [
   { id: "EO", label: "Event Organizer", desc: "Full EO service for your automotive event" },
