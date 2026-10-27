@@ -126,7 +126,7 @@ export default function JourneyPageClient() {
         style={{ pointerEvents: isIntroActive ? 'none' : 'auto' }}
       >
         {/* Section 1 - Left Half */}
-        <section className={`relative w-full h-screen bg-no-repeat flex items-start pt-[7vh] ${isMobile ? "bg-[url('/hp/bgj_1_hp.webp')] bg-cover bg-center flex-col pt-[8vh]" : "bg-[url('/bgj_1.webp')] bg-[length:100%_100%]"}`}>
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_1.webp')] md:bg-[length:100%_100%] flex items-start pt-[7vh] ${isMobile ? "flex-col pt-[8vh]" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
               {/* Glass Box Layer */}
@@ -148,7 +148,7 @@ export default function JourneyPageClient() {
                 unoptimized
                 loading="eager"
                 decoding="auto"
-                className={`absolute top-[33%] z-20 h-24 md:h-32 object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[180px]" : "left-[145px] md:left-[228px]"}`} 
+                className={`absolute top-[33%] z-20 h-24 md:h-32 w-auto object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[180px]" : "left-[145px] md:left-[228px]"}`}
                 style={{ transform: isMobile ? "translateY(-50%) translateX(-30%) scale(0.82)" : "translateY(-50%) translateX(-20%) scale(0.90)" }}
               />
             </div>
@@ -177,7 +177,7 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 2 */}
-        <section className={`relative w-full h-screen bg-no-repeat flex flex-col items-start pt-[8vh] overflow-hidden ${isMobile ? "bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center pt-[2vh]" : "bg-[url('/bgj_2.webp')] bg-[length:100%_100%]"}`}>
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_2.webp')] md:bg-[length:100%_100%] flex flex-col items-start pt-[8vh] overflow-hidden ${isMobile ? "pt-[2vh]" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 relative z-20 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`flex flex-col md:flex-row justify-start items-start w-full gap-8 ${isMobile ? "items-center" : ""}`}>
               <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
@@ -200,7 +200,7 @@ export default function JourneyPageClient() {
                   unoptimized
                   loading="eager"
                   decoding="auto"
-                  className={`absolute top-[47%] z-20 h-24 md:h-32 object-contain pointer-events-none drop-shadow-2xl ${isMobile ? "left-[158px]" : "left-[160px] md:left-[215px]"}`} 
+                  className={`absolute top-[47%] z-20 h-24 md:h-32 w-auto object-contain pointer-events-none drop-shadow-2xl ${isMobile ? "left-[158px]" : "left-[160px] md:left-[215px]"}`}
                   style={{ transform: isMobile ? "translateY(-50%) translateX(-15%) scale(0.85)" : "translateY(-50%) translateX(-5%)" }}
                 />
               </div>
@@ -239,7 +239,7 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 3 - Left Half */}
-        <section className={`relative w-full h-screen bg-no-repeat flex items-start pt-[12vh] ${isMobile ? "bg-[url('/hp/bgj_3_hp.webp')] bg-cover bg-center flex-col pt-[8vh]" : "bg-[url('/bgj_3.webp')] bg-[length:100%_100%]"}`}>
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_3.webp')] md:bg-[length:100%_100%] flex items-start pt-[12vh] ${isMobile ? "flex-col pt-[8vh]" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
               {/* Glass Box Layer (Sized for both WITH and DSL area) */}
@@ -261,7 +261,7 @@ export default function JourneyPageClient() {
                 unoptimized
                 loading="eager"
                 decoding="auto"
-                className={`absolute top-[44%] z-20 h-20 md:h-32 object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[118px]" : "left-[114px] md:left-[168px]"}`} 
+                className={`absolute top-[44%] z-20 h-20 md:h-32 w-auto object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[118px]" : "left-[114px] md:left-[168px]"}`}
                 style={{ transform: isMobile ? "translateY(-50%) translateX(-2%) scale(0.82)" : "translateY(-50%) scale(0.90)" }}
               />
             </div>

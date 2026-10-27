@@ -279,14 +279,14 @@ export default function LandingPage({ onNavigateAuth }) {
           
           {/* Crystal 3 Top Right (Truncated at Top) */}
           <div className="absolute top-[-20px] md:top-[-40px] right-12 md:right-40 hidden md:flex flex-col items-center pointer-events-none opacity-80">
-            <Image src="/crystal_3.webp" alt="Crystal 3" width={2480} height={1728} unoptimized loading="eager" decoding="auto" className="h-[75px] md:h-[120px] object-contain rotate-180" />
+            <Image src="/crystal_3.webp" alt="Crystal 3" width={2480} height={1728} unoptimized loading="eager" decoding="auto" className="h-[75px] md:h-[120px] w-auto object-contain rotate-180" />
           </div>
 
           {/* Crystal 1 Bottom Left (Truncated at Bottom) */}
-          <Image src="/crystal_1.webp" alt="Crystal 1" width={2016} height={2120} unoptimized loading="eager" decoding="auto" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-4 h-[80px] md:h-[130px] object-contain opacity-80 z-0 hidden md:block" />
+          <Image src="/crystal_1.webp" alt="Crystal 1" width={2016} height={2120} unoptimized loading="eager" decoding="auto" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-4 h-[80px] md:h-[130px] w-auto object-contain opacity-80 z-0 hidden md:block" />
 
           <div className="absolute bottom-0 left-12 md:left-40 hidden md:flex items-end">
-            <Image src="/grup.webp" alt="Group" width={2064} height={1655} unoptimized loading="eager" decoding="auto" className="relative z-10 h-[180px] md:h-[280px] object-contain translate-y-[2.5px] opacity-35" />
+            <Image src="/grup.webp" alt="Group" width={2064} height={1655} unoptimized loading="eager" decoding="auto" className="relative z-10 h-[180px] md:h-[280px] w-auto object-contain translate-y-[2.5px] opacity-35" />
           </div>
 
           <div className="absolute bottom-0 right-4 md:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
@@ -295,7 +295,7 @@ export default function LandingPage({ onNavigateAuth }) {
               className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[22px] z-0 opacity-80"
               style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%, 0 100%)" }}
             />
-            <Image src="/brio_black.webp" alt="Brio" width={2226} height={1207} unoptimized loading="eager" decoding="auto" className="relative z-10 h-[150px] md:h-[240px] object-contain translate-y-[2.5px]" />
+            <Image src="/brio_black.webp" alt="Brio" width={2226} height={1207} unoptimized loading="eager" decoding="auto" className="relative z-10 h-[150px] md:h-[240px] w-auto object-contain translate-y-[2.5px]" />
           </div>
         </div>
       </section>
@@ -351,14 +351,14 @@ export default function LandingPage({ onNavigateAuth }) {
             unoptimized
             loading="eager"
             decoding="auto"
-            className={`h-[192px] md:h-[540px] object-contain drop-shadow-[0_10px_70px_rgba(255,255,255,0.05)] ${isMobile ? "" : "rotate-180"}`} 
+            className={`h-[192px] md:h-[540px] w-auto object-contain drop-shadow-[0_10px_70px_rgba(255,255,255,0.05)] ${isMobile ? "" : "rotate-180"}`}
           />
         </div>
 
         {/* Architectural Wall Backgrounds */}
         <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
-          <Image src="/wall_2.webp" alt="Wall 2" width={1888} height={2244} unoptimized loading="eager" decoding="auto" className="absolute bottom-0 right-0 h-[215px] md:h-[377px] object-contain opacity-90 brightness-110" />
-          <Image src="/wall_1.webp" alt="Wall 1" width={2400} height={1603} unoptimized loading="eager" decoding="auto" className="absolute bottom-0 left-[-2%] md:left-[9%] h-[175px] md:h-[304px] object-contain opacity-90 brightness-110" />
+          <Image src="/wall_2.webp" alt="Wall 2" width={1888} height={2244} unoptimized loading="eager" decoding="auto" className="absolute bottom-0 right-0 h-[215px] md:h-[377px] w-auto object-contain opacity-90 brightness-110" />
+          <Image src="/wall_1.webp" alt="Wall 1" width={2400} height={1603} unoptimized loading="eager" decoding="auto" className="absolute bottom-0 left-[-2%] md:left-[9%] h-[175px] md:h-[304px] w-auto object-contain opacity-90 brightness-110" />
         </div>
 
         <FloatingSpareParts />
@@ -396,8 +396,8 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Bush Footer Decoration (Colliding in Middle, Truncated at Border) */}
         <div className="absolute bottom-[-75px] md:bottom-[-125px] left-1/2 -translate-x-1/2 flex items-end justify-center pointer-events-none z-5 w-screen overflow-hidden opacity-90">
           <TropicalParticles />
-          <Image src="/bush_1.webp" alt="Bush 1" width={3178} height={1129} unoptimized loading="eager" decoding="auto" className="h-[180px] md:h-[320px] object-contain -mr-16 md:-mr-28 -translate-y-6 md:-translate-y-10" />
-          <Image src="/bush_2.webp" alt="Bush 2" width={3172} height={1139} unoptimized loading="eager" decoding="auto" className="h-[180px] md:h-[320px] object-contain -ml-16 md:-ml-28" />
+          <Image src="/bush_1.webp" alt="Bush 1" width={3178} height={1129} unoptimized loading="eager" decoding="auto" className="h-[180px] md:h-[320px] w-auto object-contain -mr-16 md:-mr-28 -translate-y-6 md:-translate-y-10" />
+          <Image src="/bush_2.webp" alt="Bush 2" width={3172} height={1139} unoptimized loading="eager" decoding="auto" className="h-[180px] md:h-[320px] w-auto object-contain -ml-16 md:-ml-28" />
         </div>
 
         {/* Marketplace Links */}
