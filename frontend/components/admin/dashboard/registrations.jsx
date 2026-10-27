@@ -4,8 +4,10 @@ import api from "@/lib/api";
 import ReceiptModal from "@/components/ReceiptModal";
 import { useDebounce, CheckIcon, TrashIcon, XIcon, LocalBlob, Badge, formatRp, formatDate, ExpandableSearch } from './primitives';
 import { JITActionModal } from './modals';
+import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 
 export function RegistrationsPanel({ lowPowerMode }) {
+  const scheduleTimeout = useTimeoutRegistry();
   const [regs, setRegs] = useState([]);
   const [receiptModal, setReceiptModal] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,7 +47,7 @@ export function RegistrationsPanel({ lowPowerMode }) {
   };
   function exportPdf(r) {
     setReceiptModal({ type: "REGISTRATION", data: r });
-    setTimeout(() => load(), 1000); // Reload slightly later so modal can mark it exported in BG
+    scheduleTimeout(() => load(), 1000); // Reload slightly later so modal can mark it exported in BG
   }
 
   return (

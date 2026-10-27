@@ -3,12 +3,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { DARK, LABEL, XIcon, Badge, DynamicBlobs, StatCard, SectionTitle } from './primitives';
+import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
+import { DARK, LABEL, XIcon, DynamicBlobs, StatCard, SectionTitle } from './primitives';
 import { JITResetModal } from './modals';
 import { EventsPanel } from './events';
 import { RegistrationsPanel } from './registrations';
 import { INITIAL_DUMMIES, ProductsPanel } from './products';
-import { LoomBackground, SystemHealth } from './system';
+import { SystemHealth } from './system';
 import { CommentsPanel } from './comments';
 import { BookingsPanel } from './bookings';
 import { EarningsPanel } from './earnings';
@@ -25,6 +26,7 @@ export const TABS = [
 ];
 
 export default function AdminDashboard() {
+  const scheduleTimeout = useTimeoutRegistry();
   const router = useRouter();
   const [tab, setTab] = useState("events");
   const [stats, setStats] = useState({ events: 0, users: 0, regs: 0, products: 0, comments: 0, bookings: 0 });
@@ -77,7 +79,7 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error('Export failed:', err);
       setSystemToast({ type: 'error', msg: 'Failed to export logs. Check your connection.' });
-      setTimeout(() => setSystemToast(null), 4000);
+      scheduleTimeout(() => setSystemToast(null), 4000);
     } finally {
       setIsExportingLogs(false);
     }
@@ -88,7 +90,7 @@ export default function AdminDashboard() {
     setShowResetModal(false);
     setIsDrawerOpen(false);
     setSystemToast({ type: 'success', msg: '✓ System reset complete. Logging out...' });
-    setTimeout(() => {
+    scheduleTimeout(() => {
       // Force logout and hard-reload for clean state
       localStorage.clear();
       sessionStorage.clear();
@@ -180,13 +182,13 @@ export default function AdminDashboard() {
         setShowPulse(true);
         setIsChatFaded(false); // Make visible on new log
         setLastActivity(Date.now());
-        setTimeout(() => setShowPulse(false), 2000);
+        scheduleTimeout(() => setShowPulse(false), 2000);
       }
       
       if (newLogs.length > 0) prevLogIdRef.current = newLogs[0].id;
       setLogs(newLogs);
     } catch (err) { console.error(err); }
-  }, []);
+  }, [scheduleTimeout]);
 
   useEffect(() => {
     setMounted(true);
