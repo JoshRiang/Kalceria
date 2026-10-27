@@ -177,15 +177,16 @@ function DecorativeCard() {
 export default function MinigamePage() {
   const [showInfo, setShowInfo] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
-  const [isGameStarting, setIsGameStarting] = useState(false);
-  const [isGameEnding, setIsGameEnding] = useState(false);
-  const [inGame, setInGame] = useState(false);
+  const [gamePhase, setGamePhase] = useState("idle");
   const [attempt, setAttempt] = useState(1); // 1 = has attempt, 0 = used up
-  const [showReset, setShowReset] = useState(false);
   const videoRef = useRef(null);
   const scheduleTimeout = useTimeoutRegistry();
 
   const [isMobile, setIsMobile] = useState(false);
+  const isGameStarting = gamePhase === "starting" || gamePhase === "playing" || gamePhase === "ending";
+  const isGameEnding = gamePhase === "ending" || gamePhase === "ending-quit";
+  const inGame = gamePhase === "playing" || gamePhase === "ending";
+  const showReset = gamePhase === "finished";
 
   useEffect(() => {
     const checkMobile = () => {
@@ -212,27 +213,23 @@ export default function MinigamePage() {
 
   const handlePlayIt = () => {
     if (attempt === 0) return;
-    setIsGameStarting(true);
-    scheduleTimeout(() => setInGame(true), 1800);
+    setGamePhase("starting");
+    scheduleTimeout(() => setGamePhase("playing"), 1800);
   };
 
   const handleQuit = () => {
     // Quit doesn't use up attempt
-    setInGame(false);
-    setIsGameStarting(false);
+    setGamePhase((phase) => phase === "ending" ? "ending-quit" : "idle");
   };
 
   const handleFinish = () => {
     // After game finishes, attempt becomes 0, start ending sequence
     setAttempt(0);
-    setIsGameEnding(true);
+    setGamePhase("ending");
     
     // Gradual cleanup and transition back to landing page state
     scheduleTimeout(() => {
-      setInGame(false);
-      setIsGameStarting(false);
-      setIsGameEnding(false);
-      setShowReset(true);
+      setGamePhase("finished");
     }, 2800); // Sequential timing to match the exit animation layers
   };
 
