@@ -1,58 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import api from "@/lib/api";
-
-const EMAIL_AUTH_ENABLED = process.env.NEXT_PUBLIC_ENABLE_EMAIL_AUTH === "true";
-const PUBLIC_SIGNUP_ENABLED =
-  EMAIL_AUTH_ENABLED && process.env.NEXT_PUBLIC_ENABLE_PUBLIC_SIGNUP === "true";
-
-// ── Shared Input Component ──────────────────────────────────────────────────
-function Field({ id, label, type, placeholder, options, val, onChange }) {
-  const [focused, setFocused] = useState(false);
-  const isSelect = type === "select";
-
-  return (
-    <div className="flex flex-col mb-4">
-      <label className="mb-1.5 font-sans text-xs font-bold uppercase tracking-wider text-slate-400">
-        {label}
-      </label>
-      {isSelect ? (
-        <select
-          value={val}
-          onChange={(e) => onChange(id, e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          className={`
-            w-full bg-[#0c1528] border rounded-md px-3 py-2.5 
-            font-sans text-[13px] text-white outline-none transition-all
-            ${focused ? "border-slate-500 shadow-[0_0_0_2px_rgba(100,116,139,0.1)]" : "border-slate-800"}
-          `}
-        >
-          <option value="">Select…</option>
-          {options.map((o) => <option key={o} value={o}>{o}</option>)}
-        </select>
-      ) : (
-        <input
-          id={id}
-          type={type}
-          placeholder={placeholder}
-          value={type === "file" ? undefined : val}
-          onChange={(e) => onChange(id, type === "file" ? e.target.files[0] : e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          autoComplete={type === "password" ? "current-password" : "off"}
-          className={`
-            w-full bg-[#0c1528] border rounded-md px-3 py-2.5 
-            font-sans text-[13px] text-white outline-none transition-all placeholder:text-slate-600
-            ${type === "file" ? "file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600" : ""}
-            ${focused ? "border-slate-500 shadow-[0_0_0_2px_rgba(100,116,139,0.1)]" : "border-slate-800"}
-          `}
-        />
-      )}
-    </div>
-  );
-}
+import AuthField from "@/components/auth/AuthField";
+import { PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AuthPage({ onAuthSuccess, onBack }) {
@@ -69,6 +21,8 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const [mobileVideo, setMobileVideo] = useState("/hp/vid_login_hp.mp4");
 
   useEffect(() => { 
+    // Preserve the existing mount fade; the immediate update is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true); 
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -288,11 +242,11 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
               )}
-              <img src="/logologin.webp" alt="Kalceria" className="h-10 object-contain inline-block" draggable={false} />
+              <Image src="/logologin.webp" alt="Kalceria" width={1874} height={560} className="h-10 w-auto object-contain inline-block" draggable={false} />
             </div>
 
             {/* ── Mode toggle (hidden during OTP verify) ── */}
-            {PUBLIC_SIGNUP_ENABLED && mode !== "verify" && (
+            {mode !== "verify" && (
             <div className="flex mb-8 bg-[#040810]/80 rounded-lg border border-slate-800/60 p-1 relative">
               {/* Active pill background */}
               <motion.div
@@ -328,7 +282,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                 {mode === "login" ? "Welcome Back" : mode === "register" ? "Create Account" : "Verify Email"}
               </h1>
               <p className="font-mono text-sm text-slate-500 mt-1">
-                {mode === "login" ? "Enter your credentials to access the portal." : mode === "register" ? "Complete all fields to register." : `Masukkan 6 digit kode OTP yang dikirim ke ${otpEmail}`}
+                {mode === "login" ? "Enter your credentials to access the portal." : mode === "register" && !PUBLIC_SIGNUP_ENABLED ? "Not Ready Yet" : mode === "register" ? "Complete all fields to register." : `Masukkan 6 digit kode OTP yang dikirim ke ${otpEmail}`}
               </p>
             </div>
 
@@ -344,23 +298,23 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                 >
                   {mode === "login" ? (
                     <>
-                      <Field id="email" label="Email Address" type="email" placeholder="user@domain.com" val={form.email || ""} onChange={setField} />
-                      <Field id="password" label="Password" type="password" placeholder="••••••••" val={form.password || ""} onChange={setField} />
+                      <AuthField id="email" label="Email Address" type="email" placeholder="user@domain.com" val={form.email || ""} onChange={setField} />
+                      <AuthField id="password" label="Password" type="password" placeholder="••••••••" val={form.password || ""} onChange={setField} />
                     </>
                   ) : mode === "register" ? (
                     <>
-                      <Field id="name" label="Full Name" type="text" placeholder="John Doe" val={form.name || ""} onChange={setField} />
-                      <Field id="profilePhoto" label="Profile Photo" type="file" val={form.profilePhoto || ""} onChange={setField} />
+                      <AuthField id="name" label="Full Name" type="text" placeholder={PUBLIC_SIGNUP_ENABLED ? "John Doe" : "Not Ready Yet"} val={form.name || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
+                      <AuthField id="profilePhoto" label="Profile Photo" type="file" placeholder="Not Ready Yet" val={form.profilePhoto || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                        <Field id="dob" label="Date of Birth" type="date" val={form.dob || ""} onChange={setField} />
-                        <Field id="gender" label="Gender" type="select" options={["Male", "Female", "Other"]} val={form.gender || ""} onChange={setField} />
+                        <AuthField id="dob" label="Date of Birth" type="date" placeholder="Not Ready Yet" val={form.dob || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
+                        <AuthField id="gender" label="Gender" type="select" placeholder="Not Ready Yet" options={["Male", "Female", "Other"]} val={form.gender || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
                       </div>
-                      <Field id="email" label="Email Address" type="email" placeholder="user@domain.com" val={form.email || ""} onChange={setField} />
+                      <AuthField id="email" label="Email Address" type="email" placeholder={PUBLIC_SIGNUP_ENABLED ? "user@domain.com" : "Not Ready Yet"} val={form.email || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                        <Field id="domicile" label="City / Domicile" type="text" placeholder="Jakarta" val={form.domicile || ""} onChange={setField} />
-                        <Field id="phone" label="Phone Number" type="tel" placeholder="+62 8xx-xxxx-xxxx" val={form.phone || ""} onChange={setField} />
+                        <AuthField id="domicile" label="City / Domicile" type="text" placeholder="Not Ready Yet" val={form.domicile || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
+                        <AuthField id="phone" label="Phone Number" type="tel" placeholder="Not Ready Yet" val={form.phone || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
                       </div>
-                      <Field id="password" label="Password" type="password" placeholder="Create a strong password" val={form.password || ""} onChange={setField} />
+                      <AuthField id="password" label="Password" type="password" placeholder="Not Ready Yet" val={form.password || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
                       
                       {/* Password Requirements Checklist */}
                       <div className="mb-6 grid grid-cols-2 gap-2 text-xs font-sans tracking-wide">
@@ -385,9 +339,11 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                       {/* Email icon */}
                       <div className="flex justify-center mb-6">
                         <div className="w-20 h-20 flex items-center justify-center">
-                          <img 
+                          <Image
                             src="/register/email_logo.png" 
                             alt="Email Logo" 
+                            width={467}
+                            height={347}
                             className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(79,70,229,0.3)]" 
                           />
                         </div>
@@ -457,30 +413,24 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
               {/* ── Submit ── */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (mode === "register" && !PUBLIC_SIGNUP_ENABLED)}
                 className="mt-2 w-full bg-white text-black font-extrabold text-[13px] uppercase tracking-wider py-3.5 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Processing..." : mode === "login" ? "Sign In" : mode === "register" ? "Register Account" : "Verify OTP"}
+                {loading ? "Processing..." : mode === "register" && !PUBLIC_SIGNUP_ENABLED ? "Not Ready Yet" : mode === "login" ? "Sign In" : mode === "register" ? "Register Account" : "Verify OTP"}
               </button>
             </form>
 
             {/* ── Footer ── */}
             <div className="mt-8 text-center">
-              {PUBLIC_SIGNUP_ENABLED ? (
-                <p className="font-mono text-xs text-slate-500">
-                  {mode === "verify" ? "Sudah verifikasi? " : mode === "login" ? "Don't have an account? " : "Already have an account? "}
-                  <button
-                    onClick={() => switchMode(mode === "verify" ? "login" : mode === "login" ? "register" : "login")}
-                    className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4"
-                  >
-                    {mode === "verify" ? "Sign in" : mode === "login" ? "Register now" : "Sign in"}
-                  </button>
-                </p>
-              ) : (
-                <p className="font-mono text-xs text-slate-500">
-                  Account access is managed by a Kalceria administrator.
-                </p>
-              )}
+              <p className="font-mono text-xs text-slate-500">
+                {mode === "verify" ? "Sudah verifikasi? " : mode === "login" ? "Don't have an account? " : "Already have an account? "}
+                <button
+                  onClick={() => switchMode(mode === "verify" ? "login" : mode === "login" ? "register" : "login")}
+                  className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4"
+                >
+                  {mode === "verify" ? "Sign in" : mode === "login" ? "Register now" : "Sign in"}
+                </button>
+              </p>
             </div>
           </div>
           </div>
