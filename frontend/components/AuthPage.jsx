@@ -242,7 +242,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
               )}
-              <Image src="/logologin.webp" alt="Kalceria" width={1874} height={560} className="h-10 w-auto object-contain inline-block" draggable={false} />
+              <Image src="/logologin.webp" alt="Kalceria" width={1874} height={560} unoptimized loading="eager" decoding="auto" className="h-10 w-auto object-contain inline-block" draggable={false} />
             </div>
 
             {/* ── Mode toggle (hidden during OTP verify) ── */}
@@ -344,6 +344,9 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             alt="Email Logo" 
                             width={467}
                             height={347}
+                            unoptimized
+                            loading="eager"
+                            decoding="auto"
                             className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(79,70,229,0.3)]" 
                           />
                         </div>
