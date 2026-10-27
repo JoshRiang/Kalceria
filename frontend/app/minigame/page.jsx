@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import FlipGame from "./FlipGame";
+import { useTimeoutRegistry } from "../../hooks/useTimeoutRegistry";
 
 function MicroParticles({ active, stopping }) {
   const particles = useMemo(() => {
@@ -127,18 +128,19 @@ function DecorativeCard() {
     return { char, color };
   };
 
+  const scheduleTimeout = useTimeoutRegistry();
   const [isFlipped, setIsFlipped] = useState(false);
   const [content, setContent] = useState(generateContent);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setIsFlipped(f => {
-        if (f) setTimeout(() => setContent(generateContent()), 400);
+        if (f) scheduleTimeout(() => setContent(generateContent()), 400);
         return !f;
       });
     }, 2000 + Math.random() * 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [scheduleTimeout]);
 
   return (
     <div className="relative w-14 h-16" style={{ perspective: "1000px" }}>
@@ -181,6 +183,7 @@ export default function MinigamePage() {
   const [attempt, setAttempt] = useState(1); // 1 = has attempt, 0 = used up
   const [showReset, setShowReset] = useState(false);
   const videoRef = useRef(null);
+  const scheduleTimeout = useTimeoutRegistry();
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -210,7 +213,7 @@ export default function MinigamePage() {
   const handlePlayIt = () => {
     if (attempt === 0) return;
     setIsGameStarting(true);
-    setTimeout(() => setInGame(true), 1800);
+    scheduleTimeout(() => setInGame(true), 1800);
   };
 
   const handleQuit = () => {
@@ -225,7 +228,7 @@ export default function MinigamePage() {
     setIsGameEnding(true);
     
     // Gradual cleanup and transition back to landing page state
-    setTimeout(() => {
+    scheduleTimeout(() => {
       setInGame(false);
       setIsGameStarting(false);
       setIsGameEnding(false);

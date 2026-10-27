@@ -23,6 +23,7 @@ export default function JourneyPageClient() {
     window.scrollTo(0, 0);
     
     let i = 0;
+    let introTimeout;
     const typingInterval = setInterval(() => {
       if (i < fullText.length) {
         setDisplayedText(fullText.slice(0, i + 1));
@@ -30,11 +31,14 @@ export default function JourneyPageClient() {
       } else {
         clearInterval(typingInterval);
         // Wait longer after typing for a more cinematic feel
-        setTimeout(() => setIsIntroActive(false), 2000);
+        introTimeout = setTimeout(() => setIsIntroActive(false), 2000);
       }
     }, 100);
 
-    return () => clearInterval(typingInterval);
+    return () => {
+      clearInterval(typingInterval);
+      if (introTimeout) clearTimeout(introTimeout);
+    };
   }, []);
 
   return (

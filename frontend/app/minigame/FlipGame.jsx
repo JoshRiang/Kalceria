@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { useTimeoutRegistry } from "../../hooks/useTimeoutRegistry";
 
 const CARD_IMAGES = ["/ge_1.webp", "/ge_2.webp", "/ge_3.webp", "/ge_4.webp"];
 
@@ -55,6 +56,7 @@ export default function FlipGame({ onQuit, onFinish }) {
   
   const lockRef = useRef(false);
   const timerRef = useRef(null);
+  const scheduleTimeout = useTimeoutRegistry();
 
   // Step 1: Intro - Reveal all 8 cards one by one
   useEffect(() => {
@@ -73,34 +75,34 @@ export default function FlipGame({ onQuit, onFinish }) {
   useEffect(() => {
     if (phase !== "faceup") return;
     setCards(prev => prev.map(c => ({ ...c, flipped: true })));
-    setTimeout(() => setPhase("facedown"), 1800);
-  }, [phase]);
+    scheduleTimeout(() => setPhase("facedown"), 1800);
+  }, [phase, scheduleTimeout]);
 
   // Step 3: Flip Down
   useEffect(() => {
     if (phase !== "facedown") return;
     setCards(prev => prev.map(c => ({ ...c, flipped: false })));
-    setTimeout(() => setPhase("absorb"), 800);
-  }, [phase]);
+    scheduleTimeout(() => setPhase("absorb"), 800);
+  }, [phase, scheduleTimeout]);
 
   // Step 4: Absorb to Center
   useEffect(() => {
     if (phase !== "absorb") return;
-    setTimeout(() => {
+    scheduleTimeout(() => {
       // Re-shuffle and prepare spread
       setCards(makeCards());
       setPhase("spread");
     }, 1000);
-  }, [phase]);
+  }, [phase, scheduleTimeout]);
 
   // Step 5: Spread Out
   useEffect(() => {
     if (phase !== "spread") return;
-    setTimeout(() => {
+    scheduleTimeout(() => {
       setPhase("playing");
       setTimerOn(true);
     }, 800);
-  }, [phase]);
+  }, [phase, scheduleTimeout]);
 
   // Timer
   useEffect(() => {
@@ -117,9 +119,9 @@ export default function FlipGame({ onQuit, onFinish }) {
     if (matched.length === 8 && timerOn) {
       setTimerOn(false);
       setPhase("done");
-      setTimeout(() => setShowSave(true), 800);
+      scheduleTimeout(() => setShowSave(true), 800);
     }
-  }, [matched, timerOn]);
+  }, [matched, timerOn, scheduleTimeout]);
 
   const handleCardClick = (id) => {
     if (lockRef.current || phase !== "playing") return;
@@ -136,7 +138,7 @@ export default function FlipGame({ onQuit, onFinish }) {
       const cardA = cards.find(c => c.id === aId);
       const cardB = cards.find(c => c.id === bId);
 
-      setTimeout(() => {
+      scheduleTimeout(() => {
         if (cardA.img === cardB.img) {
           setMatched(prev => [...prev, aId, bId]);
           setCards(prev => prev.map(c => 
@@ -167,17 +169,17 @@ export default function FlipGame({ onQuit, onFinish }) {
   const handleSaveYes = () => {
     setShowSave(false);
     setShowSubmitted(true);
-    setTimeout(() => {
+    scheduleTimeout(() => {
       setShowSubmitted(false);
       setBlurOut(true);
-      setTimeout(() => onFinish(), 1400);
+      scheduleTimeout(() => onFinish(), 1400);
     }, 3200);
   };
 
   const handleSaveNo = () => {
     setShowSave(false);
     setBlurOut(true);
-    setTimeout(() => onFinish(), 1200);
+    scheduleTimeout(() => onFinish(), 1200);
   };
 
   return (
