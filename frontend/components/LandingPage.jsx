@@ -452,15 +452,25 @@ export default function LandingPage({ onNavigateAuth }) {
                   className="flex flex-col md:flex-row items-center gap-2 md:gap-4 group cursor-pointer"
                 >
                   <div className={`relative shrink-0 flex items-center justify-center ${isMobile ? "w-10 h-10" : "w-8 md:w-10 h-8 md:h-10"}`}>
-                    <img 
+                    <Image
                       src="/ig_gray.webp" 
                       alt="Instagram" 
+                      width={1077}
+                      height={976}
+                      unoptimized
+                      loading="eager"
+                      decoding="auto"
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.4]" 
                       draggable={false}
                     />
-                    <img 
+                    <Image
                       src="/ig.webp" 
                       alt="Instagram Colored" 
+                      width={1077}
+                      height={976}
+                      unoptimized
+                      loading="eager"
+                      decoding="auto"
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.4]" 
                       draggable={false}
                     />
@@ -478,15 +488,25 @@ export default function LandingPage({ onNavigateAuth }) {
                   className="flex flex-col md:flex-row items-center gap-2 md:gap-4 group cursor-pointer"
                 >
                   <div className={`relative shrink-0 ${isMobile ? "w-10 h-10" : "w-8 md:w-10 h-8 md:h-10"}`}>
-                    <img 
+                    <Image
                       src="/tiktok_gray.webp" 
                       alt="TikTok" 
+                      width={944}
+                      height={1117}
+                      unoptimized
+                      loading="eager"
+                      decoding="auto"
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" 
                       draggable={false}
                     />
-                    <img 
+                    <Image
                       src="/tiktok.webp" 
                       alt="TikTok Colored" 
+                      width={944}
+                      height={1117}
+                      unoptimized
+                      loading="eager"
+                      decoding="auto"
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" 
                       draggable={false}
                     />
