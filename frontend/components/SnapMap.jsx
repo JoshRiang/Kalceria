@@ -12,8 +12,6 @@ import "leaflet/dist/leaflet.css";
 
 // Constants & Helpers
 const DEFAULT_CENTER = [-6.2715, 106.7135];
-const avatar = (seed) =>
-  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
 const esc = (str) =>
   String(str).replace(
     /[&<>"']/g,
@@ -58,14 +56,18 @@ export default function SnapMap({
     if (!isReady || !focusUserId || !markerRefs.current) return;
     const markerId = `user_${focusUserId}`;
     const marker = markerRefs.current[markerId];
+    let focusTimeout;
     if (marker && mapRef.current) {
       // Small delay to ensure marker is in a layer if it was just added
-      setTimeout(() => {
+      focusTimeout = setTimeout(() => {
         const latLng = marker.getLatLng();
         mapRef.current.flyTo(latLng, 16);
         marker.openPopup();
       }, 50);
     }
+    return () => {
+      if (focusTimeout) clearTimeout(focusTimeout);
+    };
   }, [focusUserId, isReady]);
 
   useEffect(() => {

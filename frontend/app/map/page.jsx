@@ -4,6 +4,9 @@ import dynamic from "next/dynamic";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
+import { KalceriansPanel } from "@/components/map/KalceriansPanel";
+import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
 import RadialPing from "@/components/map/RadialPing";
 import { userPopup } from "@/components/map/UserPopup";
 import {
@@ -13,7 +16,6 @@ import {
   fetchMiniEvents,
   postBroadcast,
   putBroadcast,
-  delBroadcast,
   postLocation,
   patchVisibility,
   postMiniEvent,
@@ -48,305 +50,20 @@ const hqPoint = {
 };
 
 // ☁️ Static Pixel Cloud Definitions for consistent transition
-const STATIC_CLOUDS = [
-  { w: 400, h: 180, x: 5, y: 10 },
-  { w: 350, h: 150, x: 60, y: 5 },
-  { w: 280, h: 120, x: 30, y: 40 },
-  { w: 420, h: 200, x: 75, y: 45 },
-  { w: 320, h: 140, x: 10, y: 70 },
-  { w: 500, h: 250, x: 55, y: 80 },
-  { w: 250, h: 100, x: 85, y: 25 },
-  { w: 380, h: 160, x: -5, y: 50 },
-];
+
 
 // 🛰 Optimized Tactical Network (Canvas-based Particles & Links)
 
-const TacticalNet = () => {
-  const canvasRef = useRef(null);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    let animationFrameId;
-
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-
-    const particles = [];
-    const particleCount = 80;
-    const maxDist = 150;
-
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        size: Math.random() * 2 + 1,
-        color:
-          i % 7 === 0
-            ? "#ffd60a"
-            : i % 5 === 0
-              ? "#ff006e"
-              : "rgba(255,255,255,0.6)",
-      });
-    }
-
-    const animate = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-
-        // Move
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // Wrap edges
-        if (p.x < 0) p.x = width;
-        if (p.x > width) p.x = 0;
-        if (p.y < 0) p.y = height;
-        if (p.y > height) p.y = 0;
-
-        // Draw particle
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 🔗 Distance-based Linking (User Logic)
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j];
-          const dx = p.x - p2.x;
-          const dy = p.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < maxDist) {
-            ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 * (1 - dist / maxDist)})`;
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          }
-        }
-      }
-
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    const handleResize = () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    };
-
-    window.addEventListener("resize", handleResize);
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 pointer-events-none"
-      style={{ opacity: 0.6 }}
-    />
-  );
-};
 
 // ─── Vintage Laser Grid ──────────────────────────────────────────────
-function VintageLaserGrid({ active, startupProgress }) {
-  const canvasRef = useRef(null);
-  const progressRef = useRef(startupProgress);
 
-  useEffect(() => {
-    progressRef.current = startupProgress;
-  }, [startupProgress]);
-
-  useEffect(() => {
-    if (!active) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-
-    let lines = [];
-    const maxLines = 15; // Increased by 20% for energetic visual guidelines
-
-    const spawnLine = () => {
-      const isVertical = Math.random() > 0.5;
-      const pos = isVertical ? Math.random() * canvas.width : Math.random() * canvas.height;
-      const newLine = {
-        id: Math.random(),
-        isVertical,
-        pos,
-        opacity: 0,
-        targetOpacity: Math.random() * 0.12 + 0.05, // Faint retro draft look
-        life: 0,
-        maxLife: 100 + Math.random() * 150, // 2-4 seconds
-        width: Math.random() > 0.8 ? 1.5 : 0.8,
-      };
-      if (lines.length < maxLines) {
-        lines.push(newLine);
-      }
-    };
-
-    const spawnInterval = setInterval(() => {
-      if (Math.random() < 0.35) { // Spawn rate increased by 20%
-        spawnLine();
-      }
-    }, 200);
-
-    let animationFrame;
-    const render = () => {
-      const currentProgress = progressRef.current;
-      const isDark = currentProgress >= 50;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // ─── Faint Drafting Coordinate Grid ─────────────────────────────
-      if (isDark) {
-        ctx.strokeStyle = "rgba(255, 214, 10, 0.04)"; // Glowing Gold
-      } else {
-        ctx.strokeStyle = "rgba(128, 128, 128, 0.04)"; // Glowing Grey
-      }
-      ctx.lineWidth = 0.5;
-      const grid = 60;
-      for (let x = 0; x < canvas.width; x += grid) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < canvas.height; y += grid) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-
-      // ─── Spawning Laser Grid Lines (20% more density) ─────────────────
-      lines.forEach((line) => {
-        line.life++;
-        if (line.life < 25) {
-          line.opacity += (line.targetOpacity - line.opacity) * 0.1;
-        } else if (line.life > line.maxLife - 25) {
-          line.opacity += (0 - line.opacity) * 0.15;
-        }
-
-        if (isDark) {
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = "rgba(255, 195, 0, 0.5)";
-          ctx.strokeStyle = `rgba(255, 214, 10, ${line.opacity * 1.6})`;
-        } else {
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(120, 120, 120, 0.4)";
-          ctx.strokeStyle = `rgba(80, 80, 80, ${line.opacity * 1.6})`;
-        }
-
-        ctx.lineWidth = line.width;
-        ctx.beginPath();
-
-        if (line.isVertical) {
-          ctx.moveTo(line.pos, 0);
-          ctx.lineTo(line.pos, canvas.height);
-        } else {
-          ctx.moveTo(0, line.pos);
-          ctx.lineTo(canvas.width, line.pos);
-        }
-        ctx.stroke();
-
-        // Dual offset line simulating oscilloscope drawings
-        ctx.shadowBlur = 0;
-        if (isDark) {
-          ctx.strokeStyle = `rgba(255, 195, 0, ${line.opacity * 0.5})`;
-        } else {
-          ctx.strokeStyle = `rgba(140, 140, 140, ${line.opacity * 0.5})`;
-        }
-        ctx.lineWidth = line.width * 0.5;
-        ctx.beginPath();
-        if (line.isVertical) {
-          ctx.moveTo(line.pos - 2, 0);
-          ctx.lineTo(line.pos - 2, canvas.height);
-        } else {
-          ctx.moveTo(0, line.pos - 2);
-          ctx.lineTo(canvas.width, line.pos - 2);
-        }
-        ctx.stroke();
-      });
-
-      lines = lines.filter((l) => l.life < l.maxLife && l.opacity > 0.002);
-      animationFrame = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      window.removeEventListener("resize", resizeCanvas);
-      clearInterval(spawnInterval);
-      cancelAnimationFrame(animationFrame);
-    };
-  }, [active]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 pointer-events-none z-[1000]"
-      style={{ mixBlendMode: startupProgress < 50 ? "multiply" : "screen" }}
-    />
-  );
-}
 
 // ─── Smooth Domino Chevrons for B&W/Red-Black Dash Transition ─────────
-function DominoChevrons({ active, isDark }) {
-  const lightColors = ["#000000", "#1f2937", "#4b5563", "#9ca3af", "#e5e7eb", "#ffffff"];
-  const darkColors = ["#000000", "#1a0505", "#4c0505", "#991b1b", "#dc2626", "#ef4444"];
-  const colors = isDark ? darkColors : lightColors;
-  const chevronCount = 18;
 
-  return (
-    <div className="absolute inset-0 pointer-events-none z-[5] overflow-hidden flex items-center">
-      {active && Array.from({ length: chevronCount }).map((_, i) => {
-        const colorIndex = Math.floor((i / chevronCount) * colors.length);
-        const color = colors[colorIndex];
-        return (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -100 }}
-            animate={{ 
-              opacity: isDark ? [0, 0.7, 0] : [0, 0.8, 0],
-              x: [-100, 0, 100],
-            }}
-            transition={{ 
-              duration: 2.2, 
-              delay: i * 0.1, 
-              ease: "circOut" 
-            }}
-            className="h-[100vh] -ml-[10vw] flex-shrink-0"
-            style={{ width: "22vw" }}
-          >
-            <svg viewBox="0 0 24 24" preserveAspectRatio="none" className="w-full h-full" style={{ color }}>
-              <path d="M 0 0 L 12 12 L 0 24 L 8 24 L 20 12 L 8 0 Z" fill="currentColor" />
-            </svg>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
 
 export default function MapPage() {
+  const scheduleTimeout = useTimeoutRegistry();
   // State
   const [currentUser, setCurrentUser] = useState(null);
   const [mapUsersData, setMapUsersData] = useState([]);
@@ -365,17 +82,14 @@ export default function MapPage() {
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isGlitching, setIsGlitching] = useState(false);
   const [showPirate, setShowPirate] = useState(false);
   const [showStartup, setShowStartup] = useState(false);
-  const [startupStep, setStartupStep] = useState(0);
   const [startupProgress, setStartupProgress] = useState(0);
   const [particles, setParticles] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
   const [notLoggedIn, setNotLoggedIn] = useState(false);
   const [hoveredKalcerian, setHoveredKalcerian] = useState(null);
-  const [selectedKalcerian, setSelectedKalcerian] = useState(null);
   const [hasInitialCentered, setHasInitialCentered] = useState(false);
   const [isStatusBusy, setIsStatusBusy] = useState(false);
   const [isMapDark, setIsMapDark] = useState(false);
@@ -400,7 +114,7 @@ export default function MapPage() {
     // Reset mapIntroSeen to 0 so the intro plays next time
     sessionStorage.setItem("mapIntroSeen", "0");
     
-    setTimeout(() => {
+    scheduleTimeout(() => {
       window.location.href = "/?anchor=section-map";
     }, 1500); // 1.5s matching the white flash transition
   };
@@ -522,14 +236,6 @@ export default function MapPage() {
     setShowStartup(true);
     sessionStorage.setItem("mapIntroSeen", "true");
 
-    const steps = [
-      "INITIALIZING ENCRYPTED UPLINK...",
-      "SYNCING OPERATIVE SIGNALS [BINTARO SECTOR]...",
-      "FETCHING KALCERIAN DATA STREAMS...",
-      "CALIBRATING RADAR HUD OVERLAY...",
-      "ALL SIGNALS STABLE. ACCESS GRANTED.",
-    ];
-
     let currentProgress = 0;
     let interval;
     
@@ -540,17 +246,12 @@ export default function MapPage() {
         if (currentProgress >= 100) {
           currentProgress = 100;
           clearInterval(interval);
-          setTimeout(() => {
+          scheduleTimeout(() => {
             setShowStartup(false);
           }, 1000);
         }
         setStartupProgress(currentProgress);
 
-        const stepIdx = Math.min(
-          Math.floor((currentProgress / 100) * steps.length),
-          steps.length - 1,
-        );
-        setStartupStep(stepIdx);
       }, 250);
     }, 1200);
 
@@ -558,7 +259,7 @@ export default function MapPage() {
       clearTimeout(delayTimer);
       if (interval) clearInterval(interval);
     };
-  }, []);
+  }, [scheduleTimeout]);
 
   // Spawns premium magenta & golden microparticles once loading progress is >= 10%
   useEffect(() => {
@@ -634,14 +335,6 @@ export default function MapPage() {
       setIsRecentering(false);
     });
   }, []);
-
-  const startupMessages = [
-    "INITIALIZING ENCRYPTED UPLINK...",
-    "SYNCING OPERATIVE SIGNALS [BINTARO SECTOR]...",
-    "FETCHING KALCERIAN DATA STREAMS...",
-    "CALIBRATING RADAR HUD OVERLAY...",
-    "ALL SIGNALS STABLE. ACCESS GRANTED.",
-  ];
 
   // derived: users for the map (only online users with coords)
   const mapUsers = useMemo(() => mapUsersData, [mapUsersData]);
@@ -719,21 +412,6 @@ export default function MapPage() {
       setShowStatusModal(false);
     } catch (err) {
       setNotice(err.message || "Failed to update broadcast.");
-    }
-    setBusy(false);
-  }
-
-  async function handleDeleteBroadcast() {
-    setBusy(true);
-    try {
-      await delBroadcast();
-      const user = await fetchMe();
-      setCurrentUser(user);
-      setStatusText("");
-      setNotice("Broadcast deleted.");
-      setShowStatusModal(false);
-    } catch (err) {
-      setNotice(err.message || "Failed to delete broadcast.");
     }
     setBusy(false);
   }
@@ -828,19 +506,6 @@ export default function MapPage() {
     }
     setBusy(false);
   }
-
-  useEffect(() => {
-    let glitchTimeout;
-    const triggerGlitch = () => {
-      setIsGlitching(true);
-      setTimeout(() => setIsGlitching(false), 150);
-      const nextDelay = Math.random() * 4000 + 1000;
-      glitchTimeout = setTimeout(triggerGlitch, nextDelay);
-    };
-    triggerGlitch();
-
-    return () => clearTimeout(glitchTimeout);
-  }, []);
 
   // Listen for HQ modal trigger from Leaflet popups
   useEffect(() => {
@@ -1528,478 +1193,24 @@ export default function MapPage() {
         onChange={(e) => setDrawerOpen(e.target.checked)}
       />
 
-      <motion.aside
-        initial={{ x: -100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
-        className={`absolute z-[1000] top-[100px] left-4 bottom-6 w-[340px] bg-black/45 backdrop-blur-[32px] border rounded-[24px] flex flex-col transition-all duration-500 -translate-x-[calc(100%-42px)] peer-checked:translate-x-0 max-[860px]:top-auto max-[860px]:bottom-0 max-[860px]:left-0 max-[860px]:w-full max-[860px]:h-[72vh] max-[860px]:border-r-0 max-[860px]:border-t max-[860px]:rounded-none max-[860px]:rounded-t-2xl max-[860px]:translate-x-0 max-[860px]:translate-y-[calc(100%-104px)] max-[860px]:peer-checked:translate-y-0 overflow-hidden ${
-          isMapDark
-            ? "border-white/20 shadow-[inset_0_2px_6px_rgba(255,255,255,0.15),_0_20px_50px_rgba(0,0,0,0.8),_0_0_40px_rgba(255,0,110,0.15)]"
-            : "bg-white/75 border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.1),_inset_0_1px_4px_rgba(255,255,255,0.8)]"
-        }`}
-      >
-        {/* Dynamic Glassmorphism Blobs depending on Mode */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-          {isMapDark ? (
-            <>
-              {/* Dark Mode: Gold & Black */}
-              <motion.div 
-                animate={{ scale: [1, 1.15, 0.9, 1], rotate: [0, 60, -60, 0], x: [0, 20, -10, 0], y: [0, -15, 10, 0] }}
-                transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-[15%] -left-[25%] w-[120%] h-[65%] bg-gradient-to-br from-[#ffd60a]/25 via-[#ffc300]/10 to-transparent rounded-full blur-[70px]" 
-              />
-              <motion.div 
-                animate={{ scale: [1.1, 0.95, 1.05, 1.1], x: [0, -20, 15, 0], y: [0, 10, -15, 0] }}
-                transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                className="absolute -bottom-[20%] -right-[25%] w-[120%] h-[70%] bg-gradient-to-tl from-slate-950/60 via-black/40 to-transparent rounded-full blur-[80px]" 
-              />
-              <motion.div 
-                animate={{ scale: [0.9, 1.1, 0.95, 0.9], x: [0, 15, -15, 0], y: [0, 10, -10, 0] }}
-                transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute top-[25%] left-[5%] w-[90%] h-[45%] bg-gradient-to-r from-[#ffd60a]/15 to-transparent rounded-full blur-[65px]" 
-              />
-            </>
-          ) : (
-            <>
-              {/* Light Mode: Balanced White & Green */}
-              <motion.div 
-                animate={{ scale: [1, 1.12, 0.92, 1], rotate: [0, -45, 45, 0], x: [0, 15, -10, 0], y: [0, -10, 15, 0] }}
-                transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-[15%] -left-[25%] w-[120%] h-[65%] bg-gradient-to-br from-emerald-500/25 to-transparent rounded-full blur-[65px]" 
-              />
-              <motion.div 
-                animate={{ scale: [1.05, 0.95, 1.02, 1.05], x: [0, -15, 10, 0], y: [0, 15, -10, 0] }}
-                transition={{ duration: 20, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-                className="absolute -bottom-[20%] -right-[25%] w-[120%] h-[70%] bg-gradient-to-tl from-white/80 via-white/40 to-transparent rounded-full blur-[75px]" 
-              />
-              <motion.div 
-                animate={{ scale: [0.95, 1.05, 0.95], x: [0, 10, -10, 0], y: [0, 12, -12, 0] }}
-                transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                className="absolute top-[25%] left-[5%] w-[90%] h-[45%] bg-gradient-to-r from-emerald-400/10 to-white/40 rounded-full blur-[55px]" 
-              />
-            </>
-          )}
-        </div>
-
-        <label
-          htmlFor="panel-toggle"
-          aria-label="Toggle sidebar panel"
-          className={`absolute top-1/2 -right-[3px] -translate-y-1/2 translate-x-full w-1 h-16 cursor-pointer transition-all rounded-r-full max-[860px]:relative max-[860px]:top-0 max-[860px]:right-0 max-[860px]:translate-x-0 max-[860px]:translate-y-0 max-[860px]:w-12 max-[860px]:h-1 max-[860px]:mx-auto max-[860px]:my-3 max-[860px]:rounded-full ${
-            isMapDark ? "bg-white/20 hover:bg-white/40" : "bg-slate-400/30 hover:bg-slate-500/40"
-          } hover:w-1.5 max-[860px]:bg-white/30`}
-        />
- 
-        <label
-          htmlFor="panel-toggle"
-          className={`relative px-5 py-4 border-b cursor-pointer group flex justify-between items-center rounded-t-[24px] ${
-            isMapDark ? "bg-white/[0.02] border-white/[0.05]" : "bg-slate-50/50 border-slate-200"
-          }`}
-        >
-          <div className="flex flex-col">
-            <h1
-              className="font-sans font-black uppercase tracking-tighter text-xl md:text-[22px] leading-none text-white"
-              style={{ textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)" }}
-            >
-              Kalcerians
-            </h1>
-            <p className={`text-[12px] mt-1 font-medium tracking-wider ${
-              isMapDark ? "text-gray-400" : "text-slate-600"
-            }`}>
-              Find other Kalcerians
-            </p>
-          </div>
- 
-          <div className="w-10 h-10 flex items-center justify-center">
-            <svg
-              className={`w-5 h-5 transition-all duration-300 toggle-arrow ${
-                isMapDark ? "text-gray-400 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900"
-              } ${drawerOpen ? "rotate-0" : "rotate-180"}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </div>
-        </label>
- 
-        <div className="p-2">
-          <div className="relative group">
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full border rounded-lg p-3 pl-10 text-[11px] font-sans outline-none transition-all ${
-                isMapDark
-                  ? "bg-white/[0.04] border-white/[0.12] text-white focus:border-white/25 placeholder:text-gray-500"
-                  : "bg-slate-100/60 border-slate-300 text-slate-900 focus:border-slate-400 placeholder:text-slate-500"
-              }`}
-            />
-            <svg
-              className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${
-                isMapDark ? "text-gray-400 group-focus-within:text-gray-300" : "text-slate-400 group-focus-within:text-slate-600"
-              }`}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-          </div>
-        </div>
- 
-        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
-          {/* Mini Events Section */}
-          {events.length > 0 && (
-            <div className="flex flex-col">
-              <div className={`px-5 py-2 border-b flex items-center justify-between ${
-                isMapDark
-                  ? "bg-gradient-to-r from-white/[0.05] to-transparent border-white/[0.06]"
-                  : "bg-gradient-to-r from-slate-100 to-transparent border-slate-200"
-              }`}>
-                <span className={`text-[12px] font-bold tracking-wider ${
-                  isMapDark ? "text-gray-400" : "text-slate-700"
-                }`}>
-                  Mini Events
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className={`text-[11px] font-['Arial',sans-serif] ${
-                    isMapDark ? "text-gray-400" : "text-slate-500"
-                  }`}>
-                    Total: {events.length}
-                  </span>
-                </span>
-              </div>
-              <div className={`flex flex-col ${isMapDark ? "bg-[#000000]/20" : "bg-slate-50/40"}`}>
-                {events.map((event) => (
-                  <button
-                    key={event.id}
-                    type="button"
-                    aria-label={`View mission: ${event.title}`}
-                    className={`relative overflow-hidden w-full px-5 py-3.5 bg-transparent text-left transition-all border-b group flex flex-col gap-1 rounded-lg outline-none ${
-                      isMapDark
-                        ? "hover:bg-white/[0.03] border-white/[0.03] focus-visible:bg-white/5"
-                        : "hover:bg-slate-100/60 border-slate-100 focus-visible:bg-slate-100"
-                    }`}
-                    onClick={() => focusUser(event)}
-                  >
-                    {/* Distributed Red-Magenta Dynamic 4-Point Chaos Blobs */}
-                    <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none">
-                      {/* Blob 1: Left */}
-                      <div className="absolute top-[20%] -left-[20%] w-[120px] h-[120px] bg-red-500/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[3000ms]" />
-                      {/* Blob 2: Right */}
-                      <div className="absolute bottom-[20%] -right-[20%] w-[120px] h-[120px] bg-[#ff006e]/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[4000ms] delay-100" />
-                      {/* Blob 3: Top */}
-                      <div className="absolute -top-[40%] left-[20%] w-[130px] h-[100px] bg-red-500/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[2500ms] delay-200" />
-                      {/* Blob 4: Bottom */}
-                      <div className="absolute -bottom-[40%] right-[20%] w-[130px] h-[100px] bg-[#ff006e]/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[3500ms] delay-300" />
-                    </div>
-
-                    <div className="relative z-10 flex justify-between items-center">
-                      <b className={`text-[15px] font-bold transition-all duration-300 leading-relaxed ${
-                        isMapDark 
-                          ? "text-white group-hover:text-white group-hover:drop-shadow-[1.5px_1.5px_0px_#ff006e] group-hover:drop-shadow-[-1px_-1px_0px_#ffd60a]" 
-                          : "text-slate-900 group-hover:text-slate-900 group-hover:drop-shadow-[1.5px_1.5px_0px_rgba(15,23,42,0.15)] group-hover:drop-shadow-[-1.5px_-1.5px_0px_rgba(255,255,255,0.9)]"
-                      }`}>
-                        {event.title}
-                      </b>
-                    </div>
-                    <p className={`relative z-10 text-[12px] line-clamp-1 italic ${
-                      isMapDark ? "text-gray-400" : "text-slate-600"
-                    }`}>
-                      "{event.description}"
-                    </p>
-                    <div className="relative z-10 flex items-center gap-2 mt-1 opacity-60">
-                      <div className={`w-5 h-5 border rounded-full overflow-hidden ${
-                        isMapDark ? "border-white/10" : "border-slate-200"
-                      }`}>
-                        <img
-                          className="w-full h-full object-cover"
-                          src={avatarUrl(event.creator)}
-                          alt="Host"
-                        />
-                      </div>
-                      <span className={`text-[11px] font-medium tracking-wider ${
-                        isMapDark ? "text-gray-400" : "text-slate-600"
-                      }`}>
-                        by {event.creator.nickname || event.creator.name}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
- 
-          {/* Operatives Section Header */}
-          <div className={`px-5 py-2 border-b flex items-center justify-between sticky top-0 z-10 backdrop-blur-md ${
-            isMapDark
-              ? "bg-gradient-to-r from-white/[0.04] to-transparent border-white/[0.06] bg-[#0a0f1a]/40"
-              : "bg-gradient-to-r from-slate-100 to-transparent border-slate-200 bg-white/70"
-          }`}>
-            <span className={`text-[12px] font-bold tracking-wider ${
-              isMapDark ? "text-gray-400" : "text-slate-700"
-            }`}>
-              Kalcerians
-            </span>
-            <div className="flex items-center gap-3">
-              <span className={`text-[11px] font-['Arial',sans-serif] font-bold ${
-                isMapDark ? "text-white" : "text-slate-900"
-              }`}>
-                Online :{" "}
-                <span className={isMapDark ? "text-emerald-400" : "text-emerald-600"}>
-                  {kalcerians.filter((k) => k.isOnline).length}
-                </span>
-              </span>
-              <span className={`text-[11px] font-['Arial',sans-serif] ${
-                isMapDark ? "text-gray-400" : "text-slate-500"
-              }`}>
-                Total: {sidebarKalcerians.length}
-              </span>
-            </div>
-          </div>
- 
-          <div className="flex-1 overflow-y-auto custom-scrollbar bg-transparent">
-            {isDataLoading ? (
-              <div className="flex flex-col gap-[1px]">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div
-                    key={i}
-                    className={`px-5 py-5 border-b animate-pulse ${
-                      isMapDark ? "border-white/[0.03]" : "border-slate-100"
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-11 h-11 rounded-full border ${
-                        isMapDark ? "bg-white/5 border-white/5" : "bg-slate-100 border-slate-200"
-                      }`} />
-                      <div className="flex-1 space-y-3">
-                        <div className={`h-3 w-[140px] rounded ${
-                          isMapDark ? "bg-white/10" : "bg-slate-200"
-                        }`} />
-                        <div className={`h-2 w-[80px] rounded ${
-                          isMapDark ? "bg-white/5" : "bg-slate-100"
-                        }`} />
-                      </div>
-                      <div className={`w-12 h-2 rounded ${
-                        isMapDark ? "bg-white/5" : "bg-slate-100"
-                      }`} />
-                    </div>
-                  </div>
-                ))}
-                <div className="py-10 text-center flex flex-col items-center gap-3">
-                  <div className={`w-7 h-7 border-2 rounded-full animate-spin ${
-                    isMapDark ? "border-t-gray-300 border-white/5" : "border-t-slate-800 border-slate-200"
-                  }`} />
-                  <p className={`font-mono text-[9px] tracking-widest uppercase ${
-                    isMapDark ? "text-gray-400" : "text-slate-500"
-                  }`}>
-                    Scanning signals
-                  </p>
-                </div>
-              </div>
-            ) : sidebarKalcerians.length > 0 ? (
-              sidebarKalcerians.map((user) => (
-                <div key={user.id} className={`border-b ${
-                  isMapDark ? "border-white/[0.03]" : "border-slate-100"
-                }`}>
-                  <div
-                    className={`relative overflow-hidden w-full grid grid-cols-[44px_1fr_auto] items-center gap-4 px-5 py-3.5 text-left transition-all group cursor-pointer ${
-                      isMapDark ? "hover:bg-white/[0.04]" : "hover:bg-slate-100/60"
-                    }`}
-                    onMouseEnter={() => setHoveredKalcerian(user.id)}
-                    onMouseLeave={() => setHoveredKalcerian(null)}
-                    onClick={() => {
-                      if (user.isOnline) {
-                        setFocusedUserId(user.id);
-                        // Clear after a moment so it can be re-triggered
-                        setTimeout(() => setFocusedUserId(null), 100);
-                        if (window.innerWidth < 860) setDrawerOpen(false);
-                      } else {
-                        setSelectedOfflineUser(prev => prev === user.id ? null : user.id);
-                      }
-                    }}
-                  >
-                    {/* Distributed Red-Gold Dynamic 4-Point Chaos Blobs */}
-                    <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none">
-                      {/* Blob 1: Left */}
-                      <div className="absolute top-[20%] -left-[20%] w-[120px] h-[120px] bg-red-500/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[3000ms]" />
-                      {/* Blob 2: Right */}
-                      <div className="absolute bottom-[20%] -right-[20%] w-[120px] h-[120px] bg-[#ffd60a]/20 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[4000ms] delay-100" />
-                      {/* Blob 3: Top */}
-                      <div className="absolute -top-[40%] left-[20%] w-[130px] h-[100px] bg-red-500/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[2500ms] delay-200" />
-                      {/* Blob 4: Bottom */}
-                      <div className="absolute -bottom-[40%] right-[20%] w-[130px] h-[100px] bg-[#ffd60a]/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[3500ms] delay-300" />
-                    </div>
-
-                    <div className="relative z-10">
-                      <div
-                        className={`w-10 h-10 border overflow-hidden rounded-full transition-transform group-hover:scale-105 ${
-                          user.isOnline 
-                            ? (isMapDark ? "border-emerald-500/40" : "border-emerald-500/60") 
-                            : (isMapDark ? "border-white/10 opacity-50" : "border-slate-200 opacity-60")
-                        }`}
-                      >
-                        <img
-                          className="w-full h-full object-cover"
-                          src={avatarUrl(user)}
-                          alt={user.nickname || user.name}
-                        />
-                      </div>
-                      <span
-                        className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-[1.5px] rounded-full ${
-                          isMapDark ? "border-[#0a0f1a]" : "border-white"
-                        } ${user.isOnline ? "bg-emerald-400" : "bg-gray-500"}`}
-                      />
-                    </div>
-                    <div className="relative z-10 min-w-0">
-                      <div className="flex items-start flex-col">
-                        <b
-                          className={`text-sm font-bold tracking-tight truncate leading-relaxed transition-all duration-300 ${
-                            user.isOnline 
-                              ? (isMapDark 
-                                  ? "text-gray-300 group-hover:text-gray-300 group-hover:drop-shadow-[1.5px_1.5px_0px_#ff006e] group-hover:drop-shadow-[-1px_-1px_0px_#ffd60a]" 
-                                  : "text-slate-900 group-hover:text-slate-900 group-hover:drop-shadow-[1.5px_1.5px_0px_rgba(15,23,42,0.15)] group-hover:drop-shadow-[-1.5px_-1.5px_0px_rgba(255,255,255,0.9)]") 
-                              : (isMapDark ? "text-white/40" : "text-slate-400")
-                          }`}
-                        >
-                          {user.name}
-                        </b>
-                        <span className={`mt-1 px-2 py-1 rounded-md border text-[10px] font-bold tracking-wider leading-none shadow-[0_0_10px_rgba(255,255,255,0.02)] ${
-                          isMapDark
-                            ? "border-white/10 bg-gray-600/5 text-gray-400"
-                            : "border-slate-200 bg-slate-100 text-slate-600"
-                        }`}>
-                          {mapUsersData.find((u) => u.id === user.id)?.district ||
-                            (user.isOnline ? "Scanning..." : "Unknown")}
-                        </span>
-                      </div>
-                      <small
-                        className={`block mt-1 text-[11px] italic truncate ${
-                          user.isOnline 
-                            ? (isMapDark ? "text-gray-400" : "text-slate-600") 
-                            : (isMapDark ? "text-gray-600" : "text-slate-400")
-                        }`}
-                      >
-                        {user.broadcast?.message
-                          ? `"${user.broadcast.message}"`
-                          : ""}
-                      </small>
-                    </div>
-                  </div>
-                  {/* hover popup card (for desktop hover) */}
-                  {hoveredKalcerian === user.id && (
-                    <div
-                      className={`absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 w-[220px] border rounded-xl shadow-2xl p-4 flex flex-col gap-3 pointer-events-auto hidden md:flex ${
-                        isMapDark
-                          ? "bg-[#0a0f1a]/95 border-white/10"
-                          : "bg-white border-slate-200"
-                      }`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full overflow-hidden border flex-shrink-0 ${
-                          isMapDark ? "border-white/15" : "border-slate-200"
-                        }`}>
-                          <img
-                            src={avatarUrl(user)}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className={`text-[13px] font-bold truncate ${
-                            isMapDark ? "text-white" : "text-slate-900"
-                          }`}>
-                            {user.name}
-                          </p>
-                          {user.nickname && (
-                            <p className={`text-[10px] truncate ${
-                              isMapDark ? "text-gray-400" : "text-slate-500"
-                            }`}>
-                              @{user.nickname}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      {user.broadcast?.message && (
-                        <p className={`text-[11px] italic border-l-2 pl-2 line-clamp-2 ${
-                          isMapDark ? "text-gray-300 border-[#ffd60a]/40" : "text-slate-600 border-[#ffc300]"
-                        }`}>
-                          "{user.broadcast.message}"
-                        </p>
-                      )}
-                      <div className="flex gap-2">
-                        <a
-                          href={`/user/${user.id}`}
-                          className={`flex-1 py-2 text-center text-[9px] font-bold uppercase tracking-wider border rounded-lg transition-all ${
-                            isMapDark
-                              ? "bg-white/5 hover:bg-white/10 border-white/10 text-white"
-                              : "bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800"
-                          }`}
-                        >
-                          See Profile
-                        </a>
-                        {user.isOnline && (
-                          <button
-                            type="button"
-                            className={`flex-1 py-2 text-center text-[9px] font-bold uppercase tracking-wider border rounded-lg transition-all ${
-                              isMapDark
-                                ? "bg-[#ffd60a]/10 hover:bg-[#ffd60a]/20 border-[#ffd60a]/20 text-[#ffd60a]"
-                                : "bg-[#ffc300]/10 hover:bg-[#ffc300]/20 border-[#ffc300]/30 text-yellow-800"
-                            }`}
-                            onClick={() => {
-                              setFocusedUserId(user.id);
-                              setTimeout(() => setFocusedUserId(null), 100);
-                              setHoveredKalcerian(null);
-                            }}
-                          >
-                            See in Map
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="py-20 text-center flex flex-col items-center gap-4">
-                <div className={`w-12 h-12 border rounded-full flex items-center justify-center opacity-30 ${
-                  isMapDark ? "border-white/10" : "border-slate-300"
-                }`}>
-                  <svg
-                    className="w-6 h-6 animate-pulse"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.25"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                </div>
-                <p className={`font-['Arial',sans-serif] font-bold text-xs tracking-wide ${
-                  isMapDark ? "text-gray-400" : "text-slate-500"
-                }`}>
-                  No Users Found
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </motion.aside>
+      <KalceriansPanel
+        scheduleTimeout={scheduleTimeout}
+        mapUsersData={mapUsersData}
+        kalcerians={kalcerians}
+        events={events}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        isDataLoading={isDataLoading}
+        hoveredKalcerian={hoveredKalcerian}
+        setHoveredKalcerian={setHoveredKalcerian}
+        isMapDark={isMapDark}
+        setFocusedUserId={setFocusedUserId}
+        setSelectedOfflineUser={setSelectedOfflineUser}
+        sidebarKalcerians={sidebarKalcerians}
+        focusUser={focusUser}
+      />
 
       {/* Floating Coki Map Image beside the Kalcerian box */}
       <div 
@@ -2461,285 +1672,14 @@ export default function MapPage() {
         }
       `}</style>
       {/* Startup Sequence Overlay :: FORZA HORZON STYLE */}
-      <AnimatePresence>
-        {showStartup && (
-          <motion.div
-            key="startup-overlay"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, filter: "blur(40px)" }}
-            transition={{ duration: 1.5, ease: "easeInOut" }}
-            className={`fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden transition-colors duration-[3000ms] ease-in-out ${startupProgress < 50 ? "bg-white" : "bg-[#050a14]"}`}
-          >
-            {/* Smooth 4x Chevron Dash Transition (B&W on White, Red-Black on Dark) */}
-            {showStartup && (
-              <DominoChevrons 
-                key={
-                  startupProgress < 25 ? "wave1" :
-                  startupProgress < 50 ? "wave2" :
-                  startupProgress < 75 ? "wave3" : "wave4"
-                } 
-                active={showStartup} 
-                isDark={startupProgress >= 50}
-              />
-            )}
-
-            {/* Faint vintage laser grid: spawning black on white, and turning into golden glow on black background */}
-            <VintageLaserGrid active={showStartup} startupProgress={startupProgress} />
-
-
-            {/* Adaptive Atmospheric Background */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
-              <div
-                className={`absolute inset-0 transition-colors duration-1000 ${startupProgress < 50 ? "bg-white" : "bg-gradient-to-br from-[#ff006e]/20 via-transparent to-[#ffd60a]/20"}`}
-              />
-
-              {/* Dynamic Speed Lines */}
-              <div className="absolute inset-0 opacity-20">
-                {hasMounted &&
-                  [...Array(20)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ x: "-100%", opacity: 0 }}
-                      animate={{ x: "200%", opacity: [0, 1, 0] }}
-                      transition={{
-                        duration: Math.random() * 0.5 + 0.3,
-                        repeat: Infinity,
-                        delay: Math.random() * 2,
-                        ease: "linear",
-                      }}
-                      className={`absolute h-[1px] transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-200" : "bg-white"}`}
-                      style={{
-                        top: `${Math.random() * 100}%`,
-                        width: `${Math.random() * 300 + 100}px`,
-                        transform: "rotate(-5deg)",
-                      }}
-                    />
-                  ))}
-              </div>
-
-              <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none">
-                <h2
-                  className={`text-[25vw] font-black tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-200" : "text-white"}`}
-                >
-                  KALCERIA
-                </h2>
-              </div>
-            </div>
-
-            {/* Ambient Golden & Magenta Microparticles (Spawns at 10% progress and morphs dynamically on black background) */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-[5]">
-              {startupProgress >= 10 && particles.map((p) => {
-                const isDark = startupProgress >= 50;
-                // Dynamically morph Neon Magenta (#ff006e) into Cyan (#00f0ff) once screen is black!
-                const activeColor = isDark
-                  ? (p.color === "#ff006e" ? "#00f0ff" : p.color)
-                  : p.color;
-
-                return (
-                  <div
-                    key={p.id}
-                    className="absolute rounded-full blur-[0.5px] pointer-events-none"
-                    style={{
-                      left: p.left,
-                      bottom: "-20px", // Pinned below visible boundary to prevent traffic jams
-                      width: p.size,
-                      height: p.size,
-                      backgroundColor: activeColor,
-                      boxShadow: `0 0 8px ${activeColor}, 0 0 16px ${activeColor}`,
-                      animation: `floatUp ${p.duration}s linear ${p.delay}s infinite both`,
-                      opacity: 0, // Fully transparent during positive delays
-                      transition: "background-color 1.5s ease-in-out, box-shadow 1.5s ease-in-out", // Smooth morphing
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Inner Content that fades in dramatically over solid background */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
-              className="relative z-10 w-full h-screen flex flex-col items-center pt-24"
-            >
-              {/* Main Title Section */}
-              <motion.div
-                initial={{ x: -100, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.8, ease: "circOut" }}
-                className="flex flex-col items-center mb-4"
-              >
-                <h1
-                  className={`text-8xl font-sans font-black italic tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
-                >
-                  Kalcerians Map
-                </h1>
-              </motion.div>
-
-              {/* Floating Kalcerman Image (Slides in from left when background turns black) */}
-              <AnimatePresence>
-                {startupProgress >= 50 && (
-                  <div className="relative w-[440px] h-[450px] flex flex-col items-center justify-center my-4 z-20 -translate-x-[20%] -translate-y-[20%]">
-                    {/* Glowing 3D Grid Floor when background is dark */}
-                    <div 
-                      className="absolute bottom-[-100px] w-[500px] h-[300px] opacity-20 pointer-events-none transition-all duration-1000 ease-out"
-                      style={{
-                        background: "linear-gradient(rgba(0, 240, 255, 0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.25) 1px, transparent 1px)",
-                        backgroundSize: "30px 30px",
-                        transform: "rotateX(75deg) translateZ(-60px)",
-                        maskImage: "radial-gradient(ellipse at center, black, transparent 70%)",
-                        WebkitMaskImage: "radial-gradient(ellipse at center, black, transparent 70%)",
-                      }}
-                    />
-
-                    {/* The 3D Perspective Wrapper Container */}
-                    <div
-                      style={{
-                        perspective: "1000px",
-                        transformStyle: "preserve-3d",
-                        transform: `rotateX(${tilt.y}deg) rotateY(${tilt.x}deg)`,
-                        transition: "transform 0.15s ease-out",
-                        width: "100%",
-                        height: "100%",
-                        position: "relative",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {/* Fixed Position Portal: Fades in statically (no slide-in) and spins slowly */}
-                      <motion.img
-                        key="portal-bg"
-                        src="/portal.webp"
-                        alt="Portal background"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{
-                          opacity: 0.7,
-                          scale: 1,
-                          rotate: 360,
-                        }}
-                        exit={{ opacity: 0 }}
-                        transition={{
-                          opacity: { duration: 1.2, ease: "easeOut" },
-                          scale: { duration: 1.2, ease: "easeOut" },
-                          rotate: { duration: 22, repeat: Infinity, ease: "linear" },
-                        }}
-                        className="absolute top-2 left-[56%] w-[400px] h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
-                        style={{
-                          transformStyle: "preserve-3d",
-                          transform: "translateZ(0px)",
-                          zIndex: 0,
-                        }}
-                      />
-
-                      {/* Floating Character & Subtitle Subgroup (Slides in from left and floats) */}
-                      <motion.div
-                        key="kalcerman-character"
-                        initial={{ x: "-100vw", opacity: 0, scale: 0.7 }}
-                        animate={{
-                          x: 0,
-                          opacity: 0.9,
-                          scale: 1,
-                          y: [0, -15, 0],
-                        }}
-                        exit={{ x: "100vw", opacity: 0 }}
-                        transition={{
-                          x: { type: "spring", stiffness: 60, damping: 14 },
-                          opacity: { duration: 0.5 },
-                          scale: { duration: 0.5 },
-                          y: {
-                            repeat: Infinity,
-                            duration: 3,
-                            ease: "easeInOut",
-                          },
-                        }}
-                        className="relative z-10 w-full flex flex-col items-center justify-center"
-                        style={{
-                          transformStyle: "preserve-3d",
-                          transform: "translateZ(80px)",
-                        }}
-                      >
-                        {/* Character Sprite (Positioned in front, z-10, 25% bigger) */}
-                        <img
-                          src="/kalcermanmap.png"
-                          alt="Kalcerman Map"
-                          className="relative w-[275px] h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-6 z-10"
-                          style={{
-                            transformStyle: "preserve-3d",
-                            transform: "translateZ(20px)",
-                          }}
-                        />
-
-                        {/* Dialog Subtitle (Positioned in front, z-10) */}
-                        <p 
-                          className="relative text-white font-sans font-bold text-[22px] tracking-wide text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] z-10"
-                          style={{
-                            transformStyle: "preserve-3d",
-                            transform: "translateZ(40px)",
-                          }}
-                        >
-                          &quot;Let me in, Coki!&quot;
-                        </p>
-                      </motion.div>
-                    </div>
-                  </div>
-                )}
-              </AnimatePresence>
-
-              {/* High Impact Progress Section (Absolutely positioned at bottom so it never shifts!) */}
-              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[800px] px-8">
-                <div className="flex justify-between items-end mb-4">
-                  {/* Game Loading Style Randomly Changing Quotes */}
-                  <div className="text-left pb-1">
-                    <AnimatePresence mode="wait">
-                      <motion.p
-                        key={currentQuote}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 0.85, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                        className={`text-xs md:text-sm font-normal tracking-wide transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-500" : "text-white"}`}
-                        style={{ fontFamily: "Arial, sans-serif" }}
-                      >
-                        {currentQuote}
-                      </motion.p>
-                    </AnimatePresence>
-                  </div>
-                  <div className="text-right">
-                    <span
-                      className={`text-5xl font-sans font-black tracking-tighter leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
-                    >
-                      {Math.round(startupProgress)}
-                      <span className="text-[20px] ml-1 opacity-40">%</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* The "Forza Stripe" Progress Bar */}
-                <div
-                  className={`relative h-4 w-full overflow-hidden border transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-100 border-slate-200" : "bg-white/5 border-white/10"}`}
-                >
-                  <motion.div
-                    className={`absolute top-0 left-0 h-full transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-600" : "bg-gradient-to-r from-[#ff6f00] via-[#ffd60a] to-[#ffc300] shadow-[0_0_30px_#ffd60a]"}`}
-                    initial={{ width: "0%" }}
-                    animate={{ width: `${startupProgress}%` }}
-                    transition={{ type: "spring", stiffness: 40, damping: 15 }}
-                  />
-                  {/* Subtle stripes over progress */}
-                  <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.1)_50%,transparent_100%)] bg-[length:20px_100%] pointer-events-none" />
-                </div>
-
-
-              </div>
-            </motion.div>
-
-            {/* Corner Decorative Elements */}
-            <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-[#ffd60a]/10 to-transparent rounded-br-full blur-3xl" />
-            <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-[#ff006e]/10 to-transparent rounded-tl-full blur-3xl" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <StartupSequenceOverlay
+        showStartup={showStartup}
+        startupProgress={startupProgress}
+        particles={particles}
+        hasMounted={hasMounted}
+        currentQuote={currentQuote}
+        tilt={tilt}
+      />
 
       {/* Cinematic Solid White Light Flash Layer */}
       <AnimatePresence>
