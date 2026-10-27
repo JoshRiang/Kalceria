@@ -43,19 +43,20 @@ export default function LandingPage({ onNavigateAuth }) {
   }, []);
 
   const ABOUT_IMAGES = [
-    "/aboutus_bg1.webp",
-    "/aboutus_bg2.webp",
-    "/aboutus_bg3.webp",
-    "/aboutus_bg4.webp"
+    { src: "/aboutus_bg1.webp", width: 1358, height: 768 },
+    { src: "/aboutus_bg2.webp", width: 1317, height: 800 },
+    { src: "/aboutus_bg3.webp", width: 1317, height: 800 },
+    { src: "/aboutus_bg4.webp", width: 1253, height: 832 }
   ];
 
   const ABOUT_IMAGES_HP = [
-    "/hp/abt_landing_hp1.webp",
-    "/hp/abt_landing_hp2.webp",
-    "/hp/abt_landing_hp3.webp"
+    { src: "/hp/abt_landing_hp1.webp", width: 720, height: 540 },
+    { src: "/hp/abt_landing_hp2.webp", width: 1000, height: 701 },
+    { src: "/hp/abt_landing_hp3.webp", width: 500, height: 333 }
   ];
 
   const currentAboutImages = isMobile ? ABOUT_IMAGES_HP : ABOUT_IMAGES;
+  const currentAboutImage = currentAboutImages[aboutIndex % currentAboutImages.length];
 
   useEffect(() => {
     if (sessionStorage.getItem("landingSeen")) {
@@ -303,7 +304,7 @@ export default function LandingPage({ onNavigateAuth }) {
       <section id="section-about" className="relative w-full h-[70vh] overflow-hidden bg-black flex items-center justify-center border-t border-slate-900 z-30">
         <AnimatePresence initial={false} custom={aboutIndex}>
           <motion.div key={aboutIndex} variants={slideVariants} initial="enter" animate="center" exit="exit" className="absolute inset-0 w-full h-full">
-            <img src={currentAboutImages[aboutIndex % currentAboutImages.length]} alt="About Us BG" className="w-full h-full object-cover opacity-70 grayscale md:grayscale-0" />
+            <Image src={currentAboutImage.src} alt="About Us BG" width={currentAboutImage.width} height={currentAboutImage.height} unoptimized loading="eager" decoding="auto" className="w-full h-full object-cover opacity-70 grayscale md:grayscale-0" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#050a14] via-[#050a14]/60 to-transparent z-[1]" />
             {/* Warm Peach & Gold & Magenta Master overlay on mobile */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#ffd700]/35 via-[#ffaa66]/30 to-[#ff00ff]/25 mix-blend-color md:hidden z-[2]" />
@@ -342,9 +343,14 @@ export default function LandingPage({ onNavigateAuth }) {
         
         {/* Altar Border Element (Reversed 180, Truncated at Border) */}
         <div className="absolute top-[-60px] md:top-[-220px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-5 opacity-80">
-          <img 
+          <Image
             src={isMobile ? "/hp/altar_hp.webp" : "/altar.webp"} 
             alt="Altar" 
+            width={isMobile ? 2048 : 2400}
+            height={isMobile ? 2048 : 1589}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className={`h-[192px] md:h-[540px] object-contain drop-shadow-[0_10px_70px_rgba(255,255,255,0.05)] ${isMobile ? "" : "rotate-180"}`} 
           />
         </div>
@@ -537,29 +543,44 @@ export default function LandingPage({ onNavigateAuth }) {
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
             className="absolute bottom-[5%] right-[25%] w-96 h-auto opacity-90 pointer-events-none z-[1]"
           >
-            <img src="/hp/kalcer_man_hp.webp" alt="Kalcer Mascot HP" className="w-full h-auto object-contain" />
+            <Image src="/hp/kalcer_man_hp.webp" alt="Kalcer Mascot HP" width={2048} height={2048} unoptimized loading="eager" decoding="auto" className="w-full h-auto object-contain" />
           </motion.div>
         )}
 
         {/* Looping 8-Bit Mascot (Fixed Corner Position) */}
         <div className="hidden md:block absolute bottom-0 right-0 w-56 md:w-80 z-20 pointer-events-none">
           {/* Hat placed above the head */}
-          <img 
+          <Image
             src="/kalcer_hat.webp" 
             alt="Kalcer Hat" 
+            width={1408}
+            height={768}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className="absolute top-[-30%] left-1/2 -translate-x-[56%] w-[185%] h-auto z-30 drop-shadow-[0_15px_10px_rgba(0,0,0,0.5)]"
           />
           
-          <img 
+          <Image
             src={mascotFrame === 1 ? "/kalcer_man.webp" : "/kalcer_man2.webp"} 
             alt="Kalcer Mascot" 
+            width={912}
+            height={1181}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className="relative z-10 w-full h-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,255,0.3)]"
           />
 
           {/* Static Favicon Overlay to cover Gemini Logo in the absolute corner */}
-          <img
+          <Image
             src="/favicon.webp"
             alt="Favicon"
+            width={771}
+            height={681}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className="absolute bottom-1 right-1 w-6 md:w-8 h-auto z-50 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
           />
         </div>
@@ -710,9 +731,14 @@ export default function LandingPage({ onNavigateAuth }) {
         {isMobile && (
           <div className="absolute bottom-0 left-0 w-full h-48 pointer-events-none z-30 overflow-visible">
             {/* Camera HP: Centered at the middle bottom and scaled 75% bigger */}
-            <img 
+            <Image
               src="/hp/camera_hp.webp" 
               alt="Camera HP" 
+              width={1210}
+              height={864}
+              unoptimized
+              loading="eager"
+              decoding="auto"
               className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[196px] h-auto object-contain select-none translate-y-[2px]" 
               draggable={false}
             />
@@ -920,7 +946,7 @@ export default function LandingPage({ onNavigateAuth }) {
       {/* ── Section 8: Final Scene / Tokyo Nights ── */}
       <section id="section-journey" className="relative w-full min-h-[75vh] flex flex-col items-center justify-center py-20 z-50 border-t border-slate-900 overflow-hidden bg-black isolation-auto">
         {/* Tokyo Night Background - ABSOLUTE BACK */}
-        <img src="/bg_tokyo.webp" alt="Tokyo Night" className="absolute inset-0 w-full h-full object-cover opacity-50 z-[-2] pointer-events-none" />
+        <Image src="/bg_tokyo.webp" alt="Tokyo Night" width={2730} height={1536} unoptimized loading="eager" decoding="auto" className="absolute inset-0 w-full h-full object-cover opacity-50 z-[-2] pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050a14] via-transparent to-[#050a14] z-[-2] pointer-events-none" />
         
         {/* Battle Glows (Anakin vs Obi-Wan Vibe) - BEHIND LOGOS */}
@@ -944,9 +970,14 @@ export default function LandingPage({ onNavigateAuth }) {
           className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl h-full flex items-center justify-center z-[5] pointer-events-none"
           style={{ opacity: 0.7 }}
         >
-          <img 
+          <Image
             src="/starwarr.webp" 
             alt="Battle of Heroes" 
+            width={974}
+            height={1024}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className={`w-full h-auto max-h-[85vh] object-contain ${isMobile ? "scale-[1.12]" : "scale-[1.82]"}`}
             style={{ 
               filter: "contrast(1.2) brightness(0.9) saturate(1.1) drop-shadow(0 0 80px rgba(0,0,0,0.8))",
@@ -1114,9 +1145,14 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
 
         {isMobile && (
-          <img 
+          <Image
             src="/hp/bg_astro_hp.webp" 
             alt="Astronaut Background Mobile" 
+            width={2744}
+            height={1568}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className="absolute inset-0 w-full h-full object-cover z-[1] opacity-70 pointer-events-none"
           />
         )}
@@ -1131,9 +1167,14 @@ export default function LandingPage({ onNavigateAuth }) {
  
         {/* Night Background at Bottom */}
         {!isMobile && (
-          <img 
+          <Image
             src="/night.webp" 
             alt="Night Sky" 
+            width={2728}
+            height={1536}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className="absolute bottom-0 left-0 w-full h-auto object-cover z-[10] opacity-90"
             style={{ maskImage: "linear-gradient(to top, black 80%, transparent)" }}
           />
@@ -1141,9 +1182,14 @@ export default function LandingPage({ onNavigateAuth }) {
         
         {/* Astronaut - Semi-transparent, Massive and Lowered, Behind Night */}
         {!isMobile && (
-          <img 
+          <Image
             src="/astronaut.webp" 
             alt="Astronaut" 
+            width={1824}
+            height={2300}
+            unoptimized
+            loading="eager"
+            decoding="auto"
             className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[105%] h-auto object-contain z-[5] opacity-40 mix-blend-screen pointer-events-none" 
           />
         )}
