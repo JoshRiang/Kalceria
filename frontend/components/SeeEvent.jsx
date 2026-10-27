@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import api from "@/lib/api";
 import { StatCounter, RainbowPixels, MicroParticles } from "./events/effects";
@@ -128,7 +129,7 @@ export default function SeeEvent() {
         <div className={`relative z-10 container mx-auto px-6 md:px-12 flex flex-col ${isMobile ? "items-center text-center justify-center" : "items-start text-left justify-center h-full"}`}>
           <div className={`relative inline-block ${isMobile ? "text-center flex flex-col items-center justify-center" : "text-left flex flex-col items-start justify-center"}`}>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className={`relative mb-6 w-max flex items-end justify-center group ${isMobile ? "mx-auto" : "ml-0"}`}>
-               <img src="/coki_event.webp" alt="Coki Event" className="w-24 md:w-36 block relative z-10 drop-shadow-2xl" />
+               <Image src="/coki_event.webp" alt="Coki Event" width={1536} height={2304} unoptimized loading="eager" decoding="auto" className="w-24 md:w-36 block relative z-10 drop-shadow-2xl" />
                <div className="absolute left-0 bottom-0 w-[4px] h-[50%] bg-white z-20" />
                <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20" />
             </motion.div>
@@ -147,8 +148,8 @@ export default function SeeEvent() {
       <div className="relative w-full bg-[#0B0C10]">
         <RainbowPixels />
         <MicroParticles />
-        <img src="/stikermobil_5.webp" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) rotate(-3deg)" : "rotate(-3deg)" }} />
-        <img src="/stikermobil_2.webp" alt="" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) scale(0.8) rotate(6deg)" : "rotate(6deg)" }} />
+        <Image src="/stikermobil_5.webp" alt="" width={2698} height={1568} unoptimized loading="eager" decoding="auto" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) rotate(-3deg)" : "rotate(-3deg)" }} />
+        <Image src="/stikermobil_2.webp" alt="" width={2410} height={1436} unoptimized loading="eager" decoding="auto" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) scale(0.8) rotate(6deg)" : "rotate(6deg)" }} />
 
         {/* ─── SECTION 1.5: ATMOSPHERIC BREAK ────────────────────────────────── */}
         <section ref={atmosRef} className="relative w-full py-[60vh] z-20 overflow-hidden">
@@ -210,9 +211,14 @@ export default function SeeEvent() {
 
           {/* Indonesia Map Background Behind Globe */}
           <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
-             <img 
+             <Image
                src="/indo.webp" 
                alt="Indonesia Map" 
+               width={2400}
+               height={883}
+               unoptimized
+               loading="eager"
+               decoding="auto"
                className="w-[151vw] md:w-[100vw] h-auto object-contain opacity-25 filter brightness-150 contrast-125" 
              />
           </div>
@@ -248,7 +254,7 @@ export default function SeeEvent() {
               {/* Left: Picture Card Carousel - shrunk 50% on mobile */}
               <div className={`relative aspect-[4/5] rounded-2xl shadow-2xl bg-[#0B0C10] transition-all duration-300 ${isMobile ? "w-1/2 mx-auto scale-[1]" : "w-full scale-[1.03]"}`}>
                 {!isMobile && (
-                  <img src="/stikermobil_4.webp" alt="" className="absolute z-30 w-40 md:w-56 -bottom-36 md:-bottom-48 -left-10 md:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
+                  <Image src="/stikermobil_4.webp" alt="" width={2730} height={1536} unoptimized loading="eager" decoding="auto" className="absolute z-30 w-40 md:w-56 -bottom-36 md:-bottom-48 -left-10 md:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
                 )}
                 
                 <div className="relative w-full h-full rounded-2xl overflow-hidden border border-gray-800">
@@ -266,9 +272,9 @@ export default function SeeEvent() {
               {/* Right: Text Details - centered and placed under card on mobile */}
               <div className={`flex flex-col justify-center min-h-[450px] relative z-20 ${isMobile ? "items-center text-center mt-12" : ""}`}>
                 {!isMobile && (
-                  <img src="/stikermobil_1.webp" alt="" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
+                  <Image src="/stikermobil_1.webp" alt="" width={2387} height={1523} unoptimized loading="eager" decoding="auto" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
                 )}
-                <img src="/stikermobil_3.webp" alt="" className={`absolute z-10 w-36 md:w-44 bottom-[-110px] md:bottom-[-160px] opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700 ${isMobile ? "left-[85%]" : "left-1/2"}`} style={{ transform: isMobile ? "translateX(-50%) translateY(-380%) rotate(3deg)" : "translateX(-50%) rotate(3deg)" }} />
+                <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} unoptimized loading="eager" decoding="auto" className={`absolute z-10 w-36 md:w-44 bottom-[-110px] md:bottom-[-160px] opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700 ${isMobile ? "left-[85%]" : "left-1/2"}`} style={{ transform: isMobile ? "translateX(-50%) translateY(-380%) rotate(3deg)" : "translateX(-50%) rotate(3deg)" }} />
 
                 <AnimatePresence mode="wait">
                   {activeEvent && (
@@ -306,8 +312,8 @@ export default function SeeEvent() {
                 {/* On mobile, stikermobil_4 and stikermobil_1 sit beautifully centered and STATIC right below the description event */}
                 {isMobile && (
                   <div className="w-full mt-10 flex items-center justify-center gap-10 pointer-events-none relative z-30">
-                    <img src="/stikermobil_4.webp" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(-60%) translateY(10%) scale(1.4) rotate(-3deg)" }} />
-                    <img src="/stikermobil_1.webp" alt="" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(40%) translateY(-40%) scale(1.2) rotate(6deg)" }} />
+                    <Image src="/stikermobil_4.webp" alt="" width={2730} height={1536} unoptimized loading="eager" decoding="auto" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(-60%) translateY(10%) scale(1.4) rotate(-3deg)" }} />
+                    <Image src="/stikermobil_1.webp" alt="" width={2387} height={1523} unoptimized loading="eager" decoding="auto" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(40%) translateY(-40%) scale(1.2) rotate(6deg)" }} />
                   </div>
                 )}
               </div>
