@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 import JourneySection4 from '../../components/JourneySection4';
 import JourneySectionTitle from '../../components/JourneySectionTitle';
 import JourneyRightHalf, { JourneySlider, JourneyDescriptionBox } from '../../components/JourneyRightHalf';
@@ -139,9 +140,14 @@ export default function JourneyPageClient() {
               </div>
 
               {/* Logo Layer (Independent) */}
-              <img 
+              <Image
                 src="/se1.webp" 
                 alt="SE1" 
+                width={2898}
+                height={1440}
+                unoptimized
+                loading="eager"
+                decoding="auto"
                 className={`absolute top-[33%] z-20 h-24 md:h-32 object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[180px]" : "left-[145px] md:left-[228px]"}`} 
                 style={{ transform: isMobile ? "translateY(-50%) translateX(-30%) scale(0.82)" : "translateY(-50%) translateX(-20%) scale(0.90)" }}
               />
@@ -186,9 +192,14 @@ export default function JourneyPageClient() {
                 </div>
 
                 {/* Logo Layer (Independent) */}
-                <img 
+                <Image
                   src="/se2.webp" 
                   alt="SE2" 
+                  width={2052}
+                  height={2048}
+                  unoptimized
+                  loading="eager"
+                  decoding="auto"
                   className={`absolute top-[47%] z-20 h-24 md:h-32 object-contain pointer-events-none drop-shadow-2xl ${isMobile ? "left-[158px]" : "left-[160px] md:left-[215px]"}`} 
                   style={{ transform: isMobile ? "translateY(-50%) translateX(-15%) scale(0.85)" : "translateY(-50%) translateX(-5%)" }}
                 />
@@ -242,9 +253,14 @@ export default function JourneyPageClient() {
               </div>
               
               {/* Logo Layer (Independent of Box Layout) */}
-              <img 
+              <Image
                 src="/dsl.webp" 
                 alt="DSL" 
+                width={2400}
+                height={889}
+                unoptimized
+                loading="eager"
+                decoding="auto"
                 className={`absolute top-[44%] z-20 h-20 md:h-32 object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[118px]" : "left-[114px] md:left-[168px]"}`} 
                 style={{ transform: isMobile ? "translateY(-50%) translateX(-2%) scale(0.82)" : "translateY(-50%) scale(0.90)" }}
               />
