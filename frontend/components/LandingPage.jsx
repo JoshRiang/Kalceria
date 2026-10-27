@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import ServiceRequestModal from "./ServiceRequestModal";
@@ -18,6 +18,7 @@ export default function LandingPage({ onNavigateAuth }) {
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showIdeaModal, setShowIdeaModal] = useState(false);
+  const closeIdeaModal = useCallback(() => setShowIdeaModal(false), []);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [skipAnim, setSkipAnim] = useState(false);
   const displayedMerch = useMerchRandomizer();
@@ -1206,7 +1207,7 @@ export default function LandingPage({ onNavigateAuth }) {
           />
         )}
         {showIdeaModal && (
-          <IdeaCommentModal onClose={() => setShowIdeaModal(false)} />
+          <IdeaCommentModal onClose={closeIdeaModal} />
         )}
       </AnimatePresence>
 

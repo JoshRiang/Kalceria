@@ -22,7 +22,6 @@ export function IdeaCommentModal({ onClose }) {
     const msg = "Successfully Submitted!";
     let i = 0;
     let closeTimeout;
-    setSuccessText("");
     // ~130ms interval * 23 chars = ~3 seconds. To get 4-5s, let's use 180ms.
     const iv = setInterval(() => {
       setSuccessText(msg.slice(0, i + 1));
@@ -37,7 +36,7 @@ export function IdeaCommentModal({ onClose }) {
       clearInterval(iv);
       if (closeTimeout) clearTimeout(closeTimeout);
     };
-  }, [step]);
+  }, [step, onClose]);
 
   const checkUser = async () => {
     setError("");
@@ -100,7 +99,7 @@ export function IdeaCommentModal({ onClose }) {
 
   const canSubmit = adviceText.trim().length >= 5;
 
-  // Blobs shared across steps
+  // Retained locally to preserve the existing animation restart behavior on modal state changes.
   const Blobs = () => (
     <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none rounded-3xl">
       <motion.div
@@ -183,6 +182,8 @@ export function IdeaCommentModal({ onClose }) {
             className="relative w-full max-w-[480px] z-[1001]"
           >
             <div className="relative bg-[#060d1f]/90 backdrop-blur-3xl border border-cyan-500/20 rounded-3xl p-8 md:p-10 overflow-hidden shadow-[0_0_60px_rgba(0,255,255,0.1),0_0_120px_rgba(217,70,239,0.08),0_30px_80px_rgba(0,0,0,0.6)]">
+              {/* Preserve the existing animation restart behavior across modal state renders. */}
+              {/* eslint-disable-next-line react-hooks/static-components -- A stable component changes its current animation timing. */}
               <Blobs />
 
               {/* Glow border top */}
