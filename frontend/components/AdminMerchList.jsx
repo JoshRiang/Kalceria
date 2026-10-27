@@ -25,7 +25,7 @@ export default function AdminMerchList({ merch, onToggle, onDeleted, onCreated }
     finally { setLoading(false); }
   }
 
-  async function handleToggleSoldOut(id, current) {
+  async function handleToggleSoldOut(id) {
     const res = await api.patch(`/api/admin/merch/${id}/soldout`);
     onToggle(id, res.data.isSoldOut);
   }

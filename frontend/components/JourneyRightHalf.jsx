@@ -23,7 +23,7 @@ export function JourneySlider({ images, className }) {
   );
 }
 
-export function JourneyDescriptionBox({ description, delay = 0, className }) {
+export function JourneyDescriptionBox({ description, className }) {
   const hasMaxWidth = className && className.includes("max-w-");
   const defaultClasses = `relative w-full p-6 flex items-center justify-center overflow-hidden rounded-[2rem] ${hasMaxWidth ? "" : "max-w-[400px]"}`;
 
@@ -54,11 +54,11 @@ export function JourneyDescriptionBox({ description, delay = 0, className }) {
   );
 }
 
-export default function JourneyRightHalf({ images, description, delay = 0, className }) {
+export default function JourneyRightHalf({ images, description, className }) {
   return (
     <div className={`hidden md:flex flex-col items-center justify-center gap-8 z-30 ${className || "absolute right-0 top-1/2 -translate-y-1/2 w-1/2"}`}>
       <JourneySlider images={images} />
-      <JourneyDescriptionBox description={description} delay={delay} />
+      <JourneyDescriptionBox description={description} />
     </div>
   );
 }

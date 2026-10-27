@@ -13,17 +13,7 @@ const SERVICE_TYPES = [
   { id: "HOST_EVENT", label: "Host Event", desc: "We host and manage your event end-to-end" },
 ];
 
-function Step({ n, active, done }) {
-  return (
-    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black font-mono transition-all duration-300 ${
-      done ? "bg-[#FF00FF] text-white" : active ? "bg-white text-black" : "bg-slate-800 text-slate-600"
-    }`}>
-      {done ? "✓" : n}
-    </div>
-  );
-}
-
-export default function NeedUsForm({ userEmail, userName }) {
+export default function NeedUsForm({ userName }) {
   const [step, setStep] = useState(0); // 0: type, 1: details, 2: done
   const [serviceType, setServiceType] = useState("");
   const [form, setForm] = useState({ serviceName: "", contactPerson: userName || "", whatsapp: "", location: "", additionalNotes: "" });
@@ -83,7 +73,7 @@ export default function NeedUsForm({ userEmail, userName }) {
   async function handleSubmit(e) {
     e.preventDefault();
     const selectedArray = Object.entries(selectedSlots)
-      .filter(([_, val]) => val)
+      .filter(([, val]) => val)
       .map(([key]) => {
         const [date, hour] = key.split(/-(?=\d+$)/); // Split on last dash
         return { date, hour: parseInt(hour) };
@@ -225,7 +215,6 @@ export default function NeedUsForm({ userEmail, userName }) {
                       {Array.from({ length: 7 }).map((_, i) => {
                         const date = new Date();
                         date.setDate(date.getDate() + i + (weekOffset * 7));
-                        const dStr = date.toISOString().split('T')[0];
                         const dayLabel = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][date.getDay()];
                         return (
                           <div key={i} className="flex flex-col items-center gap-1">

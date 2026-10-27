@@ -70,7 +70,7 @@ export default function MapPage() {
   const [kalcerians, setKalcerians] = useState([]);
   const [events, setEvents] = useState([]);
   const [presence, setPresence] = useState("online");
-  const [notice, setNotice] = useState("");
+  const [, setNotice] = useState("");
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showHqModal, setShowHqModal] = useState(false);
@@ -1561,7 +1561,7 @@ export default function MapPage() {
               <div className="w-full h-px bg-white/5" />
               <div>
                 <p className="text-white/60 text-sm leading-relaxed italic">
-                  "{hqPoint.description}"
+                  &quot;{hqPoint.description}&quot;
                 </p>
               </div>
               <button

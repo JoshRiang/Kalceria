@@ -223,6 +223,8 @@ export default function AboutUs() {
             {/* Sharp Grayscale Anchor (Ensures face clarity) */}
             <img 
               src="/man.webp" 
+              alt=""
+              aria-hidden="true"
               className="absolute inset-0 w-full h-full object-cover filter grayscale contrast-125 brightness-110" 
               draggable={false}
             />

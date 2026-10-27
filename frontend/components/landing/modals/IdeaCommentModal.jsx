@@ -15,7 +15,6 @@ export function IdeaCommentModal({ onClose }) {
   const [ideaType, setIdeaType] = useState(null); 
   const [adviceText, setAdviceText] = useState("");
   const [successText, setSuccessText] = useState("");
-  const [showFinalBuffer, setShowFinalBuffer] = useState(false);
 
   // Typewriter for success screen
   useEffect(() => {
@@ -54,7 +53,7 @@ export function IdeaCommentModal({ onClose }) {
           setStep(2);
         }
       }
-    } catch (err) {
+    } catch {
       setError("User not found");
       setUsername("");
     } finally {
@@ -75,7 +74,7 @@ export function IdeaCommentModal({ onClose }) {
         localStorage.setItem("token", loginRes.data.token);
         setStep(2);
       }
-    } catch (err) {
+    } catch {
       setError("Invalid password");
     } finally {
       setIsVerifying(false);
@@ -228,7 +227,7 @@ export function IdeaCommentModal({ onClose }) {
                 >
                   <div>
                     <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
-                      What's The Type?
+                      What&apos;s The Type?
                     </h3>
                     <p className="text-white/40 text-sm font-sans mt-1">What would you like to share?</p>
                   </div>

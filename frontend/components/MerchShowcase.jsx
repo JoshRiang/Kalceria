@@ -30,7 +30,7 @@ function shuffle(arr) {
 
 // ─── useMerchRandomizer Hook ──────────────────────────────────────────────────
 function useMerchRandomizer(initialData) {
-  const [inventory, setInventory] = useState(initialData);
+  const [, setInventory] = useState(initialData);
   const [displayedItems, setDisplayedItems] = useState([]);
 
   const pickNextBatch = useCallback(() => {

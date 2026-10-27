@@ -7,7 +7,6 @@ export const CONFIRM_PHRASE = 'CONFIRM SYSTEM FORMAT';
 export function JITResetModal({ onClose, onConfirm }) {
   const [phrase, setPhrase] = useState('');
   const [jitPassword, setJitPassword] = useState('');
-  const [step, setStep] = useState(1); // 1=phrase, 2=jit
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState('');
 

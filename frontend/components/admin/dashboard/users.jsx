@@ -6,7 +6,6 @@ import { JITActionModal } from './modals';
 
 export function UsersPanel({ lowPowerMode }) {
   const [users, setUsers] = useState([]);
-  const [selected, setSelected] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [jitAction, setJitAction] = useState(null);
   const debouncedSearchQuery = useDebounce(searchQuery, 300);

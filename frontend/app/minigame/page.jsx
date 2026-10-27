@@ -218,7 +218,7 @@ export default function MinigamePage() {
     setIsGameStarting(false);
   };
 
-  const handleFinish = (score, saved) => {
+  const handleFinish = () => {
     // After game finishes, attempt becomes 0, start ending sequence
     setAttempt(0);
     setIsGameEnding(true);
@@ -300,7 +300,7 @@ export default function MinigamePage() {
             className="text-[7.8rem] md:text-[9rem] font-black tracking-tighter text-white font-rog whitespace-nowrap"
             style={{ textShadow: "0 0 20px rgba(255,255,0,0.6), 0 0 40px rgba(255,255,0,0.3), 0 10px 30px rgba(0,0,0,0.5)" }}
           >
-            KALCER'S GAME
+            KALCER&apos;S GAME
           </motion.h1>
 
           {/* Decorative Cards Area */}

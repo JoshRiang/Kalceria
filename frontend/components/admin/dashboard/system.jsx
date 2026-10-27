@@ -53,7 +53,7 @@ export function RealTimeGraph({ active }) {
 
 export function SystemLog({ registrations = [], products = [] }) {
   const [logs, setLogs] = useState([]);
-  const [wibTime, setWibTime] = useState("");
+  const wibTime = "";
 
   useEffect(() => {
     const all = [
@@ -142,7 +142,7 @@ export function BatteryStatus({ connected }) {
 }
 
 export function MailerStatus() {
-  const [ready, setReady] = useState(true);
+  const [ready] = useState(true);
 
   if (ready) {
     return (

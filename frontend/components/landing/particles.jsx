@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export function GoldenDust() {
@@ -283,12 +283,12 @@ export function DynamicCollage() {
       <div className="flex w-[200%] h-full animate-roll">
          <div className="grid w-1/2 h-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
             {activePhotos.map((src, i) => (
-              <img key={i} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
+              <img key={i} src={src} alt="" className="w-full h-full object-cover border-[0.5px] border-white/5" />
             ))}
          </div>
          <div className="grid w-1/2 h-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
             {activePhotos.map((src, i) => (
-              <img key={`loop-${i}`} src={src} className="w-full h-full object-cover border-[0.5px] border-white/5" />
+              <img key={`loop-${i}`} src={src} alt="" className="w-full h-full object-cover border-[0.5px] border-white/5" />
             ))}
          </div>
       </div>

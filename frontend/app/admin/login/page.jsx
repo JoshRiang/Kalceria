@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
       localStorage.setItem("token", token);
 
       // Verify admin role via a protected endpoint
-      const check = await api.get("/admin/users", {
+      await api.get("/admin/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       // If no error thrown, user is admin

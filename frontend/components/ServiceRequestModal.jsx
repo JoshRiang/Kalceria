@@ -93,7 +93,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
     setLoading(true);
     try {
       const selectedArray = Object.entries(selectedSlots)
-        .filter(([_, val]) => val)
+        .filter(([, val]) => val)
         .map(([key]) => {
           const [date, hour] = key.split(/-(?=\d+$)/);
           return { date, hour: parseInt(hour) };
@@ -203,7 +203,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
     try {
       await api.delete(`/services/request/${done.bookingId}`);
       onClose();
-    } catch (err) {
+    } catch {
       setError("Failed to cancel request.");
     } finally {
       setLoading(false);

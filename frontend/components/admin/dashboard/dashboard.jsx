@@ -502,7 +502,7 @@ export default function AdminDashboard() {
                 <div className="space-y-4">
                   <span className={LABEL}>Quick Actions (JIT Required)</span>
                   <button
-                    onClick={() => { setIsDrawerOpen(false); handleResetSuccess && setShowResetModal(true); }}
+                    onClick={() => { setIsDrawerOpen(false); if (handleResetSuccess) setShowResetModal(true); }}
                     className="w-full py-3 bg-red-900/20 border border-red-500/30 rounded-xl text-red-100 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">
                     Reset System Database
                   </button>

@@ -24,7 +24,7 @@ export function RecordSaleModal({ product, onClose, onConfirm }) {
     setIsSubmitting(true);
     try {
       await onConfirm({ qty: parsedQty, pricePerUnit: parsedPrice, totalRevenue: totalRevenue });
-    } catch (err) {
+    } catch {
       setError('Failed to record sale. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -219,7 +219,6 @@ export function ProductsPanel({ onRefresh }) {
   const [products, setProducts] = useState([]);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ productId: "", name: "", imageUrl: "", label: "AVAILABLE" });
-  const [loading, setLoading] = useState(false);
   const [saleModal, setSaleModal] = useState(null); // null | product object
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);

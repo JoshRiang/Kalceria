@@ -178,7 +178,7 @@ export default function SeeEvent() {
                  `
                }}
              >
-               <span className="text-[#ffcc00]">KALCER's</span> AROUND <span className="text-red-600">INDONESIA</span>
+               <span className="text-[#ffcc00]">KALCER&apos;s</span> AROUND <span className="text-red-600">INDONESIA</span>
              </motion.h2>
           </div>
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const CARD_IMAGES = ["/ge_1.webp", "/ge_2.webp", "/ge_3.webp", "/ge_4.webp"];
@@ -175,12 +175,6 @@ export default function FlipGame({ onQuit, onFinish }) {
 
   const handleSaveNo = () => {
     setShowSave(false);
-    setBlurOut(true);
-    setTimeout(() => onFinish(), 1200);
-  };
-
-  const handleQuit = () => {
-    setShowQuit(false);
     setBlurOut(true);
     setTimeout(() => onFinish(), 1200);
   };

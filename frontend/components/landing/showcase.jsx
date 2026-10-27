@@ -165,7 +165,7 @@ export function EventSlider() {
 }
 
 export function useMerchRandomizer() {
-  const [inventory, setInventory] = useState([]);
+  const [, setInventory] = useState([]);
   const [displayed, setDisplayed] = useState([]);
 
   useEffect(() => {
@@ -193,7 +193,7 @@ export function useMerchRandomizer() {
         localStorage.setItem("kalceria_dummy_products", JSON.stringify(INITIAL_DUMMIES));
       }
 
-      setInventory((prev) => {
+      setInventory(() => {
         const shuffled = [...items].sort(() => 0.5 - Math.random());
         const picked = shuffled.slice(0, 4);
         setDisplayed(picked);

@@ -52,7 +52,7 @@ export function PhotoCollage({ isMobile }) {
   );
 }
 
-export function VideoCell({ initialSrc, allVids, index }) {
+export function VideoCell({ initialSrc, allVids }) {
   const [src, setSrc] = useState(initialSrc);
   const [glowColor, setGlowColor] = useState("#fbbf24");
   const videoRef = useRef(null);

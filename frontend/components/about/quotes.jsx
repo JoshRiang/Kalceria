@@ -11,7 +11,7 @@ export const COMMUNITY_QUOTES = [
   "Iya Nil, Gw tau Nielll!", "Hayoooo, Besok Kelas ga ya??", "Hah, makan di F I A ga sieh?"
 ];
 
-export function FloatingQuote({ quote, onComplete }) {
+export function FloatingQuote({ quote }) {
   // quote contains: { id, text, style, pos }
   return (
     <motion.div
@@ -28,13 +28,10 @@ export function FloatingQuote({ quote, onComplete }) {
         ease: "linear",
         opacity: { duration: 1.5 }, // Smooth fade in/out
       }}
-      onAnimationComplete={(definition) => {
-        // If we wanted to trigger on end of 'animate', but we use a timer in Layer for lifespan
-      }}
       className={`absolute z-[60] pointer-events-none text-white/70 whitespace-nowrap text-xl md:text-3xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] ${quote.style}`}
       style={{ left: `${quote.pos.x}%`, top: `${quote.pos.y}%` }}
     >
-      "{quote.text}"
+      &quot;{quote.text}&quot;
     </motion.div>
   );
 }

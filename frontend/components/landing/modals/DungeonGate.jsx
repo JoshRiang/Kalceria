@@ -1,15 +1,16 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export function DungeonGate() {
   const [isLocked, setIsLocked] = useState(false); // Dummy: Event has started
   const [showPopup, setShowPopup] = useState(false);
-  const [timeLeft, setTimeLeft] = useState("");
+  const [, setTimeLeft] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const pendingTimeouts = useRef(new Set());
-  const router = require('next/navigation').useRouter();
+  const router = useRouter();
 
   const scheduleTimeout = (callback, delay) => {
     const timeout = setTimeout(() => {
