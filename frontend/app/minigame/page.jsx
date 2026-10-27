@@ -4,21 +4,37 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import FlipGame from "./FlipGame";
 import { useTimeoutRegistry } from "../../hooks/useTimeoutRegistry";
+import { createSeededRandom } from "@/lib/seededRandom";
+
+const LINE_PARTICLE_COLORS = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"];
+const DECORATIVE_COLORS = ["#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316"];
+const DECORATIVE_SHAPES = ["●", "■", "▲", "◆", "▼", "✖"];
+
+function generateDecorativeContent(random) {
+  const type = Math.floor(random() * 3);
+  const color = DECORATIVE_COLORS[Math.floor(random() * DECORATIVE_COLORS.length)];
+  let char = "";
+
+  if (type === 0) char = Math.floor(random() * 10);
+  else if (type === 1) char = String.fromCharCode(65 + Math.floor(random() * 26));
+  else char = DECORATIVE_SHAPES[Math.floor(random() * DECORATIVE_SHAPES.length)];
+
+  return { char, color };
+}
 
 function MicroParticles({ active, stopping }) {
   const particles = useMemo(() => {
-    const p = [];
-    for (let i = 0; i < 24; i++) {
-      p.push({
-        id: i,
-        size: Math.random() * 4 + 2,
-        left: Math.random() * 100,
-        delay: Math.random() * 5,
-        duration: Math.random() * 5 + 3.5,
-        isGold: Math.random() > 0.5
-      });
-    }
-    return p;
+    const random = createSeededRandom("minigame-micro-particles-v1");
+    return Array.from({ length: 24 }, (_, id) => ({
+      id,
+      size: random() * 4 + 2,
+      left: random() * 100,
+      delay: random() * 5,
+      duration: random() * 5 + 3.5,
+      isGold: random() > 0.5,
+      xDrift: (random() - 0.5) * 100,
+      exitDuration: random() * 2 + 1,
+    }));
   }, []);
 
   return (
@@ -30,8 +46,8 @@ function MicroParticles({ active, stopping }) {
               <motion.div
                 key={p.id}
                 initial={{ y: "110vh", opacity: 0 }}
-                animate={{ y: "-10vh", opacity: [0, 1, 0], x: [0, (Math.random() - 0.5) * 100, 0] }}
-                exit={{ opacity: 0, scale: 0, transition: { duration: Math.random() * 2 + 1 } }}
+                animate={{ y: "-10vh", opacity: [0, 1, 0], x: [0, p.xDrift, 0] }}
+                exit={{ opacity: 0, scale: 0, transition: { duration: p.exitDuration } }}
                 transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: "linear" }}
                 className="absolute rounded-full"
                 style={{
@@ -69,17 +85,19 @@ function ResetTimer() {
 }
 
 function LineParticles() {
-  const colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"];
-  const particles = useMemo(() => Array.from({ length: 60 }).map(() => ({
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    size: Math.random() * 7 + 2,
-    duration: 1.5 + Math.random() * 2,
-    delay: Math.random() * 3,
-    xDrift: (Math.random() - 0.5) * 200,
-    yDrift: (Math.random() - 0.5) * 200
-  })), []);
+  const particles = useMemo(() => {
+    const random = createSeededRandom("minigame-line-particles-v1");
+    return Array.from({ length: 60 }, () => ({
+      x: random() * 100,
+      y: random() * 100,
+      color: LINE_PARTICLE_COLORS[Math.floor(random() * LINE_PARTICLE_COLORS.length)],
+      size: random() * 7 + 2,
+      duration: 1.5 + random() * 2,
+      delay: random() * 3,
+      xDrift: (random() - 0.5) * 200,
+      yDrift: (random() - 0.5) * 200
+    }));
+  }, []);
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-visible z-0">
@@ -113,32 +131,19 @@ function LineParticles() {
   );
 }
 
-function DecorativeCard() {
-  const generateContent = () => {
-    const type = Math.floor(Math.random() * 3);
-    const colors = ["#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316"];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    let char = "";
-    if (type === 0) char = Math.floor(Math.random() * 10);
-    else if (type === 1) char = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    else {
-      const shapes = ["●", "■", "▲", "◆", "▼", "✖"];
-      char = shapes[Math.floor(Math.random() * shapes.length)];
-    }
-    return { char, color };
-  };
-
+function DecorativeCard({ seed }) {
   const scheduleTimeout = useTimeoutRegistry();
+  const random = useRef(createSeededRandom(`minigame-decorative-card-${seed}-updates`));
   const [isFlipped, setIsFlipped] = useState(false);
-  const [content, setContent] = useState(generateContent);
+  const [content, setContent] = useState(() => generateDecorativeContent(createSeededRandom(`minigame-decorative-card-${seed}-initial`)));
 
   useEffect(() => {
     const interval = setInterval(() => {
       setIsFlipped(f => {
-        if (f) scheduleTimeout(() => setContent(generateContent()), 400);
+        if (f) scheduleTimeout(() => setContent(generateDecorativeContent(random.current)), 400);
         return !f;
       });
-    }, 2000 + Math.random() * 2000);
+    }, 2000 + random.current() * 2000);
     return () => clearInterval(interval);
   }, [scheduleTimeout]);
 
@@ -180,6 +185,7 @@ export default function MinigamePage() {
   const [gamePhase, setGamePhase] = useState("idle");
   const [attempt, setAttempt] = useState(1); // 1 = has attempt, 0 = used up
   const videoRef = useRef(null);
+  const [gameSeed, setGameSeed] = useState("");
   const scheduleTimeout = useTimeoutRegistry();
 
   const [isMobile, setIsMobile] = useState(false);
@@ -213,6 +219,9 @@ export default function MinigamePage() {
 
   const handlePlayIt = () => {
     if (attempt === 0) return;
+    const seed = new Uint32Array(1);
+    window.crypto.getRandomValues(seed);
+    setGameSeed(`minigame-${seed[0]}`);
     setGamePhase("starting");
     scheduleTimeout(() => setGamePhase("playing"), 1800);
   };
@@ -239,7 +248,7 @@ export default function MinigamePage() {
       {/* In-Game Overlay */}
       <AnimatePresence>
         {inGame && (
-          <FlipGame attempt={attempt} onQuit={handleQuit} onFinish={handleFinish} />
+          <FlipGame attempt={attempt} seed={gameSeed} onQuit={handleQuit} onFinish={handleFinish} />
         )}
       </AnimatePresence>
 
@@ -306,7 +315,7 @@ export default function MinigamePage() {
 
           {/* Decorative Cards Area */}
           <div className="flex justify-center gap-4 mt-6 h-20">
-            {[0, 1, 2, 3].map(i => <DecorativeCard key={i} />)}
+            {[0, 1, 2, 3].map(i => <DecorativeCard key={i} seed={i} />)}
           </div>
         </motion.div>
 

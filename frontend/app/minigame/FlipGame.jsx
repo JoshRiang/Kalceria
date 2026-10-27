@@ -3,21 +3,23 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useTimeoutRegistry } from "../../hooks/useTimeoutRegistry";
+import { createSeededRandom } from "@/lib/seededRandom";
 
 const CARD_IMAGES = ["/ge_1.webp", "/ge_2.webp", "/ge_3.webp", "/ge_4.webp"];
 
-function shuffleArray(arr) {
+function shuffleArray(arr, seed) {
   const a = [...arr];
+  const random = createSeededRandom(seed);
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-function makeCards() {
+function makeCards(seed) {
   const pairs = [...CARD_IMAGES, ...CARD_IMAGES];
-  const shuffled = shuffleArray(pairs);
+  const shuffled = shuffleArray(pairs, seed);
   return shuffled.map((img, i) => ({
     id: i, 
     img, 
@@ -42,8 +44,8 @@ function Timer({ ms }) {
   );
 }
 
-export default function FlipGame({ onQuit, onFinish }) {
-  const [cards, setCards] = useState(() => makeCards());
+export default function FlipGame({ seed, onQuit, onFinish }) {
+  const [cards, setCards] = useState(() => makeCards(`${seed}:opening`));
   const [phase, setPhase] = useState("intro"); // intro | faceup | facedown | absorb | spread | playing | done
   const [selected, setSelected] = useState([]);
   const [matched, setMatched] = useState([]);
@@ -90,10 +92,10 @@ export default function FlipGame({ onQuit, onFinish }) {
     if (phase !== "absorb") return;
     scheduleTimeout(() => {
       // Re-shuffle and prepare spread
-      setCards(makeCards());
+      setCards(makeCards(`${seed}:layout`));
       setPhase("spread");
     }, 1000);
-  }, [phase, scheduleTimeout]);
+  }, [phase, scheduleTimeout, seed]);
 
   // Step 5: Spread Out
   useEffect(() => {
