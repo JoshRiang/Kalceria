@@ -40,6 +40,10 @@ logs/
 # Testing
 coverage/
 
+# Local audit and guidance notes (Markdown)
+**/*[Aa][Uu][Dd][Ii][Tt]*.md
+**/*[Gg][Uu][Ii][Dd][Aa][Nn][Cc][Ee]*.md
+
 # OS files
 Thumbs.db
 ehthumbs.db
