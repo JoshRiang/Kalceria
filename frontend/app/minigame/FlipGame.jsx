@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 const CARD_IMAGES = ["/ge_1.webp", "/ge_2.webp", "/ge_3.webp", "/ge_4.webp"];
 
@@ -280,7 +281,7 @@ export default function FlipGame({ onQuit, onFinish }) {
                   border: "1px solid rgba(0,0,0,0.05)",
                   padding: "15px"
                 }}>
-                   <img src="/favicon.webp" alt="Logo" className="w-[80px] h-[80px] opacity-40 object-contain" />
+                   <Image src="/favicon.webp" alt="Logo" width={771} height={681} unoptimized loading="eager" decoding="auto" className="w-[80px] h-[80px] opacity-40 object-contain" />
                 </div>
                 {/* Front (Face Image) */}
                 <div style={{

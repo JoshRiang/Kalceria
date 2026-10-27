@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import FlipGame from "./FlipGame";
 
 function MicroParticles({ active, stopping }) {
@@ -147,7 +148,7 @@ function DecorativeCard() {
         style={{ width: "100%", height: "100%", position: "relative", transformStyle: "preserve-3d" }}
       >
         <div className="absolute inset-0 bg-white rounded-xl flex items-center justify-center p-2 shadow-xl border border-black/5" style={{ backfaceVisibility: "hidden" }}>
-          <img src="/favicon.webp" alt="" className="w-8 h-8 opacity-70 object-contain" />
+          <Image src="/favicon.webp" alt="" width={771} height={681} unoptimized loading="eager" decoding="auto" className="w-8 h-8 opacity-70 object-contain" />
         </div>
         <div className="absolute inset-0 bg-white rounded-xl flex items-center justify-center p-2 shadow-xl border border-black/5" style={{ transform: "rotateY(180deg)", backfaceVisibility: "hidden" }}>
           <span className="font-black text-3xl select-none" style={{ 
@@ -338,7 +339,7 @@ export default function MinigamePage() {
                 transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute top-[40%] left-[35%] pointer-events-none opacity-95 -rotate-[20deg] z-[50]"
               >
-                <img src="/hand_point.webp" alt="Point" className="w-[6rem] h-[6rem] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
+                <Image src="/hand_point.webp" alt="Point" width={460} height={612} unoptimized loading="eager" decoding="auto" className="w-[6rem] h-[6rem] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
               </motion.div>
             )}
           </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import api from "@/lib/api";
 
 const CLIP = { clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" };
@@ -377,7 +378,7 @@ export default function NeedUsForm({ userName }) {
                 </button>
 
                 <a href={done.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:scale-105 transition-transform duration-500 flex justify-center">
-                  <img src="/wa_logo.webp" alt="WhatsApp" className="w-32 h-32 object-contain mx-auto" />
+                  <Image src="/wa_logo.webp" alt="WhatsApp" width={1024} height={1024} unoptimized loading="eager" decoding="auto" className="w-32 h-32 object-contain mx-auto" />
                 </a>
               </div>
 
