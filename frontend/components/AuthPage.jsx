@@ -3,6 +3,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 
+const EMAIL_AUTH_ENABLED = process.env.NEXT_PUBLIC_ENABLE_EMAIL_AUTH === "true";
+const PUBLIC_SIGNUP_ENABLED =
+  EMAIL_AUTH_ENABLED && process.env.NEXT_PUBLIC_ENABLE_PUBLIC_SIGNUP === "true";
+
 // ── Shared Input Component ──────────────────────────────────────────────────
 function Field({ id, label, type, placeholder, options, val, onChange }) {
   const [focused, setFocused] = useState(false);
@@ -288,7 +292,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
             </div>
 
             {/* ── Mode toggle (hidden during OTP verify) ── */}
-            {mode !== "verify" && (
+            {PUBLIC_SIGNUP_ENABLED && mode !== "verify" && (
             <div className="flex mb-8 bg-[#040810]/80 rounded-lg border border-slate-800/60 p-1 relative">
               {/* Active pill background */}
               <motion.div
@@ -462,15 +466,21 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
             {/* ── Footer ── */}
             <div className="mt-8 text-center">
-              <p className="font-mono text-xs text-slate-500">
-                {mode === "verify" ? "Sudah verifikasi? " : mode === "login" ? "Don't have an account? " : "Already have an account? "}
-                <button 
-                  onClick={() => switchMode(mode === "verify" ? "login" : mode === "login" ? "register" : "login")}
-                  className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4"
-                >
-                  {mode === "verify" ? "Sign in" : mode === "login" ? "Register now" : "Sign in"}
-                </button>
-              </p>
+              {PUBLIC_SIGNUP_ENABLED ? (
+                <p className="font-mono text-xs text-slate-500">
+                  {mode === "verify" ? "Sudah verifikasi? " : mode === "login" ? "Don't have an account? " : "Already have an account? "}
+                  <button
+                    onClick={() => switchMode(mode === "verify" ? "login" : mode === "login" ? "register" : "login")}
+                    className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4"
+                  >
+                    {mode === "verify" ? "Sign in" : mode === "login" ? "Register now" : "Sign in"}
+                  </button>
+                </p>
+              ) : (
+                <p className="font-mono text-xs text-slate-500">
+                  Account access is managed by a Kalceria administrator.
+                </p>
+              )}
             </div>
           </div>
           </div>

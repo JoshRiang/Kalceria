@@ -13,6 +13,7 @@ import { redirectEvent } from "../controllers/redirectController.js";
 import { cleanupExpiredBroadcasts } from "../utils/cronWorker.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import { requireAdmin, requireJIT } from "../middleware/admin.js";
+import { requireEmailAuth, requirePublicSignup } from "../middleware/authAvailability.js";
 import {
   createEvent, listEvents, updateEvent, deleteEvent,
 } from "../controllers/adminEventController.js";
@@ -43,12 +44,12 @@ const router = express.Router();
 router.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
-router.post("/auth/register", register);
+router.post("/auth/register", requirePublicSignup, register);
 router.post("/auth/login", login);
-router.post("/auth/otp/request", requestOtp);
-router.post("/auth/otp/verify", verifyOtp);
-router.post("/auth/password/reset-request", requestPasswordReset);
-router.post("/auth/password/reset", resetPassword);
+router.post("/auth/otp/request", requireEmailAuth, requestOtp);
+router.post("/auth/otp/verify", requireEmailAuth, verifyOtp);
+router.post("/auth/password/reset-request", requireEmailAuth, requestPasswordReset);
+router.post("/auth/password/reset", requireEmailAuth, resetPassword);
 router.get("/auth/check-username/:username", checkUsername);
 
 // ─── User Profile ────────────────────────────────────────────────────────────
