@@ -18,11 +18,6 @@ out/
 backend/.env
 frontend/.env
 
-# Prisma
-backend/prisma/migrations/
-# (Usually we keep migrations, but some people ignore them if using db push. 
-# Better to keep them for production, but ignore binary files if any)
-
 # IDE / Editor
 .vscode/
 .idea/
