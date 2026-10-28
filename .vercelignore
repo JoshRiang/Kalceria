@@ -1,0 +1,6 @@
+# Local environment files contain deployment credentials and must never upload.
+.env
+.env.*
+**/.env
+**/.env.*
+.npmrc
