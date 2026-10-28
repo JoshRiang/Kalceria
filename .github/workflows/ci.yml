@@ -20,6 +20,30 @@ jobs:
     name: CI / verify
     runs-on: ubuntu-latest
     timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: pentest_local_only
+          POSTGRES_DB: kalceria_pt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,6 +66,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Run endpoint and security regression tests
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:pentest_local_only@127.0.0.1:5432/kalceria_pt
+          TEST_REDIS_URL: redis://127.0.0.1:6379
+        run: |
+          npx prisma migrate deploy --schema backend/prisma/schema.prisma
+          npm test
+
       - name: Build
         run: npm run build
-

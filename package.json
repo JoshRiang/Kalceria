@@ -20,6 +20,7 @@
     "start": "npm run start --workspace=backend",
     "start:frontend": "npm run start --workspace=frontend",
     "lint": "npm run lint --workspaces",
+    "test": "npm run test:api --workspace=backend",
     "db:generate": "npm run db:generate --workspace=backend",
     "db:migrate": "npm run db:migrate --workspace=backend",
     "db:push": "npm run db:push --workspace=backend",

@@ -5,7 +5,8 @@ import { createLog } from './auditController.js';
 const ADMIN_MUTATION_LOCK = [130019, 1];
 
 async function lockAdminMutations(tx) {
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(${ADMIN_MUTATION_LOCK[0]}, ${ADMIN_MUTATION_LOCK[1]})`;
+  // $executeRaw: the lock function returns void, which $queryRaw cannot deserialize.
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ADMIN_MUTATION_LOCK[0]}::int, ${ADMIN_MUTATION_LOCK[1]}::int)`;
 }
 
 

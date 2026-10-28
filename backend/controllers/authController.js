@@ -17,6 +17,11 @@ import {
 
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
 
+// Verified against when no account matches, so unknown and known accounts take
+// comparable time and login timing does not reveal which emails exist.
+let dummyPasswordHash;
+const getDummyPasswordHash = () => (dummyPasswordHash ??= argon2.hash('timing-equalization-placeholder'));
+
 // ─── Register ────────────────────────────────────────────────────────────────
 export async function register(req, res, next) {
   try {
@@ -115,7 +120,10 @@ export async function login(req, res, next) {
           },
         })
         : null;
-    if (!user) return res.status(401).json({ error: 'Invalid credentials.' });
+    if (!user) {
+      await argon2.verify(await getDummyPasswordHash(), password).catch(() => false);
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
 
     const valid = await argon2.verify(user.passwordHash, password);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials.' });

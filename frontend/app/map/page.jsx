@@ -1294,7 +1294,7 @@ export default function MapPage() {
         <div className="fixed bottom-0 right-0 z-[900] w-[15vw] pointer-events-none animate-in fade-in slide-in-from-bottom-20 duration-1000">
           <ContentImage
             key={pirateKey}
-            src="/map/pirate_overview_looped.gif"
+            src="/map/pirate_overview_looped.webp"
             alt="Pirate Intel"
             width={240}
             height={426}

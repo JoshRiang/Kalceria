@@ -26,12 +26,21 @@ export async function saveTelemetry(req, res, next) {
       return res.status(400).json({ error: "Valid lat and lng are required." });
     }
 
+    // Precise coordinates are only retained for users who opted in to live location.
+    const consent = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { allowLiveLocation: true },
+    });
+    if (!consent?.allowLiveLocation) {
+      return res.status(403).json({ error: "Live location is disabled for this account." });
+    }
+
     const key = `telemetry:${userId}`;
     const record = JSON.stringify({ lat, lng, ts: Date.now() });
 
     await redis.lpush(key, record);
     await redis.ltrim(key, 0, 4);
-    await redis.expire(key, 30 * 24 * 60 * 60);
+    await redis.expire(key, 24 * 60 * 60);
 
     res.json({ message: "Telemetry saved." });
   } catch (err) {

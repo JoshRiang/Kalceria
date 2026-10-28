@@ -1,0 +1,88 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_production:
+        description: Confirm a Production deployment from main
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify main before release
+    if: github.ref == 'refs/heads/main' && inputs.confirm_production == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check dependency vulnerabilities
+        run: npm audit --audit-level=critical
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    name: Deploy to Vercel
+    needs: verify
+    if: github.ref == 'refs/heads/main' && inputs.confirm_production == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://kalceria-frontend.vercel.app
+    steps:
+      - name: Check out verified source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Deploy Backend to Vercel Production
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_BACKEND_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@65.4.0 deploy --yes --prod
+
+      - name: Deploy Frontend to Vercel Production
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_FRONTEND_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@65.4.0 deploy --yes --prod
+
+      - name: Smoke-check live endpoints
+        run: |
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 https://kalceria-frontend.vercel.app/ --output /dev/null
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 https://kalceria-frontend.vercel.app/map --output /dev/null
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 https://kalceria-backend.vercel.app/api/health --output /dev/null
