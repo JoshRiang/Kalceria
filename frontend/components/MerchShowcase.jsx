@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
+import ContentImage from "@/components/ui/ContentImage";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const merchData = [
@@ -89,9 +90,12 @@ function MarketplaceLogos() {
         rel="noopener noreferrer"
         className="grayscale opacity-70 transition-all duration-300 hover:grayscale-0 hover:opacity-100"
       >
+        {/* Keep the natural dimensions of this third-party logo. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="https://upload.wikimedia.org/wikipedia/commons/7/72/Tokopedia_new_logo.png"
           alt="Tokopedia"
+          loading="lazy"
           className="h-8 object-contain"
         />
       </a>
@@ -101,9 +105,11 @@ function MarketplaceLogos() {
         rel="noopener noreferrer"
         className="grayscale opacity-70 transition-all duration-300 hover:grayscale-0 hover:opacity-100"
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/1024px-Shopee.svg.png"
           alt="Shopee"
+          loading="lazy"
           className="h-8 object-contain"
         />
       </a>
@@ -141,9 +147,11 @@ function MerchCard({ item, index }) {
         {isShopee ? "Shopee" : "Tokopedia"}
       </span>
       <div className="overflow-hidden aspect-square">
-        <img
+        <ContentImage
           src={item.photoUrl}
           alt={item.id}
+          width={400}
+          height={400}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
       </div>

@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VintageLaserGrid, DominoChevrons } from "@/components/map/AtmosphereLayers";
 import { createSeededRandom } from "@/lib/seededRandom";
+import ContentImage from "@/components/ui/ContentImage";
 
 export function StartupSequenceOverlay({ showStartup, startupProgress, particles, hasMounted, currentQuote, tilt }) {
   const speedLines = useMemo(() => {
@@ -235,9 +236,11 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         }}
                       >
                         {/* Character Sprite (Positioned in front, z-10, 25% bigger) */}
-                        <img
+                        <ContentImage
                           src="/kalcermanmap.png"
                           alt="Kalcerman Map"
+                          width={2048}
+                          height={2048}
                           className="relative w-[275px] h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-6 z-10"
                           style={{
                             transformStyle: "preserve-3d",

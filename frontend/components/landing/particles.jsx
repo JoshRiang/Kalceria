@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
+import ContentImage from "@/components/ui/ContentImage";
 
 export function GoldenDust() {
   const [mounted, setMounted] = useState(false);
@@ -292,12 +293,12 @@ export function DynamicCollage() {
       <div className="flex w-[200%] h-full animate-roll">
          <div className="grid w-1/2 h-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
             {activePhotos.map((src, i) => (
-              <img key={i} src={src} alt="" className="w-full h-full object-cover border-[0.5px] border-white/5" />
+              <ContentImage key={i} src={src} alt="" width={800} height={800} className="w-full h-full object-cover border-[0.5px] border-white/5" />
             ))}
          </div>
          <div className="grid w-1/2 h-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
             {activePhotos.map((src, i) => (
-              <img key={`loop-${i}`} src={src} alt="" className="w-full h-full object-cover border-[0.5px] border-white/5" />
+              <ContentImage key={`loop-${i}`} src={src} alt="" width={800} height={800} className="w-full h-full object-cover border-[0.5px] border-white/5" />
             ))}
          </div>
       </div>

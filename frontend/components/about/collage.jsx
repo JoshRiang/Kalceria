@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
+import ContentImage from "@/components/ui/ContentImage";
 
 const ABOUT_VIDEOS = Array.from({ length: 8 }, (_, i) => `/vid_abt${i + 1}.mp4`);
 
@@ -30,9 +31,11 @@ export function PhotoCollage({ isMobile }) {
             <div key={setIndex} className={`grid w-1/2 h-full gap-1 ${isMobile ? "grid-cols-3" : "grid-cols-5"}`}>
               {activePhotos.map((src, i) => (
                 <div key={i} className="relative w-full h-full overflow-hidden bg-slate-900 border border-white/5">
-                  <img 
+                  <ContentImage
                     src={src} 
                     alt="Background" 
+                    width={800}
+                    height={800}
                     className="w-full h-full object-cover filter grayscale contrast-125 brightness-75 opacity-80" 
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />

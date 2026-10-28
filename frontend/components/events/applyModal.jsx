@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { CLIP } from './constants';
+import ContentImage from "@/components/ui/ContentImage";
 
 export const CLIP_CARD = { clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" };
 
@@ -91,7 +92,7 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
 
            <div className="grid grid-cols-2 gap-4 md:gap-6 items-center">
               <motion.div key={event?.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className={`relative w-full bg-white/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] ${isMobile ? "aspect-square" : "aspect-[3/4]"}`} style={CLIP_CARD}>
-                 <img src={event?.displayPhotoUrl} className="w-full h-full object-cover" alt="" />
+                 <ContentImage src={event?.displayPhotoUrl} className="w-full h-full object-cover" alt="" width={900} height={1200} />
                  <div className="absolute inset-0 border-2 border-white/10 pointer-events-none" style={CLIP_CARD} />
               </motion.div>
               <div className="flex flex-col justify-center h-full space-y-0.5">

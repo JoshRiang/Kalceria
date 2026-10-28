@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StepIndicator, Field } from "./service-request/FormControls";
+import ContentImage from "@/components/ui/ContentImage";
 import api from "@/lib/api";
 import { useHasMounted } from "@/hooks/useHasMounted";
 
@@ -549,9 +550,11 @@ export default function ServiceRequestModal({ onClose, userName }) {
                       rel="noopener noreferrer"
                       className="relative z-10 hover:scale-110 transition-transform duration-500"
                     >
-                      <img 
+                      <ContentImage
                         src="/wa_logo.webp" 
                         alt="WhatsApp" 
+                        width={1024}
+                        height={1024}
                         className="w-40 h-40 object-contain" 
                       />
                     </a>

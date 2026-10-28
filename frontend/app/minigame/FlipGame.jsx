@@ -301,7 +301,7 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   padding: "15%"
                 }}>
-                  <img src={card.img} alt="Card" className="w-full h-full object-contain" />
+                  <Image src={card.img} alt="Card" width={512} height={512} unoptimized loading="lazy" className="w-full h-full object-contain" />
                 </div>
               </motion.div>
             </motion.div>

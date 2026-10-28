@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createSeededRandom } from "@/lib/seededRandom";
+import ContentImage from "@/components/ui/ContentImage";
 
 const LOGOUT_PARTICLE_COLORS = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"];
 
@@ -131,9 +132,11 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
                 className="w-full h-full"
               >
-                <img
+                <ContentImage
                   src={`/kucing${catFrame}.webp`}
                   alt="Cat"
+                  width={512}
+                  height={512}
                   className="w-full h-full object-contain object-bottom drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)] z-10"
                 />
               </motion.div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ContentImage from "@/components/ui/ContentImage";
 import api from "@/lib/api";
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
@@ -96,7 +97,7 @@ export default function ApplyModal({ event, onClose }) {
                 <h2 className="font-mono font-black text-2xl uppercase tracking-tighter text-white mb-4">{event.title}</h2>
                 {event.displayPhotoUrl && (
                   <div className="w-full aspect-video rounded overflow-hidden mb-4 border border-slate-800">
-                    <img src={event.displayPhotoUrl} alt={event.title} className="w-full h-full object-cover opacity-80" />
+                    <ContentImage src={event.displayPhotoUrl} alt={event.title} width={1600} height={900} className="w-full h-full object-cover opacity-80" />
                   </div>
                 )}
                 <div className="flex flex-wrap gap-4 mb-4 text-xs font-mono text-slate-400">

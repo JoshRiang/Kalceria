@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import ContentImage from "@/components/ui/ContentImage";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import { useHasMounted } from "@/hooks/useHasMounted";
@@ -595,9 +596,11 @@ export default function MapPage() {
 
         <div className="relative z-10 text-center flex flex-col items-center gap-8 max-w-lg px-6">
           {/* mapman.webp replacing door box, static */}
-          <img 
+          <ContentImage
             src="/mapman.webp"
             alt="Mapman"
+            width={2048}
+            height={2066}
             className="w-48 h-48 object-contain drop-shadow-[0_0_30px_rgba(0,255,255,0.35)]"
           />
 
@@ -1065,9 +1068,11 @@ export default function MapPage() {
                     />
                   </div>
                 )}
-                <img
+                <ContentImage
                   src={avatarUrl(currentUser)}
                   alt="Profile"
+                  width={128}
+                  height={128}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -1270,9 +1275,11 @@ export default function MapPage() {
         }}
         className="fixed bottom-[-20px] left-1/2 -translate-x-1/2 z-[1000] pointer-events-none select-none flex flex-col items-center"
       >
-        <img
+        <ContentImage
           src="/kalcermap_bottom.png"
           alt="Kalceria Maps"
+          width={2048}
+          height={2048}
           className="h-[256px] w-auto object-contain opacity-95 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
           draggable={false}
         />
@@ -1281,10 +1288,12 @@ export default function MapPage() {
       {/* Randomized Pirate Interception Overlay */}
       {showPirate && (
         <div className="fixed bottom-0 right-0 z-[900] w-[15vw] pointer-events-none animate-in fade-in slide-in-from-bottom-20 duration-1000">
-          <img
+          <ContentImage
             key={pirateKey}
             src="/map/pirate_overview_looped.gif"
             alt="Pirate Intel"
+            width={240}
+            height={426}
             className="w-full h-auto opacity-80 mix-blend-screen"
           />
         </div>

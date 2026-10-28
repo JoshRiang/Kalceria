@@ -1,5 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
+import ContentImage from "@/components/ui/ContentImage";
 
 export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, events, searchQuery, setSearchQuery, drawerOpen, setDrawerOpen, isDataLoading, hoveredKalcerian, setHoveredKalcerian, isMapDark, setFocusedUserId, setSelectedOfflineUser, sidebarKalcerians, focusUser }) {
   return (
@@ -196,10 +197,12 @@ export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, eve
                       <div className={`w-5 h-5 border rounded-full overflow-hidden ${
                         isMapDark ? "border-white/10" : "border-slate-200"
                       }`}>
-                        <img
+                        <ContentImage
                           className="w-full h-full object-cover"
                           src={avatarUrl(event.creator)}
                           alt="Host"
+                          width={64}
+                          height={64}
                         />
                       </div>
                       <span className={`text-[11px] font-medium tracking-wider ${
@@ -323,10 +326,12 @@ export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, eve
                             : (isMapDark ? "border-white/10 opacity-50" : "border-slate-200 opacity-60")
                         }`}
                       >
-                        <img
+                        <ContentImage
                           className="w-full h-full object-cover"
                           src={avatarUrl(user)}
                           alt={user.nickname || user.name}
+                          width={64}
+                          height={64}
                         />
                       </div>
                       <span
@@ -384,10 +389,12 @@ export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, eve
                         <div className={`w-10 h-10 rounded-full overflow-hidden border flex-shrink-0 ${
                           isMapDark ? "border-white/15" : "border-slate-200"
                         }`}>
-                          <img
+                          <ContentImage
                             src={avatarUrl(user)}
                             alt=""
                             className="w-full h-full object-cover"
+                            width={80}
+                            height={80}
                           />
                         </div>
                         <div className="min-w-0">

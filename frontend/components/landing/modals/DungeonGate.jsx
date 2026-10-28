@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import ContentImage from "@/components/ui/ContentImage";
 
 export function DungeonGate() {
   const [isLocked, setIsLocked] = useState(false); // Dummy: Event has started
@@ -114,9 +115,11 @@ export function DungeonGate() {
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="relative"
               >
-                <img 
+                <ContentImage
                   src="/dgf_2.webp" 
                   alt="Guide" 
+                  width={523}
+                  height={675}
                   className="w-20 md:w-28 h-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
                 />
                 <div className="absolute -inset-4 bg-red-500/20 blur-2xl rounded-full z-[-1] opacity-50" />
@@ -173,9 +176,11 @@ export function DungeonGate() {
               {/* Glow Aura */}
               <div className="absolute inset-[-20%] bg-red-500/10 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
               
-              <img 
+              <ContentImage
                 src="/dg_1.webp" 
                 alt="Locked Gate" 
+                width={2048}
+                height={2048}
                 className="w-24 md:w-36 h-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] group-hover:brightness-110 transition-all duration-500 border-none outline-none ring-0"
               />
               
@@ -192,9 +197,11 @@ export function DungeonGate() {
                   className="absolute inset-[-30%] bg-yellow-400/20 blur-[60px] rounded-full" 
                 />
                 
-                <img 
+                <ContentImage
                   src="/dg_2.webp" 
                   alt="Dungeon Gate" 
+                  width={2048}
+                  height={2048}
                   className="w-24 md:w-36 h-auto object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] group-hover:scale-110 group-hover:brightness-125 transition-all duration-700 border-none outline-none ring-0"
                 />
                 

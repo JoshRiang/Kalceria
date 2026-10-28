@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import api from "@/lib/api";
+import ContentImage from "@/components/ui/ContentImage";
 
 const inputClass = "w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white";
 
@@ -63,7 +64,7 @@ export default function AdminMerchList({ merch, onToggle, onDeleted, onCreated }
                 m.isSoldOut ? "grayscale opacity-50" : ""
               }`}
             >
-              <img src={m.photoUrl} alt={m.name} className="w-full aspect-square object-cover" />
+              <ContentImage src={m.photoUrl} alt={m.name} width={400} height={400} className="w-full aspect-square object-cover" />
               <div className="p-2">
                 <p className="text-xs font-semibold text-gray-800 truncate">{m.name}</p>
                 <p className="text-xs text-gray-400">{formatRp(m.price)}</p>

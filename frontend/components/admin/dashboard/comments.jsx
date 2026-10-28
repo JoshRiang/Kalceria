@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import api from "@/lib/api";
 import { INPUT, TrashIcon, LocalBlob, formatDate } from './primitives';
+import ContentImage from "@/components/ui/ContentImage";
 
 export function CommentsPanel({ lowPowerMode }) {
   const [comments, setComments] = useState([]);
@@ -89,9 +90,11 @@ export function CommentsPanel({ lowPowerMode }) {
             <div className="relative z-10 flex-1 flex flex-col">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-2xl bg-black/5 border border-black/10 overflow-hidden flex-shrink-0">
-                  <img
+                  <ContentImage
                     src={c.user?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.username || 'anon'}`}
                     alt=""
+                    width={80}
+                    height={80}
                     className="w-full h-full object-cover"
                   />
                 </div>

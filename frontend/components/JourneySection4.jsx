@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import ContentImage from "@/components/ui/ContentImage";
 
 const Typewriter = ({ text, speed = 50, delay = 0, className, style }) => {
   const [displayed, setDisplayed] = useState("");
@@ -161,14 +162,18 @@ export default function JourneySection4({ isMobile: propIsMobile }) {
           
           {/* Floating Texts Overlays (Attached to the square box corner, outside overflow-hidden) */}
           <div className="absolute -top-10 -left-6 md:-left-16 md:-top-12 z-50 pointer-events-none drop-shadow-[0_20px_30px_rgba(0,0,0,0.9)] w-40 md:w-56 h-40">
-            <img 
+            <ContentImage
               src="/textfitra.webp" 
               alt="Fitra" 
+              width={2400}
+              height={1675}
               className="absolute top-0 left-0 w-full animate-text-fitra"
             />
-            <img 
+            <ContentImage
               src="/textmobi.webp" 
               alt="Mobi" 
+              width={1032}
+              height={1024}
               className="absolute -top-4 md:-top-6 left-0 w-full animate-text-mobi"
             />
           </div>
