@@ -112,7 +112,10 @@ export async function recordMerchSale(req, res, next) {
 // ─── DELETE /admin/merch/:id ──────────────────────────────────────────────────
 export async function deleteMerch(req, res, next) {
   try {
-    await prisma.merch.delete({ where: { id: req.params.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.merch.delete({ where: { id: req.params.id } });
+      await createLog(req.user.email, 'MERCH_DELETED', `Merch item ${req.params.id} deleted.`, tx);
+    });
     res.json({ message: 'Merch deleted.' });
   } catch (err) { next(err); }
 }

@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js';
+import { createLog } from './auditController.js';
 
 
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
@@ -143,7 +144,18 @@ export async function deleteRegistration(req, res, next) {
     if (version === undefined || version === null || !Number.isInteger(Number(version)) || Number(version) < 0) {
       return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required for delete.' });
     }
-    await prisma.eventRegistration.delete({ where: { id: req.params.id, version: Number(version) } });
+    await prisma.$transaction(async (tx) => {
+      const registration = await tx.eventRegistration.delete({
+        where: { id: req.params.id, version: Number(version) },
+        select: { id: true, eventId: true },
+      });
+      await createLog(
+        req.user.email,
+        'EVENT_REGISTRATION_DELETED',
+        `Registration ${registration.id} for event ${registration.eventId} deleted.`,
+        tx,
+      );
+    });
     res.json({ message: 'Deleted.' });
   } catch (err) {
     if (err.code === 'P2025') {

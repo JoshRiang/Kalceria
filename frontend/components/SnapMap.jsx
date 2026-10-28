@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createUserIcon } from "./map/UserIcon";
+import { createUserIcon, escapeMapHtml, getSafeMapAvatarUrl, getSafeMapColor } from "./map/UserIcon";
 import { createHqIcon } from "./map/HqIcon";
 import { createEventIcon } from "./map/EventIcon";
 import { userPopup } from "./map/UserPopup";
@@ -12,14 +12,6 @@ import "leaflet/dist/leaflet.css";
 
 // Constants & Helpers
 const DEFAULT_CENTER = [-6.2715, 106.7135];
-const esc = (str) =>
-  String(str).replace(
-    /[&<>"']/g,
-    (m) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        m
-      ],
-  );
 
 async function loadLeaflet() {
   if (typeof window === "undefined") return null;
@@ -102,16 +94,15 @@ export default function SnapMap({
             nickname: "Kalcerian",
           };
           const remaining = cluster.getChildCount() - 1;
-          const rawClusterColor = firstUser.color || "#ffc300";
+          const rawClusterColor = getSafeMapColor(firstUser.color);
           const clusterColor = (rawClusterColor.toLowerCase() === "#ffd60a" || rawClusterColor.toLowerCase() === "#ffea00") ? "#ffc300" : rawClusterColor;
-          const clusterAvatar =
-            firstUser.profilePicture ||
-            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(firstUser.nickname || "anon")}`;
+          const clusterAvatar = escapeMapHtml(getSafeMapAvatarUrl(firstUser));
+          const clusterNickname = escapeMapHtml(firstUser.nickname || "");
           return L.divIcon({
             html: `
               <div class="cluster-node" style="--user-color: ${clusterColor}">
                 <div class="cluster-pulse"></div>
-                <div class="cluster-avatar"><img src="${clusterAvatar}" alt="${esc(firstUser.nickname || "")}"></div>
+                <div class="cluster-avatar"><img src="${clusterAvatar}" alt="${clusterNickname}"></div>
                 <div class="cluster-count">+${remaining}</div>
               </div>
             `,

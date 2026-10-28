@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { revokeUserSessions } from '../utils/authSession.js';
+import { createLog } from './auditController.js';
 
 const ADMIN_MUTATION_LOCK = [130019, 1];
 
@@ -68,6 +69,7 @@ export async function setUserRole(req, res, next) {
         data: { role },
         select: { id: true, name: true, email: true, role: true },
       });
+      await createLog(req.user.email, 'USER_ROLE_CHANGED', `User ${user.id} role changed to ${role}.`, tx);
       return { user };
     });
     if (result.error === 'NOT_FOUND') return res.status(404).json({ error: 'User not found.' });
@@ -92,6 +94,7 @@ export async function deleteUser(req, res, next) {
       }
       await revokeUserSessions(req.params.id);
       await tx.user.delete({ where: { id: req.params.id } });
+      await createLog(req.user.email, 'USER_DELETED', `User ${req.params.id} deleted.`, tx);
       return { deleted: true };
     });
     if (result.error === 'NOT_FOUND') return res.status(404).json({ error: 'User not found.' });

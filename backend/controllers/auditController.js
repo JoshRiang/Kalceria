@@ -4,11 +4,10 @@ import prisma from '../lib/prisma.js';
 
 // Helper function to create an audit log entry.
 // IMPORTANT: This function intentionally THROWS on failure.
-// This ensures atomicity: if the audit log cannot be written,
-// the parent operation (delete/update) will also fail and roll back.
-// "No receipt = no crime" — we do NOT allow silent audit failures.
-export async function createLog(email, action, details = null) {
-  await prisma.auditLog.create({
+// Pass the active Prisma transaction client when the log must be atomic with
+// the operation it records. Failures are allowed to propagate to the caller.
+export async function createLog(email, action, details = null, client = prisma) {
+  await client.auditLog.create({
     data: {
       adminEmail: email,
       action,

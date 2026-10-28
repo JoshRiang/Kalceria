@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma.js';
-
+import { createLog } from './auditController.js';
 
 
 export async function listComments(req, res, next) {
@@ -56,7 +56,10 @@ export async function togglePinComment(req, res, next) {
 export async function deleteComment(req, res, next) {
   try {
     const { id } = req.params;
-    await prisma.comment.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.comment.delete({ where: { id } });
+      await createLog(req.user.email, 'COMMENT_DELETED', `Comment ${id} deleted.`, tx);
+    });
     res.json({ success: true });
   } catch (err) {
     next(err);

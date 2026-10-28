@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { format } from 'date-fns';
 import { randomInt } from 'node:crypto';
+import { createLog } from './auditController.js';
 
 
 
@@ -94,7 +95,10 @@ export async function updateEvent(req, res, next) {
 // ─── DELETE /admin/events/:id ─────────────────────────────────────────────────
 export async function deleteEvent(req, res, next) {
   try {
-    await prisma.event.delete({ where: { id: req.params.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.event.delete({ where: { id: req.params.id } });
+      await createLog(req.user.email, 'EVENT_DELETED', `Event ${req.params.id} deleted.`, tx);
+    });
     res.json({ message: 'Event deleted.' });
   } catch (err) { next(err); }
 }

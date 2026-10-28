@@ -1,23 +1,51 @@
 // UserIcon.jsx
-// generates leaflet user icon with floating animation, hover tooltip, droplet
+// Generates the Leaflet user icon with its floating animation and name tag.
 import { createSeededRandom } from "@/lib/seededRandom";
 
-function avatarUrl(user) {
-  return user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.nickname || user.name || 'anon')}`;
+export function escapeMapHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]);
+}
+
+export function getSafeMapAvatarUrl(user) {
+  const fallback = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.nickname || user.name || "anon")}`;
+  const candidate = user.profilePicture;
+  if (typeof candidate !== "string" || candidate.length > 2048 || candidate.startsWith("//") || candidate.includes("\\")) {
+    return fallback;
+  }
+  if (candidate.startsWith("/")) return candidate;
+  try {
+    return new URL(candidate).protocol === "https:" ? candidate : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function getSafeMapColor(value) {
+  return typeof value === "string" && /^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i.test(value)
+    ? value
+    : "#ffc300";
 }
 
 export function getUserIconHtml(user) {
   const displayName = user.nickname || user.name || '';
   const random = createSeededRandom(`map-user-icon-${user.id || user.nickname || user.name || "anon"}`);
   const randomDelay = (random() * -2).toFixed(2);
-  const rawColor = user.color || '#ffc300';
+  const rawColor = getSafeMapColor(user.color);
   const cleanColor = (rawColor.toLowerCase() === '#ffd60a' || rawColor.toLowerCase() === '#ffea00') ? '#ffc300' : rawColor;
+  const safeName = escapeMapHtml(displayName);
+  const safeAvatar = escapeMapHtml(getSafeMapAvatarUrl(user));
   return `
     <div class="radar-node" style="--user-color: ${cleanColor}">
       <div class="radar-pulse" style="animation-delay: ${randomDelay}s"></div>
-      <div class="radar-nametag">${displayName}</div>
+      <div class="radar-nametag">${safeName}</div>
       <div class="radar-float-wrapper" style="animation-delay: ${randomDelay}s">
-        <div class="radar-avatar"><img src="${avatarUrl(user)}" alt="${displayName}"></div>
+        <div class="radar-avatar"><img src="${safeAvatar}" alt="${safeName}"></div>
       </div>
       <div class="radar-droplet" style="animation-delay: ${randomDelay}s"></div>
     </div>
