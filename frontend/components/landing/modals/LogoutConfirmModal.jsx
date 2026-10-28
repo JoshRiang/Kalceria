@@ -137,6 +137,7 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                   alt="Cat"
                   width={512}
                   height={512}
+                  loading="eager"
                   className="w-full h-full object-contain object-bottom drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)] z-10"
                 />
               </motion.div>

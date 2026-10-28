@@ -36,6 +36,7 @@ export function PhotoCollage({ isMobile }) {
                     alt="Background" 
                     width={800}
                     height={800}
+                    loading="eager"
                     className="w-full h-full object-cover filter grayscale contrast-125 brightness-75 opacity-80" 
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
