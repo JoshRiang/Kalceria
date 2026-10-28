@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import ContentImage from "@/components/ui/ContentImage";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
@@ -1275,11 +1276,14 @@ export default function MapPage() {
         }}
         className="fixed bottom-[-20px] left-1/2 -translate-x-1/2 z-[1000] pointer-events-none select-none flex flex-col items-center"
       >
-        <ContentImage
+        <Image
           src="/kalcermap_bottom.png"
           alt="Kalceria Maps"
           width={2048}
           height={2048}
+          sizes="256px"
+          quality={90}
+          loading="lazy"
           className="h-[256px] w-auto object-contain opacity-95 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
           draggable={false}
         />
