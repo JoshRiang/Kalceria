@@ -63,6 +63,7 @@ export function SystemLog({ registrations = [], products = [] }) {
       ...registrations.map(r => ({ type: 'EVENT', msg: `New Event Registration: ${r.user?.name}`, time: r.createdAt })),
       ...products.map(p => ({ type: 'PRODUCT', msg: `Inventory Sync: ${p.name}`, time: new Date() })),
     ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 10);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep the feed snapshot and its timestamp refresh tied to source data changes.
     setLogs(all);
   }, [registrations, products]);
 

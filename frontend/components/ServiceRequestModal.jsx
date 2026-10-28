@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StepIndicator, Field } from "./service-request/FormControls";
 import api from "@/lib/api";
+import { useHasMounted } from "@/hooks/useHasMounted";
 
 // ── Shared Components ────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ const SERVICE_TYPES = [
 export default function ServiceRequestModal({ onClose, userName }) {
   const [step, setStep] = useState(0); // 0: Type, 1: Details, 2: Done
   const [weekOffset, setWeekOffset] = useState(0);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHasMounted();
   const [form, setForm] = useState({ 
     serviceType: "", 
     serviceName: "", 
@@ -70,7 +71,6 @@ export default function ServiceRequestModal({ onClose, userName }) {
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem("token");
 
   useEffect(() => {
-    setMounted(true);
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);

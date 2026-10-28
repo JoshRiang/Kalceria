@@ -19,6 +19,7 @@ export default function Home() {
       if (triggerAuth === "true" || isAuthParam) {
         sessionStorage.removeItem("triggerAuth");
         sessionStorage.setItem("introPlayed", "true");
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- The route's first phase is intentionally selected from URL/session state after hydration.
         setPhase("auth");
       } else {
         const hasPlayed = sessionStorage.getItem("introPlayed");

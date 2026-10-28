@@ -86,7 +86,10 @@ export function EventsPanel({ initialEvents = [], onRefresh }) {
     });
   }, [events, debouncedSearchQuery]);
 
-  useEffect(() => { setEvents(initialEvents); }, [initialEvents]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve synchronization with the parent-provided event list.
+    setEvents(initialEvents);
+  }, [initialEvents]);
 
   function setField(k, v) { setForm((p) => ({ ...p, [k]: v })); }
   function addSession() { setForm((p) => ({ ...p, sessionOptions: [...p.sessionOptions, ""] })); }

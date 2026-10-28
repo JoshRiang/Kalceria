@@ -7,6 +7,7 @@ export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false 
   
   useEffect(() => {
     if (skipAnim) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the current instant text display when animation is skipped.
       setDisplayText(text);
       return;
     }
@@ -77,6 +78,7 @@ export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false 
       if(loop) clearInterval(loop);
       timeoutIds.forEach(clearTimeout);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Keep the Typewriter restart dependencies aligned with main and avoid restarting active loops when skipAnim changes.
   }, [text, mode, delay]);
 
   return (
@@ -212,6 +214,7 @@ export function ShowcaseTypewriter({ text }) {
   const [displayed, setDisplayed] = useState("");
   
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the immediate reset frame before each showcase typewriter cycle.
     setDisplayed("");
     let i = 0;
     const interval = setInterval(() => {

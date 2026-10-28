@@ -218,6 +218,7 @@ export function BookingsPanel({ onRefresh }) {
     } catch (err) { console.error(err); }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Starts the existing async API load; state changes after its response.
   useEffect(() => { load(); }, [load]);
 
   const updateStatus = async (id, status, version, extraData = {}) => {

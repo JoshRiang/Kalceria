@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { useHasMounted } from "@/hooks/useHasMounted";
 
 // ─── Authenticating Dots ─────────────────────────────────────────────────────
 function AuthDots() {
@@ -32,10 +33,9 @@ export default function AdminLoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHasMounted();
 
   useEffect(() => {
-    setMounted(true);
     // If already admin, redirect
     const token = localStorage.getItem("adminToken");
     if (token) router.replace("/admin/dashboard");

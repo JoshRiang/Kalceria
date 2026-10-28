@@ -19,6 +19,7 @@ export function CommentsPanel({ lowPowerMode }) {
     setComments(r.data.comments || []);
   }, [search, filters]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Starts the existing async API load; state changes after its response.
   useEffect(() => { load(); }, [load]);
 
   const toggleFilter = (f) => {

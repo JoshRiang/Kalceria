@@ -24,6 +24,7 @@ export function UsersPanel({ lowPowerMode }) {
     const r = await api.get("/admin/users");
     setUsers(r.data.users);
   }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Starts the existing async API load; state changes after its response.
   useEffect(() => { load(); }, [load]);
 
   async function setRole(id, role) { await api.patch(`/admin/users/${id}/role`, { role }); load(); }

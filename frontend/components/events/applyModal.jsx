@@ -26,7 +26,10 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
   const [form, setForm] = useState({ name: "", email: "", contact: "", identifier: "", session: event?.sessionOptions?.[0] || "" });
 
   useEffect(() => {
-    if (event) setForm(f => ({ ...f, session: event.sessionOptions?.[0] || "" }));
+    if (event) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the selected session reset when the user changes events.
+      setForm(f => ({ ...f, session: event.sessionOptions?.[0] || "" }));
+    }
   }, [idx, event]);
 
   const next = () => setIdx(p => (p + 1) % events.length);

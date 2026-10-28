@@ -76,6 +76,7 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
   // Step 2: Show Faces
   useEffect(() => {
     if (phase !== "faceup") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This phase transition starts the existing timed card reveal.
     setCards(prev => prev.map(c => ({ ...c, flipped: true })));
     scheduleTimeout(() => setPhase("facedown"), 1800);
   }, [phase, scheduleTimeout]);
@@ -83,6 +84,7 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
   // Step 3: Flip Down
   useEffect(() => {
     if (phase !== "facedown") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- This phase transition starts the existing timed card hide.
     setCards(prev => prev.map(c => ({ ...c, flipped: false })));
     scheduleTimeout(() => setPhase("absorb"), 800);
   }, [phase, scheduleTimeout]);
@@ -119,6 +121,7 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
   // Win condition
   useEffect(() => {
     if (matched.length === 8 && timerOn) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Winning ends the clock and advances the existing game timeline.
       setTimerOn(false);
       setPhase("done");
       scheduleTimeout(() => setShowSave(true), 800);

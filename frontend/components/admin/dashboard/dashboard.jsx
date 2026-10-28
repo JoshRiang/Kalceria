@@ -15,6 +15,7 @@ import { CommentsPanel } from './comments';
 import { BookingsPanel } from './bookings';
 import { EarningsPanel } from './earnings';
 import { UsersPanel } from './users';
+import { useHasMounted } from "@/hooks/useHasMounted";
 
 export const TABS = [
   { id: "events", label: "Events" },
@@ -32,7 +33,7 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState("events");
   const [stats, setStats] = useState({ events: 0, users: 0, regs: 0, products: 0, comments: 0, bookings: 0 });
   const [data, setData] = useState({ events: [], users: [], regs: [], products: [], comments: [], bookings: [], earnings: { daily: [], total: 0, totalRaw: 0, average: 0, breakdown: { serviceBookings: 0, eventRegistrations: 0, timekeeperBookings: 0, merch: 0 } } });
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHasMounted();
   const [wibTime, setWibTime] = useState("");
   const [lowPowerMode, setLowPowerMode] = useState(false);
 
@@ -192,7 +193,6 @@ export default function AdminDashboard() {
   }, [scheduleTimeout]);
 
   useEffect(() => {
-    setMounted(true);
     const token = localStorage.getItem("adminToken");
     if (!token) { router.replace("/admin/login"); return; }
     
@@ -200,6 +200,7 @@ export default function AdminDashboard() {
     const logInterval = setInterval(fetchLogs, 5000);
     
     if (localStorage.getItem("lowPowerMode") === "true") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- The setting is read from browser storage after hydration.
       setLowPowerMode(true);
     }
 

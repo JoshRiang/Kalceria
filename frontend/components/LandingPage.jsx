@@ -11,9 +11,11 @@ import { CometEffect, FloatingAssets, CommunityQuotes, GeminiSparkParticles } fr
 import { LogoutConfirmModal } from "./landing/modals/LogoutConfirmModal";
 import { IdeaCommentModal } from "./landing/modals/IdeaCommentModal";
 import { DungeonGate } from "./landing/modals/DungeonGate";
+import { useHasMounted } from "@/hooks/useHasMounted";
+import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 
 export default function LandingPage({ onNavigateAuth }) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHasMounted();
   const [aboutIndex, setAboutIndex] = useState(0);
   const [mascotFrame, setMascotFrame] = useState(1);
   const [showServiceModal, setShowServiceModal] = useState(false);
@@ -32,15 +34,7 @@ export default function LandingPage({ onNavigateAuth }) {
     }
   }, [displayedMerch.length]);
 
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const isMobile = useIsMobileViewport();
 
   const ABOUT_IMAGES = [
     { src: "/aboutus_bg1.webp", width: 1358, height: 768 },
@@ -60,11 +54,11 @@ export default function LandingPage({ onNavigateAuth }) {
 
   useEffect(() => {
     if (sessionStorage.getItem("landingSeen")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- This reads a session flag to preserve the returning-visitor animation behavior.
       setSkipAnim(true);
     } else {
       sessionStorage.setItem("landingSeen", "true");
     }
-    setMounted(true);
     // Check login status
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);

@@ -5,6 +5,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
+import { useHasMounted } from "@/hooks/useHasMounted";
 import { KalceriansPanel } from "@/components/map/KalceriansPanel";
 import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
 import RadialPing from "@/components/map/RadialPing";
@@ -88,10 +89,10 @@ export default function MapPage() {
   const [startupProgress, setStartupProgress] = useState(0);
   const [particles, setParticles] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
-  const [hasMounted, setHasMounted] = useState(false);
+  const hasMounted = useHasMounted();
   const [notLoggedIn, setNotLoggedIn] = useState(false);
   const [hoveredKalcerian, setHoveredKalcerian] = useState(null);
-  const [hasInitialCentered, setHasInitialCentered] = useState(false);
+  const hasInitialCenteredRef = useRef(false);
   const [isStatusBusy, setIsStatusBusy] = useState(false);
   const [isMapDark, setIsMapDark] = useState(false);
   const [focusedUserId, setFocusedUserId] = useState(null);
@@ -147,16 +148,12 @@ export default function MapPage() {
     }));
   }, []);
 
-  // Handle Hydration
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
   // Login gate + fetch user profile
   useEffect(() => {
     const token =
       typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- This reads the existing browser session gate after hydration.
       setNotLoggedIn(true);
       return;
     }
@@ -200,16 +197,27 @@ export default function MapPage() {
 
 
 
+  const recenterMap = useCallback(() => {
+    if (!mapRef.current) return;
+    setIsRecentering(true);
+    const me = mapUsersData.find((u) => u.id === currentUser?.id);
+    if (me && me.lat && me.lng) {
+      mapRef.current.flyTo([me.lat, me.lng], 16);
+    } else {
+      mapRef.current.flyTo([-6.2715, 106.7135], 14);
+    }
+  }, [mapUsersData, currentUser]);
+
   // Auto-center on initial load once user location is known
   useEffect(() => {
-    if (!hasInitialCentered && mapRef.current && mapUsersData.length > 0 && currentUser) {
+    if (!hasInitialCenteredRef.current && mapRef.current && mapUsersData.length > 0 && currentUser) {
       const me = mapUsersData.find((u) => u.id === currentUser.id);
       if (me && me.lat && me.lng) {
         recenterMap();
-        setHasInitialCentered(true);
+        hasInitialCenteredRef.current = true;
       }
     }
-  }, [hasInitialCentered, mapUsersData, currentUser]);
+  }, [mapUsersData, currentUser, recenterMap]);
 
   const [mapCenter, setMapCenter] = useState({ lat: -6.234, lng: 106.749 });
   const [mapZoom, setMapZoom] = useState(13);
@@ -232,6 +240,7 @@ export default function MapPage() {
   // Startup Sequence Logic
   useEffect(() => {
     if (sessionStorage.getItem("mapIntroSeen") === "true") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the session-based intro visibility on the first client effect.
       setShowStartup(false);
       return;
     }
@@ -278,6 +287,7 @@ export default function MapPage() {
         delay: random() * 5, // 0s to 5s
         opacity: random() * 0.4 + 0.4, // 0.4 to 0.8
       }));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- The particle layer must begin at the existing progress threshold.
       setParticles(generated);
     }
   }, [startupProgress, particles.length]);
@@ -324,6 +334,7 @@ export default function MapPage() {
 
   // Map Event Tracking
   const handleMapReady = useCallback((mapInstance) => {
+    // eslint-disable-next-line react-hooks/immutability -- Leaflet calls this external ref callback; the live map must be available synchronously.
     mapRef.current = mapInstance;
 
     setMapCenter(mapInstance.getCenter());
@@ -376,17 +387,6 @@ export default function MapPage() {
     }
     if (!target.lat || !target.lng) return;
     mapRef.current.flyTo([target.lat, target.lng], 16);
-  }
-
-  function recenterMap() {
-    if (!mapRef.current) return;
-    setIsRecentering(true);
-    const me = mapUsersData.find((u) => u.id === currentUser?.id);
-    if (me && me.lat && me.lng) {
-      mapRef.current.flyTo([me.lat, me.lng], 16);
-    } else {
-      mapRef.current.flyTo([-6.2715, 106.7135], 14);
-    }
   }
 
   // real broadcast save

@@ -107,6 +107,7 @@ export function VideoCollage({ isMobile }) {
     const random = createRuntimeSeededRandom(`about-video-collage-${isMobile ? "mobile" : "desktop"}`);
     const size = isMobile ? 6 : 12;
     const base = Array.from({ length: size }, (_, i) => ABOUT_VIDEOS[i % ABOUT_VIDEOS.length]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the seeded post-mount shuffle and mobile grid transition.
     setInitialGrid(base.sort(() => random() - 0.5));
   }, [isMobile]);
 

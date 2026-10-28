@@ -237,6 +237,7 @@ export function ProductsPanel({ onRefresh }) {
     // Load dummies or from localStorage for persistence in this session
     const saved = localStorage.getItem("kalceria_dummy_products");
     if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Products are intentionally restored from this browser's session storage on mount.
       setProducts(JSON.parse(saved));
     } else {
       setProducts(INITIAL_DUMMIES);

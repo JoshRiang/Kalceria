@@ -28,6 +28,7 @@ export function DungeonGate() {
   // Check login status on mount
   useEffect(() => {
     const token = localStorage.getItem("token");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Login state is intentionally read from browser storage after hydration.
     setIsLoggedIn(!!token);
   }, []);
 

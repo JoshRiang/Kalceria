@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { usePhoenixAurora } from "@/hooks/usePhoenixAurora";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
+import { useHasMounted } from "@/hooks/useHasMounted";
+import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // DYNAMIC MERGED PRELOADER (Desktop = FinalJosh branch, Mobile = Obsidian Black current logic)
@@ -379,8 +381,8 @@ function MCUVideoGridCanvas({ active }) {
 // IntroPreloader — Dynamic desktop/mobile hybrid
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function IntroPreloader({ onComplete }) {
-  const [mounted,       setMounted]      = useState(false);
-  const [isMobile,      setIsMobile]     = useState(false);
+  const mounted = useHasMounted();
+  const isMobile = useIsMobileViewport();
   const [showLogo,      setShowLogo]     = useState(false);
   const [showSubtitle,  setShowSubtitle] = useState(false);
   const [showGears,     setShowGears]    = useState(false);
@@ -389,17 +391,6 @@ export default function IntroPreloader({ onComplete }) {
 
   const threadsCanvasRef = useRef(null);
   usePhoenixAurora(threadsCanvasRef, mounted && !done && !isMobile, 9500);
-
-  // Responsive device check & mount indicator
-  useEffect(() => {
-    setIsMobile(window.innerWidth < 768);
-    setMounted(true);
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   // Hybrid Timelines
   useEffect(() => {

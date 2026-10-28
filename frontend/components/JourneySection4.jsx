@@ -45,6 +45,7 @@ export default function JourneySection4({ isMobile: propIsMobile }) {
 
   useEffect(() => {
     if (propIsMobile !== undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep the section's local breakpoint state in sync with its existing parent prop.
       setLocalIsMobile(propIsMobile);
       return;
     }

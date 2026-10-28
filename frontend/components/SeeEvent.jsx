@@ -42,6 +42,7 @@ export default function SeeEvent() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Starts the existing async data request; state changes only after the response.
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {

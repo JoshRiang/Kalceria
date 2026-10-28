@@ -7,11 +7,13 @@ import { PhotoCollage, VideoCollage } from "./about/collage";
 import { FloatingQuotesLayer } from "./about/quotes";
 import { GoldenAmbientSparks, DanglingSymbols } from "./about/ambient";
 import { WebDevEntrySequence } from "./about/entrySequence";
+import { useHasMounted } from "@/hooks/useHasMounted";
+import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 
 export default function AboutUs() {
   const [showEntry, setShowEntry] = useState(false);
   const [entryDone, setEntryDone] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHasMounted();
   
   // Character Hover states
   const [hoverMentor, setHoverMentor] = useState(false);
@@ -28,20 +30,7 @@ export default function AboutUs() {
   const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
   const containerRef = useRef(null);
 
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isMobile = useIsMobileViewport();
 
   const handleMouseMove = (e) => {
     if (!containerRef.current) return;

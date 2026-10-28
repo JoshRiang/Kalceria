@@ -9,6 +9,7 @@ export function GoldenDust() {
 
   useEffect(() => {
     const random = createSeededRandom("landing-golden-dust-v1");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the existing post-mount seed and initial particle animation timing.
     setParticles(Array.from({ length: 20 }, () => ({
       x: random() * 100,
       y: random() * 100,
@@ -50,6 +51,7 @@ export function StarDust() {
 
   useEffect(() => {
     const random = createSeededRandom("landing-star-dust-v1");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the existing post-mount seed and initial particle animation timing.
     setParticles(Array.from({ length: 30 }, () => {
       const isViolet = random() > 0.5;
       return {
@@ -138,6 +140,7 @@ export function TropicalParticles() {
 
   useEffect(() => {
     const random = createSeededRandom("landing-tropical-particles-v1");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the existing post-mount seed and initial particle animation timing.
     setParticles(Array.from({ length: 40 }).map((_, i) => ({
       id: i,
       left: `${10 + random() * 80}%`,

@@ -73,6 +73,7 @@ export function HoverTypewriter({ text, speed = 40, hover }) {
   useEffect(() => {
     let t;
     if (hover) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Resetting on hover preserves the current typewriter restart frame.
       setDisplayed("");
       let i = 0;
       t = setInterval(() => {

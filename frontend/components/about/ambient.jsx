@@ -19,6 +19,7 @@ export function GoldenAmbientSparks() {
       const driftY = (random() - 0.5) * 150;
       generated.push({ id: i, size, top, left, duration, delay, driftX, driftY });
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the existing post-mount particle generation and animation start.
     setSparks(generated);
   }, []);
 

@@ -28,6 +28,7 @@ export function RegistrationsPanel({ lowPowerMode }) {
     const r = await api.get("/admin/registrations").catch(() => ({ data: { registrations: [] } }));
     setRegs(r.data.registrations || []);
   }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Starts the existing async API load; state changes after its response.
   useEffect(() => { load(); }, [load]);
 
   async function confirmPayment(id, status, version) {
