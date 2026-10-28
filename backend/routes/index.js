@@ -37,6 +37,24 @@ import { getEarnings } from "../controllers/adminEarningsController.js";
 import { sendGeneralEmail } from "../controllers/emailController.js";
 import { listLogs } from "../controllers/auditController.js";
 import { exportAllLogs, resetSystem } from "../controllers/adminSystemController.js";
+import { logout } from "../controllers/authController.js";
+import { issueCsrfToken } from "../middleware/csrf.js";
+import {
+  bookingRateLimit,
+  commentRateLimit,
+  jitRateLimit,
+  loginIdentityRateLimit,
+  loginIpRateLimit,
+  miniEventRateLimit,
+  otpRequestEmailRateLimit,
+  otpRequestIpRateLimit,
+  otpVerifyRateLimit,
+  passwordResetConfirmRateLimit,
+  passwordResetRateLimit,
+  signupRateLimit,
+  usernameCheckRateLimit,
+} from "../middleware/rateLimit.js";
+import crypto from 'node:crypto';
 
 const router = express.Router();
 
@@ -44,13 +62,15 @@ const router = express.Router();
 router.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
-router.post("/auth/register", requirePublicSignup, register);
-router.post("/auth/login", login);
-router.post("/auth/otp/request", requireEmailAuth, requestOtp);
-router.post("/auth/otp/verify", requireEmailAuth, verifyOtp);
-router.post("/auth/password/reset-request", requireEmailAuth, requestPasswordReset);
-router.post("/auth/password/reset", requireEmailAuth, resetPassword);
-router.get("/auth/check-username/:username", checkUsername);
+router.get("/auth/csrf", issueCsrfToken);
+router.post("/auth/register", signupRateLimit, requirePublicSignup, register);
+router.post("/auth/login", loginIpRateLimit, loginIdentityRateLimit, login);
+router.post("/auth/logout", logout);
+router.post("/auth/otp/request", otpRequestIpRateLimit, otpRequestEmailRateLimit, requireEmailAuth, requestOtp);
+router.post("/auth/otp/verify", otpVerifyRateLimit, requireEmailAuth, verifyOtp);
+router.post("/auth/password/reset-request", passwordResetRateLimit, requireEmailAuth, requestPasswordReset);
+router.post("/auth/password/reset", passwordResetConfirmRateLimit, requireEmailAuth, resetPassword);
+router.get("/auth/check-username/:username", usernameCheckRateLimit, checkUsername);
 
 // ─── User Profile ────────────────────────────────────────────────────────────
 router.get("/users/me", requireAuth, getMe);
@@ -60,7 +80,7 @@ router.get("/events", listPublicEvents);
 router.get("/events/:eventId", getPublicEvent);
 
 // ─── Event Registration (Auth required) ──────────────────────────────────────
-router.post("/events/:eventId/register", requireAuth, registerEvent);
+router.post("/events/:eventId/register", requireAuth, bookingRateLimit, registerEvent);
 
 // ─── Location ────────────────────────────────────────────────────────────────
 router.post("/location/update", requireAuth, updateLiveLocation);
@@ -69,17 +89,17 @@ router.get("/location/nearby", requireAuth, getNearbyUsers);
 
 // ─── Media ───────────────────────────────────────────────────────────────────
 router.get("/media", getMedia);
-router.post("/media", requireAuth, createMedia);
+router.post("/media", requireAdmin, createMedia);
 
 // ─── Mini Events ─────────────────────────────────────────────────────────────
-router.post("/mini-events", requireAuth, createMiniEvent);
-router.get("/mini-events/active", getActiveMiniEvents);
-router.put("/mini-events/:id", requireAuth, updateMiniEvent);
-router.delete("/mini-events/:id", requireAuth, deleteMiniEvent);
+router.post("/mini-events", requireAuth, miniEventRateLimit, createMiniEvent);
+router.get("/mini-events/active", requireAuth, getActiveMiniEvents);
+router.put("/mini-events/:id", requireAuth, miniEventRateLimit, updateMiniEvent);
+router.delete("/mini-events/:id", requireAuth, miniEventRateLimit, deleteMiniEvent);
 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
-router.post("/services/book", requireAuth, createBooking);
-router.post("/services/request", requireAuth, createServiceRequest);
+router.post("/services/book", requireAuth, bookingRateLimit, createBooking);
+router.post("/services/request", requireAuth, bookingRateLimit, createServiceRequest);
 router.get("/services/bookings", listPublicServiceBookings);
 router.delete("/services/request/:id", requireAuth, deleteOwnServiceRequest);
 
@@ -98,13 +118,13 @@ router.delete("/broadcast", requireAuth, deleteBroadcast);
 router.get("/redirect/event/:eventId", redirectEvent);
 
 // ─── Admin: Auth / JIT ────────────────────────────────────────────────────────
-router.post('/admin/verify-jit', requireAdmin, verifyJitPassword);
+router.post('/admin/verify-jit', requireAdmin, jitRateLimit, verifyJitPassword);
 
 // ─── Admin: Events ───────────────────────────────────────────────────────────
 router.get("/admin/events", requireAdmin, listEvents);
 router.post("/admin/events", requireAdmin, createEvent);
 router.put("/admin/events/:id", requireAdmin, updateEvent);
-router.delete("/admin/events/:id", requireAdmin, deleteEvent);
+router.delete("/admin/events/:id", requireAdmin, requireJIT, deleteEvent);
 
 // ─── Admin: Merch ────────────────────────────────────────────────────────────
 router.get("/admin/merch", requireAdmin, listMerch);
@@ -112,12 +132,12 @@ router.post("/admin/merch", requireAdmin, createMerch);
 router.put("/admin/merch/:id", requireAdmin, updateMerch);
 router.patch("/admin/merch/:id/soldout", requireAdmin, toggleSoldOut);
 router.post("/admin/merch/:id/sales", requireAdmin, recordMerchSale);
-router.delete("/admin/merch/:id", requireAdmin, deleteMerch);
+router.delete("/admin/merch/:id", requireAdmin, requireJIT, deleteMerch);
 
 // ─── Admin: Event Registrations ──────────────────────────────────────────────
 router.get("/admin/registrations", requireAdmin, listRegistrations);
 router.patch("/admin/registrations/:id/payment", requireAdmin, confirmRegistrationPayment);
-router.delete("/admin/registrations/:id", requireAdmin, deleteRegistration);
+router.delete("/admin/registrations/:id", requireAdmin, requireJIT, deleteRegistration);
 router.patch("/admin/registrations/:id/pdf", requireAdmin, markPdfExported);
 
 // ─── Admin: Service Bookings ──────────────────────────────────────────────────
@@ -137,14 +157,14 @@ router.patch("/admin/bookings/:id/pdf", requireAdmin, markBookingPdf);
 // ─── Admin: Users ─────────────────────────────────────────────────────────────
 router.get("/admin/users", requireAdmin, listUsers);
 router.get("/admin/users/:id", requireAdmin, getUser);
-router.patch("/admin/users/:id/role", requireAdmin, setUserRole);
-router.delete("/admin/users/:id", requireAdmin, deleteUser);
+router.patch("/admin/users/:id/role", requireAdmin, requireJIT, setUserRole);
+router.delete("/admin/users/:id", requireAdmin, requireJIT, deleteUser);
 
 // ─── Comments ───────────────────────────────────────────────────────────────
-router.post("/comments", optionalAuth, createComment);
+router.post("/comments", commentRateLimit, optionalAuth, createComment);
 router.get("/admin/comments", requireAdmin, listComments);
 router.patch("/admin/comments/:id/pin", requireAdmin, togglePinComment);
-router.delete("/admin/comments/:id", requireAdmin, deleteComment);
+router.delete("/admin/comments/:id", requireAdmin, requireJIT, deleteComment);
 router.get("/admin/earnings", requireAdmin, getEarnings);
 
 // ─── Email (Admin utility) ──────────────────────────────────────────────────
@@ -157,9 +177,23 @@ router.get("/admin/system/logs", requireAdmin, exportAllLogs);
 router.post("/admin/system/reset", requireAdmin, requireJIT, resetSystem);
 
 // ─── Cron ────────────────────────────────────────────────────────────────────
-router.get("/cron/cleanup", async (_req, res) => {
-  const count = await cleanupExpiredBroadcasts();
-  res.json({ deleted: count });
+router.get("/cron/cleanup", async (req, res, next) => {
+  const configuredSecret = process.env.CRON_SECRET;
+  const providedSecret = req.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
+  if (!configuredSecret) {
+    return res.status(503).json({ error: 'Cron endpoint is not configured.' });
+  }
+  const expected = Buffer.from(configuredSecret);
+  const provided = Buffer.from(providedSecret);
+  if (expected.length !== provided.length || !crypto.timingSafeEqual(expected, provided)) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+  try {
+    const count = await cleanupExpiredBroadcasts();
+    res.json({ deleted: count });
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;

@@ -8,24 +8,39 @@ export async function registerEvent(req, res, next) {
   try {
     const userId = req.user.userId;
     const { eventId } = req.params;
-    const { selectedSession } = req.body;
-
-    const event = await prisma.event.findUnique({ where: { id: eventId } });
-    if (!event) return res.status(404).json({ error: 'Event not found.' });
-    if (event.status !== 'OPEN') return res.status(400).json({ error: 'Registration is closed.' });
-
-    const now = new Date();
-    if (now < event.regStartTime || now > event.regEndTime) {
-      return res.status(400).json({ error: 'Registration is not in active window.' });
+    const { selectedSession } = req.body || {};
+    if (typeof selectedSession !== 'string' || !selectedSession.trim() || selectedSession.length > 120) {
+      return res.status(400).json({ error: 'Please select a valid event session.' });
     }
 
-    const count = await prisma.eventRegistration.count({ where: { eventId } });
-    if (count >= event.quota) return res.status(400).json({ error: 'Event is full.' });
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "events" WHERE "id" = ${eventId} FOR UPDATE`;
+      const event = await tx.event.findUnique({ where: { id: eventId } });
+      if (!event) return { error: 'NOT_FOUND' };
+      if (event.status !== 'OPEN') return { error: 'CLOSED' };
 
-    const reg = await prisma.eventRegistration.create({
-      data: { userId, eventId, selectedSession },
-      include: { user: { select: { name: true, email: true, phone: true } }, event: true },
+      const now = new Date();
+      if (now < event.regStartTime || now > event.regEndTime) return { error: 'WINDOW' };
+      if (!Array.isArray(event.sessionOptions) || !event.sessionOptions.includes(selectedSession)) {
+        return { error: 'SESSION' };
+      }
+
+      const count = await tx.eventRegistration.count({ where: { eventId } });
+      if (count >= event.quota) return { error: 'FULL' };
+
+      const registration = await tx.eventRegistration.create({
+        data: { userId, eventId, selectedSession },
+        include: { user: { select: { name: true, email: true, phone: true } }, event: true },
+      });
+      return { event, reg: registration };
     });
+
+    if (result.error === 'NOT_FOUND') return res.status(404).json({ error: 'Event not found.' });
+    if (result.error === 'CLOSED') return res.status(400).json({ error: 'Registration is closed.' });
+    if (result.error === 'WINDOW') return res.status(400).json({ error: 'Registration is not in active window.' });
+    if (result.error === 'SESSION') return res.status(400).json({ error: 'Please select a valid event session.' });
+    if (result.error === 'FULL') return res.status(400).json({ error: 'Event is full.' });
+    const { event, reg } = result;
 
     const msg = [
       `📋 PENDAFTARAN EVENT BARU`,
@@ -68,8 +83,8 @@ export async function listPublicEvents(req, res, next) {
 // ─── GET /events/:eventId (public detail) ────────────────────────────────────
 export async function getPublicEvent(req, res, next) {
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: req.params.eventId },
+    const event = await prisma.event.findFirst({
+      where: { id: req.params.eventId, status: { not: 'DRAFT' } },
       include: { _count: { select: { registrations: true } } },
     });
     if (!event) return res.status(404).json({ error: 'Event not found.' });
@@ -100,8 +115,11 @@ export async function listRegistrations(req, res, next) {
 // ─── ADMIN: PATCH /admin/registrations/:id/payment ───────────────────────────
 export async function confirmRegistrationPayment(req, res, next) {
   try {
-    const { status, version } = req.body; // 'CONFIRMED' | 'REJECTED'
-    if (version === undefined || version === null) {
+    const { status, version } = req.body || {}; // 'CONFIRMED' | 'REJECTED'
+    if (!['CONFIRMED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Payment status must be CONFIRMED or REJECTED.' });
+    }
+    if (version === undefined || version === null || !Number.isInteger(Number(version)) || Number(version) < 0) {
       return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required.' });
     }
     const reg = await prisma.eventRegistration.update({
@@ -121,8 +139,8 @@ export async function confirmRegistrationPayment(req, res, next) {
 // ─── ADMIN: DELETE /admin/registrations/:id ───────────────────────────────────
 export async function deleteRegistration(req, res, next) {
   try {
-    const { version } = req.body;
-    if (version === undefined || version === null) {
+    const { version } = req.body || {};
+    if (version === undefined || version === null || !Number.isInteger(Number(version)) || Number(version) < 0) {
       return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required for delete.' });
     }
     await prisma.eventRegistration.delete({ where: { id: req.params.id, version: Number(version) } });

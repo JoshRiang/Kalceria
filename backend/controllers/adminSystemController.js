@@ -23,9 +23,7 @@ export async function resetSystem(req, res, next) {
   try {
     const adminEmail = req.user.email;
 
-    // Write the audit log BEFORE destruction so there is a record
-    // (this will be wiped with AuditLog in the transaction — intentional,
-    // giving a clean slate while the external backup/export should have been done first)
+    // Keep the audit trail intact so destructive operations remain reviewable.
     await prisma.$transaction([
       // ── Transactional data (volatile) ─────────────────────────────────────
       prisma.merchSale.deleteMany(),           // Phase 3 sales log
@@ -36,7 +34,6 @@ export async function resetSystem(req, res, next) {
       prisma.comment.deleteMany(),             // Community feedback
       prisma.miniEvent.deleteMany(),           // Ephemeral mini events
       prisma.userBroadcast.deleteMany(),       // User broadcasts
-      prisma.auditLog.deleteMany(),            // Audit trail (clean slate)
 
       // ── Merch sold counters reset (preserve catalog, zero revenue) ────────
       prisma.merch.updateMany({

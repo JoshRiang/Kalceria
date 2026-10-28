@@ -6,6 +6,7 @@ const LIVE_TTL_SECONDS = 30 * 60;
 const UPDATE_COOLDOWN_SECONDS = 30;
 
 function parseCoordinate(value) {
+  if (value === undefined || value === null || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -30,8 +31,8 @@ function publicUser(user, liveRecord) {
 export async function updateLiveLocation(req, res, next) {
   try {
     const userId = req.user.userId;
-    const lat = parseCoordinate(req.body.lat);
-    const lng = parseCoordinate(req.body.lng);
+    const lat = parseCoordinate(req.body?.lat);
+    const lng = parseCoordinate(req.body?.lng);
 
     if (lat === null || lng === null || !isValidLatLng(lat, lng)) {
       return res.status(400).json({ error: 'Valid lat and lng are required.' });
@@ -47,8 +48,8 @@ export async function updateLiveLocation(req, res, next) {
     }
 
     const cooldownKey = `live:cooldown:${userId}`;
-    const isCoolingDown = await redis.get(cooldownKey);
-    if (isCoolingDown) {
+    const allowed = await redis.set(cooldownKey, '1', 'EX', UPDATE_COOLDOWN_SECONDS, 'NX');
+    if (!allowed) {
       return res.status(429).json({ error: 'Please wait before updating location again.' });
     }
 
@@ -70,10 +71,9 @@ export async function updateLiveLocation(req, res, next) {
 
     await redis.geoadd('active_users', lng, lat, userId);
     await redis.setex(key, LIVE_TTL_SECONDS, JSON.stringify(nextRecord));
-    await redis.setex(cooldownKey, UPDATE_COOLDOWN_SECONDS, '1');
-
     res.json({ message: 'Location updated.' });
   } catch (err) {
+    if (req.user?.userId) await redis.del(`live:cooldown:${req.user.userId}`).catch(() => {});
     next(err);
   }
 }
@@ -81,7 +81,10 @@ export async function updateLiveLocation(req, res, next) {
 export async function setLiveLocationPreference(req, res, next) {
   try {
     const userId = req.user.userId;
-    const allowLiveLocation = Boolean(req.body.allowLiveLocation);
+    if (typeof req.body?.allowLiveLocation !== 'boolean') {
+      return res.status(400).json({ error: 'allowLiveLocation must be a boolean.' });
+    }
+    const allowLiveLocation = req.body.allowLiveLocation;
     const user = await prisma.user.update({
       where: { id: userId },
       data: { allowLiveLocation },
@@ -103,19 +106,28 @@ export async function getNearbyUsers(req, res, next) {
   try {
     const lat = parseCoordinate(req.query.lat);
     const lng = parseCoordinate(req.query.lng);
-    const radius = parseCoordinate(req.query.radius) || 5;
+    const radius = parseCoordinate(req.query.radius) ?? 5;
 
-    if (lat === null || lng === null || !isValidLatLng(lat, lng)) {
+    if (lat === null || lng === null || !isValidLatLng(lat, lng) || !Number.isFinite(radius) || radius <= 0 || radius > 100) {
       return res.status(400).json({ error: 'Valid lat and lng are required.' });
     }
 
     const nearbyIds = await redis.georadius('active_users', lng, lat, radius, 'km');
     if (!nearbyIds.length) return res.json({ users: [] });
 
+    const liveRecords = await redis.mget(...nearbyIds.map((id) => `live:user:${id}`));
+    const liveById = new Map();
+    nearbyIds.forEach((id, index) => {
+      if (liveRecords[index]) liveById.set(id, JSON.parse(liveRecords[index]));
+      else redis.zrem('active_users', id).catch(() => {});
+    });
+    const activeIds = [...liveById.keys()];
+    if (!activeIds.length) return res.json({ users: [] });
+
     const now = new Date();
     const users = await prisma.user.findMany({
       where: {
-        id: { in: nearbyIds },
+        id: { in: activeIds },
         allowLiveLocation: true,
       },
       select: {
@@ -131,8 +143,7 @@ export async function getNearbyUsers(req, res, next) {
 
     const enriched = await Promise.all(
       users.map(async (user) => {
-        const liveRaw = await redis.get(`live:user:${user.id}`);
-        const liveRecord = liveRaw ? JSON.parse(liveRaw) : null;
+        const liveRecord = liveById.get(user.id);
         const broadcast = user.broadcast && user.broadcast.expiresAt > now ? user.broadcast : null;
         return publicUser({ ...user, broadcast }, liveRecord);
       })

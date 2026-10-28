@@ -1,28 +1,20 @@
-import jwt from 'jsonwebtoken';
+import { getRequestToken, verifyAuthSession } from '../utils/authSession.js';
 
-export function requireAuth(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = req.cookies?.token || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
+export async function requireAuth(req, res, next) {
+  const token = getRequestToken(req);
+  if (!token) return res.status(401).json({ error: 'Authentication required.' });
 
-  if (!token) return res.status(401).json({ error: 'No token provided.' });
+  const payload = await verifyAuthSession(token);
+  if (!payload) return res.status(401).json({ error: 'Session invalid or expired.' });
 
-  try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ error: 'Token invalid or expired.' });
-  }
+  req.user = payload;
+  return next();
 }
-export function optionalAuth(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = req.cookies?.token || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
 
+export async function optionalAuth(req, res, next) {
+  const token = getRequestToken(req);
   if (!token) return next();
 
-  try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
-  } catch {
-    next();
-  }
+  req.user = await verifyAuthSession(token) || undefined;
+  return next();
 }

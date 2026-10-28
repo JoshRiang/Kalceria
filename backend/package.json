@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "node --watch api/index.js",
     "start": "node api/index.js",
+    "lint": "eslint --config eslint.config.mjs .",
+    "build": "node scripts/check-syntax.mjs",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

@@ -1,15 +1,17 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
+import { getRequestToken, verifyAuthSession } from '../utils/authSession.js';
+import { redis } from '../lib/redis.js';
 
 
 
 export async function requireAdmin(req, res, next) {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = req.cookies?.token || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
-    if (!token) return res.status(401).json({ error: 'No token.' });
+    const token = getRequestToken(req);
+    if (!token) return res.status(401).json({ error: 'Authentication required.' });
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = await verifyAuthSession(token);
+    if (!payload) return res.status(401).json({ error: 'Session invalid or expired.' });
     req.user = payload;
 
     const user = await prisma.user.findUnique({ 
@@ -23,8 +25,7 @@ export async function requireAdmin(req, res, next) {
 
     next();
   } catch (err) {
-    console.error('[Debug Admin] Error:', err.message);
-    res.status(401).json({ error: 'Token invalid.' });
+    next(err);
   }
 }
 
@@ -33,10 +34,24 @@ export async function requireJIT(req, res, next) {
     const jitToken = req.headers['x-jit-token'];
     if (!jitToken) return res.status(403).json({ error: 'JIT token required for this action.' });
 
-    const payload = jwt.verify(jitToken, process.env.JWT_SECRET);
+    const payload = jwt.verify(jitToken, process.env.JWT_SECRET, {
+      algorithms: ['HS256'],
+      audience: 'kalceria-admin-action',
+      issuer: 'kalceria-api',
+    });
     // Pastikan token valid untuk user yang sama dan merupakan token JIT
     if (!payload.isJit || payload.userId !== req.user.userId) {
       return res.status(403).json({ error: 'Invalid JIT token.' });
+    }
+
+    if (!payload.jti) return res.status(403).json({ error: 'Invalid JIT token.' });
+    const consumedUserId = await redis.eval(
+      "local value = redis.call('GET', KEYS[1]); if value then redis.call('DEL', KEYS[1]); end; return value",
+      1,
+      `auth:jit:${payload.jti}`,
+    );
+    if (consumedUserId !== req.user.userId) {
+      return res.status(403).json({ error: 'JIT token already used or expired.' });
     }
 
     next();

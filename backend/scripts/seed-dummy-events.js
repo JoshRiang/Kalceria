@@ -1,10 +1,11 @@
 import prisma from '../lib/prisma.js';
+import { randomUUID } from 'node:crypto';
 
 
 async function main() {
   const events = [
     {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       title: "Neon Horizon 2026",
       description: "Experience the pulse of the future at the ultimate nighttime drive.",
       displayPhotoUrl: "/event_1.webp",
@@ -17,7 +18,7 @@ async function main() {
       sessionOptions: ["Night Drive 20:00"]
     },
     {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       title: "Sunset Run Series",
       description: "A scenic sunset tour alongside the coastline with fellow car enthusiasts.",
       displayPhotoUrl: "/event_2.webp",
@@ -30,7 +31,7 @@ async function main() {
       sessionOptions: ["Afternoon Session 16:00"]
     },
     {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       title: "Midnight Mechanics",
       description: "Underground meet-up to showcase builds and share engineering knowledge.",
       displayPhotoUrl: "/event_3.webp",

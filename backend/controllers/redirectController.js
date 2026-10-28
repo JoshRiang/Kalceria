@@ -1,37 +1,30 @@
-import jwt from 'jsonwebtoken';
-import { redis } from '../lib/redis.js';
-
-const FRONTEND_URL = process.env.FRONTEND_URL;
+import { getRequestToken, verifyAuthSession } from '../utils/authSession.js';
 
 // ─── GET /redirect/event/:eventId ─────────────────────────────────────────────
 export async function redirectEvent(req, res) {
   const { eventId } = req.params;
-  const loginUrl = `${FRONTEND_URL}/login?next=/event/${eventId}/register`;
-  const registerUrl = `${FRONTEND_URL}/event/${eventId}/register`;
+  const configuredFrontend = process.env.FRONTEND_URL?.split(',')[0]?.trim();
+  if (!configuredFrontend) return res.status(503).json({ error: 'Frontend URL is not configured.' });
+
+  let frontend;
+  try {
+    frontend = new URL(configuredFrontend);
+    if (!['https:', 'http:'].includes(frontend.protocol)) throw new Error('Unsupported frontend URL protocol.');
+  } catch {
+    return res.status(503).json({ error: 'Frontend URL is not configured.' });
+  }
+
+  const encodedEventId = encodeURIComponent(eventId);
+  const loginUrl = new URL(`/login?next=/event/${encodedEventId}/register`, frontend);
+  const registerUrl = new URL(`/event/${encodedEventId}/register`, frontend);
 
   try {
-    // Read token from cookie or Authorization header
-    const authHeader = req.headers['authorization'];
-    const token = req.cookies?.token || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
-
-    if (!token) return res.redirect(302, loginUrl);
-
-    // Verify JWT
-    let payload;
-    try {
-      payload = jwt.verify(token, process.env.JWT_SECRET);
-    } catch {
-      return res.redirect(302, loginUrl);
-    }
-
-    // Check session exists in Redis
-    const sessionKey = `session:${payload.userId}`;
-    const exists = await redis.exists(sessionKey);
-    if (!exists) return res.redirect(302, loginUrl);
+    const payload = await verifyAuthSession(getRequestToken(req));
+    if (!payload) return res.redirect(302, loginUrl.href);
 
     // Valid — redirect to register page
-    return res.redirect(302, registerUrl);
+    return res.redirect(302, registerUrl.href);
   } catch {
-    return res.redirect(302, loginUrl);
+    return res.redirect(302, loginUrl.href);
   }
 }

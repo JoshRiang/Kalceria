@@ -19,10 +19,10 @@ function approximateCoordinate(lat, lng) {
 export async function saveTelemetry(req, res, next) {
   try {
     const userId = req.user.userId;
-    const lat = parseCoordinate(req.body.lat);
-    const lng = parseCoordinate(req.body.lng);
+    const lat = parseCoordinate(req.body?.lat);
+    const lng = parseCoordinate(req.body?.lng);
 
-    if (lat === null || lng === null) {
+    if (lat === null || lng === null || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return res.status(400).json({ error: "Valid lat and lng are required." });
     }
 
@@ -31,6 +31,7 @@ export async function saveTelemetry(req, res, next) {
 
     await redis.lpush(key, record);
     await redis.ltrim(key, 0, 4);
+    await redis.expire(key, 30 * 24 * 60 * 60);
 
     res.json({ message: "Telemetry saved." });
   } catch (err) {
@@ -47,10 +48,16 @@ export async function getMapUsers(req, res, next) {
     const members = await redis.zrange("active_users", 0, -1);
     if (!members.length) return res.json({ users: [] });
 
+    const liveRecords = await redis.mget(...members.map((id) => `live:user:${id}`));
+    const activeMembers = members.filter((_, index) => Boolean(liveRecords[index]));
+    const staleMembers = members.filter((_, index) => !liveRecords[index]);
+    if (staleMembers.length) await redis.zrem("active_users", ...staleMembers);
+    if (!activeMembers.length) return res.json({ users: [] });
+
     // Batch fetch user profiles
     const users = await prisma.user.findMany({
       where: {
-        id: { in: members },
+        id: { in: activeMembers },
         allowLiveLocation: true,
       },
       select: {
@@ -137,7 +144,13 @@ export async function getAllKalcerians(req, res, next) {
 
     // get online user ids from redis
     const onlineIds = await redis.zrange("active_users", 0, -1);
-    const onlineSet = new Set(onlineIds);
+    const liveRecords = onlineIds.length
+      ? await redis.mget(...onlineIds.map((id) => `live:user:${id}`))
+      : [];
+    const activeIds = onlineIds.filter((_, index) => Boolean(liveRecords[index]));
+    const staleIds = onlineIds.filter((_, index) => !liveRecords[index]);
+    if (staleIds.length) await redis.zrem("active_users", ...staleIds);
+    const onlineSet = new Set(activeIds);
 
     // fetch all users — only safe public fields
     const users = await prisma.user.findMany({

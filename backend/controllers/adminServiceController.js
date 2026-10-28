@@ -20,15 +20,18 @@ export async function listServiceBookings(req, res, next) {
 // ─── PATCH /admin/services/:id/status ───────────────────────────────────────
 export async function updateServiceStatus(req, res, next) {
   try {
-    const { status, version, deploymentArea, technicalBrief, totalPrice } = req.body;
+    const { status, version, deploymentArea, technicalBrief, totalPrice } = req.body || {};
     const validStatuses = ['PENDING', 'PROCESSED', 'CANCELLED'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status provided.' });
     }
     
-    if (version === undefined || version === null) {
+    if (version === undefined || version === null || !Number.isInteger(Number(version)) || Number(version) < 0) {
       return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required.' });
     }
+    if (deploymentArea !== undefined && (typeof deploymentArea !== 'string' || deploymentArea.length > 300)) return res.status(400).json({ error: 'deploymentArea must be 300 characters or less.' });
+    if (technicalBrief !== undefined && (typeof technicalBrief !== 'string' || technicalBrief.length > 5000)) return res.status(400).json({ error: 'technicalBrief must be 5000 characters or less.' });
+    if (totalPrice !== undefined && (!Number.isFinite(Number(totalPrice)) || Number(totalPrice) < 0 || Number(totalPrice) > 1_000_000_000)) return res.status(400).json({ error: 'totalPrice must be a non-negative amount.' });
 
     // Build data object — only include financial fields if they were provided (from modal)
     const data = {
@@ -36,7 +39,7 @@ export async function updateServiceStatus(req, res, next) {
       version: { increment: 1 },
       ...(deploymentArea !== undefined && { deploymentArea }),
       ...(technicalBrief !== undefined && { technicalBrief }),
-      ...(totalPrice !== undefined && { totalPrice: parseFloat(totalPrice) }),
+      ...(totalPrice !== undefined && { totalPrice: Number(totalPrice) }),
     };
 
     const booking = await prisma.serviceBooking.update({
@@ -65,9 +68,13 @@ export async function updateServiceStatus(req, res, next) {
 // ─── PATCH /admin/services/:id/payment ───────────────────────────────────────
 export async function confirmServicePayment(req, res, next) {
   try {
-    const { status, version } = req.body; // 'CONFIRMED' | 'REJECTED'
+    const { status, version } = req.body || {}; // 'CONFIRMED' | 'REJECTED'
+
+    if (!['CONFIRMED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Payment status must be CONFIRMED or REJECTED.' });
+    }
     
-    if (version === undefined || version === null) {
+    if (version === undefined || version === null || !Number.isInteger(Number(version)) || Number(version) < 0) {
       return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required.' });
     }
 
@@ -97,8 +104,8 @@ export async function confirmServicePayment(req, res, next) {
 // ─── DELETE /admin/services/:id ───────────────────────────────────────────────
 export async function deleteServiceBooking(req, res, next) {
   try {
-    const { version } = req.body;
-    if (version === undefined || version === null) {
+    const { version } = req.body || {};
+    if (version === undefined || version === null || !Number.isInteger(Number(version)) || Number(version) < 0) {
       return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required for delete.' });
     }
     
@@ -143,9 +150,13 @@ export async function listBookings(req, res, next) {
 // ─── PATCH /admin/bookings/:id/payment ───────────────────────────────────────
 export async function confirmBookingPayment(req, res, next) {
   try {
-    const { status, version } = req.body;
+    const { status, version } = req.body || {};
 
-    if (version === undefined || version === null) {
+    if (!['CONFIRMED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({ error: 'Payment status must be CONFIRMED or REJECTED.' });
+    }
+
+    if (version === undefined || version === null || !Number.isInteger(Number(version)) || Number(version) < 0) {
       return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required.' });
     }
 
@@ -168,8 +179,8 @@ export async function confirmBookingPayment(req, res, next) {
 // ─── DELETE /admin/bookings/:id ───────────────────────────────────────────────
 export async function deleteBooking(req, res, next) {
   try {
-    const { version } = req.body;
-    if (version === undefined || version === null) {
+    const { version } = req.body || {};
+    if (version === undefined || version === null || !Number.isInteger(Number(version)) || Number(version) < 0) {
       return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required for delete.' });
     }
 

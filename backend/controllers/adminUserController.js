@@ -1,4 +1,11 @@
 import prisma from '../lib/prisma.js';
+import { revokeUserSessions } from '../utils/authSession.js';
+
+const ADMIN_MUTATION_LOCK = [130019, 1];
+
+async function lockAdminMutations(tx) {
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(${ADMIN_MUTATION_LOCK[0]}, ${ADMIN_MUTATION_LOCK[1]})`;
+}
 
 
 
@@ -30,7 +37,7 @@ export async function getUser(req, res, next) {
       },
     });
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    const { passwordHash, ...safe } = user;
+    const { passwordHash: _passwordHash, ...safe } = user;
     res.json({ user: safe });
   } catch (err) { next(err); }
 }
@@ -39,19 +46,56 @@ export async function getUser(req, res, next) {
 export async function setUserRole(req, res, next) {
   try {
     const { role } = req.body; // 'USER' | 'ADMIN'
-    const user = await prisma.user.update({
-      where: { id: req.params.id },
-      data: { role },
-      select: { id: true, name: true, email: true, role: true },
+    if (!['USER', 'ADMIN'].includes(role)) {
+      return res.status(400).json({ error: 'Role must be USER or ADMIN.' });
+    }
+    if (req.params.id === req.user.userId && role !== 'ADMIN') {
+      return res.status(400).json({ error: 'You cannot remove your own admin access.' });
+    }
+    if (req.params.id === req.user.userId && role === 'ADMIN') {
+      return res.status(400).json({ error: 'Your account already has admin access.' });
+    }
+    const result = await prisma.$transaction(async (tx) => {
+      await lockAdminMutations(tx);
+      const target = await tx.user.findUnique({ where: { id: req.params.id }, select: { id: true, role: true } });
+      if (!target) return { error: 'NOT_FOUND' };
+      if (target.role === 'ADMIN' && role !== 'ADMIN') {
+        const adminCount = await tx.user.count({ where: { role: 'ADMIN' } });
+        if (adminCount <= 1) return { error: 'LAST_ADMIN' };
+      }
+      const user = await tx.user.update({
+        where: { id: req.params.id },
+        data: { role },
+        select: { id: true, name: true, email: true, role: true },
+      });
+      return { user };
     });
-    res.json({ user });
+    if (result.error === 'NOT_FOUND') return res.status(404).json({ error: 'User not found.' });
+    if (result.error === 'LAST_ADMIN') return res.status(400).json({ error: 'The last admin account cannot be demoted.' });
+    res.json({ user: result.user });
   } catch (err) { next(err); }
 }
 
 // ─── DELETE /admin/users/:id ──────────────────────────────────────────────────
 export async function deleteUser(req, res, next) {
   try {
-    await prisma.user.delete({ where: { id: req.params.id } });
+    if (req.params.id === req.user.userId) {
+      return res.status(400).json({ error: 'You cannot delete your own admin account.' });
+    }
+    const result = await prisma.$transaction(async (tx) => {
+      await lockAdminMutations(tx);
+      const target = await tx.user.findUnique({ where: { id: req.params.id }, select: { id: true, role: true } });
+      if (!target) return { error: 'NOT_FOUND' };
+      if (target.role === 'ADMIN') {
+        const adminCount = await tx.user.count({ where: { role: 'ADMIN' } });
+        if (adminCount <= 1) return { error: 'LAST_ADMIN' };
+      }
+      await revokeUserSessions(req.params.id);
+      await tx.user.delete({ where: { id: req.params.id } });
+      return { deleted: true };
+    });
+    if (result.error === 'NOT_FOUND') return res.status(404).json({ error: 'User not found.' });
+    if (result.error === 'LAST_ADMIN') return res.status(400).json({ error: 'The last admin account cannot be deleted.' });
     res.json({ message: 'User deleted.' });
   } catch (err) { next(err); }
 }

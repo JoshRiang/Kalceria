@@ -41,7 +41,18 @@ function buildWaUrl(booking, user) {
 export async function createBooking(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { serviceType = 'SHOOTING', bookingDate, startTime, endTime } = req.body;
+    const { serviceType = 'SHOOTING', bookingDate, startTime, endTime } = req.body || {};
+
+    if (!['EO', 'SHOOTING', 'HOST_EVENT'].includes(serviceType)) {
+      return res.status(400).json({ error: 'Invalid serviceType.' });
+    }
+    if (typeof bookingDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(bookingDate) || !Number.isFinite(new Date(bookingDate).getTime())) {
+      return res.status(400).json({ error: 'bookingDate must be a valid date.' });
+    }
+    const validTime = (value) => typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+    if (!validTime(startTime) || !(validTime(endTime) || endTime === '00:00')) {
+      return res.status(400).json({ error: 'startTime and endTime must use HH:mm format.' });
+    }
 
     // ── Anti-tamper Timekeeper ────────────────────────────────────────────────
     const serverNow = new Date();
@@ -120,14 +131,32 @@ export async function createBooking(req, res, next) {
 export async function createServiceRequest(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { serviceType, serviceName, contactPerson, whatsapp, location, additionalNotes, slots } = req.body;
+    const body = req.body || {};
+    const { serviceType, serviceName, contactPerson, whatsapp, location, additionalNotes, slots } = body;
 
-    if (slots && slots.length > 10) {
+    if (!Array.isArray(slots) || slots.length < 1 || slots.length > 10) {
       return res.status(400).json({ error: 'Maximum 10 slots allowed per booking request.' });
     }
 
     if (!['EO', 'SHOOTING', 'HOST_EVENT'].includes(serviceType)) {
       return res.status(400).json({ error: 'Invalid serviceType.' });
+    }
+
+    const validTime = (value) => typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+    const validSlots = slots.every((slot) => {
+      if (!slot || typeof slot.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(slot.date) || !Number.isFinite(new Date(slot.date).getTime())) return false;
+      if (!validTime(slot.startTime) || !(validTime(slot.endTime) || slot.endTime === '00:00')) return false;
+      if (timeToMinutes(slot.startTime) < 9 * 60) return false;
+      return timeToMinutes(slot.endTime) > timeToMinutes(slot.startTime) || slot.endTime === '00:00';
+    });
+    if (!validSlots) return res.status(400).json({ error: 'Please provide valid booking dates and times.' });
+
+    const maxTextLengths = { serviceName: 160, contactPerson: 120, whatsapp: 32, location: 500, additionalNotes: 5000 };
+    for (const [field, max] of Object.entries(maxTextLengths)) {
+      const value = body[field];
+      if (value !== undefined && value !== null && (typeof value !== 'string' || value.length > max)) {
+        return res.status(400).json({ error: `${field} must be ${max} characters or less.` });
+      }
     }
 
     const user = await prisma.user.findUnique({
