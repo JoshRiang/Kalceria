@@ -149,7 +149,8 @@ export default function JourneyPageClient() {
                 alt="SE1" 
                 width={2898}
                 height={1440}
-                unoptimized
+                sizes="(min-width: 768px) 260px, 194px"
+                quality={90}
                 loading="eager"
                 decoding="auto"
                 className={`absolute top-[33%] z-20 h-24 md:h-32 w-auto object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[180px]" : "left-[145px] md:left-[228px]"}`}
@@ -201,8 +202,9 @@ export default function JourneyPageClient() {
                   alt="SE2" 
                   width={2052}
                   height={2048}
-                  unoptimized
-                  loading="eager"
+                  sizes="128px"
+                  quality={90}
+                  loading="lazy"
                   decoding="auto"
                   className={`absolute top-[47%] z-20 h-24 md:h-32 w-auto object-contain pointer-events-none drop-shadow-2xl ${isMobile ? "left-[158px]" : "left-[160px] md:left-[215px]"}`}
                   style={{ transform: isMobile ? "translateY(-50%) translateX(-15%) scale(0.85)" : "translateY(-50%) translateX(-5%)" }}
@@ -262,8 +264,9 @@ export default function JourneyPageClient() {
                 alt="DSL" 
                 width={2400}
                 height={889}
-                unoptimized
-                loading="eager"
+                sizes="(min-width: 768px) 346px, 216px"
+                quality={90}
+                loading="lazy"
                 decoding="auto"
                 className={`absolute top-[44%] z-20 h-20 md:h-32 w-auto object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[118px]" : "left-[114px] md:left-[168px]"}`}
                 style={{ transform: isMobile ? "translateY(-50%) translateX(-2%) scale(0.82)" : "translateY(-50%) scale(0.90)" }}

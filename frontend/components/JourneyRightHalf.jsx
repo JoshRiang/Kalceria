@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import Image from 'next/image';
 
 export function JourneySlider({ images, className }) {
   const count = images.length;
@@ -15,7 +16,9 @@ export function JourneySlider({ images, className }) {
       <div className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-[0_0_60px_rgba(255,255,255,0.1)] bg-black/50 backdrop-blur-sm z-20">
         <div className={`absolute inset-0 flex ${sliderClass}`} style={{ width: trackWidth }}>
           {images.map((src, i) => (
-            <div key={i} className="h-full bg-cover bg-center" style={{ width: itemWidth, backgroundImage: `url('${src}')` }} />
+            <div key={i} className="relative h-full" style={{ width: itemWidth }}>
+              <Image src={src} alt="" fill sizes="(min-width: 768px) 400px, 280px" quality={90} className="object-cover object-center" />
+            </div>
           ))}
         </div>
       </div>
