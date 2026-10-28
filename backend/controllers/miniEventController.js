@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js';
+import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cursorPagination.js';
 
 const MINI_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -72,13 +73,27 @@ export async function createMiniEvent(req, res, next) {
   }
 }
 
-export async function getActiveMiniEvents(_req, res, next) {
+export async function getActiveMiniEvents(req, res, next) {
   try {
+    const limit = parsePageLimit(req.query.limit, 100, 100);
+    const cursor = decodePageCursor(req.query.cursor);
+    if (limit === null || cursor === false) {
+      return res.status(400).json({ error: 'Pagination limit or cursor is invalid.' });
+    }
+
     const events = await prisma.miniEvent.findMany({
       where: {
         isActive: true,
         expiresAt: { gt: new Date() },
+        ...(cursor && {
+          OR: [
+            { createdAt: { lt: cursor.at } },
+            { createdAt: cursor.at, id: { lt: cursor.id } },
+          ],
+        }),
       },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
       include: {
         creator: {
           select: {
@@ -89,7 +104,6 @@ export async function getActiveMiniEvents(_req, res, next) {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
     });
 
     const mockEvent = {
@@ -110,7 +124,15 @@ export async function getActiveMiniEvents(_req, res, next) {
       },
     };
 
-    res.json({ events: [...events, mockEvent] });
+    const hasMore = events.length > limit;
+    const pageEvents = events.slice(0, limit);
+    const lastEvent = pageEvents.at(-1);
+    const nextCursor = hasMore && lastEvent
+      ? encodePageCursor({ id: lastEvent.id, at: lastEvent.createdAt })
+      : null;
+
+    if (!nextCursor) pageEvents.push(mockEvent);
+    res.json({ events: pageEvents, nextCursor });
   } catch (err) {
     next(err);
   }

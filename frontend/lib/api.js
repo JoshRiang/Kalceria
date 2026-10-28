@@ -78,11 +78,34 @@ api.interceptors.response.use(
 
 export default api;
 
+async function fetchAllPages(path, responseKey, pageSize) {
+  const items = [];
+  let cursor;
+
+  do {
+    const params = { limit: pageSize };
+    if (cursor) params.cursor = cursor;
+
+    const response = await api.get(path, { params });
+    const pageItems = response.data?.[responseKey];
+    if (Array.isArray(pageItems)) items.push(...pageItems);
+
+    const nextCursor = response.data?.nextCursor || null;
+    if (nextCursor && nextCursor === cursor) {
+      throw new Error(`Pagination cursor did not advance for ${path}.`);
+    }
+    cursor = nextCursor;
+  } while (cursor);
+
+  return items;
+}
+
 // map helpers
 export const fetchMe = () => api.get('/users/me').then(r => r.data.user);
 export const fetchMapUsers = () => api.get('/map/users').then(r => r.data.users);
 export const fetchKalcerians = () => api.get('/map/kalcerians').then(r => r.data.kalcerians);
-export const fetchMiniEvents = () => api.get('/mini-events/active').then(r => r.data.events);
+export const fetchMiniEvents = () => fetchAllPages('/mini-events/active', 'events', 100);
+export const fetchPublicEvents = () => fetchAllPages('/events', 'events', 50);
 export const postBroadcast = (message) => api.post('/broadcast', { message });
 export const putBroadcast = (message) => api.put('/broadcast', { message });
 export const delBroadcast = () => api.delete('/broadcast');

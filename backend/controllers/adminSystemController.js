@@ -1,15 +1,36 @@
 import prisma from '../lib/prisma.js';
 import { createLog } from './auditController.js';
+import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cursorPagination.js';
 
 // ─── GET /admin/system/logs ───────────────────────────────────────────────────
 // Returns ALL audit logs (no limit) for CSV export.
 // The existing GET /admin/logs is capped at 50 for the UI chatbox.
 export async function exportAllLogs(req, res, next) {
   try {
+    const limit = parsePageLimit(req.query.limit, 500, 500);
+    const cursor = decodePageCursor(req.query.cursor);
+    if (limit === null || cursor === false) {
+      return res.status(400).json({ error: 'Pagination limit or cursor is invalid.' });
+    }
+
     const logs = await prisma.auditLog.findMany({
-      orderBy: { createdAt: 'asc' }, // chronological for CSV readability
+      where: cursor ? {
+        OR: [
+          { createdAt: { gt: cursor.at } },
+          { createdAt: cursor.at, id: { gt: cursor.id } },
+        ],
+      } : undefined,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
     });
-    res.json({ logs });
+    const hasMore = logs.length > limit;
+    const pageLogs = logs.slice(0, limit);
+    const lastLog = pageLogs.at(-1);
+    const nextCursor = hasMore && lastLog
+      ? encodePageCursor({ id: lastLog.id, at: lastLog.createdAt })
+      : null;
+
+    res.json({ logs: pageLogs, nextCursor });
   } catch (err) {
     next(err);
   }

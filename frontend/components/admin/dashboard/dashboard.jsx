@@ -57,8 +57,19 @@ export default function AdminDashboard() {
   const exportLogs = async () => {
     setIsExportingLogs(true);
     try {
-      const res = await api.get('/admin/system/logs');
-      const logs = res.data.logs || [];
+      const logs = [];
+      let cursor = null;
+      do {
+        const { data } = await api.get('/admin/system/logs', {
+          params: { limit: 500, ...(cursor ? { cursor } : {}) },
+        });
+        if (Array.isArray(data.logs)) logs.push(...data.logs);
+        const nextCursor = data.nextCursor || null;
+        if (nextCursor && nextCursor === cursor) {
+          throw new Error('Audit log pagination cursor did not advance.');
+        }
+        cursor = nextCursor;
+      } while (cursor);
 
       const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
       const headers = ['Date', 'Admin/User', 'Action', 'Details'];

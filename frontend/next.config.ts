@@ -6,6 +6,7 @@ const workspaceRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url))
 
 const nextConfig: NextConfig = {
   turbopack: { root: workspaceRoot },
+  images: { qualities: [75, 90] },
   async rewrites() {
     const configuredApi = process.env.API_PROXY_URL || process.env.NEXT_PUBLIC_API_URL;
     if (!configuredApi) return [];

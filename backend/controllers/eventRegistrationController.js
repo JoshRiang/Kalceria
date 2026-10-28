@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { createLog } from './auditController.js';
+import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cursorPagination.js';
 
 
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
@@ -65,9 +66,26 @@ export async function registerEvent(req, res, next) {
 // ─── GET /events (public listing) ────────────────────────────────────────────
 export async function listPublicEvents(req, res, next) {
   try {
+    const limit = parsePageLimit(req.query.limit, 50, 100);
+    const cursor = decodePageCursor(req.query.cursor);
+    if (limit === null || cursor === false) {
+      return res.status(400).json({ error: 'Pagination limit or cursor is invalid.' });
+    }
+
     const events = await prisma.event.findMany({
-      where: { status: { not: 'DRAFT' } },
-      orderBy: { regStartTime: 'asc' },
+      where: {
+        status: { not: 'DRAFT' },
+        ...(cursor && {
+          AND: [{
+            OR: [
+              { regStartTime: { gt: cursor.at } },
+              { regStartTime: cursor.at, id: { gt: cursor.id } },
+            ],
+          }],
+        }),
+      },
+      orderBy: [{ regStartTime: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
       select: {
         id: true, title: true, description: true, displayPhotoUrl: true,
         location: true, regStartTime: true, regEndTime: true,
@@ -75,7 +93,14 @@ export async function listPublicEvents(req, res, next) {
         _count: { select: { registrations: true } },
       },
     });
-    res.json({ events });
+    const hasMore = events.length > limit;
+    const pageEvents = events.slice(0, limit);
+    const lastEvent = pageEvents.at(-1);
+    const nextCursor = hasMore && lastEvent
+      ? encodePageCursor({ id: lastEvent.id, at: lastEvent.regStartTime })
+      : null;
+
+    res.json({ events: pageEvents, nextCursor });
   } catch (err) {
     next(err);
   }
