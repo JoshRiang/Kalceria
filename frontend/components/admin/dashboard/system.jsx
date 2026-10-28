@@ -1,16 +1,19 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
+import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 export function RealTimeGraph({ active }) {
-  const [points, setPoints] = useState(Array.from({ length: 12 }, () => 20 + Math.random() * 40));
+  const [points, setPoints] = useState(() => {
+    const random = createSeededRandom("admin-realtime-graph-initial-v1");
+    return Array.from({ length: 12 }, () => 20 + random() * 40);
+  });
 
   useEffect(() => {
+    const random = createRuntimeSeededRandom("admin-realtime-graph-stream-v1");
     const t = setInterval(() => {
-      setPoints(p => {
-        const next = [...p.slice(1), 20 + Math.random() * (active ? 60 : 20)];
-        return next;
-      });
+      const nextPoint = 20 + random() * (active ? 60 : 20);
+      setPoints(p => [...p.slice(1), nextPoint]);
     }, 2000);
     return () => clearInterval(t);
   }, [active]);
@@ -164,42 +167,45 @@ export function MailerStatus() {
 }
 
 export function LoomBackground() {
-  const threads = useMemo(() => Array.from({ length: 24 }).map((_, i) => {
-    const isRainbow = Math.random() > 0.7;
-    const isVertical = Math.random() > 0.9;
+  const threads = useMemo(() => {
+    const random = createSeededRandom("admin-loom-background-v1");
+    return Array.from({ length: 24 }).map((_, i) => {
+    const isRainbow = random() > 0.7;
+    const isVertical = random() > 0.9;
 
     let startX, startY, endX, endY, cp1x, cp1y, cp2x, cp2y;
 
     if (isVertical) {
-      startX = Math.random() * 100;
+      startX = random() * 100;
       startY = -20;
-      endX = startX + (Math.random() - 0.5) * 30;
+      endX = startX + (random() - 0.5) * 30;
       endY = 120;
-      cp1x = startX + (Math.random() - 0.5) * 50;
+      cp1x = startX + (random() - 0.5) * 50;
       cp1y = 30;
-      cp2x = endX + (Math.random() - 0.5) * 50;
+      cp2x = endX + (random() - 0.5) * 50;
       cp2y = 70;
     } else {
       startX = -20;
-      startY = Math.random() * 100;
+      startY = random() * 100;
       endX = 120;
-      endY = startY + (Math.random() - 0.5) * 30;
+      endY = startY + (random() - 0.5) * 30;
       cp1x = 30;
-      cp1y = startY + (Math.random() - 0.5) * 50;
+      cp1y = startY + (random() - 0.5) * 50;
       cp2x = 70;
-      cp2y = endY + (Math.random() - 0.5) * 50;
+      cp2y = endY + (random() - 0.5) * 50;
     }
 
     return {
       id: i,
       d: `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`,
-      color: isRainbow ? `hsl(${Math.random() * 360}, 80%, 60%)` : (Math.random() > 0.5 ? "#a855f7" : "#fbbf24"),
-      width: 0.5 + Math.random() * 1.5,
-      duration: 12 + Math.random() * 18,
-      delay: Math.random() * -20,
-      glowIntensity: 8 + Math.random() * 15
+      color: isRainbow ? `hsl(${random() * 360}, 80%, 60%)` : (random() > 0.5 ? "#a855f7" : "#fbbf24"),
+      width: 0.5 + random() * 1.5,
+      duration: 12 + random() * 18,
+      delay: random() * -20,
+      glowIntensity: 8 + random() * 15
     };
-  }), []);
+    });
+  }, []);
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden opacity-40 mix-blend-screen">

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 // ─── Golden Spiral Silk Threads — Tight Cluster ───────────────────────────────
 // ALL threads spawn from a tight point at middle-left (within ±20px of center).
@@ -40,12 +41,14 @@ export function usePhoenixAurora(canvasRef, active, duration = 5000) {
       white:   { tail: "80,80,100",  mid: "200,200,220", head: "255,255,255", shadow: "200,220,255" },
     };
 
+    const random = createRuntimeSeededRandom("phoenix-aurora-threads-v1");
+
     // ── Thread definitions — tight spawn, random phases, race speeds ──────────
     // All yBase = CY (exact center). Random phase breaks synchronisation.
     // Amplitude is small so threads don't cling. Speed spread is wide → race.
     function buildThreads(W, H) {
       const CY = H * 0.50;
-      const R  = () => Math.random() * Math.PI * 2; // fully random phase
+      const R  = () => random() * Math.PI * 2; // seeded random phase
 
       const left = [
         // ── Main threads — varied speeds, small amps

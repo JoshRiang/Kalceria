@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
+import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 export function PhotoCollage({ isMobile }) {
   const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.webp`);
@@ -56,15 +57,21 @@ export function VideoCell({ initialSrc, allVids }) {
   const [src, setSrc] = useState(initialSrc);
   const [glowColor, setGlowColor] = useState("#fbbf24");
   const videoRef = useRef(null);
+  const randomRef = useRef(null);
 
   useEffect(() => {
+    randomRef.current = createRuntimeSeededRandom(`about-video-cell-${initialSrc}`);
+  }, [initialSrc]);
+
+  useEffect(() => {
+    if (!randomRef.current) return;
     const colors = ["#ef4444", "#fbbf24", "#22c55e"]; // Red, Yellow, Green
-    setGlowColor(colors[Math.floor(Math.random() * colors.length)]);
+    setGlowColor(colors[Math.floor(randomRef.current() * colors.length)]);
   }, [src]);
 
   const handleEnded = () => {
     const others = allVids.filter(v => v !== src);
-    const next = others[Math.floor(Math.random() * others.length)];
+    const next = others[Math.floor((randomRef.current?.() ?? 0) * others.length)];
     setSrc(next);
   };
 
@@ -96,9 +103,10 @@ export function VideoCollage({ isMobile }) {
   const vids = useRef(Array.from({ length: 8 }, (_, i) => `/vid_abt${i + 1}.mp4`));
   
   useEffect(() => {
+    const random = createRuntimeSeededRandom(`about-video-collage-${isMobile ? "mobile" : "desktop"}`);
     const size = isMobile ? 6 : 12;
     const base = Array.from({ length: size }, (_, i) => vids.current[i % vids.current.length]);
-    setInitialGrid(base.sort(() => Math.random() - 0.5));
+    setInitialGrid(base.sort(() => random() - 0.5));
   }, [isMobile]);
 
   if (initialGrid.length === 0) return null;

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { createSeededRandom } from "@/lib/seededRandom";
+import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 const COMMUNITY_QUOTES = [
   "Kak mau photoo!", "Woi Wahib mana woi!", "Kak mau colabbb",
@@ -15,6 +15,8 @@ export function CometEffect() {
 
   useEffect(() => {
     let active = true;
+    const random = createRuntimeSeededRandom("landing-comets-v1");
+    let nextCometId = 0;
     const timeouts = new Set();
     const scheduleTimeout = (callback, delay) => {
       const timeout = setTimeout(() => {
@@ -26,11 +28,11 @@ export function CometEffect() {
 
     function spawnComet() {
       if (!active) return;
-      const id = Math.random();
-      const isLeft = Math.random() > 0.5;
+      const id = nextCometId++;
+      const isLeft = random() > 0.5;
       const startX = isLeft ? -20 : 120;
-      const startY = Math.random() * 30;
-      const endX = 20 + Math.random() * 60;
+      const startY = random() * 30;
+      const endX = 20 + random() * 60;
       const endY = 110;
       
       const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
@@ -41,7 +43,7 @@ export function CometEffect() {
         setComets(prev => prev.filter(c => c.id !== id));
       }, 1000);
 
-      scheduleTimeout(spawnComet, 1500 + Math.random() * 1000);
+      scheduleTimeout(spawnComet, 1500 + random() * 1000);
     }
 
     spawnComet();

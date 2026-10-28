@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 
 
@@ -25,21 +26,23 @@ export function VintageLaserGrid({ active, startupProgress }) {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
+    const random = createRuntimeSeededRandom("map-vintage-laser-lines-v1");
+    let nextLineId = 0;
     let lines = [];
     const maxLines = 15; // Increased by 20% for energetic visual guidelines
 
     const spawnLine = () => {
-      const isVertical = Math.random() > 0.5;
-      const pos = isVertical ? Math.random() * canvas.width : Math.random() * canvas.height;
+      const isVertical = random() > 0.5;
+      const pos = isVertical ? random() * canvas.width : random() * canvas.height;
       const newLine = {
-        id: Math.random(),
+        id: nextLineId++,
         isVertical,
         pos,
         opacity: 0,
-        targetOpacity: Math.random() * 0.12 + 0.05, // Faint retro draft look
+        targetOpacity: random() * 0.12 + 0.05, // Faint retro draft look
         life: 0,
-        maxLife: 100 + Math.random() * 150, // 2-4 seconds
-        width: Math.random() > 0.8 ? 1.5 : 0.8,
+        maxLife: 100 + random() * 150, // 2-4 seconds
+        width: random() > 0.8 ? 1.5 : 0.8,
       };
       if (lines.length < maxLines) {
         lines.push(newLine);
@@ -47,7 +50,7 @@ export function VintageLaserGrid({ active, startupProgress }) {
     };
 
     const spawnInterval = setInterval(() => {
-      if (Math.random() < 0.35) { // Spawn rate increased by 20%
+      if (random() < 0.35) { // Spawn rate increased by 20%
         spawnLine();
       }
     }, 200);

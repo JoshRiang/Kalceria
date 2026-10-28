@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const merchData = [
@@ -19,10 +20,10 @@ const merchData = [
 ];
 
 // ─── Shuffle Utility ──────────────────────────────────────────────────────────
-function shuffle(arr) {
+function shuffle(arr, random) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
@@ -33,44 +34,47 @@ function useMerchRandomizer(initialData) {
   const [, setInventory] = useState(initialData);
   const [displayedItems, setDisplayedItems] = useState([]);
 
-  const pickNextBatch = useCallback(() => {
-    setInventory((prev) => {
-      let pool = prev.filter((i) => !i.isPilih);
-
-      // NullIt: reset if pool < 4
-      if (pool.length < 4) {
-        const reset = prev.map((i) => ({ ...i, isPilih: false }));
-        pool = reset;
-      }
-
-      const poolSeven = shuffle(pool.filter((i) => i.isSeven));
-      const poolOld   = shuffle(pool.filter((i) => !i.isSeven));
-
-      const picked = [];
-      for (const item of poolSeven) {
-        if (picked.length >= 4) break;
-        picked.push(item);
-      }
-      for (const item of poolOld) {
-        if (picked.length >= 4) break;
-        picked.push(item);
-      }
-
-      const pickedIds = new Set(picked.map((i) => i.id));
-      const nextInventory = prev.map((i) =>
-        pickedIds.has(i.id) ? { ...i, isPilih: true } : i
-      );
-
-      setDisplayedItems(picked);
-      return nextInventory;
-    });
-  }, []);
-
   useEffect(() => {
+    const nextRandomSeed = createRuntimeSeededRandom("merch-randomizer-batches-v1");
+    const pickNextBatch = () => {
+      const batchSeed = nextRandomSeed();
+      setInventory((prev) => {
+        const random = createSeededRandom(batchSeed);
+        let pool = prev.filter((i) => !i.isPilih);
+
+        // NullIt: reset if pool < 4
+        if (pool.length < 4) {
+          const reset = prev.map((i) => ({ ...i, isPilih: false }));
+          pool = reset;
+        }
+
+        const poolSeven = shuffle(pool.filter((i) => i.isSeven), random);
+        const poolOld   = shuffle(pool.filter((i) => !i.isSeven), random);
+
+        const picked = [];
+        for (const item of poolSeven) {
+          if (picked.length >= 4) break;
+          picked.push(item);
+        }
+        for (const item of poolOld) {
+          if (picked.length >= 4) break;
+          picked.push(item);
+        }
+
+        const pickedIds = new Set(picked.map((i) => i.id));
+        const nextInventory = prev.map((i) =>
+          pickedIds.has(i.id) ? { ...i, isPilih: true } : i
+        );
+
+        setDisplayedItems(picked);
+        return nextInventory;
+      });
+    };
+
     pickNextBatch();
     const id = setInterval(pickNextBatch, 5000);
     return () => clearInterval(id);
-  }, [pickNextBatch]);
+  }, []);
 
   return displayedItems;
 }

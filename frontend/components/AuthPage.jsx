@@ -5,6 +5,7 @@ import Image from "next/image";
 import api from "@/lib/api";
 import AuthField from "@/components/auth/AuthField";
 import { PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
+import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AuthPage({ onAuthSuccess, onBack }) {
@@ -31,7 +32,8 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     window.addEventListener("resize", handleResize);
 
     const vids = ["/hp/vid_login_hp.mp4", "/hp/vid_login_hp2.mp4", "/hp/vid_login_hp3.mp4"];
-    const randomVid = vids[Math.floor(Math.random() * vids.length)];
+    const random = createRuntimeSeededRandom("auth-background-video-v1");
+    const randomVid = vids[Math.floor(random() * vids.length)];
     setMobileVideo(randomVid);
 
     return () => window.removeEventListener("resize", handleResize);

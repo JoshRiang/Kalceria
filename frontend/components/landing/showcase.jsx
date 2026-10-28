@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false }) {
   const [displayText, setDisplayText] = useState("");
@@ -169,6 +170,7 @@ export function useMerchRandomizer() {
   const [displayed, setDisplayed] = useState([]);
 
   useEffect(() => {
+    const random = createRuntimeSeededRandom("landing-showcase-products-v1");
     const INITIAL_DUMMIES = Array.from({ length: 10 }).map((_, i) => ({
       id: `mock-${i}`,
       productId: `KLCR-${100 + i}`,
@@ -193,12 +195,9 @@ export function useMerchRandomizer() {
         localStorage.setItem("kalceria_dummy_products", JSON.stringify(INITIAL_DUMMIES));
       }
 
-      setInventory(() => {
-        const shuffled = [...items].sort(() => 0.5 - Math.random());
-        const picked = shuffled.slice(0, 4);
-        setDisplayed(picked);
-        return items;
-      });
+      const picked = [...items].sort(() => 0.5 - random()).slice(0, 4);
+      setInventory(items);
+      setDisplayed(picked);
     };
 
     loadAndPick();

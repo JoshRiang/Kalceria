@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 export const FLOAT_PHOTOS = [
   { src: "/ven_3.webp", top: "23%",   left: "26%",   rotate: -12, delay: 0.6  }, // Top Left
@@ -12,15 +13,20 @@ export const FLOAT_PHOTOS = [
 export function FloatingPhotoCard({ initialSrc, config, index }) {
   const [src, setSrc] = useState(initialSrc);
   const photos = useMemo(() => Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.webp`), []);
+  const randomRef = useRef(null);
+
+  useEffect(() => {
+    randomRef.current = createRuntimeSeededRandom(`events-floating-photo-${initialSrc}`);
+  }, [initialSrc]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       const others = photos.filter(p => p !== src);
-      const next = others[Math.floor(Math.random() * others.length)];
+      const next = others[Math.floor(randomRef.current() * others.length)];
       setSrc(next);
-    }, 3000 + Math.random() * 1000);
+    }, 3000 + randomRef.current() * 1000);
     return () => clearInterval(interval);
-  }, [photos, src]);
+  }, [photos, src, initialSrc]);
 
   return (
     <motion.div

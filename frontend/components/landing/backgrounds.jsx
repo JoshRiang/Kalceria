@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { createSeededRandom } from "@/lib/seededRandom";
+import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 const SOLAR_FLARE_DEFINITIONS = [
   {
@@ -48,6 +48,7 @@ export function SupportUsBackground() {
   // Noise & Flicker Engine (PWM Envelope)
   useEffect(() => {
     let startTime = Date.now();
+    const random = createRuntimeSeededRandom("landing-support-us-wave-v1");
     let rafId;
     
     const updatePaths = () => {
@@ -70,16 +71,16 @@ export function SupportUsBackground() {
         const x = i * widthStep;
         
         // Randomization scaled dynamically by the continuous envelope
-        const mAmplitude = (Math.random() - 0.5) * currentAmplitude;
-        const yAmplitude = (Math.random() - 0.5) * currentAmplitude;
+        const mAmplitude = (random() - 0.5) * currentAmplitude;
+        const yAmplitude = (random() - 0.5) * currentAmplitude;
         
         mPath += ` L${x},${100 + mAmplitude}`;
         yPath += ` L${x},${100 + yAmplitude}`;
       }
       
       // Flicker intensity scales with the envelope
-      const mOpacity = 0.8 - (Math.random() * 0.6 * envelope);
-      const yOpacity = 0.8 - (Math.random() * 0.6 * envelope);
+      const mOpacity = 0.8 - (random() * 0.6 * envelope);
+      const yOpacity = 0.8 - (random() * 0.6 * envelope);
 
       if (magentaRef.current) {
         magentaRef.current.setAttribute("d", mPath);

@@ -9,6 +9,7 @@ import { KalceriansPanel } from "@/components/map/KalceriansPanel";
 import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
 import RadialPing from "@/components/map/RadialPing";
 import { userPopup } from "@/components/map/UserPopup";
+import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 import {
   fetchMe,
   fetchMapUsers,
@@ -120,27 +121,29 @@ export default function MapPage() {
   };
 
   const loginGateParticles = useMemo(() => {
+    const random = createSeededRandom("map-login-gate-particles-v1");
     return Array.from({ length: 30 }).map((_, i) => ({
       id: i,
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      size: Math.random() > 0.85 ? 5 : 2,
-      color: ['#FF0000', '#FF3C00', '#FF7B00', '#FFA600'][Math.floor(Math.random() * 4)],
-      delay: Math.random() * 5,
-      duration: 4 + Math.random() * 5,
-      xDrift: (Math.random() - 0.5) * 80,
-      yDrift: (Math.random() - 0.5) * 80,
+      left: `${random() * 100}%`,
+      top: `${random() * 100}%`,
+      size: random() > 0.85 ? 5 : 2,
+      color: ['#FF0000', '#FF3C00', '#FF7B00', '#FFA600'][Math.floor(random() * 4)],
+      delay: random() * 5,
+      duration: 4 + random() * 5,
+      xDrift: (random() - 0.5) * 80,
+      yDrift: (random() - 0.5) * 80,
     }));
   }, []);
 
   const mapParticles = useMemo(() => {
+    const random = createSeededRandom("map-atmosphere-particles-v1");
     return Array.from({ length: 22 }).map((_, i) => ({
       id: i,
-      left: `${Math.random() * 100}%`,
-      size: `${Math.random() * 3.5 + 2}px`, // 2px to 5.5px
-      duration: Math.random() * 7 + 6, // 6s to 13s (slower, more elegant rise)
-      delay: Math.random() * 8, // 0s to 8s
-      opacity: Math.random() * 0.35 + 0.25, // 0.25 to 0.6 (more sparse and subtle)
+      left: `${random() * 100}%`,
+      size: `${random() * 3.5 + 2}px`, // 2px to 5.5px
+      duration: random() * 7 + 6, // 6s to 13s (slower, more elegant rise)
+      delay: random() * 8, // 0s to 8s
+      opacity: random() * 0.35 + 0.25, // 0.25 to 0.6 (more sparse and subtle)
     }));
   }, []);
 
@@ -236,13 +239,14 @@ export default function MapPage() {
     setShowStartup(true);
     sessionStorage.setItem("mapIntroSeen", "true");
 
+    const random = createRuntimeSeededRandom("map-startup-progress-v1");
     let currentProgress = 0;
     let interval;
     
     // Slower progress increments and cinematic delay for first step to fade in dramatically
     const delayTimer = setTimeout(() => {
       interval = setInterval(() => {
-        currentProgress += Math.random() * 8;
+        currentProgress += random() * 8;
         if (currentProgress >= 100) {
           currentProgress = 100;
           clearInterval(interval);
@@ -264,14 +268,15 @@ export default function MapPage() {
   // Spawns premium magenta & golden microparticles once loading progress is >= 10%
   useEffect(() => {
     if (startupProgress >= 10 && particles.length === 0) {
+      const random = createSeededRandom("map-startup-particles-v1");
       const generated = Array.from({ length: 25 }).map((_, i) => ({
         id: i,
-        left: `${Math.random() * 100}%`,
-        size: `${Math.random() * 5 + 3}px`, // 3px to 8px
-        color: Math.random() > 0.5 ? "#ff006e" : (Math.random() > 0.5 ? "#ffd60a" : "#ffc300"), // Neon Magenta, Golden Yellow, Gold
-        duration: Math.random() * 5 + 4, // 4s to 9s
-        delay: Math.random() * 5, // 0s to 5s
-        opacity: Math.random() * 0.4 + 0.4, // 0.4 to 0.8
+        left: `${random() * 100}%`,
+        size: `${random() * 5 + 3}px`, // 3px to 8px
+        color: random() > 0.5 ? "#ff006e" : (random() > 0.5 ? "#ffd60a" : "#ffc300"), // Neon Magenta, Golden Yellow, Gold
+        duration: random() * 5 + 4, // 4s to 9s
+        delay: random() * 5, // 0s to 5s
+        opacity: random() * 0.4 + 0.4, // 0.4 to 0.8
       }));
       setParticles(generated);
     }
@@ -280,6 +285,7 @@ export default function MapPage() {
   // Random Loading Quotes Timeline
   useEffect(() => {
     if (!showStartup) return;
+    const random = createRuntimeSeededRandom("map-startup-quotes-v1");
     const quotes = [
       "Composing  the map...",
       "Adjusting the position...",
@@ -290,9 +296,9 @@ export default function MapPage() {
     const changeQuote = () => {
       setCurrentQuote((prev) => {
         const available = quotes.filter((q) => q !== prev);
-        return available[Math.floor(Math.random() * available.length)];
+        return available[Math.floor(random() * available.length)];
       });
-      const nextDelay = 700 + Math.random() * 1100; // random delay between 700ms and 1800ms
+      const nextDelay = 700 + random() * 1100; // random delay between 700ms and 1800ms
       timeoutId = setTimeout(changeQuote, nextDelay);
     };
     timeoutId = setTimeout(changeQuote, 1000);
@@ -518,6 +524,7 @@ export default function MapPage() {
   useEffect(() => {
     if (pirateStarted.current) return;
     pirateStarted.current = true;
+    const random = createRuntimeSeededRandom("map-pirate-timer-v1");
 
     const triggerPirate = () => {
       setPirateKey((prev) => prev + 1);
@@ -527,7 +534,7 @@ export default function MapPage() {
       pirateHideRef.current = setTimeout(() => {
         setShowPirate(false);
 
-        const nextDelay = 30000 + Math.random() * 60000;
+        const nextDelay = 30000 + random() * 60000;
         pirateNextRef.current = setTimeout(triggerPirate, nextDelay);
       }, 12000);
     };

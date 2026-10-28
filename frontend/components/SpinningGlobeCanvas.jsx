@@ -2,6 +2,7 @@
 import React, { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { createSeededRandom } from "@/lib/seededRandom";
 
 // ─── Spinning Globe (Accurate Continent Dot Map) ──────────────────────────────
 function SpinningGlobe() {
@@ -9,6 +10,7 @@ function SpinningGlobe() {
 
   // Highly refined continent regions — tighter boxes, many sub-regions to avoid ocean fill
   const dotPositions = useMemo(() => {
+    const random = createSeededRandom("spinning-globe-continent-dots-v1");
     const regions = [
       // ── NORTH AMERICA ──
       [60, 72, -140, -70],  // Canada west/central
@@ -83,8 +85,8 @@ function SpinningGlobe() {
       const area = (latMax - latMin) * (lonMax - lonMin);
       const count = Math.max(40, Math.min(220, Math.floor(area * 0.7)));
       for (let i = 0; i < count; i++) {
-        const lat = latMin + Math.random() * (latMax - latMin);
-        const lon = lonMin + Math.random() * (lonMax - lonMin);
+        const lat = latMin + random() * (latMax - latMin);
+        const lon = lonMin + random() * (lonMax - lonMin);
         const latR = (lat * Math.PI) / 180;
         const lonR = (lon * Math.PI) / 180;
         pts.push(
@@ -140,13 +142,14 @@ function SpinningGlobe() {
 function GlobeCoreStrings() {
   // Create 6 independent winding paths with unique movement data
   const stringData = useMemo(() => {
+    const random = createSeededRandom("spinning-globe-core-strings-v1");
     const data = [];
     for (let j = 0; j < 6; j++) {
       const pts = [];
       for (let i = 0; i < 10; i++) {
-        const r = 0.35 + Math.random() * 0.45;
-        const phi = Math.random() * Math.PI * 2;
-        const theta = Math.random() * Math.PI;
+        const r = 0.35 + random() * 0.45;
+        const phi = random() * Math.PI * 2;
+        const theta = random() * Math.PI;
         pts.push(new THREE.Vector3(
           r * Math.sin(theta) * Math.cos(phi),
           r * Math.sin(theta) * Math.sin(phi),
@@ -158,9 +161,9 @@ function GlobeCoreStrings() {
         geometry: new THREE.BufferGeometry().setFromPoints(curve.getPoints(120)),
         color: "#ff00ff", // Pure Magenta
         rotSpeed: [
-          (Math.random() - 0.5) * 0.008, // Much slower, "grave" motion
-          (Math.random() - 0.5) * 0.008,
-          (Math.random() - 0.5) * 0.008
+          (random() - 0.5) * 0.008, // Much slower, "grave" motion
+          (random() - 0.5) * 0.008,
+          (random() - 0.5) * 0.008
         ],
         ref: React.createRef()
       });

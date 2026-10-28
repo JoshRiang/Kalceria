@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
+import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 export const COMMUNITY_QUOTES = [
   "Bro, Kalceria keren ga si?", "Bro, Wahib Embut gimana?", "Kalceria, kece tuhh.",
@@ -43,11 +44,12 @@ export function FloatingQuotesLayer() {
   const idCounter = useRef(0);
 
   useEffect(() => {
+    const random = createRuntimeSeededRandom("about-floating-quotes-v1");
     let spawnTimer;
     
     const spawnNext = () => {
       if (availableIndicesRef.current.length > 0) {
-        const rndIdxIdx = Math.floor(Math.random() * availableIndicesRef.current.length);
+        const rndIdxIdx = Math.floor(random() * availableIndicesRef.current.length);
         const quoteIdx = availableIndicesRef.current[rndIdxIdx];
         
         // Lock this quote: remove from available
@@ -55,7 +57,7 @@ export function FloatingQuotesLayer() {
 
         const text = COMMUNITY_QUOTES[quoteIdx];
         const fontStyles = ["font-serif italic", "font-sans font-black uppercase tracking-tighter", "font-mono font-bold tracking-widest", "font-serif underline font-medium"];
-        const style = fontStyles[Math.floor(Math.random() * fontStyles.length)];
+        const style = fontStyles[Math.floor(random() * fontStyles.length)];
         
         const quoteId = idCounter.current++;
         const newQuote = {
@@ -64,10 +66,10 @@ export function FloatingQuotesLayer() {
           text,
           style,
           pos: {
-            x: Math.random() * 70 + 15,
-            y: Math.random() * 70 + 15,
-            dx: (Math.random() - 0.5) * 150,
-            dy: (Math.random() - 0.5) * 150
+            x: random() * 70 + 15,
+            y: random() * 70 + 15,
+            dx: (random() - 0.5) * 150,
+            dy: (random() - 0.5) * 150
           }
         };
 
@@ -82,7 +84,7 @@ export function FloatingQuotesLayer() {
       }
 
       // Rhythmic majestic spawning
-      spawnTimer = scheduleTimeout(spawnNext, 1500 + Math.random() * 1000);
+      spawnTimer = scheduleTimeout(spawnNext, 1500 + random() * 1000);
     };
 
     spawnNext();

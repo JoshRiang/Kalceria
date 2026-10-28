@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { usePhoenixAurora } from "@/hooks/usePhoenixAurora";
+import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // DYNAMIC MERGED PRELOADER (Desktop = FinalJosh branch, Mobile = Obsidian Black current logic)
@@ -139,20 +140,21 @@ function LaserGrid({ active, bgColor = "#050a14" }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
+    const random = createRuntimeSeededRandom("intro-laser-grid-v1");
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
     const W = canvas.width, H = canvas.height;
 
     const COUNT = 140;
     const lines = Array.from({ length: COUNT }, (_, i) => {
-      const horiz = Math.random() > 0.5;
+      const horiz = random() > 0.5;
       return {
         horiz,
         delay:      (i / COUNT) * 1800,
         drainDelay: ((COUNT - 1 - i) / COUNT) * 900,
-        color:      LASER_PALETTE[Math.floor(Math.random() * LASER_PALETTE.length)],
-        pos:        horiz ? Math.random() * H : Math.random() * W,
-        thick:      Math.random() < 0.15 ? 2.5 : 1,
+        color:      LASER_PALETTE[Math.floor(random() * LASER_PALETTE.length)],
+        pos:        horiz ? random() * H : random() * W,
+        thick:      random() < 0.15 ? 2.5 : 1,
       };
     });
 
@@ -177,7 +179,7 @@ function LaserGrid({ active, bgColor = "#050a14" }) {
         if (el < FILL_END) {
           if (el >= ln.delay) alpha = Math.min((el - ln.delay) / 300, 1) * 0.9;
         } else if (el < HOLD_END) {
-          alpha = 0.9 * (0.72 + Math.random() * 0.28);
+          alpha = 0.9 * (0.72 + random() * 0.28);
         } else if (el < DRAIN_END) {
           const drainEl = el - HOLD_END;
           alpha = drainEl < ln.drainDelay
@@ -312,14 +314,15 @@ function MCUVideoGridCanvas({ active }) {
     const cols = window.innerWidth > 768 ? 7 : 6;
     const rows = window.innerWidth > 768 ? 6 : 7;
     const totalCells = cols * rows;
+    const random = createRuntimeSeededRandom("intro-video-grid-v1");
 
-    const cellAssignments = Array.from({ length: totalCells }).map(() => Math.floor(Math.random() * videos.length));
+    const cellAssignments = Array.from({ length: totalCells }).map(() => Math.floor(random() * videos.length));
 
     const switchInterval = setInterval(() => {
-      const flips = Math.floor(Math.random() * 6) + 1;
+      const flips = Math.floor(random() * 6) + 1;
       for (let i = 0; i < flips; i++) {
-        const cellIdx = Math.floor(Math.random() * totalCells);
-        cellAssignments[cellIdx] = Math.floor(Math.random() * videos.length);
+        const cellIdx = Math.floor(random() * totalCells);
+        cellAssignments[cellIdx] = Math.floor(random() * videos.length);
       }
     }, 150);
 

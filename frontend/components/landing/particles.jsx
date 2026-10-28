@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { createSeededRandom } from "@/lib/seededRandom";
+import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 export function GoldenDust() {
   const [mounted, setMounted] = useState(false);
@@ -190,6 +190,8 @@ export function AuroraParticles() {
 
   useEffect(() => {
     let active = true;
+    const random = createRuntimeSeededRandom("landing-aurora-pillars-v1");
+    let nextPillarId = 0;
     const timeouts = new Set();
     const scheduleTimeout = (callback, delay) => {
       const timeout = setTimeout(() => {
@@ -201,17 +203,17 @@ export function AuroraParticles() {
 
     const spawnPillar = () => {
       if (!active) return;
-      const id = Date.now() + Math.random();
+      const id = nextPillarId++;
       // Organic aurora color spectrum
       const colors = ['#4ade80', '#10b981', '#d946ef', '#a855f7', '#06b6d4', '#4ade80'];
       const newPillar = {
         id,
-        left: `${Math.random() * 140 - 20}%`,
-        width: Math.random() * 400 + 150, // Wider for softer edges
-        color: colors[Math.floor(Math.random() * colors.length)],
-        duration: 20 + Math.random() * 20, // Much slower for natural feel
-        skew: (Math.random() - 0.5) * 40,
-        blur: Math.random() * 50 + 80, // High blur for feathering
+        left: `${random() * 140 - 20}%`,
+        width: random() * 400 + 150, // Wider for softer edges
+        color: colors[Math.floor(random() * colors.length)],
+        duration: 20 + random() * 20, // Much slower for natural feel
+        skew: (random() - 0.5) * 40,
+        blur: random() * 50 + 80, // High blur for feathering
       };
       setPillars(prev => [...prev, newPillar]);
       scheduleTimeout(() => {
@@ -391,6 +393,8 @@ export function PrinceRupertDrop() {
 
   useEffect(() => {
     let active = true;
+    const random = createRuntimeSeededRandom("landing-prince-rupert-drops-v1");
+    let nextDropId = 0;
     const timeouts = new Set();
     const scheduleTimeout = (callback, delay) => {
       const timeout = setTimeout(() => {
@@ -403,11 +407,11 @@ export function PrinceRupertDrop() {
     const spawnDrop = () => {
       if (!active) return;
       const newDrop = {
-        id: Math.random().toString(36).substring(2, 9),
-        x: `${Math.random() * 60 + 20}%`, // Random X between 20% and 80%
-        y: `${Math.random() * 60 + 20}%`, // Random Y between 20% and 80%
-        rotation: Math.random() * 360,
-        scale: Math.random() * 0.4 + 0.6, // Scale between 0.6 and 1.0
+        id: nextDropId++,
+        x: `${random() * 60 + 20}%`, // Random X between 20% and 80%
+        y: `${random() * 60 + 20}%`, // Random Y between 20% and 80%
+        rotation: random() * 360,
+        scale: random() * 0.4 + 0.6, // Scale between 0.6 and 1.0
       };
       
       setDrops(prev => [...prev, newDrop]);
