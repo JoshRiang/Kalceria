@@ -1,20 +1,22 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { createSeededRandom } from "@/lib/seededRandom";
 
 export function GoldenAmbientSparks() {
   const [sparks, setSparks] = useState([]);
   
   useEffect(() => {
+    const random = createSeededRandom("about-ambient-sparks-v1");
     const generated = [];
     for (let i = 0; i < 18; i++) {
-      const size = Math.random() * 4 + 2; 
-      const top = Math.random() * 100;
-      const left = Math.random() * 100;
-      const duration = Math.random() * 6 + 10; // Even slower
-      const delay = Math.random() * 12;
-      const driftX = (Math.random() - 0.5) * 150;
-      const driftY = (Math.random() - 0.5) * 150;
+      const size = random() * 4 + 2;
+      const top = random() * 100;
+      const left = random() * 100;
+      const duration = random() * 6 + 10; // Even slower
+      const delay = random() * 12;
+      const driftX = (random() - 0.5) * 150;
+      const driftY = (random() - 0.5) * 150;
       generated.push({ id: i, size, top, left, duration, delay, driftX, driftY });
     }
     setSparks(generated);

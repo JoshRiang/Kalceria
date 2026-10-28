@@ -1,12 +1,15 @@
 // UserIcon.jsx
 // generates leaflet user icon with floating animation, hover tooltip, droplet
+import { createSeededRandom } from "@/lib/seededRandom";
+
 function avatarUrl(user) {
   return user.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.nickname || user.name || 'anon')}`;
 }
 
 export function getUserIconHtml(user) {
   const displayName = user.nickname || user.name || '';
-  const randomDelay = (Math.random() * -2).toFixed(2);
+  const random = createSeededRandom(`map-user-icon-${user.id || user.nickname || user.name || "anon"}`);
+  const randomDelay = (random() * -2).toFixed(2);
   const rawColor = user.color || '#ffc300';
   const cleanColor = (rawColor.toLowerCase() === '#ffd60a' || rawColor.toLowerCase() === '#ffea00') ? '#ffc300' : rawColor;
   return `

@@ -1,19 +1,24 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { createSeededRandom } from "@/lib/seededRandom";
+
+const LOGOUT_PARTICLE_COLORS = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"];
 
 export function LineParticles() {
-  const colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"];
-  const particles = useMemo(() => Array.from({ length: 25 }).map(() => ({
-    x: Math.random() * 20,
-    y: Math.random() * 100,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    size: Math.random() * 5 + 2,
-    duration: 1.5 + Math.random() * 2.5,
-    delay: Math.random() * 5,
-    xDrift: 20 + Math.random() * 60,
-    yDrift: (Math.random() - 0.5) * 120
-  })), []);
+  const particles = useMemo(() => {
+    const random = createSeededRandom("logout-line-particles-v1");
+    return Array.from({ length: 25 }, () => ({
+      x: random() * 20,
+      y: random() * 100,
+      color: LOGOUT_PARTICLE_COLORS[Math.floor(random() * LOGOUT_PARTICLE_COLORS.length)],
+      size: random() * 5 + 2,
+      duration: 1.5 + random() * 2.5,
+      delay: random() * 5,
+      xDrift: 20 + random() * 60,
+      yDrift: (random() - 0.5) * 120
+    }));
+  }, []);
 
   return (
     <motion.div 

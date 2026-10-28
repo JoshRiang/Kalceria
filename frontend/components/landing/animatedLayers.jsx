@@ -1,6 +1,14 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { createSeededRandom } from "@/lib/seededRandom";
+
+const COMMUNITY_QUOTES = [
+  "Kak mau photoo!", "Woi Wahib mana woi!", "Kak mau colabbb",
+  "Coki ganteng, no gay tho", "Otniel jelek wleee", "Aku mau Kalceria menjadi....",
+  "Tolong diet lagi ya mas", "Kak main UMINGLE yuk!", "Cok, lagi dimana, sama siapa?",
+  "Keren bangetttt!!", "GG, Speechless"
+];
 
 export function CometEffect() {
   const [comets, setComets] = useState([]);
@@ -130,35 +138,30 @@ export function FloatingAssets({ isMobile }) {
 }
 
 export function CommunityQuotes({ isMobile }) {
-  const quotes = [
-    "Kak mau photoo!", "Woi Wahib mana woi!", "Kak mau colabbb", 
-    "Coki ganteng, no gay tho", "Otniel jelek wleee", "Aku mau Kalceria menjadi....",
-    "Tolong diet lagi ya mas", "Kak main UMINGLE yuk!", "Cok, lagi dimana, sama siapa?",
-    "Keren bangetttt!!", "GG, Speechless"
-  ];
-
   // Two bands: above heading (25-40% Y) and below button (68-80% Y)
   // Horizontal constrained to 32-68% to stay clear of corner cars
   const floatingQuotes = useMemo(() => {
+    const random = createSeededRandom(`landing-community-quotes-${isMobile ? "mobile" : "desktop"}-v1`);
     // If mobile, slice quotes list to spawn 30% less items (ceil(11 * 0.7) = 8 quotes)
-    const activeList = isMobile ? quotes.slice(0, Math.ceil(quotes.length * 0.7)) : quotes;
+    const activeList = isMobile ? COMMUNITY_QUOTES.slice(0, Math.ceil(COMMUNITY_QUOTES.length * 0.7)) : COMMUNITY_QUOTES;
 
     return activeList.map((text, i) => {
       const inUpperBand = i % 2 === 0;
       return {
         id: i,
         text,
-        left: `${32 + Math.random() * 36}%`,
-        top: inUpperBand ? `${25 + Math.random() * 15}%` : `${68 + Math.random() * 12}%`,
-        delay: i * (isMobile ? 5 : 3.5) + Math.random() * 2, // 30% slower delays
-        duration: (8 + Math.random() * 8) * (isMobile ? 1.3 : 1), // 30% longer duration for calmer speed
-        xDrift: (Math.random() - 0.5) * 40,  // small drift to stay in zone
-        yDrift: (Math.random() - 0.5) * 30,
-        rotate: (Math.random() - 0.5) * 20,
-        fontSize: isMobile ? (Math.random() * 6 + 10) : (Math.random() * 8 + 13), // slightly smaller text for mobile elegance
-        bold: Math.random() > 0.5,
-        italic: Math.random() > 0.4,
-        under: Math.random() > 0.7,
+        left: `${32 + random() * 36}%`,
+        top: inUpperBand ? `${25 + random() * 15}%` : `${68 + random() * 12}%`,
+        delay: i * (isMobile ? 5 : 3.5) + random() * 2, // 30% slower delays
+        duration: (8 + random() * 8) * (isMobile ? 1.3 : 1), // 30% longer duration for calmer speed
+        xDrift: (random() - 0.5) * 40,  // small drift to stay in zone
+        yDrift: (random() - 0.5) * 30,
+        rotate: (random() - 0.5) * 20,
+        fontSize: isMobile ? (random() * 6 + 10) : (random() * 8 + 13), // slightly smaller text for mobile elegance
+        bold: random() > 0.5,
+        italic: random() > 0.4,
+        under: random() > 0.7,
+        repeatDelay: (15 + random() * 10) * (isMobile ? 1.5 : 1),
       };
     });
   }, [isMobile]);
@@ -186,7 +189,7 @@ export function CommunityQuotes({ isMobile }) {
           transition={{
             duration: q.duration,
             repeat: Infinity,
-            repeatDelay: isMobile ? (15 + Math.random() * 10) * 1.5 : (15 + Math.random() * 10), // 50% longer wait time on mobile to reduce density
+            repeatDelay: q.repeatDelay, // 50% longer wait time on mobile to reduce density
             ease: "easeInOut",
             delay: q.delay,
           }}
@@ -199,25 +202,28 @@ export function CommunityQuotes({ isMobile }) {
 }
 
 export function GeminiSparkParticles() {
-  const particles = useMemo(() => Array.from({ length: 60 }).map((_, i) => {
-    const r = Math.random();
-    let color = '#60A5FA'; 
-    if (r > 0.8) color = '#FBBF24';
-    else if (r > 0.6) color = '#D946EF';
-    else if (r > 0.3) color = '#38BDF8';
+  const particles = useMemo(() => {
+    const random = createSeededRandom("landing-gemini-spark-particles-v1");
+    return Array.from({ length: 60 }, (_, id) => {
+      const value = random();
+      let color = '#60A5FA';
+      if (value > 0.8) color = '#FBBF24';
+      else if (value > 0.6) color = '#D946EF';
+      else if (value > 0.3) color = '#38BDF8';
 
-    return {
-      id: i,
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      size: Math.random() * 3 + 1, 
-      color,
-      delay: Math.random() * 5,
-      duration: 3 + Math.random() * 5,
-      xDrift: (Math.random() - 0.5) * 60,
-      yDrift: (Math.random() - 0.5) * 60,
-    };
-  }), []);
+      return {
+        id,
+        left: `${random() * 100}%`,
+        top: `${random() * 100}%`,
+        size: random() * 3 + 1,
+        color,
+        delay: random() * 5,
+        duration: 3 + random() * 5,
+        xDrift: (random() - 0.5) * 60,
+        yDrift: (random() - 0.5) * 60,
+      };
+    });
+  }, []);
 
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">

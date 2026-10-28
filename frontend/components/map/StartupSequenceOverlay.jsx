@@ -1,8 +1,21 @@
 "use client";
+import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VintageLaserGrid, DominoChevrons } from "@/components/map/AtmosphereLayers";
+import { createSeededRandom } from "@/lib/seededRandom";
 
 export function StartupSequenceOverlay({ showStartup, startupProgress, particles, hasMounted, currentQuote, tilt }) {
+  const speedLines = useMemo(() => {
+    const random = createSeededRandom("map-startup-speed-lines-v1");
+    return Array.from({ length: 20 }, (_, id) => ({
+      id,
+      duration: random() * 0.5 + 0.3,
+      delay: random() * 2,
+      top: `${random() * 100}%`,
+      width: `${random() * 300 + 100}px`,
+    }));
+  }, []);
+
   return (
 <AnimatePresence>
         {showStartup && (
@@ -39,26 +52,21 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
               {/* Dynamic Speed Lines */}
               <div className="absolute inset-0 opacity-20">
                 {hasMounted &&
-                  [...Array(20)].map((_, i) => (
+                  speedLines.map((line) => (
                     <motion.div
-                      key={i}
+                      key={line.id}
                       initial={{ x: "-100%", opacity: 0 }}
                       animate={{ x: "200%", opacity: [0, 1, 0] }}
                       transition={{
-                        // Keep the existing per-render variation from the original overlay.
-                        // eslint-disable-next-line react-hooks/purity
-                        duration: Math.random() * 0.5 + 0.3,
+                        duration: line.duration,
                         repeat: Infinity,
-                        // eslint-disable-next-line react-hooks/purity
-                        delay: Math.random() * 2,
+                        delay: line.delay,
                         ease: "linear",
                       }}
                       className={`absolute h-[1px] transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-200" : "bg-white"}`}
                       style={{
-                        // eslint-disable-next-line react-hooks/purity
-                        top: `${Math.random() * 100}%`,
-                        // eslint-disable-next-line react-hooks/purity
-                        width: `${Math.random() * 300 + 100}px`,
+                        top: line.top,
+                        width: line.width,
                         transform: "rotate(-5deg)",
                       }}
                     />

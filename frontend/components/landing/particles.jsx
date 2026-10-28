@@ -1,17 +1,19 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { createSeededRandom } from "@/lib/seededRandom";
 
 export function GoldenDust() {
   const [mounted, setMounted] = useState(false);
   const [particles, setParticles] = useState([]);
 
   useEffect(() => {
-    setParticles(Array.from({ length: 20 }).map(() => ({
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      delay: Math.random() * 5,
-      duration: 2 + Math.random() * 3
+    const random = createSeededRandom("landing-golden-dust-v1");
+    setParticles(Array.from({ length: 20 }, () => ({
+      x: random() * 100,
+      y: random() * 100,
+      delay: random() * 5,
+      duration: 2 + random() * 3
     })));
     setMounted(true);
   }, []);
@@ -47,13 +49,14 @@ export function StarDust() {
   const [particles, setParticles] = useState([]);
 
   useEffect(() => {
-    setParticles(Array.from({ length: 30 }).map(() => {
-      const isViolet = Math.random() > 0.5;
+    const random = createSeededRandom("landing-star-dust-v1");
+    setParticles(Array.from({ length: 30 }, () => {
+      const isViolet = random() > 0.5;
       return {
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        delay: Math.random() * 5,
-        duration: 2 + Math.random() * 3,
+        x: random() * 100,
+        y: random() * 100,
+        delay: random() * 5,
+        duration: 2 + random() * 3,
         bgColor: isViolet ? "bg-[#D946EF]" : "bg-[#FACC15]",
         shadowColor: isViolet ? "rgba(217,70,239,0.8)" : "rgba(250,204,21,0.8)"
       };
@@ -134,16 +137,17 @@ export function TropicalParticles() {
   const [particles, setParticles] = useState([]);
 
   useEffect(() => {
+    const random = createSeededRandom("landing-tropical-particles-v1");
     setParticles(Array.from({ length: 40 }).map((_, i) => ({
       id: i,
-      left: `${10 + Math.random() * 80}%`,
-      bottom: `${40 + Math.random() * 30}%`,
-      size: Math.random() * 4 + 2, 
-      color: ['#bef264', '#4ade80', '#22c55e', '#166534', '#86efac'][Math.floor(Math.random() * 5)],
-      delay: Math.random() * 5,
-      duration: 4 + Math.random() * 4,
-      xDrift: (Math.random() - 0.5) * 60,
-      yRise: -(120 + Math.random() * 180),
+      left: `${10 + random() * 80}%`,
+      bottom: `${40 + random() * 30}%`,
+      size: random() * 4 + 2,
+      color: ['#bef264', '#4ade80', '#22c55e', '#166534', '#86efac'][Math.floor(random() * 5)],
+      delay: random() * 5,
+      duration: 4 + random() * 4,
+      xDrift: (random() - 0.5) * 60,
+      yRise: -(120 + random() * 180),
     })));
     setMounted(true);
   }, []);
@@ -311,6 +315,7 @@ const PR_COLORS = ["#F97316", "#FACC15", "#D946EF"];
 
 export function PrinceRupertDropInstance({ position }) {
   const dots = useMemo(() => {
+    const random = createSeededRandom(`landing-prince-rupert-dots-${position.x}-${position.y}`);
     const generatedDots = [];
     for (let i = 0; i < PR_DOT_COUNT; i++) {
       const t = Math.pow(i / (PR_DOT_COUNT - 1), 1.5); 
@@ -318,21 +323,21 @@ export function PrinceRupertDropInstance({ position }) {
       const curveY = -t * 400 + 100;
       const maxRadius = 130;
       const radiusAtT = Math.max((1 - t) * maxRadius * Math.exp(-t * 2.5), 2);
-      const angle = Math.random() * Math.PI * 2;
-      const r = Math.sqrt(Math.random()) * radiusAtT; 
+      const angle = random() * Math.PI * 2;
+      const r = Math.sqrt(random()) * radiusAtT;
       const x = curveX + r * Math.cos(angle);
       const y = curveY + r * Math.sin(angle);
-      const size = Math.random() * 5 + 3; 
-      const color = PR_COLORS[Math.floor(Math.random() * PR_COLORS.length)];
-      const duration = 2 + Math.random() * 3;
-      const delay = Math.random() * duration;
-      const xOscillation = (Math.random() - 0.5) * 20;
-      const yOscillation = (Math.random() - 0.5) * 20;
+      const size = random() * 5 + 3;
+      const color = PR_COLORS[Math.floor(random() * PR_COLORS.length)];
+      const duration = 2 + random() * 3;
+      const delay = random() * duration;
+      const xOscillation = (random() - 0.5) * 20;
+      const yOscillation = (random() - 0.5) * 20;
 
       generatedDots.push({ id: i, t, x, y, size, color, duration, delay, xOscillation, yOscillation });
     }
     return generatedDots;
-  }, []);
+  }, [position.x, position.y]);
 
   return (
     <motion.div
