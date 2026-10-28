@@ -126,7 +126,25 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                 className="flex flex-col items-center mb-4"
               >
                 <h1
-                  className={`text-8xl font-sans font-black italic tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
+                  className={`text-8xl font-sans font-black italic tracking-tighter uppercase leading-none transition-all duration-1000 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
+                  style={{
+                    textShadow: startupProgress >= 50 ? `
+                      2px 2px 0 #1a1a24,
+                      4px 4px 0 #1a1a24,
+                      6px 6px 0 #1a1a24,
+                      8px 8px 0 #FF00FF,
+                      10px 10px 0 #00FFFF,
+                      12px 12px 30px rgba(255, 0, 255, 0.6)
+                    ` : `
+                      2px 2px 0 #cbd5e1,
+                      4px 4px 0 #cbd5e1,
+                      6px 6px 0 #cbd5e1,
+                      8px 8px 0 #FF00FF,
+                      10px 10px 0 #00FFFF,
+                      12px 12px 30px rgba(0, 255, 255, 0.4)
+                    `,
+                    transform: "perspective(1000px) rotateX(10deg) rotateY(-5deg) scale(1.05)"
+                  }}
                 >
                   Kalcerians Map
                 </h1>
