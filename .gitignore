@@ -43,3 +43,8 @@ coverage/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Lighthouse reports and audit logs
+lighthouse*
+*.report.html
+*.report.json
