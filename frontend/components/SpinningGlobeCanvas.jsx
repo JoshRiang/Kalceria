@@ -140,6 +140,8 @@ function SpinningGlobe() {
 
 // ─── Internal Globe Core Strings (Bacteriophage Style) ────────────────────────
 function GlobeCoreStrings() {
+  const groupRefs = useRef([]);
+
   // Create 6 independent winding paths with unique movement data
   const stringData = useMemo(() => {
     const random = createSeededRandom("spinning-globe-core-strings-v1");
@@ -164,22 +166,22 @@ function GlobeCoreStrings() {
           (random() - 0.5) * 0.008, // Much slower, "grave" motion
           (random() - 0.5) * 0.008,
           (random() - 0.5) * 0.008
-        ],
-        ref: React.createRef()
+        ]
       });
     }
     return data;
   }, []);
 
   useFrame((state) => {
-    stringData.forEach((sd) => {
-      if (sd.ref.current) {
-        sd.ref.current.rotation.x += sd.rotSpeed[0];
-        sd.ref.current.rotation.y += sd.rotSpeed[1];
-        sd.ref.current.rotation.z += sd.rotSpeed[2];
+    stringData.forEach((sd, index) => {
+      const group = groupRefs.current[index];
+      if (group) {
+        group.rotation.x += sd.rotSpeed[0];
+        group.rotation.y += sd.rotSpeed[1];
+        group.rotation.z += sd.rotSpeed[2];
         // Dynamic scaling for "pulsing" energy
         const pulse = 1 + Math.sin(state.clock.elapsedTime * 1.5 + stringData.indexOf(sd)) * 0.08;
-        sd.ref.current.scale.set(pulse, pulse, pulse);
+        group.scale.set(pulse, pulse, pulse);
       }
     });
   });
@@ -187,7 +189,7 @@ function GlobeCoreStrings() {
   return (
     <group>
       {stringData.map((sd, i) => (
-        <group key={i} ref={sd.ref}>
+        <group key={i} ref={(group) => { groupRefs.current[i] = group; }}>
           {/* LAYER 1: The core bright magenta filament */}
           <line geometry={sd.geometry}>
             <lineBasicMaterial 

@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
+const ABOUT_VIDEOS = Array.from({ length: 8 }, (_, i) => `/vid_abt${i + 1}.mp4`);
+
 export function PhotoCollage({ isMobile }) {
   const photos = Array.from({ length: 20 }, (_, i) => `/foto_abt${i + 1}.webp`);
   const activePhotos = isMobile ? photos.slice(0, 9) : photos;
@@ -100,12 +102,11 @@ export function VideoCell({ initialSrc, allVids }) {
 
 export function VideoCollage({ isMobile }) {
   const [initialGrid, setInitialGrid] = useState([]);
-  const vids = useRef(Array.from({ length: 8 }, (_, i) => `/vid_abt${i + 1}.mp4`));
   
   useEffect(() => {
     const random = createRuntimeSeededRandom(`about-video-collage-${isMobile ? "mobile" : "desktop"}`);
     const size = isMobile ? 6 : 12;
-    const base = Array.from({ length: size }, (_, i) => vids.current[i % vids.current.length]);
+    const base = Array.from({ length: size }, (_, i) => ABOUT_VIDEOS[i % ABOUT_VIDEOS.length]);
     setInitialGrid(base.sort(() => random() - 0.5));
   }, [isMobile]);
 
@@ -129,7 +130,7 @@ export function VideoCollage({ isMobile }) {
             key={i} 
             index={i} 
             initialSrc={src} 
-            allVids={vids.current} 
+            allVids={ABOUT_VIDEOS} 
           />
         ))}
       </div>

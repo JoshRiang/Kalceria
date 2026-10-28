@@ -10,7 +10,10 @@ export function WebDevEntrySequence({ onComplete }) {
   const [phase, setPhase] = useState('typing1'); 
   const [text, setText] = useState('');
   const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     let i = 0;

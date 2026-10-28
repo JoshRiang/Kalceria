@@ -46,7 +46,7 @@ export default function AdminDashboard() {
   const [isChatFaded, setIsChatFaded] = useState(false);       // Auto-hide (opacity)
   const [unreadCount, setUnreadCount] = useState(0);
   const [showPulse, setShowPulse] = useState(false);
-  const [lastActivity, setLastActivity] = useState(Date.now());
+  const [lastActivity, setLastActivity] = useState(() => Date.now());
   const chatScrollRef = useRef(null);
   const prevLogIdRef = useRef(null);
 
