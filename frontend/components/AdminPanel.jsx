@@ -13,8 +13,8 @@ export default function AdminPanel({ userRole }) {
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    api.get("/api/admin/events").then((r) => setEvents(r.data.events)).catch(() => {});
-    api.get("/api/admin/merch").then((r) => setMerch(r.data.merch)).catch(() => {});
+    api.get("/admin/events").then((r) => setEvents(r.data.events)).catch(() => {});
+    api.get("/admin/merch").then((r) => setMerch(r.data.merch)).catch(() => {});
   }, []);
 
   const tabs = ["Events", "Merch"];

@@ -29,7 +29,7 @@ export default function AdminEventForm({ events, onCreated, onDeleted }) {
     e.preventDefault();
     setError(""); setLoading(true);
     try {
-      const res = await api.post("/api/admin/events", {
+      const res = await api.post("/admin/events", {
         ...form,
         price: parseFloat(form.price),
         sessionOptions: form.sessionOptions.filter(Boolean),
@@ -45,7 +45,7 @@ export default function AdminEventForm({ events, onCreated, onDeleted }) {
 
   async function handleDelete(id) {
     if (!confirm("Hapus event ini?")) return;
-    await api.delete(`/api/admin/events/${id}`);
+    await api.delete(`/admin/events/${id}`);
     onDeleted(id);
   }
 

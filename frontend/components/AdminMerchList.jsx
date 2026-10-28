@@ -18,7 +18,7 @@ export default function AdminMerchList({ merch, onToggle, onDeleted, onCreated }
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await api.post("/api/admin/merch", { ...form, price: parseFloat(form.price) });
+      const res = await api.post("/admin/merch", { ...form, price: parseFloat(form.price) });
       onCreated(res.data.merch);
       setForm({ name: "", photoUrl: "", link: "", price: "" });
     } catch {/* silent */}
@@ -26,13 +26,13 @@ export default function AdminMerchList({ merch, onToggle, onDeleted, onCreated }
   }
 
   async function handleToggleSoldOut(id) {
-    const res = await api.patch(`/api/admin/merch/${id}/soldout`);
+    const res = await api.patch(`/admin/merch/${id}/soldout`);
     onToggle(id, res.data.isSoldOut);
   }
 
   async function handleDelete(id) {
     if (!confirm("Hapus merch ini?")) return;
-    await api.delete(`/api/admin/merch/${id}`);
+    await api.delete(`/admin/merch/${id}`);
     onDeleted(id);
   }
 
