@@ -16,6 +16,7 @@ import { BookingsPanel } from './bookings';
 import { EarningsPanel } from './earnings';
 import { UsersPanel } from './users';
 import { useHasMounted } from "@/hooks/useHasMounted";
+import { clearSession, hasAdminSession } from "@/lib/session";
 
 export const TABS = [
   { id: "events", label: "Events" },
@@ -92,6 +93,7 @@ export default function AdminDashboard() {
     setShowResetModal(false);
     setIsDrawerOpen(false);
     setSystemToast({ type: 'success', msg: '✓ System reset complete. Logging out...' });
+    try { await api.post('/auth/logout'); } catch { /* The reset is complete; continue clearing the client session. */ }
     scheduleTimeout(() => {
       // Force logout and hard-reload for clean state
       localStorage.clear();
@@ -193,8 +195,7 @@ export default function AdminDashboard() {
   }, [scheduleTimeout]);
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
-    if (!token) { router.replace("/admin/login"); return; }
+    if (!hasAdminSession()) { router.replace("/admin/login"); return; }
     
     loadAll();
     const logInterval = setInterval(fetchLogs, 5000);
@@ -207,9 +208,9 @@ export default function AdminDashboard() {
     return () => clearInterval(logInterval);
   }, [router, loadAll, fetchLogs]);
 
-  function logout() {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("token");
+  async function logout() {
+    try { await api.post("/auth/logout"); } catch { /* Clear the marker if the session already expired. */ }
+    clearSession();
     router.replace("/admin/login");
   }
 

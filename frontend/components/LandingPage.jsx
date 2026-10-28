@@ -13,6 +13,8 @@ import { IdeaCommentModal } from "./landing/modals/IdeaCommentModal";
 import { DungeonGate } from "./landing/modals/DungeonGate";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
+import api from "@/lib/api";
+import { clearSession, hasUserSession } from "@/lib/session";
 
 export default function LandingPage({ onNavigateAuth }) {
   const mounted = useHasMounted();
@@ -60,8 +62,7 @@ export default function LandingPage({ onNavigateAuth }) {
       sessionStorage.setItem("landingSeen", "true");
     }
     // Check login status
-    const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
+    setIsLoggedIn(hasUserSession());
 
     // Smooth scroll restoration on fallback navigation
     const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
@@ -109,8 +110,9 @@ export default function LandingPage({ onNavigateAuth }) {
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
+  const handleLogout = async () => {
+    try { await api.post("/auth/logout"); } catch { /* Clear the local session marker even if the API is unavailable. */ }
+    clearSession();
     localStorage.removeItem("user");
     setIsLoggedIn(false);
     window.location.reload();

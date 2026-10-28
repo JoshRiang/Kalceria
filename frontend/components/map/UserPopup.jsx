@@ -10,10 +10,11 @@ function esc(value) {
 }
 
 function avatarUrl(user) {
-  return (
-    user.profilePicture ||
-    `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.nickname || user.name || "anon")}`
-  );
+  const fallback = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.nickname || user.name || "anon")}`;
+  const candidate = user.profilePicture;
+  if (typeof candidate !== 'string' || candidate.length > 2048 || candidate.startsWith('//') || candidate.includes('\\')) return fallback;
+  if (candidate.startsWith('/')) return candidate;
+  try { return new URL(candidate).protocol === 'https:' ? candidate : fallback; } catch { return fallback; }
 }
 
 function formatJoinDate(dateStr) {
@@ -43,7 +44,7 @@ const svgIcons = {
 };
 
 export function userPopup(user) {
-  const color = user.color || "#ffd60a";
+  const color = typeof user.color === 'string' && /^#[\da-f]{3,8}$/i.test(user.color) ? user.color : "#ffd60a";
   const message = user.broadcast?.message;
 
   // Build social rows
@@ -106,7 +107,7 @@ export function userPopup(user) {
 
       <div class="dc-header">
         <div class="dc-avatar-ring">
-          <div class="dc-avatar-img"><img src="${avatarUrl(user)}" alt="${esc(user.nickname || user.name)}"></div>
+          <div class="dc-avatar-img"><img src="${esc(avatarUrl(user))}" alt="${esc(user.nickname || user.name)}"></div>
           <div class="dc-status-dot ${user.isOnline === false ? 'offline' : ''}"></div>
         </div>
         <div class="dc-header-info">

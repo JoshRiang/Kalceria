@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import api from "@/lib/api";
+import { hasUserSession } from "@/lib/session";
 
 const CLIP = { clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" };
 const INPUT = "w-full bg-white/5 border border-white/10 rounded px-3 py-2.5 font-sans text-sm text-white outline-none transition-all placeholder:text-slate-700 focus:border-white/30";
@@ -118,7 +119,7 @@ export default function NeedUsForm({ userName }) {
     return "READY";
   };
 
-  const isLoggedIn = !!localStorage.getItem("token");
+  const isLoggedIn = hasUserSession();
 
   return (
     <section className={`w-full ${step === 1 ? 'max-w-4xl' : 'max-w-xl'} mx-auto px-4 py-16 transition-all duration-500`}>

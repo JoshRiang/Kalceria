@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { StepIndicator, Field } from "./service-request/FormControls";
 import ContentImage from "@/components/ui/ContentImage";
 import api from "@/lib/api";
+import { hasUserSession } from "@/lib/session";
 import { useHasMounted } from "@/hooks/useHasMounted";
 
 // ── Shared Components ────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
   // Form Validation
   const isFormValid = form.serviceName && form.contactPerson && form.whatsapp && form.location && Object.values(selectedSlots).filter(Boolean).length > 0;
 
-  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem("token");
+  const isLoggedIn = hasUserSession();
 
   useEffect(() => {
     document.body.style.overflow = "hidden";

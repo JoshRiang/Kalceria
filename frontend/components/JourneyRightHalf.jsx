@@ -40,15 +40,11 @@ export function JourneyDescriptionBox({ description, className }) {
         style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }} 
       />
       <div className="relative z-10 w-full text-xs md:text-sm font-serif not-italic text-white/90 drop-shadow-md leading-relaxed text-justify">
-        {(() => {
-          let formattedText = description;
-          const formatStart = '<span class="underline font-bold italic">';
-          const formatEnd = '</span>';
-          formattedText = formattedText.replace(/Mist/g, `${formatStart}Mist${formatEnd}`);
-          formattedText = formattedText.replace(/Dream Shift Labs/g, `${formatStart}Dream Shift Labs${formatEnd}`);
-          formattedText = formattedText.replace(/Universitas Indonesia Motorsport/g, `${formatStart}Universitas Indonesia Motorsport${formatEnd}`);
-          return <span dangerouslySetInnerHTML={{ __html: formattedText }} />;
-        })()}
+        {String(description || '').split(/(Universitas Indonesia Motorsport|Dream Shift Labs|Mist)/g).map((part, index) => (
+          ['Mist', 'Dream Shift Labs', 'Universitas Indonesia Motorsport'].includes(part)
+            ? <span key={`${part}-${index}`} className="underline font-bold italic">{part}</span>
+            : part
+        ))}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import Image from "next/image";
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useHasMounted } from "@/hooks/useHasMounted";
+import { establishSession, hasAdminSession, clearSession } from "@/lib/session";
 
 // ─── Authenticating Dots ─────────────────────────────────────────────────────
 function AuthDots() {
@@ -37,8 +38,7 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     // If already admin, redirect
-    const token = localStorage.getItem("adminToken");
-    if (token) router.replace("/admin/dashboard");
+    if (hasAdminSession()) router.replace("/admin/dashboard");
   }, [router]);
 
   async function handleSubmit(e) {
@@ -47,24 +47,18 @@ export default function AdminLoginPage() {
     setLoading(true);
     try {
       const res = await api.post("/auth/login", form);
-      const token = res.data?.token;
-      if (!token) throw new Error("No token.");
-
-      // Set token DULUAN agar interceptor axios tidak pakai token dari login sebelumnya
-      localStorage.setItem("token", token);
-
-      // Verify admin role via a protected endpoint
-      await api.get("/admin/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      // If no error thrown, user is admin
-      localStorage.setItem("adminToken", token);
+      if (res.data?.role !== "ADMIN") {
+        await api.post("/auth/logout");
+        clearSession();
+        throw new Error("Access denied. Admin only.");
+      }
+      establishSession(res.data);
 
       await new Promise((r) => setTimeout(r, 2200));
       router.replace("/admin/dashboard");
     } catch (err) {
       setLoading(false);
-      setError(err.message === "Forbidden. Admin only." || err.message.includes("403")
+      setError(err.message === "Access denied. Admin only." || err.message.includes("403")
         ? "Access denied. Admin only."
         : err.message || "Authentication failed.");
     }

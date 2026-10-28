@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import api from "@/lib/api";
+import { establishSession, hasUserSession } from "@/lib/session";
 
 export function IdeaCommentModal({ onClose }) {
   const [step, setStep] = useState(0); // 0=Choice, 1=Identity, 2=Category, 3=Content, 4=done
@@ -47,8 +48,7 @@ export function IdeaCommentModal({ onClose }) {
       if (res.data.exists) {
         setUserFound(true);
         // If already logged in, we can proceed
-        const token = localStorage.getItem("token");
-        if (token) {
+        if (hasUserSession()) {
           setStep(2);
         }
       }
@@ -64,13 +64,9 @@ export function IdeaCommentModal({ onClose }) {
     setError("");
     setIsVerifying(true);
     try {
-      // Need to find the email first since login uses email
-      const checkRes = await api.get(`/auth/check-username/${username}`);
-      const email = checkRes.data.email;
-      
-      const loginRes = await api.post('/auth/login', { email, password });
-      if (loginRes.data.token) {
-        localStorage.setItem("token", loginRes.data.token);
+      const loginRes = await api.post('/auth/login', { username, password });
+      if (loginRes.data?.userId) {
+        establishSession(loginRes.data);
         setStep(2);
       }
     } catch {
@@ -322,7 +318,7 @@ export function IdeaCommentModal({ onClose }) {
                           )}
                         </div>
 
-                        {userFound && !localStorage.getItem("token") && (
+                        {userFound && !hasUserSession() && (
                           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
                             <input
                               type="password"
@@ -350,7 +346,7 @@ export function IdeaCommentModal({ onClose }) {
                       onClick={() => {
                         if (identity === 'Anonymous') setStep(2);
                         else if (!userFound) checkUser();
-                        else if (!localStorage.getItem("token")) verifyPassword();
+                        else if (!hasUserSession()) verifyPassword();
                         else setStep(2);
                       }}
                       disabled={isVerifying || (identity === 'User' && !username)}

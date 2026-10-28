@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
 import api from "@/lib/api";
+import { hasUserSession } from "@/lib/session";
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 function Steps({ total, current }) {
@@ -34,7 +35,7 @@ export default function ApplyModal({ event, onClose }) {
   const [done, setDone] = useState(null); // { whatsappUrl }
   const [error, setError] = useState("");
 
-  const isLoggedIn = !!localStorage.getItem("token");
+  const isLoggedIn = hasUserSession();
   const sessions = Array.isArray(event.sessionOptions) ? event.sessionOptions : [];
   const TOTAL_STEPS = 3;
 

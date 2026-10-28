@@ -2,6 +2,7 @@
 import { useState } from "react";
 import api from "@/lib/api";
 import ContentImage from "@/components/ui/ContentImage";
+import { JITActionModal } from "@/components/admin/dashboard/modals";
 
 const inputClass = "w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white";
 
@@ -12,6 +13,7 @@ function formatRp(n) {
 export default function AdminMerchList({ merch, onToggle, onDeleted, onCreated }) {
   const [form, setForm] = useState({ name: "", photoUrl: "", link: "", price: "" });
   const [loading, setLoading] = useState(false);
+  const [jitDeleteId, setJitDeleteId] = useState(null);
 
   function setField(k, v) { setForm((p) => ({ ...p, [k]: v })); }
 
@@ -33,12 +35,26 @@ export default function AdminMerchList({ merch, onToggle, onDeleted, onCreated }
 
   async function handleDelete(id) {
     if (!confirm("Hapus merch ini?")) return;
-    await api.delete(`/admin/merch/${id}`);
+    setJitDeleteId(id);
+  }
+
+  async function executeDelete(jitToken) {
+    await api.delete(`/admin/merch/${jitDeleteId}`, { headers: { "x-jit-token": jitToken } });
+    const id = jitDeleteId;
+    setJitDeleteId(null);
     onDeleted(id);
   }
 
   return (
     <div className="grid md:grid-cols-2 gap-8">
+      {jitDeleteId && (
+        <JITActionModal
+          title="Delete merch"
+          description="Confirm your admin password to permanently delete this merch item."
+          onClose={() => setJitDeleteId(null)}
+          onConfirm={executeDelete}
+        />
+      )}
       {/* Create Form */}
       <div>
         <h3 className="font-semibold text-gray-800 mb-4">Tambah Merch</h3>

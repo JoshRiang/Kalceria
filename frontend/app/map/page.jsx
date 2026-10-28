@@ -12,6 +12,7 @@ import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay"
 import RadialPing from "@/components/map/RadialPing";
 import { userPopup } from "@/components/map/UserPopup";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
+import { hasUserSession } from "@/lib/session";
 import {
   fetchMe,
   fetchMapUsers,
@@ -151,9 +152,7 @@ export default function MapPage() {
 
   // Login gate + fetch user profile
   useEffect(() => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) {
+    if (!hasUserSession()) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- This reads the existing browser session gate after hydration.
       setNotLoggedIn(true);
       return;
@@ -601,6 +600,7 @@ export default function MapPage() {
             alt="Mapman"
             width={2048}
             height={2066}
+            loading="eager"
             className="w-48 h-48 object-contain drop-shadow-[0_0_30px_rgba(0,255,255,0.35)]"
           />
 

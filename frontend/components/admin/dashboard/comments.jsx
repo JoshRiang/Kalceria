@@ -4,11 +4,13 @@ import { motion } from "framer-motion";
 import api from "@/lib/api";
 import { INPUT, TrashIcon, LocalBlob, formatDate } from './primitives';
 import ContentImage from "@/components/ui/ContentImage";
+import { JITActionModal } from './modals';
 
 export function CommentsPanel({ lowPowerMode }) {
   const [comments, setComments] = useState([]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState(["All"]); // Max 2
+  const [jitDeleteId, setJitDeleteId] = useState(null);
 
   const load = useCallback(async () => {
     let pinned = filters.includes("Pinned") ? "true" : "";
@@ -43,12 +45,25 @@ export function CommentsPanel({ lowPowerMode }) {
 
   async function del(id) {
     if (!confirm("Delete this comment?")) return;
-    await api.delete(`/admin/comments/${id}`);
+    setJitDeleteId(id);
+  }
+
+  async function executeDelete(jitToken) {
+    await api.delete(`/admin/comments/${jitDeleteId}`, { headers: { 'x-jit-token': jitToken } });
+    setJitDeleteId(null);
     load();
   }
 
   return (
     <div className="flex flex-col gap-6">
+      {jitDeleteId && (
+        <JITActionModal
+          title="Delete comment"
+          description="Confirm your admin password to permanently delete this comment."
+          onClose={() => setJitDeleteId(null)}
+          onConfirm={executeDelete}
+        />
+      )}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:w-72">
           <input

@@ -1,7 +1,47 @@
 import type { NextConfig } from "next";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const workspaceRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: { root: workspaceRoot },
+  async rewrites() {
+    const configuredApi = process.env.API_PROXY_URL || process.env.NEXT_PUBLIC_API_URL;
+    if (!configuredApi) return [];
+
+    try {
+      const apiUrl = new URL(configuredApi);
+      if (!['http:', 'https:'].includes(apiUrl.protocol)) return [];
+      const apiPath = apiUrl.pathname.replace(/\/+$/, '') || '/api';
+      return [{
+        source: '/api/:path*',
+        destination: `${apiUrl.origin}${apiPath}/:path*`,
+      }];
+    } catch {
+      return [];
+    }
+  },
+  async headers() {
+    return [{
+      source: '/:path*',
+      headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+        ...(process.env.NODE_ENV === 'production'
+          ? [
+              { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
+              {
+                key: 'Content-Security-Policy',
+                value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' wss:; media-src 'self' blob: https:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+              },
+            ]
+          : []),
+      ],
+    }];
+  },
 };
 
 export default nextConfig;

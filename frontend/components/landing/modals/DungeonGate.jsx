@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import ContentImage from "@/components/ui/ContentImage";
+import { hasUserSession } from "@/lib/session";
 
 export function DungeonGate() {
   const [isLocked, setIsLocked] = useState(false); // Dummy: Event has started
@@ -28,9 +29,8 @@ export function DungeonGate() {
 
   // Check login status on mount
   useEffect(() => {
-    const token = localStorage.getItem("token");
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Login state is intentionally read from browser storage after hydration.
-    setIsLoggedIn(!!token);
+    setIsLoggedIn(hasUserSession());
   }, []);
 
   // Dummy target: Past date to keep it unlocked

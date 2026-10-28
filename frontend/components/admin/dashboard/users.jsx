@@ -27,13 +27,23 @@ export function UsersPanel({ lowPowerMode }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- Starts the existing async API load; state changes after its response.
   useEffect(() => { load(); }, [load]);
 
-  async function setRole(id, role) { await api.patch(`/admin/users/${id}/role`, { role }); load(); }
+  function setRole(id, role, name) {
+    setJitAction({ id, role, label: name || `User #${id.slice(0, 8).toUpperCase()}` });
+  }
   function del(id, name) {
     setJitAction({ id, label: name || `User #${id.slice(0, 8).toUpperCase()}` });
   }
   const executeDel = async (jitToken) => {
     await api.delete(`/admin/users/${jitAction.id}`, {
       headers: jitToken ? { 'x-jit-token': jitToken } : {},
+    });
+    setJitAction(null);
+    load();
+  };
+
+  const executeRoleChange = async (jitToken) => {
+    await api.patch(`/admin/users/${jitAction.id}/role`, { role: jitAction.role }, {
+      headers: { 'x-jit-token': jitToken },
     });
     setJitAction(null);
     load();
@@ -77,9 +87,9 @@ export function UsersPanel({ lowPowerMode }) {
 
           <div className="relative z-10 flex gap-2 pt-4">
             {u.role === "USER" ? (
-              <button onClick={() => setRole(u.id, "ADMIN")} title="Promote to Admin" className="w-10 h-10 flex items-center justify-center bg-red-500 rounded-2xl text-white shadow-[0_5px_15px_rgba(239,68,68,0.2)] hover:scale-105 transition-transform font-black text-lg">↑</button>
+              <button onClick={() => setRole(u.id, "ADMIN", u.name)} title="Promote to Admin" className="w-10 h-10 flex items-center justify-center bg-red-500 rounded-2xl text-white shadow-[0_5px_15px_rgba(239,68,68,0.2)] hover:scale-105 transition-transform font-black text-lg">↑</button>
             ) : (
-              <button onClick={() => setRole(u.id, "USER")} title="Demote to User" className="w-10 h-10 flex items-center justify-center bg-black/5 rounded-2xl text-black hover:bg-black/10 transition-colors font-black text-lg">→</button>
+              <button onClick={() => setRole(u.id, "USER", u.name)} title="Demote to User" className="w-10 h-10 flex items-center justify-center bg-black/5 rounded-2xl text-black hover:bg-black/10 transition-colors font-black text-lg">→</button>
             )}
             <button onClick={() => del(u.id, u.name)} className="w-10 h-10 flex items-center justify-center bg-black/5 rounded-2xl text-black/40 hover:bg-red-500 hover:text-white transition-all"><TrashIcon /></button>
           </div>
@@ -91,10 +101,12 @@ export function UsersPanel({ lowPowerMode }) {
       {/* JIT Delete Modal */}
       {jitAction && (
         <JITActionModal
-          title="Delete User"
-          description={`You are permanently deleting user ${jitAction.label}. All their bookings, registrations, and data will be cascade-deleted. This requires JIT authorization.`}
+          title={jitAction.role ? "Change User Role" : "Delete User"}
+          description={jitAction.role
+            ? `Change ${jitAction.label} to ${jitAction.role}? Confirm your admin password to continue.`
+            : `You are permanently deleting user ${jitAction.label}. All their bookings, registrations, and data will be cascade-deleted. This requires JIT authorization.`}
           onClose={() => setJitAction(null)}
-          onConfirm={executeDel}
+          onConfirm={jitAction.role ? executeRoleChange : executeDel}
         />
       )}
     </div>

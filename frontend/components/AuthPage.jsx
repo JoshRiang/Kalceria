@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import AuthField from "@/components/auth/AuthField";
 import { PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
+import { establishSession } from "@/lib/session";
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AuthPage({ onAuthSuccess, onBack }) {
@@ -140,8 +141,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     try {
       if (mode === "login") {
         const res = await api.post("/auth/login", { email: form.email, password: form.password });
-        const token = res.data?.token || res.data?.data?.token;
-        if (token) localStorage.setItem("token", token);
+        establishSession(res.data);
         setSuccess("Authentication successful.");
         setTimeout(() => onAuthSuccess?.(res.data), 800);
       } else {

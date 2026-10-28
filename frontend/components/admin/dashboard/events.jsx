@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { useDebounce, CARD, LABEL, INPUT, BTN_PRIMARY, CLIP_BTN, ExpandableSearch } from './primitives';
+import { JITActionModal } from './modals';
 
 export function ForzaCard({ event, onEdit, onDelete }) {
   const [hover, setHover] = useState(false);
@@ -72,6 +73,7 @@ export function EventsPanel({ initialEvents = [], onRefresh }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ title: "", description: "", displayPhotoUrl: "", location: "", regStartTime: "", regEndTime: "", price: "", quota: 100, status: "OPEN", sessionOptions: [""] });
   const [loading, setLoading] = useState(false);
+  const [jitDeleteId, setJitDeleteId] = useState(null);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -124,12 +126,25 @@ export function EventsPanel({ initialEvents = [], onRefresh }) {
 
   async function handleDelete(id) {
     if (!confirm("Delete event?")) return;
-    await api.delete(`/admin/events/${id}`);
+    setJitDeleteId(id);
+  }
+
+  async function executeDelete(jitToken) {
+    await api.delete(`/admin/events/${jitDeleteId}`, { headers: { 'x-jit-token': jitToken } });
+    setJitDeleteId(null);
     onRefresh();
   }
 
   return (
     <div className="grid lg:grid-cols-3 gap-10">
+      {jitDeleteId && (
+        <JITActionModal
+          title="Delete event"
+          description="Confirm your admin password to permanently delete this event."
+          onClose={() => setJitDeleteId(null)}
+          onConfirm={executeDelete}
+        />
+      )}
       <div className="lg:col-span-1 space-y-8">
         {/* Form */}
         <div className={`${CARD} rounded p-6`} style={CLIP_BTN}>

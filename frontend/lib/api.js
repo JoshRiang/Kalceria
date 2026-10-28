@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const isProduction = process.env.NODE_ENV === 'production';
+const apiBaseUrl = isProduction
+  ? '/api'
+  : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api',
+  baseURL: apiBaseUrl,
   timeout: 20000,
   withCredentials: true,
   headers: {
@@ -9,25 +14,55 @@ const api = axios.create({
   },
 });
 
-// Attach JWT from localStorage on every request
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    // Keep admin requests on their admin session, with a fallback for older sessions.
-    const isAdminUrl = config.url && config.url.includes('/admin');
-    let token = isAdminUrl ? localStorage.getItem('adminToken') : localStorage.getItem('token');
-    if (!token && isAdminUrl) token = localStorage.getItem('token');
-    if (!token && !isAdminUrl) token = localStorage.getItem('adminToken');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+if (typeof window !== 'undefined') {
+  // Remove legacy bearer tokens; the server now authenticates with HttpOnly cookies.
+  localStorage.removeItem('token');
+  localStorage.removeItem('adminToken');
+}
+
+let csrfRequest;
+const SAFE_METHODS = new Set(['get', 'head', 'options']);
+
+async function getCsrfToken() {
+  if (typeof window === 'undefined') return null;
+  const cookieToken = document.cookie
+    .split('; ')
+    .find((cookie) => cookie.startsWith('csrfToken='))
+    ?.slice('csrfToken='.length);
+  if (cookieToken) {
+    sessionStorage.setItem('kalceriaCsrfToken', decodeURIComponent(cookieToken));
+    return decodeURIComponent(cookieToken);
+  }
+  if (!csrfRequest) {
+    csrfRequest = api.get('/auth/csrf')
+      .then((response) => response.data?.csrfToken || null)
+      .finally(() => { csrfRequest = null; });
+  }
+  return csrfRequest;
+}
+
+api.interceptors.request.use(async (config) => {
+  if (typeof window !== 'undefined' && !SAFE_METHODS.has((config.method || 'get').toLowerCase())) {
+    const token = await getCsrfToken();
+    if (token) config.headers['x-csrf-token'] = token;
   }
   return config;
 });
 
 // Global response error handler
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    return res;
+  },
   (err) => {
     const status = err.response?.status;
     const message = err.response?.data?.error || err.message || 'Network Error';
+
+    if (status === 401 && typeof window !== 'undefined' && !String(err.config?.url || '').includes('/auth/login')) {
+      localStorage.removeItem('kalceriaSessionActive');
+      localStorage.removeItem('kalceriaAdminSessionActive');
+      sessionStorage.removeItem('kalceriaCsrfToken');
+    }
 
     // Silently pass JIT and expected authentication rejections.
     const isExpectedJitRejection = status === 403 && typeof message === 'string' && message.includes('JIT');
