@@ -1,10 +1,16 @@
+import argon2 from 'argon2';
+import crypto from 'node:crypto';
+import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
-
 import { redis } from '../lib/redis.js';
-
 
 const RATE_PER_HOUR = 120000;
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
+
+let serviceGuestPlaceholderHash;
+const getServiceGuestHash = () => (
+  serviceGuestPlaceholderHash ??= argon2.hash(`svc-guest-${crypto.randomBytes(24).toString('hex')}`)
+);
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 function timeToMinutes(t) {
@@ -77,7 +83,7 @@ export async function createBooking(req, res, next) {
 
     // ── Race Condition Protection (Redis Lock) ──────────────────────────────
     const lockKey = `lock:booking:${bookingDate}:${startTime}:${endTime}`;
-    const acquired = await redis.set(lockKey, userId, 'EX', 10, 'NX'); 
+    const acquired = await redis.set(lockKey, userId, 'EX', 10, 'NX');
     if (!acquired) {
       return res.status(423).json({ error: 'This slot is currently being processed by another user. Try again in 10 seconds.' });
     }
@@ -127,12 +133,55 @@ export async function createBooking(req, res, next) {
   }
 }
 
+async function resolveServiceRequestor(req, contactPerson, whatsapp) {
+  if (req.user?.userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { id: true, name: true, email: true },
+    });
+    if (user) return user;
+  }
+
+  const cleanContact = typeof contactPerson === 'string' ? contactPerson.trim() : '';
+  const cleanWa = typeof whatsapp === 'string' ? whatsapp.trim() : '';
+  if (!cleanContact || cleanWa.length < 5) {
+    return null;
+  }
+
+  const digits = cleanWa.replace(/\D/g, '').slice(0, 20) || crypto.randomBytes(6).toString('hex');
+  const guestEmail = `guest-svc-${digits}@guest.kalceria.local`;
+
+  const existing = await prisma.user.findUnique({
+    where: { email: guestEmail },
+    select: { id: true, name: true, email: true },
+  });
+  if (existing) return existing;
+
+  return prisma.user.create({
+    data: {
+      name: cleanContact,
+      dob: new Date('2000-01-01'),
+      email: guestEmail,
+      gender: 'OTHER',
+      phone: cleanWa,
+      passwordHash: await getServiceGuestHash(),
+      domicileLat: 0,
+      domicileLng: 0,
+      isEmailVerified: false,
+    },
+    select: { id: true, name: true, email: true },
+  });
+}
+
 // ─── POST /services/request (EO / Car Shoot — ServiceBooking) ─────────────────
 export async function createServiceRequest(req, res, next) {
   try {
-    const userId = req.user.userId;
     const body = req.body || {};
     const { serviceType, serviceName, contactPerson, whatsapp, location, additionalNotes, slots } = body;
+
+    if (!req.user?.userId && (!contactPerson || !whatsapp)) {
+      return res.status(401).json({ error: 'Please sign in or provide contact details.' });
+    }
 
     if (!Array.isArray(slots) || slots.length < 1 || slots.length > 10) {
       return res.status(400).json({ error: 'Maximum 10 slots allowed per booking request.' });
@@ -160,14 +209,14 @@ export async function createServiceRequest(req, res, next) {
       }
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true, email: true },
-    });
+    const user = await resolveServiceRequestor(req, contactPerson, whatsapp);
+    if (!user) {
+      return res.status(400).json({ error: 'Please provide operator name and WhatsApp contact.' });
+    }
 
     const booking = await prisma.serviceBooking.create({
       data: {
-        requestorId: userId,
+        requestorId: user.id,
         serviceType,
         serviceName: serviceName || null,
         contactPerson: contactPerson || user.name,
@@ -194,6 +243,10 @@ export async function createServiceRequest(req, res, next) {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     }) : 'Multiple Dates';
 
+    const senderLabel = user.email.endsWith('@guest.kalceria.local')
+      ? `${contactPerson || user.name} (Guest)`
+      : `${user.name} (${user.email})`;
+
     const msg = [
       `📋 SERVICE REQUEST BARU`,
       ``,
@@ -206,11 +259,19 @@ export async function createServiceRequest(req, res, next) {
       `Tanggal Mulai: ${dateStr}`,
       `Catatan: ${additionalNotes || '—'}`,
       ``,
-      `Dari: ${user.name} (${user.email})`,
+      `Dari: ${senderLabel}`,
     ].join('\n');
 
     const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
-    res.status(201).json({ bookingId: booking.id, whatsappUrl });
+    const cancelToken = process.env.JWT_SECRET
+      ? jwt.sign(
+        { bookingId: booking.id, requestorId: user.id },
+        process.env.JWT_SECRET,
+        { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '20m' },
+      )
+      : undefined;
+
+    res.status(201).json({ bookingId: booking.id, whatsappUrl, cancelToken });
   } catch (err) {
     next(err);
   }
@@ -247,7 +308,7 @@ export async function listPublicServiceBookings(req, res, next) {
     }));
 
     const response = { bookings: formatted };
-    
+
     // Cache for 30 seconds (short for "real-time" feel but saves DB hits)
     await redis.set(cacheKey, JSON.stringify(response), 'EX', 30);
 
@@ -257,20 +318,42 @@ export async function listPublicServiceBookings(req, res, next) {
   }
 }
 
-// ─── DELETE /services/request/:id (User cancels their own) ───────────────────
+// ─── DELETE /services/request/:id (User or immediate guest cancel) ────────────
 export async function deleteOwnServiceRequest(req, res, next) {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId || null;
+    const cancelHeader = req.get('x-cancel-token') || '';
     const { id } = req.params;
+
+    if (!userId && !cancelHeader) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+
+    let validCancelBookingId = null;
+    if (cancelHeader && process.env.JWT_SECRET) {
+      try {
+        const decoded = jwt.verify(cancelHeader, process.env.JWT_SECRET, {
+          algorithms: ['HS256'],
+          audience: 'kalceria-service-cancel',
+          issuer: 'kalceria-api',
+        });
+        validCancelBookingId = decoded?.bookingId || null;
+      } catch {
+        if (!userId) return res.status(401).json({ error: 'Invalid or expired cancel token.' });
+      }
+    }
 
     const booking = await prisma.serviceBooking.findUnique({ where: { id } });
     if (!booking) return res.status(404).json({ error: 'Request not found.' });
 
-    if (booking.requestorId !== userId) {
+    const authorizedByUser = Boolean(userId && booking.requestorId === userId);
+    const authorizedByToken = validCancelBookingId === booking.id;
+    if (!authorizedByUser && !authorizedByToken) {
       return res.status(403).json({ error: 'Unauthorized to delete this request.' });
     }
 
     await prisma.serviceBooking.delete({ where: { id } });
+    await redis.del('cache:public_bookings');
     res.json({ message: 'Request deleted successfully.' });
   } catch (err) {
     next(err);

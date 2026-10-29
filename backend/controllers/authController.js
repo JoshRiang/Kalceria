@@ -13,9 +13,55 @@ import {
   setAuthCookie,
 } from '../utils/authSession.js';
 
-
-
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
+const CITY_COORDS = {
+  jakarta: [-6.2088, 106.8456],
+  bintaro: [-6.2715, 106.7135],
+  tangerang: [-6.1783, 106.6319],
+  tangsel: [-6.2886, 106.7179],
+  depok: [-6.4025, 106.7942],
+  bekasi: [-6.2383, 106.9756],
+  bogor: [-6.5971, 106.8060],
+  bandung: [-6.9175, 107.6191],
+  semarang: [-6.9667, 110.4167],
+  yogyakarta: [-7.7956, 110.3695],
+  jogja: [-7.7956, 110.3695],
+  surabaya: [-7.2575, 112.7521],
+  malang: [-7.9666, 112.6326],
+  bali: [-8.6705, 115.2126],
+  denpasar: [-8.6705, 115.2126],
+  medan: [3.5952, 98.6722],
+  makassar: [-5.1477, 119.4327],
+};
+
+function resolveDomicileCoords(domicile, domicileLat, domicileLng) {
+  if (domicileLat !== undefined || domicileLng !== undefined) {
+    return [
+      domicileLat === undefined ? 0 : Number(domicileLat),
+      domicileLng === undefined ? 0 : Number(domicileLng),
+    ];
+  }
+  if (typeof domicile === 'string' && domicile.trim()) {
+    const key = domicile.trim().toLowerCase();
+    for (const [city, coords] of Object.entries(CITY_COORDS)) {
+      if (key.includes(city)) return coords;
+    }
+  }
+  return [0, 0];
+}
+
+function sanitizeProfilePicture(value) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || value.length > 200_000) return null;
+  if (/^data:image\/(?:webp|png|jpeg|jpg);base64,[A-Za-z0-9+/=]+$/.test(value)) {
+    return value;
+  }
+  if (/^https:\/\/[^\s"'<>]+$/.test(value)) {
+    return value;
+  }
+  return null;
+}
 
 // Verified against when no account matches, so unknown and known accounts take
 // comparable time and login timing does not reveal which emails exist.
@@ -25,13 +71,17 @@ const getDummyPasswordHash = () => (dummyPasswordHash ??= argon2.hash('timing-eq
 // ─── Register ────────────────────────────────────────────────────────────────
 export async function register(req, res, next) {
   try {
-    const { name, dob, email, gender, phone, password, domicileLat, domicileLng } = req.body || {};
+    const {
+      name, dob, email, gender, phone, password,
+      domicile, domicileLat, domicileLng, profilePicture,
+    } = req.body || {};
 
     if (
       typeof name !== 'string' || !name.trim() || name.trim().length > 80
       || typeof email !== 'string' || email.length > 254
       || typeof phone !== 'string' || phone.trim().length < 5 || phone.trim().length > 32
       || typeof dob !== 'string' || !Number.isFinite(new Date(dob).getTime())
+      || (domicile !== undefined && (typeof domicile !== 'string' || domicile.length > 120))
     ) {
       return res.status(400).json({ error: 'Please provide valid registration details.' });
     }
@@ -45,8 +95,7 @@ export async function register(req, res, next) {
       return res.status(400).json({ error: 'Please provide a valid gender.' });
     }
 
-    const parsedLat = domicileLat === undefined ? 0 : Number(domicileLat);
-    const parsedLng = domicileLng === undefined ? 0 : Number(domicileLng);
+    const [parsedLat, parsedLng] = resolveDomicileCoords(domicile, domicileLat, domicileLng);
     if (
       !Number.isFinite(parsedLat) || parsedLat < -90 || parsedLat > 90
       || !Number.isFinite(parsedLng) || parsedLng < -180 || parsedLng > 180
@@ -64,32 +113,37 @@ export async function register(req, res, next) {
     if (exists) return res.status(409).json({ error: 'Email already registered.' });
 
     const passwordHash = await argon2.hash(password);
+    const safeAvatar = sanitizeProfilePicture(profilePicture);
+    const emailAuthOn = process.env.ENABLE_EMAIL_AUTH === 'true';
 
     const user = await prisma.user.create({
-      data: { 
+      data: {
         name: name.trim(),
         dob: new Date(dob),
         email: normalizedEmail,
         gender: gender ? gender.toUpperCase() : 'OTHER',
         phone: phone.trim(),
-        passwordHash, 
+        passwordHash,
+        profilePicture: safeAvatar,
         domicileLat: parsedLat,
         domicileLng: parsedLng,
       },
     });
 
-    // Generate and send OTP via Resend
-    try {
-      await sendVerificationOtp(user.email);
-    } catch {
-      await redis.del(`otp:${user.email}`);
-      console.error('[OTP] Registration email delivery failed.');
+    if (emailAuthOn) {
+      try {
+        await sendVerificationOtp(user.email);
+      } catch {
+        await redis.del(`otp:${user.email}`);
+        console.error('[OTP] Registration email delivery failed.');
+      }
     }
 
-    res.status(201).json({ 
-      message: 'Registered. Check email for OTP.', 
+    res.status(201).json({
+      message: emailAuthOn ? 'Registered. Check email for OTP.' : 'Registration successful.',
+      emailVerificationRequired: emailAuthOn,
       userId: user.id,
-      username: user.name
+      username: user.name,
     });
   } catch (err) {
     next(err);
@@ -103,23 +157,30 @@ export async function login(req, res, next) {
     if (
       typeof password !== 'string' || password.length > 128
       || (email !== undefined && (typeof email !== 'string' || email.length > 254))
-      || (username !== undefined && (typeof username !== 'string' || username.length > 80))
+      || (username !== undefined && (typeof username !== 'string' || username.length > 254))
     ) {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
-    const user = typeof email === 'string'
-      ? await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } })
-      : typeof username === 'string'
-        ? await prisma.user.findFirst({
+    const rawIdentifier = typeof email === 'string' && email.trim()
+      ? email.trim()
+      : typeof username === 'string' && username.trim()
+        ? username.trim()
+        : null;
+
+    const user = rawIdentifier
+      ? (rawIdentifier.includes('@')
+        ? await prisma.user.findUnique({ where: { email: rawIdentifier.toLowerCase() } })
+        : await prisma.user.findFirst({
           where: {
             OR: [
-              { name: { equals: username.trim(), mode: 'insensitive' } },
-              { nickname: { equals: username.trim(), mode: 'insensitive' } },
+              { name: { equals: rawIdentifier, mode: 'insensitive' } },
+              { nickname: { equals: rawIdentifier, mode: 'insensitive' } },
             ],
           },
-        })
-        : null;
+        }))
+      : null;
+
     if (!user) {
       await argon2.verify(await getDummyPasswordHash(), password).catch(() => false);
       return res.status(401).json({ error: 'Invalid credentials.' });
@@ -260,19 +321,22 @@ export async function resetPassword(req, res, next) {
   }
 }
 
-// ─── Check Username Existence ────────────────────────────────────────────────
+// ─── Check Username / Email Existence ────────────────────────────────────────
 export async function checkUsername(req, res, next) {
   try {
-    const { username } = req.params;
-    if (username.length > 80) return res.status(400).json({ exists: false });
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { name: { equals: username, mode: 'insensitive' } },
-          { nickname: { equals: username, mode: 'insensitive' } }
-        ]
-      }
-    });
+    const raw = typeof req.params.username === 'string' ? req.params.username.trim() : '';
+    if (!raw || raw.length > 254) return res.status(400).json({ exists: false });
+    const user = raw.includes('@')
+      ? await prisma.user.findUnique({ where: { email: raw.toLowerCase() }, select: { id: true } })
+      : await prisma.user.findFirst({
+        where: {
+          OR: [
+            { name: { equals: raw, mode: 'insensitive' } },
+            { nickname: { equals: raw, mode: 'insensitive' } },
+          ],
+        },
+        select: { id: true },
+      });
 
     res.json({ exists: Boolean(user) });
   } catch (err) {
@@ -323,7 +387,7 @@ export async function verifyJitPassword(req, res, next) {
     }
     // req.user diset oleh middleware requireAuth/requireAdmin
     const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
-    
+
     if (!user) return res.status(401).json({ error: 'User not found.' });
 
     const valid = await argon2.verify(user.passwordHash, password);

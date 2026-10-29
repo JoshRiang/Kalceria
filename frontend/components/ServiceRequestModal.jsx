@@ -93,7 +93,6 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isLoggedIn) { setError("You must be logged in to apply."); return; }
     if (!isFormValid) return;
 
     setLoading(true);
@@ -207,7 +206,9 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
     if (!done?.bookingId) { onClose(); return; }
     setLoading(true);
     try {
-      await api.delete(`/services/request/${done.bookingId}`);
+      await api.delete(`/services/request/${done.bookingId}`, {
+        headers: done.cancelToken ? { "x-cancel-token": done.cancelToken } : undefined,
+      });
       onClose();
     } catch {
       setError("Failed to cancel request.");

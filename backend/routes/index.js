@@ -80,7 +80,7 @@ router.get("/events", listPublicEvents);
 router.get("/events/:eventId", getPublicEvent);
 
 // ─── Event Registration (Auth required) ──────────────────────────────────────
-router.post("/events/:eventId/register", requireAuth, bookingRateLimit, registerEvent);
+router.post("/events/:eventId/register", optionalAuth, bookingRateLimit, registerEvent);
 
 // ─── Location ────────────────────────────────────────────────────────────────
 router.post("/location/update", requireAuth, updateLiveLocation);
@@ -99,9 +99,9 @@ router.delete("/mini-events/:id", requireAuth, miniEventRateLimit, deleteMiniEve
 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
 router.post("/services/book", requireAuth, bookingRateLimit, createBooking);
-router.post("/services/request", requireAuth, bookingRateLimit, createServiceRequest);
+router.post("/services/request", optionalAuth, bookingRateLimit, createServiceRequest);
 router.get("/services/bookings", listPublicServiceBookings);
-router.delete("/services/request/:id", requireAuth, deleteOwnServiceRequest);
+router.delete("/services/request/:id", optionalAuth, deleteOwnServiceRequest);
 
 // ─── Telemetry & Map ─────────────────────────────────────────────────────────
 router.post("/map/telemetry", requireAuth, saveTelemetry);

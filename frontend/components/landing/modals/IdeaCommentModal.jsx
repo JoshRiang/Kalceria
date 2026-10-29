@@ -6,16 +6,34 @@ import { establishSession, hasUserSession } from "@/lib/session";
 
 export function IdeaCommentModal({ onClose }) {
   const [step, setStep] = useState(0); // 0=Choice, 1=Identity, 2=Category, 3=Content, 4=done
-  const [mainType, setMainType] = useState(null); 
+  const [mainType, setMainType] = useState(null);
   const [identity, setIdentity] = useState("Anonymous");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [userFound, setUserFound] = useState(false);
   const [error, setError] = useState("");
-  const [ideaType, setIdeaType] = useState(null); 
+  const [ideaType, setIdeaType] = useState(null);
   const [adviceText, setAdviceText] = useState("");
   const [successText, setSuccessText] = useState("");
+
+  // Pre-fill active signed-in user's name if already authenticated
+  useEffect(() => {
+    if (!hasUserSession()) return;
+    let active = true;
+    api.get("/users/me")
+      .then((res) => {
+        if (!active) return;
+        const me = res.data?.user;
+        if (me?.nickname || me?.name) {
+          setUsername((prev) => prev || me.nickname || me.name);
+          setUserFound(true);
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   // Typewriter for success screen
   useEffect(() => {
@@ -41,20 +59,23 @@ export function IdeaCommentModal({ onClose }) {
 
   const checkUser = async () => {
     setError("");
-    if (!username) return;
+    const trimmed = username.trim();
+    if (!trimmed) return;
     setIsVerifying(true);
     try {
-      const res = await api.get(`/auth/check-username/${username}`);
-      if (res.data.exists) {
+      const res = await api.get(`/auth/check-username/${encodeURIComponent(trimmed)}`);
+      if (res.data?.exists) {
         setUserFound(true);
-        // If already logged in, we can proceed
         if (hasUserSession()) {
           setStep(2);
         }
+      } else {
+        setUserFound(false);
+        setError("Account not found. Check your username or email.");
       }
     } catch {
-      setError("User not found");
-      setUsername("");
+      setUserFound(false);
+      setError("Account not found. Check your username or email.");
     } finally {
       setIsVerifying(false);
     }
@@ -62,38 +83,49 @@ export function IdeaCommentModal({ onClose }) {
 
   const verifyPassword = async () => {
     setError("");
+    if (!password) {
+      setError("Please enter your password.");
+      return;
+    }
     setIsVerifying(true);
     try {
-      const loginRes = await api.post('/auth/login', { username, password });
+      const trimmed = username.trim();
+      const loginPayload = trimmed.includes("@")
+        ? { email: trimmed, password }
+        : { username: trimmed, password };
+      const loginRes = await api.post("/auth/login", loginPayload);
       if (loginRes.data?.userId) {
         establishSession(loginRes.data);
         setStep(2);
       }
-    } catch {
-      setError("Invalid password");
+    } catch (err) {
+      setError(err.response?.data?.error || "Invalid password.");
     } finally {
       setIsVerifying(false);
     }
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
     setError("");
+    setIsSubmitting(true);
     try {
-      await api.post('/comments', {
+      await api.post("/comments", {
         content: adviceText,
         category: ideaType,
         type: mainType.toUpperCase(), // ADVICE or IDEA
-        username: identity === 'User' ? username : identity,
-        identity
+        username: identity === "User" ? username.trim() : identity,
+        identity,
       });
       setStep(4); // Success blur
     } catch (err) {
-      setError("Failed to submit. Please try again.");
-      console.error(err);
+      setError(err.response?.data?.error || "Failed to submit. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const canSubmit = adviceText.trim().length >= 5;
+  const canSubmit = adviceText.trim().length >= 5 && !isSubmitting;
 
   // Retained locally to preserve the existing animation restart behavior on modal state changes.
   const Blobs = () => (
@@ -159,8 +191,6 @@ export function IdeaCommentModal({ onClose }) {
                   <span className="animate-pulse ml-1 font-light text-green-400">|</span>
                 </motion.div>
               </div>
-
-              {/* Buffer removed as requested */}
             </motion.div>
           </motion.div>
         )}
@@ -198,10 +228,10 @@ export function IdeaCommentModal({ onClose }) {
                 {[0, 1, 2, 3].map((i) => (
                   <div key={i} className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black font-mono transition-all duration-500 border ${
-                      step > i 
-                        ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
-                        : step === i 
-                          ? "bg-white/10 border-white/40 text-white" 
+                      step > i
+                        ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+                        : step === i
+                          ? "bg-white/10 border-white/40 text-white"
                           : "bg-white/5 backdrop-blur-md border-white/5 text-white/20"
                     }`}>
                       {i + 1}
@@ -251,7 +281,7 @@ export function IdeaCommentModal({ onClose }) {
                     onClick={() => mainType && setStep(1)}
                     disabled={!mainType}
                     className={`w-full py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${
-                      mainType 
+                      mainType
                         ? "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"
                         : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
                     }`}
@@ -279,7 +309,7 @@ export function IdeaCommentModal({ onClose }) {
                     {["Anonymous", "User"].map((opt) => (
                       <button
                         key={opt}
-                        onClick={() => setIdentity(opt)}
+                        onClick={() => { setIdentity(opt); setError(""); }}
                         className={`w-full py-3.5 px-5 rounded-xl border text-left font-sans font-bold text-sm uppercase tracking-wider transition-all duration-300 ${
                           identity === opt
                             ? "bg-white/15 border-white/30 text-white"
@@ -292,27 +322,39 @@ export function IdeaCommentModal({ onClose }) {
                   </div>
 
                   <AnimatePresence>
-                    {identity === 'User' && (
+                    {identity === "User" && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
+                        animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         className="overflow-hidden flex flex-col gap-3"
                       >
                         <div className="relative">
                           <input
                             type="text"
-                            placeholder="Enter username"
+                            placeholder="Enter username or email"
                             value={username}
                             onChange={(e) => {
                               setUsername(e.target.value);
                               setError("");
                               setUserFound(false);
                             }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                if (!userFound) checkUser();
+                                else if (hasUserSession()) setStep(2);
+                              }
+                            }}
                             className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white font-sans text-sm focus:outline-none transition-all ${
                               error ? "border-red-500/50 focus:border-red-500" : "border-white/20 focus:border-white/40"
                             }`}
                           />
+                          {userFound && !error && (
+                            <p className="text-[10px] text-emerald-400 font-sans mt-1 ml-1">
+                              {hasUserSession() ? "Account verified from active session." : "Account found. Enter password to continue."}
+                            </p>
+                          )}
                           {error && (
                             <p className="text-[10px] text-red-500 font-sans mt-1 ml-1">{error}</p>
                           )}
@@ -324,7 +366,16 @@ export function IdeaCommentModal({ onClose }) {
                               type="password"
                               placeholder="Password"
                               value={password}
-                              onChange={(e) => setPassword(e.target.value)}
+                              onChange={(e) => {
+                                setPassword(e.target.value);
+                                setError("");
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  verifyPassword();
+                                }
+                              }}
                               className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white font-sans text-sm focus:outline-none focus:border-white/40 transition-all"
                             />
                           </motion.div>
@@ -344,19 +395,19 @@ export function IdeaCommentModal({ onClose }) {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => {
-                        if (identity === 'Anonymous') setStep(2);
+                        if (identity === "Anonymous") setStep(2);
                         else if (!userFound) checkUser();
                         else if (!hasUserSession()) verifyPassword();
                         else setStep(2);
                       }}
-                      disabled={isVerifying || (identity === 'User' && !username)}
+                      disabled={isVerifying || (identity === "User" && !username.trim())}
                       className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all ${
-                        isVerifying || (identity === 'User' && !username)
+                        isVerifying || (identity === "User" && !username.trim())
                           ? "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
                           : "text-white bg-white/10 border border-white/20 hover:bg-white/15 hover:border-white/30"
                       }`}
                     >
-                      {isVerifying ? "..." : (identity === 'User' && !userFound) ? "Check" : "Continue"}
+                      {isVerifying ? "..." : (identity === "User" && !userFound) ? "Check" : "Continue"}
                     </motion.button>
                   </div>
                 </motion.div>
@@ -480,13 +531,14 @@ export function IdeaCommentModal({ onClose }) {
                       whileHover={canSubmit ? { scale: 1.02 } : {}}
                       whileTap={canSubmit ? { scale: 0.98 } : {}}
                       onClick={canSubmit ? handleSubmit : undefined}
+                      disabled={!canSubmit}
                       className={`flex-[2] py-4 rounded-xl font-sans font-black text-sm uppercase tracking-widest transition-all duration-500 ${
                         canSubmit
                           ? "text-white bg-white/15 border border-white/30 hover:bg-white/20 hover:border-white/40"
                           : "text-white/20 bg-white/5 border border-white/5 cursor-not-allowed"
                       }`}
                     >
-                      Submit
+                      {isSubmitting ? "Submitting..." : "Submit"}
                     </motion.button>
                   </div>
                 </motion.div>

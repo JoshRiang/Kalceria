@@ -1,59 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
-import { getImageProps } from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import IntroPreloader from "@/components/IntroPreloader";
-
-const LandingPage = dynamic(() => import("@/components/LandingPage"), {
-  loading: () => <div className="min-h-screen bg-[#050a14]" />,
-});
-
-const AuthPage = dynamic(() => import("@/components/AuthPage"), {
-  loading: () => <div className="min-h-screen bg-[#050a14]" />,
-});
-
-const WelcomeTransition = dynamic(() => import("@/components/WelcomeTransition"), {
-  loading: () => <div className="min-h-screen bg-[#050a14]" />,
-});
-
-function InitialIntroShell() {
-  const common = { alt: "KALCERIA", quality: 75 };
-  const {
-    props: { srcSet: desktopSrcSet, ...desktopRest },
-  } = getImageProps({
-    ...common,
-    width: 1874,
-    height: 560,
-    sizes: "280px",
-    src: "/logointofadein.webp",
-  });
-  const {
-    props: { srcSet: mobileSrcSet },
-  } = getImageProps({
-    ...common,
-    width: 1104,
-    height: 960,
-    sizes: "310px",
-    src: "/hp/logointro_hp.webp",
-  });
-
-  return (
-    <div className="min-h-screen bg-[#050a14] relative flex items-center justify-center overflow-hidden">
-      <picture className="pointer-events-none select-none opacity-[0.01]">
-        <source media="(max-width: 767px)" srcSet={mobileSrcSet} sizes="310px" />
-        <source media="(min-width: 768px)" srcSet={desktopSrcSet} sizes="280px" />
-        <img
-          {...desktopRest}
-          alt="KALCERIA"
-          fetchPriority="high"
-          decoding="sync"
-          className="w-[310px] md:w-[280px] h-auto block"
-        />
-      </picture>
-    </div>
-  );
-}
+import AuthPage from "@/components/AuthPage";
+import WelcomeTransition from "@/components/WelcomeTransition";
+import LandingPage from "@/components/LandingPage";
 
 export default function HomeClient() {
   const [phase, setPhase] = useState("loading"); // "intro" | "landing" | "auth" | "welcome"
@@ -75,11 +26,6 @@ export default function HomeClient() {
         setPhase("landing");
       } else {
         setPhase("intro");
-        // Warm LandingPage chunk quietly during idle window so transition is instant when intro finishes
-        const warmTimer = setTimeout(() => {
-          import("@/components/LandingPage").catch(() => {});
-        }, 4800);
-        return () => clearTimeout(warmTimer);
       }
     }
   }, []);
@@ -90,7 +36,7 @@ export default function HomeClient() {
   };
 
   if (phase === "loading") {
-    return <InitialIntroShell />;
+    return <div style={{ background: "#000", minHeight: "100vh" }} />;
   }
 
   return (
@@ -158,4 +104,3 @@ export default function HomeClient() {
     </div>
   );
 }
-

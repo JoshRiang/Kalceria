@@ -4,9 +4,45 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import api from "@/lib/api";
 import AuthField from "@/components/auth/AuthField";
-import { PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
+import { EMAIL_AUTH_ENABLED, PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 import { establishSession } from "@/lib/session";
+
+const PASSWORD_CHECK_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+async function fileToAvatarDataUrl(file) {
+  if (!file || typeof window === "undefined" || !(file instanceof File)) return undefined;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onerror = () => resolve(undefined);
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onerror = () => resolve(undefined);
+      img.onload = () => {
+        try {
+          const size = 160;
+          const canvas = document.createElement("canvas");
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(undefined);
+            return;
+          }
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+          resolve(canvas.toDataURL("image/webp", 0.82));
+        } catch {
+          resolve(undefined);
+        }
+      };
+      img.src = String(reader.result || "");
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AuthPage({ onAuthSuccess, onBack }) {
@@ -22,10 +58,10 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileVideo, setMobileVideo] = useState("/hp/vid_login_hp.mp4");
 
-  useEffect(() => { 
+  useEffect(() => {
     // Preserve the existing mount fade; the immediate update is intentional.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true); 
+    setMounted(true);
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -95,7 +131,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
       setSuccess("OTP baru telah dikirim ke email kamu.");
       setResendCooldown(60);
     } catch (err) {
-      setError(err.message || "Gagal mengirim ulang OTP.");
+      setError(err.response?.data?.error || err.message || "Gagal mengirim ulang OTP.");
     } finally {
       setLoading(false);
     }
@@ -110,7 +146,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
       setSuccess("Email terverifikasi! Silakan login.");
       setTimeout(() => switchMode("login"), 1200);
     } catch (err) {
-      setError(err.message || "OTP salah atau expired.");
+      setError(err.response?.data?.error || err.message || "OTP salah atau expired.");
     } finally {
       setLoading(false);
     }
@@ -122,13 +158,24 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
     if (mode === "verify") { handleVerifyOtp(); return; }
 
-    if (mode === "register") {
-      if (!form.name || !form.email || !form.password || !form.dob) {
-        setError("All fields are required.");
+    if (mode === "login") {
+      if (!form.email?.trim() || !form.password) {
+        setError("Please enter your email and password.");
         return;
       }
-      if (form.password.length < 8) {
-        setError("Password must be at least 8 characters.");
+    }
+
+    if (mode === "register") {
+      if (!form.name?.trim() || !form.email?.trim() || !form.password || !form.dob || !form.phone?.trim()) {
+        setError("Name, Date of Birth, Email, Phone Number, and Password are required.");
+        return;
+      }
+      if (form.phone.trim().length < 5) {
+        setError("Please enter a valid phone number.");
+        return;
+      }
+      if (!PASSWORD_CHECK_REGEX.test(form.password)) {
+        setError("Password must meet all 4 requirements below.");
         return;
       }
       if (isNaN(new Date(form.dob).getTime())) {
@@ -140,23 +187,52 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     setLoading(true);
     try {
       if (mode === "login") {
-        const res = await api.post("/auth/login", { email: form.email, password: form.password });
+        const res = await api.post("/auth/login", {
+          email: form.email.trim(),
+          password: form.password,
+        });
         establishSession(res.data);
         setSuccess("Authentication successful.");
         setTimeout(() => onAuthSuccess?.(res.data), 800);
       } else {
-        await api.post("/auth/register", {
-          name: form.name, dob: form.dob, email: form.email,
-          domicile: form.domicile, gender: form.gender,
-          phone: form.phone, password: form.password,
+        const registeredEmail = form.email.trim();
+        const registeredPassword = form.password;
+        const profilePicture = await fileToAvatarDataUrl(form.profilePhoto);
+
+        const regRes = await api.post("/auth/register", {
+          name: form.name.trim(),
+          dob: form.dob,
+          email: registeredEmail,
+          domicile: form.domicile?.trim() || undefined,
+          gender: form.gender || "Other",
+          phone: form.phone.trim(),
+          password: registeredPassword,
+          profilePicture,
         });
-        // Transition to OTP verification
-        setOtpEmail(form.email);
-        setOtp(["", "", "", "", "", ""]);
-        setResendCooldown(60);
-        setMode("verify");
-        setForm({});
-        setSuccess("Kode OTP telah dikirim ke email kamu.");
+
+        if (EMAIL_AUTH_ENABLED && regRes.data?.emailVerificationRequired) {
+          setOtpEmail(registeredEmail);
+          setOtp(["", "", "", "", "", ""]);
+          setResendCooldown(60);
+          setMode("verify");
+          setForm({});
+          setSuccess("Kode OTP telah dikirim ke email kamu.");
+        } else {
+          // Resend Email OTP is disabled — sign in immediately
+          try {
+            const loginRes = await api.post("/auth/login", {
+              email: registeredEmail,
+              password: registeredPassword,
+            });
+            establishSession(loginRes.data);
+            setSuccess("Account created! Signing you in...");
+            setTimeout(() => onAuthSuccess?.(loginRes.data), 800);
+          } catch {
+            setMode("login");
+            setForm({ email: registeredEmail });
+            setSuccess("Registration successful! Please sign in.");
+          }
+        }
       }
     } catch (err) {
       let msg = err.response?.data?.error || err.message || "An error occurred.";
@@ -182,12 +258,12 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
       className="fixed inset-0 z-[100] overflow-hidden"
     >
       {/* ── Video Background ── */}
-      <video 
+      <video
         key={isMobile ? mobileVideo : "/videologin_regris.mp4"}
-        autoPlay 
-        loop 
-        muted 
-        playsInline 
+        autoPlay
+        loop
+        muted
+        playsInline
         className={`absolute inset-0 w-full h-full object-cover -z-10 ${isMobile ? "filter grayscale contrast-125 brightness-75" : ""}`}
       >
         <source src={isMobile ? mobileVideo : "/videologin_regris.mp4"} type="video/mp4" />
@@ -214,7 +290,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
             style={{ maxHeight: "85vh" }}
           >
             {/* Dynamic Gold + Magenta Bleed/Border */}
-            <div 
+            <div
               className="absolute -inset-[1px] rounded-xl z-0 overflow-hidden"
               style={{ opacity: 0.7 }}
             >
@@ -237,7 +313,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
             {/* ── Logo & Back ── */}
             <div className="text-center mb-10 relative flex items-center justify-center">
               {onBack && (
-                <button 
+                <button
                   onClick={onBack}
                   className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors flex items-center gap-1.5 z-10"
                 >
@@ -254,13 +330,13 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
               <motion.div
                 className="absolute inset-y-1 bg-[#1e293b]/80 rounded-md shadow-sm"
                 initial={false}
-                animate={{ 
-                  left: mode === "login" ? "4px" : "calc(50% + 2px)", 
-                  width: "calc(50% - 6px)" 
+                animate={{
+                  left: mode === "login" ? "4px" : "calc(50% + 2px)",
+                  width: "calc(50% - 6px)"
                 }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
-              
+
               <button
                 type="button"
                 onClick={() => switchMode("login")}
@@ -306,18 +382,18 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                   ) : mode === "register" ? (
                     <>
                       <AuthField id="name" label="Full Name" type="text" placeholder={PUBLIC_SIGNUP_ENABLED ? "John Doe" : "Not Ready Yet"} val={form.name || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
-                      <AuthField id="profilePhoto" label="Profile Photo" type="file" placeholder="Not Ready Yet" val={form.profilePhoto || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
+                      <AuthField id="profilePhoto" label="Profile Photo (Optional)" type="file" placeholder={PUBLIC_SIGNUP_ENABLED ? "Choose photo" : "Not Ready Yet"} val={form.profilePhoto || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                        <AuthField id="dob" label="Date of Birth" type="date" placeholder="Not Ready Yet" val={form.dob || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
-                        <AuthField id="gender" label="Gender" type="select" placeholder="Not Ready Yet" options={["Male", "Female", "Other"]} val={form.gender || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
+                        <AuthField id="dob" label="Date of Birth" type="date" placeholder={PUBLIC_SIGNUP_ENABLED ? "YYYY-MM-DD" : "Not Ready Yet"} val={form.dob || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
+                        <AuthField id="gender" label="Gender" type="select" placeholder={PUBLIC_SIGNUP_ENABLED ? "Select gender" : "Not Ready Yet"} options={["Male", "Female", "Other"]} val={form.gender || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
                       </div>
                       <AuthField id="email" label="Email Address" type="email" placeholder={PUBLIC_SIGNUP_ENABLED ? "user@domain.com" : "Not Ready Yet"} val={form.email || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                        <AuthField id="domicile" label="City / Domicile" type="text" placeholder="Not Ready Yet" val={form.domicile || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
-                        <AuthField id="phone" label="Phone Number" type="tel" placeholder="Not Ready Yet" val={form.phone || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
+                        <AuthField id="domicile" label="City / Domicile" type="text" placeholder={PUBLIC_SIGNUP_ENABLED ? "Jakarta / Bintaro" : "Not Ready Yet"} val={form.domicile || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
+                        <AuthField id="phone" label="Phone Number" type="tel" placeholder={PUBLIC_SIGNUP_ENABLED ? "+628123456789" : "Not Ready Yet"} val={form.phone || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
                       </div>
-                      <AuthField id="password" label="Password" type="password" placeholder="Not Ready Yet" val={form.password || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
-                      
+                      <AuthField id="password" label="Password" type="password" placeholder={PUBLIC_SIGNUP_ENABLED ? "••••••••" : "Not Ready Yet"} val={form.password || ""} onChange={setField} disabled={!PUBLIC_SIGNUP_ENABLED} />
+
                       {/* Password Requirements Checklist */}
                       <div className="mb-6 grid grid-cols-2 gap-2 text-xs font-sans tracking-wide">
                         {[
@@ -342,14 +418,14 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                       <div className="flex justify-center mb-6">
                         <div className="w-20 h-20 flex items-center justify-center">
                           <Image
-                            src="/register/email_logo.png" 
-                            alt="Email Logo" 
+                            src="/register/email_logo.png"
+                            alt="Email Logo"
                             width={467}
                             height={347}
                             unoptimized
                             loading="eager"
                             decoding="auto"
-                            className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(79,70,229,0.3)]" 
+                            className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(79,70,229,0.3)]"
                           />
                         </div>
                       </div>
@@ -442,7 +518,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         </motion.div>
         </motion.div>
       </div>
-      
+
       {/* Scrollbar styles to inject globally if needed, or scoped here */}
       <style dangerouslySetInnerHTML={{__html: `
         .custom-scrollbar::-webkit-scrollbar {

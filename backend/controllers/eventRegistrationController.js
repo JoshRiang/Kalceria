@@ -1,19 +1,107 @@
+import argon2 from 'argon2';
+import crypto from 'node:crypto';
 import prisma from '../lib/prisma.js';
 import { createLog } from './auditController.js';
 import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cursorPagination.js';
 
-
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
+
+let guestPlaceholderHash;
+const getGuestPlaceholderHash = () => (
+  guestPlaceholderHash ??= argon2.hash(`guest-unusable-${crypto.randomBytes(24).toString('hex')}`)
+);
+
+async function resolveEventRegistrant(req) {
+  const { identifier, name, email, contact } = req.body || {};
+
+  // 1) "As Guest" payload (name + email + contact)
+  if (name !== undefined || contact !== undefined || (email !== undefined && identifier === undefined)) {
+    const cleanName = typeof name === 'string' ? name.trim() : '';
+    const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const cleanContact = typeof contact === 'string' ? contact.trim() : '';
+
+    if (
+      !cleanName || cleanName.length > 80
+      || !cleanEmail || cleanEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)
+      || cleanContact.length < 5 || cleanContact.length > 32
+    ) {
+      return { error: 'GUEST_INVALID' };
+    }
+
+    const existing = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      select: { id: true },
+    });
+    if (existing) {
+      return { userId: existing.id, guestContact: cleanContact, guestName: cleanName };
+    }
+
+    const created = await prisma.user.create({
+      data: {
+        name: cleanName,
+        dob: new Date('2000-01-01'),
+        email: cleanEmail,
+        gender: 'OTHER',
+        phone: cleanContact,
+        passwordHash: await getGuestPlaceholderHash(),
+        domicileLat: 0,
+        domicileLng: 0,
+        isEmailVerified: false,
+      },
+      select: { id: true },
+    });
+    return { userId: created.id, guestContact: cleanContact, guestName: cleanName };
+  }
+
+  // 2) "By Account" payload (identifier = email / username / nickname)
+  if (typeof identifier === 'string' && identifier.trim()) {
+    const raw = identifier.trim();
+    if (raw.length > 254) return { error: 'ACCOUNT_NOT_FOUND' };
+    const found = raw.includes('@')
+      ? await prisma.user.findUnique({ where: { email: raw.toLowerCase() }, select: { id: true } })
+      : await prisma.user.findFirst({
+        where: {
+          OR: [
+            { name: { equals: raw, mode: 'insensitive' } },
+            { nickname: { equals: raw, mode: 'insensitive' } },
+          ],
+        },
+        select: { id: true },
+      });
+    if (!found) return { error: 'ACCOUNT_NOT_FOUND' };
+    return { userId: found.id };
+  }
+
+  // 3) Authenticated session fallback
+  if (req.user?.userId) {
+    return { userId: req.user.userId };
+  }
+
+  return { error: 'MISSING_IDENTITY' };
+}
 
 // ─── POST /events/:eventId/register ──────────────────────────────────────────
 export async function registerEvent(req, res, next) {
   try {
-    const userId = req.user.userId;
     const { eventId } = req.params;
     const { selectedSession } = req.body || {};
+
+    const registrant = await resolveEventRegistrant(req);
+    if (registrant.error === 'MISSING_IDENTITY') {
+      return res.status(401).json({ error: 'Please provide your account email/username or guest details.' });
+    }
+    if (registrant.error === 'GUEST_INVALID') {
+      return res.status(400).json({ error: 'Please provide valid guest name, email, and WhatsApp contact.' });
+    }
+    if (registrant.error === 'ACCOUNT_NOT_FOUND') {
+      return res.status(404).json({ error: 'Account not found. Check your email/username or register As Guest.' });
+    }
+
     if (typeof selectedSession !== 'string' || !selectedSession.trim() || selectedSession.length > 120) {
       return res.status(400).json({ error: 'Please select a valid event session.' });
     }
+
+    const { userId, guestContact, guestName } = registrant;
 
     const result = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT "id" FROM "events" WHERE "id" = ${eventId} FOR UPDATE`;
@@ -44,12 +132,16 @@ export async function registerEvent(req, res, next) {
     if (result.error === 'FULL') return res.status(400).json({ error: 'Event is full.' });
     const { event, reg } = result;
 
+    const participantName = guestName || reg.user.name;
+    const participantContact = guestContact || reg.user.phone || '';
+
     const msg = [
       `📋 PENDAFTARAN EVENT BARU`,
       ``,
       `Event: ${event.title}`,
       `Sesi: ${selectedSession}`,
-      `Peserta: ${reg.user.name} (${reg.user.email})`,
+      `Peserta: ${participantName} (${reg.user.email})`,
+      ...(participantContact ? [`Kontak: ${participantContact}`] : []),
       `Biaya: Rp ${event.price.toLocaleString('id-ID')}`,
       ``,
       `Segera konfirmasi pembayaran!`,

@@ -11,11 +11,11 @@ export function requireEmailAuth(req, res, next) {
 }
 
 export function requirePublicSignup(req, res, next) {
-  if (process.env.ENABLE_PUBLIC_SIGNUP !== "true") {
+  if (process.env.ENABLE_PUBLIC_SIGNUP === "false") {
     return res.status(403).json({
       error: "Public registration is closed. Contact an administrator to request an account.",
     });
   }
 
-  return requireEmailAuth(req, res, next);
+  next();
 }

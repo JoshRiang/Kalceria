@@ -253,42 +253,42 @@ describe('Kalceria API', { skip: !enabled }, () => {
       assert.equal(r.status, 200);
       for (const k of ['passwordHash', 'email', 'phone', 'dob', 'role']) assert.equal(r.json.user[k], undefined, k);
     });
-    it('public signup is closed by default', async () => {
-      const r = await anon.post('/api/auth/register', { name: 'x', email: 'x@example.test', phone: '12345', dob: '2000-01-01', password: PASSWORD });
-      assert.equal(r.status, 403);
+    it('public signup can be closed with ENABLE_PUBLIC_SIGNUP=false', async () => {
+      process.env.ENABLE_PUBLIC_SIGNUP = 'false';
+      try {
+        const r = await anon.post('/api/auth/register', { name: 'x', email: 'x@example.test', phone: '12345', dob: '2000-01-01', password: PASSWORD });
+        assert.equal(r.status, 403);
+      } finally {
+        delete process.env.ENABLE_PUBLIC_SIGNUP;
+      }
     });
-    it('email flows are disabled by default', async () => {
+    it('email flows are disabled by default while public signup works without OTP', async () => {
       for (const p of ['/api/auth/otp/request', '/api/auth/otp/verify', '/api/auth/password/reset-request', '/api/auth/password/reset']) {
         assert.equal((await anon.post(p, { email: 'a@example.test' })).status, 503, p);
       }
     });
-    it('registration validates input once signup is enabled', async () => {
+    it('registration validates input without requiring ENABLE_EMAIL_AUTH', async () => {
       // The signup limiter (10/h per IP) also counts the "closed" probe above.
       const stale = await redis.keys('rate:signup-ip:*');
       if (stale.length) await redis.del(...stale);
-      process.env.ENABLE_PUBLIC_SIGNUP = 'true'; process.env.ENABLE_EMAIL_AUTH = 'true';
-      try {
-        const base = { name: 'Reg', email: `reg-${crypto.randomBytes(3).toString('hex')}@example.test`, phone: '+62812345', dob: '2000-01-01', password: PASSWORD };
-        const bad = [
-          { ...base, email: 'not-an-email' },
-          { ...base, password: 'weak' },
-          { ...base, password: 'alllowercase1!' },
-          { ...base, domicileLat: 999 },
-          { ...base, domicileLng: -999 },
-          { ...base, gender: 'ROBOT' },
-          { ...base, name: 'n'.repeat(81) },
-          { ...base, dob: 'garbage' },
-          { ...base, phone: '1' },
-        ];
-        for (const b of bad) {
-          const r = await new Client().post('/api/auth/register', b);
-          assert.equal(r.status, 400, JSON.stringify(b).slice(0, 80));
-        }
-        const dupe = await new Client().post('/api/auth/register', { ...base, email: userA.email });
-        assert.equal(dupe.status, 409);
-      } finally {
-        delete process.env.ENABLE_PUBLIC_SIGNUP; delete process.env.ENABLE_EMAIL_AUTH;
+      const base = { name: 'Reg', email: `reg-${crypto.randomBytes(3).toString('hex')}@example.test`, phone: '+62812345', dob: '2000-01-01', password: PASSWORD };
+      const bad = [
+        { ...base, email: 'not-an-email' },
+        { ...base, password: 'weak' },
+        { ...base, password: 'alllowercase1!' },
+        { ...base, domicileLat: 999 },
+        { ...base, domicileLng: -999 },
+        { ...base, gender: 'ROBOT' },
+        { ...base, name: 'n'.repeat(81) },
+        { ...base, dob: 'garbage' },
+        { ...base, phone: '1' },
+      ];
+      for (const b of bad) {
+        const r = await new Client().post('/api/auth/register', b);
+        assert.equal(r.status, 400, JSON.stringify(b).slice(0, 80));
       }
+      const dupe = await new Client().post('/api/auth/register', { ...base, email: userA.email });
+      assert.equal(dupe.status, 409);
     });
     it('check-username handles injection-style input safely', async () => {
       for (const u of ["' OR '1'='1", '%00', '<script>alert(1)</script>', 'a'.repeat(200)]) {

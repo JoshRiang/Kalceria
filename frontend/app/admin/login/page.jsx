@@ -60,7 +60,7 @@ export default function AdminLoginPage() {
       setLoading(false);
       setError(err.message === "Access denied. Admin only." || err.message.includes("403")
         ? "Access denied. Admin only."
-        : err.message || "Authentication failed.");
+        : err.response?.data?.error || err.message || "Authentication failed.");
     }
   }
 
