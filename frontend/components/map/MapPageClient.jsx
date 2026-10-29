@@ -12,8 +12,8 @@ import { MapAuthGate } from "@/components/map/MapAuthGate";
 import { INITIAL_MOCK_MINI_EVENTS } from "@/components/map/mockMiniEvents";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
+import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
 const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel").then((m) => m.KalceriansPanel), { ssr: false });
-const StartupSequenceOverlay = dynamic(() => import("@/components/map/StartupSequenceOverlay").then((m) => m.StartupSequenceOverlay), { ssr: false });
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
 import { hasUserSession } from "@/lib/session";
@@ -33,13 +33,7 @@ import {
 
 const SnapMap = dynamic(() => import("@/components/SnapMap"), {
   ssr: false,
-  loading: () => (
-    <main className="min-h-screen bg-[#050a14] text-white flex items-center justify-center">
-      <div className="font-sans text-sm uppercase tracking-[0.25em] text-[#ffd60a]">
-        Loading Snap Map
-      </div>
-    </main>
-  ),
+  loading: () => <div className="fixed inset-0 bg-[#050a14] z-[10]" />,
 });
 
 // Helpers
@@ -792,27 +786,29 @@ export default function MapPage() {
         </motion.svg>
       </button>
 
-      <motion.div
-        animate={{ y: [0, -4, 0] }}
-        transition={{
-          duration: 5,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="fixed bottom-[-20px] left-1/2 -translate-x-1/2 z-[1000] pointer-events-none select-none flex flex-col items-center"
-      >
-        <Image
-          src="/kalcermap_bottom.png"
-          alt="Kalceria Maps"
-          width={2048}
-          height={2048}
-          sizes="256px"
-          quality={90}
-          loading="lazy"
-          className="h-[256px] w-auto object-contain opacity-95 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
-          draggable={false}
-        />
-      </motion.div>
+      {!showStartup && (
+        <motion.div
+          animate={{ y: [0, -4, 0] }}
+          transition={{
+            duration: 5,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="fixed bottom-[-20px] left-1/2 -translate-x-1/2 z-[1000] pointer-events-none select-none flex flex-col items-center"
+        >
+          <Image
+            src="/kalcermap_bottom.png"
+            alt="Kalceria Maps"
+            width={2048}
+            height={2048}
+            sizes="256px"
+            quality={90}
+            loading="lazy"
+            className="h-[256px] w-auto object-contain opacity-95 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+            draggable={false}
+          />
+        </motion.div>
+      )}
 
       {/* Randomized Pirate Interception Overlay */}
       {showPirate && (

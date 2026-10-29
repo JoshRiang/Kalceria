@@ -73,6 +73,7 @@ export default function SnapMap({
         attributionControl: false,
         center: DEFAULT_CENTER,
         zoom: 13,
+        closePopupOnClick: false,
       });
 
       const tileLayer = L.tileLayer(
@@ -163,6 +164,8 @@ export default function SnapMap({
         }).bindPopup(userPopup(user), {
           className: "tactical-popup",
           offset: [0, -60],
+          autoClose: false,
+          closeOnClick: false,
         });
         marker._lastPopupContent = userPopup(user);
         markerRefs.current[markerId] = marker;
@@ -199,6 +202,8 @@ export default function SnapMap({
         }).bindPopup(eventPopup(item), {
           className: "tactical-popup",
           offset: [0, -34],
+          autoClose: false,
+          closeOnClick: false,
         });
         marker._lastPopupContent = eventPopup(item);
         markerRefs.current[markerId] = marker;
@@ -218,6 +223,8 @@ export default function SnapMap({
         }).bindPopup(hqPopup(hqPoint), {
           className: "tactical-popup hq-tactical-popup",
           offset: [0, -30],
+          autoClose: false,
+          closeOnClick: false,
         });
         markerRefs.current["hq"] = hqMarker;
         layer.addLayer(hqMarker);

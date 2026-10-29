@@ -35,7 +35,7 @@ function extractMediaUrl(item) {
     case "eat":
       return "/media/gifs/the-office.gif";
     case "discuss":
-      return "/media/gifs/the-mentalist.gif";
+      return "/media/gifs/event_disc_1.gif";
     default:
       return "/media/gifs/the-office.gif";
   }
