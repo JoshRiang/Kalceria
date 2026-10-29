@@ -18,71 +18,143 @@ function cleanDesc(value) {
     .trim();
 }
 
-function extractMediaUrl(item) {
-  if (item.mediaUrl) return item.mediaUrl;
-  if (item.videoUrl) return item.videoUrl;
-  if (item.gifUrl) return item.gifUrl;
+function extractMediaList(item) {
+  if (Array.isArray(item.mediaUrls) && item.mediaUrls.length > 0) {
+    return item.mediaUrls.filter(Boolean);
+  }
+  if (item.mediaUrl) {
+    if (item.mediaUrl.includes(",")) {
+      return item.mediaUrl.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    return [item.mediaUrl];
+  }
+  if (item.videoUrl) return [item.videoUrl];
+  if (item.gifUrl) return [item.gifUrl];
   const match = String(item.description || "").match(/\[MEDIA:([^\]]+)\]/i);
-  if (match) return match[1];
+  if (match) {
+    const raw = match[1];
+    if (raw.includes(",")) {
+      return raw.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    return [raw];
+  }
 
-  // Default GIF based on category (Mentalist, Toothless, Office prioritized)
+  // Fallback GIFs based on category
   const categoryId = getEventCategory(item);
   switch (categoryId) {
     case "cafe":
-      return "/media/gifs/the-mentalist.gif";
+      return ["/media/gifs/event_cafe_1.gif", "/media/gifs/event_cafe_2.gif"];
     case "special":
-      return "/media/gifs/dragon-toothless.gif";
+      return ["/media/gifs/event_spec_1.gif", "/media/gifs/event_spec_2.gif", "/media/gifs/event_spec_3.gif"];
     case "eat":
-      return "/media/gifs/the-office.gif";
+      return ["/media/gifs/event_eat_1.gif", "/media/gifs/event_eat_2.gif"];
     case "discuss":
-      return "/media/gifs/event_disc_1.gif";
+      return ["/media/gifs/event_disc_1.gif", "/media/gifs/event_disc_2.gif"];
     default:
-      return "/media/gifs/the-office.gif";
+      return ["/media/gifs/the-office.gif"];
   }
 }
 
-function renderMediaFeed(mediaUrl) {
-  const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(mediaUrl) || /^data:video/i.test(mediaUrl);
+function renderSingleMedia(url) {
+  const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
 
   if (isVideo) {
     return `
       <video 
-        src="${esc(mediaUrl)}" 
+        src="${esc(url)}" 
         autoplay 
         loop 
         muted 
         playsinline 
-        style="width: 100%; height: 100%; object-fit: cover; opacity: 0.85; display: block;"
+        style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95; display: block;"
       ></video>
     `;
   }
 
   return `
     <img 
-      src="${esc(mediaUrl)}" 
-      alt="Live Feed"
-      loading="lazy"
-      style="width: 100%; height: 100%; object-fit: cover; opacity: 0.85; display: block;"
+      src="${esc(url)}" 
+      alt="Event Live Feed" 
+      loading="lazy" 
+      style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95; display: block;" 
     />
   `;
 }
 
+function renderMediaCarousel(mediaList) {
+  const list = Array.isArray(mediaList)
+    ? mediaList.filter(Boolean)
+    : (mediaList ? [mediaList] : []);
+
+  if (list.length === 0) {
+    return renderSingleMedia("/media/gifs/event_cafe_1.gif");
+  }
+  if (list.length === 1) {
+    return renderSingleMedia(list[0]);
+  }
+
+  const N = list.length;
+  const period = N * 4;
+  const activePercent = Math.max(1, Math.floor(90 / N));
+  const fullPercent = Math.max(2, Math.floor(100 / N));
+  const animName = `eventCarouselFade${N}`;
+
+  const slidesHtml = list
+    .map((url, i) => {
+      const delay = i * 4;
+      return `
+        <div style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; animation: ${animName} ${period}s infinite; animation-delay: ${delay}s;">
+          ${renderSingleMedia(url)}
+        </div>
+      `;
+    })
+    .join("");
+
+  const indicatorsHtml = list
+    .map((_, i) => {
+      const delay = i * 4;
+      return `
+        <div style="flex: 1; height: 2px; border-radius: 2px; background: rgba(255, 255, 255, 0.25); overflow: hidden;">
+          <div style="height: 100%; background: #ffffff; width: 0%; animation: eventIndicatorRoll${N} ${period}s infinite; animation-delay: ${delay}s;"></div>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+    <style>
+      @keyframes ${animName} {
+        0% { opacity: 0; }
+        1.5% { opacity: 1; }
+        ${activePercent}% { opacity: 1; }
+        ${fullPercent}% { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      @keyframes eventIndicatorRoll${N} {
+        0% { width: 0%; opacity: 0.4; }
+        1.5% { opacity: 1; }
+        ${activePercent}% { width: 100%; opacity: 1; }
+        ${fullPercent}% { width: 100%; opacity: 0.3; }
+        100% { width: 0%; opacity: 0.3; }
+      }
+    </style>
+    <div class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; background: #000;">
+      ${slidesHtml}
+      <div style="position: absolute; top: 8px; left: 10px; right: 10px; z-index: 10; display: flex; gap: 4px; pointer-events: none;">
+        ${indicatorsHtml}
+      </div>
+    </div>
+  `;
+}
+
 const EVENT_COLOR_PALETTES = [
-  // Deep Blue & Neon Pink (Like Create Event Form)
   { blob1: "rgba(37, 99, 235, 0.40)", blob2: "rgba(236, 72, 153, 0.32)" },
-  // Deep Blue & Radiant Gold
   { blob1: "rgba(37, 99, 235, 0.38)", blob2: "rgba(255, 214, 10, 0.30)" },
-  // Emerald Green & Cyan
   { blob1: "rgba(16, 185, 129, 0.38)", blob2: "rgba(6, 182, 212, 0.32)" },
-  // Violet Purple & Electric Pink
   { blob1: "rgba(147, 51, 234, 0.40)", blob2: "rgba(244, 63, 94, 0.32)" },
-  // Amber Gold & Crimson Red
   { blob1: "rgba(245, 158, 11, 0.40)", blob2: "rgba(239, 68, 68, 0.30)" },
-  // Cyber Turquoise & Royal Blue
   { blob1: "rgba(20, 184, 166, 0.40)", blob2: "rgba(59, 130, 246, 0.32)" },
-  // Sunset Orange & Indigo
   { blob1: "rgba(249, 115, 22, 0.38)", blob2: "rgba(99, 102, 241, 0.32)" },
-  // Hot Magenta & Electric Violet
   { blob1: "rgba(217, 70, 239, 0.40)", blob2: "rgba(124, 58, 237, 0.32)" },
 ];
 
@@ -100,7 +172,7 @@ function getEventPalette(item) {
 export function eventPopup(item) {
   const displayDesc = cleanDesc(item.description);
   const creatorName = item.creator?.nickname || item.creator?.name || "Kalcerian";
-  const mediaUrl = extractMediaUrl(item);
+  const mediaList = extractMediaList(item);
   const palette = getEventPalette(item);
 
   return `
@@ -117,12 +189,9 @@ export function eventPopup(item) {
         <small style="color: rgba(255, 255, 255, 0.7); font-size: 11px; margin-top: 2px; font-weight: 400;">${esc(creatorName)}</small>
       </div>
 
-      <!-- Live Feed GIF / Video Banner behaving exactly like HQ GIF -->
+      <!-- Dynamic Rolling Media Carousel (Zero LIVE FEED text) -->
       <div class="popup-video" style="position: relative; z-index: 2; width: 100%; height: 120px; overflow: hidden; border-top: 1px solid rgba(255, 255, 255, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: #000;">
-        ${renderMediaFeed(mediaUrl)}
-        <div style="position: absolute; top: 10px; left: 10px; z-index: 5;">
-          <span style="font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 11px; color: #ffffff; text-transform: uppercase; letter-spacing: -0.025em; line-height: 1; text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.9);">LIVE FEED</span>
-        </div>
+        ${renderMediaCarousel(mediaList)}
       </div>
 
       <!-- Clean description with pure white font -->

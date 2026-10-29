@@ -96,12 +96,17 @@ export const MapModals = memo(function MapModals({
     try {
       const res = await uploadBlobMedia(file);
       if (res.url) {
-        setEventForm((f) => ({ ...f, mediaUrl: res.url }));
+        setEventForm((f) => {
+          const current = (f.mediaUrl || "").trim();
+          const next = current ? `${current}, ${res.url}` : res.url;
+          return { ...f, mediaUrl: next };
+        });
       }
     } catch (err) {
       setUploadError(err.message || "Failed to upload media");
     } finally {
       setIsUploadingMedia(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
   return (
@@ -325,7 +330,7 @@ export const MapModals = memo(function MapModals({
                       <polygon points="23 7 16 12 23 17 23 7" />
                       <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                     </svg>
-                    Live Feed Media (Video / GIF)
+                    Live Media Feed {eventForm.mediaUrl && eventForm.mediaUrl.includes(",") ? `(${eventForm.mediaUrl.split(",").filter((s) => s.trim()).length} clips)` : ""}
                   </label>
                   {eventForm.mediaUrl && (
                     <button
@@ -378,33 +383,36 @@ export const MapModals = memo(function MapModals({
                   <p className="text-[11px] text-red-400 mt-0.5">{uploadError}</p>
                 )}
 
-                {/* Live Feed Preview inside Modal */}
-                {eventForm.mediaUrl && (
-                  <div className="relative w-full h-[90px] rounded-lg overflow-hidden bg-black border border-white/10 mt-1">
-                    {/\.(mp4|webm|ogg)($|\?)/i.test(eventForm.mediaUrl) || /^data:video/i.test(eventForm.mediaUrl) ? (
-                      <video
-                        src={eventForm.mediaUrl}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="w-full h-full object-cover opacity-85"
-                      />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={eventForm.mediaUrl}
-                        alt="Preview"
-                        className="w-full h-full object-cover opacity-85"
-                      />
-                    )}
-                    <div className="absolute top-2 left-2 z-10">
-                      <span className="font-sans font-bold text-[10px] text-white uppercase tracking-tight leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
-                        LIVE FEED PREVIEW
-                      </span>
+                {/* Preview inside Modal */}
+                {eventForm.mediaUrl && (() => {
+                  const firstUrl = eventForm.mediaUrl.split(",")[0].trim();
+                  return (
+                    <div className="relative w-full h-[90px] rounded-lg overflow-hidden bg-black border border-white/10 mt-1">
+                      {/\.(mp4|webm|ogg)($|\?)/i.test(firstUrl) || /^data:video/i.test(firstUrl) ? (
+                        <video
+                          src={firstUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="w-full h-full object-cover opacity-85"
+                        />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={firstUrl}
+                          alt="Preview"
+                          className="w-full h-full object-cover opacity-85"
+                        />
+                      )}
+                      <div className="absolute top-2 left-2 z-10">
+                        <span className="font-sans font-bold text-[10px] text-white uppercase tracking-tight leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                          PREVIEW
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               <div className="flex flex-col gap-2 mt-2">

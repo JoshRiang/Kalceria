@@ -43,13 +43,19 @@ const avatarUrl = (user) =>
 
 const hqPoint = {
   id: "hq_bintaro",
-  title: "KALCERIA HEADQUARTER",
+  title: "Kalceria Headquarter",
   role: "Meet Center",
   description: "Place where people meet",
   lat: -6.2715,
   lng: 106.7135,
-  gifUrl: "/media/gifs/hq-live.gif",
-  videoUrl: "/media/gifs/hq-live.gif",
+  gifUrl: "/media/gifs/hq_feed_1.gif",
+  videoUrl: "/media/gifs/hq_feed_1.gif",
+  mediaUrls: [
+    "/media/gifs/hq_feed_1.gif",
+    "/media/gifs/hq_feed_2.gif",
+    "/media/gifs/hq_feed_3.gif",
+    "/media/gifs/hq_feed_4.gif",
+  ],
 };
 
 // ☁️ Static Pixel Cloud Definitions for consistent transition
@@ -92,7 +98,17 @@ export default function MapPage() {
   const [isRecentering, setIsRecentering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showPirate, setShowPirate] = useState(false);
-  const [showStartup, setShowStartup] = useState(false);
+  const [showStartup, setShowStartup] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        if (!hasUserSession()) return false;
+        return sessionStorage.getItem("mapIntroSeen") !== "true";
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
   const [startupProgress, setStartupProgress] = useState(0);
   const [particles, setParticles] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -624,12 +640,12 @@ export default function MapPage() {
       {/* SnapMap Component (Semi-Transparent for Glass Effect) */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: showStartup ? 0 : 1 }}
+        animate={{ opacity: showStartup || !hasMounted ? 0 : 1 }}
         transition={{ duration: 1.2, ease: "easeOut" }}
         className="fixed inset-0 z-[10] w-full h-full"
         style={{
-          visibility: showStartup ? "hidden" : "visible",
-          pointerEvents: showStartup ? "none" : "auto",
+          visibility: showStartup || !hasMounted ? "hidden" : "visible",
+          pointerEvents: showStartup || !hasMounted ? "none" : "auto",
         }}
       >
         <SnapMap
@@ -786,7 +802,7 @@ export default function MapPage() {
         </motion.svg>
       </button>
 
-      {!showStartup && (
+      {!showStartup && hasMounted && (
         <motion.div
           animate={{ y: [0, -4, 0] }}
           transition={{
