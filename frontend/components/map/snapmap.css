@@ -831,17 +831,74 @@
 }
 
 /* Legacy popup classes kept for HQ & Event popups */
+@keyframes modalBlobDriftA {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(14px, -18px, 0) scale(1.15);
+  }
+  66% {
+    transform: translate3d(-10px, 12px, 0) scale(0.92);
+  }
+}
+
+@keyframes modalBlobDriftB {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+  33% {
+    transform: translate3d(-16px, 14px, 0) scale(0.9);
+  }
+  66% {
+    transform: translate3d(12px, -12px, 0) scale(1.18);
+  }
+}
+
 .tactical-card {
   position: relative;
   width: 280px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  background: rgba(10, 14, 39, 0.85);
-  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 18px !important;
+  background: rgba(10, 15, 30, 0.45) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   color: #fff;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+}
+
+.card-dynamic-blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  border-radius: 18px;
+}
+
+.card-dynamic-blob-1 {
+  position: absolute;
+  top: -20%;
+  left: -20%;
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
+  filter: blur(44px);
+  will-change: transform;
+  animation: modalBlobDriftA 8s ease-in-out infinite;
+}
+
+.card-dynamic-blob-2 {
+  position: absolute;
+  bottom: -25%;
+  right: -20%;
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
+  filter: blur(44px);
+  will-change: transform;
+  animation: modalBlobDriftB 10s ease-in-out infinite 1.5s;
 }
 
 .scanlines {
