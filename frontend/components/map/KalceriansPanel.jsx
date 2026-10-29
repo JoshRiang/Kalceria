@@ -277,16 +277,6 @@ export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, eve
                     </div>
                   </div>
                 ))}
-                <div className="py-10 text-center flex flex-col items-center gap-3">
-                  <div className={`w-7 h-7 border-2 rounded-full animate-spin ${
-                    isMapDark ? "border-t-gray-300 border-white/5" : "border-t-slate-800 border-slate-200"
-                  }`} />
-                  <p className={`font-mono text-[9px] tracking-widest uppercase ${
-                    isMapDark ? "text-gray-400" : "text-slate-500"
-                  }`}>
-                    Scanning signals
-                  </p>
-                </div>
               </div>
             ) : sidebarKalcerians.length > 0 ? (
               sidebarKalcerians.map((user) => (

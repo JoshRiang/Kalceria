@@ -62,7 +62,6 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
           {/* Find The Others Button */}
           <motion.button
             onClick={() => {
-              sessionStorage.removeItem("mapIntroSeen");
               sessionStorage.setItem("landingScrollTarget", "section-map");
               sessionStorage.setItem("landingScrollY", window.scrollY);
               window.location.href = "/map";

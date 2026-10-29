@@ -103,7 +103,7 @@ export default function MapPage() {
   const [particles, setParticles] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const hasMounted = useHasMounted();
-  const [notLoggedIn, setNotLoggedIn] = useState(true);
+  const [notLoggedIn, setNotLoggedIn] = useState(() => (typeof window !== "undefined" ? !hasUserSession() : false));
   const [hoveredKalcerian, setHoveredKalcerian] = useState(null);
   const hasInitialCenteredRef = useRef(false);
   const [isStatusBusy, setIsStatusBusy] = useState(false);
@@ -126,8 +126,6 @@ export default function MapPage() {
     sessionStorage.setItem("landingScrollTarget", "section-map");
     // Mark landing intro as played so it bypasses the preloader and lands directly on the anchor
     sessionStorage.setItem("introPlayed", "true");
-    // Reset mapIntroSeen to 0 so the intro plays next time
-    sessionStorage.setItem("mapIntroSeen", "0");
     
     scheduleTimeout(() => {
       window.location.href = "/?anchor=section-map";

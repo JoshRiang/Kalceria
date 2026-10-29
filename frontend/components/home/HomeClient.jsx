@@ -9,7 +9,17 @@ const AuthPage = dynamic(() => import("@/components/AuthPage"), { ssr: false });
 const WelcomeTransition = dynamic(() => import("@/components/WelcomeTransition"), { ssr: false });
 
 export default function HomeClient() {
-  const [phase, setPhase] = useState("intro"); // "intro" | "landing" | "auth" | "welcome"
+  const [phase, setPhase] = useState(() => {
+    if (typeof window === "undefined") return "landing";
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("auth") === "true" || sessionStorage.getItem("triggerAuth") === "true") {
+      return "auth";
+    }
+    if (sessionStorage.getItem("introPlayed") === "true") {
+      return "landing";
+    }
+    return "intro";
+  });
   const [username, setUsername] = useState("User");
 
   useEffect(() => {
@@ -23,7 +33,7 @@ export default function HomeClient() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- The route's first phase is intentionally selected from URL/session state after hydration.
       setPhase("auth");
     } else {
-      const hasPlayed = sessionStorage.getItem("introPlayed");
+      const hasPlayed = sessionStorage.getItem("introPlayed") === "true";
       if (hasPlayed) {
         setPhase("landing");
       }
@@ -73,6 +83,8 @@ export default function HomeClient() {
           >
             <AuthPage
               onAuthSuccess={(data) => {
+                sessionStorage.setItem("introPlayed", "true");
+                sessionStorage.setItem("landingSeen", "true");
                 setUsername(data?.username || data?.user?.username || "Commander");
                 setPhase("welcome");
               }}
@@ -92,7 +104,11 @@ export default function HomeClient() {
           >
             <WelcomeTransition
               username={username}
-              onComplete={() => setPhase("landing")}
+              onComplete={() => {
+                sessionStorage.setItem("introPlayed", "true");
+                sessionStorage.setItem("landingSeen", "true");
+                setPhase("landing");
+              }}
             />
           </motion.div>
         )}

@@ -75,17 +75,17 @@ export function eventPopup(item) {
   const mediaUrl = extractMediaUrl(item);
 
   return `
-    <div class="tactical-card event-card" style="--border-color: #ff006e">
+    <div class="tactical-card event-card" style="border: 1px solid rgba(255, 255, 255, 0.15) !important; border-left: 1px solid rgba(255, 255, 255, 0.15) !important; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;">
       <div class="scanlines"></div>
-      <div class="popup-profile" style="align-items: center; gap: 12px;">
-        <!-- Clean category icon without dummy AB or + characters -->
-        <div class="event-badge" style="--border-color: #ff006e; width: 34px; height: 34px; min-width: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 6px; color: #ff006e; background: rgba(255, 0, 110, 0.08);">
+      <div class="popup-profile" style="align-items: center; gap: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+        <!-- Icon without circle encapsulation -->
+        <div style="width: 26px; height: 26px; min-width: 26px; display: flex; align-items: center; justify-content: center; color: #ffffff;">
           ${cat.svg}
         </div>
-        <!-- Event title with declarer name sitting directly underneath as subtitle -->
+        <!-- Pure white event title with declarer subtitle -->
         <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 0;">
-          <strong style="color: #ff006e; font-size: 14px; font-weight: 700; line-height: 1.25; word-break: break-word;">${esc(item.title)}</strong>
-          <small style="color: rgba(255, 255, 255, 0.75); font-size: 11px; margin-top: 2px; font-weight: 400;">${esc(creatorName)}</small>
+          <strong style="color: #ffffff; font-size: 14px; font-weight: 700; line-height: 1.25; word-break: break-word;">${esc(item.title)}</strong>
+          <small style="color: rgba(255, 255, 255, 0.7); font-size: 11px; margin-top: 2px; font-weight: 400;">${esc(creatorName)}</small>
         </div>
       </div>
 
@@ -98,10 +98,10 @@ export function eventPopup(item) {
         <div class="scanlines" style="opacity: 0.2;"></div>
       </div>
 
-      <!-- Clean description with dot removed as requested in picture 3 -->
-      <div class="popup-status active" style="--border-color: #ff006e; padding-left: 14px;"><p style="font-style: italic;">${esc(displayDesc)}</p></div>
-      <div class="popup-action-wrap"><div class="popup-action disabled">EXPIRES ${esc(new Date(item.expiresAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }))}</div></div>
+      <!-- Clean description with pure white font -->
+      <div class="popup-status active" style="padding-left: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08);"><p style="font-style: italic; color: rgba(255, 255, 255, 0.9);">${esc(displayDesc)}</p></div>
+      <div class="popup-action-wrap" style="border-top: 1px solid rgba(255, 255, 255, 0.08);"><div class="popup-action disabled" style="color: rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.06);">EXPIRES ${esc(new Date(item.expiresAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }))}</div></div>
     </div>
-    <div class="popup-tail" style="--border-color: #ff006e"></div>
+    <div class="popup-tail" style="background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);"></div>
   `;
 }
