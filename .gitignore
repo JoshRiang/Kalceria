@@ -51,3 +51,5 @@ lighthouse*
 summary.md
 **/*[Ss][Uu][Mm][Mm][Aa][Rr][Yy]*.md
 scratch/
+
+.vercel/
