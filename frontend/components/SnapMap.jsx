@@ -185,6 +185,8 @@ export default function SnapMap({
           marker.setLatLng([item.lat, item.lng]);
         }
 
+        marker.setIcon(createEventIcon(L, item, isMapDark));
+
         const newPopupContent = eventPopup(item);
         if (marker._lastPopupContent !== newPopupContent) {
           marker.getPopup().setContent(newPopupContent);
@@ -192,7 +194,7 @@ export default function SnapMap({
         }
       } else {
         const marker = L.marker([item.lat, item.lng], {
-          icon: createEventIcon(L, item),
+          icon: createEventIcon(L, item, isMapDark),
           userData: { color: "#ff006e" },
         }).bindPopup(eventPopup(item), {
           className: "tactical-popup",
@@ -207,9 +209,11 @@ export default function SnapMap({
     // 3. Reconcile HQ
     if (hqPoint) {
       currentEventIds.add("hq");
-      if (!markerRefs.current["hq"]) {
+      if (markerRefs.current["hq"]) {
+        markerRefs.current["hq"].setIcon(createHqIcon(L, isMapDark));
+      } else {
         const hqMarker = L.marker([hqPoint.lat, hqPoint.lng], {
-          icon: createHqIcon(L),
+          icon: createHqIcon(L, isMapDark),
           userData: { color: "#ffd60a", nickname: "HQ", avatarSeed: "hq" },
         }).bindPopup(hqPopup(hqPoint), {
           className: "tactical-popup hq-tactical-popup",
@@ -229,7 +233,7 @@ export default function SnapMap({
     });
 
     layer.addTo(mapRef.current);
-  }, [users, events, hqPoint, isReady]);
+  }, [users, events, hqPoint, isReady, isMapDark]);
 
   return (
     <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>

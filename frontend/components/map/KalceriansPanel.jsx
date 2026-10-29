@@ -357,14 +357,19 @@ export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, eve
                         >
                           {user.name}
                         </b>
-                        <span className={`mt-1 px-2 py-1 rounded-md border text-[10px] font-bold tracking-wider leading-none shadow-[0_0_10px_rgba(255,255,255,0.02)] ${
-                          isMapDark
-                            ? "border-white/10 bg-gray-600/5 text-gray-400"
-                            : "border-slate-200 bg-slate-100 text-slate-600"
-                        }`}>
-                          {mapUsersData.find((u) => u.id === user.id)?.district ||
-                            (user.isOnline ? "Scanning..." : "Unknown")}
-                        </span>
+                        {(() => {
+                          const district = mapUsersData.find((u) => u.id === user.id)?.district;
+                          if (!district || district === "Scanning..." || district === "Unknown") return null;
+                          return (
+                            <span className={`mt-1 px-2 py-1 rounded-md border text-[10px] font-bold tracking-wider leading-none shadow-[0_0_10px_rgba(255,255,255,0.02)] ${
+                              isMapDark
+                                ? "border-white/10 bg-gray-600/5 text-gray-400"
+                                : "border-slate-200 bg-slate-100 text-slate-600"
+                            }`}>
+                              {district}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <small
                         className={`block mt-1 text-[11px] italic truncate ${

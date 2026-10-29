@@ -83,7 +83,7 @@ export default function MapPage() {
   const [showHqModal, setShowHqModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusText, setStatusText] = useState("");
-  const [eventForm, setEventForm] = useState({ title: "", description: "" });
+  const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe" });
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
@@ -460,9 +460,12 @@ export default function MapPage() {
     setBusy(true);
     try {
       const me = mapUsersData.find((u) => u.id === currentUser?.id);
+      const category = eventForm.category || "cafe";
+      const cleanDesc = (eventForm.description || "").replace(/\[CAT:[a-z_]+\]\s*/i, "").trim();
+      const encodedDesc = `[CAT:${category}] ${cleanDesc}`.trim();
       const payload = {
         title: eventForm.title,
-        description: eventForm.description,
+        description: encodedDesc,
         lat: me?.lat || currentUser?.domicileLat || -6.2715,
         lng: me?.lng || currentUser?.domicileLng || 106.7135,
       };
@@ -485,6 +488,26 @@ export default function MapPage() {
     setBusy(false);
   }
 
+  const handleOpenEventModal = useCallback((open = true) => {
+    if (open) {
+      const own = events.find((ev) => ev.creator?.id === currentUser?.id || ev.id === "own");
+      if (own) {
+        const rawDesc = own.description || "";
+        const match = rawDesc.match(/\[CAT:([a-z_]+)\]/i);
+        const category = match ? match[1].toLowerCase() : "cafe";
+        const cleanDesc = rawDesc.replace(/\[CAT:[a-z_]+\]\s*/i, "").trim();
+        setEventForm({
+          title: own.title || "",
+          description: cleanDesc,
+          category,
+        });
+      } else {
+        setEventForm((f) => ({ ...f, category: f.category || "cafe" }));
+      }
+    }
+    setShowEventModal(open);
+  }, [events, currentUser]);
+
   async function deleteMiniEvent() {
     setBusy(true);
     try {
@@ -494,7 +517,7 @@ export default function MapPage() {
       }
       const updatedEvents = await fetchMiniEvents();
       setEvents(updatedEvents || []);
-      setEventForm({ title: "", description: "" });
+      setEventForm({ title: "", description: "", category: "cafe" });
       setNotice("Mini event deleted.");
       setShowEventModal(false);
     } catch (err) {
@@ -677,7 +700,7 @@ export default function MapPage() {
         setMenuOpen={setMenuOpen}
         setShowQuitModal={setShowQuitModal}
         setShowStatusModal={setShowStatusModal}
-        setShowEventModal={setShowEventModal}
+        setShowEventModal={handleOpenEventModal}
         isStatusBusy={isStatusBusy}
         currentUser={currentUser}
         avatarUrl={avatarUrl}
@@ -908,7 +931,7 @@ export default function MapPage() {
         setStatusText={setStatusText}
         busy={busy}
         showEventModal={showEventModal}
-        setShowEventModal={setShowEventModal}
+        setShowEventModal={handleOpenEventModal}
         saveMiniEvent={saveMiniEvent}
         eventForm={eventForm}
         setEventForm={setEventForm}

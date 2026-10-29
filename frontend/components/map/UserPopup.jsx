@@ -113,7 +113,7 @@ export function userPopup(user) {
         <div class="dc-header-info">
           <div class="dc-display-name" style="color:${color}">${esc(user.name)}</div>
           ${user.nickname ? `<div class="dc-username">@${esc(user.nickname)}</div>` : ""}
-          <div class="dc-sector">${esc(user.district || "Unknown Sector")}</div>
+          ${user.district && !["Scanning...", "Unknown", "Unknown Sector"].includes(user.district) ? `<div class="dc-sector">${esc(user.district)}</div>` : ""}
         </div>
       </div>
 

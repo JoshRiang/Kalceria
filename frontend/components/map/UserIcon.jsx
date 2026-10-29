@@ -13,8 +13,8 @@ export function escapeMapHtml(value) {
 }
 
 export function getSafeMapAvatarUrl(user) {
-  const fallback = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.nickname || user.name || "anon")}`;
-  const candidate = user.profilePicture;
+  const fallback = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.name || "anon")}`;
+  const candidate = user?.profilePicture;
   if (typeof candidate !== "string" || candidate.length > 2048 || candidate.startsWith("//") || candidate.includes("\\")) {
     return fallback;
   }
@@ -33,16 +33,23 @@ export function getSafeMapColor(value) {
 }
 
 export function getUserIconHtml(user) {
-  const displayName = user.nickname || user.name || '';
-  const random = createSeededRandom(`map-user-icon-${user.id || user.nickname || user.name || "anon"}`);
+  const displayName = user?.nickname || user?.name || '';
+  const random = createSeededRandom(`map-user-icon-${user?.id || user?.nickname || user?.name || "anon"}`);
   const randomDelay = (random() * -2).toFixed(2);
-  const rawColor = getSafeMapColor(user.color);
+  const rawColor = getSafeMapColor(user?.color);
   const cleanColor = (rawColor.toLowerCase() === '#ffd60a' || rawColor.toLowerCase() === '#ffea00') ? '#ffc300' : rawColor;
   const safeName = escapeMapHtml(displayName);
   const safeAvatar = escapeMapHtml(getSafeMapAvatarUrl(user));
+
+  // Echoing animation is only for people who are online (green color #10b981)
+  const isOnline = user?.isOnline !== false;
+  const pulseHtml = isOnline
+    ? `<div class="radar-pulse online-green-pulse" style="animation-delay: ${randomDelay}s; border: 2px solid #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);"></div>`
+    : '';
+
   return `
     <div class="radar-node" style="--user-color: ${cleanColor}">
-      <div class="radar-pulse" style="animation-delay: ${randomDelay}s"></div>
+      ${pulseHtml}
       <div class="radar-nametag">${safeName}</div>
       <div class="radar-float-wrapper" style="animation-delay: ${randomDelay}s">
         <div class="radar-avatar"><img src="${safeAvatar}" alt="${safeName}"></div>

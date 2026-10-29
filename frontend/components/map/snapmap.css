@@ -229,8 +229,7 @@
 }
 
 .radar-pulse,
-.cluster-pulse,
-.event-pulse {
+.cluster-pulse {
   position: absolute;
   top: 24px;
   left: 24px;
@@ -242,6 +241,11 @@
   opacity: 0;
   transform: translate(-50%, -50%);
   animation: radarPing 2s infinite cubic-bezier(0, 0, 0.2, 1);
+}
+
+.radar-pulse.online-green-pulse {
+  border: 2px solid #10b981 !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
 }
 .tactical-popup .leaflet-popup-content-wrapper {
   padding: 0;
