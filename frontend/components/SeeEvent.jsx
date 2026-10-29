@@ -46,6 +46,7 @@ export default function SeeEvent() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Starts data fetch on mount
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {

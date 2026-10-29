@@ -526,6 +526,7 @@ export default function IntroPreloader({ onComplete }) {
             alt="KALCERIA"
             width={310}
             height={64}
+            fetchPriority="high"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: showLogo ? 1 : 0, scale: showLogo ? 1 : 0.95 }}
             transition={{ duration: 1.0, ease: "easeInOut" }}
@@ -560,6 +561,7 @@ export default function IntroPreloader({ onComplete }) {
             alt="KALCERIA"
             width={280}
             height={60}
+            fetchPriority="high"
             initial={{ opacity: 0 }}
             animate={{ opacity: showLogo ? 1 : 0 }}
             transition={{ duration: 1.4, ease: "easeInOut" }}

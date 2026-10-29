@@ -3,13 +3,13 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import IntroPreloader from "@/components/IntroPreloader";
-import LandingPage from "@/components/LandingPage";
 
+const LandingPage = dynamic(() => import("@/components/LandingPage"), { ssr: false });
 const AuthPage = dynamic(() => import("@/components/AuthPage"), { ssr: false });
 const WelcomeTransition = dynamic(() => import("@/components/WelcomeTransition"), { ssr: false });
 
 export default function HomeClient() {
-  const [phase, setPhase] = useState("loading"); // "intro" | "landing" | "auth" | "welcome"
+  const [phase, setPhase] = useState("intro"); // "intro" | "landing" | "auth" | "welcome"
   const [username, setUsername] = useState("User");
 
   useEffect(() => {
@@ -26,8 +26,6 @@ export default function HomeClient() {
       const hasPlayed = sessionStorage.getItem("introPlayed");
       if (hasPlayed) {
         setPhase("landing");
-      } else {
-        setPhase("intro");
       }
     }
   }, []);
@@ -36,10 +34,6 @@ export default function HomeClient() {
     sessionStorage.setItem("introPlayed", "true");
     setPhase("landing");
   };
-
-  if (phase === "loading") {
-    return <div style={{ background: "#000", minHeight: "100vh" }} />;
-  }
 
   return (
     <div style={{ background: "#050a14", minHeight: "100vh", position: "relative", overflowX: "hidden" }}>
