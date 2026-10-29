@@ -1,5 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { createLog } from './auditController.js';
+import { safeNotify, sendServiceRequestStatusEmail } from '../lib/mailer.js';
+import { notifyServiceRequestUpdated } from '../lib/whatsappBroker.js';
 
 
 
@@ -48,6 +50,9 @@ export async function updateServiceStatus(req, res, next) {
         version: Number(version) 
       },
       data,
+      include: {
+        requestor: { select: { id: true, name: true, email: true, phone: true } },
+      },
     });
     
     // Log with financial summary if present
@@ -55,6 +60,19 @@ export async function updateServiceStatus(req, res, next) {
       ? `Updated Service Booking ${req.params.id} to ${status} | Total: IDR ${parseFloat(totalPrice).toLocaleString('id-ID')}`
       : `Updated Service Booking ${req.params.id} to ${status}`;
     await createLog(req.user.email, logDetail);
+
+    // Dispatches
+    safeNotify(() => notifyServiceRequestUpdated({
+      booking,
+      user: booking.requestor,
+      status,
+    }), 'whatsapp-service-status');
+
+    safeNotify(() => sendServiceRequestStatusEmail({
+      to: booking.requestor?.email,
+      booking,
+      status,
+    }), 'email-service-status');
 
     res.json({ booking });
   } catch (err) {
@@ -88,9 +106,25 @@ export async function confirmServicePayment(req, res, next) {
         ...(status === 'CONFIRMED' && { status: 'PROCESSED' }),
         version: { increment: 1 }
       },
+      include: {
+        requestor: { select: { id: true, name: true, email: true, phone: true } },
+      },
     });
 
     await createLog(req.user.email, `Updated Service Payment ${req.params.id} to ${status}`);
+
+    // Dispatches
+    safeNotify(() => notifyServiceRequestUpdated({
+      booking,
+      user: booking.requestor,
+      status,
+    }), 'whatsapp-service-status');
+
+    safeNotify(() => sendServiceRequestStatusEmail({
+      to: booking.requestor?.email,
+      booking,
+      status,
+    }), 'email-service-status');
 
     res.json({ booking });
   } catch (err) {
@@ -166,6 +200,19 @@ export async function confirmBookingPayment(req, res, next) {
     });
 
     await createLog(req.user.email, `Updated Booking Payment ${req.params.id} to ${status}`);
+
+    // Dispatches
+    safeNotify(() => notifyServiceRequestUpdated({
+      booking,
+      user: booking.requestor,
+      status,
+    }), 'whatsapp-service-status');
+
+    safeNotify(() => sendServiceRequestStatusEmail({
+      to: booking.requestor?.email,
+      booking,
+      status,
+    }), 'email-service-status');
 
     res.json({ booking });
   } catch (err) {

@@ -1,8 +1,12 @@
 import argon2 from 'argon2';
 import crypto from 'node:crypto';
+import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
 import { createLog } from './auditController.js';
 import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cursorPagination.js';
+import { safeNotify, sendEventRegistrationEmail, sendEventPaymentConfirmedEmail } from '../lib/mailer.js';
+import { createEventPaymentSession, isOnlinePaymentEnabled } from '../lib/paymentBroker.js';
+import { notifyEventRegistration, notifyEventPaymentConfirmed } from '../lib/whatsappBroker.js';
 
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
 
@@ -148,7 +152,50 @@ export async function registerEvent(req, res, next) {
     ].join('\n');
 
     const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
-    res.status(201).json({ registration: reg, whatsappUrl });
+
+    // Online Payment checkout session (if broker is enabled)
+    let paymentCheckout = null;
+    if (isOnlinePaymentEnabled()) {
+      paymentCheckout = await createEventPaymentSession({
+        event,
+        registration: reg,
+        user: { id: userId, name: participantName, email: reg.user.email, phone: participantContact },
+      }).catch((err) => {
+        console.warn('[EventRegistration] Payment session generation failed:', err.message);
+        return null;
+      });
+    }
+
+    // Signed payment token for guest checkout access
+    const paymentToken = process.env.JWT_SECRET
+      ? jwt.sign(
+        { registrationId: reg.id, userId },
+        process.env.JWT_SECRET,
+        { algorithm: 'HS256', audience: 'kalceria-event-payment', issuer: 'kalceria-api', expiresIn: '2h' },
+      )
+      : undefined;
+
+    // Dispatches (fire-and-forget, safe & isolated)
+    safeNotify(() => notifyEventRegistration({
+      registration: reg,
+      event,
+      user: { name: participantName, phone: participantContact, email: reg.user.email },
+      paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
+    }), 'whatsapp-event-reg');
+
+    safeNotify(() => sendEventRegistrationEmail({
+      to: reg.user.email,
+      event,
+      registration: reg,
+      paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
+    }), 'email-event-reg');
+
+    res.status(201).json({
+      registration: reg,
+      whatsappUrl,
+      paymentCheckout,
+      paymentToken,
+    });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'Already registered for this event.' });
     next(err);
@@ -243,8 +290,23 @@ export async function confirmRegistrationPayment(req, res, next) {
     const reg = await prisma.eventRegistration.update({
       where: { id: req.params.id, version: Number(version) },
       data: { paymentStatus: status, version: { increment: 1 } },
-      include: { user: { select: { name: true, email: true } }, event: { select: { title: true } } },
+      include: { user: { select: { id: true, name: true, email: true, phone: true } }, event: true },
     });
+
+    if (status === 'CONFIRMED') {
+      safeNotify(() => notifyEventPaymentConfirmed({
+        registration: reg,
+        event: reg.event,
+        user: reg.user,
+      }), 'whatsapp-admin-confirm');
+
+      safeNotify(() => sendEventPaymentConfirmedEmail({
+        to: reg.user.email,
+        event: reg.event,
+        registration: reg,
+      }), 'email-admin-confirm');
+    }
+
     res.json({ registration: reg });
   } catch (err) {
     if (err.code === 'P2025') {

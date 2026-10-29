@@ -170,6 +170,16 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
                 Registered for <span className="text-white font-bold">{event?.title}</span> ({form.session}).
               </p>
             </div>
+            {doneData.paymentCheckout?.checkoutUrl && (
+              <a
+                href={doneData.paymentCheckout.checkoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:opacity-95 text-black font-black uppercase tracking-tight text-xs rounded-lg transition-all flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)] mb-2"
+              >
+                💳 Pay Online Now (QRIS / VA / E-Wallet)
+              </a>
+            )}
             <div className="flex gap-3">
               {doneData.whatsappUrl && (
                 <a

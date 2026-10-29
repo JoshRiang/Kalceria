@@ -40,6 +40,20 @@ import { exportAllLogs, resetSystem } from "../controllers/adminSystemController
 import { logout } from "../controllers/authController.js";
 import { issueCsrfToken } from "../middleware/csrf.js";
 import {
+  getPaymentCapabilities,
+  createCheckoutSession,
+  getRegistrationPaymentStatus,
+  handlePaymentWebhook,
+} from "../controllers/paymentController.js";
+import {
+  verifyMetaWhatsAppWebhook,
+  handleInboundWhatsAppWebhook,
+} from "../controllers/whatsappWebhookController.js";
+import {
+  getPublicIntegrationStatus,
+  getAdminIntegrationReadiness,
+} from "../controllers/integrationController.js";
+import {
   bookingRateLimit,
   commentRateLimit,
   jitRateLimit,
@@ -195,5 +209,19 @@ router.get("/cron/cleanup", async (req, res, next) => {
     next(error);
   }
 });
+
+// ─── Integrations (Capabilities & Broker Readiness) ──────────────────────────
+router.get("/integrations/status", getPublicIntegrationStatus);
+router.get("/admin/integrations/readiness", requireAdmin, getAdminIntegrationReadiness);
+
+// ─── Payments (Online Events Broker) ─────────────────────────────────────────
+router.get("/payments/config", getPaymentCapabilities);
+router.post("/payments/events/:registrationId/checkout", optionalAuth, bookingRateLimit, createCheckoutSession);
+router.get("/payments/events/:registrationId/status", optionalAuth, getRegistrationPaymentStatus);
+
+// ─── Webhooks (Server-to-Server Broker Callbacks) ────────────────────────────
+router.post("/webhooks/payment", handlePaymentWebhook);
+router.get("/webhooks/whatsapp", verifyMetaWhatsAppWebhook);
+router.post("/webhooks/whatsapp", handleInboundWhatsAppWebhook);
 
 export default router;

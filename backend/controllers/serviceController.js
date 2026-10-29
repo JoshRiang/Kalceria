@@ -3,6 +3,8 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
+import { safeNotify, sendServiceRequestSubmittedEmail, sendServiceRequestAdminAlertEmail } from '../lib/mailer.js';
+import { notifyServiceRequestCreated } from '../lib/whatsappBroker.js';
 
 const RATE_PER_HOUR = 120000;
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
@@ -270,6 +272,27 @@ export async function createServiceRequest(req, res, next) {
         { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '20m' },
       )
       : undefined;
+
+    // Dispatches (fire-and-forget, safe & isolated)
+    safeNotify(() => notifyServiceRequestCreated({
+      booking,
+      slots,
+      user,
+      contactPerson,
+      whatsapp,
+    }), 'whatsapp-service-request');
+
+    safeNotify(() => sendServiceRequestSubmittedEmail({
+      to: user.email,
+      booking,
+      slots,
+    }), 'email-service-request');
+
+    safeNotify(() => sendServiceRequestAdminAlertEmail({
+      booking,
+      slots,
+      user,
+    }), 'email-service-admin-alert');
 
     res.status(201).json({ bookingId: booking.id, whatsappUrl, cancelToken });
   } catch (err) {
