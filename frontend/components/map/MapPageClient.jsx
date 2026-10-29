@@ -54,7 +54,8 @@ const hqPoint = {
   description: "Place where people meet",
   lat: -6.2715,
   lng: 106.7135,
-  videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+  gifUrl: "/media/gifs/hq-live.gif",
+  videoUrl: "/media/gifs/hq-live.gif",
 };
 
 // ☁️ Static Pixel Cloud Definitions for consistent transition
@@ -90,7 +91,7 @@ export default function MapPage() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusText, setStatusText] = useState("");
-  const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe" });
+  const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe", mediaUrl: "" });
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
@@ -468,11 +469,20 @@ export default function MapPage() {
     try {
       const me = mapUsersData.find((u) => u.id === currentUser?.id);
       const category = eventForm.category || "cafe";
-      const cleanDesc = (eventForm.description || "").replace(/\[CAT:[a-z_]+\]\s*/i, "").trim();
-      const encodedDesc = `[CAT:${category}] ${cleanDesc}`.trim();
+      const mediaUrl = (eventForm.mediaUrl || "").trim();
+      const cleanDesc = (eventForm.description || "")
+        .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+        .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+        .trim();
+      let encodedDesc = `[CAT:${category}] ${cleanDesc}`.trim();
+      if (mediaUrl) {
+        encodedDesc = `[MEDIA:${mediaUrl}] ${encodedDesc}`.trim();
+      }
       const payload = {
         title: eventForm.title,
         description: encodedDesc,
+        category,
+        mediaUrl,
         lat: me?.lat || currentUser?.domicileLat || -6.2715,
         lng: me?.lng || currentUser?.domicileLng || 106.7135,
       };
@@ -500,16 +510,22 @@ export default function MapPage() {
       const own = events.find((ev) => ev.creator?.id === currentUser?.id || ev.id === "own");
       if (own) {
         const rawDesc = own.description || "";
-        const match = rawDesc.match(/\[CAT:([a-z_]+)\]/i);
-        const category = match ? match[1].toLowerCase() : "cafe";
-        const cleanDesc = rawDesc.replace(/\[CAT:[a-z_]+\]\s*/i, "").trim();
+        const catMatch = rawDesc.match(/\[CAT:([a-z_]+)\]/i);
+        const mediaMatch = rawDesc.match(/\[MEDIA:([^\]]+)\]/i);
+        const category = catMatch ? catMatch[1].toLowerCase() : (own.category || "cafe");
+        const mediaUrl = own.mediaUrl || (mediaMatch ? mediaMatch[1] : "");
+        const cleanDesc = rawDesc
+          .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+          .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+          .trim();
         setEventForm({
           title: own.title || "",
           description: cleanDesc,
           category,
+          mediaUrl,
         });
       } else {
-        setEventForm((f) => ({ ...f, category: f.category || "cafe" }));
+        setEventForm((f) => ({ ...f, category: f.category || "cafe", mediaUrl: f.mediaUrl || "" }));
       }
     }
     setShowEventModal(open);
@@ -524,7 +540,7 @@ export default function MapPage() {
       }
       const updatedEvents = await fetchMiniEvents();
       setEvents(mergeEvents(updatedEvents));
-      setEventForm({ title: "", description: "", category: "cafe" });
+      setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "" });
       setNotice("Mini event deleted.");
       setShowEventModal(false);
     } catch (err) {

@@ -1,8 +1,9 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { userPopup } from "@/components/map/UserPopup";
+import { uploadBlobMedia } from "@/lib/api";
 
 const EVENT_CATEGORIES_GRID = [
   // Left top: Coffee Icon (Cafe Meeting)
@@ -81,6 +82,26 @@ export const MapModals = memo(function MapModals({
   setShowQuitModal,
   handleQuitConfirm,
 }) {
+  const fileInputRef = useRef(null);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const handleMediaUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingMedia(true);
+    setUploadError("");
+    try {
+      const res = await uploadBlobMedia(file);
+      if (res.url) {
+        setEventForm((f) => ({ ...f, mediaUrl: res.url }));
+      }
+    } catch (err) {
+      setUploadError(err.message || "Failed to upload media");
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
   return (
     <>
       {/* Modals with enhanced HUD design */}
@@ -299,6 +320,97 @@ export const MapModals = memo(function MapModals({
                   placeholder="Agenda details"
                 />
               </div>
+
+              {/* Video / GIF Live Feed Attachment */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <label className={`text-xs font-semibold tracking-wider flex items-center gap-1.5 ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                      <polygon points="23 7 16 12 23 17 23 7" />
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                    </svg>
+                    Live Feed Media (Video / GIF)
+                  </label>
+                  {eventForm.mediaUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setEventForm((f) => ({ ...f, mediaUrl: "" }))}
+                      className="text-[10px] text-pink-400 hover:underline"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    className={`flex-1 border rounded-lg p-2.5 text-xs focus:border-slate-500 outline-none transition-all ${
+                      isMapDark ? "bg-white/[0.03] border-white/10 text-white" : "bg-slate-50 border-slate-300 text-slate-900"
+                    }`}
+                    value={eventForm.mediaUrl || ""}
+                    onChange={(e) => setEventForm((f) => ({ ...f, mediaUrl: e.target.value }))}
+                    placeholder="Paste Video / GIF URL or choose file"
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="video/*,image/gif"
+                    className="hidden"
+                    onChange={handleMediaUpload}
+                  />
+                  <button
+                    type="button"
+                    disabled={isUploadingMedia || busy}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`px-3 py-2 border rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all ${
+                      isMapDark
+                        ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                        : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    {isUploadingMedia ? "Uploading..." : "Upload"}
+                  </button>
+                </div>
+
+                {uploadError && (
+                  <p className="text-[11px] text-red-400 mt-0.5">{uploadError}</p>
+                )}
+
+                {/* Live Feed Preview inside Modal */}
+                {eventForm.mediaUrl && (
+                  <div className="relative w-full h-[90px] rounded-lg overflow-hidden bg-black border border-white/10 mt-1">
+                    {/\.(mp4|webm|ogg)($|\?)/i.test(eventForm.mediaUrl) || /^data:video/i.test(eventForm.mediaUrl) ? (
+                      <video
+                        src={eventForm.mediaUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover opacity-85"
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={eventForm.mediaUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover opacity-85"
+                      />
+                    )}
+                    <div className="absolute top-2 left-2 z-10">
+                      <span className="font-sans font-bold text-[10px] text-white uppercase tracking-tight leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                        LIVE FEED PREVIEW
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col gap-2 mt-2">
                 <button
                   type="submit"

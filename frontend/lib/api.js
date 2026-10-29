@@ -114,3 +114,17 @@ export const patchVisibility = (allow) => api.patch('/location/visibility', { al
 export const postMiniEvent = (data) => api.post('/mini-events', data);
 export const putMiniEvent = (id, data) => api.put(`/mini-events/${id}`, data);
 export const delMiniEvent = (id) => api.delete(`/mini-events/${id}`);
+
+export const uploadBlobMedia = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/blob/upload", {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to upload media file");
+  }
+  return res.json();
+};

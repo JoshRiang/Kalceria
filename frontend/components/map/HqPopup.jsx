@@ -9,7 +9,36 @@ function esc(value) {
     .replace(/'/g, "&#039;");
 }
 
+function renderMediaFeed(mediaUrl) {
+  const url = mediaUrl || "/media/gifs/hq-live.gif";
+  const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
+
+  if (isVideo) {
+    return `
+      <video 
+        src="${esc(url)}" 
+        autoplay 
+        loop 
+        muted 
+        playsinline 
+        style="width: 100%; height: 100%; object-fit: cover; opacity: 0.85; display: block;"
+      ></video>
+    `;
+  }
+
+  return `
+    <img 
+      src="${esc(url)}" 
+      alt="Live Feed"
+      loading="lazy"
+      style="width: 100%; height: 100%; object-fit: cover; opacity: 0.85; display: block;"
+    />
+  `;
+}
+
 export function hqPopup(hq) {
+  const mediaUrl = hq.gifUrl || hq.videoUrl || "/media/gifs/hq-live.gif";
+
   return `
     <div class="tactical-card hq-card" style="--border-color: #ffd60a">
       <div class="scanlines"></div>
@@ -22,17 +51,9 @@ export function hqPopup(hq) {
         </div>
       </div>
       <div class="popup-video" style="width: 100%; height: 120px; overflow: hidden; position: relative; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: #000;">
-        <video 
-          src="${hq.videoUrl}" 
-          autoplay 
-          loop 
-          muted 
-          playsinline 
-          style="width: 100%; height: 100%; object-fit: cover; opacity: 0.7;"
-        ></video>
-        <div style="position: absolute; top: 10px; left: 10px; display: flex; align-items: center; gap: 6px;">
-          <span style="width: 6px; height: 6px; background: #ff0000; border-radius: 50%; animation: pulse 1s infinite;"></span>
-          <span style="font-family: monospace; font-size: 8px; color: #ffd60a; text-transform: uppercase; letter-spacing: 1px; font-weight: 900; text-shadow: 0 0 5px #ffd60a;">REC :: HQ-CAM-01</span>
+        ${renderMediaFeed(mediaUrl)}
+        <div style="position: absolute; top: 10px; left: 10px; z-index: 5;">
+          <span style="font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 11px; color: #ffffff; text-transform: uppercase; letter-spacing: -0.025em; line-height: 1; text-shadow: 0 1px 4px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.9);">LIVE FEED</span>
         </div>
         <div class="scanlines" style="opacity: 0.2;"></div>
       </div>

@@ -12,11 +12,22 @@ function parseCoordinate(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function formatMiniEvent(ev) {
+  const raw = ev.description || "";
+  const catMatch = raw.match(/\[CAT:([a-z_]+)\]/i);
+  const mediaMatch = raw.match(/\[MEDIA:([^\]]+)\]/i);
+  return {
+    ...ev,
+    category: catMatch ? catMatch[1].toLowerCase() : (ev.category || "cafe"),
+    mediaUrl: mediaMatch ? mediaMatch[1] : (ev.mediaUrl || null),
+  };
+}
+
 function validateMiniEvent({ title, description, lat, lng }) {
   if (!title) return "Title is required.";
   if (title.length > 80) return "Title must be 80 characters or less.";
-  if (description.length > 240)
-    return "Description must be 240 characters or less.";
+  if (description.length > 600)
+    return "Description must be 600 characters or less.";
   if (lat === null || lng === null) return "Valid lat and lng are required.";
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180)
     return "Valid lat and lng are required.";
@@ -27,7 +38,15 @@ export async function createMiniEvent(req, res, next) {
   try {
     const creatorId = req.user.userId;
     const title = cleanText(req.body.title);
-    const description = cleanText(req.body.description);
+    let description = cleanText(req.body.description);
+    const category = cleanText(req.body.category) || "cafe";
+    const mediaUrl = cleanText(req.body.mediaUrl);
+    if (mediaUrl && !description.includes("[MEDIA:")) {
+      description = `[MEDIA:${mediaUrl}] ${description}`;
+    }
+    if (category && !description.includes("[CAT:")) {
+      description = `[CAT:${category}] ${description}`;
+    }
     const lat = parseCoordinate(req.body.lat);
     const lng = parseCoordinate(req.body.lng);
     const error = validateMiniEvent({ title, description, lat, lng });
@@ -115,6 +134,7 @@ export async function getActiveMiniEvents(req, res, next) {
         lng: 106.7110,
         isActive: true,
         category: "cafe",
+        mediaUrl: "/media/gifs/the-mentalist.gif",
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 86400000),
         creator: { id: "mock_ahmad", name: "Ahmad Bintaro", nickname: "Ahmad", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad" },
@@ -127,6 +147,7 @@ export async function getActiveMiniEvents(req, res, next) {
         lng: 106.7225,
         isActive: true,
         category: "cafe",
+        mediaUrl: "/media/gifs/the-office.gif",
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 86400000),
         creator: { id: "mock_rei", name: "Rei Nathan", nickname: "Rei", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rei" },
@@ -139,6 +160,7 @@ export async function getActiveMiniEvents(req, res, next) {
         lng: 106.7085,
         isActive: true,
         category: "cafe",
+        mediaUrl: "/media/gifs/dragon-toothless.gif",
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 86400000),
         creator: { id: "mock_josh", name: "Josh Riang", nickname: "Josh", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Josh" },
@@ -151,6 +173,7 @@ export async function getActiveMiniEvents(req, res, next) {
         lng: 106.7160,
         isActive: true,
         category: "special",
+        mediaUrl: "/media/gifs/dragon-toothless.gif",
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 86400000),
         creator: { id: "mock_alpha", name: "Kalcerian Alpha", nickname: "Alpha", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alpha" },
@@ -267,7 +290,7 @@ export async function getActiveMiniEvents(req, res, next) {
         }
       }
     }
-    res.json({ events: pageEvents, nextCursor });
+    res.json({ events: pageEvents.map(formatMiniEvent), nextCursor });
   } catch (err) {
     next(err);
   }
