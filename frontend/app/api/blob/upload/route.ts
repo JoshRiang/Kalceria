@@ -21,16 +21,36 @@ export async function POST(req: NextRequest) {
 
     if (blobToken || blobStoreId || isVercel) {
       try {
-        const options: { access: "public"; token?: string } = { access: "public" };
+        const options: { access: "public" | "private"; token?: string } = { access: "public" };
         if (blobToken) {
           options.token = blobToken;
         }
 
-        const blob = await put(filename, file, options);
+        let blob;
+        let isPrivate = false;
+        try {
+          blob = await put(filename, file, options);
+        } catch (firstErr: unknown) {
+          const msg = firstErr instanceof Error ? firstErr.message : "";
+          // If store is configured with private access, seamlessly retry with private access
+          if (msg.includes("Cannot use public access on a private store") || msg.includes("private store")) {
+            options.access = "private";
+            blob = await put(filename, file, options);
+            isPrivate = true;
+          } else {
+            throw firstErr;
+          }
+        }
+
+        const finalUrl = isPrivate
+          ? `/api/blob/raw?url=${encodeURIComponent(blob.url)}`
+          : blob.url;
 
         return NextResponse.json({
           success: true,
-          url: blob.url,
+          url: finalUrl,
+          rawBlobUrl: blob.url,
+          access: isPrivate ? "private" : "public",
           provider: "vercel-blob",
         });
       } catch (blobErr: unknown) {
