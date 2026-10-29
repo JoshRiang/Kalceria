@@ -2,7 +2,7 @@ import { createPageMetadata } from "@/lib/seo";
 import MinigameClient from "@/components/minigame/MinigameClient";
 
 export const metadata = createPageMetadata({
-  title: "Kalcer's Game — Daily Flip Challenge & Event Vouchers",
+  title: "Kalcer's Game",
   description:
     "Play Kalcer's Game daily flip challenge, climb the Kalceria community leaderboard, and compete for exclusive Social Cult automotive event vouchers.",
   path: "/minigame",

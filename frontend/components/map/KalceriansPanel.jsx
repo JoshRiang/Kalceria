@@ -2,6 +2,10 @@
 import { motion } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
 
+const avatarUrl = (user) =>
+  user?.profilePicture ||
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.name || "anon")}`;
+
 export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, events, searchQuery, setSearchQuery, drawerOpen, setDrawerOpen, isDataLoading, hoveredKalcerian, setHoveredKalcerian, isMapDark, setFocusedUserId, setSelectedOfflineUser, sidebarKalcerians, focusUser }) {
   return (
 <motion.aside

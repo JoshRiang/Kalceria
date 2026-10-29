@@ -159,7 +159,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         setSuccess("Kode OTP telah dikirim ke email kamu.");
       }
     } catch (err) {
-      let msg = err.message || "An error occurred.";
+      let msg = err.response?.data?.error || err.message || "An error occurred.";
       if (msg.includes("prisma")) {
         if (msg.includes("dob") || msg.includes("Invalid Date")) {
           msg = "Format tanggal lahir tidak valid.";

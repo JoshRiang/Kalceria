@@ -32,6 +32,7 @@ export default function SeeEvent() {
   const [hasCycledHero, setHasCycledHero] = useState(false);
   const [eventIdx, setEventIdx] = useState(0);
   const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -40,6 +41,8 @@ export default function SeeEvent() {
       setEvents(publicEvents || []);
     } catch (err) {
       console.error(err);
+    } finally {
+      setEventsLoading(false);
     }
   }, []);
 
@@ -138,8 +141,8 @@ export default function SeeEvent() {
           <RainbowPixels />
           <MicroParticles />
         </>}
-        <Image src="/stikermobil_5.webp" alt="" width={2698} height={1568} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-40 md:w-56 bottom-10 right-[10%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) rotate(-3deg)" : "rotate(-3deg)" }} />
-        <Image src="/stikermobil_2.webp" alt="" width={2410} height={1436} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-40 md:w-56 bottom-10 left-[2%] opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700" style={{ transform: isMobile ? "translateY(-220%) scale(0.8) rotate(6deg)" : "rotate(6deg)" }} />
+        <Image src="/stikermobil_5.webp" alt="" width={2698} height={1568} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className={`absolute z-10 w-36 sm:w-40 md:w-56 bottom-10 ${isMobile ? "right-[4%]" : "right-[10%]"} opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700`} style={{ transform: isMobile ? "translateY(-190%) rotate(-3deg)" : "rotate(-3deg)" }} />
+        <Image src="/stikermobil_2.webp" alt="" width={2410} height={1436} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className={`absolute z-10 w-36 sm:w-40 md:w-56 bottom-10 ${isMobile ? "left-[4%]" : "left-[2%]"} opacity-80 drop-shadow-xl pointer-events-none transition-transform duration-700`} style={{ transform: isMobile ? "translateY(-190%) scale(0.85) rotate(6deg)" : "rotate(6deg)" }} />
 
         {/* ─── SECTION 1.5: ATMOSPHERIC BREAK ────────────────────────────────── */}
         <section ref={atmosRef} className="relative w-full py-[60vh] z-20 overflow-hidden">
@@ -247,13 +250,22 @@ export default function SeeEvent() {
                 {!isMobile && (
                   <Image src="/stikermobil_4.webp" alt="" width={2730} height={1536} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-40 md:w-56 -bottom-36 md:-bottom-48 -left-10 md:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
                 )}
+                {isMobile && (
+                  <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="144px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-28 sm:w-32 -top-12 -right-8 opacity-85 drop-shadow-2xl pointer-events-none rotate-[4deg]" />
+                )}
                 
                 <div className="relative w-full h-full rounded-2xl overflow-hidden border border-gray-800">
                   <AnimatePresence mode="wait">
-                    {activeEvent && (
+                    {activeEvent ? (
                       <motion.div key={activeEvent.id} initial={{ opacity: 0, x: "100%" }} animate={{ opacity: 1, x: "0%" }} exit={{ opacity: 0, x: "-100%" }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className="absolute inset-0 w-full h-full">
                         <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${activeEvent.displayPhotoUrl})` }} />
                         <div className="absolute inset-0 shadow-[inset_0_0_50px_rgba(0,0,0,0.6)]" />
+                      </motion.div>
+                    ) : (
+                      <motion.div key="placeholder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-br from-white/[0.06] via-[#0B0C10] to-fuchsia-950/20">
+                        <span className="font-mono text-xs uppercase tracking-[0.3em] text-white/40 animate-pulse">
+                          {eventsLoading ? "Syncing Grid..." : "Next Drop Soon"}
+                        </span>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -263,12 +275,14 @@ export default function SeeEvent() {
               {/* Right: Text Details - centered and placed under card on mobile */}
               <div className={`flex flex-col justify-center min-h-[450px] relative z-20 ${isMobile ? "items-center text-center mt-12" : ""}`}>
                 {!isMobile && (
-                  <Image src="/stikermobil_1.webp" alt="" width={2387} height={1523} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
+                  <>
+                    <Image src="/stikermobil_1.webp" alt="" width={2387} height={1523} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
+                    <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="(min-width: 768px) 176px, 144px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-44 bottom-[-160px] left-1/2 opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700" style={{ transform: "translateX(-50%) rotate(3deg)" }} />
+                  </>
                 )}
-                <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="(min-width: 768px) 176px, 144px" quality={75} loading="lazy" decoding="async" className={`absolute z-10 w-36 md:w-44 bottom-[-110px] md:bottom-[-160px] opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700 ${isMobile ? "left-[85%]" : "left-1/2"}`} style={{ transform: isMobile ? "translateX(-50%) translateY(-380%) rotate(3deg)" : "translateX(-50%) rotate(3deg)" }} />
 
                 <AnimatePresence mode="wait">
-                  {activeEvent && (
+                  {activeEvent ? (
                     <motion.div key={activeEvent.id} initial={{ x: 100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3 } }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }} className={`flex flex-col relative z-20 ${isMobile ? "text-center items-center" : "text-right items-end"}`}>
                       <motion.h2 
                         animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
@@ -297,14 +311,25 @@ export default function SeeEvent() {
                         </div>
                       </div>
                     </motion.div>
+                  ) : (
+                    <motion.div key="details-placeholder" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`flex flex-col justify-center min-h-[300px] relative z-20 ${isMobile ? "text-center items-center" : "text-right items-end"}`}>
+                      <h2 className="text-4xl md:text-5xl font-black italic uppercase text-white/80 tracking-tighter mb-4">
+                        {eventsLoading ? "Loading Events..." : "Upcoming Drop"}
+                      </h2>
+                      <p className={`text-gray-400 text-base md:text-lg max-w-md ${isMobile ? "text-center mx-auto" : "text-right"}`}>
+                        {eventsLoading
+                          ? "Connecting to Kalceria event telemetry..."
+                          : "Stay tuned. New automotive meets and underground runs are being prepared."}
+                      </p>
+                    </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* On mobile, stikermobil_4 and stikermobil_1 sit beautifully centered and STATIC right below the description event */}
+                {/* On mobile, stikermobil_4 and stikermobil_1 sit cleanly below the event details with zero overlap */}
                 {isMobile && (
-                  <div className="w-full mt-10 flex items-center justify-center gap-10 pointer-events-none relative z-30">
-                    <Image src="/stikermobil_4.webp" alt="" width={2730} height={1536} sizes="160px" quality={75} loading="lazy" decoding="async" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(-60%) translateY(10%) scale(1.4) rotate(-3deg)" }} />
-                    <Image src="/stikermobil_1.webp" alt="" width={2387} height={1523} sizes="160px" quality={75} loading="lazy" decoding="async" className="w-28 opacity-90 drop-shadow-2xl transition-transform duration-700" style={{ transform: "translateX(40%) translateY(-40%) scale(1.2) rotate(6deg)" }} />
+                  <div className="w-full max-w-[340px] mx-auto mt-10 mb-4 px-2 flex items-center justify-between gap-6 pointer-events-none relative z-30">
+                    <Image src="/stikermobil_4.webp" alt="" width={2730} height={1536} sizes="160px" quality={75} loading="lazy" decoding="async" className="w-32 sm:w-36 opacity-90 drop-shadow-2xl -rotate-3" />
+                    <Image src="/stikermobil_1.webp" alt="" width={2387} height={1523} sizes="160px" quality={75} loading="lazy" decoding="async" className="w-28 sm:w-32 opacity-90 drop-shadow-2xl rotate-6 -translate-y-2" />
                   </div>
                 )}
               </div>
@@ -316,10 +341,10 @@ export default function SeeEvent() {
         <section className="relative w-full pb-32 pt-12 z-20 pointer-events-none">
           <div className="container mx-auto px-6 md:px-12 pointer-events-auto max-w-4xl">
             <div className="flex justify-center">
-              <motion.div whileHover={{ scale: 1.02 }} className={`relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[320px] w-full max-w-md transition-transform duration-700 ${isMobile ? "translate-y-[-95%]" : ""}`}>
+              <motion.div whileHover={{ scale: 1.02 }} className={`relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[320px] w-full max-w-md transition-transform duration-700 ${isMobile ? "translate-y-[-85%]" : ""}`}>
                 <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white mb-6 text-center">Wanna Join?</h3>
                 <div className="flex-1 flex items-center justify-center">
-                   <button onClick={() => setApplyModalOpen(true)} className="relative w-full py-5 font-sans font-black uppercase tracking-tighter text-black bg-white border border-white transition-all hover:bg-white/90 group cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.2)]" style={CLIP}>
+                   <button onClick={() => activeEvent && setApplyModalOpen(true)} disabled={!activeEvent} className="relative w-full py-5 font-sans font-black uppercase tracking-tighter text-black bg-white border border-white transition-all hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.2)]" style={CLIP}>
                     <span className="relative z-10 text-2xl">APPLY NOW</span>
                     <div className="absolute inset-0 bg-black/5 scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300 z-0" />
                   </button>
@@ -331,7 +356,7 @@ export default function SeeEvent() {
 
       </div>
       <AnimatePresence>
-        {applyModalOpen && <ApplyModal events={events} startIndex={eventIdx} isMobile={isMobile} onClose={() => setApplyModalOpen(false)} />}
+        {applyModalOpen && events.length > 0 && <ApplyModal events={events} startIndex={eventIdx} isMobile={isMobile} onClose={() => setApplyModalOpen(false)} />}
       </AnimatePresence>
     </main>
   );

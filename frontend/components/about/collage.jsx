@@ -22,12 +22,12 @@ export function PhotoCollage({ isMobile }) {
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-[#FFD700]/15 via-[#00FFFF]/10 to-[#FFD700]/15" />
       </div>
 
-      <motion.div 
+      <motion.div
         animate={isActive ? { opacity: [0.4, 0.7, 0.4] } : { opacity: 0.5 }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
         className="relative w-full h-full"
       >
-        <div 
+        <div
           className="flex h-full animate-[roll_80s_linear_infinite]"
           style={{ width: "200%", animationPlayState: isActive ? "running" : "paused" }}
         >
@@ -37,8 +37,8 @@ export function PhotoCollage({ isMobile }) {
               {activePhotos.map((src, i) => (
                 <div key={i} className="relative w-full h-full min-h-0 overflow-hidden bg-slate-900 border border-white/5">
                   <Image
-                    src={src} 
-                    alt="" 
+                    src={src}
+                    alt=""
                     aria-hidden="true"
                     width={800}
                     height={800}
@@ -46,7 +46,7 @@ export function PhotoCollage({ isMobile }) {
                     quality={70}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover filter grayscale contrast-125 brightness-75 opacity-80" 
+                    className="w-full h-full object-cover filter grayscale contrast-125 brightness-75 opacity-80"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                 </div>
@@ -57,7 +57,7 @@ export function PhotoCollage({ isMobile }) {
       </motion.div>
 
       <div className="absolute inset-0 bg-gradient-to-b from-[#050a14] via-transparent to-[#050a14]" />
-      
+
       <style jsx>{`
         @keyframes roll {
           0% { transform: translateX(0); }
@@ -94,7 +94,7 @@ export function VideoCell({ index = 0, initialSrc, allVids, active = true }) {
     const v = videoRef.current;
     if (!v || !streamReady) return;
     if (active) {
-      v.play().catch(() => {});
+      v.play().catch(() => { });
     } else {
       v.pause();
     }
@@ -115,12 +115,12 @@ export function VideoCell({ index = 0, initialSrc, allVids, active = true }) {
       />
 
       {streamReady && (
-        <video 
+        <video
           ref={videoRef}
-          src={src} 
+          src={src}
           autoPlay={active}
-          muted 
-          playsInline 
+          muted
+          playsInline
           preload="metadata"
           onEnded={handleEnded}
           className="relative z-10 w-full h-full object-cover opacity-90"
@@ -135,7 +135,7 @@ export function VideoCollage({ isMobile }) {
   const isActive = useViewportActivity(containerRef, { rootMargin: "200px 0px", initialActive: true });
   const [initialGrid, setInitialGrid] = useState([]);
   const lastSizeRef = useRef(0);
-  
+
   useEffect(() => {
     const mobileNow = typeof window !== "undefined" ? window.innerWidth < 768 : isMobile;
     const size = mobileNow ? 6 : 12;
@@ -149,7 +149,7 @@ export function VideoCollage({ isMobile }) {
   return (
     <div ref={containerRef} className="absolute inset-0 z-0 overflow-hidden bg-[#050a14]">
       {initialGrid.length > 0 && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1.4, ease: "easeOut" }}
@@ -162,16 +162,16 @@ export function VideoCollage({ isMobile }) {
 
           <div className="grid grid-cols-2 md:grid-cols-4 grid-rows-3 w-full h-full gap-1 opacity-60">
             {initialGrid.map((src, i) => (
-              <VideoCell 
-                key={i} 
-                index={i} 
-                initialSrc={src} 
-                allVids={ABOUT_VIDEOS} 
+              <VideoCell
+                key={i}
+                index={i}
+                initialSrc={src}
+                allVids={ABOUT_VIDEOS}
                 active={isActive}
               />
             ))}
           </div>
-          
+
           {/* Atmospheric Overlays */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#050a14] via-transparent to-[#050a14] opacity-80" />
         </motion.div>

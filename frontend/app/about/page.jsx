@@ -2,9 +2,9 @@ import AboutUs from "@/components/AboutUs";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata = createPageMetadata({
-  title: "About Us — De Bello & Our Collective",
+  title: "About Us",
   description:
-    "Discover the story behind Kalceria (Ālea iacta est) — an automotive culture and digital craftsmanship movement forged by enthusiasts, engineers, and creative architects.",
+    "Discover the story behind Kalceria (Ālea iacta est), an automotive culture and digital craftsmanship movement forged by enthusiasts, engineers, and creative architects.",
   path: "/about",
   keywords: [
     "About Kalceria",

@@ -146,6 +146,7 @@ export async function createServiceRequest(req, res, next) {
     const validSlots = slots.every((slot) => {
       if (!slot || typeof slot.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(slot.date) || !Number.isFinite(new Date(slot.date).getTime())) return false;
       if (!validTime(slot.startTime) || !(validTime(slot.endTime) || slot.endTime === '00:00')) return false;
+      if (slot.startTime === '00:00' && slot.endTime === '01:00') return true;
       if (timeToMinutes(slot.startTime) < 9 * 60) return false;
       return timeToMinutes(slot.endTime) > timeToMinutes(slot.startTime) || slot.endTime === '00:00';
     });

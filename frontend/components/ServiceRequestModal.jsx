@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { StepIndicator, Field } from "./service-request/FormControls";
 import ContentImage from "@/components/ui/ContentImage";
@@ -21,7 +22,7 @@ const SERVICE_TYPES = [
   { id: "HOST_EVENT", label: "Host Event", desc: "We host and manage your event end-to-end" },
 ];
 
-export default function ServiceRequestModal({ onClose, userName }) {
+export default function ServiceRequestModal({ onClose, userName, onRequireAuth }) {
   const [step, setStep] = useState(0); // 0: Type, 1: Details, 2: Done
   const [weekOffset, setWeekOffset] = useState(0);
   const mounted = useHasMounted();
@@ -56,9 +57,12 @@ export default function ServiceRequestModal({ onClose, userName }) {
     const map = {};
     publicBookings.forEach(b => {
       const bDate = new Date(b.targetDate).toISOString().split('T')[0];
-      const startH = parseInt(b.startTime.split(':')[0]);
-      const endH = parseInt(b.endTime.split(':')[0]);
-      // Handle midnight wrap if necessary, though our slots are usually day-based
+      const startH = parseInt(b.startTime.split(':')[0], 10);
+      const endH = parseInt(b.endTime.split(':')[0], 10);
+      if (startH === 0 && endH === 1) {
+        map[`${bDate}-24`] = b.status;
+        return;
+      }
       for (let h = startH; h < (endH === 0 ? 24 : endH); h++) {
         map[`${bDate}-${h}`] = b.status;
       }
@@ -103,8 +107,8 @@ export default function ServiceRequestModal({ onClose, userName }) {
 
       const slots = selectedArray.map(s => ({
         date: s.date,
-        startTime: s.hour.toString().padStart(2, '0') + ":00",
-        endTime: (s.hour === 23 ? 0 : s.hour + 1).toString().padStart(2, '0') + ":00"
+        startTime: (s.hour === 24 ? 0 : s.hour).toString().padStart(2, '0') + ":00",
+        endTime: (s.hour === 23 ? 0 : s.hour === 24 ? 1 : s.hour + 1).toString().padStart(2, '0') + ":00"
       }));
 
       const res = await api.post("/services/request", {
@@ -212,8 +216,10 @@ export default function ServiceRequestModal({ onClose, userName }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -365,9 +371,7 @@ export default function ServiceRequestModal({ onClose, userName }) {
                           }`}>
                             {form.serviceType === s.id ? (
                               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"></path></svg>
-                            ) : (
-                              <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       </button>
@@ -487,13 +491,6 @@ export default function ServiceRequestModal({ onClose, userName }) {
                         {loading ? "SENDING..." : "NEXT"}
                       </button>
                     </div>
-
-                    {error && (
-                      <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-red-500/10 border border-red-500/20 px-6 py-3 rounded-full flex items-center gap-3 backdrop-blur-xl z-[300]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-                        <p className="text-red-500 text-[9px] font-sans font-black uppercase tracking-widest">{error}</p>
-                      </div>
-                    )}
                   </form>
                 </motion.div>
               )}
@@ -592,6 +589,23 @@ export default function ServiceRequestModal({ onClose, userName }) {
           </div>
         </div>
       </motion.div>
-    </div>
+
+      {error && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/85 border border-red-500/40 px-6 py-3 rounded-full flex items-center gap-3 backdrop-blur-xl z-[10000] shadow-2xl">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+          <p className="text-red-400 text-[10px] font-sans font-black uppercase tracking-widest">{error}</p>
+          {(!isLoggedIn || error.toLowerCase().includes("log") || error.toLowerCase().includes("token")) && onRequireAuth && (
+            <button
+              type="button"
+              onClick={onRequireAuth}
+              className="ml-2 px-3 py-1 rounded-full bg-white text-black font-sans font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-colors"
+            >
+              Sign In
+            </button>
+          )}
+        </div>
+      )}
+    </div>,
+    document.body
   );
 }

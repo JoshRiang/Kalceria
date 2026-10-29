@@ -18,7 +18,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[#050a14]">
       <h1 className="sr-only">
-        Kalceria — Automotive Culture and Interactive Digital Art Collective
+        Kalceria: Automotive Culture and Interactive Digital Art Collective
       </h1>
       <HomeClient />
     </main>

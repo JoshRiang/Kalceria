@@ -2,7 +2,7 @@ import { createPageMetadata } from "@/lib/seo";
 import SeeEvent from "@/components/SeeEvent";
 
 export const metadata = createPageMetadata({
-  title: "Events — Curated Automotive Meets & Exclusive Drops",
+  title: "Events",
   description:
     "Discover upcoming Kalceria automotive events, curated car culture meetups, underground drops, and nationwide Kalcerians gatherings across Indonesia.",
   path: "/events",

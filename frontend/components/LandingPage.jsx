@@ -746,7 +746,13 @@ export default function LandingPage({ onNavigateAuth }) {
 
       <AnimatePresence>
         {showServiceModal && (
-          <ServiceRequestModal onClose={() => setShowServiceModal(false)} />
+          <ServiceRequestModal
+            onClose={() => setShowServiceModal(false)}
+            onRequireAuth={() => {
+              setShowServiceModal(false);
+              onNavigateAuth?.();
+            }}
+          />
         )}
         {showLogoutConfirm && (
           <LogoutConfirmModal 

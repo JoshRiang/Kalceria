@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const SITE_CONFIG = {
   name: "Kalceria",
-  defaultTitle: "Kalceria — Automotive Culture & Digital Art Collective",
+  defaultTitle: "Kalceria | Automotive Culture & Digital Art Collective",
   description:
     "Kalceria is an automotive culture and interactive digital art collective blending high-octane engineering, curated street events, live community radar, and bespoke creative experiences.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://kalceria-frontend.vercel.app",
