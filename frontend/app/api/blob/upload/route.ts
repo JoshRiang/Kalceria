@@ -14,20 +14,32 @@ export async function POST(req: NextRequest) {
 
     const filename = `events/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
-    // If Vercel Blob Token is configured, upload directly to Vercel Blob
+    // Support both modern Vercel OIDC (BLOB_STORE_ID / Vercel runtime) and static BLOB_READ_WRITE_TOKEN
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    const blobStoreId = process.env.BLOB_STORE_ID;
+    const isVercel = Boolean(process.env.VERCEL);
 
-    if (blobToken) {
-      const blob = await put(filename, file, {
-        access: "public",
-        token: blobToken,
-      });
+    if (blobToken || blobStoreId || isVercel) {
+      try {
+        const options: { access: "public"; token?: string } = { access: "public" };
+        if (blobToken) {
+          options.token = blobToken;
+        }
 
-      return NextResponse.json({
-        success: true,
-        url: blob.url,
-        provider: "vercel-blob",
-      });
+        const blob = await put(filename, file, options);
+
+        return NextResponse.json({
+          success: true,
+          url: blob.url,
+          provider: "vercel-blob",
+        });
+      } catch (blobErr: unknown) {
+        const errMsg = blobErr instanceof Error ? blobErr.message : "Vercel Blob upload failed";
+        console.warn("Vercel Blob put failed:", errMsg);
+        if (isVercel) {
+          return NextResponse.json({ error: errMsg }, { status: 500 });
+        }
+      }
     }
 
     // Graceful fallback for local development or when token is pending configuration:
