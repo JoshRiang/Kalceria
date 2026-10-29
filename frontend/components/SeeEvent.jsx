@@ -98,8 +98,8 @@ export default function SeeEvent() {
                         src={src}
                         alt=""
                         fill
-                        sizes="(max-width: 768px) 108vw, 120vw"
-                        quality={75}
+                        sizes="(max-width: 768px) 85vw, 115vw"
+                        quality={70}
                         priority={idx === 0}
                         fetchPriority={idx === 0 ? "high" : "auto"}
                         className="object-cover object-center"

@@ -558,7 +558,7 @@ export default function IntroPreloader({ onComplete }) {
               width={1104}
               height={960}
               sizes="310px"
-              quality={85}
+              quality={75}
               priority
               fetchPriority="high"
               className="w-full h-auto block"
@@ -592,7 +592,7 @@ export default function IntroPreloader({ onComplete }) {
               width={1874}
               height={560}
               sizes="280px"
-              quality={85}
+              quality={75}
               priority
               fetchPriority="high"
               className="w-full h-auto block"

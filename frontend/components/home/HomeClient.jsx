@@ -18,7 +18,7 @@ const WelcomeTransition = dynamic(() => import("@/components/WelcomeTransition")
 });
 
 function InitialIntroShell() {
-  const common = { alt: "KALCERIA", quality: 85 };
+  const common = { alt: "KALCERIA", quality: 75 };
   const {
     props: { srcSet: desktopSrcSet, ...desktopRest },
   } = getImageProps({
@@ -78,7 +78,7 @@ export default function HomeClient() {
         // Warm LandingPage chunk quietly during idle window so transition is instant when intro finishes
         const warmTimer = setTimeout(() => {
           import("@/components/LandingPage").catch(() => {});
-        }, 2500);
+        }, 4800);
         return () => clearTimeout(warmTimer);
       }
     }

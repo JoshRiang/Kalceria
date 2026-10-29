@@ -68,15 +68,21 @@ export function PhotoCollage({ isMobile }) {
   );
 }
 
-export function VideoCell({ initialSrc, allVids, active = true, streamReady = true }) {
+export function VideoCell({ index = 0, initialSrc, allVids, active = true }) {
   const [src, setSrc] = useState(initialSrc);
   const [glowColor, setGlowColor] = useState("#fbbf24");
+  const [streamReady, setStreamReady] = useState(false);
   const videoRef = useRef(null);
   const randomRef = useRef(null);
 
   useEffect(() => {
     randomRef.current = createRuntimeSeededRandom(`about-video-cell-${initialSrc}`);
   }, [initialSrc]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setStreamReady(true), 450 + index * 180);
+    return () => clearTimeout(timer);
+  }, [index]);
 
   useEffect(() => {
     if (!randomRef.current) return;
@@ -102,11 +108,9 @@ export function VideoCell({ initialSrc, allVids, active = true, streamReady = tr
 
   return (
     <div className="relative w-full h-full min-h-0 overflow-hidden bg-slate-950 border border-white/10">
-      {/* Randomized Traffic Light Glow (Fills empty transition slots) */}
-      <motion.div 
-        animate={active ? { opacity: [0.4, 0.8, 0.4], scale: [1, 1.2, 1] } : { opacity: 0.4, scale: 1 }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute inset-0 z-0 blur-[30px]"
+      {/* Randomized Traffic Light Glow (GPU-composited pulse fills empty transition slots) */}
+      <div
+        className={`absolute inset-0 z-0 blur-[30px] opacity-55 ${active ? "animate-pulse" : ""}`}
         style={{ backgroundColor: glowColor }}
       />
 
@@ -130,20 +134,17 @@ export function VideoCollage({ isMobile }) {
   const containerRef = useRef(null);
   const isActive = useViewportActivity(containerRef, { rootMargin: "200px 0px", initialActive: true });
   const [initialGrid, setInitialGrid] = useState([]);
-  const [streamReady, setStreamReady] = useState(false);
+  const lastSizeRef = useRef(0);
   
   useEffect(() => {
-    const random = createRuntimeSeededRandom(`about-video-collage-${isMobile ? "mobile" : "desktop"}`);
-    const size = isMobile ? 6 : 12;
+    const mobileNow = typeof window !== "undefined" ? window.innerWidth < 768 : isMobile;
+    const size = mobileNow ? 6 : 12;
+    if (lastSizeRef.current === size) return;
+    lastSizeRef.current = size;
+    const random = createRuntimeSeededRandom(`about-video-collage-${mobileNow ? "mobile" : "desktop"}`);
     const base = Array.from({ length: size }, (_, i) => ABOUT_VIDEOS[i % ABOUT_VIDEOS.length]);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the seeded post-mount shuffle and mobile grid transition.
     setInitialGrid(base.sort(() => random() - 0.5));
   }, [isMobile]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setStreamReady(true), 320);
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <div ref={containerRef} className="absolute inset-0 z-0 overflow-hidden bg-[#050a14]">
@@ -151,7 +152,7 @@ export function VideoCollage({ isMobile }) {
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 2, ease: "easeOut" }}
+          transition={{ duration: 1.4, ease: "easeOut" }}
           className="absolute inset-0"
         >
           {/* Background Glow to fill gaps */}
@@ -167,7 +168,6 @@ export function VideoCollage({ isMobile }) {
                 initialSrc={src} 
                 allVids={ABOUT_VIDEOS} 
                 active={isActive}
-                streamReady={streamReady}
               />
             ))}
           </div>

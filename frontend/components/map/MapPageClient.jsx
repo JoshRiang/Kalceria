@@ -7,13 +7,14 @@ import ContentImage from "@/components/ui/ContentImage";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import { useHasMounted } from "@/hooks/useHasMounted";
-import { KalceriansPanel } from "@/components/map/KalceriansPanel";
-import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
 import RadialPing from "@/components/map/RadialPing";
 import { MapAuthGate } from "@/components/map/MapAuthGate";
-import { MapHeaderHud } from "@/components/map/MapHeaderHud";
-import { MapModals } from "@/components/map/MapModals";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
+
+const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel").then((m) => m.KalceriansPanel), { ssr: false });
+const StartupSequenceOverlay = dynamic(() => import("@/components/map/StartupSequenceOverlay").then((m) => m.StartupSequenceOverlay), { ssr: false });
+const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
+const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
 import { hasUserSession } from "@/lib/session";
 import {
   fetchMe,
