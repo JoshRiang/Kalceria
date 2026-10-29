@@ -53,3 +53,8 @@ summary.md
 scratch/
 
 .vercel/
+
+# Python scripts
+*.py
+*.pyc
+__pycache__/

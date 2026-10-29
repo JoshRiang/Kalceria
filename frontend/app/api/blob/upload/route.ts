@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
+import { optimizeUploadMedia } from "@/lib/mediaOptimizer";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const filename = `events/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const rawBuffer = Buffer.from(await file.arrayBuffer());
+    const declaredMimeType = file.type || "application/octet-stream";
+
+    // Server-side normalization & compression preserving 100% visual fidelity
+    const optimized = await optimizeUploadMedia(rawBuffer, file.name, declaredMimeType);
+
+    const safeFilename = `events/${Date.now()}-${optimized.filename.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
     // Support both modern Vercel OIDC (BLOB_STORE_ID / Vercel runtime) and static BLOB_READ_WRITE_TOKEN
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
@@ -21,7 +28,10 @@ export async function POST(req: NextRequest) {
 
     if (blobToken || blobStoreId || isVercel) {
       try {
-        const options: { access: "public" | "private"; token?: string } = { access: "public" };
+        const options: { access: "public" | "private"; token?: string; contentType?: string } = {
+          access: "public",
+          contentType: optimized.contentType,
+        };
         if (blobToken) {
           options.token = blobToken;
         }
@@ -29,13 +39,13 @@ export async function POST(req: NextRequest) {
         let blob;
         let isPrivate = false;
         try {
-          blob = await put(filename, file, options);
+          blob = await put(safeFilename, optimized.buffer, options);
         } catch (firstErr: unknown) {
           const msg = firstErr instanceof Error ? firstErr.message : "";
           // If store is configured with private access, seamlessly retry with private access
           if (msg.includes("Cannot use public access on a private store") || msg.includes("private store")) {
             options.access = "private";
-            blob = await put(filename, file, options);
+            blob = await put(safeFilename, optimized.buffer, options);
             isPrivate = true;
           } else {
             throw firstErr;
@@ -52,6 +62,12 @@ export async function POST(req: NextRequest) {
           rawBlobUrl: blob.url,
           access: isPrivate ? "private" : "public",
           provider: "vercel-blob",
+          optimization: {
+            originalSize: optimized.originalSize,
+            optimizedSize: optimized.optimizedSize,
+            reductionPercent: optimized.reductionPercent,
+            dimensions: optimized.dimensions,
+          },
         });
       } catch (blobErr: unknown) {
         const errMsg = blobErr instanceof Error ? blobErr.message : "Vercel Blob upload failed";
@@ -63,20 +79,23 @@ export async function POST(req: NextRequest) {
     }
 
     // Graceful fallback for local development or when token is pending configuration:
-    // Convert to high-performance base64 data URL so user can immediately preview and submit
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const mimeType = file.type || "video/mp4";
-    const dataUrl = `data:${mimeType};base64,${buffer.toString("base64")}`;
+    // Convert to normalized base64 data URL so user can immediately preview and submit
+    const dataUrl = `data:${optimized.contentType};base64,${optimized.buffer.toString("base64")}`;
 
     return NextResponse.json({
       success: true,
       url: dataUrl,
       provider: "local-preview-fallback",
-      message: "BLOB_READ_WRITE_TOKEN not yet detected. Using safe preview fallback.",
+      message: "BLOB_READ_WRITE_TOKEN not yet detected. Using normalized preview fallback.",
+      optimization: {
+        originalSize: optimized.originalSize,
+        optimizedSize: optimized.optimizedSize,
+        reductionPercent: optimized.reductionPercent,
+        dimensions: optimized.dimensions,
+      },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to upload file";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
