@@ -9,6 +9,7 @@ import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import RadialPing from "@/components/map/RadialPing";
 import { MapAuthGate } from "@/components/map/MapAuthGate";
+import { INITIAL_MOCK_MINI_EVENTS } from "@/components/map/mockMiniEvents";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel").then((m) => m.KalceriansPanel), { ssr: false });
@@ -69,18 +70,24 @@ const hqPoint = {
 // ─── Smooth Domino Chevrons for B&W/Red-Black Dash Transition ─────────
 
 
+const mergeEvents = (activeList) => {
+  if (!activeList || activeList.length === 0) return INITIAL_MOCK_MINI_EVENTS;
+  const activeIds = new Set(activeList.map((e) => e.id));
+  const missingMocks = INITIAL_MOCK_MINI_EVENTS.filter((m) => !activeIds.has(m.id));
+  return [...activeList, ...missingMocks];
+};
+
 export default function MapPage() {
   const scheduleTimeout = useTimeoutRegistry();
   // State
   const [currentUser, setCurrentUser] = useState(null);
   const [mapUsersData, setMapUsersData] = useState([]);
   const [kalcerians, setKalcerians] = useState([]);
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState(INITIAL_MOCK_MINI_EVENTS);
   const [presence, setPresence] = useState("online");
   const [, setNotice] = useState("");
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
-  const [showHqModal, setShowHqModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusText, setStatusText] = useState("");
   const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe" });
@@ -169,7 +176,7 @@ export default function MapPage() {
         if (!alive) return;
         setMapUsersData(users || []);
         setKalcerians(kals || []);
-        setEvents(activeEvents || []);
+        setEvents(mergeEvents(activeEvents));
         setIsDataLoading(false);
       } catch (err) {
         console.error("[Map] fetch error", err);
@@ -479,7 +486,7 @@ export default function MapPage() {
       }
       
       const updatedEvents = await fetchMiniEvents();
-      setEvents(updatedEvents || []);
+      setEvents(mergeEvents(updatedEvents));
       setNotice("Mini event saved.");
       setShowEventModal(false);
     } catch (err) {
@@ -516,7 +523,7 @@ export default function MapPage() {
         await delMiniEvent(existingEvent.id);
       }
       const updatedEvents = await fetchMiniEvents();
-      setEvents(updatedEvents || []);
+      setEvents(mergeEvents(updatedEvents));
       setEventForm({ title: "", description: "", category: "cafe" });
       setNotice("Mini event deleted.");
       setShowEventModal(false);
@@ -525,13 +532,6 @@ export default function MapPage() {
     }
     setBusy(false);
   }
-
-  // Listen for HQ modal trigger from Leaflet popups
-  useEffect(() => {
-    const handleOpenHq = () => setShowHqModal(true);
-    window.addEventListener("openHq", handleOpenHq);
-    return () => window.removeEventListener("openHq", handleOpenHq);
-  }, []);
 
   // Independent Pirate manifestation logic
   useEffect(() => {
@@ -937,9 +937,6 @@ export default function MapPage() {
         setEventForm={setEventForm}
         activeOwnEvent={activeOwnEvent}
         deleteMiniEvent={deleteMiniEvent}
-        showHqModal={showHqModal}
-        setShowHqModal={setShowHqModal}
-        hqPoint={hqPoint}
         isExiting={isExiting}
         showQuitModal={showQuitModal}
         setShowQuitModal={setShowQuitModal}

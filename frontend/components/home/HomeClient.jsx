@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 import IntroPreloader from "@/components/IntroPreloader";
-import AuthPage from "@/components/AuthPage";
-import WelcomeTransition from "@/components/WelcomeTransition";
 import LandingPage from "@/components/LandingPage";
+
+const AuthPage = dynamic(() => import("@/components/AuthPage"), { ssr: false });
+const WelcomeTransition = dynamic(() => import("@/components/WelcomeTransition"), { ssr: false });
 
 export default function HomeClient() {
   const [phase, setPhase] = useState("loading"); // "intro" | "landing" | "auth" | "welcome"

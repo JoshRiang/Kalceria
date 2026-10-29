@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+        { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+        { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
         ...(process.env.NODE_ENV === 'production'
           ? [
               { key: 'Strict-Transport-Security', value: 'max-age=31536000' },

@@ -359,7 +359,7 @@ export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, eve
                         </b>
                         {(() => {
                           const district = mapUsersData.find((u) => u.id === user.id)?.district;
-                          if (!district || district === "Scanning..." || district === "Unknown") return null;
+                          if (!district || /^(scanning|unknown)/i.test(district.trim())) return null;
                           return (
                             <span className={`mt-1 px-2 py-1 rounded-md border text-[10px] font-bold tracking-wider leading-none shadow-[0_0_10px_rgba(255,255,255,0.02)] ${
                               isMapDark

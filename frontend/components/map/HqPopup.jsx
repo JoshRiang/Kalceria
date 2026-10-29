@@ -36,11 +36,7 @@ export function hqPopup(hq) {
         </div>
         <div class="scanlines" style="opacity: 0.2;"></div>
       </div>
-      <div class="popup-status active" style="--border-color: #ffd60a"><span style="background: #ffd60a; box-shadow: 0 0 5px #ffd60a"></span><p>${esc(hq.description)}</p></div>
-      <div class="popup-action-wrap">
-        <button class="popup-action hq-enter-btn" onclick="window.dispatchEvent(new CustomEvent('openHq'))">ENTER HEADQUARTER</button>
-      </div>
-
+      <div class="popup-status active" style="--border-color: #ffd60a; padding-left: 14px;"><p style="font-style: italic;">${esc(hq.description)}</p></div>
     </div>
     <div class="popup-tail" style="--border-color: #ffd60a"></div>
   `;

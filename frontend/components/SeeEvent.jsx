@@ -7,7 +7,7 @@ import { fetchPublicEvents } from "@/lib/api";
 import { StatCounter, RainbowPixels, MicroParticles } from "./events/effects";
 import { FloatingPhotos } from "./events/floatingPhotos";
 import { Typewriter } from "./events/typewriter";
-import { ApplyModal } from "./events/applyModal";
+const ApplyModal = dynamic(() => import("./events/applyModal").then(m => m.ApplyModal), { ssr: false });
 import { CLIP } from "./events/constants";
 const SpinningGlobeCanvas = dynamic(() => import("./SpinningGlobeCanvas"), {
   ssr: false,
@@ -46,7 +46,6 @@ export default function SeeEvent() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- Starts the existing async data request; state changes only after the response.
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {

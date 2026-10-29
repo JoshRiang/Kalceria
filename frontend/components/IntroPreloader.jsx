@@ -524,11 +524,14 @@ export default function IntroPreloader({ onComplete }) {
           <motion.img
             src="/hp/logointro_hp.webp"
             alt="KALCERIA"
+            width={310}
+            height={64}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: showLogo ? 1 : 0, scale: showLogo ? 1 : 0.95 }}
             transition={{ duration: 1.0, ease: "easeInOut" }}
             style={{ 
               width: "310px",
+              height: "auto",
               pointerEvents: "none", 
               display: "block", 
               filter: "drop-shadow(0 0 35px rgba(255, 255, 255, 0.12))",
@@ -555,10 +558,12 @@ export default function IntroPreloader({ onComplete }) {
           <motion.img
             src="/logointofadein.webp"
             alt="KALCERIA"
+            width={280}
+            height={60}
             initial={{ opacity: 0 }}
             animate={{ opacity: showLogo ? 1 : 0 }}
             transition={{ duration: 1.4, ease: "easeInOut" }}
-            style={{ width: "280px", pointerEvents: "none", display: "block", flexShrink: 0 }}
+            style={{ width: "280px", height: "auto", pointerEvents: "none", display: "block", flexShrink: 0 }}
             draggable={false}
           />
 

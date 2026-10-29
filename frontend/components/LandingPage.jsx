@@ -3,13 +3,15 @@ import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import ServiceRequestModal from "./ServiceRequestModal";
+import dynamic from "next/dynamic";
 import { Typewriter, FilmLane, FilmStrip, EventSlider, useMerchRandomizer, MerchCard, FindMoreSlider } from "./landing/showcase";
 import { GoldenDust, StarDust, FloatingSpareParts, TropicalParticles, DynamicCollage, PrinceRupertDrop } from "./landing/particles";
 import { SupportUsBackground } from "./landing/backgrounds";
-import { LogoutConfirmModal } from "./landing/modals/LogoutConfirmModal";
-import { IdeaCommentModal } from "./landing/modals/IdeaCommentModal";
 import { ClosingSections } from "./landing/ClosingSections";
+
+const ServiceRequestModal = dynamic(() => import("./ServiceRequestModal"), { ssr: false });
+const LogoutConfirmModal = dynamic(() => import("./landing/modals/LogoutConfirmModal").then(m => m.LogoutConfirmModal), { ssr: false });
+const IdeaCommentModal = dynamic(() => import("./landing/modals/IdeaCommentModal").then(m => m.IdeaCommentModal), { ssr: false });
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 import api from "@/lib/api";

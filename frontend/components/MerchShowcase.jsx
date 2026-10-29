@@ -95,8 +95,10 @@ function MarketplaceLogos() {
         <img
           src="https://upload.wikimedia.org/wikipedia/commons/7/72/Tokopedia_new_logo.png"
           alt="Tokopedia"
+          width={120}
+          height={32}
           loading="lazy"
-          className="h-8 object-contain"
+          className="h-8 w-auto object-contain"
         />
       </a>
       <a
@@ -109,8 +111,10 @@ function MarketplaceLogos() {
         <img
           src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/1024px-Shopee.svg.png"
           alt="Shopee"
+          width={100}
+          height={32}
           loading="lazy"
-          className="h-8 object-contain"
+          className="h-8 w-auto object-contain"
         />
       </a>
     </div>

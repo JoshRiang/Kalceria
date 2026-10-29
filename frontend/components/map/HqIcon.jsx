@@ -7,9 +7,11 @@ export function getHqIconHtml(isMapDark = false) {
   const textShadow = isMapDark
     ? "0 2px 4px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.85)"
     : "0 1px 3px rgba(255,255,255,1), 0 0 6px rgba(255,255,255,0.95)";
-  const iconShadow = isMapDark
-    ? "drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 6px rgba(255,255,255,0.4))"
-    : "drop-shadow(0 1px 3px rgba(255,255,255,0.95)) drop-shadow(0 2px 5px rgba(0,0,0,0.4))";
+
+  const circleBg = isMapDark ? "rgba(10, 15, 26, 0.9)" : "rgba(255, 255, 255, 0.95)";
+  const circleShadow = isMapDark
+    ? "0 0 14px rgba(255,255,255,0.2), 0 3px 8px rgba(0,0,0,0.8)"
+    : "0 0 10px rgba(0,0,0,0.12), 0 3px 8px rgba(0,0,0,0.2)";
 
   return `
     <div class="clean-hq-node" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
@@ -17,12 +19,14 @@ export function getHqIconHtml(isMapDark = false) {
         Fresh Market <br> Bintaro
       </div>
 
-      <!-- Generic Home Icon (no encapsulation, white/black per theme) -->
-      <div style="width: 32px; height: 32px; color: ${iconColor}; filter: ${iconShadow}; display: flex; align-items: center; justify-content: center; transition: color 0.3s ease;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 100%; height: 100%;">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
+      <!-- HQ round circle container with Home Icon inside -->
+      <div style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid ${iconColor}; background: ${circleBg}; backdrop-filter: blur(4px); box-shadow: ${circleShadow}; display: flex; align-items: center; justify-content: center; color: ${iconColor}; transition: all 0.3s ease;">
+        <div style="width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 100%; height: 100%;">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </div>
       </div>
     </div>
   `;

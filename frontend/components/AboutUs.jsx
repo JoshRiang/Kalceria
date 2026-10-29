@@ -5,9 +5,11 @@ import Image from "next/image";
 import { StaticTypewriter } from "./about/typewriter";
 import { PhotoCollage, VideoCollage } from "./about/collage";
 import { FloatingQuotesLayer } from "./about/quotes";
+import dynamic from "next/dynamic";
 import { GoldenAmbientSparks, AnimatedReiiPair } from "./about/ambient";
-import { WebDevEntrySequence } from "./about/entrySequence";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
+
+const WebDevEntrySequence = dynamic(() => import("./about/entrySequence").then(m => m.WebDevEntrySequence), { ssr: false });
 
 export default function AboutUs() {
   const [showEntry, setShowEntry] = useState(false);

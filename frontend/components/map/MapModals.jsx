@@ -76,9 +76,6 @@ export const MapModals = memo(function MapModals({
   setEventForm,
   activeOwnEvent,
   deleteMiniEvent,
-  showHqModal,
-  setShowHqModal,
-  hqPoint,
   isExiting,
   showQuitModal,
   setShowQuitModal,
@@ -327,78 +324,6 @@ export const MapModals = memo(function MapModals({
               </div>
             </form>
           </motion.div>
-        </div>
-      )}
-
-      {/* HQ Modal */}
-      {showHqModal && (
-        <div
-          className="fixed inset-0 z-[3000] grid place-items-center bg-black/60 backdrop-blur-2xl p-4 sm:p-8 animate-in zoom-in-95 duration-300"
-          onClick={() => setShowHqModal(false)}
-        >
-          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-            <div className="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vw] bg-amber-500 rounded-full blur-[140px] opacity-[0.15] animate-[float-wide_30s_infinite_linear]" />
-            <div className="absolute -bottom-[10%] -right-[10%] w-[50vw] h-[50vw] bg-pink-500 rounded-full blur-[120px] opacity-[0.1] animate-[float-wide_35s_infinite_reverse_linear]" />
-          </div>
-
-          <div
-            className="relative w-full max-w-5xl bg-[#0a0f1a]/50 backdrop-blur-xl border border-white/[0.12] rounded-[24px] shadow-2xl flex flex-col md:flex-row overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="absolute top-4 right-6 z-50 text-white/20 text-4xl hover:text-white transition-colors"
-              onClick={() => setShowHqModal(false)}
-            >
-              ×
-            </button>
-
-            <div className="w-full md:w-2/3 bg-black relative aspect-video md:aspect-auto rounded-l-2xl overflow-hidden">
-              <video
-                className="w-full h-full object-cover opacity-70"
-                autoPlay
-                loop
-                muted
-                playsInline
-                src={hqPoint.videoUrl}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0c1528] via-transparent to-transparent pointer-events-none" />
-              <div className="absolute bottom-8 left-8 flex items-center gap-4">
-                <div className="w-0.5 h-8 bg-white/30 rounded-full" />
-                <h3 className="font-sans font-bold text-2xl text-white uppercase tracking-tight leading-none">
-                  Live Feed
-                </h3>
-              </div>
-              <div className="absolute top-6 left-6 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-mono text-white/40 tracking-wider uppercase">
-                  Encrypted Signal
-                </span>
-              </div>
-            </div>
-
-            <div className="w-full md:w-1/3 p-10 flex flex-col justify-center gap-8 bg-transparent border-l border-white/5">
-              <div>
-                <label className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-2 block">
-                  Main Base
-                </label>
-                <h4 className="font-sans font-bold text-3xl text-white uppercase leading-none tracking-tight">
-                  Fresh Market Bintaro
-                </h4>
-              </div>
-              <div className="w-full h-px bg-white/5" />
-              <div>
-                <p className="text-white/60 text-sm leading-relaxed italic">
-                  &quot;{hqPoint.description}&quot;
-                </p>
-              </div>
-              <button
-                className="w-full py-4 border border-white/10 text-white font-semibold text-xs tracking-wider rounded-lg hover:bg-white/5 hover:border-white/20 transition-all"
-                onClick={() => setShowHqModal(false)}
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
