@@ -117,3 +117,4 @@ Admin dapat melihat status kesiapan seluruh broker secara real-time melalui endp
 - **Diagnostik Admin**: `GET /api/admin/integrations/readiness` (memerlukan session Admin)
 
 Diagnostik akan memeriksa apakah semua environment variable yang dibutuhkan sudah terisi tanpa pernah mengekspos isi rahasia API key.
+

@@ -55,3 +55,4 @@ export function handleInboundWhatsAppWebhook(req, res) {
   // Always acknowledge immediately with 200 OK so Meta doesn't disable the webhook
   res.status(200).json({ status: 'received' });
 }
+
