@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
+import { useViewportActivity } from "@/hooks/useViewportActivity";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 export const COMMUNITY_QUOTES = [
@@ -18,7 +19,7 @@ export function FloatingQuote({ quote }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.9, x: 0, y: 0 }}
       animate={{ 
-        opacity: 0.7, 
+        opacity: 0.78, 
         scale: 1, 
         x: quote.pos.dx, 
         y: quote.pos.dy 
@@ -29,7 +30,7 @@ export function FloatingQuote({ quote }) {
         ease: "linear",
         opacity: { duration: 1.5 }, // Smooth fade in/out
       }}
-      className={`absolute z-[60] pointer-events-none text-white/70 whitespace-nowrap text-xl md:text-3xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] ${quote.style}`}
+      className={`absolute z-[60] pointer-events-none text-slate-100 whitespace-nowrap text-xl md:text-3xl drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)] ${quote.style}`}
       style={{ left: `${quote.pos.x}%`, top: `${quote.pos.y}%` }}
     >
       &quot;{quote.text}&quot;
@@ -38,16 +39,21 @@ export function FloatingQuote({ quote }) {
 }
 
 export function FloatingQuotesLayer() {
+  const containerRef = useRef(null);
+  const isActive = useViewportActivity(containerRef, { rootMargin: "300px 0px" });
   const [activeQuotes, setActiveQuotes] = useState([]);
   const scheduleTimeout = useTimeoutRegistry();
   const availableIndicesRef = useRef(Array.from({ length: COMMUNITY_QUOTES.length }, (_, i) => i));
   const idCounter = useRef(0);
 
   useEffect(() => {
+    if (!isActive) return;
     const random = createRuntimeSeededRandom("about-floating-quotes-v1");
     let spawnTimer;
+    let cancelled = false;
     
     const spawnNext = () => {
+      if (cancelled) return;
       if (availableIndicesRef.current.length > 0) {
         const rndIdxIdx = Math.floor(random() * availableIndicesRef.current.length);
         const quoteIdx = availableIndicesRef.current[rndIdxIdx];
@@ -79,7 +85,9 @@ export function FloatingQuotesLayer() {
         scheduleTimeout(() => {
           setActiveQuotes(prev => prev.filter(q => q.id !== quoteId));
           // Unlock quote: return index to available pool
-          availableIndicesRef.current.push(quoteIdx);
+          if (!availableIndicesRef.current.includes(quoteIdx)) {
+            availableIndicesRef.current.push(quoteIdx);
+          }
         }, 8000);
       }
 
@@ -88,11 +96,14 @@ export function FloatingQuotesLayer() {
     };
 
     spawnNext();
-    return () => clearTimeout(spawnTimer);
-  }, [scheduleTimeout]);
+    return () => {
+      cancelled = true;
+      clearTimeout(spawnTimer);
+    };
+  }, [isActive, scheduleTimeout]);
 
   return (
-    <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
+    <div ref={containerRef} aria-hidden="true" className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
       <AnimatePresence>
         {activeQuotes.map(q => (
           <FloatingQuote key={q.id} quote={q} />

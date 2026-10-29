@@ -44,9 +44,10 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Lighthouse reports and audit logs
+# Lighthouse reports, summary, and scratch scripts
 lighthouse*
 *.report.html
 *.report.json
-*summary*.md
+summary.md
+**/*[Ss][Uu][Mm][Mm][Aa][Rr][Yy]*.md
 scratch/

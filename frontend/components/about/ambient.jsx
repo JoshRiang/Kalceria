@@ -1,9 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { createSeededRandom } from "@/lib/seededRandom";
+import { useViewportActivity } from "@/hooks/useViewportActivity";
 
 export function GoldenAmbientSparks() {
+  const containerRef = useRef(null);
+  const isActive = useViewportActivity(containerRef, { rootMargin: "350px 0px" });
   const [sparks, setSparks] = useState([]);
   
   useEffect(() => {
@@ -24,8 +28,8 @@ export function GoldenAmbientSparks() {
   }, []);
 
   return (
-    <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
-      {sparks.map((s) => (
+    <div ref={containerRef} className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
+      {isActive && sparks.map((s) => (
         <motion.div
           key={s.id}
           className="absolute rounded-full"
@@ -88,5 +92,108 @@ export function DanglingSymbols({ char, color, side = "left", configs = [], isMo
         </motion.div>
       ))}
     </div>
+  );
+}
+
+export function AnimatedReiiPair({ isMobile }) {
+  const containerRef = useRef(null);
+  const isActive = useViewportActivity(containerRef, { rootMargin: "350px 0px" });
+  const [imgToggle, setImgToggle] = useState(false);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const itv = setInterval(() => setImgToggle((prev) => !prev), 1000);
+    return () => clearInterval(itv);
+  }, [isActive]);
+
+  return (
+    <>
+      {/* LEFT REII IMAGE */}
+      <div ref={containerRef} className="absolute -bottom-40 mr-0 md:mr-6 pointer-events-none flex items-end justify-center z-10 right-[82%] md:right-full">
+        <motion.div
+          animate={isActive ? { scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] } : { scale: 1, opacity: 0.4 }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-gradient-to-tr from-[#FFD700]/40 to-cyan-500/40 blur-[70px] rounded-full z-[-1]"
+        />
+        <div className="relative z-10 w-[9.6rem] md:w-[17.25rem] aspect-[768/905] flex-shrink-0">
+          <Image
+            src="/reii.webp"
+            alt="Reii Left"
+            fill
+            sizes="(max-width: 768px) 154px, 276px"
+            quality={75}
+            loading="lazy"
+            decoding="async"
+            className={`object-contain object-bottom transition-none ${imgToggle ? "opacity-0" : "opacity-90"}`}
+          />
+          <Image
+            src="/reii2.webp"
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="(max-width: 768px) 154px, 276px"
+            quality={75}
+            loading="lazy"
+            decoding="async"
+            className={`object-contain object-bottom transition-none ${imgToggle ? "opacity-90" : "opacity-0"}`}
+          />
+        </div>
+
+        <DanglingSymbols
+          char="?"
+          color="#FFD700"
+          side="left"
+          isMobile={isMobile}
+          configs={[
+            { delay: 0, rotate: -15, top: isMobile ? "5%" : "-15%", offset: 145 },
+            { delay: 0.8, rotate: 10, top: isMobile ? "55%" : "35%", offset: 200 },
+          ]}
+        />
+      </div>
+
+      {/* RIGHT REII IMAGE */}
+      <div className="absolute -bottom-40 ml-0 md:ml-6 pointer-events-none flex items-end justify-center z-10 left-[82%] md:left-full">
+        <motion.div
+          animate={isActive ? { scale: [1.3, 1, 1.3], opacity: [0.6, 0.3, 0.6] } : { scale: 1, opacity: 0.4 }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-gradient-to-tl from-[#FF00FF]/40 to-cyan-500/40 blur-[70px] rounded-full z-[-1]"
+        />
+        <div className="relative z-10 w-[9.6rem] md:w-[17.25rem] aspect-[768/905] flex-shrink-0">
+          <Image
+            src="/reii2.webp"
+            alt="Reii Right"
+            fill
+            sizes="(max-width: 768px) 154px, 276px"
+            quality={75}
+            loading="lazy"
+            decoding="async"
+            className={`object-contain object-bottom transition-none ${imgToggle ? "opacity-0" : "opacity-90"}`}
+          />
+          <Image
+            src="/reii3.webp"
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="(max-width: 768px) 154px, 276px"
+            quality={75}
+            loading="lazy"
+            decoding="async"
+            className={`object-contain object-bottom transition-none ${imgToggle ? "opacity-90" : "opacity-0"}`}
+          />
+        </div>
+
+        <DanglingSymbols
+          char="!"
+          color="#00FFFF"
+          side="right"
+          isMobile={isMobile}
+          configs={[
+            { delay: 0, rotate: -15, top: "-15%", offset: 145 },
+            { delay: 0.8, rotate: 10, top: "30%", offset: 200 },
+            { delay: 1.5, rotate: -5, top: "65%", offset: 250 },
+          ]}
+        />
+      </div>
+    </>
   );
 }
