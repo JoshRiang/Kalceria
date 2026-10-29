@@ -6,55 +6,57 @@ import { userPopup } from "@/components/map/UserPopup";
 import { uploadBlobMedia } from "@/lib/api";
 
 const EVENT_CATEGORIES_GRID = [
-  // Left top: Coffee Icon (Cafe Meeting)
+  // Left top: Coffee Icon (Cafe Meeting) - Combination of black and white from Picture 3
   {
     id: "cafe",
     label: "Cafe Meeting",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-        <line x1="6" y1="1" x2="6" y2="4" />
-        <line x1="10" y1="1" x2="10" y2="4" />
-        <line x1="14" y1="1" x2="14" y2="4" />
+    renderIcon: (isSelected) => (
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+        <path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke={isSelected ? "#101010" : "#9ca3af"} strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke={isSelected ? "#101010" : "#9ca3af"} strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill={isSelected ? "#000000" : "#64748b"} stroke="#ffffff" strokeWidth="0.75" />
+        <ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill="#ffffff" stroke="#000000" strokeWidth="0.6" />
+        <path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke="#ffffff" strokeWidth="1.3" strokeLinecap="round" />
+        <path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke={isSelected ? "#000000" : "#64748b"} strokeWidth="1.8" strokeLinecap="round" />
+        <ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill={isSelected ? "#000000" : "#64748b"} stroke="#ffffff" strokeWidth="0.6" />
+        <ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill="#ffffff" />
       </svg>
     ),
   },
-  // Right top: Makanan Icon (Eat Together)
+  // Right top: Makanan Icon (Eat Together) - Pure black on light / pure white on dark / grey unselected
   {
     id: "eat",
     label: "Eat Together",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2" />
-        <line x1="15" y1="11" x2="15" y2="22" />
-        <path d="M6 2v20" />
-        <path d="M6 2c2 0 3 2 3 5s-1 5-3 5" />
+    renderIcon: (isSelected, isMapDark) => (
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isSelected ? (isMapDark ? "#ffffff" : "#000000") : "#9ca3af"}>
+        <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z" />
       </svg>
     ),
   },
-  // Left bottom: Tanda Seru Icon (Something Special)
+  // Left bottom: Tanda Seru Icon (Something Special - Picture 1) - Pure black on light / pure white on dark / grey unselected
   {
     id: "special",
     label: "Something Special",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="8" x2="12" y2="12" />
-        <line x1="12" y1="16" x2="12.01" y2="16" />
+    renderIcon: (isSelected, isMapDark) => (
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isSelected ? (isMapDark ? "#ffffff" : "#000000") : "#9ca3af"}>
+        <path d="M10.8 3h2.4l-.65 11h-1.1L10.8 3zM12 17.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5z" />
       </svg>
     ),
   },
-  // Right bottom: People Discuss Icon (Discuss More)
+  // Right bottom: People Discuss Icon (Discuss More) - Combination of black and white
   {
     id: "discuss",
     label: "Discuss More",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    renderIcon: (isSelected) => (
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+        <path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill={isSelected ? "#000000" : "#64748b"} stroke="#ffffff" strokeWidth="0.8" />
+        <circle cx="10.5" cy="5.3" r="0.7" fill="#ffffff" />
+        <circle cx="12" cy="5.3" r="0.7" fill="#ffffff" />
+        <circle cx="13.5" cy="5.3" r="0.7" fill="#ffffff" />
+        <circle cx="7.5" cy="13" r="2.5" fill={isSelected ? "#000000" : "#475569"} stroke="#ffffff" strokeWidth="1" />
+        <path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={isSelected ? "#000000" : "#475569"} stroke="#ffffff" strokeWidth="1" />
+        <circle cx="16.5" cy="13" r="2.5" fill="#ffffff" stroke={isSelected ? "#000000" : "#64748b"} strokeWidth="1.2" />
+        <path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill="#ffffff" stroke={isSelected ? "#000000" : "#64748b"} strokeWidth="1.2" />
       </svg>
     ),
   },
@@ -257,29 +259,23 @@ export const MapModals = memo(function MapModals({
                         key={cat.id}
                         type="button"
                         onClick={() => setEventForm((f) => ({ ...f, category: cat.id }))}
-                        className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 outline-none ${
+                        className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 outline-none ${
                           isSelected
-                            ? (isMapDark
-                                ? "border-white/60 bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.15)] ring-1 ring-white/40"
-                                : "border-black/60 bg-black/5 shadow-[0_0_12px_rgba(0,0,0,0.08)] ring-1 ring-black/40")
+                            ? "bg-white/35 backdrop-blur-md border-white/80 shadow-[0_0_20px_rgba(255,255,255,0.45),inset_0_1px_3px_rgba(255,255,255,0.8)] ring-1 ring-white/60"
                             : (isMapDark
                                 ? "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
-                                : "border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-slate-100")
+                                : "border-slate-200/80 bg-white/40 hover:border-slate-300 hover:bg-white/60")
                         }`}
                       >
-                        <div
-                          className={`transition-colors duration-200 ${
-                            isSelected
-                              ? (isMapDark ? "text-white" : "text-black")
-                              : "text-gray-400"
-                          }`}
-                        >
-                          {cat.icon}
+                        <div className="transition-transform duration-200">
+                          {cat.renderIcon(isSelected, isMapDark)}
                         </div>
                         <span
                           style={{ fontFamily: "Arial, sans-serif" }}
-                          className={`text-[11px] font-medium leading-tight text-center mt-1.5 transition-colors duration-200 ${
-                            isMapDark ? "text-white" : "text-black"
+                          className={`text-[11px] leading-tight text-center mt-1.5 transition-colors duration-200 ${
+                            isSelected
+                              ? (isMapDark ? "text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : "text-slate-900 font-bold")
+                              : "text-gray-400 font-medium"
                           }`}
                         >
                           {cat.label}

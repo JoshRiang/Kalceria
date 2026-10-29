@@ -19,12 +19,11 @@ export function getHqIconHtml(isMapDark = false) {
         Fresh Market <br> Bintaro
       </div>
 
-      <!-- HQ round circle container with Home Icon inside -->
+      <!-- HQ round circle container with Solid Home Icon inside (Picture 2) -->
       <div style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid ${iconColor}; background: ${circleBg}; backdrop-filter: blur(4px); box-shadow: ${circleShadow}; display: flex; align-items: center; justify-content: center; color: ${iconColor}; transition: all 0.3s ease;">
         <div style="width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 100%; height: 100%;">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width: 100%; height: 100%;">
+            <path d="M18 5.5h-2.2v1.9l2.2 1.8V5.5zM12 3L2 12h3.5v9h5v-5.5h3v5.5h5v-9H22L12 3z"/>
           </svg>
         </div>
       </div>
