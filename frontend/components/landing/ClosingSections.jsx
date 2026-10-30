@@ -59,7 +59,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             />
           )}
 
-          {/* Find The Others Button */}
+          {/* Find The Others Button - Natural Cloud Fader */}
           <motion.button
             onClick={() => {
               sessionStorage.setItem("landingScrollTarget", "section-map");
@@ -70,27 +70,30 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             }}
             whileHover={{ 
               scale: 1.05,
-              boxShadow: "0 0 50px rgba(255,255,255,0.4), inset 0 0 20px rgba(255,255,255,0.2)",
-              backgroundColor: "rgba(255,255,255,0.15)"
+              boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
             }}
             whileTap={{ scale: 0.95 }}
-            className={`absolute z-30 ${isMobile ? "top-[20%]" : ""} bg-white/10 backdrop-blur-2xl border-none rounded-2xl text-white font-black uppercase tracking-tighter text-lg md:text-3xl px-6 py-3.5 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_0_35px_rgba(255,255,255,0.25)] hover:shadow-[0_0_55px_rgba(255,255,255,0.45)] transition-all duration-300 transform-gpu will-change-transform`}
+            className={`absolute z-30 ${isMobile ? "bottom-[8%] left-1/2 -translate-x-1/2" : ""} bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-lg md:text-3xl px-8 py-4 md:px-14 md:py-6 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 transform-gpu will-change-transform`}
+            style={{
+              maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
+              WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
+            }}
           >
             {/* Peach Blob */}
             <motion.div 
               animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -top-8 -left-4 w-24 h-24 bg-[#FFB07C] rounded-full blur-[24px] opacity-70 z-0 pointer-events-none"
+              className="absolute -top-8 -left-4 w-28 h-28 bg-[#FFB07C] rounded-full blur-[26px] opacity-75 z-0 pointer-events-none"
             />
             {/* Green Blob */}
             <motion.div 
               animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="absolute -bottom-8 -right-4 w-24 h-24 bg-green-400 rounded-full blur-[24px] opacity-60 z-0 pointer-events-none"
+              className="absolute -bottom-8 -right-4 w-28 h-28 bg-green-400 rounded-full blur-[26px] opacity-70 z-0 pointer-events-none"
             />
             
             <span 
-              className="relative z-10"
+              className="relative z-10 whitespace-nowrap"
               style={{
                 textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
               }}
@@ -112,37 +115,18 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             />
           )}
 
-          {/* Asteroid Field - Grouped Clusters */}
+          {/* Asteroid Field - Optimized to 2 on Mobile, 4 on Desktop to eliminate lag */}
           {[
-            // Cluster 1: Top Left (2x A1, 1x A2)
-            { id: 1, src: '/asteroid_1.webp', top: '5%', left: '5%', size: '42px', delay: 0, rot: 45 },
-            { id: 2, src: '/asteroid_1.webp', top: '15%', left: '18%', size: '49px', delay: 1.2, rot: -30 },
-            { id: 3, src: '/asteroid_2.webp', top: '22%', left: '8%', size: '31px', delay: 2.5, rot: 115 },
-            
-            // Cluster 2: Top Right (2x A1, 2x A2)
-            { id: 4, src: '/asteroid_1.webp', top: '10%', right: '10%', size: '55px', delay: 0.8, rot: -80 },
-            { id: 14, src: '/asteroid_1.webp', top: '3%', right: '22%', size: '38px', delay: 1.4, rot: 25 },
-            { id: 5, src: '/asteroid_2.webp', top: '18%', right: '15%', size: '28px', delay: 1.8, rot: 12 },
-            { id: 10, src: '/asteroid_2.webp', top: '5%', right: '30%', size: '34px', delay: 0.9, rot: 55 },
-            
-            // Cluster 3: Bottom Left (2x A1, 2x A2)
-            { id: 6, src: '/asteroid_1.webp', bottom: '18%', left: '10%', size: '35px', delay: 3.2, rot: 155 },
-            { id: 15, src: '/asteroid_1.webp', bottom: '5%', left: '22%', size: '44px', delay: 0.5, rot: -60 },
-            { id: 7, src: '/asteroid_2.webp', bottom: '25%', left: '5%', size: '44px', delay: 0.4, rot: -40 },
-            { id: 12, src: '/asteroid_2.webp', bottom: '12%', left: '28%', size: '24px', delay: 3.5, rot: 190 },
-            
-            // Cluster 4: Bottom Right (2x A1, 3x A2)
-            { id: 8, src: '/asteroid_1.webp', bottom: '22%', right: '10%', size: '52px', delay: 1.5, rot: 100 },
-            { id: 16, src: '/asteroid_1.webp', bottom: '30%', right: '25%', size: '39px', delay: 2.2, rot: 10 },
-            { id: 9, src: '/asteroid_2.webp', bottom: '35%', right: '12%', size: '37px', delay: 2.8, rot: -120 },
-            { id: 11, src: '/asteroid_2.webp', bottom: '10%', right: '32%', size: '43px', delay: 2.1, rot: -20 },
-            { id: 13, src: '/asteroid_2.webp', bottom: '5%', right: '40%', size: '49px', delay: 0.6, rot: -10 }
-          ].map((ast) => (
+            { id: 1, src: '/asteroid_1.webp', top: '8%', left: '8%', size: '36px', delay: 0, rot: 45 },
+            { id: 4, src: '/asteroid_1.webp', top: '12%', right: '12%', size: '42px', delay: 0.8, rot: -80 },
+            { id: 7, src: '/asteroid_2.webp', bottom: '26%', left: '6%', size: '32px', delay: 0.4, rot: -40, desktopOnly: true },
+            { id: 8, src: '/asteroid_1.webp', bottom: '22%', right: '10%', size: '40px', delay: 1.5, rot: 100, desktopOnly: true },
+          ].filter(ast => !isMobile || !ast.desktopOnly).map((ast) => (
             <motion.img
               key={ast.id}
               src={ast.src}
               alt="Asteroid"
-              className="absolute pointer-events-none opacity-60 z-[5]"
+              className="absolute pointer-events-none opacity-50 z-[5]"
               style={{ 
                 top: ast.top, 
                 left: ast.left, 
@@ -219,38 +203,40 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
            {/* Red Dynamic Glow (Left / Kalceria) */}
            <motion.div 
-             animate={{ opacity: [0.3, 0.5, 0.3] }}
+             animate={{ opacity: isMobile ? [0.12, 0.22, 0.12] : [0.3, 0.5, 0.3] }}
              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-             className="absolute top-[-10%] left-[-15%] w-[60%] h-[120%] bg-red-600/30 blur-[130px] rounded-full will-change-transform"
+             className={`absolute top-[-10%] left-[-15%] w-[60%] h-[120%] bg-red-600/25 blur-[130px] rounded-full will-change-transform`}
            />
            {/* Cyan Dynamic Glow (Right / DSL) */}
            <motion.div 
-             animate={{ opacity: [0.3, 0.5, 0.3] }}
+             animate={{ opacity: isMobile ? [0.12, 0.22, 0.12] : [0.3, 0.5, 0.3] }}
              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.5 }}
-             className="absolute top-[-10%] right-[-15%] w-[60%] h-[120%] bg-cyan-500/30 blur-[130px] rounded-full will-change-transform"
+             className={`absolute top-[-10%] right-[-15%] w-[60%] h-[120%] bg-cyan-500/25 blur-[130px] rounded-full will-change-transform`}
            />
         </div>
 
-        {/* Static Star Wars Backdrop Focal Point */}
-        <div 
-          className={`absolute ${isMobile ? "top-[48%]" : "top-[65%]"} left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl h-full flex items-center justify-center z-[5] pointer-events-none`}
-          style={{ opacity: 0.7 }}
-        >
-          <Image
-            src="/starwarr.webp" 
-            alt="Battle of Heroes" 
-            width={974}
-            height={1024}
-            sizes="(max-width: 768px) 100vw, 1152px"
-            quality={75}
-            loading="lazy"
-            decoding="async"
-            className={`w-full h-auto max-h-[85vh] object-contain ${isMobile ? "scale-[1.0] opacity-60" : "scale-[1.82]"}`}
-            style={{ 
-              filter: "contrast(1.2) brightness(0.9) saturate(1.1) drop-shadow(0 0 80px rgba(0,0,0,0.8))",
-            }}
-          />
-        </div>
+        {/* Static Star Wars Backdrop Focal Point - Desktop Only */}
+        {!isMobile && (
+          <div 
+            className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl h-full flex items-center justify-center z-[5] pointer-events-none"
+            style={{ opacity: 0.7 }}
+          >
+            <Image
+              src="/starwarr.webp" 
+              alt="Battle of Heroes" 
+              width={974}
+              height={1024}
+              sizes="1152px"
+              quality={75}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-auto max-h-[85vh] object-contain scale-[1.82]"
+              style={{ 
+                filter: "contrast(1.2) brightness(0.9) saturate(1.1) drop-shadow(0 0 80px rgba(0,0,0,0.8))",
+              }}
+            />
+          </div>
+        )}
 
         {/* Scattered Aurora Effect - TOP ATMOSPHERE */}
         <div className="absolute inset-0 z-40 pointer-events-none">
@@ -260,14 +246,14 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
         <div className="relative z-10 w-full max-w-6xl px-6 md:px-8 flex flex-col items-center gap-8 md:gap-16">
            {/* Collaboration Header - Top-down on mobile, horizontal on desktop */}
            <div 
-             className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-10"
-             style={{ transform: `translateY(${isMobile ? "8%" : "15%"})` }}
+             className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10"
+             style={{ transform: `translateY(${isMobile ? "6%" : "15%"})` }}
            >
-              {/* Kalceria Logo */}
+              {/* Kalceria Logo - 25% Boosted on Mobile */}
               <motion.img 
                 src="/logologin.webp" 
                 alt="Kalceria" 
-                className={`${isMobile ? "h-[44px]" : "h-18 md:h-24"} w-auto object-contain -rotate-[12deg] drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform`}
+                className={`${isMobile ? "h-[56px]" : "h-18 md:h-24"} w-auto object-contain -rotate-[12deg] drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform`}
                 animate={{ y: [0, -6, 0], x: isMobile ? 0 : '20%' }}
                 transition={{ 
                   y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
@@ -275,7 +261,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                 }}
               />
 
-              {/* The "X" as an SVG Clipped Glass Artifact (Stabilized & Shrunk on Mobile) */}
+              {/* The "X" as an SVG Clipped Glass Artifact (25% Boosted on Mobile) */}
               <div 
                 className="relative flex items-center justify-center group z-20"
                 style={{ transform: "none" }}
@@ -287,10 +273,10 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                  <motion.div 
                    animate={{ scale: [1, 1.1, 1], rotate: [0, 360], opacity: [0.2, 0.4, 0.2] }}
                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[60px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform ${isMobile ? "w-[68px] h-[68px]" : "w-[240px] md:w-[340px] h-[240px] md:h-[340px]"}`}
+                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[60px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform ${isMobile ? "w-[86px] h-[86px]" : "w-[240px] md:w-[340px] h-[240px] md:h-[340px]"}`}
                  />
 
-                 <svg width={isMobile ? "64" : "220"} height={isMobile ? "64" : "220"} viewBox="0 0 220 220" className="relative z-10 transform-gpu">
+                 <svg width={isMobile ? "80" : "220"} height={isMobile ? "80" : "220"} viewBox="0 0 220 220" className="relative z-10 transform-gpu">
                     <defs>
                       <clipPath id="collab-x-clip-v3">
                         <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" style={{ fontFamily: 'Arial Black, sans-serif' }}>X</text>
@@ -321,11 +307,11 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                  </svg>
               </div>
 
-              {/* DSL Logo */}
+              {/* DSL Logo - 25% Boosted on Mobile */}
               <motion.img 
                 src="/dsl.webp" 
                 alt="DSL" 
-                className={`${isMobile ? "h-[44px]" : "h-18 md:h-24"} w-auto object-contain rotate-[12deg] drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform`}
+                className={`${isMobile ? "h-[56px]" : "h-18 md:h-24"} w-auto object-contain rotate-[12deg] drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform`}
                 animate={{ y: [0, 6, 0], x: isMobile ? 0 : '-20%' }}
                 transition={{ 
                   y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
@@ -335,12 +321,13 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
            </div>
            
            <div className="flex flex-col items-center gap-6 md:gap-8">
+              {/* JOIN US? - 25% Boosted on Mobile */}
               <motion.h2 
                 initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
-                whileInView={{ opacity: 1, y: 0, x: 0, scale: isMobile ? 0.9 : 0.85, filter: "blur(0px)" }}
+                whileInView={{ opacity: 1, y: 0, x: 0, scale: isMobile ? 1.05 : 0.85, filter: "blur(0px)" }}
                 viewport={{ once: false, amount: 0.5 }}
                 transition={{ duration: 1, ease: "easeOut" }}
-                className="text-4xl md:text-8xl font-black uppercase tracking-tighter text-white text-center"
+                className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white text-center"
                 style={{ 
                   textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)"
                 }}
@@ -348,10 +335,11 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                 JOIN US?
               </motion.h2>
 
+              {/* WhatsApp Logo - 25% Boosted on Mobile */}
               <motion.img 
                 src="/wa_logo.webp" 
                 alt="WhatsApp" 
-                className="h-14 md:h-28 w-auto object-contain drop-shadow-[0_0_40px_rgba(37,211,102,0.5)] z-20"
+                className={`${isMobile ? "h-[72px]" : "h-14 md:h-28"} w-auto object-contain drop-shadow-[0_0_40px_rgba(37,211,102,0.5)] z-20`}
                 animate={{ y: [0, -6, 0], x: isMobile ? 0 : '22%' }}
                 transition={{ 
                   y: { duration: 5, repeat: Infinity, ease: "easeInOut" },
@@ -363,26 +351,30 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                 sessionStorage.setItem("landingScrollTarget", "section-journey");
                 sessionStorage.setItem("landingScrollY", window.scrollY);
               }}>
+                {/* See The Journey Button - Natural Cloud Fader */}
                 <motion.button
                   whileHover={{ 
                     scale: 1.05,
-                    boxShadow: "0 0 50px rgba(255,255,255,0.4), inset 0 0 20px rgba(255,255,255,0.2)",
-                    backgroundColor: "rgba(255,255,255,0.15)"
+                    boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
                   }}
                   whileTap={{ scale: 0.95 }}
-                  className="relative mt-2 md:mt-4 mx-auto z-30 bg-white/10 backdrop-blur-2xl border-none rounded-2xl text-white font-black uppercase tracking-tighter text-lg md:text-3xl px-8 py-4 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_0_35px_rgba(255,255,255,0.25)] hover:shadow-[0_0_55px_rgba(255,255,255,0.4)] transition-all duration-300"
+                  className="relative mt-2 md:mt-4 mx-auto z-30 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-lg md:text-3xl px-8 py-4 md:px-14 md:py-6 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300"
+                  style={{
+                    maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
+                    WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
+                  }}
                 >
                   {/* Peach Blob */}
                   <motion.div 
                     animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }}
                     transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute -top-8 -left-4 w-24 h-24 bg-[#FFB07C] rounded-full blur-[24px] opacity-70 z-0 pointer-events-none"
+                    className="absolute -top-8 -left-4 w-28 h-28 bg-[#FFB07C] rounded-full blur-[26px] opacity-75 z-0 pointer-events-none"
                   />
                   {/* Green Blob */}
                   <motion.div 
                     animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute -bottom-8 -right-4 w-24 h-24 bg-green-400 rounded-full blur-[24px] opacity-60 z-0 pointer-events-none"
+                    className="absolute -bottom-8 -right-4 w-28 h-28 bg-green-400 rounded-full blur-[26px] opacity-70 z-0 pointer-events-none"
                   />
                   
                   <span 

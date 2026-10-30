@@ -161,18 +161,19 @@ export function SupportUsBackground() {
 export function SolarPhoenix({ isMobile }) {
   const particles = useMemo(() => {
     const random = createSeededRandom("landing-solar-phoenix-particles-v1");
-    return Array.from({ length: 50 }, (_, id) => ({
+    const count = isMobile ? 6 : 14;
+    return Array.from({ length: count }, (_, id) => ({
       id,
       left: `${random() * 100}%`,
       top: `${random() * 100}%`,
-      size: random() > 0.8 ? '12px' : '6px', // Much larger
+      size: random() > 0.8 ? '10px' : '5px',
       color: ['#ffffff', '#fbbf24', '#ff8c00', '#ffed4a'][Math.floor(random() * 4)],
-      delay: random() * 5,
-      duration: 3 + random() * 4,
-      xDrift: (random() - 0.5) * 100, // Bigger drift
-      yDrift: (random() - 0.5) * 100,
+      delay: random() * 4,
+      duration: 3 + random() * 3,
+      xDrift: (random() - 0.5) * 40,
+      yDrift: (random() - 0.5) * 40,
     }));
-  }, []);
+  }, [isMobile]);
 
   const flares = useMemo(() => {
     const random = createSeededRandom("landing-solar-phoenix-flares-v1");

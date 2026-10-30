@@ -156,8 +156,16 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
               <div className="relative z-10 flex gap-6 w-full">
                 <button
                   onClick={handleYes}
-                  className="flex-1 group relative py-4 rounded-[18px] overflow-hidden border-none bg-white/10 backdrop-blur-2xl shadow-[0_0_25px_rgba(255,255,255,0.2)] hover:shadow-[0_0_35px_rgba(255,255,255,0.35)] hover:bg-white/15 transition-all duration-300"
+                  className="flex-1 group relative py-4 rounded-[22px] overflow-hidden border-none bg-emerald-500/15 backdrop-blur-2xl shadow-[0_0_30px_rgba(16,185,129,0.35)] hover:shadow-[0_0_45px_rgba(16,185,129,0.55)] hover:bg-emerald-500/25 transition-all duration-300"
                 >
+                  {/* Green Fader Cloud Atmosphere */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none bg-gradient-to-r from-emerald-500/20 via-emerald-400/35 to-emerald-500/20 opacity-80 group-hover:opacity-100 transition-opacity duration-300" 
+                    style={{
+                      maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 75%, transparent 100%)",
+                      WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 75%, transparent 100%)"
+                    }}
+                  />
                   <span
                     className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-sm"
                     style={{
@@ -169,8 +177,16 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                 </button>
                 <button
                   onClick={onCancel}
-                  className="flex-1 group relative py-4 rounded-[18px] overflow-hidden border-none bg-white/10 backdrop-blur-2xl shadow-[0_0_25px_rgba(255,255,255,0.2)] hover:shadow-[0_0_35px_rgba(255,255,255,0.35)] hover:bg-white/15 transition-all duration-300"
+                  className="flex-1 group relative py-4 rounded-[22px] overflow-hidden border-none bg-red-500/15 backdrop-blur-2xl shadow-[0_0_30px_rgba(239,68,68,0.35)] hover:shadow-[0_0_45px_rgba(239,68,68,0.55)] hover:bg-red-500/25 transition-all duration-300"
                 >
+                  {/* Red Fader Cloud Atmosphere */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none bg-gradient-to-r from-red-500/20 via-red-400/35 to-red-500/20 opacity-80 group-hover:opacity-100 transition-opacity duration-300" 
+                    style={{
+                      maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 75%, transparent 100%)",
+                      WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 75%, transparent 100%)"
+                    }}
+                  />
                   <span
                     className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-sm"
                     style={{

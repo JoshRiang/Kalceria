@@ -28,21 +28,23 @@ export function JourneySlider({ images, className }) {
 
 export function JourneyDescriptionBox({ description, className }) {
   const hasMaxWidth = className && className.includes("max-w-");
-  const defaultClasses = `relative w-full p-6 flex items-center justify-center overflow-hidden rounded-[2rem] ${hasMaxWidth ? "" : "max-w-[400px]"}`;
+  const defaultClasses = `relative w-full p-6 sm:p-8 flex items-center justify-center overflow-hidden rounded-3xl ${hasMaxWidth ? "" : "max-w-[400px]"}`;
 
   return (
-    <div className={`${defaultClasses} ${className || ""}`}>
-      {/* Dynamic Blobs */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
-        <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-black rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-black rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+    <div 
+      className={`${defaultClasses} ${className || ""} bg-white/10 backdrop-blur-3xl border-none shadow-[0_0_50px_rgba(255,255,255,0.25)]`}
+      style={{
+        maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
+        WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
+      }}
+    >
+      {/* Cloud Dynamic Glow Blobs */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-50 mix-blend-screen">
+        <div className="absolute top-[-40%] left-[-20%] w-[120%] h-[160%] bg-[#FF00FF]/30 rounded-full blur-[50px] animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-[-40%] right-[-20%] w-[120%] h-[160%] bg-[#FFD700]/30 rounded-full blur-[50px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
       </div>
 
-      <div 
-        className="absolute inset-0 border border-white/10 bg-white/5 backdrop-blur-md shadow-[0_0_80px_rgba(0,0,0,0.5)] z-0 pointer-events-none" 
-        style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }} 
-      />
-      <div className="relative z-10 w-full text-xs md:text-sm font-serif not-italic text-white/90 drop-shadow-md leading-relaxed text-justify">
+      <div className="relative z-10 w-full text-xs md:text-sm font-serif not-italic text-white/95 drop-shadow-md leading-relaxed text-justify">
         {String(description || '').split(/(Universitas Indonesia Motorsport|Dream Shift Labs|Mist)/g).map((part, index) => (
           ['Mist', 'Dream Shift Labs', 'Universitas Indonesia Motorsport'].includes(part)
             ? <span key={`${part}-${index}`} className="underline font-bold italic">{part}</span>
