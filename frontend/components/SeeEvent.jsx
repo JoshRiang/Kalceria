@@ -145,8 +145,8 @@ export default function SeeEvent() {
           <RainbowPixels />
           <MicroParticles />
         </>}
-        <Image src="/stikermobil_5.webp" alt="" width={2698} height={1568} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-28 sm:w-40 md:w-56 bottom-4 md:bottom-10 right-[3%] md:right-[10%] opacity-80 drop-shadow-xl pointer-events-none -rotate-3" />
-        <Image src="/stikermobil_2.webp" alt="" width={2410} height={1436} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-28 sm:w-40 md:w-56 bottom-4 md:bottom-10 left-[3%] md:left-[2%] opacity-80 drop-shadow-xl pointer-events-none rotate-6 scale-90 sm:scale-100" />
+        <Image src="/stikermobil_5.webp" alt="" width={2698} height={1568} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-24 xs:w-28 sm:w-40 md:w-56 bottom-2 md:bottom-10 right-[2%] md:right-[10%] opacity-80 drop-shadow-xl pointer-events-none -rotate-3" />
+        <Image src="/stikermobil_2.webp" alt="" width={2410} height={1436} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-24 xs:w-28 sm:w-40 md:w-56 bottom-2 md:bottom-10 left-[2%] md:left-[2%] opacity-80 drop-shadow-xl pointer-events-none rotate-6 scale-90 sm:scale-100" />
 
         {/* ─── SECTION 1.5: ATMOSPHERIC BREAK ────────────────────────────────── */}
         <section ref={atmosRef} className="relative w-full py-[60vh] z-20 overflow-hidden">
@@ -222,7 +222,7 @@ export default function SeeEvent() {
           </div>
 
           {/* 3D Spinning Globe: scaled 25% smaller, 10% righter, 10% lower on mobile */}
-          <div className={`absolute inset-0 z-0 flex items-center justify-center transition-all duration-700 origin-center ${isMobile ? "scale-[0.75] translate-x-[10%] translate-y-[10%]" : ""}`}>
+          <div className={`absolute inset-0 z-0 flex items-center justify-center transition-all duration-700 origin-center ${isMobile ? "scale-[0.56] xs:scale-[0.60] sm:scale-[0.72] translate-x-0 translate-y-[6%]" : ""}`}>
              {isAtmosView && <SpinningGlobeCanvas />}
           </div>
           {/* Aggressive Edge Blending for Seamless Transitions */}
@@ -232,13 +232,13 @@ export default function SeeEvent() {
           {isAtmosView && <FloatingPhotos isMobile={isMobile} />}
 
           {/* ── LEFT STATS ── */}
-          <div className="absolute left-6 md:left-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-12 pointer-events-none">
+          <div className="absolute left-3 xs:left-4 sm:left-6 md:left-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-8 sm:gap-12 pointer-events-none">
             <StatCounter target={10} label="Users" suffix="" active={isAtmosView} />
             <StatCounter target={10} label="Events" suffix="+" active={isAtmosView} />
           </div>
 
           {/* ── RIGHT STATS ── */}
-          <div className="absolute right-6 md:right-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-12 pointer-events-none items-end">
+          <div className="absolute right-3 xs:right-4 sm:right-6 md:right-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-8 sm:gap-12 pointer-events-none items-end">
             <StatCounter target={100}  label="Hours Streamed" suffix="+" align="end" active={isAtmosView} />
             <StatCounter target={1000} label="Days Created" suffix="" align="end" active={isAtmosView} />
           </div>
@@ -255,7 +255,7 @@ export default function SeeEvent() {
                   <Image src="/stikermobil_4.webp" alt="" width={2730} height={1536} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-40 md:w-56 -bottom-36 md:-bottom-48 -left-10 md:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
                 )}
                 {isMobile && (
-                  <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="144px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-28 sm:w-32 -top-12 -right-8 opacity-85 drop-shadow-2xl pointer-events-none rotate-[4deg]" />
+                  <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="144px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-22 xs:w-24 sm:w-32 -top-14 xs:-top-16 -right-2 xs:right-0 opacity-85 drop-shadow-2xl pointer-events-none rotate-[6deg]" />
                 )}
                 
                 <div className="relative w-full h-full rounded-2xl overflow-hidden border border-gray-800">
@@ -342,7 +342,7 @@ export default function SeeEvent() {
         </section>
 
         {/* ─── SECTION 3: COMMUNITY INTERACTION ────────────────────────────── */}
-        <section className="relative w-full py-16 md:pb-32 md:pt-12 z-20 pointer-events-none">
+        <section className="relative w-full py-16 pb-36 md:pb-32 md:pt-12 z-20 pointer-events-none">
           <div className="container mx-auto px-6 md:px-12 pointer-events-auto max-w-4xl">
             <div className="flex justify-center">
               <motion.div whileHover={{ scale: 1.02 }} className="relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[300px] sm:h-[320px] w-full max-w-md">

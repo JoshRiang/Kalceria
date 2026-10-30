@@ -191,7 +191,6 @@ export default function MinigamePage() {
   const scheduleTimeout = useTimeoutRegistry();
 
   const [isMobile, setIsMobile] = useState(false);
-  const [isPortraitMobile, setIsPortraitMobile] = useState(false);
   const isGameStarting = gamePhase === "starting" || gamePhase === "playing" || gamePhase === "ending";
   const isGameEnding = gamePhase === "ending" || gamePhase === "ending-quit";
   const inGame = gamePhase === "playing" || gamePhase === "ending";
@@ -201,14 +200,11 @@ export default function MinigamePage() {
     const checkViewport = () => {
       const mob = window.innerWidth <= 768 || (window.innerHeight <= 768 && window.innerWidth <= 950);
       setIsMobile(mob);
-      setIsPortraitMobile(mob && window.innerHeight > window.innerWidth);
     };
     checkViewport();
     window.addEventListener("resize", checkViewport);
-    window.addEventListener("orientationchange", checkViewport);
     return () => {
       window.removeEventListener("resize", checkViewport);
-      window.removeEventListener("orientationchange", checkViewport);
     };
   }, []);
 
@@ -552,49 +548,6 @@ export default function MinigamePage() {
 
       {/* Initial Blackout */}
       <motion.div initial={{ opacity: 0.92 }} animate={{ opacity: 0 }} transition={{ duration: 0.9, ease: "easeOut" }} className="fixed inset-0 z-[2000] bg-black pointer-events-none" />
-
-      {/* Orientation Tilt Prompt Overlay for Mobile Portrait */}
-      <AnimatePresence>
-        {isPortraitMobile && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="fixed inset-0 z-[6000] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md px-6 text-center pointer-events-auto"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-              className="flex flex-col items-center gap-4"
-            >
-              {/* Rotating phone icon */}
-              <motion.svg
-                animate={{ rotate: [0, -90, -90, 0] }}
-                transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.5 }}
-                className="w-12 h-12 text-white/90 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <rect x="5" y="2" width="14" height="20" rx="3" strokeWidth="2" />
-                <line x1="10" y1="18" x2="14" y2="18" strokeWidth="2" strokeLinecap="round" />
-              </motion.svg>
-
-              <span
-                className="text-white text-2xl sm:text-3xl font-bold tracking-tight"
-                style={{
-                  fontFamily: "Arial, sans-serif",
-                  textShadow: "0 2px 12px rgba(0,0,0,0.8)"
-                }}
-              >
-                Tilt the phone
-              </span>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </main>
   );
 }

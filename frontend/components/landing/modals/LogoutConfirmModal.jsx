@@ -109,19 +109,9 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
             <div className="absolute bottom-[100%] left-1/2 -translate-x-[55%] w-32 h-32 z-50 pointer-events-none">
               <motion.div 
                 initial={{ opacity: 0 }}
-                animate={{ 
-                  opacity: [0, 1, 0.5, 1], // Entry then start pulse
-                  boxShadow: [
-                    "0 0 15px #fff, 0 0 30px #D946EF, 0 0 45px #FACC15",
-                    "0 0 25px #fff, 0 0 50px #D946EF, 0 0 75px #FACC15",
-                    "0 0 15px #fff, 0 0 30px #D946EF, 0 0 45px #FACC15"
-                  ]
-                }}
-                transition={{ 
-                  opacity: { duration: 0.8, times: [0, 0.2, 0.6, 1], delay: 0.2 },
-                  boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
-                }}
-                className="absolute left-0 top-0 bottom-0 pointer-events-none z-30" 
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="absolute inset-0 pointer-events-none z-30" 
               >
                 <LineParticles />
               </motion.div>

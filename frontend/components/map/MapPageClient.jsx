@@ -818,7 +818,7 @@ export default function MapPage() {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="fixed bottom-[96px] xs:bottom-[102px] md:bottom-[-20px] left-1/2 -translate-x-1/2 z-[35] pointer-events-none select-none flex flex-col items-center"
+          className="fixed bottom-[116px] xs:bottom-[122px] md:bottom-[4px] left-1/2 -translate-x-1/2 z-[35] pointer-events-none select-none flex flex-col items-center"
         >
           <Image
             src="/kalcermap_bottom.png"
