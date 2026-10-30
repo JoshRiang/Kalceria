@@ -71,11 +71,30 @@ const hqPoint = {
 // ─── Smooth Domino Chevrons for B&W/Red-Black Dash Transition ─────────
 
 
+const cleanEventDesc = (item) => {
+  if (!item) return item;
+  const raw = item.description || "";
+  const catMatch = raw.match(/\[CAT:([a-z_]+)\]/i);
+  const mediaMatch = raw.match(/\[MEDIA:([^\]]+)\]/i);
+  const cleanDescription = raw
+    .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+    .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+    .trim();
+  return {
+    ...item,
+    category: catMatch ? catMatch[1].toLowerCase() : (item.category || "cafe"),
+    mediaUrl: mediaMatch ? mediaMatch[1] : (item.mediaUrl || null),
+    description: cleanDescription,
+  };
+};
+
 const mergeEvents = (activeList) => {
-  if (!activeList || activeList.length === 0) return INITIAL_MOCK_MINI_EVENTS;
-  const activeIds = new Set(activeList.map((e) => e.id));
-  const missingMocks = INITIAL_MOCK_MINI_EVENTS.filter((m) => !activeIds.has(m.id));
-  return [...activeList, ...missingMocks];
+  const normalizedMocks = INITIAL_MOCK_MINI_EVENTS.map(cleanEventDesc);
+  if (!activeList || activeList.length === 0) return normalizedMocks;
+  const cleanedActive = activeList.map(cleanEventDesc);
+  const activeIds = new Set(cleanedActive.map((e) => e.id));
+  const missingMocks = normalizedMocks.filter((m) => !activeIds.has(m.id));
+  return [...cleanedActive, ...missingMocks];
 };
 
 export default function MapPage() {
@@ -84,7 +103,7 @@ export default function MapPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [mapUsersData, setMapUsersData] = useState([]);
   const [kalcerians, setKalcerians] = useState([]);
-  const [events, setEvents] = useState(INITIAL_MOCK_MINI_EVENTS);
+  const [events, setEvents] = useState(() => INITIAL_MOCK_MINI_EVENTS.map(cleanEventDesc));
   const [presence, setPresence] = useState("online");
   const [, setNotice] = useState("");
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -102,12 +121,12 @@ export default function MapPage() {
     if (typeof window !== "undefined") {
       try {
         if (!hasUserSession()) return false;
-        return sessionStorage.getItem("mapIntroSeen") !== "true";
+        return true;
       } catch {
         return false;
       }
     }
-    return false;
+    return true;
   });
   const [startupProgress, setStartupProgress] = useState(0);
   const [particles, setParticles] = useState([]);
@@ -245,34 +264,25 @@ export default function MapPage() {
   // Startup Sequence Logic
   useEffect(() => {
     if (notLoggedIn) return;
-    if (sessionStorage.getItem("mapIntroSeen") === "true") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Preserve the session-based intro visibility on the first client effect.
-      setShowStartup(false);
-      return;
-    }
-    
-    setShowStartup(true);
-    sessionStorage.setItem("mapIntroSeen", "true");
 
     const random = createRuntimeSeededRandom("map-startup-progress-v1");
     let currentProgress = 0;
     let interval;
     
-    // Slower progress increments and cinematic delay for first step to fade in dramatically
+    // Smooth progress increments and cinematic transition sequence
     const delayTimer = setTimeout(() => {
       interval = setInterval(() => {
-        currentProgress += random() * 8;
+        currentProgress += random() * 10 + 4;
         if (currentProgress >= 100) {
           currentProgress = 100;
           clearInterval(interval);
           scheduleTimeout(() => {
             setShowStartup(false);
-          }, 1000);
+          }, 600);
         }
         setStartupProgress(currentProgress);
-
-      }, 250);
-    }, 1200);
+      }, 140);
+    }, 300);
 
     return () => {
       clearTimeout(delayTimer);

@@ -6,6 +6,13 @@ const avatarUrl = (user) =>
   user?.profilePicture ||
   `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.name || "anon")}`;
 
+function cleanDesc(value) {
+  return String(value || "")
+    .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+    .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+    .trim();
+}
+
 export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, events, searchQuery, setSearchQuery, drawerOpen, setDrawerOpen, isDataLoading, hoveredKalcerian, setHoveredKalcerian, isMapDark, setFocusedUserId, setSelectedOfflineUser, sidebarKalcerians, focusUser }) {
   return (
 <motion.aside
@@ -195,7 +202,7 @@ export function KalceriansPanel({ scheduleTimeout, mapUsersData, kalcerians, eve
                     <p className={`relative z-10 text-[12px] line-clamp-1 italic ${
                       isMapDark ? "text-gray-400" : "text-slate-600"
                     }`}>
-                      &quot;{event.description}&quot;
+                      &quot;{cleanDesc(event.description)}&quot;
                     </p>
                     <div className="relative z-10 flex items-center gap-2 mt-1 opacity-60">
                       <div className={`w-5 h-5 border rounded-full overflow-hidden ${

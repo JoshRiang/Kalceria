@@ -64,6 +64,8 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             onClick={() => {
               sessionStorage.setItem("landingScrollTarget", "section-map");
               sessionStorage.setItem("landingScrollY", window.scrollY);
+              sessionStorage.removeItem("mapIntroSeen");
+              sessionStorage.setItem("playMapIntro", "true");
               window.location.href = "/map";
             }}
             whileHover={{ 

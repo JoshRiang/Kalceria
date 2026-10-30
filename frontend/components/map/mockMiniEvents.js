@@ -6,7 +6,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_cafe_1",
     title: "Morning Espresso Catchup",
-    description: "[CAT:cafe] Morning caffeine hit and route planning before heading to BSD loop.",
+    description: "Morning caffeine hit and route planning before heading to BSD loop.",
     category: "cafe",
     mediaUrl: "/media/gifs/event_cafe_1.gif",
     mediaUrls: ["/media/gifs/event_cafe_1.gif", "/media/gifs/event_cafe_2.gif"],
@@ -24,7 +24,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_cafe_2",
     title: "Sunset Coffee & Chills",
-    description: "[CAT:cafe] Iced Latte session at Sector 7 parkside cafe. All car enthusiasts welcome.",
+    description: "Iced Latte session at Sector 7 parkside cafe. All car enthusiasts welcome.",
     category: "cafe",
     mediaUrl: "/media/gifs/event_cafe_2.gif",
     lat: -6.2810,
@@ -41,7 +41,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_cafe_3",
     title: "V6 Roaster & Filter Brew",
-    description: "[CAT:cafe] Pour over tasting and casual Sunday talk with the crew.",
+    description: "Pour over tasting and casual Sunday talk with the crew.",
     category: "cafe",
     mediaUrl: "/media/gifs/event_cafe_3.gif",
     lat: -6.2680,
@@ -60,7 +60,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_spec_1",
     title: "Sunday Morning Fast Run",
-    description: "[CAT:special] Early morning spirited highway convoy to Karawaci circuit loop.",
+    description: "Early morning spirited highway convoy to Karawaci circuit loop.",
     category: "special",
     mediaUrl: "/media/gifs/event_spec_1.gif",
     mediaUrls: ["/media/gifs/event_spec_1.gif", "/media/gifs/event_spec_2.gif", "/media/gifs/event_spec_3.gif"],
@@ -78,7 +78,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_spec_2",
     title: "Trackday Rollout Prep",
-    description: "[CAT:special] Alignment check and tire pressure setup before Sentul session.",
+    description: "Alignment check and tire pressure setup before Sentul session.",
     category: "special",
     mediaUrl: "/media/gifs/event_spec_2.gif",
     lat: -6.2650,
@@ -95,7 +95,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_spec_3",
     title: "Midnight Garage Reveal",
-    description: "[CAT:special] Secret widebody build unveiling with the core engineering circle.",
+    description: "Secret widebody build unveiling with the core engineering circle.",
     category: "special",
     mediaUrl: "/media/gifs/event_spec_3.gif",
     lat: -6.2855,
@@ -114,7 +114,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_eat_1",
     title: "Late Night Sate & Tongseng",
-    description: "[CAT:eat] Post-cruise street food feast near Fresh Market strip.",
+    description: "Post-cruise street food feast near Fresh Market strip.",
     category: "eat",
     mediaUrl: "/media/gifs/event_eat_1.gif",
     mediaUrls: ["/media/gifs/event_eat_1.gif", "/media/gifs/event_eat_2.gif"],
@@ -132,7 +132,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_eat_2",
     title: "Dimsum Brunch Gathering",
-    description: "[CAT:eat] Warm dimsum feast and parking lot lineup at Bintaro Loop.",
+    description: "Warm dimsum feast and parking lot lineup at Bintaro Loop.",
     category: "eat",
     mediaUrl: "/media/gifs/event_eat_2.gif",
     lat: -6.2760,
@@ -149,7 +149,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_eat_3",
     title: "Smoked Brisket Dinner",
-    description: "[CAT:eat] BBQ platter sharing and dyno talk with the turbos family.",
+    description: "BBQ platter sharing and dyno talk with the turbos family.",
     category: "eat",
     mediaUrl: "/media/gifs/event_eat_3.gif",
     lat: -6.2620,
@@ -168,7 +168,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_disc_1",
     title: "ECU Tuning & Map Strategy",
-    description: "[CAT:discuss] In-depth technical breakdown of fuel trims, ignition timing, and boost curves.",
+    description: "In-depth technical breakdown of fuel trims, ignition timing, and boost curves.",
     category: "discuss",
     mediaUrl: "/media/gifs/event_disc_1.gif",
     mediaUrls: ["/media/gifs/event_disc_1.gif", "/media/gifs/event_disc_2.gif"],
@@ -186,7 +186,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_disc_2",
     title: "Coilovers & Camber Talk",
-    description: "[CAT:discuss] Suspension geometry roundtable: roll centers and damper rebound settings.",
+    description: "Suspension geometry roundtable: roll centers and damper rebound settings.",
     category: "discuss",
     mediaUrl: "/media/gifs/event_disc_2.gif",
     lat: -6.2830,
@@ -203,7 +203,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_disc_3",
     title: "Aero & Downforce Clinic",
-    description: "[CAT:discuss] Computational flow analysis discussion on rear wings and front splitters.",
+    description: "Computational flow analysis discussion on rear wings and front splitters.",
     category: "discuss",
     mediaUrl: "/media/gifs/event_disc_3.gif",
     lat: -6.2695,
