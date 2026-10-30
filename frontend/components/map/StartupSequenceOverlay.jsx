@@ -201,7 +201,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         scale: { duration: 1.2, ease: "easeOut" },
                         rotate: { duration: 22, repeat: Infinity, ease: "linear" },
                       }}
-                      className="absolute top-2 left-[50%] xs:left-[52%] md:top-2 md:left-[56%] md:translate-x-0 md:translate-y-0 w-[170px] sm:w-[260px] md:w-[400px] h-[170px] sm:h-[260px] md:h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
+                      className="absolute top-2 left-[56%] xs:left-[58%] md:top-2 md:left-[56%] md:translate-x-0 md:translate-y-0 w-[140px] xs:w-[155px] sm:w-[260px] md:w-[400px] h-[140px] xs:h-[155px] sm:h-[260px] md:h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
                       style={{
                         transformStyle: "preserve-3d",
                         transform: "translateZ(0px)",
@@ -242,7 +242,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         alt="Kalcerman Map"
                         width={2048}
                         height={2048}
-                        className="relative w-[130px] h-[130px] xs:w-[150px] xs:h-[150px] sm:w-[220px] sm:h-[220px] md:w-[275px] md:h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-2 sm:mb-4 md:mb-6 z-10 -translate-x-[12%] sm:-translate-x-[15%] md:-translate-x-0"
+                        className="relative w-[110px] h-[110px] xs:w-[125px] xs:h-[125px] sm:w-[220px] sm:h-[220px] md:w-[275px] md:h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-2 sm:mb-4 md:mb-6 z-10 -translate-x-[18%] xs:-translate-x-[20%] sm:-translate-x-[15%] md:-translate-x-0"
                         style={{
                           transformStyle: "preserve-3d",
                           transform: "translateZ(20px)",
@@ -266,7 +266,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
             </AnimatePresence>
 
             {/* High Impact Progress Section */}
-            <div className="absolute bottom-12 sm:bottom-14 md:bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[800px] px-6 sm:px-8">
+            <div className="absolute bottom-16 xs:bottom-20 md:bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[800px] px-6 sm:px-8">
               <div className="flex justify-between items-end mb-2 sm:mb-4">
                 {/* Game Loading Style Quotes */}
                 <div className="text-left pb-1 max-w-[70%]">

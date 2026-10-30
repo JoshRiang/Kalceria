@@ -221,6 +221,13 @@ export default function LandingPage({ onNavigateAuth }) {
           <Image src="/hp/grup_hp.webp" alt="Group Mobile" width={2304} height={1848} unoptimized loading="eager" decoding="auto" className="h-full w-auto object-contain opacity-35" />
         </div>
 
+        {/* Mobile Header: Title on top of card for Mobile; hidden on desktop */}
+        <div className="relative z-20 flex flex-col items-center gap-2 mb-5 md:hidden">
+          <h2 className="text-center text-4xl sm:text-5xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
+            <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={skipAnim} />
+          </h2>
+        </div>
+
         {/* Center: Event Slider Card (Relative on Mobile, Absolutely Centered on Desktop) */}
         <div 
           className="relative md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 z-10 w-full max-w-[260px] md:max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm" 
@@ -230,8 +237,8 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
 
         {/* Left Content (Relative on Mobile placed under card, Absolute on Desktop) */}
-        <div className="relative md:absolute left-0 md:left-24 bottom-0 md:top-1/2 md:-translate-y-1/2 z-20 flex flex-col items-center md:items-start gap-4 md:gap-6 mt-8 md:mt-0">
-          <h2 className="text-center md:text-left text-5xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
+        <div className="relative md:absolute left-0 md:left-24 bottom-0 md:top-1/2 md:-translate-y-1/2 z-20 flex flex-col items-center md:items-start gap-4 md:gap-6 mt-6 md:mt-0">
+          <h2 className="hidden md:block text-center md:text-left text-5xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
             <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={skipAnim} />
           </h2>
           <Link href="/events" onClick={() => {
