@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { Typewriter, FilmLane, FilmStrip, EventSlider, useMerchRandomizer, Merch
 import { GoldenDust, StarDust, FloatingSpareParts, TropicalParticles, DynamicCollage, PrinceRupertDrop } from "./landing/particles";
 import { SupportUsBackground } from "./landing/backgrounds";
 import { ClosingSections } from "./landing/ClosingSections";
+import { useViewportActivity } from "@/hooks/useViewportActivity";
 
 const ServiceRequestModal = dynamic(() => import("./ServiceRequestModal"), { ssr: false });
 const LogoutConfirmModal = dynamic(() => import("./landing/modals/LogoutConfirmModal").then(m => m.LogoutConfirmModal), { ssr: false });
@@ -39,6 +40,19 @@ export default function LandingPage({ onNavigateAuth }) {
   }, [displayedMerch.length]);
 
   const isMobile = useIsMobileViewport();
+  const heroSectionRef = useRef(null);
+  const heroVideoRef = useRef(null);
+  const isHeroActive = useViewportActivity(heroSectionRef, { rootMargin: "200px 0px", initialActive: true });
+
+  useEffect(() => {
+    const v = heroVideoRef.current;
+    if (!v) return;
+    if (isHeroActive) {
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+    }
+  }, [isHeroActive]);
 
   const ABOUT_IMAGES = [
     { src: "/aboutus_bg1.webp", width: 1358, height: 768 },
@@ -148,13 +162,13 @@ export default function LandingPage({ onNavigateAuth }) {
       className="relative w-full bg-[#050a14] text-white font-mono overflow-x-hidden selection:bg-[#FF00FF] selection:text-white"
     >
       {/* ── Section 1: Hero ── */}
-      <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center overflow-hidden py-24 z-10">
+      <section ref={heroSectionRef} className="relative w-full min-h-[85vh] flex flex-col items-center justify-center overflow-hidden py-24 z-10">
         <DynamicCollage />
         <div className="absolute inset-0 bg-gradient-to-b from-[#050a14]/50 via-[#050a14]/10 to-[#050a14] z-0" />
 
         {/* Video Container */}
         <div className="relative w-[88%] md:w-[72%] max-w-4xl aspect-square md:aspect-video rounded-lg overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-md flex flex-col items-center justify-center z-10">
-          <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover bg-[#000000]/60">
+          <video ref={heroVideoRef} autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover bg-[#000000]/60">
             <source src="/video_landingatas.mp4" type="video/mp4" />
           </video>
           

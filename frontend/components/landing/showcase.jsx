@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
+import { useViewportActivity } from "@/hooks/useViewportActivity";
 
 export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false }) {
   const [displayText, setDisplayText] = useState(skipAnim ? text : "");
@@ -349,14 +350,17 @@ export function MerchCard({ item, isInitial, index, isMobile }) {
 const FINDMORE_VIDEOS = Array.from({length: 10}, (_, i) => `/vit_tt${i+1}.mp4`);
 
 export function FindMoreSlider() {
+  const containerRef = useRef(null);
+  const isActive = useViewportActivity(containerRef, { rootMargin: "300px 0px" });
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
+    if (!isActive) return;
     const int = setInterval(() => {
       setIndex(prev => (prev + 1) % FINDMORE_VIDEOS.length);
     }, 5000);
     return () => clearInterval(int);
-  }, []);
+  }, [isActive]);
 
   const variants = {
     enter: { y: "100%" },
@@ -365,14 +369,15 @@ export function FindMoreSlider() {
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-black">
+    <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-black">
       <AnimatePresence initial={false} custom={index}>
         <motion.video
           key={index}
           src={FINDMORE_VIDEOS[index]}
-          autoPlay
+          autoPlay={isActive}
           muted
           playsInline
+          preload="metadata"
           loop={false}
           variants={variants}
           initial="enter"
