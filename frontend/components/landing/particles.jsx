@@ -99,8 +99,8 @@ export function StarDust() {
 
 export function FloatingSpareParts() {
   const parts = [
-    { src: "/support_1.webp", pos: "top-10 left-4 md:left-20", rot: 15, delay: 0.2, dur: 7.5 },
-    { src: "/support_2.webp", pos: "top-10 right-4 md:right-20", rot: -15, delay: 1.5, dur: 6.2 },
+    { src: "/support_1.webp", pos: "top-2 xs:top-4 md:top-10 left-1 xs:left-2 md:left-20", rot: 15, delay: 0.2, dur: 7.5 },
+    { src: "/support_2.webp", pos: "top-4 xs:top-6 md:top-10 right-1 xs:right-3 md:right-20", rot: -15, delay: 1.5, dur: 6.2 },
     { src: "/support_3.webp", pos: "bottom-10 left-4 md:left-20", rot: -20, delay: 0.8, dur: 8.4 },
     { src: "/support_4.webp", pos: "bottom-10 right-4 md:right-20", rot: 25, delay: 2.3, dur: 5.8 },
   ];
@@ -108,19 +108,24 @@ export function FloatingSpareParts() {
   return (
     <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
       {parts.map((part, i) => {
-        // Adjust size for top-right (index 1) and bottom-left (index 2)
-        const isSmaller = i === 1 || i === 2;
-        const sizeClass = isSmaller ? "w-20 md:w-44" : "w-28 md:w-64";
+        // Smart size adjust on mobile: shrink left element (wheel tire) so it never overlaps chandelier
+        const sizeClass = i === 0
+          ? "w-[74px] xs:w-[84px] sm:w-[98px] md:w-64"
+          : i === 1
+            ? "w-16 xs:w-20 md:w-44"
+            : i === 2
+              ? "w-20 md:w-44"
+              : "w-28 md:w-64";
 
         return (
           <motion.img
             key={i}
             src={part.src}
-            className={`absolute ${part.pos} ${sizeClass} h-auto ${isSmaller && i === 2 || i === 3 ? "opacity-100" : "opacity-70"}`}
+            className={`absolute ${part.pos} ${sizeClass} h-auto ${i === 2 || i === 3 ? "opacity-100" : "opacity-75"}`}
             initial={{ rotate: part.rot }}
             animate={{
-              y: [0, -20, 0],
-              rotate: [part.rot, part.rot + 4, part.rot],
+              y: [0, -15, 0],
+              rotate: [part.rot, part.rot + 3, part.rot],
             }}
             transition={{
               duration: part.dur,

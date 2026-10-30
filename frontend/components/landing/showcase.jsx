@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 
 export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false }) {
-  const [displayText, setDisplayText] = useState("");
+  const [displayText, setDisplayText] = useState(skipAnim ? text : "");
   
   useEffect(() => {
     if (skipAnim) {
@@ -26,12 +26,9 @@ export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false 
         timeoutIds.push(t);
       });
       
-      // 2. Wait until 3000ms, then backspace
+      // 2. Mode 'none' stays permanently typed without deletion
       if (mode === "none") {
-        const tReset = setTimeout(() => {
-          if(!isCancelled) setDisplayText("");
-        }, 5900);
-        timeoutIds.push(tReset);
+        return;
       } else if (mode === "letter") {
         const tStartBack = setTimeout(() => {
           chars.forEach((_, i) => {
@@ -66,10 +63,12 @@ export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false 
     const startDelay = setTimeout(() => {
       if(isCancelled) return;
       playAnim();
+      if (mode !== "none") {
       loop = setInterval(() => {
         if(!isCancelled) setDisplayText("");
         playAnim();
       }, 6000); // Base loop is 6 seconds
+      }
     }, delay);
     
     return () => {
@@ -93,7 +92,9 @@ export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false 
         }
       `}</style>
       {displayText}
-      <span className="animate-solid-blink ml-1 font-light text-white">|</span>
+      {!skipAnim && (mode !== "none" || displayText !== text) && (
+        <span className="animate-solid-blink ml-1 font-light text-white">|</span>
+      )}
     </span>
   );
 }

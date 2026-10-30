@@ -121,7 +121,7 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                   opacity: { duration: 0.8, times: [0, 0.2, 0.6, 1], delay: 0.2 },
                   boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
                 }}
-                className="absolute left-[1%] top-[0%] bottom-0 w-[10px] bg-white z-30" 
+                className="absolute left-0 top-0 bottom-0 pointer-events-none z-30" 
               >
                 <LineParticles />
               </motion.div>

@@ -234,33 +234,33 @@ export default function LandingPage({ onNavigateAuth }) {
           </Link>
         </div>
 
-        {/* Floating Crystal 2 Instances */}
+        {/* Floating Crystal 2 (Meteors) - Dynamically framed around Event Card on Mobile with zero cutoffs */}
         <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-           {/* Bottom (Smallest) */}
+           {/* Meteor 1: Upper Left */}
            <motion.img 
              src="/crystal_2.webp" 
-             className="absolute h-[20px] md:h-[28px] object-contain opacity-70 left-[20%] md:left-[35%] bottom-[42%] md:bottom-[5%] -translate-x-1/2"
-             animate={{ y: [0, -8, 0], rotate: [55, 65, 55] }}
-             transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+             className="absolute h-[26px] md:h-[36px] object-contain opacity-85 left-[calc(50%-142px)] top-[16%] md:left-[calc(50%-260px)] md:top-[55%] filter drop-shadow-[0_0_12px_rgba(255,0,255,0.7)]"
+             animate={{ y: [0, -14, 0], x: [0, 5, 0], rotate: [-35, -15, -35], scale: [1, 1.1, 1] }}
+             transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
            />
-           {/* Left Small */}
+           {/* Meteor 2: Right Center */}
            <motion.img 
              src="/crystal_2.webp" 
-             className="absolute h-[26px] md:h-[36px] object-contain opacity-70 left-[calc(50%-185px)] md:left-[calc(50%-260px)] top-[30%] md:top-[55%]"
-             animate={{ y: [0, -10, 0], rotate: [-35, -25, -35] }}
-             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-           />
-           {/* Right Medium */}
-           <motion.img 
-             src="/crystal_2.webp" 
-             className="absolute h-[34px] md:h-[47px] object-contain opacity-70 left-[calc(50%+165px)] md:left-[calc(50%+175px)] top-[22%] md:top-[18%]"
-             animate={{ y: [0, -15, 0], rotate: [30, 40, 30] }}
+             className="absolute h-[30px] md:h-[47px] object-contain opacity-85 left-[calc(50%+118px)] top-[26%] md:left-[calc(50%+175px)] md:top-[18%] filter drop-shadow-[0_0_15px_rgba(255,215,0,0.7)]"
+             animate={{ y: [0, -16, 0], x: [0, -6, 0], rotate: [25, 45, 25], scale: [1, 1.12, 1] }}
              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
            />
-           {/* Right Large */}
+           {/* Meteor 3: Lower Left */}
            <motion.img 
              src="/crystal_2.webp" 
-             className="absolute h-[45px] md:h-[63px] object-contain opacity-70 left-[calc(50%+190px)] md:left-[calc(50%+200px)] top-[45%] md:top-[50%]"
+             className="absolute h-[22px] md:h-[28px] object-contain opacity-85 left-[calc(50%-132px)] top-[42%] md:left-[35%] md:bottom-[5%] md:top-auto filter drop-shadow-[0_0_10px_rgba(255,140,0,0.6)]"
+             animate={{ y: [0, -10, 0], x: [0, 4, 0], rotate: [50, 70, 50], scale: [1, 1.08, 1] }}
+             transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+           />
+           {/* Meteor 4: Desktop Only */}
+           <motion.img 
+             src="/crystal_2.webp" 
+             className="hidden md:block absolute h-[45px] md:h-[63px] object-contain opacity-70 md:left-[calc(50%+200px)] md:top-[50%]"
              animate={{ y: [0, -18, 0], rotate: [0, 10, 0] }}
              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
            />
@@ -367,7 +367,7 @@ export default function LandingPage({ onNavigateAuth }) {
              animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
            >
-             <Typewriter text="SUPPORT US" mode="none" delay={6000} skipAnim={skipAnim} />
+             <Typewriter text="SUPPORT US" mode="none" delay={isMobile ? 0 : 400} skipAnim={isMobile || skipAnim} />
            </motion.h2>
         </div>
 
