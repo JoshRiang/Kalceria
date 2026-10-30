@@ -44,7 +44,8 @@ const particles = generateParticles();
 export default function JourneySection4() {
   return (
     <section className="relative w-full min-h-[1050px] md:min-h-screen bg-[#050505] overflow-hidden flex flex-col md:flex-row items-center justify-center pt-16 pb-16 sm:pt-20 sm:pb-20">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes blob-float {
           0% { transform: translate(0px, 0px) scale(1); }
           33% { transform: translate(30px, -50px) scale(1.1); }
@@ -85,7 +86,7 @@ export default function JourneySection4() {
           animation: fade-mobi 12s cubic-bezier(0.65, 0, 0.35, 1) infinite;
         }
       `}} />
-      
+
       {/* Dynamic Blobs */}
       <div className="absolute top-[10%] left-[20%] w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-cyan-500/20 rounded-full mix-blend-screen filter blur-[100px] opacity-70 animate-blob" style={{ animationDelay: '0s' }}></div>
       <div className="absolute bottom-[10%] right-[10%] w-[45vw] h-[45vw] max-w-[500px] max-h-[500px] bg-amber-500/20 rounded-full mix-blend-screen filter blur-[80px] opacity-70 animate-blob" style={{ animationDelay: '-5s' }}></div>
@@ -113,13 +114,13 @@ export default function JourneySection4() {
 
       {/* Content Container */}
       <div className="relative z-20 container mx-auto px-6 md:px-12 flex flex-col md:flex-row items-center gap-12">
-        
+
         {/* Left Half: Title & Description */}
         <div className="w-full md:w-1/2 flex flex-col justify-center text-left py-8 md:py-0">
           <div className="relative mb-6 w-full flex flex-col items-start group">
             {/* Surfer Image Floating above Title on Mobile, above Title on Desktop */}
-            <motion.img 
-              src="/surfer.webp" 
+            <motion.img
+              src="/surfer.webp"
               alt="Surfer"
               className="relative md:absolute mx-auto md:mx-0 w-[180px] sm:w-[220px] md:w-auto h-[130px] sm:h-[160px] md:h-[244%] z-30 object-contain drop-shadow-[0_10px_30px_rgba(34,211,238,0.4)] pointer-events-none mb-4 md:mb-0 md:-top-[230%] md:left-[5%] md:right-auto"
               animate={{ y: [0, -15, 0], rotate: [-2, 2, -2] }}
@@ -129,9 +130,9 @@ export default function JourneySection4() {
               <Typewriter text="WAITING FOR YOU" delay={500} speed={80} />
             </h1>
           </div>
-          
+
           <div className="max-w-xl text-base md:text-xl font-medium text-gray-200 leading-relaxed drop-shadow-lg text-justify md:text-left">
-            Kalceria is open for visionary partnerships, media collaborations, and brand sponsorships. We are aggressively building an automotive ecosystem where street culture and innovation thrive. Connect with us today to explore limitless possibilities and dominate the scene together. 
+            Kalceria is open for visionary partnerships, media collaborations, and brand sponsorships. We are aggressively building an automotive ecosystem where street culture and innovation thrive. Connect with us today to explore limitless possibilities and dominate the scene together.
             <a href="https://wa.me/1234567890" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline font-bold pointer-events-auto transition-colors duration-300 ml-1">
               Click here to chat!
             </a>
@@ -142,19 +143,19 @@ export default function JourneySection4() {
       {/* Right Half: Square Box Auto Scroll */}
       <div className="w-full flex items-center justify-center p-4 md:absolute md:right-0 md:top-1/2 md:-translate-y-1/2 md:w-1/2 md:p-0 z-30">
         <div className="relative w-full max-w-[450px] aspect-square">
-          
+
           {/* Floating Texts Overlays (Attached to the square box corner, outside overflow-hidden) */}
           <div className="absolute -top-10 -left-6 md:-left-16 md:-top-12 z-50 pointer-events-none drop-shadow-[0_20px_30px_rgba(0,0,0,0.9)] w-40 md:w-56 h-40">
             <ContentImage
-              src="/textfitra.webp" 
-              alt="Fitra" 
+              src="/textfitra.webp"
+              alt="Fitra"
               width={2400}
               height={1675}
               className="absolute top-0 left-0 w-full animate-text-fitra"
             />
             <ContentImage
-              src="/textmobi.webp" 
-              alt="Mobi" 
+              src="/textmobi.webp"
+              alt="Mobi"
               width={1032}
               height={1024}
               className="absolute -top-4 md:-top-6 left-0 w-full animate-text-mobi"

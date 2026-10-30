@@ -121,11 +121,11 @@ function LineParticles() {
             opacity: [0, 1, 0],
             scale: [0.5, 1.5, 0.5]
           }}
-          transition={{ 
-            duration: p.duration, 
-            repeat: Infinity, 
-            ease: "easeOut", 
-            delay: p.delay 
+          transition={{
+            duration: p.duration,
+            repeat: Infinity,
+            ease: "easeOut",
+            delay: p.delay
           }}
         />
       ))}
@@ -160,7 +160,7 @@ function DecorativeCard({ seed }) {
           <Image src="/favicon.webp" alt="" width={771} height={681} sizes="32px" quality={75} loading="eager" decoding="async" className="w-8 h-8 opacity-70 object-contain" />
         </div>
         <div className="absolute inset-0 bg-white rounded-xl flex items-center justify-center p-2 shadow-xl border border-black/5" style={{ transform: "rotateY(180deg)", backfaceVisibility: "hidden" }}>
-          <span className="font-black text-3xl select-none" style={{ 
+          <span className="font-black text-3xl select-none" style={{
             color: content.color,
             textShadow: `
               0 1px 0 rgba(0,0,0,0.1),
@@ -244,7 +244,7 @@ export default function MinigamePage() {
     // After game finishes, attempt becomes 0, start ending sequence
     setAttempt(0);
     setGamePhase("ending");
-    
+
     // Gradual cleanup and transition back to landing page state
     scheduleTimeout(() => {
       setGamePhase("finished");
@@ -449,104 +449,105 @@ export default function MinigamePage() {
       {/* Trailer Modal */}
       <AnimatePresence>
         {showTrailer && (
-          <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4 overflow-y-auto bg-black/90">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5 }} onClick={() => setShowTrailer(false)} className="absolute inset-0 cursor-pointer" />
-            <div className="relative flex flex-col items-center py-12 min-h-full justify-center">
-              <motion.div initial={{ opacity: 0, y: 10, filter: "blur(20px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: 20, filter: "blur(40px)", transition: { duration: 0.8 } }} transition={{ duration: 1.5 }} className="text-center mb-10 max-w-sm relative">
-                <div className="flex items-center justify-center gap-4">
-                  <h2 className="text-4xl font-black italic tracking-tighter text-white mb-2" style={{ textShadow: "3px 3px 0px #d946ef" }}>SOCIAL CULT</h2>
-                  <button aria-label="Close trailer" onClick={() => setShowTrailer(false)} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center text-white hover:bg-white/20 hover:scale-110 transition-all shadow-2xl border border-white/20 group overflow-hidden relative translate-x-2">
-                    <div className="absolute inset-0 bg-red-600/60 blur-[4px] rounded-full opacity-70 group-hover:opacity-100 transition-opacity" />
-                    <svg className="relative z-10 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </div>
-                <p className="text-[10px] font-sans text-white leading-relaxed px-6 opacity-60">A revolutionary fusion of high-performance automotive engineering and urban street culture. Join the collective as we redefine the boundaries of style and speed.</p>
-              </motion.div>
-
-              <div className="relative">
-                {/* Floating ge images around the card - More Spread & Smaller */}
-                {[
-                  { src: "/ge_1.webp", pos: isMobile ? "-top-12 -left-26" : "-top-24 -left-40", rot: -15, delay: 0 },
-                  { src: "/ge_2.webp", pos: isMobile ? "-top-10 -right-24" : "-top-20 -right-36", rot: 20, delay: 0.5 },
-                  { src: "/ge_3.webp", pos: isMobile ? "bottom-[-16%] -left-26" : "bottom-[5%] -left-48", rot: 10, delay: 1 },
-                  { src: "/ge_4.webp", pos: isMobile ? "bottom-[-14%] -right-24" : "bottom-[7%] -right-44", rot: -10, delay: 1.5 },
-                ].map((ge, idx) => (
-                  <motion.img
-                    key={idx}
-                    src={ge.src}
-                    alt=""
-                    aria-hidden="true"
-                    loading="lazy"
-                    decoding="async"
-                    initial={{ opacity: 0, scale: 0.5, rotate: ge.rot }}
-                    animate={{ 
-                      opacity: 1, 
-                      scale: 1,
-                      y: [0, -10, 0],
-                      rotate: [ge.rot, ge.rot + 5, ge.rot]
-                    }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                    transition={{ 
-                      opacity: { duration: 0.8, delay: 0.5 + idx * 0.1 },
-                      scale: { duration: 0.8, delay: 0.5 + idx * 0.1 },
-                      y: { duration: 4 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay },
-                      rotate: { duration: 5 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay }
-                    }}
-                    className={`absolute ${ge.pos} ${isMobile ? "w-20" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-2xl pointer-events-none`}
-                  />
-                ))}
-
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: 20, filter: "blur(30px)" }} 
-                  animate={{ opacity: 1, scale: 1, y: [0, -6, 0], filter: "blur(0px)" }} 
-                  exit={{ opacity: 0, scale: 0.9, y: 40, filter: "blur(50px)", transition: { duration: 0.8 } }} 
-                  transition={{ duration: 1.5, y: { duration: 4, repeat: Infinity, ease: "easeInOut" } }} 
-                  className="relative w-[280px] md:w-[320px] aspect-[9/16] rounded-[2.5rem] border border-yellow-500/50 shadow-[0_0_60px_rgba(251,191,36,0.4)] bg-black mt-[-2rem] overflow-visible"
-                >
-                  {/* Golden Glow Pulse */}
-                  <motion.div
-                    animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.05, 1] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute inset-[-10%] bg-yellow-500/20 blur-[40px] rounded-[3rem] z-0"
-                  />
-
-                  {/* Rainbow Particles */}
-                  <LineParticles />
-
-                  <div className="relative w-full h-full z-10 overflow-hidden rounded-[2.5rem] border border-white/10">
-                    <video ref={videoRef} src="/trailer.mp4" controls autoPlay className="w-full h-full object-cover" />
-                  </div>
-                </motion.div>
-              </div>
+      <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4 overflow-y-auto bg-black/90">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5 }} onClick={() => setShowTrailer(false)} className="absolute inset-0 cursor-pointer" />
+        <div className="relative flex flex-col items-center py-12 min-h-full justify-center">
+          <motion.div initial={{ opacity: 0, y: 10, filter: "blur(20px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: 20, filter: "blur(40px)", transition: { duration: 0.8 } }} transition={{ duration: 1.5 }} className="text-center mb-10 max-w-sm relative">
+            <div className="flex items-center justify-center gap-4">
+              <h2 className="text-4xl font-black italic tracking-tighter text-white mb-2" style={{ textShadow: "3px 3px 0px #d946ef" }}>SOCIAL CULT</h2>
+              <button aria-label="Close trailer" onClick={() => setShowTrailer(false)} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center text-white hover:bg-white/20 hover:scale-110 transition-all shadow-2xl border border-white/20 group overflow-hidden relative translate-x-2">
+                <div className="absolute inset-0 bg-red-600/60 blur-[4px] rounded-full opacity-70 group-hover:opacity-100 transition-opacity" />
+                <svg className="relative z-10 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
-          </div>
-        )}
-      </AnimatePresence>
+            <p className="text-[10px] font-sans text-white leading-relaxed px-6 opacity-60">A revolutionary fusion of high-performance automotive engineering and urban street culture. Join the collective as we redefine the boundaries of style and speed.</p>
+          </motion.div>
 
-      {/* Rules Modal */}
-      <AnimatePresence>
-        {showInfo && (
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowInfo(false)} className="absolute inset-0 bg-black/80 cursor-pointer" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-lg p-10 overflow-hidden rounded-[2.5rem] border border-white/20 shadow-[0_30px_100px_rgba(0,0,0,0.8)]">
-              <div className="absolute inset-0 z-0 bg-black/95" />
-              <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
-                <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute -top-[40%] -left-[20%] w-[120%] h-[120%] bg-indigo-900 rounded-full blur-[80px]" />
-                <motion.div animate={{ scale: [1.2, 1, 1.2], opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute -bottom-[40%] -right-[20%] w-[120%] h-[120%] bg-purple-800 rounded-full blur-[80px]" />
-              </div>
-              <div className="relative z-10">
-                <h3 className="text-3xl font-rog font-black text-white mb-8 tracking-tighter uppercase border-b border-white/10 pb-4">Game Rules</h3>
-                <div className="space-y-6 text-white font-sans text-sm leading-relaxed">
-                  <div className="flex gap-4"><span className="font-bold">1.</span><p>Every registered user is granted 1 (one) attempt daily until the day before the event (H-1).</p></div>
-                  <div className="flex gap-4"><span className="font-bold">2.</span><p>The score achieved in the first attempt will be saved automatically.</p></div>
-                  <div className="flex gap-4"><span className="font-bold">3.</span><p>During the second attempt, users can choose whether to keep the newest score or retain their previous one.</p></div>
-                  <div className="flex gap-4"><span className="font-bold">4.</span><p>Users compete for the top leaderboard spots until H-1; those with the highest scores will be selected to win an <span className="italic underline decoration-purple-400 underline-offset-4">Event Voucher</span>.</p></div>
-                </div>
-                <button onClick={() => setShowInfo(false)} className="mt-10 w-full py-4 bg-white/10 border border-white/20 rounded-xl font-sans font-black uppercase text-xs tracking-widest text-white hover:bg-white/20 transition-all active:scale-95">Understood</button>
+          <div className="relative">
+            {/* Floating ge images around the card - More Spread & Smaller */}
+            {[
+              { src: "/ge_1.webp", pos: isMobile ? "-top-12 -left-26" : "-top-24 -left-40", rot: -15, delay: 0 },
+              { src: "/ge_2.webp", pos: isMobile ? "-top-10 -right-24" : "-top-20 -right-36", rot: 20, delay: 0.5 },
+              { src: "/ge_3.webp", pos: isMobile ? "bottom-[-16%] -left-26" : "bottom-[5%] -left-48", rot: 10, delay: 1 },
+              { src: "/ge_4.webp", pos: isMobile ? "bottom-[-14%] -right-24" : "bottom-[7%] -right-44", rot: -10, delay: 1.5 },
+            ].map((ge, idx) => (
+              <motion.img
+                key={idx}
+                src={ge.src}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                decoding="async"
+                initial={{ opacity: 0, scale: 0.5, rotate: ge.rot }}
+                animate={{
+                  opacity: 1,
+                  scale: 1,
+                  y: [0, -10, 0],
+                  rotate: [ge.rot, ge.rot + 5, ge.rot]
+                }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                transition={{
+                  opacity: { duration: 0.8, delay: 0.5 + idx * 0.1 },
+                  scale: { duration: 0.8, delay: 0.5 + idx * 0.1 },
+                  y: { duration: 4 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay },
+                  rotate: { duration: 5 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay }
+                }}
+                className={`absolute ${ge.pos} ${isMobile ? "w-20" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-2xl pointer-events-none`}
+              />
+            ))}
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20, filter: "blur(30px)" }}
+              animate={{ opacity: 1, scale: 1, y: [0, -6, 0], filter: "blur(0px)" }}
+              exit={{ opacity: 0, scale: 0.9, y: 40, filter: "blur(50px)", transition: { duration: 0.8 } }}
+              transition={{ duration: 1.5, y: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}
+              className="relative w-[280px] md:w-[320px] aspect-[9/16] rounded-[2.5rem] border border-yellow-500/50 shadow-[0_0_60px_rgba(251,191,36,0.4)] bg-black mt-[-2rem] overflow-visible"
+            >
+              {/* Golden Glow Pulse */}
+              <motion.div
+                animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.05, 1] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute inset-[-10%] bg-yellow-500/20 blur-[40px] rounded-[3rem] z-0"
+              />
+
+              {/* Rainbow Particles */}
+              <LineParticles />
+
+              <div className="relative w-full h-full z-10 overflow-hidden rounded-[2.5rem] border border-white/10">
+                <video ref={videoRef} src="/trailer.mp4" controls autoPlay className="w-full h-full object-cover" />
               </div>
             </motion.div>
           </div>
-        )}
+        </div>
+      </div>
+    )
+}
+      </AnimatePresence >
+
+  {/* Rules Modal */ }
+  < AnimatePresence >
+  { showInfo && (
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-6">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowInfo(false)} className="absolute inset-0 bg-black/80 cursor-pointer" />
+      <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-lg p-10 overflow-hidden rounded-[2.5rem] border border-white/20 shadow-[0_30px_100px_rgba(0,0,0,0.8)]">
+        <div className="absolute inset-0 z-0 bg-black/95" />
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
+          <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute -top-[40%] -left-[20%] w-[120%] h-[120%] bg-indigo-900 rounded-full blur-[80px]" />
+          <motion.div animate={{ scale: [1.2, 1, 1.2], opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute -bottom-[40%] -right-[20%] w-[120%] h-[120%] bg-purple-800 rounded-full blur-[80px]" />
+        </div>
+        <div className="relative z-10">
+          <h3 className="text-3xl font-rog font-black text-white mb-8 tracking-tighter uppercase border-b border-white/10 pb-4">Game Rules</h3>
+          <div className="space-y-6 text-white font-sans text-sm leading-relaxed">
+            <div className="flex gap-4"><span className="font-bold">1.</span><p>Every registered user is granted 1 (one) attempt daily until the day before the event (H-1).</p></div>
+            <div className="flex gap-4"><span className="font-bold">2.</span><p>The score achieved in the first attempt will be saved automatically.</p></div>
+            <div className="flex gap-4"><span className="font-bold">3.</span><p>During the second attempt, users can choose whether to keep the newest score or retain their previous one.</p></div>
+            <div className="flex gap-4"><span className="font-bold">4.</span><p>Users compete for the top leaderboard spots until H-1; those with the highest scores will be selected to win an <span className="italic underline decoration-purple-400 underline-offset-4">Event Voucher</span>.</p></div>
+          </div>
+          <button onClick={() => setShowInfo(false)} className="mt-10 w-full py-4 bg-white/10 border border-white/20 rounded-xl font-sans font-black uppercase text-xs tracking-widest text-white hover:bg-white/20 transition-all active:scale-95">Understood</button>
+        </div>
+      </motion.div>
+    </div>
+  )}
       </AnimatePresence>
 
       {/* Initial Blackout */}
@@ -562,28 +563,28 @@ export default function MinigamePage() {
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="fixed inset-0 z-[6000] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md px-6 text-center pointer-events-auto"
           >
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
               className="flex flex-col items-center gap-4"
             >
               {/* Rotating phone icon */}
-              <motion.svg 
+              <motion.svg
                 animate={{ rotate: [0, -90, -90, 0] }}
                 transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.5 }}
-                className="w-12 h-12 text-white/90 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" 
-                fill="none" 
-                stroke="currentColor" 
+                className="w-12 h-12 text-white/90 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
                 <rect x="5" y="2" width="14" height="20" rx="3" strokeWidth="2" />
                 <line x1="10" y1="18" x2="14" y2="18" strokeWidth="2" strokeLinecap="round" />
               </motion.svg>
 
-              <span 
+              <span
                 className="text-white text-2xl sm:text-3xl font-bold tracking-tight"
-                style={{ 
+                style={{
                   fontFamily: "Arial, sans-serif",
                   textShadow: "0 2px 12px rgba(0,0,0,0.8)"
                 }}
