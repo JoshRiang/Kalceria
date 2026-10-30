@@ -15,11 +15,16 @@ export default function AboutUs() {
   const [showEntry, setShowEntry] = useState(false);
   const [entryDone, setEntryDone] = useState(false);
   
-  // Character Hover states
+  // Character Hover / Tap states
   const [hoverMentor, setHoverMentor] = useState(false);
+  const [activeChar, setActiveChar] = useState(null); // 'rei' | 'josh' | 'otniel' | null
   const [hoverRei, setHoverRei] = useState(false);
   const [hoverJosh, setHoverJosh] = useState(false);
   const [hoverOtniel, setHoverOtniel] = useState(false);
+
+  const toggleChar = (char) => {
+    setActiveChar((prev) => (prev === char ? null : char));
+  };
   
   const handleEntryComplete = useCallback(() => {
     setShowEntry(false);
@@ -359,11 +364,48 @@ export default function AboutUs() {
 
         {/* Character Group Behind Plateau */}
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-auto z-[4] pointer-events-none transform translate-y-[15%]">
-           {/* Rei - Center Bottom Layer */}
+           
+           {/* Mobile Unified Top-Center Info Box above Central Gladiator */}
+           {isMobile && (
+             <AnimatePresence>
+               {activeChar && (
+                 <motion.div
+                   key={activeChar}
+                   initial={{ opacity: 0, y: 15, scale: 0.9 }}
+                   animate={{ opacity: 1, y: 0, scale: 1 }}
+                   exit={{ opacity: 0, y: 15, scale: 0.9 }}
+                   className="absolute bottom-[46vh] sm:bottom-[50vh] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 rounded-[1.2rem] pointer-events-auto"
+                   style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                 >
+                   {/* Photo Box */}
+                   <div className="overflow-hidden border border-white/15 bg-black/30 w-[84px] h-[84px] rounded-[0.6rem] mb-2 shadow-inner">
+                     <Image 
+                       src={activeChar === "rei" ? "/reifo.webp" : activeChar === "josh" ? "/jofo.webp" : "/ofo.webp"} 
+                       alt={activeChar} 
+                       width={200} 
+                       height={200} 
+                       sizes="84px" 
+                       quality={80} 
+                       className="w-full h-full object-cover" 
+                     />
+                   </div>
+                   
+                   <div className="absolute -z-10 inset-0 bg-black/60 blur-2xl rounded-full scale-75" />
+                   <p className="text-white font-normal leading-relaxed relative z-10 text-xs text-center">
+                     <span className="underline font-bold">Our beloved friend,</span><br />
+                     {activeChar === "rei" ? "Reinathan Ezkhiel K." : activeChar === "josh" ? "Joshua Ricardo R." : "Otniel Kristian S."}
+                   </p>
+                 </motion.div>
+               )}
+             </AnimatePresence>
+           )}
+
+           {/* Rei - Center Bottom Layer (Central Gladiator) */}
            <div 
              className="absolute left-1/2 -translate-x-1/2 h-[102vh] w-auto z-[1] pointer-events-auto bottom-[-34vh] md:bottom-[-25vh]"
-             onMouseEnter={() => setHoverRei(true)}
-             onMouseLeave={() => setHoverRei(false)}
+             onMouseEnter={() => { if (!isMobile) { setHoverRei(true); setActiveChar("rei"); } }}
+             onMouseLeave={() => { if (!isMobile) { setHoverRei(false); setActiveChar(null); } }}
+             onClick={() => { toggleChar("rei"); setHoverRei((p) => !p); }}
            >
              <Image
                src="/rei.webp" 
@@ -374,37 +416,40 @@ export default function AboutUs() {
                quality={75}
                loading="lazy"
                decoding="async"
-               className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.2)] cursor-help"
+               className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.2)] cursor-pointer md:cursor-help"
              />
-             <AnimatePresence>
-                {hoverRei && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                    className="absolute bottom-[68%] left-[70%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start p-3 rounded-[1rem] md:p-5 md:rounded-[2rem]"
-                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
-                  >
-                    {/* Photo Box */}
-                    <div className="overflow-hidden border border-white/10 bg-black/20 w-[80px] h-[80px] rounded-[0.5rem] mb-2 md:w-[136px] md:h-[136px] md:rounded-[1rem] md:mb-4">
-                      <Image src="/reifo.webp" alt="Reinathan photo" width={481} height={572} sizes="(max-width: 768px) 80px, 136px" quality={75} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                    </div>
-                    
-                    <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
-                    <p className="text-white font-normal leading-relaxed relative z-10 text-xs md:text-base">
-                      <span className="underline font-bold">Our beloved friend,</span><br />
-                      Reinathan Ezkhiel K.
-                    </p>
-                  </motion.div>
-                )}
-             </AnimatePresence>
+             {!isMobile && (
+               <AnimatePresence>
+                  {(hoverRei || activeChar === "rei") && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                      className="absolute bottom-[68%] left-[70%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start p-3 rounded-[1rem] md:p-5 md:rounded-[2rem]"
+                      style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                    >
+                      {/* Photo Box */}
+                      <div className="overflow-hidden border border-white/10 bg-black/20 w-[80px] h-[80px] rounded-[0.5rem] mb-2 md:w-[136px] md:h-[136px] md:rounded-[1rem] md:mb-4">
+                        <Image src="/reifo.webp" alt="Reinathan photo" width={481} height={572} sizes="(max-width: 768px) 80px, 136px" quality={75} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      </div>
+                      
+                      <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
+                      <p className="text-white font-normal leading-relaxed relative z-10 text-xs md:text-base">
+                        <span className="underline font-bold">Our beloved friend,</span><br />
+                        Reinathan Ezkhiel K.
+                      </p>
+                    </motion.div>
+                  )}
+               </AnimatePresence>
+             )}
            </div>
 
            {/* Josh - Left Upper Layer */}
            <div 
              className="absolute -translate-x-1/2 z-[2] pointer-events-auto bottom-0 left-[25%] w-[34vw] h-auto md:left-[30%] md:h-[63vh] md:w-auto"
-             onMouseEnter={() => setHoverJosh(true)}
-             onMouseLeave={() => setHoverJosh(false)}
+             onMouseEnter={() => { if (!isMobile) { setHoverJosh(true); setActiveChar("josh"); } }}
+             onMouseLeave={() => { if (!isMobile) { setHoverJosh(false); setActiveChar(null); } }}
+             onClick={() => { toggleChar("josh"); setHoverJosh((p) => !p); }}
            >
              <Image
                src="/josh.webp" 
@@ -415,37 +460,40 @@ export default function AboutUs() {
                quality={75}
                loading="lazy"
                decoding="async"
-               className="object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help w-full h-auto md:h-full md:w-auto"
+               className="object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-pointer md:cursor-help w-full h-auto md:h-full md:w-auto"
              />
-             <AnimatePresence>
-                {hoverJosh && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20, scale: 0.9 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: 20, scale: 0.9 }}
-                    className="absolute bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start top-[30%] right-[80%] p-3 rounded-[1rem] md:top-[40%] md:right-[85%] md:p-5 md:rounded-[2rem]"
-                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
-                  >
-                    {/* Photo Box */}
-                    <div className="overflow-hidden border border-white/10 bg-black/20 w-[80px] h-[80px] rounded-[0.5rem] mb-2 md:w-[136px] md:h-[136px] md:rounded-[1rem] md:mb-4">
-                      <Image src="/jofo.webp" alt="Joshua photo" width={433} height={416} sizes="(max-width: 768px) 80px, 136px" quality={75} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                    </div>
+             {!isMobile && (
+               <AnimatePresence>
+                  {(hoverJosh || activeChar === "josh") && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                      className="absolute bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start top-[30%] right-[80%] p-3 rounded-[1rem] md:top-[40%] md:right-[85%] md:p-5 md:rounded-[2rem]"
+                      style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                    >
+                      {/* Photo Box */}
+                      <div className="overflow-hidden border border-white/10 bg-black/20 w-[80px] h-[80px] rounded-[0.5rem] mb-2 md:w-[136px] md:h-[136px] md:rounded-[1rem] md:mb-4">
+                        <Image src="/jofo.webp" alt="Joshua photo" width={433} height={416} sizes="(max-width: 768px) 80px, 136px" quality={75} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      </div>
 
-                    <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
-                    <p className="text-white font-normal leading-relaxed relative z-10 text-xs md:text-base">
-                      <span className="underline font-bold">Our beloved friend,</span><br />
-                      Joshua Ricardo R.
-                    </p>
-                  </motion.div>
-                )}
-             </AnimatePresence>
+                      <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
+                      <p className="text-white font-normal leading-relaxed relative z-10 text-xs md:text-base">
+                        <span className="underline font-bold">Our beloved friend,</span><br />
+                        Joshua Ricardo R.
+                      </p>
+                    </motion.div>
+                  )}
+               </AnimatePresence>
+             )}
            </div>
 
            {/* Otniel - Right Upper Layer */}
            <div 
              className="absolute -translate-x-1/2 z-[2] pointer-events-auto left-[75%] w-[28vw] h-auto bottom-0 md:h-[63vh] md:w-auto md:bottom-[-18vh]"
-             onMouseEnter={() => setHoverOtniel(true)}
-             onMouseLeave={() => setHoverOtniel(false)}
+             onMouseEnter={() => { if (!isMobile) { setHoverOtniel(true); setActiveChar("otniel"); } }}
+             onMouseLeave={() => { if (!isMobile) { setHoverOtniel(false); setActiveChar(null); } }}
+             onClick={() => { toggleChar("otniel"); setHoverOtniel((p) => !p); }}
            >
              <Image
                src="/otniel.webp" 
@@ -456,30 +504,32 @@ export default function AboutUs() {
                quality={75}
                loading="lazy"
                decoding="async"
-               className="object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-help w-full h-auto md:h-full md:w-auto md:scale-[1.3] md:origin-bottom"
+               className="object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-pointer md:cursor-help w-full h-auto md:h-full md:w-auto md:scale-[1.3] md:origin-bottom"
              />
-             <AnimatePresence>
-                {hoverOtniel && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -20, scale: 0.9 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: -20, scale: 0.9 }}
-                    className="absolute top-[25%] left-[95%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start p-3 rounded-[1rem] md:p-5 md:rounded-[2rem]"
-                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
-                  >
-                    {/* Photo Box */}
-                    <div className="overflow-hidden border border-white/10 bg-black/20 w-[80px] h-[80px] rounded-[0.5rem] mb-2 md:w-[136px] md:h-[136px] md:rounded-[1rem] md:mb-4">
-                      <Image src="/ofo.webp" alt="Otniel photo" width={664} height={622} sizes="(max-width: 768px) 80px, 136px" quality={75} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                    </div>
+             {!isMobile && (
+               <AnimatePresence>
+                  {(hoverOtniel || activeChar === "otniel") && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      exit={{ opacity: 0, x: -20, scale: 0.9 }}
+                      className="absolute top-[25%] left-[95%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start p-3 rounded-[1rem] md:p-5 md:rounded-[2rem]"
+                      style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                    >
+                      {/* Photo Box */}
+                      <div className="overflow-hidden border border-white/10 bg-black/20 w-[80px] h-[80px] rounded-[0.5rem] mb-2 md:w-[136px] md:h-[136px] md:rounded-[1rem] md:mb-4">
+                        <Image src="/ofo.webp" alt="Otniel photo" width={664} height={622} sizes="(max-width: 768px) 80px, 136px" quality={75} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      </div>
 
-                    <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
-                    <p className="text-white font-normal leading-relaxed relative z-10 text-xs md:text-base">
-                      <span className="underline font-bold">Our beloved friend,</span><br />
-                      Otniel Kristian S.
-                    </p>
-                  </motion.div>
-                )}
-             </AnimatePresence>
+                      <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
+                      <p className="text-white font-normal leading-relaxed relative z-10 text-xs md:text-base">
+                        <span className="underline font-bold">Our beloved friend,</span><br />
+                        Otniel Kristian S.
+                      </p>
+                    </motion.div>
+                  )}
+               </AnimatePresence>
+             )}
            </div>
         </div>
 
@@ -534,14 +584,13 @@ export default function AboutUs() {
         {/* Golden Ambient Sparks (Free Floating) */}
         <GoldenAmbientSparks />
 
-        {/* Section Title at the top */}
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10 text-center w-full px-8 flex flex-col items-center">
+        {/* Section Title at the top - Always visible & prominent on re-scroll */}
+        <div className="absolute top-10 sm:top-14 md:top-20 left-1/2 -translate-x-1/2 z-30 text-center w-full px-6 flex flex-col items-center pointer-events-none">
            <motion.h2 
-             initial={{ opacity: 0, y: -30 }}
-             whileInView={{ opacity: 1, y: 0 }}
-             viewport={{ once: true }}
-             transition={{ duration: 1, ease: "easeOut" }}
-             className="text-5xl md:text-7xl font-normal tracking-tighter text-white leading-none"
+             initial={{ opacity: 1, y: 0 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.8, ease: "easeOut" }}
+             className="text-4xl sm:text-5xl md:text-7xl font-normal tracking-tighter text-white leading-none select-none"
              style={{ 
                fontFamily: "'Times New Roman', Times, serif",
                textShadow: `
@@ -560,29 +609,30 @@ export default function AboutUs() {
 
         {/* Static Paragraph - Centered on mobile, Left on desktop */}
         <p 
-          className="absolute top-[8.5rem] md:top-[12.5rem] w-[88%] max-w-[340px] md:max-w-[280px] text-slate-300 text-sm sm:text-base md:text-lg font-normal leading-relaxed pointer-events-none z-20 text-center md:text-justify left-1/2 -translate-x-1/2 md:left-[32%] md:translate-x-0"
+          className="absolute top-[5.2rem] sm:top-[6.5rem] md:top-[12.5rem] w-[90%] max-w-[340px] md:max-w-[280px] text-slate-200 text-xs sm:text-sm md:text-lg font-normal leading-relaxed pointer-events-none z-30 text-center md:text-justify left-1/2 -translate-x-1/2 md:left-[32%] md:translate-x-0 opacity-100"
           style={{ fontFamily: "'Times New Roman', Times, serif" }}
         >
           Kalceria used to be a Final Project, now it is becoming a legacy of digital craftsmanship and automotive passion. It stands as a testament to the boundary-pushing creativity of our development team.
         </p>
         
-        {/* dy_3 (Fitra Eri / Mentor) image - Centered between Paragraph and Bottom Figures on mobile */}
+        {/* dy_3 (Fitra Eri / Mentor) image - Not diagonal (0deg), +30% size on mobile */}
         <div 
-          className="absolute left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[50.4%] z-20 top-[17.5rem] md:top-[5.88rem]"
+          className="absolute left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[50.4%] z-20 top-[15.5rem] sm:top-[16.5rem] md:top-[5.88rem]"
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
+          onClick={() => setHoverMentor((p) => !p)}
         >
           <Image
             src="/dy_3.webp" 
             alt="Ditya Alif K."
             width={1536}
             height={2729}
-            sizes="(max-width: 768px) 150px, 372px"
-            quality={75}
+            sizes="(max-width: 768px) 220px, 372px"
+            quality={85}
             loading="lazy"
             decoding="async"
-            className="object-contain pointer-events-auto opacity-80 cursor-help w-[140px] h-[140px] sm:w-[170px] sm:h-[170px] md:w-[23.25rem] md:h-[23.25rem]"
-            style={{ rotate: "-10.5deg" }}
+            className="object-contain pointer-events-auto opacity-95 cursor-pointer md:cursor-help w-[185px] h-[185px] sm:w-[220px] sm:h-[220px] md:w-[23.25rem] md:h-[23.25rem] transition-transform duration-300"
+            style={{ rotate: isMobile ? "0deg" : "-10.5deg" }}
           />
           
           <AnimatePresence>
@@ -616,7 +666,7 @@ export default function AboutUs() {
       <div className="w-full h-[1px] bg-cyan-500/50 animate-[pulse_2s_ease-in-out_infinite] shadow-[0_0_15px_#00FFFF] relative z-40" />
 
       {/* ── SECTION 3: THE FAQ ACCORDION ── */}
-      <section className="relative w-full py-40 flex flex-col items-center overflow-hidden z-30 bg-[#050a14]">
+      <section className="relative w-full min-h-screen py-24 md:py-40 flex flex-col items-center justify-between overflow-hidden z-30 bg-[#050a14]">
         
         {/* Floating Bohemian Quotes Background */}
         <FloatingQuotesLayer />
@@ -631,7 +681,7 @@ export default function AboutUs() {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-50px" }}
-          className="relative z-10 w-[90%] max-w-4xl flex flex-col"
+          className="relative z-10 w-[90%] max-w-4xl flex flex-col my-auto"
         >
           {/* 1. GLASS BACKGROUND LAYER (Blurs the quotes behind it) */}
           <div 
@@ -639,8 +689,10 @@ export default function AboutUs() {
             style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }} 
           />
 
-          {/* 2 & 3. ISOLATED ANIMATED REII PAIR (Zero CLS & zero parent re-renders) */}
-          <AnimatedReiiPair isMobile={isMobile} />
+          {/* 2 & 3. ISOLATED ANIMATED REII PAIR - Sticks to bottom on mobile, flanks card on desktop */}
+          <div className="sticky bottom-0 z-20 w-full flex justify-between pointer-events-none md:contents">
+            <AnimatedReiiPair isMobile={isMobile} />
+          </div>
 
           {/* 4. CONTENT LAYER (Text and buttons) */}
           <div className="relative z-20 flex flex-col w-full h-full transition-all duration-300">

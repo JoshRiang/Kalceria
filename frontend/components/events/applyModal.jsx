@@ -133,15 +133,15 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
 
         {/* Mini Carousel Header */}
         <div className="relative z-30 mb-6">
-           <div className={`flex items-center justify-between mb-4 ${isMobile ? "px-10" : ""}`}>
-              <button type="button" onClick={prev} className="w-10 h-10 flex items-center justify-center border border-white/20 text-white/40 hover:text-white hover:border-white transition-all bg-white/5 rounded-lg">
+           <div className={`flex items-center justify-between mb-4 ${isMobile ? "px-6" : ""}`}>
+              <button type="button" onClick={prev} className="p-2 flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none outline-none focus:outline-none">
                 <ChevronLeft />
               </button>
               <div className="text-center flex-1">
                  <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white italic mb-0.5" style={{ textShadow: "2px 2px 0 #FF00FF" }}>{event?.title}</h2>
                  <p className="text-[9px] text-slate-400 font-sans uppercase tracking-[0.2em] italic">Secure your slot in the grid</p>
               </div>
-              <button type="button" onClick={next} className="w-10 h-10 flex items-center justify-center border border-white/20 text-white/40 hover:text-white hover:border-white transition-all bg-white/5 rounded-lg">
+              <button type="button" onClick={next} className="p-2 flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none outline-none focus:outline-none">
                 <ChevronRight />
               </button>
            </div>

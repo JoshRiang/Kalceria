@@ -108,14 +108,17 @@ export function AnimatedReiiPair({ isMobile }) {
 
   return (
     <>
-      {/* LEFT REII IMAGE */}
-      <div ref={containerRef} className="absolute -bottom-24 md:-bottom-40 mr-0 md:mr-6 pointer-events-none flex items-end justify-center z-10 -left-6 sm:left-0 md:left-auto md:right-full">
+      {/* LEFT REII IMAGE - Sticks to bottom of mobile handphone, side of desktop card */}
+      <div 
+        ref={containerRef} 
+        className="pointer-events-none flex items-end justify-center z-20 bottom-0 left-0 md:absolute md:-bottom-40 md:left-auto md:right-full mr-0 md:mr-6"
+      >
         <motion.div
           animate={isActive ? { scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] } : { scale: 1, opacity: 0.4 }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-[140px] h-[140px] md:w-[300px] md:h-[300px] bg-gradient-to-tr from-[#FFD700]/40 to-cyan-500/40 blur-[50px] md:blur-[70px] rounded-full z-[-1]"
+          className="absolute w-[120px] h-[120px] md:w-[300px] md:h-[300px] bg-gradient-to-tr from-[#FFD700]/40 to-cyan-500/40 blur-[40px] md:blur-[70px] rounded-full z-[-1]"
         />
-        <div className="relative z-10 w-[6.5rem] sm:w-[9.6rem] md:w-[17.25rem] aspect-[768/905] flex-shrink-0">
+        <div className="relative z-10 w-[6rem] sm:w-[8rem] md:w-[17.25rem] aspect-[768/905] flex-shrink-0">
           <Image
             src="/reii.webp"
             alt="Reii Left"
@@ -145,20 +148,22 @@ export function AnimatedReiiPair({ isMobile }) {
           side="left"
           isMobile={isMobile}
           configs={[
-            { delay: 0, rotate: -15, top: isMobile ? "5%" : "-15%", offset: isMobile ? 80 : 145 },
-            { delay: 0.8, rotate: 10, top: isMobile ? "55%" : "35%", offset: isMobile ? 110 : 200 },
+            { delay: 0, rotate: -15, top: isMobile ? "-15%" : "-15%", offset: isMobile ? 65 : 145 },
+            { delay: 0.8, rotate: 10, top: isMobile ? "25%" : "35%", offset: isMobile ? 90 : 200 },
           ]}
         />
       </div>
 
-      {/* RIGHT REII IMAGE */}
-      <div className="absolute -bottom-24 md:-bottom-40 ml-0 md:ml-6 pointer-events-none flex items-end justify-center z-10 -right-6 sm:right-0 md:right-auto md:left-full">
+      {/* RIGHT REII IMAGE - Sticks to bottom of mobile handphone, side of desktop card */}
+      <div 
+        className="pointer-events-none flex items-end justify-center z-20 bottom-0 right-0 md:absolute md:-bottom-40 md:right-auto md:left-full ml-0 md:ml-6"
+      >
         <motion.div
           animate={isActive ? { scale: [1.3, 1, 1.3], opacity: [0.6, 0.3, 0.6] } : { scale: 1, opacity: 0.4 }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute w-[140px] h-[140px] md:w-[300px] md:h-[300px] bg-gradient-to-tl from-[#FF00FF]/40 to-cyan-500/40 blur-[50px] md:blur-[70px] rounded-full z-[-1]"
+          className="absolute w-[120px] h-[120px] md:w-[300px] md:h-[300px] bg-gradient-to-tl from-[#FF00FF]/40 to-cyan-500/40 blur-[40px] md:blur-[70px] rounded-full z-[-1]"
         />
-        <div className="relative z-10 w-[6.5rem] sm:w-[9.6rem] md:w-[17.25rem] aspect-[768/905] flex-shrink-0">
+        <div className="relative z-10 w-[6rem] sm:w-[8rem] md:w-[17.25rem] aspect-[768/905] flex-shrink-0">
           <Image
             src="/reii2.webp"
             alt="Reii Right"
@@ -188,9 +193,9 @@ export function AnimatedReiiPair({ isMobile }) {
           side="right"
           isMobile={isMobile}
           configs={[
-            { delay: 0, rotate: -15, top: isMobile ? "0%" : "-15%", offset: isMobile ? 80 : 145 },
-            { delay: 0.8, rotate: 10, top: isMobile ? "35%" : "30%", offset: isMobile ? 110 : 200 },
-            { delay: 1.5, rotate: -5, top: isMobile ? "65%" : "65%", offset: isMobile ? 130 : 250 },
+            { delay: 0, rotate: -15, top: isMobile ? "-20%" : "-15%", offset: isMobile ? 65 : 145 },
+            { delay: 0.8, rotate: 10, top: isMobile ? "15%" : "30%", offset: isMobile ? 90 : 200 },
+            { delay: 1.5, rotate: -5, top: isMobile ? "45%" : "65%", offset: isMobile ? 110 : 250 },
           ]}
         />
       </div>
