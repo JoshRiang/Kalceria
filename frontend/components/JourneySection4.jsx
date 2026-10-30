@@ -41,25 +41,9 @@ const generateParticles = () => {
 
 const particles = generateParticles();
 
-export default function JourneySection4({ isMobile: propIsMobile }) {
-  const [localIsMobile, setLocalIsMobile] = useState(false);
-
-  useEffect(() => {
-    if (propIsMobile !== undefined) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep the section's local breakpoint state in sync with its existing parent prop.
-      setLocalIsMobile(propIsMobile);
-      return;
-    }
-    const checkMobile = () => setLocalIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, [propIsMobile]);
-
-  const isMobile = propIsMobile !== undefined ? propIsMobile : localIsMobile;
-
+export default function JourneySection4() {
   return (
-    <section className="relative w-full min-h-screen bg-[#050505] overflow-hidden flex flex-col md:flex-row items-center justify-center pt-20 pb-20">
+    <section className="relative w-full min-h-[1050px] md:min-h-screen bg-[#050505] overflow-hidden flex flex-col md:flex-row items-center justify-center pt-16 pb-16 sm:pt-20 sm:pb-20">
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes blob-float {
           0% { transform: translate(0px, 0px) scale(1); }
@@ -131,23 +115,22 @@ export default function JourneySection4({ isMobile: propIsMobile }) {
       <div className="relative z-20 container mx-auto px-6 md:px-12 flex flex-col md:flex-row items-center gap-12">
         
         {/* Left Half: Title & Description */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center text-left py-12 md:py-0">
-          <div className="relative mb-6 w-full group">
-            <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-left text-white drop-shadow-2xl font-rog relative z-10" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
-              <Typewriter text="WAITING FOR YOU" delay={500} speed={80} />
-            </h1>
-            {/* Surfer Image Floating beside Title on Mobile, above Title on Desktop */}
+        <div className="w-full md:w-1/2 flex flex-col justify-center text-left py-8 md:py-0">
+          <div className="relative mb-6 w-full flex flex-col items-start group">
+            {/* Surfer Image Floating above Title on Mobile, above Title on Desktop */}
             <motion.img 
               src="/surfer.webp" 
               alt="Surfer"
-              className="absolute top-[25%] -translate-y-1/2 right-[2%] h-[200px] z-30 object-contain drop-shadow-[0_10px_30px_rgba(34,211,238,0.4)] pointer-events-none md:-top-[230%] md:left-[5%] md:h-[244%] md:right-auto md:translate-y-0"
-              style={isMobile ? { top: "15%" } : {}}
+              className="relative md:absolute mx-auto md:mx-0 w-[180px] sm:w-[220px] md:w-auto h-[130px] sm:h-[160px] md:h-[244%] z-30 object-contain drop-shadow-[0_10px_30px_rgba(34,211,238,0.4)] pointer-events-none mb-4 md:mb-0 md:-top-[230%] md:left-[5%] md:right-auto"
               animate={{ y: [0, -15, 0], rotate: [-2, 2, -2] }}
               transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
             />
+            <h1 className="text-4xl xs:text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter text-left text-white drop-shadow-2xl font-rog relative z-10" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
+              <Typewriter text="WAITING FOR YOU" delay={500} speed={80} />
+            </h1>
           </div>
           
-          <div className="max-w-xl text-lg md:text-xl font-medium text-gray-200 leading-relaxed drop-shadow-lg text-justify">
+          <div className="max-w-xl text-base md:text-xl font-medium text-gray-200 leading-relaxed drop-shadow-lg text-justify md:text-left">
             Kalceria is open for visionary partnerships, media collaborations, and brand sponsorships. We are aggressively building an automotive ecosystem where street culture and innovation thrive. Connect with us today to explore limitless possibilities and dominate the scene together. 
             <a href="https://wa.me/1234567890" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline font-bold pointer-events-auto transition-colors duration-300 ml-1">
               Click here to chat!

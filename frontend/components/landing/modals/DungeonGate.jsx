@@ -181,7 +181,7 @@ export function DungeonGate() {
                 alt="Locked Gate" 
                 width={2048}
                 height={2048}
-                className="w-24 md:w-36 h-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] group-hover:brightness-110 transition-all duration-500 border-none outline-none ring-0"
+                className="w-16 sm:w-20 md:w-36 h-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] group-hover:brightness-110 transition-all duration-500 border-none outline-none ring-0"
               />
               
               {/* Status Indicator */}
@@ -202,7 +202,7 @@ export function DungeonGate() {
                   alt="Dungeon Gate" 
                   width={2048}
                   height={2048}
-                  className="w-24 md:w-36 h-auto object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] group-hover:scale-110 group-hover:brightness-125 transition-all duration-700 border-none outline-none ring-0"
+                  className="w-16 sm:w-20 md:w-36 h-auto object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] group-hover:scale-110 group-hover:brightness-125 transition-all duration-700 border-none outline-none ring-0"
                 />
                 
                 {/* Ready Indicator */}

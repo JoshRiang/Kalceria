@@ -85,8 +85,8 @@ export function FloatingAssets({ isMobile }) {
         { src: '/ccar_1.webp', x: 5, y: 18, w: "w-32 md:w-56", rot: -35, dX: 60, dY: 45, rS: 55 },
         { src: '/ccar_2.webp', x: 8, y: 62, w: "w-24 md:w-36", rot: 45, dX: -70, dY: -65, rS: -60 },
       ] : []),
-      { src: '/ccar_3.webp', x: isMobile ? 70 : 85, y: isMobile ? 3 : 18, w: isMobile ? "w-[153px] md:w-56" : "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
-      { src: '/ccar_4.webp', x: isMobile ? 67 : 82, y: isMobile ? 47 : 62, w: isMobile ? "w-[115px] md:w-36" : "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
+      { src: '/ccar_3.webp', x: isMobile ? 75 : 85, y: isMobile ? 8 : 18, w: isMobile ? "w-24 xs:w-28 md:w-56" : "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
+      { src: '/ccar_4.webp', x: isMobile ? 70 : 82, y: isMobile ? 55 : 62, w: isMobile ? "w-20 xs:w-24 md:w-36" : "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
       // stikermobil_3 & stikermobil_1 — only on desktop
       ...(!isMobile ? [
         { src: '/stikermobil_3.webp', x: 28.5, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },

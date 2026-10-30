@@ -314,16 +314,16 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
           </div>
 
           <div className="p-6 pt-4 pb-2">
-            <div className={`flex items-start gap-12 ${step === 1 ? "mb-10" : ""}`}>
+            <div className={`flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-12 ${step === 1 ? "mb-6 sm:mb-10" : ""}`}>
               <div className="flex-shrink-0">
                 <StepIndicator total={3} current={step} />
               </div>
               {step === 1 && (
                 <div className="flex flex-col pt-1">
-                  <h2 className="font-sans text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">
+                  <h2 className="font-sans text-xl sm:text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">
                     Project <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">Details</span>
                   </h2>
-                  <p className="text-slate-400 text-[11px] leading-tight font-sans max-w-[500px]">
+                  <p className="text-slate-400 text-[11px] leading-snug font-sans max-w-[500px]">
                     Configure mission parameters & select your operational window.
                   </p>
                 </div>
@@ -476,18 +476,18 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                     </div>
 
                     {/* Horizontal Footer Navigation */}
-                    <div className="flex gap-6 max-w-[900px] mx-auto w-full mt-2">
+                    <div className="flex gap-4 sm:gap-6 max-w-[900px] mx-auto w-full mt-2">
                       <button 
                         type="button" 
                         onClick={() => setStep(0)} 
-                        className="flex-1 py-6 bg-white/5 text-slate-400 font-sans font-black uppercase text-[12px] tracking-[0.3em] rounded-[25px] hover:bg-white/10 transition-all border border-white/5"
+                        className="flex-1 py-3.5 sm:py-6 bg-white/5 text-slate-400 font-sans font-black uppercase text-[10px] sm:text-[12px] tracking-[0.15em] sm:tracking-[0.3em] rounded-[20px] sm:rounded-[25px] hover:bg-white/10 transition-all border border-white/5"
                       >
                         ← BACK
                       </button>
                       <button 
                         type="submit" 
                         disabled={loading || !isFormValid} 
-                        className={`${buttonStyle} flex-[2.5] py-6 rounded-[25px] ${isFormValid ? "bg-white text-black opacity-100 shadow-[0_0_50px_rgba(255,255,255,0.4)]" : "bg-white/10 text-white/20 cursor-not-allowed"}`}
+                        className={`${buttonStyle} flex-[2] sm:flex-[2.5] py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] ${isFormValid ? "bg-white text-black opacity-100 shadow-[0_0_50px_rgba(255,255,255,0.4)]" : "bg-white/10 text-white/20 cursor-not-allowed"}`}
                       >
                         {loading ? "SENDING..." : "NEXT"}
                       </button>

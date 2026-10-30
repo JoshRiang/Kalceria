@@ -173,15 +173,9 @@ export default function LandingPage({ onNavigateAuth }) {
             {isLoggedIn ? (
               <button
                 onClick={() => setShowLogoutConfirm(true)}
-                className="group relative px-10 md:px-12 py-2.5 md:py-3.5 rounded-[20px] overflow-hidden transition-all duration-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]"
+                className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-[13px] md:text-[15px] hover:text-red-400 transition-colors duration-300 py-2 px-4 focus:outline-none"
               >
-                <div className="absolute inset-0 bg-red-500/20 group-hover:bg-red-500/30 transition-colors" />
-                <div className="absolute inset-0 border border-red-500/30 group-hover:border-red-500/50 rounded-[20px]" />
-                <div className="absolute inset-0 shadow-[0_0_40px_rgba(239,68,68,0.1)] group-hover:shadow-[0_0_60px_rgba(239,68,68,0.2)] transition-all" />
-                
-                <span className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-[13px] md:text-[15px]">
-                  LOGOUT
-                </span>
+                LOGOUT
               </button>
             ) : (
               <button
@@ -418,7 +412,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 5: Find More ── */}
-      <section className="relative w-full min-h-[90vh] bg-[#050a14] flex flex-col items-center justify-center py-20 z-50 border-t border-slate-900 overflow-hidden">
+      <section className="relative w-full min-h-[1080px] md:min-h-[90vh] bg-[#050a14] flex flex-col items-center justify-center py-16 md:py-20 z-50 border-t border-slate-900 overflow-hidden">
         
         {/* Ambient Blobs */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-50 mix-blend-screen">
@@ -429,25 +423,48 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Prince Rupert's Drop Assembly */}
         <PrinceRupertDrop />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 items-center gap-10">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10">
           
-          {/* Left Column: Typography */}
-          <div className="relative flex flex-col items-center md:items-start justify-center text-center md:text-left p-4 order-2 md:order-1">
+          {/* TikTok Feed Container: Order 1 on mobile, Order 2 on desktop */}
+          <div className="relative flex items-center justify-center md:justify-start ml-0 md:-ml-[20%] py-4 md:py-10 order-1 md:order-2 w-full">
             <GoldenDust />
-            <div className="relative z-10">
+            {/* Clean, minimalist video container (shrunk 20% on mobile) */}
+            <div className={`relative w-full ${isMobile ? "max-w-[210px] aspect-[9/16]" : "max-w-[289px] aspect-[340/680]"} group z-10 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 bg-black shadow-2xl`}>
+              <FindMoreSlider />
+            </div>
+          </div>
+
+          {/* Typography & Socials: Order 2 on mobile (under video), Order 1 on desktop */}
+          <div className="relative flex flex-col items-center md:items-start justify-center text-center md:text-left p-2 md:p-4 order-2 md:order-1">
+            <GoldenDust />
+            <div className="relative z-10 flex flex-col items-center md:items-start w-full">
+              {/* 1. Title: Under video on mobile */}
               <motion.h2 
                 animate={isMobile ? { opacity: 1 } : { opacity: [0.3, 1, 0.3] }}
                 transition={isMobile ? { duration: 0 } : { repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-6 font-mono text-center md:text-left"
+                className="text-4xl sm:text-5xl md:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-4 md:mb-6 font-mono text-center md:text-left"
               >
                 FIND MORE
               </motion.h2>
+
+              {/* 2. Coki mascot: Under Title on mobile (shrunk) */}
+              {isMobile && (
+                <motion.div 
+                  animate={{ y: [-6, 6, -6], rotate: [-1.5, 1.5, -1.5] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                  className="w-48 xs:w-56 h-auto my-3 pointer-events-none z-10"
+                >
+                  <Image src="/hp/kalcer_man_hp.webp" alt="Kalcer Mascot HP" width={2048} height={2048} unoptimized loading="eager" decoding="auto" className="w-full h-auto object-contain drop-shadow-[0_10px_25px_rgba(0,0,0,0.6)]" />
+                </motion.div>
+              )}
+
+              {/* 3. Description: Under Coki on mobile */}
               <p className="font-sans text-gray-300 text-sm md:text-lg max-w-md text-center md:text-left leading-relaxed px-4 md:px-0">
                 Wahib embut keren banget wowowowow. Kalceria is the ultimate destination for automotive euphoria.
               </p>
 
-              {/* Social Media Icon List - Horizontal Style on Mobile */}
-              <div className="flex flex-row md:flex-col gap-6 mt-8 items-center justify-center md:items-start w-full">
+              {/* 4. Social Media Icon List: Under Description on mobile */}
+              <div className="flex flex-row md:flex-col gap-6 mt-6 md:mt-8 items-center justify-center md:items-start w-full">
                 {/* Instagram Icon */}
                 <a 
                   href="https://www.instagram.com/kalceria/" 
@@ -523,27 +540,8 @@ export default function LandingPage({ onNavigateAuth }) {
             </div>
           </div>
 
-          {/* Right Column: TikTok Feed Container */}
-          <div className="relative flex items-center justify-center md:justify-start ml-0 md:-ml-[20%] py-10 order-1 md:order-2 w-full">
-            <GoldenDust />
-            {/* Clean, minimalist video container (shrunk 20% on mobile) */}
-            <div className={`relative w-full ${isMobile ? "max-w-[210px] aspect-[9/16]" : "max-w-[289px] aspect-[340/680]"} group z-10 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 bg-black shadow-2xl`}>
-              <FindMoreSlider />
-            </div>
-          </div>
-
         </div>
 
-        {/* Floating Mobile Mascot Background */}
-        {isMobile && (
-          <motion.div 
-            animate={{ y: [-10, 10, -10], rotate: [-2, 2, -2] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-[5%] right-[25%] w-96 h-auto opacity-90 pointer-events-none z-[1]"
-          >
-            <Image src="/hp/kalcer_man_hp.webp" alt="Kalcer Mascot HP" width={2048} height={2048} unoptimized loading="eager" decoding="auto" className="w-full h-auto object-contain" />
-          </motion.div>
-        )}
 
         {/* Looping 8-Bit Mascot (Fixed Corner Position) */}
         <div className="hidden md:block absolute bottom-0 right-0 w-56 md:w-80 z-20 pointer-events-none">

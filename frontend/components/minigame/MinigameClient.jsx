@@ -191,18 +191,25 @@ export default function MinigamePage() {
   const scheduleTimeout = useTimeoutRegistry();
 
   const [isMobile, setIsMobile] = useState(false);
+  const [isPortraitMobile, setIsPortraitMobile] = useState(false);
   const isGameStarting = gamePhase === "starting" || gamePhase === "playing" || gamePhase === "ending";
   const isGameEnding = gamePhase === "ending" || gamePhase === "ending-quit";
   const inGame = gamePhase === "playing" || gamePhase === "ending";
   const showReset = gamePhase === "finished";
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const checkViewport = () => {
+      const mob = window.innerWidth <= 768 || (window.innerHeight <= 768 && window.innerWidth <= 950);
+      setIsMobile(mob);
+      setIsPortraitMobile(mob && window.innerHeight > window.innerWidth);
     };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    checkViewport();
+    window.addEventListener("resize", checkViewport);
+    window.addEventListener("orientationchange", checkViewport);
+    return () => {
+      window.removeEventListener("resize", checkViewport);
+      window.removeEventListener("orientationchange", checkViewport);
+    };
   }, []);
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -337,19 +344,19 @@ export default function MinigamePage() {
               y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
               opacity: { duration: 1.5, delay: 0.5, ease: "easeOut" }
             }}
-            className="text-[7.8rem] md:text-[9rem] font-black tracking-tighter text-white font-rog whitespace-nowrap"
+            className="text-3xl xs:text-5xl sm:text-7xl md:text-[8rem] lg:text-[9rem] font-black tracking-tighter text-white font-rog whitespace-nowrap"
             style={{ textShadow: "0 0 20px rgba(255,255,0,0.6), 0 0 40px rgba(255,255,0,0.3), 0 10px 30px rgba(0,0,0,0.5)" }}
           >
             KALCER&apos;S GAME
           </motion.h1>
 
           {/* Decorative Cards Area */}
-          <div className="flex justify-center gap-4 mt-6 h-20">
+          <div className="flex justify-center gap-2 sm:gap-4 mt-4 sm:mt-6 h-16 sm:h-20">
             {[0, 1, 2, 3].map(i => <DecorativeCard key={i} seed={i} />)}
           </div>
         </motion.div>
 
-        {/* PLAY IT + Attempt - Horizontal Layout */}
+        {/* PLAY IT + Attempt - Responsive Layout */}
         <motion.div
           animate={{
             opacity: isGameStarting ? 0 : 1,
@@ -357,13 +364,13 @@ export default function MinigamePage() {
             pointerEvents: isGameStarting ? "none" : "auto",
             transition: { opacity: { duration: 0.8 } }
           }}
-          className="relative z-20 flex items-center gap-10 mt-[8vh]"
+          className="relative z-20 flex flex-col sm:flex-row items-center gap-6 sm:gap-10 mt-[4vh] sm:mt-[8vh]"
         >
           <div className="relative group">
             <button
               onClick={handlePlayIt}
               disabled={attempt === 0}
-              className="relative z-10 text-4xl md:text-5xl font-rog font-black text-white tracking-[0.2em] hover:scale-105 transition-transform duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="relative z-10 text-3xl sm:text-4xl md:text-5xl font-rog font-black text-white tracking-[0.2em] hover:scale-105 transition-transform duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
                 textShadow: "0px 1px 0px #999, 0px 2px 0px #888, 0px 3px 0px #777, 0px 4px 0px #666, 0px 5px 30px rgba(0,0,0,0.9)"
               }}
@@ -374,20 +381,20 @@ export default function MinigamePage() {
             {/* Hand Icon - Pointing to the button */}
             {attempt > 0 && (
               <motion.div
-                animate={{ y: [0, 10, 0, 7, 0], scale: [1, 1.1, 1, 1.05, 1] }}
+                animate={{ y: [0, 8, 0, 5, 0], scale: [1, 1.08, 1, 1.04, 1] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-[40%] left-[35%] pointer-events-none opacity-95 -rotate-[20deg] z-[50]"
+                className="absolute top-[35%] left-[30%] pointer-events-none opacity-95 -rotate-[20deg] z-[50]"
               >
-                <Image src="/hand_point.webp" alt="Point" width={460} height={612} sizes="96px" quality={80} loading="eager" decoding="async" className="w-[6rem] h-[6rem] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
+                <Image src="/hand_point.webp" alt="Point" width={460} height={612} sizes="96px" quality={80} loading="eager" decoding="async" className="w-14 h-14 sm:w-[6rem] sm:h-[6rem] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" />
               </motion.div>
             )}
           </div>
 
-          {/* Info Section - Now to the Right, Symmetrical and Balanced */}
-          <div className="flex flex-col gap-2 translate-x-[5%]">
-            <div className="flex items-center justify-center gap-6 px-8 py-2 min-w-[250px] bg-black/40 backdrop-blur-[20px] rounded-2xl border border-white/10 shadow-2xl">
-              <span className="text-white font-sans text-xl tracking-tighter underline underline-offset-8 decoration-white/20">Attempt :</span>
-              <span className="text-white font-sans text-xl tracking-tighter">{attempt}</span>
+          {/* Info Section */}
+          <div className="flex flex-col gap-2 translate-x-0 sm:translate-x-[5%]">
+            <div className="flex items-center justify-center gap-4 sm:gap-6 px-5 sm:px-8 py-1.5 sm:py-2 min-w-[180px] sm:min-w-[250px] bg-black/40 backdrop-blur-[20px] rounded-2xl border border-white/10 shadow-2xl">
+              <span className="text-white font-sans text-base sm:text-xl tracking-tighter underline underline-offset-8 decoration-white/20">Attempt :</span>
+              <span className="text-white font-sans text-base sm:text-xl tracking-tighter">{attempt}</span>
             </div>
 
             {/* Reset Countdown */}
@@ -396,10 +403,10 @@ export default function MinigamePage() {
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center justify-center gap-6 px-8 py-2 min-w-[250px] bg-black/40 backdrop-blur-[20px] rounded-2xl border border-white/10 shadow-2xl"
+                  className="flex items-center justify-center gap-4 sm:gap-6 px-5 sm:px-8 py-1.5 sm:py-2 min-w-[180px] sm:min-w-[250px] bg-black/40 backdrop-blur-[20px] rounded-2xl border border-white/10 shadow-2xl"
                 >
-                  <span className="text-white font-sans text-xl tracking-tighter underline underline-offset-8 decoration-white/20">Reset :</span>
-                  <div className="text-xl font-sans tracking-tighter">
+                  <span className="text-white font-sans text-base sm:text-xl tracking-tighter underline underline-offset-8 decoration-white/20">Reset :</span>
+                  <div className="text-base sm:text-xl font-sans tracking-tighter">
                     <ResetTimer />
                   </div>
                 </motion.div>
@@ -416,15 +423,15 @@ export default function MinigamePage() {
             pointerEvents: isGameStarting ? "none" : "auto",
             transition: { duration: 0.8 }
           }}
-          className="absolute bottom-[4%] right-[2%] z-30 flex items-center justify-center gap-6"
+          className="absolute bottom-4 right-4 sm:bottom-[4%] sm:right-[2%] z-30 flex items-center justify-center gap-3 sm:gap-6"
         >
           <motion.div whileHover={{ scale: 1.05 }} onClick={() => setShowTrailer(true)} className="relative group cursor-pointer">
-            <div className="relative w-[180px] py-3 flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-[20px] shadow-2xl">
+            <div className="relative w-[140px] sm:w-[180px] py-2 sm:py-3 flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-[20px] shadow-2xl">
               <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
                 <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.6, 0.9, 0.6] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-50%] left-[-20%] w-[120%] h-[150%] bg-amber-500 rounded-full blur-[40px]" />
                 <motion.div animate={{ scale: [1.3, 1, 1.3], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute bottom-[-50%] right-[-20%] w-[120%] h-[150%] bg-red-600 rounded-full blur-[40px]" />
               </div>
-              <span className="relative z-10 text-xl font-rog font-black text-white tracking-widest" style={{ textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 10px rgba(0,0,0,0.8)" }}>THE EVENT</span>
+              <span className="relative z-10 text-base sm:text-xl font-rog font-black text-white tracking-widest" style={{ textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 10px rgba(0,0,0,0.8)" }}>THE EVENT</span>
             </div>
           </motion.div>
           <div className="relative group w-10 h-10">
@@ -544,6 +551,49 @@ export default function MinigamePage() {
 
       {/* Initial Blackout */}
       <motion.div initial={{ opacity: 0.92 }} animate={{ opacity: 0 }} transition={{ duration: 0.9, ease: "easeOut" }} className="fixed inset-0 z-[2000] bg-black pointer-events-none" />
+
+      {/* Orientation Tilt Prompt Overlay for Mobile Portrait */}
+      <AnimatePresence>
+        {isPortraitMobile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="fixed inset-0 z-[6000] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md px-6 text-center pointer-events-auto"
+          >
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+              className="flex flex-col items-center gap-4"
+            >
+              {/* Rotating phone icon */}
+              <motion.svg 
+                animate={{ rotate: [0, -90, -90, 0] }}
+                transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.5 }}
+                className="w-12 h-12 text-white/90 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <rect x="5" y="2" width="14" height="20" rx="3" strokeWidth="2" />
+                <line x1="10" y1="18" x2="14" y2="18" strokeWidth="2" strokeLinecap="round" />
+              </motion.svg>
+
+              <span 
+                className="text-white text-2xl sm:text-3xl font-bold tracking-tight"
+                style={{ 
+                  fontFamily: "Arial, sans-serif",
+                  textShadow: "0 2px 12px rgba(0,0,0,0.8)"
+                }}
+              >
+                Tilt the phone
+              </span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

@@ -138,7 +138,7 @@ export function VideoCollage({ isMobile }) {
 
   useEffect(() => {
     const mobileNow = typeof window !== "undefined" ? window.innerWidth < 768 : isMobile;
-    const size = mobileNow ? 6 : 12;
+    const size = mobileNow ? 4 : 12;
     if (lastSizeRef.current === size) return;
     lastSizeRef.current = size;
     const random = createRuntimeSeededRandom(`about-video-collage-${mobileNow ? "mobile" : "desktop"}`);
@@ -160,7 +160,7 @@ export function VideoCollage({ isMobile }) {
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#FF00FF]/20 via-[#00FFFF]/10 to-[#FF00FF]/20" />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 grid-rows-3 w-full h-full gap-1 opacity-60">
+          <div className="grid grid-cols-2 md:grid-cols-4 grid-rows-2 md:grid-rows-3 w-full h-full gap-1 opacity-60">
             {initialGrid.map((src, i) => (
               <VideoCell
                 key={i}

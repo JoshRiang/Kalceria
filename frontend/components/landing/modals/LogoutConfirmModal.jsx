@@ -154,13 +154,31 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                 You sure want to <span className="text-red-500">Log -Out?</span>
               </h3>
               <div className="relative z-10 flex gap-6 w-full">
-                <button onClick={handleYes} className="flex-1 group relative py-4 rounded-[18px] overflow-hidden border border-white/5 transition-all">
-                  <div className="absolute inset-0 bg-emerald-500/10 group-hover:bg-emerald-500/20" />
-                  <span className="relative z-10 font-sans font-black text-emerald-500 uppercase tracking-widest text-sm">YES</span>
+                <button
+                  onClick={handleYes}
+                  className="flex-1 group relative py-4 rounded-[18px] overflow-hidden border-none bg-white/10 backdrop-blur-2xl shadow-[0_0_25px_rgba(255,255,255,0.2)] hover:shadow-[0_0_35px_rgba(255,255,255,0.35)] hover:bg-white/15 transition-all duration-300"
+                >
+                  <span
+                    className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-sm"
+                    style={{
+                      textShadow: "1px 1px 0px #ffffff, 2px 2px 0px #cbd5e1, 3px 3px 0px #64748b, 4px 4px 6px rgba(0,0,0,0.6)"
+                    }}
+                  >
+                    YES
+                  </span>
                 </button>
-                <button onClick={onCancel} className="flex-1 group relative py-4 rounded-[18px] overflow-hidden border border-white/5 transition-all">
-                  <div className="absolute inset-0 bg-red-500/10 group-hover:bg-red-500/20" />
-                  <span className="relative z-10 font-sans font-black text-red-500 uppercase tracking-widest text-sm">NO</span>
+                <button
+                  onClick={onCancel}
+                  className="flex-1 group relative py-4 rounded-[18px] overflow-hidden border-none bg-white/10 backdrop-blur-2xl shadow-[0_0_25px_rgba(255,255,255,0.2)] hover:shadow-[0_0_35px_rgba(255,255,255,0.35)] hover:bg-white/15 transition-all duration-300"
+                >
+                  <span
+                    className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-sm"
+                    style={{
+                      textShadow: "1px 1px 0px #ffffff, 2px 2px 0px #cbd5e1, 3px 3px 0px #64748b, 4px 4px 6px rgba(0,0,0,0.6)"
+                    }}
+                  >
+                    NO
+                  </span>
                 </button>
               </div>
             </div>

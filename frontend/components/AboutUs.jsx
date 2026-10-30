@@ -558,17 +558,17 @@ export default function AboutUs() {
            </motion.h2>
         </div>
 
-        {/* Static Paragraph on the left */}
+        {/* Static Paragraph - Centered on mobile, Left on desktop */}
         <p 
-          className="absolute top-[12.5rem] max-w-[220px] md:max-w-[280px] text-slate-300 text-base md:text-lg font-normal leading-relaxed pointer-events-none z-20 text-justify left-[14%] md:left-[32%]"
+          className="absolute top-[8.5rem] md:top-[12.5rem] w-[88%] max-w-[340px] md:max-w-[280px] text-slate-300 text-sm sm:text-base md:text-lg font-normal leading-relaxed pointer-events-none z-20 text-center md:text-justify left-1/2 -translate-x-1/2 md:left-[32%] md:translate-x-0"
           style={{ fontFamily: "'Times New Roman', Times, serif" }}
         >
           Kalceria used to be a Final Project, now it is becoming a legacy of digital craftsmanship and automotive passion. It stands as a testament to the boundary-pushing creativity of our development team.
         </p>
         
-        {/* dy_3 image at the right half of under the Webdev Team title */}
+        {/* dy_3 (Fitra Eri / Mentor) image - Centered between Paragraph and Bottom Figures on mobile */}
         <div 
-          className="absolute left-[50.4%] z-20 top-[8.38rem] md:top-[5.88rem]"
+          className="absolute left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[50.4%] z-20 top-[17.5rem] md:top-[5.88rem]"
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
         >
@@ -577,11 +577,11 @@ export default function AboutUs() {
             alt="Ditya Alif K."
             width={1536}
             height={2729}
-            sizes="(max-width: 768px) 220px, 372px"
+            sizes="(max-width: 768px) 150px, 372px"
             quality={75}
             loading="lazy"
             decoding="async"
-            className="object-contain pointer-events-auto opacity-80 cursor-help w-[220px] h-[220px] md:w-[23.25rem] md:h-[23.25rem]"
+            className="object-contain pointer-events-auto opacity-80 cursor-help w-[140px] h-[140px] sm:w-[170px] sm:h-[170px] md:w-[23.25rem] md:h-[23.25rem]"
             style={{ rotate: "-10.5deg" }}
           />
           
@@ -646,12 +646,12 @@ export default function AboutUs() {
           <div className="relative z-20 flex flex-col w-full h-full transition-all duration-300">
             <button 
               onClick={() => setMasterFaqOpen(!masterFaqOpen)}
-              className="w-full text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none px-5 py-6 md:px-8 md:py-10"
+              className="w-full text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none px-4 py-4 md:px-8 md:py-10"
             >
-              <span className="font-mono font-black uppercase tracking-tighter text-white transition-colors drop-shadow-2xl text-xl md:text-5xl">
+              <span className="font-mono font-black uppercase tracking-tighter text-white transition-colors drop-shadow-2xl text-lg sm:text-2xl md:text-5xl">
                 FREQUENTLY ASKED QUESTIONS
               </span>
-              <span className="font-mono text-white transition-transform duration-300 text-2xl md:text-4xl" style={{ transform: masterFaqOpen ? "rotate(45deg)" : "rotate(0deg)" }}>
+              <span className="font-mono text-white transition-transform duration-300 text-xl md:text-4xl" style={{ transform: masterFaqOpen ? "rotate(45deg)" : "rotate(0deg)" }}>
                 +
               </span>
             </button>
@@ -666,7 +666,7 @@ export default function AboutUs() {
                   transition={{ duration: 0.4, ease: "easeInOut" }}
                   className="bg-transparent border-t border-white/10 overflow-hidden"
                 >
-                  <div className="flex flex-col p-3 gap-3 md:p-8 md:gap-4">
+                  <div className="flex flex-col p-2 sm:p-3 gap-2 sm:gap-3 md:p-8 md:gap-4">
                     
                     {faqs.map((faq, i) => (
                       <motion.div 
@@ -678,12 +678,12 @@ export default function AboutUs() {
                       >
                         <button 
                           onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                          className="w-full text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none px-4 py-4 md:px-6 md:py-6"
+                          className="w-full text-left flex justify-between items-center group hover:bg-white/5 transition-colors focus:outline-none px-3.5 py-3 sm:px-4 sm:py-4 md:px-6 md:py-6"
                         >
-                          <span className="font-mono font-black uppercase tracking-tighter text-slate-300 group-hover:text-white transition-colors pr-8 text-sm md:text-xl">
+                          <span className="font-mono font-black uppercase tracking-tighter text-slate-300 group-hover:text-white transition-colors pr-4 text-xs sm:text-sm md:text-xl">
                             {faq.q}
                           </span>
-                          <span className="font-mono text-white transition-colors flex-shrink-0 text-lg md:text-2xl">
+                          <span className="font-mono text-white transition-colors flex-shrink-0 text-base md:text-2xl">
                             {openFaq === i ? "—" : "+"}
                           </span>
                         </button>
@@ -697,7 +697,7 @@ export default function AboutUs() {
                               transition={{ duration: 0.3, ease: "easeInOut" }}
                               className="border-t border-slate-800 overflow-hidden"
                             >
-                              <div className="font-sans text-slate-400 leading-relaxed bg-[#060c18] px-4 py-4 text-xs md:px-6 md:py-6 md:text-base">
+                              <div className="font-sans text-slate-400 leading-relaxed bg-[#060c18] px-3.5 py-3 text-[11px] sm:text-xs md:px-6 md:py-6 md:text-base">
                                 {faq.a}
                               </div>
                             </motion.div>

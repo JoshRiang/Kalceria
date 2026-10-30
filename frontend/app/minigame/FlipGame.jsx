@@ -38,8 +38,8 @@ function Timer({ ms }) {
     <div className="flex items-baseline justify-center gap-1 font-sans font-black text-white tracking-tighter leading-none tabular-nums" style={{
       textShadow: "0 0 30px rgba(255,255,255,0.4), 0 0 60px rgba(0,0,0,0.5)"
     }}>
-      <span className="text-[5rem]">{m}:{s}</span>
-      <span className="text-[2rem] opacity-60">:{mil}</span>
+      <span className="text-4xl sm:text-6xl md:text-[5rem]">{m}:{s}</span>
+      <span className="text-xl sm:text-2xl md:text-[2rem] opacity-60">:{mil}</span>
     </div>
   );
 }
@@ -219,16 +219,17 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
           </>
         )}
       </AnimatePresence>
-      {/* Back Button - Bold Left Arrow */}
+      {/* Back Button - Cloudy Borderless */}
       <button
         onClick={() => setShowQuit(true)}
-        className="absolute top-10 left-10 z-50 flex items-center justify-center w-14 h-14 rounded-2xl group transition-all hover:scale-110 active:scale-95"
+        className="absolute top-4 left-4 sm:top-10 sm:left-10 z-50 flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/10 backdrop-blur-2xl border-none shadow-[0_0_25px_rgba(255,255,255,0.25)] hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] group transition-all hover:scale-105 active:scale-95 overflow-hidden"
       >
-        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
-          <div className="absolute -top-4 -left-4 w-20 h-20 bg-red-600 rounded-full blur-[30px] opacity-70" />
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl opacity-60">
+          <div className="absolute -top-3 -left-3 w-14 h-14 bg-[#FFB07C] rounded-full blur-[18px] opacity-70" />
+          <div className="absolute -bottom-3 -right-3 w-14 h-14 bg-cyan-400 rounded-full blur-[18px] opacity-60" />
         </div>
         <svg 
-          className="relative z-10 w-6 h-6 text-white" 
+          className="relative z-10 w-5 h-5 sm:w-6 sm:h-6 text-white" 
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24" 
@@ -239,15 +240,15 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
       </button>
 
       {/* Timer Header */}
-      <div className="mb-10 text-center relative z-10">
+      <div className="mb-6 sm:mb-10 text-center relative z-10">
         <Timer ms={ms} />
-        <p className="text-white font-sans text-xl tracking-tighter mt-4">
+        <p className="text-white font-sans text-base sm:text-xl tracking-tighter mt-2 sm:mt-4">
           {phase === "intro" || phase === "faceup" || phase === "facedown" ? "Feel it coming" : "Find all matches"}
         </p>
       </div>
 
       {/* Grid Container - CLEAN, NO OUTER BOX */}
-      <div className="relative grid grid-cols-4 gap-8">
+      <div className="relative grid grid-cols-4 gap-2 xs:gap-3 sm:gap-6 md:gap-8 max-w-[95vw] px-2">
         {cards.map((card) => {
           const isFlipped = card.flipped || card.matched;
 
@@ -271,7 +272,7 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 rotate: { duration: 0.5 } // For absorb
               }}
               onClick={() => handleCardClick(card.id)}
-              className="relative w-[145px] h-[180px] cursor-pointer"
+              className="relative w-[70px] h-[92px] xs:w-[90px] xs:h-[118px] sm:w-[120px] sm:h-[155px] md:w-[145px] md:h-[180px] cursor-pointer"
               style={{ perspective: "1000px" }}
             >
               <motion.div
@@ -286,9 +287,9 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   boxShadow: "0 15px 35px rgba(0,0,0,0.4)",
                   border: "1px solid rgba(0,0,0,0.05)",
-                  padding: "15px"
+                  padding: "10px"
                 }}>
-                   <Image src="/favicon.webp" alt="Logo" width={771} height={681} unoptimized loading="eager" decoding="auto" className="w-[80px] h-[80px] opacity-40 object-contain" />
+                   <Image src="/favicon.webp" alt="Logo" width={771} height={681} unoptimized loading="eager" decoding="auto" className="w-[45px] h-[45px] sm:w-[80px] sm:h-[80px] opacity-40 object-contain" />
                 </div>
                 {/* Front (Face Image) */}
                 <div style={{

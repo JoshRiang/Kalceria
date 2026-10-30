@@ -30,7 +30,7 @@ export function FloatingQuote({ quote }) {
         ease: "linear",
         opacity: { duration: 1.5 }, // Smooth fade in/out
       }}
-      className={`absolute z-[60] pointer-events-none text-slate-100 whitespace-nowrap text-xl md:text-3xl drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)] ${quote.style}`}
+      className={`absolute z-[5] pointer-events-none text-slate-100 whitespace-nowrap text-sm sm:text-base md:text-2xl drop-shadow-[0_2px_14px_rgba(0,0,0,0.85)] opacity-40 md:opacity-75 ${quote.style}`}
       style={{ left: `${quote.pos.x}%`, top: `${quote.pos.y}%` }}
     >
       &quot;{quote.text}&quot;

@@ -83,11 +83,11 @@ export default function JourneyPageClient() {
             {/* Marvel-style Background Video */}
             <motion.div 
               initial={{ opacity: 0, scale: 1.1 }}
-              animate={{ opacity: 0.7, scale: 1 }}
+              animate={{ opacity: isMobile ? 0.5 : 0.7, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ 
-                opacity: { duration: 3, ease: "easeInOut" },
-                scale: { duration: 5, ease: "easeOut" }
+                opacity: { duration: 2.5, ease: "easeInOut" },
+                scale: { duration: 4, ease: "easeOut" }
               }}
               className="absolute inset-0 z-0 grayscale contrast-[1.2] brightness-[0.8]"
             >
@@ -97,12 +97,13 @@ export default function JourneyPageClient() {
                 loop 
                 muted 
                 playsInline 
+                preload="metadata"
                 className="w-full h-full object-cover"
               />
             </motion.div>
 
             <h1
-              className="relative z-10 text-[6rem] md:text-[14.5rem] font-black tracking-tighter text-white font-rog whitespace-nowrap"
+              className="relative z-10 text-4xl xs:text-5xl sm:text-7xl md:text-[14.5rem] font-black tracking-tighter text-white font-rog flex flex-col md:flex-row items-center justify-center text-center gap-1 md:gap-6 px-4"
               style={{ 
                 WebkitTextStroke: "2px rgba(255,255,255,0.4)",
                 textShadow: `
@@ -118,7 +119,16 @@ export default function JourneyPageClient() {
                 `
               }}
             >
-              {displayedText}
+              {isMobile ? (
+                <>
+                  <span>{displayedText.includes(" ") ? displayedText.split(" ")[0] : displayedText}</span>
+                  {displayedText.includes(" ") && (
+                    <span>{displayedText.split(" ").slice(1).join(" ")}</span>
+                  )}
+                </>
+              ) : (
+                <span>{displayedText}</span>
+              )}
             </h1>
           </motion.div>
         )}
@@ -134,7 +144,7 @@ export default function JourneyPageClient() {
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
               {/* Glass Box Layer */}
-              <div className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-[0_12px_40px_rgba(0,0,0,0.4)] ${isMobile ? "pr-[160px]" : "pr-[120px] md:pr-[196px]"}`}>
+              <div className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-2xl border-none rounded-[2.5rem] shadow-[0_0_35px_rgba(255,255,255,0.25)] hover:shadow-[0_0_50px_rgba(255,255,255,0.4)] transition-all duration-300 ${isMobile ? "pr-[160px]" : "pr-[120px] md:pr-[196px]"}`}>
                 {/* Dynamic Blobs */}
                 <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-screen">
                   <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#FF00FF] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
@@ -187,7 +197,7 @@ export default function JourneyPageClient() {
             <div className={`flex flex-col md:flex-row justify-start items-start w-full gap-8 ${isMobile ? "items-center" : ""}`}>
               <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
                 {/* Glass Box Layer */}
-                <div className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-[0_12px_40px_rgba(0,0,0,0.4)] ${isMobile ? "pr-[138px]" : "pr-[90px] md:pr-[177px]"}`}>
+                <div className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-2xl border-none rounded-[2.5rem] shadow-[0_0_35px_rgba(255,255,255,0.25)] hover:shadow-[0_0_50px_rgba(255,255,255,0.4)] transition-all duration-300 ${isMobile ? "pr-[138px]" : "pr-[90px] md:pr-[177px]"}`}>
                   {/* Dynamic Blobs */}
                   <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-screen">
                     <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#FF00FF] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
@@ -249,7 +259,7 @@ export default function JourneyPageClient() {
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
               {/* Glass Box Layer (Sized for both WITH and DSL area) */}
-              <div className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.3)] ${isMobile ? "pr-[151px]" : "pr-[140px] md:pr-[260px]"}`}>
+              <div className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-2xl border-none rounded-[2.5rem] shadow-[0_0_35px_rgba(255,255,255,0.25)] hover:shadow-[0_0_50px_rgba(255,255,255,0.4)] transition-all duration-300 ${isMobile ? "pr-[151px]" : "pr-[140px] md:pr-[260px]"}`}>
                 {/* Dynamic Blobs */}
                 <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-screen">
                   <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#FF00FF] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
