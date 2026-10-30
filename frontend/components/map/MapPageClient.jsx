@@ -163,7 +163,7 @@ export default function MapPage() {
 
   const mapParticles = useMemo(() => {
     const random = createSeededRandom("map-atmosphere-particles-v1");
-    return Array.from({ length: 22 }).map((_, i) => ({
+    return Array.from({ length: 8 }).map((_, i) => ({
       id: i,
       left: `${random() * 100}%`,
       size: `${random() * 3.5 + 2}px`, // 2px to 5.5px
@@ -356,17 +356,15 @@ export default function MapPage() {
     setMapCenter(mapInstance.getCenter());
     setMapZoom(mapInstance.getZoom());
 
-    mapInstance.on("move", () => {
+    mapInstance.on("moveend", () => {
       setMapCenter(mapInstance.getCenter());
+      setIsRecentering(false);
     });
     mapInstance.on("zoomend", () => {
       setMapZoom(mapInstance.getZoom());
+      setMapCenter(mapInstance.getCenter());
     });
-
     mapInstance.on("movestart", () => {});
-    mapInstance.on("moveend", () => {
-      setIsRecentering(false);
-    });
   }, []);
 
   // derived: users for the map (only online users with coords)
@@ -820,7 +818,7 @@ export default function MapPage() {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="fixed bottom-[-20px] left-1/2 -translate-x-1/2 z-[1000] pointer-events-none select-none flex flex-col items-center"
+          className="fixed bottom-[96px] xs:bottom-[102px] md:bottom-[-20px] left-1/2 -translate-x-1/2 z-[35] pointer-events-none select-none flex flex-col items-center"
         >
           <Image
             src="/kalcermap_bottom.png"
@@ -830,7 +828,7 @@ export default function MapPage() {
             sizes="256px"
             quality={90}
             loading="lazy"
-            className="h-[256px] w-auto object-contain opacity-95 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+            className="h-[125px] xs:h-[140px] md:h-[256px] w-auto object-contain opacity-95 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
             draggable={false}
           />
         </motion.div>

@@ -194,7 +194,7 @@ export function TropicalParticles() {
   );
 }
 
-export function AuroraParticles() {
+export function AuroraParticles({ isMobile = false }) {
   const [pillars, setPillars] = useState([]);
 
   useEffect(() => {
@@ -218,31 +218,39 @@ export function AuroraParticles() {
       const newPillar = {
         id,
         left: `${random() * 140 - 20}%`,
-        width: random() * 400 + 150, // Wider for softer edges
+        width: isMobile ? random() * 200 + 100 : random() * 400 + 150,
         color: colors[Math.floor(random() * colors.length)],
-        duration: 20 + random() * 20, // Much slower for natural feel
+        duration: isMobile ? 12 + random() * 8 : 20 + random() * 20,
         skew: (random() - 0.5) * 40,
-        blur: random() * 50 + 80, // High blur for feathering
+        blur: isMobile ? 35 : random() * 50 + 80,
       };
-      setPillars(prev => [...prev, newPillar]);
+      setPillars(prev => [...prev.slice(isMobile ? -2 : -10), newPillar]);
       scheduleTimeout(() => {
         setPillars(prev => prev.filter(p => p.id !== id));
       }, newPillar.duration * 1000);
     };
 
     // Initial scattered start
-    for(let i=0; i<8; i++) {
+    const count = isMobile ? 2 : 8;
+    for(let i=0; i<count; i++) {
       scheduleTimeout(spawnPillar, i * 600);
     }
 
-    const interval = setInterval(spawnPillar, 4000); 
+    if (!isMobile) {
+      const interval = setInterval(spawnPillar, 4000); 
+      return () => {
+        active = false;
+        clearInterval(interval);
+        timeouts.forEach(clearTimeout);
+        timeouts.clear();
+      };
+    }
     return () => {
       active = false;
-      clearInterval(interval);
       timeouts.forEach(clearTimeout);
       timeouts.clear();
     };
-  }, []);
+  }, [isMobile]);
 
   return (
     <div className="absolute inset-0 z-1 pointer-events-none overflow-hidden mix-blend-screen opacity-60">

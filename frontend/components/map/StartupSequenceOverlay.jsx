@@ -117,7 +117,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, ease: "easeOut" }}
-            className="relative z-10 w-full h-screen flex flex-col items-center pt-24"
+            className="relative z-10 w-full h-screen flex flex-col items-center pt-14 sm:pt-18 md:pt-24"
           >
             {/* Main Title Section */}
             <motion.div
@@ -155,7 +155,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
             {/* Floating Kalcerman Image (Slides in from left when background turns black) */}
             <AnimatePresence>
               {startupProgress >= 50 && (
-                <div className="relative w-[280px] sm:w-[360px] md:w-[440px] h-[280px] sm:h-[350px] md:h-[450px] flex flex-col items-center justify-center my-2 sm:my-4 z-20 mx-auto -translate-x-0 md:-translate-x-[15%] -translate-y-0 md:-translate-y-[15%]">
+                <div className="relative w-[260px] sm:w-[340px] md:w-[440px] h-[220px] sm:h-[300px] md:h-[450px] flex flex-col items-center justify-center my-1 sm:my-3 md:my-4 z-20 mx-auto -translate-x-0 md:-translate-x-[15%] -translate-y-0 md:-translate-y-[15%]">
                   {/* Glowing 3D Grid Floor when background is dark */}
                   <div
                     className="absolute bottom-[-60px] md:bottom-[-100px] w-[300px] sm:w-[400px] md:w-[500px] h-[200px] md:h-[300px] opacity-20 pointer-events-none transition-all duration-1000 ease-out"
@@ -201,7 +201,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         scale: { duration: 1.2, ease: "easeOut" },
                         rotate: { duration: 22, repeat: Infinity, ease: "linear" },
                       }}
-                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:top-2 md:left-[56%] md:translate-x-0 md:translate-y-0 w-[240px] sm:w-[320px] md:w-[400px] h-[240px] sm:h-[320px] md:h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
+                      className="absolute top-2 left-[50%] xs:left-[52%] md:top-2 md:left-[56%] md:translate-x-0 md:translate-y-0 w-[170px] sm:w-[260px] md:w-[400px] h-[170px] sm:h-[260px] md:h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
                       style={{
                         transformStyle: "preserve-3d",
                         transform: "translateZ(0px)",
@@ -242,7 +242,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         alt="Kalcerman Map"
                         width={2048}
                         height={2048}
-                        className="relative w-[170px] h-[170px] sm:w-[220px] sm:h-[220px] md:w-[275px] md:h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-3 sm:mb-6 z-10"
+                        className="relative w-[130px] h-[130px] xs:w-[150px] xs:h-[150px] sm:w-[220px] sm:h-[220px] md:w-[275px] md:h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-2 sm:mb-4 md:mb-6 z-10 -translate-x-[12%] sm:-translate-x-[15%] md:-translate-x-0"
                         style={{
                           transformStyle: "preserve-3d",
                           transform: "translateZ(20px)",
@@ -266,7 +266,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
             </AnimatePresence>
 
             {/* High Impact Progress Section */}
-            <div className="absolute bottom-6 sm:bottom-12 md:bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[800px] px-6 sm:px-8">
+            <div className="absolute bottom-12 sm:bottom-14 md:bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[800px] px-6 sm:px-8">
               <div className="flex justify-between items-end mb-2 sm:mb-4">
                 {/* Game Loading Style Quotes */}
                 <div className="text-left pb-1 max-w-[70%]">

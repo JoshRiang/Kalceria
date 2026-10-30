@@ -13,23 +13,34 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
     <>
       {/* ── Section 7: Big Square Concept ── */}
       <section id="section-map" className="relative w-full aspect-square bg-[#0c1528] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
-        {/* Background Blobs (Cyan, Magenta, Gold) */}
+        {/* Background Blobs (Cyan, Magenta, Gold) - GPU-Optimized on Mobile */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
-          <motion.div 
-            animate={{ scale: [1, 1.25, 1], x: ["-15%", "15%", "-15%"], y: ["-10%", "10%", "-10%"] }} 
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} 
-            className="absolute top-0 left-0 w-[60vw] h-[60vw] rounded-full blur-[140px] bg-[#00FFFF]" 
-          />
-          <motion.div 
-            animate={{ scale: [1.1, 1.35, 1.1], x: ["15%", "-15%", "15%"], y: ["10%", "-10%", "10%"] }} 
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }} 
-            className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#D946EF]" 
-          />
-          <motion.div 
-            animate={{ scale: [1, 1.4, 1], x: ["0%", "10%", "0%"], y: ["20%", "-20%", "20%"] }} 
-            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 4 }} 
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55vw] h-[55vw] rounded-full blur-[160px] bg-[#FACC15]" 
-          />
+          {isMobile ? (
+            <div 
+              className="absolute inset-0"
+              style={{
+                background: "radial-gradient(circle at 15% 15%, rgba(0,255,255,0.4) 0%, transparent 55%), radial-gradient(circle at 85% 85%, rgba(217,70,239,0.4) 0%, transparent 60%), radial-gradient(circle at 50% 50%, rgba(250,204,21,0.25) 0%, transparent 65%)"
+              }}
+            />
+          ) : (
+            <>
+              <motion.div 
+                animate={{ scale: [1, 1.25, 1], x: ["-15%", "15%", "-15%"], y: ["-10%", "10%", "-10%"] }} 
+                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} 
+                className="absolute top-0 left-0 w-[60vw] h-[60vw] rounded-full blur-[140px] bg-[#00FFFF]" 
+              />
+              <motion.div 
+                animate={{ scale: [1.1, 1.35, 1.1], x: ["15%", "-15%", "15%"], y: ["10%", "-10%", "10%"] }} 
+                transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }} 
+                className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#D946EF]" 
+              />
+              <motion.div 
+                animate={{ scale: [1, 1.4, 1], x: ["0%", "10%", "0%"], y: ["20%", "-20%", "20%"] }} 
+                transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 4 }} 
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55vw] h-[55vw] rounded-full blur-[160px] bg-[#FACC15]" 
+              />
+            </>
+          )}
         </div>
 
         {/* Earthman on mobile - sits at z-[3], behind particles (z-[4]) and asteroids (z-10 container wrapper) */}
@@ -201,18 +212,29 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
         
         {/* Battle Glows (Anakin vs Obi-Wan Vibe) - BEHIND LOGOS */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-           {/* Red Dynamic Glow (Left / Kalceria) */}
-           <motion.div 
-             animate={{ opacity: isMobile ? [0.12, 0.22, 0.12] : [0.3, 0.5, 0.3] }}
-             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-             className={`absolute top-[-10%] left-[-15%] w-[60%] h-[120%] bg-red-600/25 blur-[130px] rounded-full will-change-transform`}
-           />
-           {/* Cyan Dynamic Glow (Right / DSL) */}
-           <motion.div 
-             animate={{ opacity: isMobile ? [0.12, 0.22, 0.12] : [0.3, 0.5, 0.3] }}
-             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.5 }}
-             className={`absolute top-[-10%] right-[-15%] w-[60%] h-[120%] bg-cyan-500/25 blur-[130px] rounded-full will-change-transform`}
-           />
+          {isMobile ? (
+            <div 
+              className="absolute inset-0 opacity-40"
+              style={{
+                background: "radial-gradient(circle at 10% 40%, rgba(220,38,38,0.25) 0%, transparent 60%), radial-gradient(circle at 90% 40%, rgba(6,182,212,0.25) 0%, transparent 60%)"
+              }}
+            />
+          ) : (
+            <>
+              {/* Red Dynamic Glow (Left / Kalceria) */}
+              <motion.div 
+                animate={{ opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-[-10%] left-[-15%] w-[60%] h-[120%] bg-red-600/25 blur-[130px] rounded-full will-change-transform"
+              />
+              {/* Cyan Dynamic Glow (Right / DSL) */}
+              <motion.div 
+                animate={{ opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.5 }}
+                className="absolute top-[-10%] right-[-15%] w-[60%] h-[120%] bg-cyan-500/25 blur-[130px] rounded-full will-change-transform"
+              />
+            </>
+          )}
         </div>
 
         {/* Static Star Wars Backdrop Focal Point - Desktop Only */}
@@ -240,7 +262,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
 
         {/* Scattered Aurora Effect - TOP ATMOSPHERE */}
         <div className="absolute inset-0 z-40 pointer-events-none">
-          <AuroraParticles />
+          <AuroraParticles isMobile={isMobile} />
         </div>
         
         <div className="relative z-10 w-full max-w-6xl px-6 md:px-8 flex flex-col items-center gap-8 md:gap-16">
