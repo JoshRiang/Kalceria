@@ -124,10 +124,10 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
               initial={{ x: -100, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.8, ease: "circOut" }}
-              className="flex flex-col items-center mb-2 sm:mb-4 px-4"
+              className="flex flex-col items-center mb-2 sm:mb-4 px-4 w-full"
             >
               <h1
-                className={`text-4xl sm:text-6xl md:text-8xl font-sans font-black italic tracking-tighter uppercase leading-none transition-all duration-1000 text-center flex flex-col md:flex-row items-center justify-center gap-1 md:gap-4 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
+                className={`text-5xl xs:text-6xl sm:text-7xl md:text-8xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-1000 text-center flex flex-col md:flex-row items-center justify-center gap-1 md:gap-4 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
                 style={{
                   textShadow: startupProgress >= 50 ? `
                       2px 2px 0 #1a1a24,
@@ -152,10 +152,10 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
               </h1>
             </motion.div>
 
-            {/* Floating Kalcerman Image (Slides in from left when background turns black) */}
+            {/* Floating Kalcerman Image & Portal - Equal Sizing Underneath */}
             <AnimatePresence>
               {startupProgress >= 50 && (
-                <div className="relative w-[260px] sm:w-[340px] md:w-[440px] h-[220px] sm:h-[300px] md:h-[450px] flex flex-col items-center justify-center my-1 sm:my-3 md:my-4 z-20 mx-auto -translate-x-0 md:-translate-x-[15%] -translate-y-0 md:-translate-y-[15%]">
+                <div className="relative w-[280px] xs:w-[320px] sm:w-[360px] md:w-[440px] h-[220px] sm:h-[300px] md:h-[450px] flex flex-col items-center justify-center my-1 sm:my-3 md:my-4 z-20 mx-auto -translate-x-0 md:-translate-x-[15%] -translate-y-0 md:-translate-y-[15%]">
                   {/* Glowing 3D Grid Floor when background is dark */}
                   <div
                     className="absolute bottom-[-60px] md:bottom-[-100px] w-[300px] sm:w-[400px] md:w-[500px] h-[200px] md:h-[300px] opacity-20 pointer-events-none transition-all duration-1000 ease-out"
@@ -184,7 +184,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                       justifyContent: "center",
                     }}
                   >
-                    {/* Fixed Position Portal: Centered and responsive */}
+                    {/* Fixed Position Portal: Equal scale with hero underneath */}
                     <motion.img
                       key="portal-bg"
                       src="/portal.webp"
@@ -201,7 +201,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         scale: { duration: 1.2, ease: "easeOut" },
                         rotate: { duration: 22, repeat: Infinity, ease: "linear" },
                       }}
-                      className="absolute top-2 left-[56%] xs:left-[58%] md:top-2 md:left-[56%] md:translate-x-0 md:translate-y-0 w-[140px] xs:w-[155px] sm:w-[260px] md:w-[400px] h-[140px] xs:h-[155px] sm:h-[260px] md:h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
+                      className="absolute top-2 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[56%] w-[160px] xs:w-[175px] sm:w-[260px] md:w-[400px] h-[160px] xs:h-[175px] sm:h-[260px] md:h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
                       style={{
                         transformStyle: "preserve-3d",
                         transform: "translateZ(0px)",
@@ -236,13 +236,13 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         transform: "translateZ(80px)",
                       }}
                     >
-                      {/* Character Sprite */}
+                      {/* Character Sprite - Equal sizing with portal */}
                       <ContentImage
                         src="/kalcermanmap.png"
                         alt="Kalcerman Map"
                         width={2048}
                         height={2048}
-                        className="relative w-[110px] h-[110px] xs:w-[125px] xs:h-[125px] sm:w-[220px] sm:h-[220px] md:w-[275px] md:h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-2 sm:mb-4 md:mb-6 z-10 -translate-x-[18%] xs:-translate-x-[20%] sm:-translate-x-[15%] md:-translate-x-0"
+                        className="relative w-[160px] h-[160px] xs:w-[175px] xs:h-[175px] sm:w-[240px] sm:h-[240px] md:w-[275px] md:h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-2 sm:mb-4 md:mb-6 z-10 translate-x-0"
                         style={{
                           transformStyle: "preserve-3d",
                           transform: "translateZ(20px)",

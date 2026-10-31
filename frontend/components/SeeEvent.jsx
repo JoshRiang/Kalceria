@@ -221,8 +221,8 @@ export default function SeeEvent() {
              />
           </div>
 
-          {/* 3D Spinning Globe: scaled 25% smaller, 10% righter, 10% lower on mobile */}
-          <div className={`absolute inset-0 z-0 flex items-center justify-center transition-all duration-700 origin-center ${isMobile ? "scale-[0.56] xs:scale-[0.60] sm:scale-[0.72] translate-x-0 translate-y-[6%]" : ""}`}>
+          {/* 3D Spinning Globe: perfectly centered on mobile and desktop */}
+          <div className={`absolute inset-0 z-0 flex items-center justify-center transition-all duration-700 origin-center ${isMobile ? "scale-[0.52] xs:scale-[0.56] sm:scale-[0.70] translate-x-0 translate-y-0" : ""}`}>
              {isAtmosView && <SpinningGlobeCanvas />}
           </div>
           {/* Aggressive Edge Blending for Seamless Transitions */}
@@ -232,13 +232,13 @@ export default function SeeEvent() {
           {isAtmosView && <FloatingPhotos isMobile={isMobile} />}
 
           {/* ── LEFT STATS ── */}
-          <div className="absolute left-3 xs:left-4 sm:left-6 md:left-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-8 sm:gap-12 pointer-events-none">
+          <div className="absolute left-2 xs:left-4 sm:left-6 md:left-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-8 sm:gap-12 pointer-events-none">
             <StatCounter target={10} label="Users" suffix="" active={isAtmosView} />
             <StatCounter target={10} label="Events" suffix="+" active={isAtmosView} />
           </div>
 
           {/* ── RIGHT STATS ── */}
-          <div className="absolute right-3 xs:right-4 sm:right-6 md:right-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-8 sm:gap-12 pointer-events-none items-end">
+          <div className="absolute right-2 xs:right-4 sm:right-6 md:right-12 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-8 sm:gap-12 pointer-events-none items-end scale-90 sm:scale-100 origin-right">
             <StatCounter target={100}  label="Hours Streamed" suffix="+" align="end" active={isAtmosView} />
             <StatCounter target={1000} label="Days Created" suffix="" align="end" active={isAtmosView} />
           </div>

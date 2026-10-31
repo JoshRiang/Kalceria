@@ -5,6 +5,8 @@ import { usePhoenixAurora } from "@/hooks/usePhoenixAurora";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
+import api from "@/lib/api";
+import { hasUserSession } from "@/lib/session";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // DYNAMIC MERGED PRELOADER (Desktop = FinalJosh branch, Mobile = Obsidian Black current logic)
@@ -391,6 +393,23 @@ export default function IntroPreloader({ onComplete }) {
 
   const threadsCanvasRef = useRef(null);
   usePhoenixAurora(threadsCanvasRef, mounted && !done && !isMobile, 9500);
+
+  // Backend verification and cache warming during intro
+  useEffect(() => {
+    let alive = true;
+    const prepareBackend = async () => {
+      try {
+        await Promise.allSettled([
+          api.get("/events/public").catch(() => null),
+          hasUserSession() ? api.get("/users/me").catch(() => null) : Promise.resolve(null),
+        ]);
+      } catch {
+        // Intentionally silent
+      }
+    };
+    prepareBackend();
+    return () => { alive = false; };
+  }, []);
 
   // Hybrid Timelines
   useEffect(() => {

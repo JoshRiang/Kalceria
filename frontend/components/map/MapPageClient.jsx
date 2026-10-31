@@ -261,34 +261,40 @@ export default function MapPage() {
   const pirateStarted = useRef(false);
   const [pirateKey, setPirateKey] = useState(0);
 
-  // Startup Sequence Logic
+  // Startup Sequence Logic - Tied directly to Real Backend Preparation
   useEffect(() => {
     if (notLoggedIn) return;
 
-    const random = createRuntimeSeededRandom("map-startup-progress-v1");
-    let currentProgress = 0;
-    let interval;
-    
-    // Smooth progress increments and cinematic transition sequence
-    const delayTimer = setTimeout(() => {
-      interval = setInterval(() => {
-        currentProgress += random() * 10 + 4;
-        if (currentProgress >= 100) {
-          currentProgress = 100;
-          clearInterval(interval);
+    // Determine target progress based on backend lifecycle
+    let target = 25; // Initial handshake
+    if (currentUser) target = Math.max(target, 55); // User auth & profile confirmed
+    if (!isDataLoading) target = Math.max(target, 88); // Users, Kalcerians & mini-events loaded
+    if (!isDataLoading && hasMounted) target = 100; // Ready for interactive map
+
+    let animationFrame;
+    const updateProgress = () => {
+      setStartupProgress((prev) => {
+        if (prev >= 100) return 100;
+        const diff = target - prev;
+        const step = Math.max(0.6, diff * 0.12);
+        const next = Math.min(target, prev + step);
+        if (next >= 100) {
           scheduleTimeout(() => {
             setShowStartup(false);
           }, 600);
+          return 100;
         }
-        setStartupProgress(currentProgress);
-      }, 140);
-    }, 300);
+        return next;
+      });
+      animationFrame = requestAnimationFrame(updateProgress);
+    };
+
+    animationFrame = requestAnimationFrame(updateProgress);
 
     return () => {
-      clearTimeout(delayTimer);
-      if (interval) clearInterval(interval);
+      if (animationFrame) cancelAnimationFrame(animationFrame);
     };
-  }, [notLoggedIn, scheduleTimeout]);
+  }, [notLoggedIn, currentUser, isDataLoading, hasMounted, scheduleTimeout]);
 
   // Spawns premium magenta & golden microparticles once loading progress is >= 10%
   useEffect(() => {

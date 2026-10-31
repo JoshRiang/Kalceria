@@ -105,7 +105,7 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
             className="relative w-full max-w-[450px] rounded-[30px] overflow-visible border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.6)]"
           >
-            {/* Cat Mascot Area */}
+            {/* Cat Mascot Area with L-Border like Coki on SeeEvent */}
             <div className="absolute bottom-[100%] left-1/2 -translate-x-[55%] w-32 h-32 z-50 pointer-events-none">
               <motion.div 
                 initial={{ opacity: 0 }}
@@ -120,7 +120,7 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-                className="w-full h-full"
+                className="relative w-full h-full"
               >
                 <ContentImage
                   src={`/kucing${catFrame}.webp`}
@@ -130,6 +130,9 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                   loading="eager"
                   className="w-full h-full object-contain object-bottom drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)] z-10"
                 />
+                {/* White corner L-border under cat mascot (matching Coki on SeeEvent) */}
+                <div className="absolute left-0 bottom-0 w-[4px] h-[55%] bg-white z-20 shadow-[0_0_8px_white]" />
+                <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20 shadow-[0_0_8px_white]" />
               </motion.div>
             </div>
 
@@ -157,9 +160,9 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                     }}
                   />
                   <span
-                    className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-sm"
+                    className="relative z-10 font-sans font-black text-white uppercase tracking-[0.25em] text-base md:text-lg"
                     style={{
-                      textShadow: "1px 1px 0px #ffffff, 2px 2px 0px #cbd5e1, 3px 3px 0px #64748b, 4px 4px 6px rgba(0,0,0,0.6)"
+                      textShadow: "0 1px 0 #ffffff, 0 2px 0 #cbd5e1, 0 3px 0 #94a3b8, 0 4px 0 #64748b, 0 5px 8px rgba(0,0,0,0.8)"
                     }}
                   >
                     YES
@@ -178,9 +181,9 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                     }}
                   />
                   <span
-                    className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-sm"
+                    className="relative z-10 font-sans font-black text-white uppercase tracking-[0.25em] text-base md:text-lg"
                     style={{
-                      textShadow: "1px 1px 0px #ffffff, 2px 2px 0px #cbd5e1, 3px 3px 0px #64748b, 4px 4px 6px rgba(0,0,0,0.6)"
+                      textShadow: "0 1px 0 #ffffff, 0 2px 0 #cbd5e1, 0 3px 0 #94a3b8, 0 4px 0 #64748b, 0 5px 8px rgba(0,0,0,0.8)"
                     }}
                   >
                     NO

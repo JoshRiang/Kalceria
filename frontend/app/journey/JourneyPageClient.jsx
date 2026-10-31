@@ -147,8 +147,8 @@ export default function JourneyPageClient() {
               <div 
                 className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border-none rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_70px_rgba(255,255,255,0.45)] transition-all duration-300 ${isMobile ? "pr-[160px]" : "pr-[120px] md:pr-[196px]"}`}
                 style={{
-                  maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
-                  WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
+                  maskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)",
+                  WebkitMaskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)"
                 }}
               >
                 {/* Dynamic Blobs */}
@@ -206,8 +206,8 @@ export default function JourneyPageClient() {
                 <div 
                   className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border-none rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_70px_rgba(255,255,255,0.45)] transition-all duration-300 ${isMobile ? "pr-[138px]" : "pr-[90px] md:pr-[177px]"}`}
                   style={{
-                    maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
-                    WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
+                    maskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)",
+                    WebkitMaskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)"
                   }}
                 >
                   {/* Dynamic Blobs */}
@@ -274,8 +274,8 @@ export default function JourneyPageClient() {
               <div 
                 className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border-none rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_70px_rgba(255,255,255,0.45)] transition-all duration-300 ${isMobile ? "pr-[151px]" : "pr-[140px] md:pr-[260px]"}`}
                 style={{
-                  maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
-                  WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
+                  maskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)",
+                  WebkitMaskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)"
                 }}
               >
                 {/* Dynamic Blobs */}

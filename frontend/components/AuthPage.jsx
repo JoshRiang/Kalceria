@@ -471,22 +471,16 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                 </motion.div>
               </AnimatePresence>
 
-              {/* ── Error / Success ── */}
+              {/* ── Error / Success (Pure borderless typography without box or symbol) ── */}
               <AnimatePresence>
                 {error && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-md flex items-center gap-2">
-                      <span className="text-red-500 text-sm">✕</span>
-                      <span className="text-red-400 font-mono text-xs">{error}</span>
-                    </div>
+                    <p className="mb-4 text-red-500 font-mono text-xs text-center">{error}</p>
                   </motion.div>
                 )}
                 {success && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <div className="mb-6 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-md flex items-center gap-2">
-                      <span className="text-emerald-500 text-sm">✓</span>
-                      <span className="text-emerald-400 font-mono text-xs">{success}</span>
-                    </div>
+                    <p className="mb-4 text-emerald-400 font-mono text-xs text-center">{success}</p>
                   </motion.div>
                 )}
               </AnimatePresence>

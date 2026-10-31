@@ -34,8 +34,8 @@ export function JourneyDescriptionBox({ description, className }) {
     <div 
       className={`${defaultClasses} ${className || ""} bg-white/10 backdrop-blur-3xl border-none shadow-[0_0_50px_rgba(255,255,255,0.25)]`}
       style={{
-        maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
-        WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
+        maskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)",
+        WebkitMaskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)"
       }}
     >
       {/* Cloud Dynamic Glow Blobs */}

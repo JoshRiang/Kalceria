@@ -108,10 +108,10 @@ export function AnimatedReiiPair({ isMobile }) {
 
   return (
     <>
-      {/* LEFT REII IMAGE - Sticks to bottom of mobile handphone, side of desktop card */}
+      {/* LEFT REII IMAGE - Sticks to bottom left on mobile, flanks desktop card */}
       <div 
         ref={containerRef} 
-        className="pointer-events-none flex items-end justify-center z-20 bottom-0 left-0 md:absolute md:-bottom-40 md:left-auto md:right-full mr-0 md:mr-6"
+        className="pointer-events-none flex items-end justify-center z-20 absolute bottom-0 left-0 md:bottom-auto md:left-auto md:right-full md:-bottom-40 mr-0 md:mr-6"
       >
         <motion.div
           animate={isActive ? { scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] } : { scale: 1, opacity: 0.4 }}
@@ -154,9 +154,9 @@ export function AnimatedReiiPair({ isMobile }) {
         />
       </div>
 
-      {/* RIGHT REII IMAGE - Sticks to bottom of mobile handphone, side of desktop card */}
+      {/* RIGHT REII IMAGE - Sticks to bottom right on mobile, flanks desktop card */}
       <div 
-        className="pointer-events-none flex items-end justify-center z-20 bottom-0 right-0 md:absolute md:-bottom-40 md:right-auto md:left-full ml-0 md:ml-6"
+        className="pointer-events-none flex items-end justify-center z-20 absolute bottom-0 right-0 md:bottom-auto md:right-auto md:left-full md:-bottom-40 ml-0 md:ml-6"
       >
         <motion.div
           animate={isActive ? { scale: [1.3, 1, 1.3], opacity: [0.6, 0.3, 0.6] } : { scale: 1, opacity: 0.4 }}

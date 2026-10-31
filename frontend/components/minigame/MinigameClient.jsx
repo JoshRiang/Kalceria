@@ -328,7 +328,7 @@ export default function MinigamePage() {
             filter: isGameStarting ? "blur(30px)" : "blur(0px)",
             transition: { opacity: { duration: 1 }, filter: { duration: 1 } }
           }}
-          className="relative z-20 mt-[12vh] text-center"
+          className="relative z-20 mt-[8vh] sm:mt-[12vh] text-center px-4"
         >
           <motion.h1
             initial={{ y: -40, opacity: 0.01 }}
@@ -340,19 +340,24 @@ export default function MinigamePage() {
               y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
               opacity: { duration: 1.5, delay: 0.5, ease: "easeOut" }
             }}
-            className="text-3xl xs:text-5xl sm:text-7xl md:text-[8rem] lg:text-[9rem] font-black tracking-tighter text-white font-rog whitespace-nowrap"
+            className="font-black tracking-tighter text-white font-rog leading-[0.92] sm:leading-none"
             style={{ textShadow: "0 0 20px rgba(255,255,0,0.6), 0 0 40px rgba(255,255,0,0.3), 0 10px 30px rgba(0,0,0,0.5)" }}
           >
-            KALCER&apos;S GAME
+            <span className="block sm:inline text-5xl xs:text-6xl sm:text-7xl md:text-[8rem] lg:text-[9rem]">
+              KALCER&apos;S
+            </span>
+            <span className="block sm:inline text-5xl xs:text-6xl sm:text-7xl md:text-[8rem] lg:text-[9rem] sm:ml-4">
+              GAME
+            </span>
           </motion.h1>
 
           {/* Decorative Cards Area */}
-          <div className="flex justify-center gap-2 sm:gap-4 mt-4 sm:mt-6 h-16 sm:h-20">
+          <div className="flex justify-center gap-2 sm:gap-4 mt-3 sm:mt-6 h-14 sm:h-20">
             {[0, 1, 2, 3].map(i => <DecorativeCard key={i} seed={i} />)}
           </div>
         </motion.div>
 
-        {/* PLAY IT + Attempt - Responsive Layout */}
+        {/* PLAY IT + Attempt - Centered on Mobile Screen HP */}
         <motion.div
           animate={{
             opacity: isGameStarting ? 0 : 1,
@@ -360,7 +365,7 @@ export default function MinigamePage() {
             pointerEvents: isGameStarting ? "none" : "auto",
             transition: { opacity: { duration: 0.8 } }
           }}
-          className="relative z-20 flex flex-col sm:flex-row items-center gap-6 sm:gap-10 mt-[4vh] sm:mt-[8vh]"
+          className="relative z-20 flex flex-col sm:flex-row items-center gap-5 sm:gap-10 mt-[4vh] sm:mt-[8vh]"
         >
           <div className="relative group">
             <button

@@ -374,7 +374,7 @@ export default function AboutUs() {
                    initial={{ opacity: 0, y: 15, scale: 0.9 }}
                    animate={{ opacity: 1, y: 0, scale: 1 }}
                    exit={{ opacity: 0, y: 15, scale: 0.9 }}
-                   className="absolute bottom-[46vh] sm:bottom-[50vh] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 rounded-[1.2rem] pointer-events-auto"
+                   className="absolute bottom-[36vh] sm:bottom-[38vh] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 rounded-[1.2rem] pointer-events-auto"
                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
                  >
                    {/* Photo Box */}
@@ -609,31 +609,40 @@ export default function AboutUs() {
 
         {/* Static Paragraph - Centered on mobile, Left on desktop */}
         <p 
-          className="absolute top-[5.2rem] sm:top-[6.5rem] md:top-[12.5rem] w-[90%] max-w-[340px] md:max-w-[280px] text-slate-200 text-xs sm:text-sm md:text-lg font-normal leading-relaxed pointer-events-none z-30 text-center md:text-justify left-1/2 -translate-x-1/2 md:left-[32%] md:translate-x-0 opacity-100"
+          className="absolute top-[4.6rem] sm:top-[5.5rem] md:top-[12.5rem] w-[90%] max-w-[340px] md:max-w-[280px] text-slate-200 text-xs sm:text-sm md:text-lg font-normal leading-relaxed pointer-events-none z-30 text-center md:text-justify left-1/2 -translate-x-1/2 md:left-[32%] md:translate-x-0 opacity-100"
           style={{ fontFamily: "'Times New Roman', Times, serif" }}
         >
           Kalceria used to be a Final Project, now it is becoming a legacy of digital craftsmanship and automotive passion. It stands as a testament to the boundary-pushing creativity of our development team.
         </p>
         
-        {/* dy_3 (Fitra Eri / Mentor) image - Not diagonal (0deg), +30% size on mobile */}
+        {/* dy_3 (Fitra Eri / Mentor) image - Not diagonal (0deg), +30% size on mobile, with white L-border */}
         <div 
-          className="absolute left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[50.4%] z-20 top-[15.5rem] sm:top-[16.5rem] md:top-[5.88rem]"
+          className="absolute left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[50.4%] z-20 top-[12rem] sm:top-[13rem] md:top-[5.88rem]"
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
           onClick={() => setHoverMentor((p) => !p)}
         >
-          <Image
-            src="/dy_3.webp" 
-            alt="Ditya Alif K."
-            width={1536}
-            height={2729}
-            sizes="(max-width: 768px) 220px, 372px"
-            quality={85}
-            loading="lazy"
-            decoding="async"
-            className="object-contain pointer-events-auto opacity-95 cursor-pointer md:cursor-help w-[185px] h-[185px] sm:w-[220px] sm:h-[220px] md:w-[23.25rem] md:h-[23.25rem] transition-transform duration-300"
-            style={{ rotate: isMobile ? "0deg" : "-10.5deg" }}
-          />
+          <div className="relative">
+            <Image
+              src="/dy_3.webp" 
+              alt="Ditya Alif K."
+              width={1536}
+              height={2729}
+              sizes="(max-width: 768px) 245px, 372px"
+              quality={85}
+              loading="lazy"
+              decoding="async"
+              className="object-contain pointer-events-auto opacity-95 cursor-pointer md:cursor-help w-[220px] h-[220px] xs:w-[245px] xs:h-[245px] md:w-[23.25rem] md:h-[23.25rem] transition-transform duration-300"
+              style={{ rotate: isMobile ? "0deg" : "-10.5deg" }}
+            />
+            {/* White L-corner border at bottom for mobile (matching Coki on SeeEvent) */}
+            {isMobile && (
+              <>
+                <div className="absolute left-0 bottom-0 w-[4px] h-[50%] bg-white z-20 shadow-[0_0_8px_white]" />
+                <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20 shadow-[0_0_8px_white]" />
+              </>
+            )}
+          </div>
           
           <AnimatePresence>
             {hoverMentor && (
@@ -677,6 +686,13 @@ export default function AboutUs() {
           <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }} className="absolute bottom-[10%] right-[30%] w-[40vw] h-[40vw] rounded-full blur-[160px] bg-[#FFD700]" />
         </div>
 
+        {/* Mobile: Animated Reii Pair Sticks to Bottom Screen Corners (Outside FAQ card) */}
+        {isMobile && (
+          <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-between pointer-events-none px-0">
+            <AnimatedReiiPair isMobile={true} />
+          </div>
+        )}
+
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -689,10 +705,10 @@ export default function AboutUs() {
             style={{ clipPath: "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)" }} 
           />
 
-          {/* 2 & 3. ISOLATED ANIMATED REII PAIR - Sticks to bottom on mobile, flanks card on desktop */}
-          <div className="sticky bottom-0 z-20 w-full flex justify-between pointer-events-none md:contents">
-            <AnimatedReiiPair isMobile={isMobile} />
-          </div>
+          {/* Desktop Reii Pair Flanks the Card */}
+          {!isMobile && (
+            <AnimatedReiiPair isMobile={false} />
+          )}
 
           {/* 4. CONTENT LAYER (Text and buttons) */}
           <div className="relative z-20 flex flex-col w-full h-full transition-all duration-300">

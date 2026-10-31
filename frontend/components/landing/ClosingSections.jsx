@@ -64,13 +64,15 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             <motion.img 
               src="/earth.webp" 
               alt="Earth" 
-              className="absolute h-[30%] md:h-[40%] object-contain opacity-90 z-0 drop-shadow-[0_0_50px_rgba(0,255,255,0.2)]"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[34%] md:h-[46%] object-contain opacity-90 z-0 drop-shadow-[0_0_50px_rgba(0,255,255,0.2)]"
               animate={{ rotate: 360 }}
               transition={{ duration: 180, repeat: Infinity, ease: "linear" }}
             />
           )}
 
           {/* Find The Others Button - Natural Cloud Fader */}
+          {/* On Desktop & iPad/Tablet: Centered directly on Earth (top-1/2 -translate-y-1/2) */}
+          {/* On Mobile HP: Bottom positioned (bottom-[8%]) near Earthman's hands */}
           <motion.button
             onClick={() => {
               sessionStorage.setItem("landingScrollTarget", "section-map");
@@ -84,7 +86,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
             }}
             whileTap={{ scale: 0.95 }}
-            className="absolute z-30 bottom-[8%] md:bottom-[16%] lg:bottom-[18%] left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-base sm:text-lg md:text-2xl px-6 py-3.5 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 transform-gpu will-change-transform"
+            className="absolute z-30 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-base sm:text-lg md:text-2xl px-6 py-3.5 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 transform-gpu will-change-transform"
             style={{
               maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
               WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
@@ -265,25 +267,24 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
           <AuroraParticles isMobile={isMobile} />
         </div>
         
-        <div className="relative z-10 w-full max-w-6xl px-6 md:px-8 flex flex-col items-center gap-8 md:gap-16">
-           {/* Collaboration Header - Top-down on mobile, horizontal on desktop */}
+        <div className="relative z-10 w-full max-w-6xl px-6 md:px-8 flex flex-col items-center gap-8 md:gap-14">
+           {/* Collaboration Header - Centered between Darth Vader & Obi-Wan on desktop without face overlap */}
            <div 
-             className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10"
-             style={{ transform: `translateY(${isMobile ? "6%" : "15%"})` }}
+             className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 mx-auto"
+             style={{ transform: `translateY(${isMobile ? "4%" : "12%"})` }}
            >
-              {/* Kalceria Logo - 25% Boosted on Mobile */}
+              {/* Kalceria Logo - 0 deg tilt & boosted on mobile, centered & uncovered on desktop */}
               <motion.img 
                 src="/logologin.webp" 
                 alt="Kalceria" 
-                className={`${isMobile ? "h-[56px]" : "h-18 md:h-24"} w-auto object-contain -rotate-[12deg] drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform`}
-                animate={{ y: [0, -6, 0], x: isMobile ? 0 : '20%' }}
+                className={`${isMobile ? "h-[68px] xs:h-[76px] rotate-0" : "h-16 md:h-20 -rotate-[8deg]"} w-auto object-contain drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform`}
+                animate={{ y: [0, -6, 0] }}
                 transition={{ 
-                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-                  default: { duration: 0.8 }
+                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" }
                 }}
               />
 
-              {/* The "X" as an SVG Clipped Glass Artifact (25% Boosted on Mobile) */}
+              {/* The "X" as an SVG Clipped Glass Artifact - Centered */}
               <div 
                 className="relative flex items-center justify-center group z-20"
                 style={{ transform: "none" }}
@@ -295,10 +296,10 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                  <motion.div 
                    animate={{ scale: [1, 1.1, 1], rotate: [0, 360], opacity: [0.2, 0.4, 0.2] }}
                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[60px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform ${isMobile ? "w-[86px] h-[86px]" : "w-[240px] md:w-[340px] h-[240px] md:h-[340px]"}`}
+                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[50px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform ${isMobile ? "w-[86px] h-[86px]" : "w-[160px] md:w-[200px] h-[160px] md:h-[200px]"}`}
                  />
 
-                 <svg width={isMobile ? "80" : "220"} height={isMobile ? "80" : "220"} viewBox="0 0 220 220" className="relative z-10 transform-gpu">
+                 <svg width={isMobile ? "80" : "130"} height={isMobile ? "80" : "130"} viewBox="0 0 220 220" className="relative z-10 transform-gpu">
                     <defs>
                       <clipPath id="collab-x-clip-v3">
                         <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" style={{ fontFamily: 'Arial Black, sans-serif' }}>X</text>
@@ -329,21 +330,20 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                  </svg>
               </div>
 
-              {/* DSL Logo - 25% Boosted on Mobile */}
+              {/* DSL Logo - 0 deg tilt & boosted on mobile, centered & uncovered on desktop */}
               <motion.img 
                 src="/dsl.webp" 
                 alt="DSL" 
-                className={`${isMobile ? "h-[56px]" : "h-18 md:h-24"} w-auto object-contain rotate-[12deg] drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform`}
-                animate={{ y: [0, 6, 0], x: isMobile ? 0 : '-20%' }}
+                className={`${isMobile ? "h-[68px] xs:h-[76px] rotate-0" : "h-16 md:h-20 rotate-[8deg]"} w-auto object-contain drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform`}
+                animate={{ y: [0, 6, 0] }}
                 transition={{ 
-                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-                  default: { duration: 0.8 }
+                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" }
                 }}
               />
            </div>
            
            <div className="flex flex-col items-center gap-6 md:gap-8">
-              {/* JOIN US? - 25% Boosted on Mobile */}
+              {/* JOIN US? - Centered and aligned */}
               <motion.h2 
                 initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
                 whileInView={{ opacity: 1, y: 0, x: 0, scale: isMobile ? 1.05 : 0.85, filter: "blur(0px)" }}
@@ -357,15 +357,14 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                 JOIN US?
               </motion.h2>
 
-              {/* WhatsApp Logo - 25% Boosted on Mobile */}
+              {/* WhatsApp Logo - Centered directly under JOIN US? */}
               <motion.img 
                 src="/wa_logo.webp" 
                 alt="WhatsApp" 
-                className={`${isMobile ? "h-[72px]" : "h-14 md:h-28"} w-auto object-contain drop-shadow-[0_0_40px_rgba(37,211,102,0.5)] z-20`}
-                animate={{ y: [0, -6, 0], x: isMobile ? 0 : '22%' }}
+                className={`${isMobile ? "h-[72px]" : "h-14 md:h-24"} w-auto object-contain drop-shadow-[0_0_40px_rgba(37,211,102,0.5)] z-20`}
+                animate={{ y: [0, -6, 0] }}
                 transition={{ 
-                  y: { duration: 5, repeat: Infinity, ease: "easeInOut" },
-                  default: { duration: 0.8 }
+                  y: { duration: 5, repeat: Infinity, ease: "easeInOut" }
                 }}
               />
 
