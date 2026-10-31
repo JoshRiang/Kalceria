@@ -14,7 +14,7 @@ const ServiceRequestModal = dynamic(() => import("./ServiceRequestModal"), { ssr
 const LogoutConfirmModal = dynamic(() => import("./landing/modals/LogoutConfirmModal").then(m => m.LogoutConfirmModal), { ssr: false });
 const IdeaCommentModal = dynamic(() => import("./landing/modals/IdeaCommentModal").then(m => m.IdeaCommentModal), { ssr: false });
 import { useHasMounted } from "@/hooks/useHasMounted";
-import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
+import { useIsMobileViewport, useIsMobileOrTabletViewport } from "@/hooks/useIsMobileViewport";
 import api from "@/lib/api";
 import { clearSession, hasUserSession } from "@/lib/session";
 
@@ -40,6 +40,7 @@ export default function LandingPage({ onNavigateAuth }) {
   }, [displayedMerch.length]);
 
   const isMobile = useIsMobileViewport();
+  const isMobileOrTablet = useIsMobileOrTabletViewport();
   const heroSectionRef = useRef(null);
   const heroVideoRef = useRef(null);
   const isHeroActive = useViewportActivity(heroSectionRef, { rootMargin: "200px 0px", initialActive: true });
@@ -67,7 +68,7 @@ export default function LandingPage({ onNavigateAuth }) {
     { src: "/hp/abt_landing_hp3.webp", width: 500, height: 333 }
   ];
 
-  const currentAboutImages = isMobile ? ABOUT_IMAGES_HP : ABOUT_IMAGES;
+  const currentAboutImages = isMobileOrTablet ? ABOUT_IMAGES_HP : ABOUT_IMAGES;
   const currentAboutImage = currentAboutImages[aboutIndex % currentAboutImages.length];
 
   useEffect(() => {
@@ -317,11 +318,11 @@ export default function LandingPage({ onNavigateAuth }) {
       <section id="section-about" className="relative w-full h-[70vh] overflow-hidden bg-black flex items-center justify-center border-t border-slate-900 z-30">
         <AnimatePresence initial={false} custom={aboutIndex}>
           <motion.div key={aboutIndex} variants={slideVariants} initial="enter" animate="center" exit="exit" className="absolute inset-0 w-full h-full">
-            <Image src={currentAboutImage.src} alt="About Us BG" width={currentAboutImage.width} height={currentAboutImage.height} unoptimized loading="eager" decoding="auto" className="w-full h-full object-cover opacity-70 grayscale md:grayscale-0" />
+            <Image src={currentAboutImage.src} alt="About Us BG" width={currentAboutImage.width} height={currentAboutImage.height} unoptimized loading="eager" decoding="auto" className="w-full h-full object-cover opacity-70 grayscale xl:grayscale-0" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#050a14] via-[#050a14]/60 to-transparent z-[1]" />
-            {/* Warm Peach & Gold & Magenta Master overlay on mobile */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#ffd700]/35 via-[#ffaa66]/30 to-[#ff00ff]/25 mix-blend-color md:hidden z-[2]" />
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#ff00ff]/20 via-[#ffaa66]/20 to-[#ffd700]/15 mix-blend-overlay md:hidden z-[3]" />
+            {/* Warm Peach & Gold & Magenta Master overlay on mobile & tablet */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#ffd700]/35 via-[#ffaa66]/30 to-[#ff00ff]/25 mix-blend-color xl:hidden z-[2]" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#ff00ff]/20 via-[#ffaa66]/20 to-[#ffd700]/15 mix-blend-overlay xl:hidden z-[3]" />
           </motion.div>
         </AnimatePresence>
 
@@ -357,10 +358,10 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Altar Border Element (Reversed 180, Truncated at Border) */}
         <div className="absolute top-[-60px] md:top-[-220px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-5 opacity-80">
           <Image
-            src={isMobile ? "/hp/altar_hp.webp" : "/altar.webp"} 
+            src={isMobileOrTablet ? "/hp/altar_hp.webp" : "/altar.webp"} 
             alt="Altar" 
-            width={isMobile ? 2048 : 2400}
-            height={isMobile ? 2048 : 1589}
+            width={isMobileOrTablet ? 2048 : 2400}
+            height={isMobileOrTablet ? 2048 : 1589}
             unoptimized
             loading="eager"
             decoding="auto"

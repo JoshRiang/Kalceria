@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
+import { useIsTabletViewport } from "@/hooks/useIsMobileViewport";
 
 const COMMUNITY_QUOTES = [
   "Kak mau photoo!", "Woi Wahib mana woi!", "Kak mau colabbb",
@@ -177,22 +178,35 @@ export function CometEffect() {
 }
 
 export function FloatingAssets({ isMobile }) {
+  const isTablet = useIsTabletViewport();
   const assets = useMemo(() => {
-    const assetDefinitions = [
-      // ccar_1 & ccar_2 shifted more left
-      ...(!isMobile ? [
+    let assetDefinitions = [];
+
+    if (isMobile) {
+      // Mobile HP: 2 clean cars
+      assetDefinitions = [
+        { src: '/ccar_3.webp', x: 75, y: 8, w: "w-24 xs:w-28", rot: 25, dX: -40, dY: 35, rS: 35 },
+        { src: '/ccar_4.webp', x: 70, y: 55, w: "w-20 xs:w-24", rot: -15, dX: 35, dY: -35, rS: -45 },
+      ];
+    } else if (isTablet) {
+      // iPad / Tablet family: Reduced amount (3 cars), zero edge-hugging stickers removed from left/right edges
+      assetDefinitions = [
+        { src: '/ccar_3.webp', x: 68, y: 22, w: "w-28 md:w-40", rot: 20, dX: -30, dY: 25, rS: 25 },
+        { src: '/stikermobil_3.webp', x: 28, y: 74, w: "w-20 md:w-28", rot: -8, dX: 40, dY: -35, rS: 30 },
+        { src: '/stikermobil_1.webp', x: 62, y: 76, w: "w-18 md:w-26", rot: 12, dX: -35, dY: -30, rS: -25 },
+      ];
+    } else {
+      // Desktop widescreen: Full 6 stickers with classic wide distribution
+      assetDefinitions = [
         { src: '/ccar_1.webp', x: 5, y: 18, w: "w-32 md:w-56", rot: -35, dX: 60, dY: 45, rS: 55 },
         { src: '/ccar_2.webp', x: 8, y: 62, w: "w-24 md:w-36", rot: 45, dX: -70, dY: -65, rS: -60 },
-      ] : []),
-      { src: '/ccar_3.webp', x: isMobile ? 75 : 85, y: isMobile ? 8 : 18, w: isMobile ? "w-24 xs:w-28 md:w-56" : "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
-      { src: '/ccar_4.webp', x: isMobile ? 70 : 82, y: isMobile ? 55 : 62, w: isMobile ? "w-20 xs:w-24 md:w-36" : "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
-      // stikermobil_3 & stikermobil_1 — only on desktop
-      ...(!isMobile ? [
+        { src: '/ccar_3.webp', x: 85, y: 18, w: "w-32 md:w-56", rot: 25, dX: -40, dY: 35, rS: 35 },
+        { src: '/ccar_4.webp', x: 82, y: 62, w: "w-24 md:w-36", rot: -15, dX: 35, dY: -35, rS: -45 },
         { src: '/stikermobil_3.webp', x: 28.5, y: 80, w: "w-20 md:w-32", rot: -8, dX: 55, dY: -50, rS: 40 },
         { src: '/stikermobil_1.webp', x: 65, y: 81, w: "w-16 md:w-28", rot: 14, dX: -45, dY: -40, rS: -35 },
-      ] : []),
-    ];
-    
+      ];
+    }
+
     return assetDefinitions.map((def, i) => ({
       src: def.src,
       id: i,
@@ -206,7 +220,7 @@ export function FloatingAssets({ isMobile }) {
       yDrift: def.dY,
       rotationSpeed: def.rS,
     }));
-  }, [isMobile]);
+  }, [isMobile, isTablet]);
 
   return (
     <div className="absolute inset-0 z-[15] pointer-events-none overflow-hidden">

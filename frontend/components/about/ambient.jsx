@@ -108,22 +108,22 @@ export function AnimatedReiiPair({ isMobile }) {
 
   return (
     <>
-      {/* LEFT REII IMAGE - Sticks to bottom left on mobile, flanks desktop card */}
+      {/* LEFT REII IMAGE - Sticks to bottom left on all devices (mobile, tab, iPad, desktop) */}
       <div 
         ref={containerRef} 
-        className="pointer-events-none flex items-end justify-center z-20 absolute bottom-0 left-0 md:bottom-auto md:left-auto md:right-full md:-bottom-40 mr-0 md:mr-6"
+        className="pointer-events-none flex items-end justify-center z-20 absolute bottom-0 left-0"
       >
         <motion.div
           animate={isActive ? { scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] } : { scale: 1, opacity: 0.4 }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-[120px] h-[120px] md:w-[300px] md:h-[300px] bg-gradient-to-tr from-[#FFD700]/40 to-cyan-500/40 blur-[40px] md:blur-[70px] rounded-full z-[-1]"
+          className="absolute w-[120px] h-[120px] sm:w-[160px] sm:h-[160px] md:w-[220px] md:h-[220px] lg:w-[280px] lg:h-[280px] bg-gradient-to-tr from-[#FFD700]/40 to-cyan-500/40 blur-[40px] md:blur-[60px] rounded-full z-[-1]"
         />
-        <div className="relative z-10 w-[6rem] sm:w-[8rem] md:w-[17.25rem] aspect-[768/905] flex-shrink-0">
+        <div className="relative z-10 w-[6rem] xs:w-[7rem] sm:w-[8.5rem] md:w-[11rem] lg:w-[13.5rem] xl:w-[16rem] aspect-[768/905] flex-shrink-0">
           <Image
             src="/reii.webp"
             alt="Reii Left"
             fill
-            sizes="(max-width: 768px) 110px, 276px"
+            sizes="(max-width: 768px) 110px, (max-width: 1280px) 180px, 256px"
             quality={75}
             loading="lazy"
             decoding="async"
@@ -134,7 +134,7 @@ export function AnimatedReiiPair({ isMobile }) {
             alt=""
             aria-hidden="true"
             fill
-            sizes="(max-width: 768px) 110px, 276px"
+            sizes="(max-width: 768px) 110px, (max-width: 1280px) 180px, 256px"
             quality={75}
             loading="lazy"
             decoding="async"
@@ -148,27 +148,27 @@ export function AnimatedReiiPair({ isMobile }) {
           side="left"
           isMobile={isMobile}
           configs={[
-            { delay: 0, rotate: -15, top: isMobile ? "-15%" : "-15%", offset: isMobile ? 65 : 145 },
-            { delay: 0.8, rotate: 10, top: isMobile ? "25%" : "35%", offset: isMobile ? 90 : 200 },
+            { delay: 0, rotate: -15, top: isMobile ? "-15%" : "-15%", offset: isMobile ? 65 : 110 },
+            { delay: 0.8, rotate: 10, top: isMobile ? "25%" : "30%", offset: isMobile ? 90 : 150 },
           ]}
         />
       </div>
 
-      {/* RIGHT REII IMAGE - Sticks to bottom right on mobile, flanks desktop card */}
+      {/* RIGHT REII IMAGE - Sticks to bottom right on all devices (mobile, tab, iPad, desktop) */}
       <div 
-        className="pointer-events-none flex items-end justify-center z-20 absolute bottom-0 right-0 md:bottom-auto md:right-auto md:left-full md:-bottom-40 ml-0 md:ml-6"
+        className="pointer-events-none flex items-end justify-center z-20 absolute bottom-0 right-0"
       >
         <motion.div
           animate={isActive ? { scale: [1.3, 1, 1.3], opacity: [0.6, 0.3, 0.6] } : { scale: 1, opacity: 0.4 }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute w-[120px] h-[120px] md:w-[300px] md:h-[300px] bg-gradient-to-tl from-[#FF00FF]/40 to-cyan-500/40 blur-[40px] md:blur-[70px] rounded-full z-[-1]"
+          className="absolute w-[120px] h-[120px] sm:w-[160px] sm:h-[160px] md:w-[220px] md:h-[220px] lg:w-[280px] lg:h-[280px] bg-gradient-to-tl from-[#FF00FF]/40 to-cyan-500/40 blur-[40px] md:blur-[60px] rounded-full z-[-1]"
         />
-        <div className="relative z-10 w-[6rem] sm:w-[8rem] md:w-[17.25rem] aspect-[768/905] flex-shrink-0">
+        <div className="relative z-10 w-[6rem] xs:w-[7rem] sm:w-[8.5rem] md:w-[11rem] lg:w-[13.5rem] xl:w-[16rem] aspect-[768/905] flex-shrink-0">
           <Image
             src="/reii2.webp"
             alt="Reii Right"
             fill
-            sizes="(max-width: 768px) 110px, 276px"
+            sizes="(max-width: 768px) 110px, (max-width: 1280px) 180px, 256px"
             quality={75}
             loading="lazy"
             decoding="async"
@@ -179,7 +179,7 @@ export function AnimatedReiiPair({ isMobile }) {
             alt=""
             aria-hidden="true"
             fill
-            sizes="(max-width: 768px) 110px, 276px"
+            sizes="(max-width: 768px) 110px, (max-width: 1280px) 180px, 256px"
             quality={75}
             loading="lazy"
             decoding="async"
@@ -193,9 +193,9 @@ export function AnimatedReiiPair({ isMobile }) {
           side="right"
           isMobile={isMobile}
           configs={[
-            { delay: 0, rotate: -15, top: isMobile ? "-20%" : "-15%", offset: isMobile ? 65 : 145 },
-            { delay: 0.8, rotate: 10, top: isMobile ? "15%" : "30%", offset: isMobile ? 90 : 200 },
-            { delay: 1.5, rotate: -5, top: isMobile ? "45%" : "65%", offset: isMobile ? 110 : 250 },
+            { delay: 0, rotate: -15, top: isMobile ? "-20%" : "-15%", offset: isMobile ? 65 : 110 },
+            { delay: 0.8, rotate: 10, top: isMobile ? "15%" : "25%", offset: isMobile ? 90 : 150 },
+            { delay: 1.5, rotate: -5, top: isMobile ? "45%" : "55%", offset: isMobile ? 110 : 180 },
           ]}
         />
       </div>
