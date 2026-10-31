@@ -453,23 +453,23 @@ export default function MinigamePage() {
       <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4 overflow-y-auto bg-black/90">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5 }} onClick={() => setShowTrailer(false)} className="absolute inset-0 cursor-pointer" />
         <div className="relative flex flex-col items-center py-6 sm:py-12 min-h-full justify-center">
-          <motion.div initial={{ opacity: 0, y: 10, filter: "blur(20px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: 20, filter: "blur(40px)", transition: { duration: 0.8 } }} transition={{ duration: 1.5 }} className="text-center mb-4 sm:mb-8 max-w-sm relative">
-            <div className="flex items-center justify-center gap-4">
-              <h2 className="text-4xl font-black italic tracking-tighter text-white mb-2" style={{ textShadow: "3px 3px 0px #d946ef" }}>SOCIAL CULT</h2>
+          <motion.div initial={{ opacity: 0, y: 10, filter: "blur(20px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: 20, filter: "blur(40px)", transition: { duration: 0.8 } }} transition={{ duration: 1.5 }} className="text-center mb-6 sm:mb-8 w-full max-w-[340px] xs:max-w-[370px] sm:max-w-md px-2 relative">
+            <div className="flex items-center justify-center gap-4 mb-2">
+              <h2 className="text-4xl font-black italic tracking-tighter text-white" style={{ textShadow: "3px 3px 0px #d946ef" }}>SOCIAL CULT</h2>
               <button aria-label="Close trailer" onClick={() => setShowTrailer(false)} className="p-2 flex items-center justify-center text-white/90 hover:text-white hover:scale-110 transition-all group translate-x-2">
                 <svg className="w-5 h-5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <p className="text-[10px] font-sans text-white leading-relaxed px-6 opacity-60">A revolutionary fusion of high-performance automotive engineering and urban street culture. Join the collective as we redefine the boundaries of style and speed.</p>
+            <p className="text-xs font-sans text-white/80 leading-relaxed text-center px-2 mt-2">A revolutionary fusion of high-performance automotive engineering and urban street culture. Join the collective as we redefine the boundaries of style and speed.</p>
           </motion.div>
 
           <div className="relative">
-            {/* Floating ge images around the card - More Spread & Smaller */}
+            {/* Floating ge images around the card - Precise Corner Framing */}
             {[
-              { src: "/ge_1.webp", pos: isMobile ? "-top-6 -left-8" : "-top-24 -left-40", rot: -15, delay: 0 },
-              { src: "/ge_2.webp", pos: isMobile ? "-top-6 -right-8" : "-top-20 -right-36", rot: 20, delay: 0.5 },
-              { src: "/ge_3.webp", pos: isMobile ? "bottom-[4%] -left-8" : "bottom-[5%] -left-48", rot: 10, delay: 1 },
-              { src: "/ge_4.webp", pos: isMobile ? "bottom-[4%] -right-8" : "bottom-[7%] -right-44", rot: -10, delay: 1.5 },
+              { src: "/ge_1.webp", pos: isMobile ? "-top-4 -left-7" : "-top-24 -left-40", rot: -15, delay: 0 },
+              { src: "/ge_2.webp", pos: isMobile ? "-top-4 -right-7" : "-top-20 -right-36", rot: 20, delay: 0.5 },
+              { src: "/ge_3.webp", pos: isMobile ? "-bottom-3 -left-7" : "bottom-[5%] -left-48", rot: 10, delay: 1 },
+              { src: "/ge_4.webp", pos: isMobile ? "-bottom-3 -right-7" : "bottom-[7%] -right-44", rot: -10, delay: 1.5 },
             ].map((ge, idx) => (
               <motion.img
                 key={idx}

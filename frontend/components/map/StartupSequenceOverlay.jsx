@@ -117,17 +117,17 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, ease: "easeOut" }}
-            className="relative z-10 w-full h-screen flex flex-col items-center pt-14 sm:pt-18 md:pt-24"
+            className="relative z-10 w-full h-screen flex flex-col items-center justify-between md:justify-start pt-20 xs:pt-28 md:pt-24 pb-16 xs:pb-20 md:pb-0"
           >
-            {/* Main Title Section */}
+            {/* Main Title Section - Perfectly Centered on Mobile */}
             <motion.div
-              initial={{ x: -100, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.8, ease: "circOut" }}
-              className="flex flex-col items-center mb-2 sm:mb-4 px-4 w-full"
+              className="flex flex-col items-center mb-2 sm:mb-4 px-4 w-full text-center"
             >
               <h1
-                className={`text-6xl xs:text-7xl sm:text-7xl md:text-8xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-1000 text-center flex flex-col md:flex-row items-center justify-center gap-1 md:gap-4 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
+                className={`text-5xl xs:text-6xl sm:text-7xl md:text-8xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-1000 text-center flex flex-col md:flex-row items-center justify-center gap-1 md:gap-4 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
                 style={{
                   textShadow: startupProgress >= 50 ? `
                       2px 2px 0 #1a1a24,
@@ -144,7 +144,6 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                       10px 10px 0 #00FFFF,
                       12px 12px 30px rgba(0, 255, 255, 0.4)
                     `,
-                  transform: "perspective(1000px) rotateX(10deg) rotateY(-5deg) scale(1.05)"
                 }}
               >
                 <span>Kalcerians</span>
@@ -152,10 +151,10 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
               </h1>
             </motion.div>
 
-            {/* Floating Kalcerman Image & Portal - Equal Sizing Underneath */}
+            {/* Floating Kalcerman Image & Portal - Hidden on Mobile HP, PRESERVED on Tablet & Desktop */}
             <AnimatePresence>
               {startupProgress >= 50 && (
-                <div className="relative w-[280px] xs:w-[320px] sm:w-[360px] md:w-[440px] h-[220px] sm:h-[300px] md:h-[450px] flex flex-col items-center justify-center my-1 sm:my-3 md:my-4 z-20 mx-auto -translate-x-0 md:-translate-x-[15%] -translate-y-0 md:-translate-y-[15%]">
+                <div className="hidden md:flex relative w-[280px] xs:w-[320px] sm:w-[360px] md:w-[440px] h-[220px] sm:h-[300px] md:h-[450px] flex-col items-center justify-center my-1 sm:my-3 md:my-4 z-20 mx-auto -translate-x-0 md:-translate-x-[15%] -translate-y-0 md:-translate-y-[15%]">
                   {/* Glowing 3D Grid Floor when background is dark */}
                   <div
                     className="absolute bottom-[-60px] md:bottom-[-100px] w-[300px] sm:w-[400px] md:w-[500px] h-[200px] md:h-[300px] opacity-20 pointer-events-none transition-all duration-1000 ease-out"

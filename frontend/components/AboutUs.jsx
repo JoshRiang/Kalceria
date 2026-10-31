@@ -585,12 +585,12 @@ export default function AboutUs() {
         <GoldenAmbientSparks />
 
         {/* Section Title at the top - Always visible & prominent on re-scroll */}
-        <div className="absolute top-10 sm:top-14 md:top-20 left-1/2 -translate-x-1/2 z-30 text-center w-full px-6 flex flex-col items-center pointer-events-none">
+        <div className="absolute top-6 xs:top-8 sm:top-12 md:top-20 left-1/2 -translate-x-1/2 z-30 text-center w-full px-4 flex flex-col items-center pointer-events-none">
            <motion.h2 
              initial={{ opacity: 1, y: 0 }}
              animate={{ opacity: 1, y: 0 }}
              transition={{ duration: 0.8, ease: "easeOut" }}
-             className="text-4xl sm:text-5xl md:text-7xl font-normal tracking-tighter text-white leading-none select-none"
+             className="text-4xl sm:text-5xl md:text-7xl font-normal tracking-tighter text-white leading-none select-none mb-3 sm:mb-4"
              style={{ 
                fontFamily: "'Times New Roman', Times, serif",
                textShadow: `
@@ -605,11 +605,19 @@ export default function AboutUs() {
            >
              Webdev Team
            </motion.h2>
+
+           {/* Mobile Paragraph - Clean, spaced, natural breathing room under title */}
+           <p 
+             className="block md:hidden w-[90%] max-w-[340px] text-slate-200 text-xs sm:text-sm font-normal leading-relaxed text-center opacity-100"
+             style={{ fontFamily: "'Times New Roman', Times, serif" }}
+           >
+             Kalceria used to be a Final Project, now it is becoming a legacy of digital craftsmanship and automotive passion. It stands as a testament to the boundary-pushing creativity of our development team.
+           </p>
         </div>
 
-        {/* Static Paragraph - Centered on mobile, Left on desktop */}
+        {/* Static Paragraph - Desktop Left placement preserved */}
         <p 
-          className="absolute top-[4.6rem] sm:top-[5.5rem] md:top-[12.5rem] w-[90%] max-w-[340px] md:max-w-[280px] text-slate-200 text-xs sm:text-sm md:text-lg font-normal leading-relaxed pointer-events-none z-30 text-center md:text-justify left-1/2 -translate-x-1/2 md:left-[32%] md:translate-x-0 opacity-100"
+          className="hidden md:block absolute md:top-[12.5rem] md:max-w-[280px] text-slate-200 md:text-lg font-normal leading-relaxed pointer-events-none z-30 md:text-justify md:left-[32%] md:translate-x-0 opacity-100"
           style={{ fontFamily: "'Times New Roman', Times, serif" }}
         >
           Kalceria used to be a Final Project, now it is becoming a legacy of digital craftsmanship and automotive passion. It stands as a testament to the boundary-pushing creativity of our development team.
@@ -617,7 +625,7 @@ export default function AboutUs() {
         
         {/* dy_3 (Fitra Eri / Mentor) image - 0deg and trimmed bottom horizontal line for mobile, -10.5deg on desktop */}
         <div 
-          className="absolute left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[50.4%] z-20 top-[12rem] sm:top-[13rem] md:top-[5.88rem]"
+          className="absolute left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[50.4%] z-20 top-[13.5rem] xs:top-[14.5rem] sm:top-[15rem] md:top-[5.88rem]"
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
           onClick={() => setHoverMentor((p) => !p)}
@@ -635,8 +643,8 @@ export default function AboutUs() {
               decoding="async"
               className="object-contain block pointer-events-auto opacity-95 cursor-pointer md:cursor-help w-[150px] xs:w-[175px] h-auto md:w-[23.25rem] md:h-[23.25rem] rotate-0 md:-rotate-[10.5deg] transition-transform duration-300"
             />
-            {/* Pure CSS Horizontal Line: exact horizontal length of the photo, trim 2px, 0ms block time, no vertical line */}
-            <div className="block md:hidden w-full h-[2px] bg-white/95 shadow-[0_0_6px_rgba(255,255,255,0.7)] mt-1.5" />
+            {/* Pure CSS Horizontal Line: integrated flush to the bottom edge with 0 space */}
+            <div className="block md:hidden absolute bottom-0 left-0 right-0 h-[2px] bg-white/95 shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
           </div>
           
           <AnimatePresence>

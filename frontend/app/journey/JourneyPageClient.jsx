@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import JourneySection4 from '../../components/JourneySection4';
-import JourneySectionTitle from '../../components/JourneySectionTitle';
 import JourneyRightHalf, { JourneySlider, JourneyDescriptionBox } from '../../components/JourneyRightHalf';
 
 export default function JourneyPageClient() {
@@ -139,41 +138,18 @@ export default function JourneyPageClient() {
         className={`transition-all duration-[1500ms] cubic-bezier(0.16, 1, 0.3, 1) ${isIntroActive ? 'blur-[60px] scale-[1.02]' : 'blur-0 scale-100'}`}
         style={{ pointerEvents: isIntroActive ? 'none' : 'auto' }}
       >
-        {/* Section 1 - Left Half */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_1.webp')] md:bg-[length:100%_100%] flex items-start pt-[7vh] ${isMobile ? "flex-col pt-[8vh]" : ""}`}>
+        {/* Section 1 - Mist */}
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_1.webp')] md:bg-[length:100%_100%] flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
-            <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
-              {/* Glass Box Layer - Sharp Edged Glass */}
-              <div 
-                className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border border-white/20 rounded-none shadow-[0_0_50px_rgba(255,255,255,0.25)] hover:shadow-[0_0_70px_rgba(255,255,255,0.4)] transition-all duration-300 ${isMobile ? "pr-[160px]" : "pr-[120px] md:pr-[196px]"}`}
-              >
-                {/* Dynamic Blobs - Palette: Mint Cyan & Cyber Violet */}
-                <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-screen">
-                  <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#00FFCC] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
-                  <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-[#9333EA] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
-                </div>
-                <JourneySectionTitle text="WITH" align="left" delay={500} />
-              </div>
-
-              {/* Logo Layer (Independent) */}
-              <Image
-                src="/se1.webp" 
-                alt="SE1" 
-                width={2898}
-                height={1440}
-                sizes="(min-width: 768px) 260px, 194px"
-                quality={90}
-                loading="eager"
-                decoding="auto"
-                className={`absolute top-[33%] z-20 h-24 md:h-32 w-auto object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[180px]" : "left-[145px] md:left-[228px]"}`}
-                style={{ transform: isMobile ? "translateY(-50%) translateX(-30%) scale(0.82)" : "translateY(-50%) translateX(-20%) scale(0.90)" }}
-              />
-            </div>
-
             {/* Mobile Stack for Section 1 */}
             {isMobile && (
-              <div className="w-full flex flex-col items-center gap-6 mt-12 z-30">
-                <JourneySlider images={['/mist_1.webp', '/mist_1.webp']} className="max-w-[280px]" />
+              <div className="w-full flex flex-col items-center gap-6 z-30">
+                <JourneySlider 
+                  logo="/se1.webp" 
+                  logoAlt="Mist" 
+                  images={['/mist_1.webp', '/mist_1.webp']} 
+                  className="max-w-[280px]" 
+                />
                 <JourneyDescriptionBox 
                   description="Mist is a legendary entity in the underground automotive scene, bringing unparalleled style and performance." 
                   delay={1000} 
@@ -185,6 +161,8 @@ export default function JourneyPageClient() {
 
           {!isMobile && (
             <JourneyRightHalf 
+              logo="/se1.webp"
+              logoAlt="Mist"
               images={['/mist_1.webp', '/mist_1.webp']} 
               description="Mist is a legendary entity in the underground automotive scene, bringing unparalleled style and performance." 
               delay={1000} 
@@ -193,106 +171,37 @@ export default function JourneyPageClient() {
           )}
         </section>
 
-        {/* Section 2 */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_2.webp')] md:bg-[length:100%_100%] flex flex-col items-start pt-[8vh] overflow-hidden ${isMobile ? "pt-[2vh]" : ""}`}>
-          <div className={`container mx-auto px-6 md:px-12 relative z-20 ${isMobile ? "flex flex-col items-center" : ""}`}>
-            <div className={`flex flex-col md:flex-row justify-start items-start w-full gap-8 ${isMobile ? "items-center" : ""}`}>
-              <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
-                {/* Glass Box Layer - Sharp Edged Glass */}
-                <div 
-                  className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border border-white/20 rounded-none shadow-[0_0_50px_rgba(255,255,255,0.25)] hover:shadow-[0_0_70px_rgba(255,255,255,0.4)] transition-all duration-300 ${isMobile ? "pr-[138px]" : "pr-[90px] md:pr-[177px]"}`}
-                >
-                  {/* Dynamic Blobs - Palette: Gold & Racing Red */}
-                  <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-screen">
-                    <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#FFD700] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
-                    <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-[#EF4444] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
-                  </div>
-                  <JourneySectionTitle text="WITH" align="left" delay={500} />
-                </div>
-
-                {/* Logo Layer (Independent) */}
-                <Image
-                  src="/se2.webp" 
-                  alt="SE2" 
-                  width={2052}
-                  height={2048}
-                  sizes="128px"
-                  quality={90}
-                  loading="lazy"
-                  decoding="auto"
-                  className={`absolute top-[47%] z-20 h-24 md:h-32 w-auto object-contain pointer-events-none drop-shadow-2xl ${isMobile ? "left-[158px]" : "left-[160px] md:left-[215px]"}`}
-                  style={{ transform: isMobile ? "translateY(-50%) translateX(-15%) scale(0.85)" : "translateY(-50%) translateX(-5%)" }}
-                />
-              </div>
-
-              {/* Description Box exactly beside WITH box */}
+        {/* Section 2 - UI Racing Team */}
+        <section className="relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_2.webp')] md:bg-[length:100%_100%] flex flex-col items-center justify-center overflow-hidden">
+          <div className="container mx-auto px-6 md:px-12 relative z-20 flex flex-col items-center">
+            <div className="w-full flex flex-col items-center gap-6 z-30">
+              <JourneySlider 
+                logo="/se2.webp" 
+                logoAlt="UI Racing Team" 
+                images={['/uims_1.webp', '/uims_2.webp']} 
+                className={isMobile ? "max-w-[280px]" : "max-w-[360px]"}
+              />
               <JourneyDescriptionBox 
                 description="We partner with Universitas Indonesia Motorsport to deliver high-octane experiences and unparalleled performance." 
                 delay={1200} 
-                className="hidden md:flex" 
+                className={isMobile ? "max-w-[320px]" : "max-w-[460px]"} 
               />
             </div>
-
-            {/* Mobile Stack for Section 2 */}
-            {isMobile ? (
-              <div className="w-full flex flex-col items-center gap-6 mt-6 z-30">
-                <JourneySlider 
-                  images={['/uims_1.webp', '/uims_2.webp']} 
-                  className="max-w-[280px]"
-                />
-                <JourneyDescriptionBox 
-                  description="We partner with Universitas Indonesia Motorsport to deliver high-octane experiences and unparalleled performance." 
-                  delay={1200} 
-                  className="max-w-[320px]" 
-                />
-              </div>
-            ) : (
-              /* Photocard Box under WITH box */
-              <div className="w-full mt-6 ml-0 relative z-30">
-                <JourneySlider 
-                  images={['/uims_1.webp', '/uims_2.webp']} 
-                  className="max-w-[400px] aspect-square"
-                />
-              </div>
-            )}
           </div>
         </section>
 
-        {/* Section 3 - Left Half */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_3.webp')] md:bg-[length:100%_100%] flex items-start pt-[12vh] ${isMobile ? "flex-col pt-[8vh]" : ""}`}>
+        {/* Section 3 - Dream Shift Labs */}
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_3.webp')] md:bg-[length:100%_100%] flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
-            <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
-              {/* Glass Box Layer (Sized for both WITH and DSL area) - Sharp Edged Glass */}
-              <div 
-                className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border border-white/20 rounded-none shadow-[0_0_50px_rgba(255,255,255,0.25)] hover:shadow-[0_0_70px_rgba(255,255,255,0.4)] transition-all duration-300 ${isMobile ? "pr-[151px]" : "pr-[140px] md:pr-[260px]"}`}
-              >
-                {/* Dynamic Blobs - Palette: Electric Cyan & Hot Magenta */}
-                <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-screen">
-                  <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#00F0FF] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
-                  <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-[#FF007F] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
-                </div>
-                <JourneySectionTitle text="WITH" align="left" delay={500} />
-              </div>
-              
-              {/* Logo Layer (Independent of Box Layout) */}
-              <Image
-                src="/dsl.webp" 
-                alt="DSL" 
-                width={2400}
-                height={889}
-                sizes="(min-width: 768px) 346px, 216px"
-                quality={90}
-                loading="lazy"
-                decoding="auto"
-                className={`absolute top-[44%] z-20 h-20 md:h-32 w-auto object-contain pointer-events-none drop-shadow-2xl origin-left ${isMobile ? "left-[118px]" : "left-[114px] md:left-[168px]"}`}
-                style={{ transform: isMobile ? "translateY(-50%) translateX(-2%) scale(0.82)" : "translateY(-50%) scale(0.90)" }}
-              />
-            </div>
-
             {/* Mobile Stack for Section 3 */}
             {isMobile && (
-              <div className="w-full flex flex-col items-center gap-6 mt-12 z-30">
-                <JourneySlider images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} className="max-w-[280px]" />
+              <div className="w-full flex flex-col items-center gap-6 z-30">
+                <JourneySlider 
+                  logo="/dsl.webp" 
+                  logoAlt="Dream Shift Labs" 
+                  images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} 
+                  className="max-w-[280px]" 
+                />
                 <JourneyDescriptionBox 
                   description="Dream Shift Labs pioneers the digital frontier of automotive culture, crafting immersive experiences that transcend reality." 
                   delay={1400} 
@@ -304,6 +213,8 @@ export default function JourneyPageClient() {
 
           {!isMobile && (
             <JourneyRightHalf 
+              logo="/dsl.webp"
+              logoAlt="Dream Shift Labs"
               images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} 
               description="Dream Shift Labs pioneers the digital frontier of automotive culture, crafting immersive experiences that transcend reality." 
               delay={1400} 
