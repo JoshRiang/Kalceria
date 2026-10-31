@@ -15,7 +15,7 @@ export function CometEffect() {
 
   useEffect(() => {
     let active = true;
-    const random = createRuntimeSeededRandom("landing-comets-v1");
+    const random = createRuntimeSeededRandom("landing-comets-v2");
     let nextCometId = 0;
     const timeouts = new Set();
     const scheduleTimeout = (callback, delay) => {
@@ -29,35 +29,64 @@ export function CometEffect() {
     function spawnComet() {
       if (!active) return;
       const id = nextCometId++;
-      const isLeft = random() > 0.5;
-      const winW = typeof window !== 'undefined' ? window.innerWidth : 1000;
-      const winH = typeof window !== 'undefined' ? window.innerHeight : 800;
-      const aspect = winW / Math.max(winH, 1);
-
-      // Realistic diagonal trajectory (~30 to 40 deg angle across the sky)
-      const slope = 0.55 + random() * 0.25;
-
-      const startX = isLeft ? -20 : 120;
-      const startY = 5 + random() * 30;
-      const endX = isLeft ? 120 : -20;
-      const deltaX_pct = Math.abs(endX - startX);
-      const deltaY_pct = Math.min((deltaX_pct * aspect) * slope, 80);
-      const endY = startY + deltaY_pct;
       
-      const pixelDx = (endX - startX) * winW / 100;
-      const pixelDy = (endY - startY) * winH / 100;
-      const angle = (Math.atan2(pixelDy, pixelDx) * 180) / Math.PI;
+      const winW = typeof window !== 'undefined' ? window.innerWidth : 1200;
+      const isMobile = winW < 768;
+      const isTablet = winW >= 768 && winW < 1024;
 
-      setComets(prev => [...prev, { id, startX, startY, endX, endY, angle }]);
-      
+      // Realistic cosmic streak parameters tailored per device
+      const tailLength = isMobile 
+        ? Math.round(130 + random() * 40)
+        : isTablet 
+          ? Math.round(180 + random() * 50)
+          : Math.round(230 + random() * 70);
+
+      const distance = isMobile
+        ? Math.round(360 + random() * 120)
+        : isTablet
+          ? Math.round(520 + random() * 150)
+          : Math.round(650 + random() * 200);
+
+      const duration = isMobile
+        ? 1.15 + random() * 0.25
+        : 1.35 + random() * 0.35;
+
+      // 65% spawn from upper-left going down-right (~30-40°), 35% from upper-right going down-left (~140-150°)
+      const goesRight = random() > 0.35;
+      const angle = goesRight 
+        ? Math.round(30 + random() * 10) 
+        : Math.round(140 + random() * 10);
+
+      const startX = goesRight
+        ? Math.round(5 + random() * (isMobile ? 30 : 45))
+        : Math.round((isMobile ? 70 : 65) + random() * 25);
+
+      const startY = Math.round(5 + random() * (isMobile ? 25 : 30));
+
+      const isGold = random() > 0.75;
+
+      setComets(prev => [...prev, {
+        id,
+        startX,
+        startY,
+        angle,
+        distance,
+        duration,
+        tailLength,
+        isGold
+      }]);
+
       scheduleTimeout(() => {
         setComets(prev => prev.filter(c => c.id !== id));
-      }, 900);
+      }, Math.round((duration + 0.2) * 1000));
 
-      scheduleTimeout(spawnComet, 1600 + random() * 1200);
+      // Natural spawn cadence: every 2.4s to 4.2s
+      scheduleTimeout(spawnComet, Math.round(2400 + random() * 1800));
     }
 
-    spawnComet();
+    // Initial first spawn after brief delay
+    scheduleTimeout(spawnComet, 800);
+
     return () => {
       active = false;
       timeouts.forEach(clearTimeout);
@@ -66,21 +95,80 @@ export function CometEffect() {
   }, []);
 
   return (
-    <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden">
+    <div className="absolute inset-0 z-[25] pointer-events-none overflow-hidden">
       <AnimatePresence>
         {comets.map((c) => (
           <motion.div
             key={c.id}
-            initial={{ left: `${c.startX}%`, top: `${c.startY}%`, opacity: 0 }}
-            animate={{ left: `${c.endX}%`, top: `${c.endY}%`, opacity: [0, 1, 0] }}
+            initial={{ 
+              x: 0, 
+              opacity: 0, 
+              scale: 0.75 
+            }}
+            animate={{ 
+              x: c.distance, 
+              opacity: [0, 1, 1, 0], 
+              scale: [0.75, 1.15, 0.95] 
+            }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.7, ease: "linear" }}
-            className="absolute"
+            transition={{ 
+              duration: c.duration, 
+              ease: [0.25, 0.1, 0.25, 1.0],
+              opacity: {
+                times: [0, 0.15, 0.75, 1],
+                duration: c.duration,
+                ease: "easeInOut"
+              }
+            }}
+            className="absolute will-change-transform transform-gpu"
+            style={{ 
+              left: `${c.startX}%`, 
+              top: `${c.startY}%`,
+              transform: `rotate(${c.angle}deg)`,
+              transformOrigin: "0 0"
+            }}
           >
-            <div 
-              className="w-32 md:w-64 h-[1px] md:h-[2px] bg-gradient-to-r from-transparent via-cyan-300 to-white blur-[0.5px]"
-              style={{ transform: `rotate(${c.angle}deg)`, transformOrigin: "left center" }}
-            />
+            <div className="relative flex items-center">
+              {/* Soft Tapered Atmospheric Flare (Glow halo around trail) */}
+              <div 
+                className="absolute right-0 h-[6px] md:h-[8px] rounded-full blur-[2px] pointer-events-none opacity-60"
+                style={{
+                  width: `${Math.round(c.tailLength * 0.85)}px`,
+                  background: c.isGold
+                    ? "linear-gradient(90deg, transparent 0%, rgba(251,191,36,0.3) 40%, rgba(255,255,255,0.8) 100%)"
+                    : "linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.35) 40%, rgba(255,255,255,0.85) 100%)"
+                }}
+              />
+
+              {/* Core High-Density Comet Trail */}
+              <div 
+                className="absolute right-0 h-[2px] md:h-[2.5px] rounded-full pointer-events-none"
+                style={{
+                  width: `${c.tailLength}px`,
+                  background: c.isGold
+                    ? "linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.2) 20%, rgba(251,191,36,0.8) 75%, #ffffff 100%)"
+                    : "linear-gradient(90deg, transparent 0%, rgba(0,240,255,0.2) 20%, rgba(0,240,255,0.85) 75%, #ffffff 100%)",
+                  boxShadow: c.isGold
+                    ? "0 0 10px rgba(251,191,36,0.6)"
+                    : "0 0 10px rgba(0,240,255,0.6)"
+                }}
+              />
+
+              {/* Radiant Comet Nucleus / Head (Forward-Facing at Leading Edge x=0) */}
+              <div 
+                className="absolute right-0 translate-x-1/2 w-2 h-2 md:w-3 md:h-3 rounded-full bg-white z-10 pointer-events-none"
+                style={{
+                  boxShadow: c.isGold
+                    ? "0 0 10px #ffffff, 0 0 20px #fbbf24, 0 0 35px #f59e0b"
+                    : "0 0 10px #ffffff, 0 0 20px #00f0ff, 0 0 35px #38bdf8"
+                }}
+              />
+
+              {/* Diamond Sparkle Lens Flare */}
+              <div 
+                className="absolute right-0 translate-x-1/2 w-4 h-4 md:w-6 md:h-6 bg-white/40 blur-[1px] rotate-45 pointer-events-none"
+              />
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>
