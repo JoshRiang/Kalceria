@@ -2,93 +2,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-// ─── Gear Components ─────────────────────────────────────────────────────────
-function GearShape({ id, cx, cy, pitchR, toothH, teeth, angleOffset = 0, duration = 4, spinDir = 1 }) {
-  const outerR = pitchR + toothH;
-  const innerR = pitchR - toothH * 0.45;
-  const hubR = pitchR * 0.30;
-  const boreR = pitchR * 0.11;
-  const toothArc = (2 * Math.PI) / teeth;
-  const toothHalf = toothArc * 0.38;
-
-  const pts = [];
-  for (let i = 0; i < teeth; i++) {
-    const base = (i / teeth) * Math.PI * 2 + angleOffset;
-    pts.push(
-      `${cx + Math.cos(base - toothHalf * 1.5) * innerR},${cy + Math.sin(base - toothHalf * 1.5) * innerR}`,
-      `${cx + Math.cos(base - toothHalf * 0.9) * pitchR},${cy + Math.sin(base - toothHalf * 0.9) * pitchR}`,
-      `${cx + Math.cos(base - toothHalf * 0.52) * outerR},${cy + Math.sin(base - toothHalf * 0.52) * outerR}`,
-      `${cx + Math.cos(base + toothHalf * 0.52) * outerR},${cy + Math.sin(base + toothHalf * 0.52) * outerR}`,
-      `${cx + Math.cos(base + toothHalf * 0.9) * pitchR},${cy + Math.sin(base + toothHalf * 0.9) * pitchR}`,
-      `${cx + Math.cos(base + toothHalf * 1.5) * innerR},${cy + Math.sin(base + toothHalf * 1.5) * innerR}`
-    );
-  }
-  const ptStr = pts.join(" ");
-  const bId = `gb${id}`, fId = `gf${id}`, sId = `gs${id}`;
-
-  return (
-    <g>
-      <animateTransform attributeName="transform" type="rotate" from={`0 ${cx} ${cy}`} to={`${spinDir * 360} ${cx} ${cy}`} dur={`${duration}s`} repeatCount="indefinite" />
-      <defs>
-        <radialGradient id={bId} cx="32%" cy="28%" r="72%">
-          <stop offset="0%"   stopColor="#d4af37" />
-          <stop offset="40%"  stopColor="#8B6914" />
-          <stop offset="100%" stopColor="#2a1f00" />
-        </radialGradient>
-        <radialGradient id={fId} cx="38%" cy="32%" r="65%">
-          <stop offset="0%"   stopColor="#6b4f12" />
-          <stop offset="100%" stopColor="#0d0900" />
-        </radialGradient>
-        <radialGradient id={sId} cx="28%" cy="22%" r="52%">
-          <stop offset="0%"   stopColor="rgba(255,220,80,0.65)" />
-          <stop offset="65%"  stopColor="rgba(255,180,0,0.06)" />
-          <stop offset="100%" stopColor="rgba(255,180,0,0)" />
-        </radialGradient>
-      </defs>
-      <polygon points={ptStr} fill="#000" opacity={0.45} transform="translate(2,3)" />
-      <polygon points={ptStr} fill={`url(#${bId})`} />
-      <circle  cx={cx} cy={cy} r={pitchR * 0.86} fill={`url(#${fId})`} />
-      {[0,1,2,3].map(i => {
-        const a = (i / 4) * Math.PI * 2 + angleOffset;
-        return <line key={i} x1={cx + Math.cos(a) * boreR * 2.2} y1={cy + Math.sin(a) * boreR * 2.2} x2={cx + Math.cos(a) * hubR * 0.8} y2={cy + Math.sin(a) * hubR * 0.8} stroke="#6b4f12" strokeWidth="1.3" />;
-      })}
-      <circle cx={cx} cy={cy} r={hubR} fill="#1a1000" stroke="#c8a020" strokeWidth="1.1" />
-      <circle cx={cx - hubR*0.22} cy={cy - hubR*0.22} r={hubR*0.48} fill="none" stroke="rgba(255,210,60,0.25)" strokeWidth="0.9" />
-      <circle cx={cx} cy={cy} r={boreR} fill="#050300" />
-      <polygon points={ptStr} fill={`url(#${sId})`} opacity={0.85} />
-      <polygon points={ptStr} fill="none" stroke="rgba(255,200,50,0.22)" strokeWidth="0.8" />
-    </g>
-  );
-}
-
-function StaticGears({ visible }) {
-  const p1 = 36, p2 = Math.round(36 * 0.618), p3 = Math.round(36 * 0.618 * 0.618);
-  const h1 = 9, h2 = Math.round(9 * 0.618), h3 = Math.max(3, Math.round(h2 * 0.618));
-  const cx1 = 50, cy1 = 50;
-  const a12 = Math.PI * 0.15;
-  const d12 = p1 + p2;
-  const cx2 = cx1 + Math.cos(a12) * d12;
-  const cy2 = cy1 + Math.sin(a12) * d12;
-  const a23 = Math.PI * -0.25;
-  const d23 = p2 + p3;
-  const cx3 = cx2 + Math.cos(a23) * d23;
-  const cy3 = cy2 + Math.sin(a23) * d23;
-  const svgW = cx3 + p3 + h3 + 15;
-  const svgH = Math.max(cy1 + p1 + h1, cy2 + p2 + h2, cy3 + p3 + h3) + 15;
-
-  return (
-    <div className="h-[120px] flex flex-col items-center justify-center">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: visible ? 1 : 0 }} transition={{ duration: 1.2, ease: "easeOut" }}>
-        <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ filter: "drop-shadow(0 4px 18px rgba(180,120,0,0.7))", transform: "scale(1.1)" }}>
-          <GearShape id="WA" cx={cx1} cy={cy1} pitchR={p1} toothH={h1} teeth={18} duration={4} spinDir={1} />
-          <GearShape id="WB" cx={cx2} cy={cy2} pitchR={p2} toothH={h2} teeth={Math.round(18*p2/p1)} duration={4*(p2/p1)} spinDir={-1} />
-          <GearShape id="WC" cx={cx3} cy={cy3} pitchR={p3} toothH={h3} teeth={Math.round(18*p3/p1)} duration={4*(p3/p1)} spinDir={1} />
-        </svg>
-      </motion.div>
-    </div>
-  );
-}
-
 // ─── Typewriter Component (Slower & Smoother) ──────────────────────────────
 function Typewriter({ text, speed = 120, delay = 0, dir = "ltr" }) {
   const [displayed, setDisplayed] = useState("");
@@ -328,15 +241,10 @@ export default function WelcomeTransition({ username, onComplete }) {
           </h1>
         </div>
         
-        {/* Gears & Redirect Status - Fixed Height Container */}
-        {!isMobile && (
-          <div className="flex flex-col items-center mt-12 h-[160px] justify-start">
-            <StaticGears visible={showGears} />
-            <div className="h-8">
-              {showGears && <RedirectText />}
-            </div>
-          </div>
-        )}
+        {/* Redirect Status - Tight, modern spacing */}
+        <div className="flex flex-col items-center mt-3 sm:mt-5 h-8 justify-center">
+          {showGears && <RedirectText />}
+        </div>
       </div>
     </motion.div>
   );

@@ -70,3 +70,4 @@ export function MapWalkthroughTooltip({ show = true }) {
     </AnimatePresence>
   );
 }
+
