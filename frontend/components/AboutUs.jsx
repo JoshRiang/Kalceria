@@ -374,7 +374,7 @@ export default function AboutUs() {
                    initial={{ opacity: 0, y: 15, scale: 0.9 }}
                    animate={{ opacity: 1, y: 0, scale: 1 }}
                    exit={{ opacity: 0, y: 15, scale: 0.9 }}
-                   className="absolute bottom-[36vh] sm:bottom-[38vh] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 rounded-[1.2rem] pointer-events-auto"
+                   className="absolute bottom-[20vh] xs:bottom-[22vh] sm:bottom-[24vh] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 rounded-[1.2rem] pointer-events-auto"
                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
                  >
                    {/* Photo Box */}
@@ -622,17 +622,17 @@ export default function AboutUs() {
           onMouseLeave={() => setHoverMentor(false)}
           onClick={() => setHoverMentor((p) => !p)}
         >
-          <div className="relative">
+          <div className="relative w-max flex items-end justify-center mx-auto">
             <Image
               src="/dy_3.webp" 
               alt="Ditya Alif K."
               width={1536}
               height={2729}
-              sizes="(max-width: 768px) 245px, 372px"
+              sizes="(max-width: 768px) 190px, 372px"
               quality={85}
               loading="lazy"
               decoding="async"
-              className="object-contain pointer-events-auto opacity-95 cursor-pointer md:cursor-help w-[220px] h-[220px] xs:w-[245px] xs:h-[245px] md:w-[23.25rem] md:h-[23.25rem] transition-transform duration-300"
+              className="object-contain block pointer-events-auto opacity-95 cursor-pointer md:cursor-help w-[150px] xs:w-[175px] h-auto md:w-[23.25rem] md:h-[23.25rem] transition-transform duration-300"
               style={{ rotate: isMobile ? "0deg" : "-10.5deg" }}
             />
             {/* White L-corner border at bottom for mobile (matching Coki on SeeEvent) */}
