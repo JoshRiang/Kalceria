@@ -139,7 +139,7 @@ export default function JourneyPageClient() {
         style={{ pointerEvents: isIntroActive ? 'none' : 'auto' }}
       >
         {/* Section 1 - Mist */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_1.webp')] md:bg-[length:100%_100%] flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_1.webp')] md:bg-cover md:bg-center flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             {/* Mobile Stack for Section 1 */}
             {isMobile && (
@@ -172,7 +172,7 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 2 - UI Racing Team */}
-        <section className="relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_2.webp')] md:bg-[length:100%_100%] flex flex-col items-center justify-center overflow-hidden">
+        <section className="relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_2.webp')] md:bg-cover md:bg-center flex flex-col items-center justify-center overflow-hidden">
           <div className="container mx-auto px-6 md:px-12 relative z-20 flex flex-col items-center">
             <div className="w-full flex flex-col items-center gap-6 z-30">
               <JourneySlider 
@@ -191,7 +191,7 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 3 - Dream Shift Labs */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_3.webp')] md:bg-[length:100%_100%] flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_3.webp')] md:bg-cover md:bg-center flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             {/* Mobile Stack for Section 3 */}
             {isMobile && (

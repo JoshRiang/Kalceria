@@ -444,80 +444,60 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Prince Rupert's Drop Assembly */}
         <PrinceRupertDrop />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 items-center gap-6 md:gap-10">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 flex flex-col lg:grid lg:grid-cols-2 items-center gap-6 lg:gap-10">
           
-          {/* TikTok Feed Container: Order 1 on mobile, Order 2 on desktop */}
-          <div className="relative flex items-center justify-center md:justify-start ml-0 md:-ml-[20%] py-4 md:py-10 order-1 md:order-2 w-full">
+          {/* Typography: Top center on mobile & iPad, Column 1 on desktop */}
+          <div className="relative flex flex-col items-center lg:items-start justify-center text-center lg:text-left p-2 md:p-4 order-1 w-full">
             <GoldenDust />
-            {/* Clean, minimalist video container (shrunk 20% on mobile) */}
-            <div className={`relative w-full ${isMobile ? "max-w-[210px] aspect-[9/16]" : "max-w-[289px] aspect-[340/680]"} group z-10 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 bg-black shadow-2xl`}>
-              <FindMoreSlider />
-            </div>
-          </div>
-
-          {/* Typography & Socials: Order 2 on mobile (under video), Order 1 on desktop */}
-          <div className="relative flex flex-col items-center md:items-start justify-center text-center md:text-left p-2 md:p-4 order-2 md:order-1">
-            <GoldenDust />
-            <div className="relative z-10 flex flex-col items-center md:items-start w-full">
-              {/* 1. Title: Under video on mobile */}
+            <div className="relative z-10 flex flex-col items-center lg:items-start w-full">
+              {/* 1. Title: Top center on mobile and iPad */}
               <motion.h2 
                 animate={isMobile ? { opacity: 1 } : { opacity: [0.3, 1, 0.3] }}
                 transition={isMobile ? { duration: 0 } : { repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                className="text-4xl sm:text-5xl md:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-4 md:mb-6 font-mono text-center md:text-left"
+                className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-3 lg:mb-6 font-mono text-center lg:text-left"
               >
                 FIND MORE
               </motion.h2>
 
-              {/* 2. Coki mascot: Under Title on mobile (shrunk) */}
-              {isMobile && (
-                <motion.div 
-                  animate={{ y: [-6, 6, -6], rotate: [-1.5, 1.5, -1.5] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                  className="w-48 xs:w-56 h-auto my-3 pointer-events-none z-10"
-                >
-                  <Image src="/hp/kalcer_man_hp.webp" alt="Kalcer Mascot HP" width={2048} height={2048} unoptimized loading="eager" decoding="auto" className="w-full h-auto object-contain drop-shadow-[0_10px_25px_rgba(0,0,0,0.6)]" />
-                </motion.div>
-              )}
-
-              {/* 3. Description: Under Coki on mobile */}
-              <p className="font-sans text-gray-300 text-sm md:text-lg max-w-md text-center md:text-left leading-relaxed px-4 md:px-0">
+              {/* 2. Description: Sub description right below title on mobile & iPad */}
+              <p className="font-sans text-gray-300 text-sm sm:text-base md:text-lg max-w-md md:max-w-xl lg:max-w-md text-center lg:text-left leading-relaxed px-4 lg:px-0">
                 Wahib embut keren banget wowowowow. Kalceria is the ultimate destination for automotive euphoria.
               </p>
 
-              {/* 4. Social Media Icon List: Under Description on mobile */}
-              <div className="flex flex-row md:flex-col gap-6 mt-6 md:mt-8 items-center justify-center md:items-start w-full">
+              {/* 3. Social Media Icon List: Shown in left column on desktop */}
+              <div className="hidden lg:flex flex-col gap-6 mt-8 items-start w-full">
                 {/* Instagram Icon */}
                 <a 
                   href="https://www.instagram.com/kalceria/" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="flex flex-col md:flex-row items-center gap-2 md:gap-4 group cursor-pointer"
+                  className="flex flex-row items-center gap-4 group cursor-pointer"
                 >
-                  <div className={`relative shrink-0 flex items-center justify-center ${isMobile ? "w-10 h-10" : "w-8 md:w-10 h-8 md:h-10"}`}>
+                  <div className="relative shrink-0 flex items-center justify-center w-8 md:w-10 h-8 md:h-10">
                     <Image
                       src="/ig_gray.webp" 
                       alt="Instagram" 
-                      width={1077}
-                      height={976}
-                      unoptimized
-                      loading="eager"
-                      decoding="auto"
+                      width={1077} 
+                      height={976} 
+                      unoptimized 
+                      loading="eager" 
+                      decoding="auto" 
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.4]" 
                       draggable={false}
                     />
                     <Image
                       src="/ig.webp" 
                       alt="Instagram Colored" 
-                      width={1077}
-                      height={976}
-                      unoptimized
-                      loading="eager"
-                      decoding="auto"
+                      width={1077} 
+                      height={976} 
+                      unoptimized 
+                      loading="eager" 
+                      decoding="auto" 
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.4]" 
                       draggable={false}
                     />
                   </div>
-                  <span className={`font-sans text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center ${isMobile ? "text-[13px]" : "text-[11px] md:text-sm"}`}>
+                  <span className="font-sans text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-left text-sm">
                     Instagram - kalceria
                   </span>
                 </a>
@@ -527,38 +507,122 @@ export default function LandingPage({ onNavigateAuth }) {
                   href="https://www.tiktok.com/@gallerykalceria" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="flex flex-col md:flex-row items-center gap-2 md:gap-4 group cursor-pointer"
+                  className="flex flex-row items-center gap-4 group cursor-pointer"
                 >
-                  <div className={`relative shrink-0 ${isMobile ? "w-10 h-10" : "w-8 md:w-10 h-8 md:h-10"}`}>
+                  <div className="relative shrink-0 w-8 md:w-10 h-8 md:h-10">
                     <Image
                       src="/tiktok_gray.webp" 
                       alt="TikTok" 
-                      width={944}
-                      height={1117}
-                      unoptimized
-                      loading="eager"
-                      decoding="auto"
+                      width={944} 
+                      height={1117} 
+                      unoptimized 
+                      loading="eager" 
+                      decoding="auto" 
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" 
                       draggable={false}
                     />
                     <Image
                       src="/tiktok.webp" 
                       alt="TikTok Colored" 
-                      width={944}
-                      height={1117}
-                      unoptimized
-                      loading="eager"
-                      decoding="auto"
+                      width={944} 
+                      height={1117} 
+                      unoptimized 
+                      loading="eager" 
+                      decoding="auto" 
                       className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" 
                       draggable={false}
                     />
                   </div>
-                  <span className={`font-sans text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center ${isMobile ? "text-[13px]" : "text-[11px] md:text-sm"}`}>
+                  <span className="font-sans text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-left text-sm">
                     tiktok kalceria
                   </span>
                 </a>
               </div>
             </div>
+          </div>
+
+          {/* TikTok Feed Container: Center middle on mobile & iPad, Column 2 on desktop */}
+          <div className="relative flex items-center justify-center lg:justify-start ml-0 lg:-ml-[20%] py-4 md:py-6 lg:py-10 order-2 w-full">
+            <GoldenDust />
+            {/* Clean, minimalist video container */}
+            <div className={`relative w-full ${isMobile ? "max-w-[210px] aspect-[9/16]" : "max-w-[270px] md:max-w-[290px] aspect-[340/680]"} group z-10 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 bg-black shadow-2xl mx-auto lg:mx-0`}>
+              <FindMoreSlider />
+            </div>
+          </div>
+
+          {/* Social Media Icon List: Below Video on mobile & iPad */}
+          <div className="flex lg:hidden flex-row gap-6 mt-4 mb-2 items-center justify-center w-full order-3 z-20">
+            {/* Instagram Icon */}
+            <a 
+              href="https://www.instagram.com/kalceria/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex flex-col sm:flex-row items-center gap-2 group cursor-pointer"
+            >
+              <div className="relative shrink-0 flex items-center justify-center w-8 h-8">
+                <Image
+                  src="/ig_gray.webp" 
+                  alt="Instagram" 
+                  width={1077} 
+                  height={976} 
+                  unoptimized 
+                  loading="eager" 
+                  decoding="auto" 
+                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.3]" 
+                  draggable={false}
+                />
+                <Image
+                  src="/ig.webp" 
+                  alt="Instagram Colored" 
+                  width={1077} 
+                  height={976} 
+                  unoptimized 
+                  loading="eager" 
+                  decoding="auto" 
+                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.3]" 
+                  draggable={false}
+                />
+              </div>
+              <span className="font-sans text-gray-400 font-semibold tracking-wide text-xs sm:text-sm">
+                Instagram - kalceria
+              </span>
+            </a>
+
+            {/* TikTok Icon */}
+            <a 
+              href="https://www.tiktok.com/@gallerykalceria" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex flex-col sm:flex-row items-center gap-2 group cursor-pointer"
+            >
+              <div className="relative shrink-0 w-8 h-8">
+                <Image
+                  src="/tiktok_gray.webp" 
+                  alt="TikTok" 
+                  width={944} 
+                  height={1117} 
+                  unoptimized 
+                  loading="eager" 
+                  decoding="auto" 
+                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" 
+                  draggable={false}
+                />
+                <Image
+                  src="/tiktok.webp" 
+                  alt="TikTok Colored" 
+                  width={944} 
+                  height={1117} 
+                  unoptimized 
+                  loading="eager" 
+                  decoding="auto" 
+                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" 
+                  draggable={false}
+                />
+              </div>
+              <span className="font-sans text-gray-400 font-semibold tracking-wide text-xs sm:text-sm">
+                tiktok kalceria
+              </span>
+            </a>
           </div>
 
         </div>

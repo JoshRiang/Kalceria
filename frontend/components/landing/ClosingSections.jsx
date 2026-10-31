@@ -239,138 +239,111 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
           )}
         </div>
 
-        {/* Static Star Wars Backdrop Focal Point - Desktop Only */}
-        {!isMobile && (
-          <div 
-            className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-6xl h-full flex items-center justify-center z-[5] pointer-events-none"
-            style={{ opacity: 0.7 }}
-          >
-            <Image
-              src="/starwarr.webp" 
-              alt="Battle of Heroes" 
-              width={974}
-              height={1024}
-              sizes="1152px"
-              quality={75}
-              loading="lazy"
-              decoding="async"
-              className="w-full h-auto max-h-[85vh] object-contain scale-[1.82]"
-              style={{ 
-                filter: "contrast(1.2) brightness(0.9) saturate(1.1) drop-shadow(0 0 80px rgba(0,0,0,0.8))",
-              }}
-            />
-          </div>
-        )}
-
         {/* Scattered Aurora Effect - TOP ATMOSPHERE */}
         <div className="absolute inset-0 z-40 pointer-events-none">
           <AuroraParticles isMobile={isMobile} />
         </div>
         
-        <div className="relative z-10 w-full max-w-6xl px-6 md:px-8 flex flex-col items-center gap-8 md:gap-14">
-           {/* Collaboration Header - Centered between Darth Vader & Obi-Wan on desktop without face overlap */}
-           <div 
-             className="w-full max-w-lg md:max-w-xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-2.5 sm:gap-3 md:gap-4 z-20"
-             style={{ transform: `translateY(${isMobile ? "4%" : "12%"})` }}
-           >
-              {/* Kalceria Logo - Left column, right-aligned, still and compact */}
+        {/* Unified, Coherent Vertical Alignment: Kalceria X DSL -> JOIN US? -> WhatsApp -> SEE THE JOURNEY */}
+        <div className="relative z-10 w-full max-w-4xl px-6 flex flex-col items-center justify-center gap-6 sm:gap-7 md:gap-8 mx-auto text-center">
+           {/* 1. Collaboration Header (Kalceria X DSL) - Big like mobile, semi-transparent X */}
+           <div className="w-full max-w-xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-5 md:gap-6 z-20">
+              {/* Kalceria Logo - Big like mobile */}
               <div className="flex justify-end items-center">
                 <img 
                   src="/logologin.webp" 
                   alt="Kalceria" 
-                  className="h-9 sm:h-10 md:h-12 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)] rotate-0"
+                  className="h-16 xs:h-[72px] sm:h-20 md:h-20 w-auto object-contain drop-shadow-[0_0_35px_rgba(255,0,0,0.5)] rotate-0"
                 />
               </div>
 
-              {/* The "X" - Center column, exactly on the 50% centerline, equivalent height, no gradient, no floating animation */}
+              {/* The "X" - Semi-transparent, height matched to logos */}
               <div className="flex items-center justify-center px-1">
-                <svg width="48" height="48" viewBox="0 0 100 100" className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 drop-shadow-[0_0_20px_rgba(255,255,255,0.7)] select-none pointer-events-none">
-                  <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="#ffffff" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+                <svg width="64" height="64" viewBox="0 0 100 100" className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 select-none pointer-events-none drop-shadow-[0_0_15px_rgba(255,255,255,0.25)]">
+                  <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="rgba(255,255,255,0.4)" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                     X
                   </text>
                 </svg>
               </div>
 
-              {/* DSL Logo - Right column, left-aligned, still and compact */}
+              {/* DSL Logo - Big like mobile */}
               <div className="flex justify-start items-center">
                 <img 
                   src="/dsl.webp" 
                   alt="DSL" 
-                  className="h-9 sm:h-10 md:h-12 w-auto object-contain drop-shadow-[0_0_25px_rgba(0,255,255,0.5)] rotate-0"
+                  className="h-16 xs:h-[72px] sm:h-20 md:h-20 w-auto object-contain drop-shadow-[0_0_35px_rgba(0,255,255,0.5)] rotate-0"
                 />
               </div>
            </div>
            
-           <div className="flex flex-col items-center gap-6 md:gap-8">
-              {/* JOIN US? - Centered and aligned */}
-              <motion.h2 
-                initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
-                whileInView={{ opacity: 1, y: 0, x: 0, scale: isMobile ? 1.05 : 0.85, filter: "blur(0px)" }}
-                viewport={{ once: false, amount: 0.5 }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white text-center flex items-center justify-center"
-                style={{ 
-                  textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)"
-                }}
-              >
-                <span className="relative inline-flex items-baseline">
-                  <span>JOIN US</span>
-                  <span className="w-0 overflow-visible select-none font-black inline-block">?</span>
-                </span>
-              </motion.h2>
+           {/* 2. JOIN US? - Dead center aligned */}
+           <motion.h2 
+             initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
+             whileInView={{ opacity: 1, y: 0, x: 0, filter: "blur(0px)" }}
+             viewport={{ once: false, amount: 0.5 }}
+             transition={{ duration: 1, ease: "easeOut" }}
+             className="text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter text-white text-center flex items-center justify-center select-none"
+             style={{ 
+               textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)"
+             }}
+           >
+             <span className="relative inline-flex items-baseline">
+               <span>JOIN US</span>
+               <span className="w-0 overflow-visible select-none font-black inline-block">?</span>
+             </span>
+           </motion.h2>
 
-              {/* WhatsApp Logo - Centered directly under JOIN US? */}
-              <motion.img 
-                src="/wa_logo.webp" 
-                alt="WhatsApp" 
-                className={`${isMobile ? "h-[72px]" : "h-14 md:h-24"} w-auto object-contain drop-shadow-[0_0_40px_rgba(37,211,102,0.5)] z-20`}
-                animate={{ y: [0, -6, 0] }}
-                transition={{ 
-                  y: { duration: 5, repeat: Infinity, ease: "easeInOut" }
-                }}
-              />
+           {/* 3. WhatsApp Logo - Dead center aligned */}
+           <motion.img 
+             src="/wa_logo.webp" 
+             alt="WhatsApp" 
+             className="h-14 sm:h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_35px_rgba(37,211,102,0.5)] z-20 cursor-pointer"
+             animate={{ y: [0, -6, 0] }}
+             transition={{ 
+               y: { duration: 5, repeat: Infinity, ease: "easeInOut" }
+             }}
+           />
 
-              <Link href="/journey" onClick={() => {
-                sessionStorage.setItem("landingScrollTarget", "section-journey");
-                sessionStorage.setItem("landingScrollY", window.scrollY);
-              }}>
-                {/* See The Journey Button - Natural Cloud Fader */}
-                <motion.button
-                  whileHover={{ 
-                    scale: 1.05,
-                    boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                  className="relative mt-2 md:mt-4 mx-auto z-30 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-lg md:text-3xl px-8 py-4 md:px-14 md:py-6 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300"
-                  style={{
-                    maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
-                    WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
-                  }}
-                >
-                  {/* Peach Blob */}
-                  <motion.div 
-                    animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute -top-8 -left-4 w-28 h-28 bg-[#FFB07C] rounded-full blur-[26px] opacity-75 z-0 pointer-events-none"
-                  />
-                  {/* Green Blob */}
-                  <motion.div 
-                    animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute -bottom-8 -right-4 w-28 h-28 bg-green-400 rounded-full blur-[26px] opacity-70 z-0 pointer-events-none"
-                  />
-                  
-                  <span 
-                    className="relative z-10 whitespace-nowrap"
-                    style={{
-                      textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
-                    }}
-                  >
-                    SEE THE JOURNEY
-                  </span>
-                </motion.button>
-              </Link>
-           </div>
+           {/* 4. See The Journey Button - Dead center aligned */}
+           <Link href="/journey" onClick={() => {
+             sessionStorage.setItem("landingScrollTarget", "section-journey");
+             sessionStorage.setItem("landingScrollY", window.scrollY);
+           }}>
+             <motion.button
+               whileHover={{ 
+                 scale: 1.05,
+                 boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
+               }}
+               whileTap={{ scale: 0.95 }}
+               className="relative mx-auto z-30 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-lg md:text-3xl px-8 py-4 md:px-14 md:py-6 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300"
+               style={{
+                 maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
+                 WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
+               }}
+             >
+               {/* Peach Blob */}
+               <motion.div 
+                 animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }}
+                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                 className="absolute -top-8 -left-4 w-28 h-28 bg-[#FFB07C] rounded-full blur-[26px] opacity-75 z-0 pointer-events-none"
+               />
+               {/* Green Blob */}
+               <motion.div 
+                 animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }}
+                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                 className="absolute -bottom-8 -right-4 w-28 h-28 bg-green-400 rounded-full blur-[26px] opacity-70 z-0 pointer-events-none"
+               />
+               
+               <span 
+                 className="relative z-10 whitespace-nowrap"
+                 style={{
+                   textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
+                 }}
+               >
+                 SEE THE JOURNEY
+               </span>
+             </motion.button>
+           </Link>
         </div>
       </section>
 

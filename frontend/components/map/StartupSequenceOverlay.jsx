@@ -117,9 +117,9 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, ease: "easeOut" }}
-            className="relative z-10 w-full h-screen flex flex-col items-center justify-center pb-24 md:pb-0 md:justify-start md:pt-24"
+            className="relative z-10 w-full h-screen flex flex-col items-center justify-center pb-24 md:pb-0 md:justify-start pt-16 md:pt-20 lg:pt-24"
           >
-            {/* Main Title Section - Perfectly Centered on Mobile */}
+            {/* Main Title Section - Stacked for mobile & iPad to consume upper half */}
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -127,7 +127,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
               className="flex flex-col items-center mb-2 sm:mb-4 px-4 w-full text-center"
             >
               <h1
-                className={`text-5xl xs:text-6xl sm:text-7xl md:text-8xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-1000 text-center flex flex-col md:flex-row items-center justify-center gap-1 md:gap-4 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
+                className={`text-5xl xs:text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-1000 text-center flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-4 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
                 style={{
                   textShadow: startupProgress >= 50 ? `
                       2px 2px 0 #1a1a24,
@@ -151,10 +151,10 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
               </h1>
             </motion.div>
 
-            {/* Floating Kalcerman Image & Portal - Hidden on Mobile HP, PRESERVED on Tablet & Desktop */}
+            {/* Floating Kalcerman Image & Portal - Middle/Bottom for iPad, Top/Center for Desktop */}
             <AnimatePresence>
               {startupProgress >= 50 && (
-                <div className="hidden md:flex relative w-[280px] xs:w-[320px] sm:w-[360px] md:w-[440px] h-[220px] sm:h-[300px] md:h-[450px] flex-col items-center justify-center my-1 sm:my-3 md:my-4 z-20 mx-auto -translate-x-0 md:-translate-x-[15%] -translate-y-0 md:-translate-y-[15%]">
+                <div className="hidden md:flex relative w-[280px] xs:w-[320px] sm:w-[360px] md:w-[440px] lg:w-[460px] h-[220px] sm:h-[300px] md:h-[420px] lg:h-[450px] flex-col items-center justify-center my-3 sm:my-4 md:my-6 lg:my-4 z-20 mx-auto -translate-x-0 md:-translate-x-[6%] lg:-translate-x-[15%] translate-y-6 md:translate-y-12 lg:-translate-y-[15%]">
                   {/* Glowing 3D Grid Floor when background is dark */}
                   <div
                     className="absolute bottom-[-60px] md:bottom-[-100px] w-[300px] sm:w-[400px] md:w-[500px] h-[200px] md:h-[300px] opacity-20 pointer-events-none transition-all duration-1000 ease-out"
