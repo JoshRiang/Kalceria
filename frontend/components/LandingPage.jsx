@@ -297,10 +297,11 @@ export default function LandingPage({ onNavigateAuth }) {
           </div>
 
           {/* Crystal 1 Bottom Left (Truncated at Bottom) */}
-          <Image src="/crystal_1.webp" alt="Crystal 1" width={2016} height={2120} unoptimized loading="eager" decoding="auto" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-4 h-[80px] md:h-[130px] w-auto object-contain opacity-80 z-0 hidden md:block" />
+          <Image src="/crystal_1.webp" alt="Crystal 1" width={2016} height={2120} unoptimized loading="eager" decoding="auto" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-2 xl:left-4 h-[80px] md:h-[120px] xl:h-[130px] w-auto object-contain opacity-80 z-[15] hidden md:block" />
 
-          <div className="absolute bottom-0 left-12 md:left-40 hidden md:flex items-end">
-            <Image src="/grup.webp" alt="Group" width={2064} height={1655} unoptimized loading="eager" decoding="auto" className="relative z-10 h-[180px] md:h-[280px] w-auto object-contain translate-y-[2.5px] opacity-35" />
+          {/* Group Silhouette: Shifted more left for iPad Family to eliminate overlap with carousel and explore button */}
+          <div className="absolute bottom-0 left-2 sm:left-4 md:left-2 lg:left-6 xl:left-40 hidden md:flex items-end z-10">
+            <Image src="/grup.webp" alt="Group" width={2064} height={1655} unoptimized loading="eager" decoding="auto" className="relative z-10 h-[180px] md:h-[220px] lg:h-[250px] xl:h-[280px] w-auto object-contain translate-y-[2.5px] opacity-35" />
           </div>
 
           <div className="absolute bottom-0 right-4 md:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
