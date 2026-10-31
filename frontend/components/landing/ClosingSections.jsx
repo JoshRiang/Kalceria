@@ -86,7 +86,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
             }}
             whileTap={{ scale: 0.95 }}
-            className="absolute z-30 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-base sm:text-lg md:text-2xl px-6 py-3.5 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 transform-gpu will-change-transform"
+            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-base sm:text-lg md:text-2xl px-6 py-3.5 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 transform-gpu will-change-transform"
             style={{
               maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
               WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
@@ -160,14 +160,14 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             />
           ))}
 
-          {/* Floating Clouds Assembly */}
+          {/* Floating Clouds Assembly - Redistributed on iPad Family for open, spacious framing around Earth with zero button overlap */}
           {!isMobile && (
             <>
-              {/* Left Cloud: awan_3 - Now fully opaque */}
+              {/* Left Cloud: awan_3 - Redistributed for iPad family to upper-left flank */}
               <motion.img 
                 src="/awan_3.webp" 
                 alt="Cloud Left"
-                className="absolute left-[23%] bottom-[27%] h-[103px] md:h-[184px] object-contain opacity-100 z-30 pointer-events-none"
+                className="absolute left-[23%] md:left-[16%] xl:left-[23%] bottom-[27%] md:bottom-[36%] xl:bottom-[27%] h-[103px] md:h-[145px] xl:h-[184px] object-contain opacity-100 z-30 pointer-events-none"
                 animate={{ 
                   y: [0, -15, 0], 
                   rotate: [-37, -33, -37],
@@ -176,11 +176,11 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
               />
 
-              {/* Right Top Cloud: awan_1 - Duplicated awan_2 but in awan_1 position */}
+              {/* Right Top Cloud: awan_2 - Redistributed for iPad family to upper-right arc */}
               <motion.img 
                 src="/awan_2.webp" 
                 alt="Cloud Right Top"
-                className="absolute right-[28%] top-[27%] h-[76px] md:h-[131px] object-contain opacity-100 z-30 pointer-events-none"
+                className="absolute right-[28%] md:right-[22%] xl:right-[28%] top-[27%] md:top-[19%] xl:top-[27%] h-[76px] md:h-[105px] xl:h-[131px] object-contain opacity-100 z-30 pointer-events-none"
                 animate={{ 
                   y: [0, -12, 0], 
                   rotate: [1, -3, 1],
@@ -189,11 +189,11 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
               />
 
-              {/* Right Middle Cloud: awan_2 - 2% lefter */}
+              {/* Right Middle Cloud: awan_2 - Redistributed for iPad family to lower-right flank below button */}
               <motion.img 
                 src="/awan_2.webp" 
                 alt="Cloud Right Middle"
-                className="absolute right-[21%] bottom-[33%] h-[66px] md:h-[121px] object-contain opacity-100 z-30 pointer-events-none"
+                className="absolute right-[21%] md:right-[14%] xl:right-[21%] bottom-[33%] md:bottom-[21%] xl:bottom-[33%] h-[66px] md:h-[95px] xl:h-[121px] object-contain opacity-100 z-30 pointer-events-none"
                 animate={{ 
                   y: [0, -20, 0], 
                   rotate: [-1, 1, -1],
