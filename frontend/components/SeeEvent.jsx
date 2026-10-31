@@ -78,20 +78,25 @@ export default function SeeEvent() {
         <div className="relative z-10 container mx-auto px-6 md:px-12 flex flex-col items-center text-center justify-center md:items-start md:text-left md:h-full">
           
           {/* Top: See Event Title + Coki Logo */}
-          <div className="order-1 relative inline-block text-center flex flex-col items-center justify-center md:text-left md:items-start mb-2 md:mb-6">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className="relative mb-3 md:mb-6 w-max flex items-end justify-center group mx-auto md:ml-0 md:mr-0">
+          <div className="relative inline-block text-center flex flex-col items-center justify-center md:text-left md:items-start mb-2 md:mb-4">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className="relative mb-3 md:mb-4 w-max flex items-end justify-center group mx-auto md:ml-0 md:mr-0">
                <Image src="/coki_event.webp" alt="Coki Event" width={1536} height={2304} sizes="(min-width: 768px) 144px, 80px" quality={75} loading="eager" decoding="async" className="w-20 md:w-36 block relative z-10 drop-shadow-2xl" />
                <div className="absolute left-0 bottom-0 w-[4px] h-[50%] bg-white z-20" />
                <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20" />
             </motion.div>
 
-            <motion.h1 initial={{ scale: 0.92, opacity: 0.01 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }} className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-white drop-shadow-2xl font-rog mb-2 md:mb-6 relative z-10 text-center md:text-left" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
+            <motion.h1 initial={{ scale: 0.92, opacity: 0.01 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }} className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-white drop-shadow-2xl font-rog mb-2 md:mb-4 relative z-10 text-center md:text-left" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
               SEE EVENT
             </motion.h1>
           </div>
 
+          {/* Description Text: Consistently placed UNDER the title across all devices */}
+          <div className="w-full max-w-2xl text-sm sm:text-base md:text-lg font-medium text-gray-200 leading-relaxed drop-shadow-lg min-h-[70px] md:min-h-[90px] text-center mx-auto md:text-left md:mx-0 mb-4 md:mb-6">
+            <Typewriter text="This Event hosted by Kalceria and by the use of community. We bring automotive enthusiasts together to share the same obsession. Prepare your engines for the ultimate street euphoria." delay={800} speed={40} />
+          </div>
+
           {/* Middle: Photo Carousel on Mobile, full-bleed absolute background on Desktop */}
-          <div className="order-2 w-[90%] max-w-[380px] aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 backdrop-blur-md bg-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] my-5 flex items-center justify-center relative md:my-0 md:max-w-none md:aspect-auto md:rounded-none md:border-0 md:backdrop-blur-none md:bg-transparent md:shadow-none md:order-none md:absolute md:inset-0 md:-z-10 md:w-full md:h-full">
+          <div className="w-[90%] max-w-[380px] aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 backdrop-blur-md bg-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] my-5 flex items-center justify-center relative md:my-0 md:max-w-none md:aspect-auto md:rounded-none md:border-0 md:backdrop-blur-none md:bg-transparent md:shadow-none md:absolute md:inset-0 md:-z-10 md:w-full md:h-full">
             <div
               className="relative w-full h-full overflow-hidden flex items-center justify-center [clip-path:polygon(20px_0,100%_0,100%_calc(100%-20px),calc(100%-20px)_100%,0_100%,0_20px)] md:[clip-path:none]"
             >
@@ -131,11 +136,6 @@ export default function SeeEvent() {
             </div>
           </div>
 
-          {/* Bottom: Description Text */}
-          <div className="order-3 md:order-none w-full max-w-2xl text-sm sm:text-base md:text-lg font-medium text-gray-200 leading-relaxed drop-shadow-lg min-h-[90px] md:h-[150px] text-center mx-auto md:text-left md:mx-0">
-            <Typewriter text="This Event hosted by Kalceria and by the use of community. We bring automotive enthusiasts together to share the same obsession. Prepare your engines for the ultimate street euphoria." delay={800} speed={40} />
-          </div>
-
         </div>
       </section>
 
@@ -145,8 +145,8 @@ export default function SeeEvent() {
           <RainbowPixels />
           <MicroParticles />
         </>}
-        <Image src="/stikermobil_5.webp" alt="" width={2698} height={1568} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-24 xs:w-28 sm:w-40 md:w-56 bottom-2 md:bottom-10 right-[2%] md:right-[10%] opacity-80 drop-shadow-xl pointer-events-none -rotate-3" />
-        <Image src="/stikermobil_2.webp" alt="" width={2410} height={1436} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-24 xs:w-28 sm:w-40 md:w-56 bottom-2 md:bottom-10 left-[2%] md:left-[2%] opacity-80 drop-shadow-xl pointer-events-none rotate-6 scale-90 sm:scale-100" />
+        <Image src="/stikermobil_5.webp" alt="" width={2698} height={1568} sizes="(min-width: 1280px) 224px, (min-width: 768px) 144px, 112px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-24 xs:w-28 sm:w-32 md:w-36 xl:w-56 bottom-2 md:bottom-6 xl:bottom-10 right-[2%] md:right-[4%] xl:right-[10%] opacity-80 drop-shadow-xl pointer-events-none -rotate-3" />
+        <Image src="/stikermobil_2.webp" alt="" width={2410} height={1436} sizes="(min-width: 1280px) 224px, (min-width: 768px) 144px, 112px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-24 xs:w-28 sm:w-32 md:w-36 xl:w-56 bottom-2 md:bottom-6 xl:bottom-10 left-[2%] md:left-[2%] xl:left-[4%] opacity-80 drop-shadow-xl pointer-events-none rotate-6 scale-90 sm:scale-100" />
 
         {/* ─── SECTION 1.5: ATMOSPHERIC BREAK ────────────────────────────────── */}
         <section ref={atmosRef} className="relative w-full py-[60vh] z-20 overflow-hidden">
@@ -252,7 +252,7 @@ export default function SeeEvent() {
               {/* Left: Picture Card Carousel - shrunk 50% on mobile */}
               <div className={`relative aspect-[4/5] rounded-2xl shadow-2xl bg-[#0B0C10] transition-all duration-300 ${isMobile ? "w-1/2 mx-auto scale-[1]" : "w-full scale-[1.03]"}`}>
                 {!isMobile && (
-                  <Image src="/stikermobil_4.webp" alt="" width={2730} height={1536} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-40 md:w-56 -bottom-36 md:-bottom-48 -left-10 md:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
+                  <Image src="/stikermobil_4.webp" alt="" width={2730} height={1536} sizes="(min-width: 1280px) 224px, (min-width: 768px) 144px, 112px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-32 md:w-36 xl:w-56 -bottom-24 md:-bottom-28 xl:-bottom-48 -left-6 md:-left-8 xl:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
                 )}
                 {isMobile && (
                   <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="144px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-22 xs:w-24 sm:w-32 -top-14 xs:-top-16 -right-2 xs:right-0 opacity-85 drop-shadow-2xl pointer-events-none rotate-[6deg]" />
@@ -280,8 +280,8 @@ export default function SeeEvent() {
               <div className={`flex flex-col justify-center min-h-[450px] relative z-20 ${isMobile ? "items-center text-center mt-12" : ""}`}>
                 {!isMobile && (
                   <>
-                    <Image src="/stikermobil_1.webp" alt="" width={2387} height={1523} sizes="(min-width: 768px) 224px, 160px" quality={75} loading="lazy" decoding="async" className="absolute -top-36 md:-top-44 right-10 w-40 md:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
-                    <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="(min-width: 768px) 176px, 144px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-44 bottom-[-160px] left-1/2 opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700" style={{ transform: "translateX(-50%) rotate(3deg)" }} />
+                    <Image src="/stikermobil_1.webp" alt="" width={2387} height={1523} sizes="(min-width: 1280px) 224px, (min-width: 768px) 144px, 112px" quality={75} loading="lazy" decoding="async" className="absolute -top-28 md:-top-32 xl:-top-44 right-6 md:right-8 xl:right-10 w-32 md:w-36 xl:w-56 opacity-90 drop-shadow-2xl z-10 pointer-events-none transition-transform duration-700" style={{ transform: "rotate(6deg)" }} />
+                    <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="(min-width: 1280px) 176px, (min-width: 768px) 130px, 112px" quality={75} loading="lazy" decoding="async" className="absolute z-10 w-28 md:w-32 xl:w-44 bottom-[-90px] md:bottom-[-110px] xl:bottom-[-160px] left-1/2 opacity-70 drop-shadow-2xl pointer-events-none transition-all duration-700" style={{ transform: "translateX(-50%) rotate(3deg)" }} />
                   </>
                 )}
 

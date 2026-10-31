@@ -207,7 +207,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 2: Events ── */}
-      <section id="section-events" className="relative w-full min-h-[70vh] flex flex-col md:flex-row items-center justify-center md:justify-between overflow-hidden bg-[#050a14] z-20 px-8 md:px-24 py-20 gap-12 md:gap-16">
+      <section id="section-events" className="relative w-full min-h-[70vh] flex flex-col xl:flex-row items-center justify-center xl:justify-between overflow-hidden bg-[#050a14] z-20 px-6 sm:px-8 xl:px-24 py-16 xl:py-20 gap-8 sm:gap-10 xl:gap-16">
         <StarDust />
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
           <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] rounded-full blur-[100px] bg-[#FF00FF]" />
@@ -222,24 +222,24 @@ export default function LandingPage({ onNavigateAuth }) {
           <Image src="/hp/grup_hp.webp" alt="Group Mobile" width={2304} height={1848} unoptimized loading="eager" decoding="auto" className="h-full w-auto object-contain opacity-35" />
         </div>
 
-        {/* Mobile Header: Title on top of card for Mobile; hidden on desktop */}
-        <div className="relative z-20 flex flex-col items-center gap-2 mb-5 md:hidden">
-          <h2 className="text-center text-4xl sm:text-5xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
+        {/* Header: Title above carousel for Mobile and iPad family; hidden on desktop widescreen */}
+        <div className="relative z-20 flex flex-col items-center gap-2 mb-2 sm:mb-4 xl:hidden">
+          <h2 className="text-center text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
             <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={skipAnim} />
           </h2>
         </div>
 
-        {/* Center: Event Slider Card (Relative on Mobile, Absolutely Centered on Desktop) */}
+        {/* Center: Event Slider Card (Relative on Mobile & iPad, Absolutely Centered on Desktop Widescreen) */}
         <div 
-          className="relative md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 z-10 w-full max-w-[260px] md:max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm" 
+          className="relative xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2 z-10 w-full max-w-[260px] sm:max-w-[290px] md:max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm" 
           style={{ clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" }}
         >
           <EventSlider />
         </div>
 
-        {/* Left Content (Relative on Mobile placed under card, Absolute on Desktop) */}
-        <div className="relative md:absolute left-0 md:left-24 bottom-0 md:top-1/2 md:-translate-y-1/2 z-20 flex flex-col items-center md:items-start gap-4 md:gap-6 mt-6 md:mt-0">
-          <h2 className="hidden md:block text-center md:text-left text-5xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
+        {/* Explore Button: Underneath carousel on Mobile & iPad, on Left on Desktop Widescreen */}
+        <div className="relative xl:absolute left-0 xl:left-24 bottom-0 xl:top-1/2 xl:-translate-y-1/2 z-20 flex flex-col items-center xl:items-start gap-4 xl:gap-6 mt-4 sm:mt-6 xl:mt-0">
+          <h2 className="hidden xl:block text-center xl:text-left text-5xl xl:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
             <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={skipAnim} />
           </h2>
           <Link href="/events" onClick={() => {
@@ -247,7 +247,7 @@ export default function LandingPage({ onNavigateAuth }) {
             sessionStorage.setItem("landingScrollY", window.scrollY);
           }}>
             <button
-              className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer"
+              className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)]"
               style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
             >
               <span className="relative z-10">EXPLORE</span>
