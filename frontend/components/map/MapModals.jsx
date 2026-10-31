@@ -129,14 +129,14 @@ export const MapModals = memo(function MapModals({
 
       {showStatusModal && (
         <div
-          className="fixed inset-0 z-[2000] grid place-items-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-300"
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
           onClick={() => setShowStatusModal(false)}
         >
           <motion.div
-            animate={{ y: [0, -5, 0] }}
+            animate={{ y: [0, -3, 0] }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className={`relative w-full max-w-[420px] rounded-[24px] shadow-2xl overflow-hidden backdrop-blur-xl transition-colors duration-500 ${
-              isMapDark ? "bg-[#0a0f1a]/45 border border-white/[0.15]" : "bg-white/45 border border-slate-200"
+            className={`relative w-full max-w-[420px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[24px] shadow-2xl overflow-hidden backdrop-blur-xl transition-colors duration-500 ${
+              isMapDark ? "bg-[#0a0f1a]/85 border border-white/[0.15]" : "bg-white/85 border border-slate-200"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -154,8 +154,8 @@ export const MapModals = memo(function MapModals({
               />
             </div>
 
-            <div className="relative z-10 flex justify-between items-center px-6 py-5 border-b border-white/[0.05]">
-              <h2 className={`font-sans font-bold text-lg tracking-tight ${isMapDark ? "text-white" : "text-slate-900"}`}>
+            <div className="shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-b border-white/[0.08]">
+              <h2 className={`font-sans font-bold text-base sm:text-lg tracking-tight ${isMapDark ? "text-white" : "text-slate-900"}`}>
                 Update Status
               </h2>
               <button
@@ -168,8 +168,8 @@ export const MapModals = memo(function MapModals({
                 ×
               </button>
             </div>
-            <form onSubmit={saveBroadcast} className="relative z-10 p-6 flex flex-col gap-5">
-              <p className={isMapDark ? "text-white/60 text-sm leading-relaxed tracking-wide" : "text-slate-600 text-sm leading-relaxed tracking-wide"}>
+            <form onSubmit={saveBroadcast} className="relative z-10 p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-4 sm:gap-5 custom-scrollbar">
+              <p className={isMapDark ? "text-white/60 text-xs sm:text-sm leading-relaxed tracking-wide" : "text-slate-600 text-xs sm:text-sm leading-relaxed tracking-wide"}>
                 Share your current activity with other Kalcerians for 24h.
               </p>
               <div className="flex flex-col gap-2">
@@ -177,7 +177,7 @@ export const MapModals = memo(function MapModals({
                   Broadcast
                 </label>
                 <textarea
-                  className={`w-full border rounded-lg p-4 text-sm focus:border-slate-500 outline-none min-h-[120px] transition-all ${
+                  className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm focus:border-slate-500 outline-none min-h-[90px] sm:min-h-[120px] transition-all ${
                     isMapDark ? "bg-white/[0.03] border-white/10 text-white" : "bg-slate-50 border-slate-300 text-slate-900"
                   }`}
                   value={statusText}
@@ -186,10 +186,10 @@ export const MapModals = memo(function MapModals({
                   autoFocus
                 />
               </div>
-              <div className="flex flex-col gap-2 mt-2">
+              <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
                 <button
                   type="submit"
-                  className={`w-full py-3.5 backdrop-blur-md border text-xs font-bold tracking-wider rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:opacity-50 disabled:pointer-events-none ${
+                  className={`w-full py-3 sm:py-3.5 backdrop-blur-md border text-xs font-bold tracking-wider rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:opacity-50 disabled:pointer-events-none ${
                     isMapDark 
                       ? "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30" 
                       : "bg-slate-900/10 border-slate-900/20 text-slate-800 hover:bg-slate-900/20 hover:border-slate-900/30"
@@ -206,14 +206,14 @@ export const MapModals = memo(function MapModals({
 
       {showEventModal && (
         <div
-          className="fixed inset-0 z-[2000] grid place-items-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-300"
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-2.5 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
           onClick={() => setShowEventModal(false)}
         >
           <motion.div
-            animate={{ y: [0, -5, 0] }}
+            animate={{ y: [0, -3, 0] }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className={`relative w-full max-w-[440px] rounded-[24px] shadow-2xl overflow-hidden backdrop-blur-xl transition-colors duration-500 ${
-              isMapDark ? "bg-[#0a0f1a]/45 border border-white/[0.15]" : "bg-white/45 border border-slate-200"
+            className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden backdrop-blur-2xl transition-colors duration-500 ${
+              isMapDark ? "bg-[#0a0f1a]/85 border border-white/[0.18]" : "bg-white/90 border border-slate-200"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -231,13 +231,13 @@ export const MapModals = memo(function MapModals({
               />
             </div>
 
-            <div className="relative z-10 flex justify-between items-center px-6 py-5 border-b border-white/[0.05]">
-              <h2 className={`font-sans font-bold text-lg tracking-tight ${isMapDark ? "text-white" : "text-slate-900"}`}>
+            <div className="shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-b border-white/[0.08]">
+              <h2 className={`font-sans font-bold text-base sm:text-lg tracking-tight ${isMapDark ? "text-white" : "text-slate-900"}`}>
                 Create Your Own Event
               </h2>
               <button
                 type="button"
-                className={`text-2xl leading-none relative z-10 transition-all duration-200 hover:scale-110 active:scale-95 ${
+                className={`text-2xl leading-none relative z-10 p-1 transition-all duration-200 hover:scale-110 active:scale-95 ${
                   isMapDark ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"
                 }`}
                 onClick={() => setShowEventModal(false)}
@@ -246,17 +246,17 @@ export const MapModals = memo(function MapModals({
               </button>
             </div>
 
-            <form onSubmit={saveMiniEvent} className="relative z-10 p-6 flex flex-col gap-4">
-              <p className={isMapDark ? "text-white/60 text-sm leading-relaxed tracking-wide" : "text-slate-600 text-sm leading-relaxed tracking-wide"}>
+            <form onSubmit={saveMiniEvent} className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3 sm:gap-4 custom-scrollbar">
+              <p className={isMapDark ? "text-white/70 text-xs sm:text-sm leading-relaxed tracking-wide" : "text-slate-600 text-xs sm:text-sm leading-relaxed tracking-wide"}>
                 Share your current activity with other Kalcerians for 24h.
               </p>
 
               {/* 2x2 Category Selector */}
-              <div className="flex flex-col gap-2">
-                <label className={`text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
+              <div className="flex flex-col gap-1.5 sm:gap-2">
+                <label className={`text-[11px] sm:text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
                   Category
                 </label>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                   {EVENT_CATEGORIES_GRID.map((cat) => {
                     const isSelected = (eventForm.category || "cafe") === cat.id;
                     return (
@@ -264,7 +264,7 @@ export const MapModals = memo(function MapModals({
                         key={cat.id}
                         type="button"
                         onClick={() => setEventForm((f) => ({ ...f, category: cat.id }))}
-                        className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-300 outline-none ${
+                        className={`flex flex-col items-center justify-center p-2.5 xs:p-3 rounded-xl border transition-all duration-300 outline-none ${
                           isSelected
                             ? "bg-white/35 backdrop-blur-md border-white/80 shadow-[0_0_20px_rgba(255,255,255,0.45),inset_0_1px_3px_rgba(255,255,255,0.8)] ring-1 ring-white/60"
                             : (isMapDark
@@ -277,7 +277,7 @@ export const MapModals = memo(function MapModals({
                         </div>
                         <span
                           style={{ fontFamily: "Arial, sans-serif" }}
-                          className={`text-[11px] leading-tight text-center mt-1.5 transition-colors duration-200 ${
+                          className={`text-[10px] xs:text-[11px] leading-tight text-center mt-1.5 transition-colors duration-200 ${
                             isSelected
                               ? (isMapDark ? "text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : "text-slate-900 font-bold")
                               : "text-gray-400 font-medium"
@@ -291,12 +291,12 @@ export const MapModals = memo(function MapModals({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className={`text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
+              <div className="flex flex-col gap-1.5 sm:gap-2">
+                <label className={`text-[11px] sm:text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
                   Event Title
                 </label>
                 <input
-                  className={`w-full border rounded-lg p-3.5 text-sm focus:border-slate-500 outline-none transition-all ${
+                  className={`w-full border rounded-lg p-2.5 sm:p-3.5 text-xs sm:text-sm focus:border-slate-500 outline-none transition-all ${
                     isMapDark ? "bg-white/[0.03] border-white/10 text-white" : "bg-slate-50 border-slate-300 text-slate-900"
                   }`}
                   value={eventForm.title}
@@ -306,12 +306,13 @@ export const MapModals = memo(function MapModals({
                   placeholder="Nongs FM Sini"
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <label className={`text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
+
+              <div className="flex flex-col gap-1.5 sm:gap-2">
+                <label className={`text-[11px] sm:text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
                   Briefing
                 </label>
                 <textarea
-                  className={`w-full border rounded-lg p-3.5 text-sm focus:border-slate-500 outline-none min-h-[100px] transition-all ${
+                  className={`w-full border rounded-lg p-2.5 sm:p-3.5 text-xs sm:text-sm focus:border-slate-500 outline-none min-h-[75px] sm:min-h-[100px] resize-y transition-all ${
                     isMapDark ? "bg-white/[0.03] border-white/10 text-white" : "bg-slate-50 border-slate-300 text-slate-900"
                   }`}
                   value={eventForm.description}
@@ -323,9 +324,9 @@ export const MapModals = memo(function MapModals({
               </div>
 
               {/* Video / GIF Live Feed Attachment */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5 sm:gap-2">
                 <div className="flex items-center justify-between">
-                  <label className={`text-xs font-semibold tracking-wider flex items-center gap-1.5 ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
+                  <label className={`text-[11px] sm:text-xs font-semibold tracking-wider flex items-center gap-1.5 ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
                       <polygon points="23 7 16 12 23 17 23 7" />
                       <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
@@ -346,7 +347,7 @@ export const MapModals = memo(function MapModals({
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    className={`flex-1 border rounded-lg p-2.5 text-xs focus:border-slate-500 outline-none transition-all ${
+                    className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs focus:border-slate-500 outline-none transition-all ${
                       isMapDark ? "bg-white/[0.03] border-white/10 text-white" : "bg-slate-50 border-slate-300 text-slate-900"
                     }`}
                     value={eventForm.mediaUrl || ""}
@@ -364,7 +365,7 @@ export const MapModals = memo(function MapModals({
                     type="button"
                     disabled={isUploadingMedia || busy}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`px-3 py-2 border rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all ${
+                    className={`px-3 py-2 border rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all shrink-0 ${
                       isMapDark
                         ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
                         : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -387,7 +388,7 @@ export const MapModals = memo(function MapModals({
                 {eventForm.mediaUrl && (() => {
                   const firstUrl = eventForm.mediaUrl.split(",")[0].trim();
                   return (
-                    <div className="relative w-full h-[90px] rounded-lg overflow-hidden bg-black border border-white/10 mt-1">
+                    <div className="relative w-full h-[90px] rounded-lg overflow-hidden bg-black border border-white/10 mt-1 shrink-0">
                       {/\.(mp4|webm|ogg)($|\?)/i.test(firstUrl) || /^data:video/i.test(firstUrl) ? (
                         <video
                           src={firstUrl}
@@ -415,10 +416,10 @@ export const MapModals = memo(function MapModals({
                 })()}
               </div>
 
-              <div className="flex flex-col gap-2 mt-2">
+              <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
                 <button
                   type="submit"
-                  className={`w-full py-3.5 backdrop-blur-md border text-xs font-bold tracking-wider rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:opacity-50 disabled:pointer-events-none ${
+                  className={`w-full py-3 sm:py-3.5 backdrop-blur-md border text-xs font-bold tracking-wider rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:opacity-50 disabled:pointer-events-none ${
                     isMapDark 
                       ? "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30" 
                       : "bg-slate-900/10 border-slate-900/20 text-slate-800 hover:bg-slate-900/20 hover:border-slate-900/30"
@@ -430,7 +431,7 @@ export const MapModals = memo(function MapModals({
                 {activeOwnEvent && (
                   <button
                     type="button"
-                    className="w-full py-3.5 border border-pink-500/30 bg-pink-500/10 backdrop-blur-md text-pink-400 font-semibold text-xs tracking-wider rounded-xl hover:bg-pink-500/20 hover:border-pink-500/50 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                    className="w-full py-3 sm:py-3.5 border border-pink-500/30 bg-pink-500/10 backdrop-blur-md text-pink-400 font-semibold text-xs tracking-wider rounded-xl hover:bg-pink-500/20 hover:border-pink-500/50 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:pointer-events-none"
                     onClick={deleteMiniEvent}
                     disabled={busy}
                   >
