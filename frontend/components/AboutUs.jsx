@@ -375,7 +375,7 @@ export default function AboutUs() {
                    initial={{ opacity: 0, y: 15, scale: 0.9 }}
                    animate={{ opacity: 1, y: 0, scale: 1 }}
                    exit={{ opacity: 0, y: 15, scale: 0.9 }}
-                   className="absolute bottom-[20vh] xs:bottom-[22vh] sm:bottom-[24vh] md:bottom-[26vh] lg:bottom-[28vh] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 md:p-4 rounded-[1.2rem] md:rounded-[1.5rem] pointer-events-auto"
+                   className="absolute bottom-[48vw] xs:bottom-[45vw] sm:bottom-[40vw] md:bottom-[36vw] lg:bottom-[35vw] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 md:p-4 rounded-[1.2rem] md:rounded-[1.5rem] pointer-events-auto"
                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
                  >
                    {/* Photo Box */}
@@ -401,9 +401,9 @@ export default function AboutUs() {
              </AnimatePresence>
            )}
 
-           {/* Rei - Center Bottom Layer (Central Gladiator) */}
+           {/* Rei - Center Bottom Layer (Central Gladiator) - Dragged to ground at bottom-0 with proportional height matching Josh & Otniel */}
            <div 
-             className="absolute left-1/2 -translate-x-1/2 h-[92vh] sm:h-[96vh] md:h-[100vh] xl:h-[102vh] w-auto z-[1] pointer-events-auto bottom-[-22vh] sm:bottom-[-24vh] md:bottom-[-22vh] xl:bottom-[-25vh]"
+             className="absolute left-1/2 -translate-x-1/2 bottom-0 z-[1] pointer-events-auto h-[44vw] sm:h-[38vw] md:h-[34vw] w-auto xl:h-[102vh] xl:bottom-[-25vh]"
              onMouseEnter={() => { if (!isMobileOrTablet) { setHoverRei(true); setActiveChar("rei"); } }}
              onMouseLeave={() => { if (!isMobileOrTablet) { setHoverRei(false); setActiveChar(null); } }}
              onClick={() => { toggleChar("rei"); setHoverRei((p) => !p); }}
