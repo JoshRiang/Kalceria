@@ -9,6 +9,8 @@ export function JourneySlider({ images, logo, logoAlt, logoWidth = 260, logoHeig
   const trackWidth = `${count * 100}%`;
   const itemWidth = `${100 / count}%`;
 
+  const isDsl = Boolean(logo && (logo.includes('dsl') || logoAlt?.toLowerCase().includes('dsl')));
+
   const hasMaxWidth = className && className.includes("max-w-");
   const defaultClasses = `relative w-full aspect-square ${hasMaxWidth ? "" : "max-w-[400px]"}`;
 
@@ -18,8 +20,8 @@ export function JourneySlider({ images, logo, logoAlt, logoWidth = 260, logoHeig
       className={`${defaultClasses} ${className || ""} cursor-pointer select-none group transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]`}
     >
       {!revealed && logo ? (
-        /* White Card with Partner Logo & TAP ME font */
-        <div className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.35)] bg-white border border-slate-100 z-20 flex flex-col items-center justify-center p-6 transition-all duration-500">
+        /* Card with Partner Logo & TAP HERE font (Black box for DSL, White for others) */
+        <div className={`absolute inset-0 rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.4)] ${isDsl ? "bg-black border border-white/20" : "bg-white border border-slate-100"} z-20 flex flex-col items-center justify-center p-6 transition-all duration-500`}>
           <div className="relative w-full h-[65%] flex items-center justify-center p-2">
             <Image
               src={logo}
@@ -28,11 +30,14 @@ export function JourneySlider({ images, logo, logoAlt, logoWidth = 260, logoHeig
               height={logoHeight}
               quality={95}
               loading="eager"
-              className="max-w-[85%] max-h-[85%] w-auto h-auto object-contain filter drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+              className={`max-w-[85%] max-h-[85%] w-auto h-auto object-contain filter ${isDsl ? "drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]" : "drop-shadow-md"} group-hover:scale-105 transition-transform duration-300`}
             />
           </div>
-          <span className="text-[11px] sm:text-xs font-sans font-black uppercase tracking-[0.25em] text-slate-500 group-hover:text-black transition-colors mt-2 animate-pulse">
-            TAP ME
+          <span 
+            className={`text-xs sm:text-sm font-black uppercase tracking-tight mt-2 ${isDsl ? "text-white" : "text-black"}`}
+            style={{ fontFamily: "'Arial Black', 'Helvetica Neue', sans-serif" }}
+          >
+            TAP HERE
           </span>
         </div>
       ) : (
@@ -44,9 +49,6 @@ export function JourneySlider({ images, logo, logoAlt, logoWidth = 260, logoHeig
                 <Image src={src} alt="" fill sizes="(min-width: 768px) 400px, 280px" quality={90} className="object-cover object-center" />
               </div>
             ))}
-          </div>
-          <div className="absolute top-3 right-3 z-30 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[9px] sm:text-[10px] font-sans font-bold text-white/90 tracking-wider uppercase border border-white/20">
-            TAP TO FLIP
           </div>
         </div>
       )}
