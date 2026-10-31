@@ -75,30 +75,69 @@ export default function SeeEvent() {
       
       {/* ─── SECTION 1: HERO CAROUSEL ────────────────────────────────────────── */}
       <section className="relative w-full min-h-screen md:h-screen overflow-hidden flex items-center justify-center py-10 md:py-0">
-        <div className="relative z-10 container mx-auto px-6 md:px-12 flex flex-col items-center text-center justify-center md:items-start md:text-left md:h-full">
+        
+        {/* Full-bleed Slideshow Background: Covers the exact rear of the entire screen on Surface Pro, iPad, and Desktop */}
+        <div className="hidden md:block absolute inset-0 w-full h-full -z-10 overflow-hidden pointer-events-none">
+          <AnimatePresence mode="sync">
+            {HERO_IMAGES.map((src, idx) => (
+              idx === heroIdx && (
+                <motion.div
+                  key={src}
+                  initial={idx === 0 && !hasCycledHero ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 1.2 }}
+                  className="absolute inset-0 w-full h-full flex items-center justify-center"
+                >
+                  <motion.div
+                    animate={{ x: ["0%", "-15%"] }}
+                    transition={{ duration: 15, ease: "linear", repeat: Infinity, repeatType: "mirror" }}
+                    className="w-[120%] h-full absolute left-0 top-0 opacity-100"
+                  >
+                    <Image
+                      src={src}
+                      alt=""
+                      fill
+                      sizes="100vw"
+                      quality={75}
+                      priority={idx === 0}
+                      fetchPriority={idx === 0 ? "high" : "auto"}
+                      className="object-cover object-center"
+                    />
+                  </motion.div>
+                </motion.div>
+              )
+            ))}
+          </AnimatePresence>
+          <div className="absolute inset-0 bg-orange-400/10 md:bg-orange-400/20 mix-blend-overlay z-10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent md:bg-gradient-to-b md:from-transparent md:to-[#0B0C10] z-10 pointer-events-none" />
+        </div>
+
+        {/* Foreground Content Container */}
+        <div className="relative z-10 container mx-auto px-6 md:px-12 flex flex-col items-center text-center justify-center xl:items-start xl:text-left md:h-full">
           
           {/* Top: See Event Title + Coki Logo */}
-          <div className="relative inline-block text-center flex flex-col items-center justify-center md:text-left md:items-start mb-2 md:mb-4">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className="relative mb-3 md:mb-4 w-max flex items-end justify-center group mx-auto md:ml-0 md:mr-0">
+          <div className="relative inline-block text-center flex flex-col items-center justify-center xl:text-left xl:items-start mb-2 md:mb-4">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className="relative mb-3 md:mb-4 w-max flex items-end justify-center group mx-auto xl:ml-0 xl:mr-0">
                <Image src="/coki_event.webp" alt="Coki Event" width={1536} height={2304} sizes="(min-width: 768px) 144px, 80px" quality={75} loading="eager" decoding="async" className="w-20 md:w-36 block relative z-10 drop-shadow-2xl" />
                <div className="absolute left-0 bottom-0 w-[4px] h-[50%] bg-white z-20" />
                <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20" />
             </motion.div>
 
-            <motion.h1 initial={{ scale: 0.92, opacity: 0.01 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }} className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-white drop-shadow-2xl font-rog mb-2 md:mb-4 relative z-10 text-center md:text-left" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
+            <motion.h1 initial={{ scale: 0.92, opacity: 0.01 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }} className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-white drop-shadow-2xl font-rog mb-2 md:mb-4 relative z-10 text-center xl:text-left" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
               SEE EVENT
             </motion.h1>
           </div>
 
           {/* Description Text: Consistently placed UNDER the title across all devices */}
-          <div className="w-full max-w-2xl text-sm sm:text-base md:text-lg font-medium text-gray-200 leading-relaxed drop-shadow-lg min-h-[70px] md:min-h-[90px] text-center mx-auto md:text-left md:mx-0 mb-4 md:mb-6">
+          <div className="w-full max-w-2xl text-sm sm:text-base md:text-lg font-medium text-gray-200 leading-relaxed drop-shadow-lg min-h-[70px] md:min-h-[90px] text-center mx-auto xl:text-left xl:mx-0 mb-4 md:mb-6">
             <Typewriter text="This Event hosted by Kalceria and by the use of community. We bring automotive enthusiasts together to share the same obsession. Prepare your engines for the ultimate street euphoria." delay={800} speed={40} />
           </div>
 
-          {/* Middle: Photo Carousel on Mobile, full-bleed absolute background on Desktop */}
-          <div className="w-[90%] max-w-[380px] aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 backdrop-blur-md bg-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] my-5 flex items-center justify-center relative md:my-0 md:max-w-none md:aspect-auto md:rounded-none md:border-0 md:backdrop-blur-none md:bg-transparent md:shadow-none md:absolute md:inset-0 md:-z-10 md:w-full md:h-full">
+          {/* Mobile-Only: Photo Carousel Glass Card */}
+          <div className="md:hidden w-[90%] max-w-[380px] aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 backdrop-blur-md bg-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] my-5 flex items-center justify-center relative">
             <div
-              className="relative w-full h-full overflow-hidden flex items-center justify-center [clip-path:polygon(20px_0,100%_0,100%_calc(100%-20px),calc(100%-20px)_100%,0_100%,0_20px)] md:[clip-path:none]"
+              className="relative w-full h-full overflow-hidden flex items-center justify-center [clip-path:polygon(20px_0,100%_0,100%_calc(100%-20px),calc(100%-20px)_100%,0_100%,0_20px)]"
             >
               <AnimatePresence mode="sync">
                 {HERO_IMAGES.map((src, idx) => (
@@ -114,7 +153,7 @@ export default function SeeEvent() {
                       <motion.div
                         animate={{ x: ["0%", "-15%"] }}
                         transition={{ duration: 15, ease: "linear", repeat: Infinity, repeatType: "mirror" }}
-                        className="w-[120%] h-full absolute left-0 top-0 opacity-80 md:opacity-100"
+                        className="w-[120%] h-full absolute left-0 top-0 opacity-80"
                       >
                         <Image
                           src={src}
@@ -131,8 +170,8 @@ export default function SeeEvent() {
                   )
                 ))}
               </AnimatePresence>
-              <div className="absolute inset-0 bg-orange-400/10 md:bg-orange-400/20 mix-blend-overlay z-10 pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent md:bg-gradient-to-b md:from-transparent md:to-[#0B0C10] z-10 pointer-events-none" />
+              <div className="absolute inset-0 bg-orange-400/10 mix-blend-overlay z-10 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10 pointer-events-none" />
             </div>
           </div>
 

@@ -305,7 +305,7 @@ export default function AboutUs() {
             setShowEntry(true);
           }
         }}
-        className="relative w-full flex flex-col items-center justify-center overflow-hidden z-25 border-t border-slate-900 min-h-[105vh] md:min-h-[115vh] xl:min-h-[150vh]"
+        className="relative w-full flex flex-col items-center justify-center overflow-hidden z-25 border-t border-slate-900 min-h-[105vh] md:h-screen md:min-h-[850px] xl:h-auto xl:min-h-[150vh]"
       >
         
         {/* Entry Sequence Overlay */}
@@ -626,7 +626,7 @@ export default function AboutUs() {
         
         {/* dy_3 (Fitra Eri / Mentor) image - 0deg and trimmed bottom horizontal line for mobile & iPad, -10.5deg on desktop widescreen */}
         <div 
-          className="absolute left-1/2 -translate-x-1/2 xl:translate-x-0 xl:left-[50.4%] z-20 top-[9rem] xs:top-[9.5rem] sm:top-[11rem] md:top-[11.5rem] xl:top-[5.88rem]"
+          className="absolute left-1/2 -translate-x-1/2 xl:translate-x-0 xl:left-[50.4%] z-20 top-[9rem] xs:top-[9.5rem] sm:top-[11rem] md:top-[13.5rem] lg:top-[14rem] xl:top-[5.88rem]"
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
           onClick={() => setHoverMentor((p) => !p)}
