@@ -656,8 +656,8 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
 
 
-        {/* Looping 8-Bit Mascot (Fixed Corner Position - Scaled down for iPad mini & iPad Pro) */}
-        <div className="hidden md:block absolute bottom-0 right-0 w-36 md:w-36 lg:w-44 xl:w-72 2xl:w-80 z-20 pointer-events-none">
+        {/* Looping 8-Bit Mascot (Fixed Corner Position: Desktop Widescreen Only) */}
+        <div className="hidden xl:block absolute bottom-0 right-0 xl:w-72 2xl:w-80 z-20 pointer-events-none">
           {/* Hat placed above the head */}
           <Image
             src="/kalcer_hat.webp" 
