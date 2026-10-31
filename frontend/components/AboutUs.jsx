@@ -305,7 +305,7 @@ export default function AboutUs() {
             setShowEntry(true);
           }
         }}
-        className="relative w-full flex flex-col items-center justify-center overflow-hidden z-25 border-t border-slate-900 min-h-[105vh] md:h-screen md:min-h-[850px] xl:h-auto xl:min-h-[150vh]"
+        className="relative w-full flex flex-col items-center justify-center overflow-hidden z-25 border-t border-slate-900 min-h-[105vh] md:h-[75vh] md:max-h-[920px] md:min-h-[750px] xl:h-auto xl:max-h-none xl:min-h-[150vh]"
       >
         
         {/* Entry Sequence Overlay */}
@@ -489,9 +489,9 @@ export default function AboutUs() {
              )}
            </div>
 
-           {/* Otniel - Right Upper Layer (Sticks to bottom-0 on mobile and iPad) */}
+           {/* Otniel - Right Upper Layer (Shifted left to close gap with Rei and Josh) */}
            <div 
-             className="absolute -translate-x-1/2 z-[2] pointer-events-auto left-[75%] sm:left-[73%] md:left-[72%] w-[28vw] sm:w-[24vw] md:w-[22vw] h-auto bottom-0 xl:h-[63vh] xl:w-auto xl:bottom-[-18vh]"
+             className="absolute -translate-x-1/2 z-[2] pointer-events-auto left-[67%] xs:left-[65%] sm:left-[64%] md:left-[63%] lg:left-[62%] xl:left-[64%] w-[28vw] sm:w-[24vw] md:w-[22vw] h-auto bottom-0 xl:h-[63vh] xl:w-auto xl:bottom-[-18vh]"
              onMouseEnter={() => { if (!isMobileOrTablet) { setHoverOtniel(true); setActiveChar("otniel"); } }}
              onMouseLeave={() => { if (!isMobileOrTablet) { setHoverOtniel(false); setActiveChar(null); } }}
              onClick={() => { toggleChar("otniel"); setHoverOtniel((p) => !p); }}
@@ -586,7 +586,7 @@ export default function AboutUs() {
         <GoldenAmbientSparks />
 
         {/* Section Title at the top - Always visible & prominent on re-scroll */}
-        <div className="absolute top-3 xs:top-4 sm:top-8 md:top-10 xl:top-20 left-1/2 -translate-x-1/2 z-30 text-center w-full px-4 flex flex-col items-center pointer-events-none">
+        <div className="absolute top-3 xs:top-4 sm:top-6 md:top-6 lg:top-8 xl:top-20 left-1/2 -translate-x-1/2 z-30 text-center w-full px-4 flex flex-col items-center pointer-events-none">
            <motion.h2 
              initial={{ opacity: 1, y: 0 }}
              animate={{ opacity: 1, y: 0 }}
@@ -626,7 +626,7 @@ export default function AboutUs() {
         
         {/* dy_3 (Fitra Eri / Mentor) image - 0deg and trimmed bottom horizontal line for mobile & iPad, -10.5deg on desktop widescreen */}
         <div 
-          className="absolute left-1/2 -translate-x-1/2 xl:translate-x-0 xl:left-[50.4%] z-20 top-[9rem] xs:top-[9.5rem] sm:top-[11rem] md:top-[13.5rem] lg:top-[14rem] xl:top-[5.88rem]"
+          className="absolute left-1/2 -translate-x-1/2 xl:translate-x-0 xl:left-[50.4%] z-20 top-[9rem] xs:top-[9.5rem] sm:top-[10.5rem] md:top-[11.5rem] lg:top-[12rem] xl:top-[5.88rem]"
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
           onClick={() => setHoverMentor((p) => !p)}
