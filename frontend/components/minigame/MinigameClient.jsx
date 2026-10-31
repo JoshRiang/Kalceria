@@ -191,6 +191,7 @@ export default function MinigamePage() {
   const scheduleTimeout = useTimeoutRegistry();
 
   const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
   const isGameStarting = gamePhase === "starting" || gamePhase === "playing" || gamePhase === "ending";
   const isGameEnding = gamePhase === "ending" || gamePhase === "ending-quit";
   const inGame = gamePhase === "playing" || gamePhase === "ending";
@@ -198,8 +199,12 @@ export default function MinigamePage() {
 
   useEffect(() => {
     const checkViewport = () => {
-      const mob = window.innerWidth <= 768 || (window.innerHeight <= 768 && window.innerWidth <= 950);
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const mob = w <= 768 || (h <= 768 && w <= 950);
+      const tab = !mob && w < 1280;
       setIsMobile(mob);
+      setIsTablet(tab);
     };
     checkViewport();
     window.addEventListener("resize", checkViewport);
@@ -466,10 +471,10 @@ export default function MinigamePage() {
           <div className="relative">
             {/* Corner framing stickers - Hardware accelerated entry & clean static lock */}
             {[
-              { src: "/ge_1.webp", pos: isMobile ? "-top-4 -left-7" : "-top-24 -left-40", rot: -15 },
-              { src: "/ge_2.webp", pos: isMobile ? "-top-4 -right-7" : "-top-20 -right-36", rot: 20 },
-              { src: "/ge_3.webp", pos: isMobile ? "-bottom-3 -left-7" : "bottom-[5%] -left-48", rot: 10 },
-              { src: "/ge_4.webp", pos: isMobile ? "-bottom-3 -right-7" : "bottom-[7%] -right-44", rot: -10 },
+              { src: "/ge_1.webp", pos: isMobile ? "-top-4 -left-7" : isTablet ? "-top-4 -left-8" : "-top-24 -left-40", rot: -15 },
+              { src: "/ge_2.webp", pos: isMobile ? "-top-4 -right-7" : isTablet ? "-top-4 -right-8" : "-top-20 -right-36", rot: 20 },
+              { src: "/ge_3.webp", pos: isMobile ? "-bottom-3 -left-7" : isTablet ? "-bottom-4 -left-8" : "bottom-[5%] -left-48", rot: 10 },
+              { src: "/ge_4.webp", pos: isMobile ? "-bottom-3 -right-7" : isTablet ? "-bottom-4 -right-8" : "bottom-[7%] -right-44", rot: -10 },
             ].map((ge, idx) => (
               <motion.img
                 key={idx}
@@ -490,7 +495,7 @@ export default function MinigamePage() {
                   delay: 0.15 + idx * 0.08,
                   ease: "easeOut"
                 }}
-                className={`absolute ${ge.pos} ${isMobile ? "w-14" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-xl pointer-events-none transform-gpu will-change-transform`}
+                className={`absolute ${ge.pos} ${isMobile ? "w-14" : isTablet ? "w-16 md:w-20" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-xl pointer-events-none transform-gpu will-change-transform`}
               />
             ))}
 

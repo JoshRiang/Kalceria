@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AuroraParticles } from "./particles";
 import { SolarPhoenix } from "./backgrounds";
-import { CometEffect, FloatingAssets, CommunityQuotes, GeminiSparkParticles } from "./animatedLayers";
+import { FloatingAssets, CommunityQuotes, GeminiSparkParticles } from "./animatedLayers";
 import { DungeonGate } from "./modals/DungeonGate";
 
 export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenIdeaModal }) {
@@ -246,51 +246,98 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
         
         {/* Unified, Coherent Vertical Alignment: Kalceria X DSL -> JOIN US? -> WhatsApp -> SEE THE JOURNEY */}
         <div className="relative z-10 w-full max-w-4xl px-6 flex flex-col items-center justify-center gap-6 sm:gap-7 md:gap-8 mx-auto text-center">
-           {/* 1. Collaboration Header (Kalceria X DSL) - Big like mobile, semi-transparent X */}
-           <div className="w-full max-w-xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-5 md:gap-6 z-20">
-              {/* Kalceria Logo - Big like mobile */}
-              <div className="flex justify-end items-center">
-                <img 
-                  src="/logologin.webp" 
-                  alt="Kalceria" 
-                  className="h-16 xs:h-[72px] sm:h-20 md:h-20 w-auto object-contain drop-shadow-[0_0_35px_rgba(255,0,0,0.5)] rotate-0"
-                />
-              </div>
+           {/* 1. Collaboration Header (Kalceria X DSL) */}
+           {isMobile ? (
+             /* Mobile Phone Family: Vertical Stack (Kalceria on top, X in middle with pink/gold blobs, DSL underneath) */
+             <div className="w-full max-w-[280px] xs:max-w-[320px] mx-auto flex flex-col items-center justify-center gap-3 z-20">
+               {/* Kalceria on TOP - Straight, no slope, no gradient, no floating */}
+               <img 
+                 src="/logologin.webp" 
+                 alt="Kalceria" 
+                 className="h-14 xs:h-16 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.4)] rotate-0"
+               />
 
-              {/* The "X" - Semi-transparent, height matched to logos */}
-              <div className="flex items-center justify-center px-1">
-                <svg width="64" height="64" viewBox="0 0 100 100" className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 select-none pointer-events-none drop-shadow-[0_0_15px_rgba(255,255,255,0.25)]">
-                  <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="rgba(255,255,255,0.4)" style={{ fontFamily: 'Arial Black, sans-serif' }}>
-                    X
-                  </text>
-                </svg>
-              </div>
+               {/* The "X" in MIDDLE - Semi-transparent with pink & golden blobs */}
+               <div className="relative flex items-center justify-center py-1">
+                 {/* Pink dynamic blob */}
+                 <div 
+                   className="absolute -top-1 -left-2 w-10 h-10 rounded-full bg-[#FF00FF] opacity-70 pointer-events-none"
+                   style={{ filter: "blur(12px)" }}
+                 />
+                 {/* Golden dynamic blob */}
+                 <div 
+                   className="absolute -bottom-1 -right-2 w-10 h-10 rounded-full bg-[#FFD700] opacity-65 pointer-events-none"
+                   style={{ filter: "blur(12px)" }}
+                 />
+                 <svg width="48" height="48" viewBox="0 0 100 100" className="w-10 h-10 relative z-10 select-none pointer-events-none drop-shadow-[0_0_15px_rgba(255,255,255,0.25)]">
+                   <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="rgba(255,255,255,0.4)" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+                     X
+                   </text>
+                 </svg>
+               </div>
 
-              {/* DSL Logo - Big like mobile */}
-              <div className="flex justify-start items-center">
-                <img 
-                  src="/dsl.webp" 
-                  alt="DSL" 
-                  className="h-16 xs:h-[72px] sm:h-20 md:h-20 w-auto object-contain drop-shadow-[0_0_35px_rgba(0,255,255,0.5)] rotate-0"
-                />
-              </div>
-           </div>
+               {/* DSL at the UNDER - Straight, no slope, no gradient, no floating */}
+               <img 
+                 src="/dsl.webp" 
+                 alt="DSL" 
+                 className="h-14 xs:h-16 w-auto object-contain drop-shadow-[0_0_25px_rgba(0,255,255,0.4)] rotate-0"
+               />
+             </div>
+           ) : (
+             /* Desktop / Tab / iPad Family: Horizontal Grid, Kalceria (+20%) X (+15% with pink/gold blobs) DSL (+20%) */
+             <div className="w-full max-w-2xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-6 md:gap-8 z-20">
+               {/* Kalceria Logo - 20% bigger (from 80px to 96px-112px) */}
+               <div className="flex justify-end items-center">
+                 <img 
+                   src="/logologin.webp" 
+                   alt="Kalceria" 
+                   className="h-20 sm:h-24 md:h-24 lg:h-28 w-auto object-contain drop-shadow-[0_0_40px_rgba(255,0,0,0.5)] rotate-0"
+                 />
+               </div>
+
+               {/* The "X" - 15% bigger, semi-transparent, pink and golden blobs behind */}
+               <div className="relative flex items-center justify-center px-1">
+                 {/* Pink dynamic blob */}
+                 <div 
+                   className="absolute -top-1 -left-2 w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#FF00FF] opacity-70 pointer-events-none"
+                   style={{ filter: "blur(16px)" }}
+                 />
+                 {/* Golden dynamic blob */}
+                 <div 
+                   className="absolute -bottom-1 -right-2 w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#FFD700] opacity-65 pointer-events-none"
+                   style={{ filter: "blur(16px)" }}
+                 />
+                 <svg width="80" height="80" viewBox="0 0 100 100" className="w-16 h-16 sm:w-[70px] sm:h-[70px] md:w-[74px] md:h-[74px] lg:w-20 lg:h-20 relative z-10 select-none pointer-events-none drop-shadow-[0_0_15px_rgba(255,255,255,0.25)]">
+                   <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="rgba(255,255,255,0.4)" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+                     X
+                   </text>
+                 </svg>
+               </div>
+
+               {/* DSL Logo - 20% bigger (from 80px to 96px-112px) */}
+               <div className="flex justify-start items-center">
+                 <img 
+                   src="/dsl.webp" 
+                   alt="DSL" 
+                   className="h-20 sm:h-24 md:h-24 lg:h-28 w-auto object-contain drop-shadow-[0_0_40px_rgba(0,255,255,0.5)] rotate-0"
+                 />
+               </div>
+             </div>
+           )}
            
-           {/* 2. JOIN US? - Dead center aligned */}
+           {/* 2. JOIN US? - Center of whitespace between JOIN & US mathematically aligned with WA button centerline */}
            <motion.h2 
              initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
              whileInView={{ opacity: 1, y: 0, x: 0, filter: "blur(0px)" }}
              viewport={{ once: false, amount: 0.5 }}
              transition={{ duration: 1, ease: "easeOut" }}
-             className="text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter text-white text-center flex items-center justify-center select-none"
+             className="w-full max-w-2xl mx-auto flex items-baseline justify-center text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter text-white select-none"
              style={{ 
                textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)"
              }}
            >
-             <span className="relative inline-flex items-baseline">
-               <span>JOIN US</span>
-               <span className="w-0 overflow-visible select-none font-black inline-block">?</span>
-             </span>
+             <div className="flex-1 text-right pr-2 sm:pr-3 md:pr-4">JOIN</div>
+             <div className="flex-1 text-left pl-2 sm:pl-3 md:pl-4">US?</div>
            </motion.h2>
 
            {/* 3. WhatsApp Logo - Dead center aligned */}
@@ -373,9 +420,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
           />
         )}
 
-        {/* Dynamic Comet Effect - Replacing Portal */}
-        <CometEffect />
- 
+
         {/* Community Quotes - Floating Text (Ahead of Astronaut Layer) */}
         <div className="absolute inset-0 z-[40] pointer-events-none">
           <CommunityQuotes isMobile={isMobile} />
