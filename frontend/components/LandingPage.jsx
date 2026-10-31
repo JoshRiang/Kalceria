@@ -445,28 +445,28 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Prince Rupert's Drop Assembly */}
         <PrinceRupertDrop />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 flex flex-col lg:grid lg:grid-cols-2 items-center gap-6 lg:gap-10">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 flex flex-col xl:grid xl:grid-cols-2 items-center gap-6 xl:gap-10">
           
-          {/* Typography: Top center on mobile & iPad, Column 1 on desktop */}
-          <div className="relative flex flex-col items-center lg:items-start justify-center text-center lg:text-left p-2 md:p-4 order-1 w-full">
+          {/* Typography: Top center on mobile & iPad, Column 1 on desktop widescreen */}
+          <div className="relative flex flex-col items-center xl:items-start justify-center text-center xl:text-left p-2 md:p-4 order-1 w-full">
             <GoldenDust />
-            <div className="relative z-10 flex flex-col items-center lg:items-start w-full">
+            <div className="relative z-10 flex flex-col items-center xl:items-start w-full">
               {/* 1. Title: Top center on mobile and iPad */}
               <motion.h2 
                 animate={isMobile ? { opacity: 1 } : { opacity: [0.3, 1, 0.3] }}
                 transition={isMobile ? { duration: 0 } : { repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-3 lg:mb-6 font-mono text-center lg:text-left"
+                className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-3 xl:mb-6 font-mono text-center xl:text-left"
               >
                 FIND MORE
               </motion.h2>
 
               {/* 2. Description: Sub description right below title on mobile & iPad */}
-              <p className="font-sans text-gray-300 text-sm sm:text-base md:text-lg max-w-md md:max-w-xl lg:max-w-md text-center lg:text-left leading-relaxed px-4 lg:px-0">
+              <p className="font-sans text-gray-300 text-sm sm:text-base md:text-lg max-w-md md:max-w-xl xl:max-w-md text-center xl:text-left leading-relaxed px-4 xl:px-0">
                 Wahib embut keren banget wowowowow. Kalceria is the ultimate destination for automotive euphoria.
               </p>
 
-              {/* 3. Social Media Icon List: Shown in left column on desktop */}
-              <div className="hidden lg:flex flex-col gap-6 mt-8 items-start w-full">
+              {/* 3. Social Media Icon List: Shown in left column on desktop widescreen */}
+              <div className="hidden xl:flex flex-col gap-6 mt-8 items-start w-full">
                 {/* Instagram Icon */}
                 <a 
                   href="https://www.instagram.com/kalceria/" 
@@ -542,17 +542,17 @@ export default function LandingPage({ onNavigateAuth }) {
             </div>
           </div>
 
-          {/* TikTok Feed Container: Center middle on mobile & iPad, Column 2 on desktop */}
-          <div className="relative flex items-center justify-center lg:justify-start ml-0 lg:-ml-[20%] py-4 md:py-6 lg:py-10 order-2 w-full">
+          {/* TikTok Feed Container: Center middle on mobile & iPad, Column 2 on desktop widescreen */}
+          <div className="relative flex items-center justify-center xl:justify-start ml-0 xl:-ml-[20%] py-4 md:py-6 lg:py-10 order-2 w-full">
             <GoldenDust />
             {/* Clean, minimalist video container */}
-            <div className={`relative w-full ${isMobile ? "max-w-[210px] aspect-[9/16]" : "max-w-[270px] md:max-w-[290px] aspect-[340/680]"} group z-10 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 bg-black shadow-2xl mx-auto lg:mx-0`}>
+            <div className={`relative w-full ${isMobile ? "max-w-[210px] aspect-[9/16]" : "max-w-[270px] md:max-w-[290px] aspect-[340/680]"} group z-10 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 bg-black shadow-2xl mx-auto xl:mx-0`}>
               <FindMoreSlider />
             </div>
           </div>
 
           {/* Social Media Icon List: Below Video on mobile & iPad */}
-          <div className="flex lg:hidden flex-row gap-6 mt-4 mb-2 items-center justify-center w-full order-3 z-20">
+          <div className="flex xl:hidden flex-row gap-6 mt-4 mb-2 items-center justify-center w-full order-3 z-20">
             {/* Instagram Icon */}
             <a 
               href="https://www.instagram.com/kalceria/" 
@@ -629,8 +629,8 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
 
 
-        {/* Looping 8-Bit Mascot (Fixed Corner Position) */}
-        <div className="hidden md:block absolute bottom-0 right-0 w-56 md:w-80 z-20 pointer-events-none">
+        {/* Looping 8-Bit Mascot (Fixed Corner Position - Scaled down for iPad mini & iPad Pro) */}
+        <div className="hidden md:block absolute bottom-0 right-0 w-36 md:w-36 lg:w-44 xl:w-72 2xl:w-80 z-20 pointer-events-none">
           {/* Hat placed above the head */}
           <Image
             src="/kalcer_hat.webp" 
