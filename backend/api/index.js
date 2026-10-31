@@ -31,10 +31,18 @@ app.use((_req, res, next) => {
 // ─── CORS (Dynamic) ───────────────────────────────────────────────────────────
 const allowedOrigins = (process.env.FRONTEND_URL || "").split(",").map((o) => o.trim());
 
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (/^https:\/\/kalceria-frontend.*\.vercel\.app$/.test(origin)) return true;
+  if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  return false;
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
       } else {
         callback(new Error('CORS origin denied'));
