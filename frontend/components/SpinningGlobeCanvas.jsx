@@ -232,7 +232,7 @@ function GlobeCoreStrings() {
 // Default export wrapper containing the Canvas context
 export default function SpinningGlobeCanvas() {
   return (
-    <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }} style={{ pointerEvents: 'none' }}>
+    <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }} style={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
        <ambientLight intensity={0.5} />
        <pointLight position={[10, 10, 10]} />
        <SpinningGlobe />

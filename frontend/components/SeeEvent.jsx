@@ -221,8 +221,8 @@ export default function SeeEvent() {
              />
           </div>
 
-          {/* 3D Spinning Globe: perfectly centered on mobile and desktop */}
-          <div className={`absolute inset-0 z-0 flex items-center justify-center transition-all duration-700 origin-center ${isMobile ? "scale-[0.52] xs:scale-[0.56] sm:scale-[0.70] translate-x-0 translate-y-0" : ""}`}>
+          {/* 3D Spinning Globe: Perfectly centered in the dead center of the Indonesia Map */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] xs:w-[320px] xs:h-[320px] sm:w-[420px] sm:h-[420px] md:w-[680px] md:h-[680px] z-0 flex items-center justify-center pointer-events-none">
              {isAtmosView && <SpinningGlobeCanvas />}
           </div>
           {/* Aggressive Edge Blending for Seamless Transitions */}
