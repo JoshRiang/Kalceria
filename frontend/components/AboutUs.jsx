@@ -305,7 +305,7 @@ export default function AboutUs() {
             setShowEntry(true);
           }
         }}
-        className="relative w-full flex flex-col items-center justify-center overflow-hidden z-25 border-t border-slate-900 min-h-[105vh] md:h-[75vh] md:max-h-[920px] md:min-h-[750px] xl:h-auto xl:max-h-none xl:min-h-[150vh]"
+        className="relative w-full flex flex-col items-center justify-center overflow-hidden z-25 border-t border-slate-900 min-h-[820px] xs:min-h-[860px] sm:min-h-[900px] md:h-[980px] md:min-h-[980px] lg:h-[1040px] lg:min-h-[1040px] xl:h-auto xl:max-h-none xl:min-h-[150vh]"
       >
         
         {/* Entry Sequence Overlay */}
@@ -375,7 +375,7 @@ export default function AboutUs() {
                    initial={{ opacity: 0, y: 15, scale: 0.9 }}
                    animate={{ opacity: 1, y: 0, scale: 1 }}
                    exit={{ opacity: 0, y: 15, scale: 0.9 }}
-                   className="absolute bottom-[48vw] xs:bottom-[45vw] sm:bottom-[40vw] md:bottom-[36vw] lg:bottom-[35vw] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 md:p-4 rounded-[1.2rem] md:rounded-[1.5rem] pointer-events-auto"
+                   className="absolute bottom-[200px] xs:bottom-[210px] sm:bottom-[230px] md:bottom-[295px] lg:bottom-[320px] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 md:p-4 rounded-[1.2rem] md:rounded-[1.5rem] pointer-events-auto"
                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
                  >
                    {/* Photo Box */}
@@ -387,6 +387,8 @@ export default function AboutUs() {
                        height={200} 
                        sizes="(max-width: 768px) 84px, 105px" 
                        quality={80} 
+                       priority
+                       unoptimized
                        className="w-full h-full object-cover" 
                      />
                    </div>
@@ -411,13 +413,13 @@ export default function AboutUs() {
              <Image
                src="/rei.webp" 
                alt="Reinathan Ezkhiel K." 
-               width={1536}
-               height={2736}
-               sizes="(max-width: 768px) 55vw, (max-width: 1280px) 42vw, 520px"
-               quality={75}
-               loading="lazy"
-               decoding="async"
-               className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.2)] cursor-pointer md:cursor-pointer xl:cursor-help"
+               width={1536} 
+               height={2736} 
+               sizes="(max-width: 768px) 55vw, (max-width: 1280px) 42vw, 520px" 
+               quality={75} 
+               loading="lazy" 
+               decoding="async" 
+               className="h-full w-auto object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.2)] cursor-pointer md:cursor-pointer xl:cursor-help" 
              />
              {!isMobileOrTablet && (
                <AnimatePresence>
@@ -426,16 +428,16 @@ export default function AboutUs() {
                       initial={{ opacity: 0, y: 20, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                      className="absolute bottom-[68%] left-[70%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start p-5 rounded-[2rem]"
+                      className="absolute bottom-[80%] left-1/2 -translate-x-1/2 bg-black/75 backdrop-blur-xl border border-white/15 shadow-[0_0_40px_rgba(0,0,0,0.7)] z-[30] w-max flex flex-col items-center p-5 rounded-[2rem]"
                       style={{ fontFamily: "'Times New Roman', Times, serif" }}
                     >
                       {/* Photo Box */}
                       <div className="overflow-hidden border border-white/10 bg-black/20 w-[136px] h-[136px] rounded-[1rem] mb-4">
-                        <Image src="/reifo.webp" alt="Reinathan photo" width={481} height={572} sizes="136px" quality={75} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        <Image src="/reifo.webp" alt="Reinathan photo" width={481} height={572} sizes="136px" quality={80} priority unoptimized className="w-full h-full object-cover" />
                       </div>
                       
                       <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
-                      <p className="text-white font-normal leading-relaxed relative z-10 text-base">
+                      <p className="text-white font-normal leading-relaxed relative z-10 text-base text-center">
                         <span className="underline font-bold">Our beloved friend,</span><br />
                         Reinathan Ezkhiel K.
                       </p>
@@ -445,9 +447,9 @@ export default function AboutUs() {
              )}
            </div>
 
-           {/* Josh - Left Upper Layer (Sticks to bottom-0 on mobile and iPad) */}
+           {/* Josh - Left Upper Layer (Symmetrical Trias Formation - Flanking Rei) */}
            <div 
-             className="absolute -translate-x-1/2 z-[2] pointer-events-auto bottom-0 left-[25%] sm:left-[27%] md:left-[28%] w-[34vw] sm:w-[28vw] md:w-[26vw] h-auto xl:left-[30%] xl:h-[63vh] xl:w-auto"
+             className="absolute -translate-x-1/2 z-[2] pointer-events-auto bottom-0 left-[28%] sm:left-[29%] md:left-[30%] xl:left-[30%] w-[32vw] sm:w-[28vw] md:w-[26vw] h-auto xl:h-[63vh] xl:w-auto"
              onMouseEnter={() => { if (!isMobileOrTablet) { setHoverJosh(true); setActiveChar("josh"); } }}
              onMouseLeave={() => { if (!isMobileOrTablet) { setHoverJosh(false); setActiveChar(null); } }}
              onClick={() => { toggleChar("josh"); setHoverJosh((p) => !p); }}
@@ -455,13 +457,13 @@ export default function AboutUs() {
              <Image
                src="/josh.webp" 
                alt="Joshua Ricardo R." 
-               width={2016}
-               height={2130}
-               sizes="(max-width: 768px) 34vw, (max-width: 1280px) 28vw, 560px"
-               quality={75}
-               loading="lazy"
-               decoding="async"
-               className="object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-pointer md:cursor-pointer xl:cursor-help w-full h-auto xl:h-full xl:w-auto"
+               width={2016} 
+               height={2130} 
+               sizes="(max-width: 768px) 32vw, (max-width: 1280px) 26vw, 560px" 
+               quality={75} 
+               loading="lazy" 
+               decoding="async" 
+               className="object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-pointer md:cursor-pointer xl:cursor-help w-full h-auto xl:h-full xl:w-auto" 
              />
              {!isMobileOrTablet && (
                <AnimatePresence>
@@ -475,7 +477,7 @@ export default function AboutUs() {
                     >
                       {/* Photo Box */}
                       <div className="overflow-hidden border border-white/10 bg-black/20 w-[136px] h-[136px] rounded-[1rem] mb-4">
-                        <Image src="/jofo.webp" alt="Joshua photo" width={433} height={416} sizes="136px" quality={75} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        <Image src="/jofo.webp" alt="Joshua photo" width={433} height={416} sizes="136px" quality={80} priority unoptimized className="w-full h-full object-cover" />
                       </div>
 
                       <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
@@ -489,9 +491,9 @@ export default function AboutUs() {
              )}
            </div>
 
-           {/* Otniel - Right Upper Layer (Shifted left to close gap with Rei and Josh) */}
+           {/* Otniel - Right Upper Layer (Symmetrical Trias Formation - Exactly Mirroring Josh) */}
            <div 
-             className="absolute -translate-x-1/2 z-[2] pointer-events-auto left-[67%] xs:left-[65%] sm:left-[64%] md:left-[63%] lg:left-[62%] xl:left-[64%] w-[28vw] sm:w-[24vw] md:w-[22vw] h-auto bottom-0 xl:h-[63vh] xl:w-auto xl:bottom-[-18vh]"
+             className="absolute -translate-x-1/2 z-[2] pointer-events-auto left-[72%] sm:left-[71%] md:left-[70%] xl:left-[70%] w-[32vw] sm:w-[28vw] md:w-[26vw] h-auto bottom-0 xl:h-[63vh] xl:w-auto xl:bottom-[-18vh]"
              onMouseEnter={() => { if (!isMobileOrTablet) { setHoverOtniel(true); setActiveChar("otniel"); } }}
              onMouseLeave={() => { if (!isMobileOrTablet) { setHoverOtniel(false); setActiveChar(null); } }}
              onClick={() => { toggleChar("otniel"); setHoverOtniel((p) => !p); }}
@@ -499,13 +501,13 @@ export default function AboutUs() {
              <Image
                src="/otniel.webp" 
                alt="Otniel Kristian S." 
-               width={1888}
-               height={2234}
-               sizes="(max-width: 768px) 28vw, (max-width: 1280px) 24vw, 560px"
-               quality={75}
-               loading="lazy"
-               decoding="async"
-               className="object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-pointer md:cursor-pointer xl:cursor-help w-full h-auto xl:h-full xl:w-auto xl:scale-[1.3] xl:origin-bottom"
+               width={1888} 
+               height={2234} 
+               sizes="(max-width: 768px) 32vw, (max-width: 1280px) 26vw, 560px" 
+               quality={75} 
+               loading="lazy" 
+               decoding="async" 
+               className="object-contain brightness-90 contrast-110 drop-shadow-[0_0_30px_rgba(255,215,0,0.15)] cursor-pointer md:cursor-pointer xl:cursor-help w-full h-auto xl:h-full xl:w-auto xl:scale-[1.3] xl:origin-bottom" 
              />
              {!isMobileOrTablet && (
                <AnimatePresence>
@@ -519,7 +521,7 @@ export default function AboutUs() {
                     >
                       {/* Photo Box */}
                       <div className="overflow-hidden border border-white/10 bg-black/20 w-[136px] h-[136px] rounded-[1rem] mb-4">
-                        <Image src="/ofo.webp" alt="Otniel photo" width={664} height={622} sizes="136px" quality={75} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        <Image src="/ofo.webp" alt="Otniel photo" width={664} height={622} sizes="136px" quality={80} priority unoptimized className="w-full h-full object-cover" />
                       </div>
 
                       <div className="absolute -z-10 inset-0 bg-black/40 blur-2xl rounded-full scale-75" />
@@ -626,7 +628,7 @@ export default function AboutUs() {
         
         {/* dy_3 (Fitra Eri / Mentor) image - 0deg and trimmed bottom horizontal line for mobile & iPad, -10.5deg on desktop widescreen */}
         <div 
-          className="absolute left-1/2 -translate-x-1/2 xl:translate-x-0 xl:left-[50.4%] z-20 top-[9rem] xs:top-[9.5rem] sm:top-[10.5rem] md:top-[11.5rem] lg:top-[12rem] xl:top-[5.88rem]"
+          className="absolute left-1/2 -translate-x-1/2 xl:translate-x-0 xl:left-[50.4%] z-20 top-[7.5rem] xs:top-[8rem] sm:top-[8.75rem] md:top-[10rem] lg:top-[10.5rem] xl:top-[5.88rem]"
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
           onClick={() => setHoverMentor((p) => !p)}
@@ -637,12 +639,12 @@ export default function AboutUs() {
               alt="Ditya Alif K."
               width={1536}
               height={2729}
-              sizes="(max-width: 768px) 160px, (max-width: 1280px) 210px, 372px"
+              sizes="(max-width: 768px) 145px, (max-width: 1280px) 185px, 372px"
               quality={85}
               priority
               loading="eager"
               decoding="async"
-              className="object-contain block pointer-events-auto opacity-95 cursor-pointer xl:cursor-help w-[140px] xs:w-[160px] sm:w-[185px] md:w-[210px] h-auto xl:w-[23.25rem] xl:h-[23.25rem] rotate-0 xl:-rotate-[10.5deg] transition-transform duration-300"
+              className="object-contain block pointer-events-auto opacity-95 cursor-pointer xl:cursor-help w-[130px] xs:w-[145px] sm:w-[165px] md:w-[185px] lg:w-[200px] h-auto xl:w-[23.25rem] xl:h-[23.25rem] rotate-0 xl:-rotate-[10.5deg] transition-transform duration-300"
             />
             {/* Pure CSS Horizontal Line: integrated flush to the bottom edge with 0 space for mobile & iPad */}
             <div className="block xl:hidden absolute bottom-0 left-0 right-0 h-[2px] bg-white/95 shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
