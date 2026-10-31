@@ -469,12 +469,12 @@ export default function MinigamePage() {
           </motion.div>
 
           <div className="relative">
-            {/* Corner framing stickers - Hardware accelerated entry & clean static lock */}
+            {/* Corner framing stickers - Spread outward for phone, tab & iPad family to completely clear play/pause controls */}
             {[
-              { src: "/ge_1.webp", pos: isMobile ? "-top-4 -left-7" : isTablet ? "-top-4 -left-8" : "-top-24 -left-40", rot: -15 },
-              { src: "/ge_2.webp", pos: isMobile ? "-top-4 -right-7" : isTablet ? "-top-4 -right-8" : "-top-20 -right-36", rot: 20 },
-              { src: "/ge_3.webp", pos: isMobile ? "-bottom-3 -left-7" : isTablet ? "-bottom-4 -left-8" : "bottom-[5%] -left-48", rot: 10 },
-              { src: "/ge_4.webp", pos: isMobile ? "-bottom-3 -right-7" : isTablet ? "-bottom-4 -right-8" : "bottom-[7%] -right-44", rot: -10 },
+              { src: "/ge_1.webp", pos: isMobile ? "-top-6 -left-10" : isTablet ? "-top-8 -left-14" : "-top-24 -left-40", rot: -15 },
+              { src: "/ge_2.webp", pos: isMobile ? "-top-6 -right-10" : isTablet ? "-top-8 -right-14" : "-top-20 -right-36", rot: 20 },
+              { src: "/ge_3.webp", pos: isMobile ? "-bottom-8 -left-12" : isTablet ? "-bottom-10 -left-16" : "bottom-[5%] -left-48", rot: 10 },
+              { src: "/ge_4.webp", pos: isMobile ? "-bottom-8 -right-12" : isTablet ? "-bottom-10 -right-14" : "bottom-[7%] -right-44", rot: -10 },
             ].map((ge, idx) => (
               <motion.img
                 key={idx}

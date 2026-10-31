@@ -111,7 +111,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                 textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
               }}
             >
-              FIND THE OTHERS !
+              FIND THE OTHERS
             </span>
           </motion.button>
 
@@ -521,7 +521,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                    textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
                    filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
                  }}>
-               Make Us Better !
+               Make Us Better
              </h2>
            </motion.div>
 

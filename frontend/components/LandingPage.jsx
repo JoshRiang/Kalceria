@@ -304,13 +304,13 @@ export default function LandingPage({ onNavigateAuth }) {
             <Image src="/grup.webp" alt="Group" width={2064} height={1655} unoptimized loading="eager" decoding="auto" className="relative z-10 h-[180px] md:h-[220px] lg:h-[250px] xl:h-[280px] w-auto object-contain translate-y-[2.5px] opacity-35" />
           </div>
 
-          <div className="absolute bottom-0 right-4 md:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
+          <div className="absolute bottom-0 right-4 md:right-2 lg:right-6 xl:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
             {/* Magenta Tapakan (Base) - Wedge Shape from Sketch */}
             <div 
-              className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[22px] z-0 opacity-80"
+              className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[75px] md:h-[80px] lg:h-[110px] xl:h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[16px] md:blur-[18px] xl:blur-[22px] z-0 opacity-80"
               style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%, 0 100%)" }}
             />
-            <Image src="/brio_black.webp" alt="Brio" width={2226} height={1207} unoptimized loading="eager" decoding="auto" className="relative z-10 h-[150px] md:h-[240px] w-auto object-contain translate-y-[2.5px]" />
+            <Image src="/brio_black.webp" alt="Brio" width={2226} height={1207} unoptimized loading="eager" decoding="auto" className="relative z-10 h-[120px] md:h-[125px] lg:h-[175px] xl:h-[240px] w-auto object-contain translate-y-[2.5px]" />
           </div>
         </div>
       </section>
