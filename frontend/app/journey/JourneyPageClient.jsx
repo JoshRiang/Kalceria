@@ -143,18 +143,14 @@ export default function JourneyPageClient() {
         <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_1.webp')] md:bg-[length:100%_100%] flex items-start pt-[7vh] ${isMobile ? "flex-col pt-[8vh]" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
-              {/* Glass Box Layer - Natural Cloud Fader */}
+              {/* Glass Box Layer - Sharp Edged Glass */}
               <div 
-                className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border-none rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_70px_rgba(255,255,255,0.45)] transition-all duration-300 ${isMobile ? "pr-[160px]" : "pr-[120px] md:pr-[196px]"}`}
-                style={{
-                  maskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)",
-                  WebkitMaskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)"
-                }}
+                className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border border-white/20 rounded-none shadow-[0_0_50px_rgba(255,255,255,0.25)] hover:shadow-[0_0_70px_rgba(255,255,255,0.4)] transition-all duration-300 ${isMobile ? "pr-[160px]" : "pr-[120px] md:pr-[196px]"}`}
               >
-                {/* Dynamic Blobs */}
+                {/* Dynamic Blobs - Palette: Mint Cyan & Cyber Violet */}
                 <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-screen">
-                  <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#FF00FF] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
-                  <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-[#FFD700] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+                  <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#00FFCC] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
+                  <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-[#9333EA] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
                 </div>
                 <JourneySectionTitle text="WITH" align="left" delay={500} />
               </div>
@@ -202,18 +198,14 @@ export default function JourneyPageClient() {
           <div className={`container mx-auto px-6 md:px-12 relative z-20 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`flex flex-col md:flex-row justify-start items-start w-full gap-8 ${isMobile ? "items-center" : ""}`}>
               <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
-                {/* Glass Box Layer - Natural Cloud Fader */}
+                {/* Glass Box Layer - Sharp Edged Glass */}
                 <div 
-                  className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border-none rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_70px_rgba(255,255,255,0.45)] transition-all duration-300 ${isMobile ? "pr-[138px]" : "pr-[90px] md:pr-[177px]"}`}
-                  style={{
-                    maskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)",
-                    WebkitMaskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)"
-                  }}
+                  className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border border-white/20 rounded-none shadow-[0_0_50px_rgba(255,255,255,0.25)] hover:shadow-[0_0_70px_rgba(255,255,255,0.4)] transition-all duration-300 ${isMobile ? "pr-[138px]" : "pr-[90px] md:pr-[177px]"}`}
                 >
-                  {/* Dynamic Blobs */}
+                  {/* Dynamic Blobs - Palette: Gold & Racing Red */}
                   <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-screen">
-                    <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#FF00FF] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
-                    <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-[#FFD700] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+                    <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#FFD700] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
+                    <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-[#EF4444] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
                   </div>
                   <JourneySectionTitle text="WITH" align="left" delay={500} />
                 </div>
@@ -270,18 +262,14 @@ export default function JourneyPageClient() {
         <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_3.webp')] md:bg-[length:100%_100%] flex items-start pt-[12vh] ${isMobile ? "flex-col pt-[8vh]" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             <div className={`relative flex items-center ${isMobile ? "justify-center mx-auto" : ""}`}>
-              {/* Glass Box Layer (Sized for both WITH and DSL area) - Natural Cloud Fader */}
+              {/* Glass Box Layer (Sized for both WITH and DSL area) - Sharp Edged Glass */}
               <div 
-                className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border-none rounded-3xl shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_70px_rgba(255,255,255,0.45)] transition-all duration-300 ${isMobile ? "pr-[151px]" : "pr-[140px] md:pr-[260px]"}`}
-                style={{
-                  maskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)",
-                  WebkitMaskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)"
-                }}
+                className={`relative overflow-hidden w-fit py-4 md:py-6 pl-8 md:pl-12 bg-white/10 backdrop-blur-3xl border border-white/20 rounded-none shadow-[0_0_50px_rgba(255,255,255,0.25)] hover:shadow-[0_0_70px_rgba(255,255,255,0.4)] transition-all duration-300 ${isMobile ? "pr-[151px]" : "pr-[140px] md:pr-[260px]"}`}
               >
-                {/* Dynamic Blobs */}
+                {/* Dynamic Blobs - Palette: Electric Cyan & Hot Magenta */}
                 <div className="absolute inset-0 z-0 pointer-events-none opacity-40 mix-blend-screen">
-                  <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#FF00FF] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
-                  <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-[#FFD700] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+                  <div className="absolute top-[-50%] left-[-10%] w-[120%] h-[200%] bg-[#00F0FF] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '4s' }} />
+                  <div className="absolute bottom-[-50%] right-[-10%] w-[120%] h-[200%] bg-[#FF007F] rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
                 </div>
                 <JourneySectionTitle text="WITH" align="left" delay={500} />
               </div>

@@ -266,7 +266,7 @@ export default function MinigamePage() {
   });
 
   return (
-    <main className="relative w-full h-screen bg-black overflow-hidden select-none">
+    <main className="relative w-full h-[100dvh] max-h-[100dvh] bg-black overflow-hidden select-none">
 
       {/* In-Game Overlay */}
       <AnimatePresence>
@@ -319,7 +319,7 @@ export default function MinigamePage() {
       <motion.div
         initial={{ opacity: 0.01, filter: "blur(28px) brightness(0.5)" }}
         animate={{ opacity: 1, filter: "blur(0px) brightness(1)", transition: { duration: 1.2, ease: [0.16, 1, 0.3, 1] } }}
-        className="relative w-full h-screen flex flex-col items-center"
+        className="relative w-full h-[100dvh] max-h-[100dvh] flex flex-col items-center overflow-hidden"
       >
         {/* Title */}
         <motion.div
@@ -328,7 +328,7 @@ export default function MinigamePage() {
             filter: isGameStarting ? "blur(30px)" : "blur(0px)",
             transition: { opacity: { duration: 1 }, filter: { duration: 1 } }
           }}
-          className="relative z-20 mt-[8vh] sm:mt-[12vh] text-center px-4"
+          className="relative z-20 mt-[3vh] xs:mt-[4vh] sm:mt-[10vh] text-center px-4"
         >
           <motion.h1
             initial={{ y: -40, opacity: 0.01 }}
@@ -352,7 +352,7 @@ export default function MinigamePage() {
           </motion.h1>
 
           {/* Decorative Cards Area */}
-          <div className="flex justify-center gap-2 sm:gap-4 mt-3 sm:mt-6 h-14 sm:h-20">
+          <div className="flex justify-center gap-2 sm:gap-4 mt-2 sm:mt-6 h-14 sm:h-20">
             {[0, 1, 2, 3].map(i => <DecorativeCard key={i} seed={i} />)}
           </div>
         </motion.div>
@@ -365,7 +365,7 @@ export default function MinigamePage() {
             pointerEvents: isGameStarting ? "none" : "auto",
             transition: { opacity: { duration: 0.8 } }
           }}
-          className="relative z-20 flex flex-col sm:flex-row items-center gap-5 sm:gap-10 mt-[4vh] sm:mt-[8vh]"
+          className="relative z-20 flex flex-col sm:flex-row items-center gap-4 sm:gap-10 mt-[2vh] xs:mt-[3vh] sm:mt-[6vh]"
         >
           <div className="relative group">
             <button
@@ -424,7 +424,7 @@ export default function MinigamePage() {
             pointerEvents: isGameStarting ? "none" : "auto",
             transition: { duration: 0.8 }
           }}
-          className="absolute bottom-4 right-4 sm:bottom-[4%] sm:right-[2%] z-30 flex items-center justify-center gap-3 sm:gap-6"
+          className="absolute bottom-3 right-3 xs:bottom-4 xs:right-4 sm:bottom-[4%] sm:right-[2%] z-30 flex items-center justify-center gap-3 sm:gap-6"
         >
           <motion.div whileHover={{ scale: 1.05 }} onClick={() => setShowTrailer(true)} className="relative group cursor-pointer">
             <div className="relative w-[140px] sm:w-[180px] py-2 sm:py-3 flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-[20px] shadow-2xl">
@@ -452,13 +452,12 @@ export default function MinigamePage() {
         {showTrailer && (
       <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4 overflow-y-auto bg-black/90">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5 }} onClick={() => setShowTrailer(false)} className="absolute inset-0 cursor-pointer" />
-        <div className="relative flex flex-col items-center py-12 min-h-full justify-center">
-          <motion.div initial={{ opacity: 0, y: 10, filter: "blur(20px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: 20, filter: "blur(40px)", transition: { duration: 0.8 } }} transition={{ duration: 1.5 }} className="text-center mb-10 max-w-sm relative">
+        <div className="relative flex flex-col items-center py-6 sm:py-12 min-h-full justify-center">
+          <motion.div initial={{ opacity: 0, y: 10, filter: "blur(20px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: 20, filter: "blur(40px)", transition: { duration: 0.8 } }} transition={{ duration: 1.5 }} className="text-center mb-4 sm:mb-8 max-w-sm relative">
             <div className="flex items-center justify-center gap-4">
               <h2 className="text-4xl font-black italic tracking-tighter text-white mb-2" style={{ textShadow: "3px 3px 0px #d946ef" }}>SOCIAL CULT</h2>
-              <button aria-label="Close trailer" onClick={() => setShowTrailer(false)} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center text-white hover:bg-white/20 hover:scale-110 transition-all shadow-2xl border border-white/20 group overflow-hidden relative translate-x-2">
-                <div className="absolute inset-0 bg-red-600/60 blur-[4px] rounded-full opacity-70 group-hover:opacity-100 transition-opacity" />
-                <svg className="relative z-10 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M6 18L18 6M6 6l12 12" /></svg>
+              <button aria-label="Close trailer" onClick={() => setShowTrailer(false)} className="p-2 flex items-center justify-center text-white/90 hover:text-white hover:scale-110 transition-all group translate-x-2">
+                <svg className="w-5 h-5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
             <p className="text-[10px] font-sans text-white leading-relaxed px-6 opacity-60">A revolutionary fusion of high-performance automotive engineering and urban street culture. Join the collective as we redefine the boundaries of style and speed.</p>
@@ -467,10 +466,10 @@ export default function MinigamePage() {
           <div className="relative">
             {/* Floating ge images around the card - More Spread & Smaller */}
             {[
-              { src: "/ge_1.webp", pos: isMobile ? "-top-12 -left-26" : "-top-24 -left-40", rot: -15, delay: 0 },
-              { src: "/ge_2.webp", pos: isMobile ? "-top-10 -right-24" : "-top-20 -right-36", rot: 20, delay: 0.5 },
-              { src: "/ge_3.webp", pos: isMobile ? "bottom-[-16%] -left-26" : "bottom-[5%] -left-48", rot: 10, delay: 1 },
-              { src: "/ge_4.webp", pos: isMobile ? "bottom-[-14%] -right-24" : "bottom-[7%] -right-44", rot: -10, delay: 1.5 },
+              { src: "/ge_1.webp", pos: isMobile ? "-top-6 -left-8" : "-top-24 -left-40", rot: -15, delay: 0 },
+              { src: "/ge_2.webp", pos: isMobile ? "-top-6 -right-8" : "-top-20 -right-36", rot: 20, delay: 0.5 },
+              { src: "/ge_3.webp", pos: isMobile ? "bottom-[4%] -left-8" : "bottom-[5%] -left-48", rot: 10, delay: 1 },
+              { src: "/ge_4.webp", pos: isMobile ? "bottom-[4%] -right-8" : "bottom-[7%] -right-44", rot: -10, delay: 1.5 },
             ].map((ge, idx) => (
               <motion.img
                 key={idx}
@@ -493,7 +492,7 @@ export default function MinigamePage() {
                   y: { duration: 4 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay },
                   rotate: { duration: 5 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay }
                 }}
-                className={`absolute ${ge.pos} ${isMobile ? "w-20" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-2xl pointer-events-none`}
+                className={`absolute ${ge.pos} ${isMobile ? "w-14" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-2xl pointer-events-none`}
               />
             ))}
 
@@ -502,7 +501,7 @@ export default function MinigamePage() {
               animate={{ opacity: 1, scale: 1, y: [0, -6, 0], filter: "blur(0px)" }}
               exit={{ opacity: 0, scale: 0.9, y: 40, filter: "blur(50px)", transition: { duration: 0.8 } }}
               transition={{ duration: 1.5, y: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}
-              className="relative w-[280px] md:w-[320px] aspect-[9/16] rounded-[2.5rem] border border-yellow-500/50 shadow-[0_0_60px_rgba(251,191,36,0.4)] bg-black mt-[-2rem] overflow-visible"
+              className="relative w-[220px] xs:w-[240px] md:w-[320px] aspect-[9/16] rounded-3xl md:rounded-[2.5rem] border border-yellow-500/50 shadow-[0_0_40px_rgba(251,191,36,0.4)] bg-black mt-0 sm:mt-[-1rem] overflow-visible"
             >
               {/* Golden Glow Pulse */}
               <motion.div
@@ -514,7 +513,7 @@ export default function MinigamePage() {
               {/* Rainbow Particles */}
               <LineParticles />
 
-              <div className="relative w-full h-full z-10 overflow-hidden rounded-[2.5rem] border border-white/10">
+              <div className="relative w-full h-full z-10 overflow-hidden rounded-3xl md:rounded-[2.5rem] border border-white/10">
                 <video ref={videoRef} src="/trailer.mp4" controls autoPlay className="w-full h-full object-cover" />
               </div>
             </motion.div>

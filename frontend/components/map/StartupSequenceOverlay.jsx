@@ -23,8 +23,8 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
         <motion.div
           key="startup-overlay"
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, filter: "blur(40px)" }}
-          transition={{ duration: 1.5, ease: "easeInOut" }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
           className={`fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden transition-colors duration-[3000ms] ease-in-out ${startupProgress < 50 ? "bg-white" : "bg-[#050a14]"}`}
         >
           {/* Smooth 4x Chevron Dash Transition (B&W on White, Red-Black on Dark) */}
@@ -127,7 +127,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
               className="flex flex-col items-center mb-2 sm:mb-4 px-4 w-full"
             >
               <h1
-                className={`text-5xl xs:text-6xl sm:text-7xl md:text-8xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-1000 text-center flex flex-col md:flex-row items-center justify-center gap-1 md:gap-4 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
+                className={`text-6xl xs:text-7xl sm:text-7xl md:text-8xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-1000 text-center flex flex-col md:flex-row items-center justify-center gap-1 md:gap-4 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
                 style={{
                   textShadow: startupProgress >= 50 ? `
                       2px 2px 0 #1a1a24,
@@ -201,7 +201,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         scale: { duration: 1.2, ease: "easeOut" },
                         rotate: { duration: 22, repeat: Infinity, ease: "linear" },
                       }}
-                      className="absolute top-2 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[56%] w-[160px] xs:w-[175px] sm:w-[260px] md:w-[400px] h-[160px] xs:h-[175px] sm:h-[260px] md:h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
+                      className="absolute top-2 left-1/2 translate-x-10 xs:translate-x-14 md:translate-x-0 md:left-[56%] w-[160px] xs:w-[175px] sm:w-[260px] md:w-[400px] h-[160px] xs:h-[175px] sm:h-[260px] md:h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
                       style={{
                         transformStyle: "preserve-3d",
                         transform: "translateZ(0px)",
@@ -242,7 +242,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         alt="Kalcerman Map"
                         width={2048}
                         height={2048}
-                        className="relative w-[160px] h-[160px] xs:w-[175px] xs:h-[175px] sm:w-[240px] sm:h-[240px] md:w-[275px] md:h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-2 sm:mb-4 md:mb-6 z-10 translate-x-0"
+                        className="relative w-[160px] h-[160px] xs:w-[175px] xs:h-[175px] sm:w-[240px] sm:h-[240px] md:w-[275px] md:h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-2 sm:mb-4 md:mb-6 z-10 -translate-x-10 xs:-translate-x-14 md:translate-x-0"
                         style={{
                           transformStyle: "preserve-3d",
                           transform: "translateZ(20px)",

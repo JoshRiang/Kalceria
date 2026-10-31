@@ -30,20 +30,31 @@ export function CometEffect() {
       if (!active) return;
       const id = nextCometId++;
       const isLeft = random() > 0.5;
+      const winW = typeof window !== 'undefined' ? window.innerWidth : 1000;
+      const winH = typeof window !== 'undefined' ? window.innerHeight : 800;
+      const aspect = winW / Math.max(winH, 1);
+
+      // Realistic diagonal trajectory (~30 to 40 deg angle across the sky)
+      const slope = 0.55 + random() * 0.25;
+
       const startX = isLeft ? -20 : 120;
-      const startY = random() * 30;
-      const endX = 20 + random() * 60;
-      const endY = 110;
+      const startY = 5 + random() * 30;
+      const endX = isLeft ? 120 : -20;
+      const deltaX_pct = Math.abs(endX - startX);
+      const deltaY_pct = Math.min((deltaX_pct * aspect) * slope, 80);
+      const endY = startY + deltaY_pct;
       
-      const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+      const pixelDx = (endX - startX) * winW / 100;
+      const pixelDy = (endY - startY) * winH / 100;
+      const angle = (Math.atan2(pixelDy, pixelDx) * 180) / Math.PI;
 
       setComets(prev => [...prev, { id, startX, startY, endX, endY, angle }]);
       
       scheduleTimeout(() => {
         setComets(prev => prev.filter(c => c.id !== id));
-      }, 1000);
+      }, 900);
 
-      scheduleTimeout(spawnComet, 1500 + random() * 1000);
+      scheduleTimeout(spawnComet, 1600 + random() * 1200);
     }
 
     spawnComet();

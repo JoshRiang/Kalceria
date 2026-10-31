@@ -128,7 +128,7 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                   width={512}
                   height={512}
                   loading="eager"
-                  className="w-full h-full object-contain object-bottom drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)] z-10"
+                  className={`w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)] z-10 ${catFrame === 1 ? "object-bottom-left" : "object-bottom"}`}
                 />
                 {/* White corner L-border under cat mascot (matching Coki on SeeEvent) */}
                 <div className="absolute left-0 bottom-0 w-[4px] h-[55%] bg-white z-20 shadow-[0_0_8px_white]" />
