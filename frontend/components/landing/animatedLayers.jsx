@@ -181,9 +181,9 @@ export function GeminiSparkParticles() {
   return (
     <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
       {particles.map((p) => (
-        <motion.div
+        <div
           key={p.id}
-          className="absolute rounded-full"
+          className="absolute rounded-full will-change-transform"
           style={{
             width: p.size,
             height: p.size,
@@ -191,21 +191,24 @@ export function GeminiSparkParticles() {
             top: p.top,
             backgroundColor: p.color,
             boxShadow: `0 0 12px ${p.color}, 0 0 24px ${p.color}44`,
-          }}
-          animate={{
-            x: [0, p.xDrift, 0],
-            y: [0, p.yDrift, 0],
-            opacity: [0.3, 1, 0.3],
-            scale: [0.5, 1.2, 0.5],
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: p.delay,
+            "--xDrift": `${p.xDrift}px`,
+            "--yDrift": `${p.yDrift}px`,
+            animation: `geminiSparkAnim ${p.duration}s ease-in-out ${p.delay}s infinite`,
           }}
         />
       ))}
+      <style jsx>{`
+        @keyframes geminiSparkAnim {
+          0%, 100% {
+            transform: translate3d(0, 0, 0) scale(0.5);
+            opacity: 0.3;
+          }
+          50% {
+            transform: translate3d(var(--xDrift), var(--yDrift), 0) scale(1.2);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }

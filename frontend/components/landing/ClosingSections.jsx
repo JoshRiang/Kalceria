@@ -12,7 +12,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
   return (
     <>
       {/* ── Section 7: Big Square Concept ── */}
-      <section id="section-map" className="relative w-full aspect-square bg-[#0c1528] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900">
+      <section id="section-map" className="relative w-full aspect-square bg-[#0c1528] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900" style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }}>
         {/* Background Blobs (Cyan, Magenta, Gold) - GPU-Optimized on Mobile */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
           {isMobile ? (
@@ -207,7 +207,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
       </section>
 
       {/* ── Section 8: Final Scene / Tokyo Nights ── */}
-      <section id="section-journey" className="relative w-full min-h-[75vh] flex flex-col items-center justify-center py-20 z-50 border-t border-slate-900 overflow-hidden bg-black isolation-auto">
+      <section id="section-journey" className="relative w-full min-h-[75vh] flex flex-col items-center justify-center py-20 z-50 border-t border-slate-900 overflow-hidden bg-black isolation-auto" style={{ contentVisibility: "auto", containIntrinsicSize: "850px" }}>
         {/* Tokyo Night Background - ABSOLUTE BACK */}
         <Image src="/bg_tokyo.webp" alt="Tokyo Night" width={2730} height={1536} sizes="100vw" quality={75} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover opacity-50 z-[-2] pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050a14] via-transparent to-[#050a14] z-[-2] pointer-events-none" />
@@ -426,7 +426,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
       </section>
 
       {/* ── Section 9: The Legacy ── */}
-      <section id="section-minigame" className="relative w-full min-h-[820px] md:min-h-0 md:aspect-square bg-[#02040a] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900 py-16 md:py-0">
+      <section id="section-minigame" className="relative w-full min-h-[820px] md:min-h-0 md:aspect-square bg-[#02040a] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900 py-16 md:py-0" style={{ contentVisibility: "auto", containIntrinsicSize: "850px" }}>
         {/* Background Atmosphere - Simplified Astral Divine (Lightweight) */}
         <div className="absolute inset-0 z-0 pointer-events-none">
            {/* Cyan Core Glow */}
