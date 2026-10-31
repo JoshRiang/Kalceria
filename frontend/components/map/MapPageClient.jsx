@@ -13,6 +13,7 @@ import { INITIAL_MOCK_MINI_EVENTS } from "@/components/map/mockMiniEvents";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
+import { MapWalkthroughTooltip } from "@/components/map/MapWalkthroughTooltip";
 const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel").then((m) => m.KalceriansPanel), { ssr: false });
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
@@ -57,19 +58,6 @@ const hqPoint = {
     "/media/gifs/hq_feed_4.mp4",
   ],
 };
-
-// ☁️ Static Pixel Cloud Definitions for consistent transition
-
-
-// 🛰 Optimized Tactical Network (Canvas-based Particles & Links)
-
-
-
-// ─── Vintage Laser Grid ──────────────────────────────────────────────
-
-
-// ─── Smooth Domino Chevrons for B&W/Red-Black Dash Transition ─────────
-
 
 const cleanEventDesc = (item) => {
   if (!item) return item;
@@ -726,6 +714,8 @@ export default function MapPage() {
           />
         )}
       </AnimatePresence>
+
+      <MapWalkthroughTooltip show={!showStartup && hasMounted} />
 
       {!showStartup && hasMounted && (
         <>

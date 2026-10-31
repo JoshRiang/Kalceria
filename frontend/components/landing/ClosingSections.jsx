@@ -86,7 +86,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
             }}
             whileTap={{ scale: 0.95 }}
-            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-base sm:text-lg md:text-2xl px-6 py-3.5 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 transform-gpu will-change-transform"
+            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-base sm:text-lg md:text-2xl px-6 py-3.5 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 transform-gpu will-change-transform focus-visible:ring-2 focus-visible:ring-fuchsia-400 focus-visible:outline-none focus:outline-none"
             style={{
               maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
               WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
@@ -393,7 +393,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                  boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
                }}
                whileTap={{ scale: 0.95 }}
-               className="relative mx-auto z-30 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-lg md:text-3xl px-8 py-4 md:px-14 md:py-6 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300"
+               className="relative mx-auto z-30 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-lg md:text-3xl px-8 py-4 md:px-14 md:py-6 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 focus-visible:ring-2 focus-visible:ring-fuchsia-400 focus-visible:outline-none focus:outline-none"
                style={{
                  maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
                  WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
@@ -529,7 +529,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
            <motion.button
              onClick={onOpenIdeaModal}
              whileTap={{ scale: 0.95 }}
-             className="relative group cursor-pointer z-40 focus:outline-none"
+             className="relative group cursor-pointer z-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400 rounded-2xl"
            >
               <div className="relative w-48 md:w-[240px] py-4 md:py-6 bg-white/10 backdrop-blur-2xl border-none rounded-2xl overflow-hidden shadow-[0_0_35px_rgba(255,255,255,0.25)] group-hover:bg-white/15 group-hover:shadow-[0_0_50px_rgba(255,255,255,0.4)] transition-all duration-500 flex items-center justify-center">
                 {/* Glassmorphism Blobs - always visible, subtle */}

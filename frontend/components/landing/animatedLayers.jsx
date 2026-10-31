@@ -208,6 +208,9 @@ export function GeminiSparkParticles() {
             opacity: 1;
           }
         }
+        @media (prefers-reduced-motion: reduce) {
+          div { animation: none !important; }
+        }
       `}</style>
     </div>
   );

@@ -40,6 +40,9 @@ export function GoldenDust() {
           0%, 100% { opacity: 0; transform: translateY(0); }
           50% { opacity: 1; transform: translateY(-15px); }
         }
+        @media (prefers-reduced-motion: reduce) {
+          div { animation: none !important; }
+        }
       `}</style>
     </div>
   );
@@ -85,6 +88,9 @@ export function StarDust() {
         @keyframes starDustAnim {
           0%, 100% { opacity: 0; transform: translateY(0) scale(0.5); }
           50% { opacity: 1; transform: translateY(-20px) scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          div { animation: none !important; }
         }
       `}</style>
     </div>
@@ -191,6 +197,9 @@ export function TropicalParticles() {
             transform: translate3d(0, var(--yRise), 0);
           }
         }
+        @media (prefers-reduced-motion: reduce) {
+          div { animation: none !important; }
+        }
       `}</style>
     </div>
   );
@@ -288,7 +297,7 @@ export function AuroraParticles({ isMobile = false }) {
   );
 }
 
-export function DynamicCollage() {
+export function DynamicCollage({ isGated = false }) {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -304,7 +313,7 @@ export function DynamicCollage() {
   const activePhotos = photos.slice(0, limit);
   
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden opacity-45 pointer-events-none">
+    <div className={`absolute inset-0 z-0 overflow-hidden pointer-events-none transition-opacity duration-1000 ${isGated ? "opacity-20" : "opacity-45"}`}>
       <div className="flex w-[200%] h-full animate-roll">
          <div className="grid w-1/2 h-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
             {activePhotos.map((src, i) => (
@@ -324,6 +333,12 @@ export function DynamicCollage() {
         }
         .animate-roll {
           animation: roll 80s linear infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-roll {
+            animation: none !important;
+            transform: translateX(-25%);
+          }
         }
       `}</style>
     </div>

@@ -431,7 +431,7 @@ export default function SeeEvent() {
               <motion.div whileHover={{ scale: 1.02 }} className="relative bg-[#0B0C10]/40 p-8 rounded-2xl border-2 border-dashed border-gray-500/30 backdrop-blur-xl flex flex-col justify-between h-[300px] sm:h-[320px] w-full max-w-md">
                 <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white mb-6 text-center">Wanna Join?</h3>
                 <div className="flex-1 flex items-center justify-center">
-                   <button onClick={() => activeEvent && setApplyModalOpen(true)} disabled={!activeEvent} className="relative w-full py-5 font-sans font-black uppercase tracking-tighter text-black bg-white border border-white transition-all hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.2)]" style={CLIP}>
+                   <button onClick={() => activeEvent && setApplyModalOpen(true)} disabled={!activeEvent} className="relative w-full py-5 font-sans font-black uppercase tracking-tighter text-black bg-white border border-white transition-all hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none" style={CLIP}>
                     <span className="relative z-10 text-2xl">APPLY NOW</span>
                     <div className="absolute inset-0 bg-black/5 scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300 z-0" />
                   </button>

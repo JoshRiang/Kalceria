@@ -29,6 +29,7 @@ export default function LandingPage({ onNavigateAuth }) {
   const closeIdeaModal = useCallback(() => setShowIdeaModal(false), []);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [skipAnim, setSkipAnim] = useState(false);
+  const [ambientGated, setAmbientGated] = useState(true);
   const displayedMerch = useMerchRandomizer();
   const [merchInitial, setMerchInitial] = useState(true);
 
@@ -72,11 +73,16 @@ export default function LandingPage({ onNavigateAuth }) {
   const currentAboutImage = currentAboutImages[aboutIndex % currentAboutImages.length];
 
   useEffect(() => {
+    let gateTimer;
     if (sessionStorage.getItem("landingSeen")) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- This reads a session flag to preserve the returning-visitor animation behavior.
       setSkipAnim(true);
+      setAmbientGated(false);
     } else {
       sessionStorage.setItem("landingSeen", "true");
+      gateTimer = setTimeout(() => {
+        setAmbientGated(false);
+      }, 1800);
     }
     // Check login status
     setIsLoggedIn(hasUserSession());
@@ -121,10 +127,14 @@ export default function LandingPage({ onNavigateAuth }) {
         }
       }, 1600);
       return () => {
+        if (gateTimer) clearTimeout(gateTimer);
         clearInterval(scrollInterval);
         clearTimeout(timer);
       };
     }
+    return () => {
+      if (gateTimer) clearTimeout(gateTimer);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -164,7 +174,7 @@ export default function LandingPage({ onNavigateAuth }) {
     >
       {/* ── Section 1: Hero ── */}
       <section ref={heroSectionRef} className="relative w-full min-h-[85vh] flex flex-col items-center justify-center overflow-hidden py-24 z-10">
-        <DynamicCollage />
+        <DynamicCollage isGated={ambientGated} />
         <div className="absolute inset-0 bg-gradient-to-b from-[#050a14]/50 via-[#050a14]/10 to-[#050a14] z-0" />
 
         {/* Video Container */}
@@ -195,7 +205,7 @@ export default function LandingPage({ onNavigateAuth }) {
             ) : (
               <button
                 onClick={onNavigateAuth}
-                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_30px_rgba(255,255,255,0.15)]"
+                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_30px_rgba(255,255,255,0.15)] focus-polygon focus-visible:outline-none"
                 style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
               >
                 <span className="relative z-10">LOGIN / REGISTER</span>
@@ -247,7 +257,7 @@ export default function LandingPage({ onNavigateAuth }) {
             sessionStorage.setItem("landingScrollY", window.scrollY);
           }}>
             <button
-              className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+              className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none"
               style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
             >
               <span className="relative z-10">EXPLORE</span>
@@ -337,7 +347,7 @@ export default function LandingPage({ onNavigateAuth }) {
               sessionStorage.setItem("landingScrollY", window.scrollY);
             }}>
               <button
-                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none"
                 style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
               >
                 <span className="relative z-10">Get to Know More</span>
@@ -828,7 +838,7 @@ export default function LandingPage({ onNavigateAuth }) {
                onClick={() => setShowServiceModal(true)}
                whileHover={{ scale: 1.05 }}
                whileTap={{ scale: 0.95 }}
-               className="relative px-8 md:px-12 py-3 md:py-4 font-sans font-black uppercase tracking-tighter text-sm md:text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+               className="relative px-8 md:px-12 py-3 md:py-4 font-sans font-black uppercase tracking-tighter text-sm md:text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none"
                style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
              >
                <span className="relative z-10">APPLY A REQUEST</span>
