@@ -257,20 +257,36 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                  className="h-14 xs:h-16 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.4)] rotate-0"
                />
 
-               {/* The "X" in MIDDLE - Semi-transparent with pink & golden blobs */}
+               {/* The "X" in MIDDLE - Semi-transparent with pink & golden blobs strictly inside the X */}
                <div className="relative flex items-center justify-center py-1">
-                 {/* Pink dynamic blob */}
-                 <div 
-                   className="absolute -top-1 -left-2 w-10 h-10 rounded-full bg-[#FF00FF] opacity-70 pointer-events-none"
-                   style={{ filter: "blur(12px)" }}
-                 />
-                 {/* Golden dynamic blob */}
-                 <div 
-                   className="absolute -bottom-1 -right-2 w-10 h-10 rounded-full bg-[#FFD700] opacity-65 pointer-events-none"
-                   style={{ filter: "blur(12px)" }}
-                 />
                  <svg width="48" height="48" viewBox="0 0 100 100" className="w-10 h-10 relative z-10 select-none pointer-events-none drop-shadow-[0_0_15px_rgba(255,255,255,0.25)]">
-                   <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="rgba(255,255,255,0.4)" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+                   <defs>
+                     <clipPath id="xClipMobile">
+                       <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+                         X
+                       </text>
+                     </clipPath>
+                     <radialGradient id="pinkBlobMobile" cx="28%" cy="28%" r="48%">
+                       <stop offset="0%" stopColor="#FF00FF" stopOpacity="0.95" />
+                       <stop offset="60%" stopColor="#FF00FF" stopOpacity="0.55" />
+                       <stop offset="100%" stopColor="#FF00FF" stopOpacity="0" />
+                     </radialGradient>
+                     <radialGradient id="goldBlobMobile" cx="72%" cy="72%" r="48%">
+                       <stop offset="0%" stopColor="#FFD700" stopOpacity="0.95" />
+                       <stop offset="60%" stopColor="#FFD700" stopOpacity="0.55" />
+                       <stop offset="100%" stopColor="#FFD700" stopOpacity="0" />
+                     </radialGradient>
+                   </defs>
+
+                   {/* Blobs & base fill strictly inside X */}
+                   <g clipPath="url(#xClipMobile)">
+                     <rect width="100" height="100" fill="rgba(255,255,255,0.45)" />
+                     <rect width="100" height="100" fill="url(#pinkBlobMobile)" />
+                     <rect width="100" height="100" fill="url(#goldBlobMobile)" />
+                   </g>
+
+                   {/* Clean semi-transparent outline stroke */}
+                   <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                      X
                    </text>
                  </svg>
@@ -295,20 +311,36 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                  />
                </div>
 
-               {/* The "X" - 15% bigger, semi-transparent, pink and golden blobs behind */}
+               {/* The "X" - 15% bigger, semi-transparent, pink and golden blobs strictly inside the X */}
                <div className="relative flex items-center justify-center px-1">
-                 {/* Pink dynamic blob */}
-                 <div 
-                   className="absolute -top-1 -left-2 w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#FF00FF] opacity-70 pointer-events-none"
-                   style={{ filter: "blur(16px)" }}
-                 />
-                 {/* Golden dynamic blob */}
-                 <div 
-                   className="absolute -bottom-1 -right-2 w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#FFD700] opacity-65 pointer-events-none"
-                   style={{ filter: "blur(16px)" }}
-                 />
                  <svg width="80" height="80" viewBox="0 0 100 100" className="w-16 h-16 sm:w-[70px] sm:h-[70px] md:w-[74px] md:h-[74px] lg:w-20 lg:h-20 relative z-10 select-none pointer-events-none drop-shadow-[0_0_15px_rgba(255,255,255,0.25)]">
-                   <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="rgba(255,255,255,0.4)" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+                   <defs>
+                     <clipPath id="xClipDesktop">
+                       <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+                         X
+                       </text>
+                     </clipPath>
+                     <radialGradient id="pinkBlobDesktop" cx="28%" cy="28%" r="48%">
+                       <stop offset="0%" stopColor="#FF00FF" stopOpacity="0.95" />
+                       <stop offset="60%" stopColor="#FF00FF" stopOpacity="0.55" />
+                       <stop offset="100%" stopColor="#FF00FF" stopOpacity="0" />
+                     </radialGradient>
+                     <radialGradient id="goldBlobDesktop" cx="72%" cy="72%" r="48%">
+                       <stop offset="0%" stopColor="#FFD700" stopOpacity="0.95" />
+                       <stop offset="60%" stopColor="#FFD700" stopOpacity="0.55" />
+                       <stop offset="100%" stopColor="#FFD700" stopOpacity="0" />
+                     </radialGradient>
+                   </defs>
+
+                   {/* Blobs & base fill strictly inside X */}
+                   <g clipPath="url(#xClipDesktop)">
+                     <rect width="100" height="100" fill="rgba(255,255,255,0.45)" />
+                     <rect width="100" height="100" fill="url(#pinkBlobDesktop)" />
+                     <rect width="100" height="100" fill="url(#goldBlobDesktop)" />
+                   </g>
+
+                   {/* Clean semi-transparent outline stroke */}
+                   <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" style={{ fontFamily: 'Arial Black, sans-serif' }}>
                      X
                    </text>
                  </svg>
@@ -325,19 +357,18 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              </div>
            )}
            
-           {/* 2. JOIN US? - Center of whitespace between JOIN & US mathematically aligned with WA button centerline */}
+           {/* 2. JOIN US - Dead center aligned */}
            <motion.h2 
              initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
              whileInView={{ opacity: 1, y: 0, x: 0, filter: "blur(0px)" }}
              viewport={{ once: false, amount: 0.5 }}
              transition={{ duration: 1, ease: "easeOut" }}
-             className="w-full max-w-2xl mx-auto flex items-baseline justify-center text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter text-white select-none"
+             className="w-full max-w-2xl mx-auto text-center text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter text-white select-none"
              style={{ 
                textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)"
              }}
            >
-             <div className="flex-1 text-right pr-2 sm:pr-3 md:pr-4">JOIN</div>
-             <div className="flex-1 text-left pl-2 sm:pl-3 md:pl-4">US?</div>
+             JOIN US
            </motion.h2>
 
            {/* 3. WhatsApp Logo - Dead center aligned */}
