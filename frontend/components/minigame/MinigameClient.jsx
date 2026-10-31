@@ -89,37 +89,37 @@ function ResetTimer() {
 function LineParticles() {
   const particles = useMemo(() => {
     const random = createSeededRandom("minigame-line-particles-v1");
-    return Array.from({ length: 60 }, () => ({
+    return Array.from({ length: 16 }, () => ({
       x: random() * 100,
       y: random() * 100,
       color: LINE_PARTICLE_COLORS[Math.floor(random() * LINE_PARTICLE_COLORS.length)],
-      size: random() * 7 + 2,
-      duration: 1.5 + random() * 2,
-      delay: random() * 3,
-      xDrift: (random() - 0.5) * 200,
-      yDrift: (random() - 0.5) * 200
+      size: random() * 5 + 3,
+      duration: 2 + random() * 2,
+      delay: random() * 2,
+      xDrift: (random() - 0.5) * 120,
+      yDrift: (random() - 0.5) * 120
     }));
   }, []);
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-visible z-0">
+    <div className="hidden md:block absolute inset-0 pointer-events-none overflow-visible z-0 transform-gpu">
       {particles.map((p, i) => (
         <motion.div
           key={i}
-          className="absolute rounded-full"
+          className="absolute rounded-full will-change-transform"
           style={{
             left: `${p.x}%`,
             top: `${p.y}%`,
             width: p.size,
             height: p.size,
             backgroundColor: p.color,
-            boxShadow: `0 0 15px ${p.color}`
+            boxShadow: `0 0 10px ${p.color}`
           }}
           animate={{
             x: [0, p.xDrift],
             y: [0, p.yDrift],
-            opacity: [0, 1, 0],
-            scale: [0.5, 1.5, 0.5]
+            opacity: [0, 0.8, 0],
+            scale: [0.6, 1.2, 0.6]
           }}
           transition={{
             duration: p.duration,
@@ -464,57 +464,65 @@ export default function MinigamePage() {
           </motion.div>
 
           <div className="relative">
-            {/* Floating ge images around the card - Precise Corner Framing */}
+            {/* Corner framing stickers - Hardware accelerated entry & clean static lock */}
             {[
-              { src: "/ge_1.webp", pos: isMobile ? "-top-4 -left-7" : "-top-24 -left-40", rot: -15, delay: 0 },
-              { src: "/ge_2.webp", pos: isMobile ? "-top-4 -right-7" : "-top-20 -right-36", rot: 20, delay: 0.5 },
-              { src: "/ge_3.webp", pos: isMobile ? "-bottom-3 -left-7" : "bottom-[5%] -left-48", rot: 10, delay: 1 },
-              { src: "/ge_4.webp", pos: isMobile ? "-bottom-3 -right-7" : "bottom-[7%] -right-44", rot: -10, delay: 1.5 },
+              { src: "/ge_1.webp", pos: isMobile ? "-top-4 -left-7" : "-top-24 -left-40", rot: -15 },
+              { src: "/ge_2.webp", pos: isMobile ? "-top-4 -right-7" : "-top-20 -right-36", rot: 20 },
+              { src: "/ge_3.webp", pos: isMobile ? "-bottom-3 -left-7" : "bottom-[5%] -left-48", rot: 10 },
+              { src: "/ge_4.webp", pos: isMobile ? "-bottom-3 -right-7" : "bottom-[7%] -right-44", rot: -10 },
             ].map((ge, idx) => (
               <motion.img
                 key={idx}
                 src={ge.src}
                 alt=""
                 aria-hidden="true"
-                loading="lazy"
+                loading="eager"
                 decoding="async"
-                initial={{ opacity: 0, scale: 0.5, rotate: ge.rot }}
+                initial={{ opacity: 0, scale: 0.6, rotate: ge.rot }}
                 animate={{
                   opacity: 1,
                   scale: 1,
-                  y: [0, -10, 0],
-                  rotate: [ge.rot, ge.rot + 5, ge.rot]
+                  rotate: ge.rot
                 }}
-                exit={{ opacity: 0, scale: 0.5 }}
+                exit={{ opacity: 0, scale: 0.6 }}
                 transition={{
-                  opacity: { duration: 0.8, delay: 0.5 + idx * 0.1 },
-                  scale: { duration: 0.8, delay: 0.5 + idx * 0.1 },
-                  y: { duration: 4 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay },
-                  rotate: { duration: 5 + idx, repeat: Infinity, ease: "easeInOut", delay: ge.delay }
+                  duration: 0.5,
+                  delay: 0.15 + idx * 0.08,
+                  ease: "easeOut"
                 }}
-                className={`absolute ${ge.pos} ${isMobile ? "w-14" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-2xl pointer-events-none`}
+                className={`absolute ${ge.pos} ${isMobile ? "w-14" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-xl pointer-events-none transform-gpu will-change-transform`}
               />
             ))}
 
+            {/* Video Card - Rock-solid static presentation while playing with zero layout repainting */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20, filter: "blur(30px)" }}
-              animate={{ opacity: 1, scale: 1, y: [0, -6, 0], filter: "blur(0px)" }}
-              exit={{ opacity: 0, scale: 0.9, y: 40, filter: "blur(50px)", transition: { duration: 0.8 } }}
-              transition={{ duration: 1.5, y: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}
-              className="relative w-[220px] xs:w-[240px] md:w-[320px] aspect-[9/16] rounded-3xl md:rounded-[2.5rem] border border-yellow-500/50 shadow-[0_0_40px_rgba(251,191,36,0.4)] bg-black mt-0 sm:mt-[-1rem] overflow-visible"
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="relative w-[220px] xs:w-[240px] md:w-[320px] aspect-[9/16] rounded-3xl md:rounded-[2.5rem] border border-yellow-500/50 shadow-[0_0_35px_rgba(251,191,36,0.35)] bg-black mt-0 sm:mt-[-1rem] overflow-visible transform-gpu will-change-transform"
             >
-              {/* Golden Glow Pulse */}
-              <motion.div
-                animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.05, 1] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute inset-[-10%] bg-yellow-500/20 blur-[40px] rounded-[3rem] z-0"
+              {/* Golden Glow Accent - Static GPU accelerated glow without CPU blur recalculation */}
+              <div
+                className="absolute inset-[-6%] bg-yellow-500/20 blur-[25px] rounded-[3rem] z-0 pointer-events-none transform-gpu"
               />
 
-              {/* Rainbow Particles */}
+              {/* Rainbow Particles (Desktop Only) */}
               <LineParticles />
 
-              <div className="relative w-full h-full z-10 overflow-hidden rounded-3xl md:rounded-[2.5rem] border border-white/10">
-                <video ref={videoRef} src="/trailer.mp4" controls autoPlay className="w-full h-full object-cover" />
+              <div className="relative w-full h-full z-10 overflow-hidden rounded-3xl md:rounded-[2.5rem] border border-white/10 transform-gpu">
+                <video 
+                  ref={videoRef} 
+                  src="/trailer.mp4" 
+                  controls 
+                  autoPlay 
+                  playsInline 
+                  webkit-playsinline="true"
+                  preload="auto"
+                  controlsList="nodownload"
+                  className="w-full h-full object-cover transform-gpu will-change-transform" 
+                  style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
+                />
               </div>
             </motion.div>
           </div>

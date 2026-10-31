@@ -270,76 +270,35 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
         <div className="relative z-10 w-full max-w-6xl px-6 md:px-8 flex flex-col items-center gap-8 md:gap-14">
            {/* Collaboration Header - Centered between Darth Vader & Obi-Wan on desktop without face overlap */}
            <div 
-             className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 mx-auto"
+             className="w-full max-w-lg md:max-w-xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-2.5 sm:gap-3 md:gap-4 z-20"
              style={{ transform: `translateY(${isMobile ? "4%" : "12%"})` }}
            >
-              {/* Kalceria Logo - 0 deg tilt & boosted on mobile, centered & uncovered on desktop */}
-              <motion.img 
-                src="/logologin.webp" 
-                alt="Kalceria" 
-                className={`${isMobile ? "h-[68px] xs:h-[76px] rotate-0" : "h-16 md:h-20 -rotate-[8deg]"} w-auto object-contain drop-shadow-[0_0_40px_rgba(255,0,0,0.6)] z-20 will-change-transform`}
-                animate={{ y: [0, -6, 0] }}
-                transition={{ 
-                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" }
-                }}
-              />
-
-              {/* The "X" as an SVG Clipped Glass Artifact - Centered */}
-              <div 
-                className="relative flex items-center justify-center group z-20"
-                style={{ transform: "none" }}
-              >
-                 {/* X-Backglow */}
-                 <div className="absolute inset-0 bg-white/10 blur-[30px] rounded-full scale-110 opacity-30 pointer-events-none" />
-
-                 {/* Golden-Red Corona Dynamic Flare */}
-                 <motion.div 
-                   animate={{ scale: [1, 1.1, 1], rotate: [0, 360], opacity: [0.2, 0.4, 0.2] }}
-                   transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[50px] bg-gradient-to-tr from-amber-500 via-orange-600 to-red-700 opacity-40 z-0 will-change-transform ${isMobile ? "w-[86px] h-[86px]" : "w-[160px] md:w-[200px] h-[160px] md:h-[200px]"}`}
-                 />
-
-                 <svg width={isMobile ? "80" : "130"} height={isMobile ? "80" : "130"} viewBox="0 0 220 220" className="relative z-10 transform-gpu">
-                    <defs>
-                      <clipPath id="collab-x-clip-v3">
-                        <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" style={{ fontFamily: 'Arial Black, sans-serif' }}>X</text>
-                      </clipPath>
-                    </defs>
-                    
-                    <g clipPath="url(#collab-x-clip-v3)">
-                       {/* Glass Fill */}
-                       <rect width="100%" height="100%" fill="rgba(255,255,255,0.18)" />
-                       
-                       {/* Internal Energy Blobs */}
-                       <motion.circle 
-                         animate={{ cx: [30, 190], cy: [30, 190], r: [45, 75, 45] }}
-                         transition={{ duration: 6, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
-                         fill="#FF00FF" style={{ filter: 'blur(35px)', opacity: 0.9 }}
-                         className="will-change-[cx,cy]"
-                       />
-                       <motion.circle 
-                         animate={{ cx: [190, 30], cy: [190, 30], r: [75, 45, 75] }}
-                         transition={{ duration: 7, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
-                         fill="#FFD700" style={{ filter: 'blur(35px)', opacity: 0.9 }}
-                         className="will-change-[cx,cy]"
-                       />
-                    </g>
-                    
-                    {/* HD Stroke */}
-                    <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" fontSize="160" fontWeight="950" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" style={{ fontFamily: 'Arial Black, sans-serif' }}>X</text>
-                 </svg>
+              {/* Kalceria Logo - Left column, right-aligned, still and compact */}
+              <div className="flex justify-end items-center">
+                <img 
+                  src="/logologin.webp" 
+                  alt="Kalceria" 
+                  className="h-9 sm:h-10 md:h-12 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)] rotate-0"
+                />
               </div>
 
-              {/* DSL Logo - 0 deg tilt & boosted on mobile, centered & uncovered on desktop */}
-              <motion.img 
-                src="/dsl.webp" 
-                alt="DSL" 
-                className={`${isMobile ? "h-[68px] xs:h-[76px] rotate-0" : "h-16 md:h-20 rotate-[8deg]"} w-auto object-contain drop-shadow-[0_0_40px_rgba(0,255,255,0.6)] z-20 will-change-transform`}
-                animate={{ y: [0, 6, 0] }}
-                transition={{ 
-                  y: { duration: 6, repeat: Infinity, ease: "easeInOut" }
-                }}
-              />
+              {/* The "X" - Center column, exactly on the 50% centerline, equivalent height, no gradient, no floating animation */}
+              <div className="flex items-center justify-center px-1">
+                <svg width="48" height="48" viewBox="0 0 100 100" className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 drop-shadow-[0_0_20px_rgba(255,255,255,0.7)] select-none pointer-events-none">
+                  <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="85" fontWeight="950" fill="#ffffff" style={{ fontFamily: 'Arial Black, sans-serif' }}>
+                    X
+                  </text>
+                </svg>
+              </div>
+
+              {/* DSL Logo - Right column, left-aligned, still and compact */}
+              <div className="flex justify-start items-center">
+                <img 
+                  src="/dsl.webp" 
+                  alt="DSL" 
+                  className="h-9 sm:h-10 md:h-12 w-auto object-contain drop-shadow-[0_0_25px_rgba(0,255,255,0.5)] rotate-0"
+                />
+              </div>
            </div>
            
            <div className="flex flex-col items-center gap-6 md:gap-8">
@@ -349,12 +308,15 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                 whileInView={{ opacity: 1, y: 0, x: 0, scale: isMobile ? 1.05 : 0.85, filter: "blur(0px)" }}
                 viewport={{ once: false, amount: 0.5 }}
                 transition={{ duration: 1, ease: "easeOut" }}
-                className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white text-center"
+                className="text-5xl md:text-8xl font-black uppercase tracking-tighter text-white text-center flex items-center justify-center"
                 style={{ 
                   textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)"
                 }}
               >
-                JOIN US?
+                <span className="relative inline-flex items-baseline">
+                  <span>JOIN US</span>
+                  <span className="w-0 overflow-visible select-none font-black inline-block">?</span>
+                </span>
               </motion.h2>
 
               {/* WhatsApp Logo - Centered directly under JOIN US? */}

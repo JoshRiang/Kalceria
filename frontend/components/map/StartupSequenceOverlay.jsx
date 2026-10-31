@@ -117,7 +117,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, ease: "easeOut" }}
-            className="relative z-10 w-full h-screen flex flex-col items-center justify-between md:justify-start pt-20 xs:pt-28 md:pt-24 pb-16 xs:pb-20 md:pb-0"
+            className="relative z-10 w-full h-screen flex flex-col items-center justify-center pb-24 md:pb-0 md:justify-start md:pt-24"
           >
             {/* Main Title Section - Perfectly Centered on Mobile */}
             <motion.div
