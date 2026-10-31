@@ -552,8 +552,34 @@ export default function LandingPage({ onNavigateAuth }) {
             </div>
           </div>
 
-          {/* Social Media Icon List: Below Video on mobile & iPad */}
-          <div className="flex xl:hidden flex-row gap-6 mt-4 mb-2 items-center justify-center w-full order-3 z-20">
+          {/* Flying & Floating Coki Mascot (Mobile Phone & Tablet Family Only) - Placed in between video and TikTok/IG logo */}
+          <div className="flex xl:hidden items-center justify-center w-full order-3 z-20 my-4 sm:my-6 md:my-8 pointer-events-none">
+            <motion.div
+              animate={{ 
+                y: [-12, 12, -12], 
+                x: [-5, 5, -5],
+                rotate: [-3, 3, -3] 
+              }}
+              transition={{ 
+                duration: 5.5, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="relative w-44 xs:w-48 sm:w-56 md:w-64 max-w-[75vw] h-auto drop-shadow-[0_10px_35px_rgba(255,0,255,0.35)]"
+            >
+              <Image 
+                src="/hp/kalcer_man_hp.webp" 
+                alt="Coki Flying Mascot" 
+                width={2048} 
+                height={2048} 
+                priority
+                className="w-full h-auto object-contain select-none" 
+              />
+            </motion.div>
+          </div>
+
+          {/* Social Media Icon List: Below Coki Mascot on mobile & tablet */}
+          <div className="flex xl:hidden flex-row gap-6 mt-2 mb-4 items-center justify-center w-full order-4 z-20">
             {/* Instagram Icon */}
             <a 
               href="https://www.instagram.com/kalceria/" 
