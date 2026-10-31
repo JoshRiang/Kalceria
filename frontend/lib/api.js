@@ -87,6 +87,9 @@ async function fetchAllPages(path, responseKey, pageSize) {
     if (cursor) params.cursor = cursor;
 
     const response = await api.get(path, { params });
+    if (!response.data || typeof response.data !== 'object') {
+      break;
+    }
     const pageItems = response.data?.[responseKey];
     if (Array.isArray(pageItems)) items.push(...pageItems);
 

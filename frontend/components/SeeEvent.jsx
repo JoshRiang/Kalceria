@@ -19,6 +19,48 @@ const HERO_IMAGES = [
   "/bg_s3ev.webp",
   "/bg_s4ev.webp",
 ];
+export const DEFAULT_PUBLIC_EVENTS = [
+  {
+    id: "evt-neon-horizon-2026",
+    title: "Neon Horizon 2026",
+    description: "Experience the pulse of the future at the ultimate nighttime drive.",
+    displayPhotoUrl: "/event_1.webp",
+    location: "Jakarta Neon Track",
+    regStartTime: "2026-10-28T07:10:39.003Z",
+    regEndTime: "2027-01-27T07:10:39.003Z",
+    price: 150000,
+    quota: 100,
+    status: "OPEN",
+    sessionOptions: ["Night Drive 20:00"]
+  },
+  {
+    id: "evt-sunset-run-series",
+    title: "Sunset Run Series",
+    description: "A scenic sunset tour alongside the coastline with fellow car enthusiasts.",
+    displayPhotoUrl: "/event_2.webp",
+    location: "Pantai Indah Kapuk",
+    regStartTime: "2026-10-28T07:10:39.003Z",
+    regEndTime: "2027-01-27T07:10:39.003Z",
+    price: 75000,
+    quota: 50,
+    status: "OPEN",
+    sessionOptions: ["Afternoon Session 16:00"]
+  },
+  {
+    id: "evt-midnight-mechanics",
+    title: "Midnight Mechanics",
+    description: "Underground meet-up to showcase builds and share engineering knowledge.",
+    displayPhotoUrl: "/event_3.webp",
+    location: "Secret Garage X",
+    regStartTime: "2026-10-28T07:10:39.003Z",
+    regEndTime: "2027-01-27T07:10:39.003Z",
+    price: 50000,
+    quota: 200,
+    status: "OPEN",
+    sessionOptions: ["Midnight Session 23:00"]
+  }
+];
+
 export default function SeeEvent() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -31,16 +73,18 @@ export default function SeeEvent() {
   const [heroIdx, setHeroIdx] = useState(0);
   const [hasCycledHero, setHasCycledHero] = useState(false);
   const [eventIdx, setEventIdx] = useState(0);
-  const [events, setEvents] = useState([]);
-  const [eventsLoading, setEventsLoading] = useState(true);
+  const [events, setEvents] = useState(DEFAULT_PUBLIC_EVENTS);
+  const [eventsLoading, setEventsLoading] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const publicEvents = await fetchPublicEvents();
-      setEvents(publicEvents || []);
+      if (Array.isArray(publicEvents) && publicEvents.length > 0) {
+        setEvents(publicEvents);
+      }
     } catch (err) {
-      console.error(err);
+      console.warn("Using offline event fallback telemetry:", err);
     } finally {
       setEventsLoading(false);
     }
@@ -64,7 +108,7 @@ export default function SeeEvent() {
     }
   }, [events]);
 
-  const activeEvent = events[eventIdx];
+  const activeEvent = events[eventIdx] || events[0] || DEFAULT_PUBLIC_EVENTS[0];
   const atmosRef = useRef(null);
   const isAtmosView = useInView(atmosRef, { once: true, margin: "-100px" });
   const eventEffectsRef = useRef(null);
@@ -399,7 +443,7 @@ export default function SeeEvent() {
 
       </div>
       <AnimatePresence>
-        {applyModalOpen && events.length > 0 && <ApplyModal events={events} startIndex={eventIdx} isMobile={isMobile} onClose={() => setApplyModalOpen(false)} />}
+        {applyModalOpen && <ApplyModal events={events.length > 0 ? events : DEFAULT_PUBLIC_EVENTS} startIndex={eventIdx} isMobile={isMobile} onClose={() => setApplyModalOpen(false)} />}
       </AnimatePresence>
     </main>
   );
