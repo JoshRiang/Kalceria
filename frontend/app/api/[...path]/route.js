@@ -41,12 +41,21 @@ async function handler(req, { params }) {
 
     const clientHeaders = new Headers();
     backendRes.headers.forEach((value, key) => {
-      if (key.toLowerCase() === 'set-cookie') {
-        clientHeaders.append(key, value);
-      } else {
+      if (key.toLowerCase() !== 'set-cookie') {
         clientHeaders.set(key, value);
       }
     });
+
+    const setCookies =
+      typeof backendRes.headers.getSetCookie === 'function'
+        ? backendRes.headers.getSetCookie()
+        : backendRes.headers.get('set-cookie')
+        ? [backendRes.headers.get('set-cookie')]
+        : [];
+
+    for (const cookie of setCookies) {
+      clientHeaders.append('set-cookie', cookie);
+    }
 
     const body = await backendRes.arrayBuffer();
     return new NextResponse(body, {

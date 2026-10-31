@@ -12,20 +12,7 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 31536000,
   },
   async rewrites() {
-    const configuredApi = process.env.API_PROXY_URL || process.env.NEXT_PUBLIC_API_URL || 'https://kalceria-backend.vercel.app/api';
-    if (!configuredApi) return [];
-
-    try {
-      const apiUrl = new URL(configuredApi);
-      if (!['http:', 'https:'].includes(apiUrl.protocol)) return [];
-      const apiPath = apiUrl.pathname.replace(/\/+$/, '') || '/api';
-      return [{
-        source: '/api/:path*',
-        destination: `${apiUrl.origin}${apiPath}/:path*`,
-      }];
-    } catch {
-      return [];
-    }
+    return [];
   },
   async headers() {
     return [
