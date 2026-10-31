@@ -615,14 +615,14 @@ export default function AboutUs() {
           Kalceria used to be a Final Project, now it is becoming a legacy of digital craftsmanship and automotive passion. It stands as a testament to the boundary-pushing creativity of our development team.
         </p>
         
-        {/* dy_3 (Fitra Eri / Mentor) image - Not diagonal (0deg), +30% size on mobile, with white L-border */}
+        {/* dy_3 (Fitra Eri / Mentor) image - 0deg and trimmed bottom horizontal line for mobile, -10.5deg on desktop */}
         <div 
           className="absolute left-1/2 -translate-x-1/2 md:translate-x-0 md:left-[50.4%] z-20 top-[12rem] sm:top-[13rem] md:top-[5.88rem]"
           onMouseEnter={() => setHoverMentor(true)}
           onMouseLeave={() => setHoverMentor(false)}
           onClick={() => setHoverMentor((p) => !p)}
         >
-          <div className="relative w-max flex items-end justify-center mx-auto">
+          <div className="relative w-max flex flex-col items-center justify-end mx-auto">
             <Image
               src="/dy_3.webp" 
               alt="Ditya Alif K."
@@ -630,18 +630,13 @@ export default function AboutUs() {
               height={2729}
               sizes="(max-width: 768px) 190px, 372px"
               quality={85}
-              loading="lazy"
+              priority
+              loading="eager"
               decoding="async"
-              className="object-contain block pointer-events-auto opacity-95 cursor-pointer md:cursor-help w-[150px] xs:w-[175px] h-auto md:w-[23.25rem] md:h-[23.25rem] transition-transform duration-300"
-              style={{ rotate: isMobile ? "0deg" : "-10.5deg" }}
+              className="object-contain block pointer-events-auto opacity-95 cursor-pointer md:cursor-help w-[150px] xs:w-[175px] h-auto md:w-[23.25rem] md:h-[23.25rem] rotate-0 md:-rotate-[10.5deg] transition-transform duration-300"
             />
-            {/* White L-corner border at bottom for mobile (matching Coki on SeeEvent) */}
-            {isMobile && (
-              <>
-                <div className="absolute left-0 bottom-0 w-[4px] h-[50%] bg-white z-20 shadow-[0_0_8px_white]" />
-                <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20 shadow-[0_0_8px_white]" />
-              </>
-            )}
+            {/* Pure CSS Horizontal Line: exact horizontal length of the photo, trim 2px, 0ms block time, no vertical line */}
+            <div className="block md:hidden w-full h-[2px] bg-white/95 shadow-[0_0_6px_rgba(255,255,255,0.7)] mt-1.5" />
           </div>
           
           <AnimatePresence>
