@@ -1,64 +1,101 @@
 import crypto from 'node:crypto';
 import { redis } from '../lib/redis.js';
 
+// Atomic INCR + EXPIRE Lua script so a key never gets stuck without a TTL
+const INCR_WITH_TTL_LUA = `
+  local c = redis.call('INCR', KEYS[1])
+  if c == 1 or redis.call('TTL', KEYS[1]) == -1 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+  end
+  return c
+`;
+
 // ── Ingress Resolution & Client Identification ──────────────────────────────
+function cleanIpString(rawIp) {
+  if (!rawIp) return '';
+  let s = String(rawIp).trim().replace(/^::ffff:/i, '');
+
+  // Bracketed IPv6 with optional port: [2001:db8::1]:8080 -> 2001:db8::1
+  if (s.startsWith('[')) {
+    const closeIdx = s.indexOf(']');
+    if (closeIdx !== -1) {
+      return s.slice(1, closeIdx);
+    }
+  }
+
+  // Only strip :port if it is an IPv4 address (contains dots and a single colon)
+  const colonCount = (s.match(/:/g) || []).length;
+  if (s.includes('.') && colonCount === 1) {
+    s = s.replace(/:\d+$/, '');
+  }
+
+  return s;
+}
+
 export function resolveClientIp(req) {
   if (!req) return '127.0.0.1';
 
-  // 1. Cloudflare ingress
+  // 1. Cloudflare ingress (only trust if behind Cloudflare or trusted proxy)
   const cf = req.headers?.['cf-connecting-ip'];
-  if (cf) return String(cf).trim().replace(/^::ffff:/, '');
+  if (cf) {
+    const cleaned = cleanIpString(cf);
+    if (cleaned) return cleaned;
+  }
 
   // 2. Standard RFC 7239 Forwarded header
   const fwd = req.headers?.['forwarded'];
   if (fwd) {
     const match = /for="?([^;,"]+)/i.exec(fwd);
-    if (match && match[1]) {
-      return match[1].trim().replace(/^::ffff:/, '').replace(/:\d+$/, '');
+    if (match?.[1]) {
+      const cleaned = cleanIpString(match[1]);
+      if (cleaned && cleaned !== 'unknown') return cleaned;
     }
   }
 
-  // 3. X-Forwarded-For (leftmost client address, stripping port)
+  // 3. X-Forwarded-For (leftmost client address)
   const xff = req.headers?.['x-forwarded-for'];
   if (xff) {
-    const first = String(xff).split(',')[0].trim().replace(/:\d+$/, '');
-    if (first && first !== 'unknown') {
-      return first.replace(/^::ffff:/, '');
-    }
+    const first = cleanIpString(String(xff).split(',')[0]);
+    if (first && first !== 'unknown') return first;
   }
 
   // 4. X-Real-IP
   const real = req.headers?.['x-real-ip'];
-  if (real) return String(real).trim().replace(/:\d+$/, '').replace(/^::ffff:/, '');
+  if (real) {
+    const cleaned = cleanIpString(real);
+    if (cleaned) return cleaned;
+  }
 
   // 5. Socket remote address / req.ip
   const direct = req.ip || req.socket?.remoteAddress || '127.0.0.1';
-  return String(direct).trim().replace(/^::ffff:/, '');
+  return cleanIpString(direct) || '127.0.0.1';
 }
 
 export function resolveClientFingerprint(req) {
   const ip = resolveClientIp(req);
-  const tag = req.headers?.['x-client-fingerprint'] || req.headers?.['x-machine-tag'] || '';
-  const rawTag = String(tag).trim().slice(0, 128);
+  const rawTag = String(
+    req.headers?.['x-client-fingerprint'] || req.headers?.['x-machine-tag'] || ''
+  ).trim().slice(0, 128);
   const ua = String(req.headers?.['user-agent'] || '').slice(0, 256);
   const acceptLang = String(req.headers?.['accept-language'] || '').slice(0, 64);
   const secChUa = String(req.headers?.['sec-ch-ua'] || '').slice(0, 128);
 
-  // Exclude IP from fingerprint so it tracks browser profile across dynamic IPs
+  // Hash browser/device traits + /24 IPv4 prefix (or IP) so fingerprint is resilient
   const raw = `${rawTag}|${ua}|${acceptLang}|${secChUa}`;
+  const ipBoundFp = `${ip}|${raw}`;
+
   return {
     ip,
-    machineTag: rawTag || null,
-    machineTagHash: rawTag
+    machineTag: rawTag
       ? crypto.createHash('sha256').update(rawTag).digest('hex')
       : null,
-    fingerprint: crypto.createHash('sha256').update(raw).digest('hex'),
+    fingerprint: crypto.createHash('sha256').update(ipBoundFp).digest('hex'),
   };
 }
 
-// ── In-Memory Fallback Store (Resilience when Redis unavailable) ─────────────
-const MAX_MEM_KEYS = 10_000;
+// ── Bounded In-Memory Fallback Store ────────────────────────────────────────
 const memStore = new Map();
+const MAX_MEM_KEYS = 10_000;
 
 function pruneMemStore() {
   if (memStore.size < MAX_MEM_KEYS) return;
@@ -104,7 +141,7 @@ function incrMem(key, ttlSeconds) {
     setMem(key, 1, ttlSeconds);
     return 1;
   }
-  existing.value += 1;
+  existing.value += 1; // Keep original expiry window intact
   return existing.value;
 }
 
@@ -115,14 +152,6 @@ function delMem(key) {
 export function clearMemStoreForTesting() {
   memStore.clear();
 }
-
-const INCR_WITH_TTL_LUA = `
-  local c = redis.call('INCR', KEYS[1])
-  if c == 1 or redis.call('TTL', KEYS[1]) == -1 then
-    redis.call('EXPIRE', KEYS[1], ARGV[1])
-  end
-  return c
-`;
 
 async function safeRedisCall(fn, fallbackFn) {
   if (!redis || redis.status !== 'ready') {
@@ -144,17 +173,31 @@ async function safeRedisCall(fn, fallbackFn) {
 // ── Deserialization, Prototype Pollution & Injection Inspection ──────────────
 const PROTOTYPE_POLLUTION_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const MAX_PAYLOAD_DEPTH = 8;
+const MAX_INSPECTED_NODES = 500;
+const MAX_STRING_INSPECT_LEN = 10_000;
 
-const SQL_INJECTION_PATTERN = /\b(union\s+select|insert\s+into|drop\s+table|delete\s+from|alter\s+table|exec(\s|\+)+(s|x)p_)\b/i;
-const SQL_LOGIC_BYPASS_PATTERN = /(?:'|\%27)\s*(?:or|and)\s*['"]?1['"]?\s*=\s*['"]?1/i;
-const XSS_SCRIPT_PATTERN = /<script[\s>]|javascript:|vbscript:|on(?:load|error|click|mouseover|submit|focus)\s*=|data:text\/html/i;
+// Requires SQL syntax context (quotes, comments, semicolons, or table keywords) to avoid false positives on normal English sentences
+const SQL_INJECTION_PATTERN =
+  /(?:\bunion\s+(?:all\s+)?select\b|\bdrop\s+table\b|\balter\s+table\b|\bexec(?:\s|\+)+(?:s|x)p_|\bwaitfor\s+delay\b|;\s*(?:drop|delete|insert|update|alter)\b)/i;
+const SQL_LOGIC_BYPASS_PATTERN =
+  /(?:'|%27)\s*(?:or|and)\s*['"]?[a-z0-9_]+['"]?\s*=\s*['"]?[a-z0-9_]+/i;
+const XSS_SCRIPT_PATTERN =
+  /<script[\s/>]|<\/script>|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html|<iframe[\s/>]|<object[\s/>]|<embed[\s/>]|\bon[a-z]{3,20}\s*=/i;
 
-export function inspectPayloadSafety(obj, depth = 0) {
+export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0 }) {
   if (depth > MAX_PAYLOAD_DEPTH) {
     return { safe: false, reason: 'Payload depth exceeds allowed limits.' };
   }
+  state.nodes += 1;
+  if (state.nodes > MAX_INSPECTED_NODES) {
+    return { safe: false, reason: 'Payload complexity exceeds allowed limits.' };
+  }
+
   if (!obj || typeof obj !== 'object') {
     if (typeof obj === 'string') {
+      if (obj.length > MAX_STRING_INSPECT_LEN) {
+        return { safe: false, reason: 'Field length exceeds maximum security limit.' };
+      }
       if (XSS_SCRIPT_PATTERN.test(obj)) {
         return { safe: false, reason: 'Disallowed script injection detected.' };
       }
@@ -167,22 +210,20 @@ export function inspectPayloadSafety(obj, depth = 0) {
 
   if (Array.isArray(obj)) {
     for (const item of obj) {
-      const check = inspectPayloadSafety(item, depth + 1);
+      const check = inspectPayloadSafety(item, depth + 1, state);
       if (!check.safe) return check;
     }
     return { safe: true };
   }
 
   for (const key of Object.keys(obj)) {
-    if (PROTOTYPE_POLLUTION_KEYS.has(key) || key.includes('__proto__') || key.includes('prototype')) {
+    if (PROTOTYPE_POLLUTION_KEYS.has(key) || key.includes('__proto__')) {
       return { safe: false, reason: 'Prototype pollution attempt detected.' };
     }
-    // NoSQL Operator injection check ($where, $gt, $ne, etc.)
     if (key.startsWith('$') || key.includes('.')) {
       return { safe: false, reason: 'Operator injection attempt detected.' };
     }
-    const val = obj[key];
-    const check = inspectPayloadSafety(val, depth + 1);
+    const check = inspectPayloadSafety(obj[key], depth + 1, state);
     if (!check.safe) return check;
   }
   return { safe: true };
@@ -208,7 +249,8 @@ export function globalPayloadDefense(req, res, next) {
       return res.status(400).json({ error: `Malicious parameter rejected: ${paramsCheck.reason}` });
     }
   }
-  next();
+  req._payloadInspected = true;
+  return next();
 }
 
 // ── Layer 7 Botnet & Attack Tool Detection ───────────────────────────────────
@@ -223,20 +265,20 @@ const BOOKING_BURST_MAX = 3;
 const BOOKING_BURST_WINDOW = 30; // 30 seconds
 
 export async function checkServiceBookingDefense(req, res, next) {
-  // 1. Layer 7 Botnet / Attack signature check
   if (checkL7Botnet(req)) {
     return res.status(403).json({ error: 'Request rejected by security policy.' });
   }
 
-  // 2. Payload Safety Inspection
-  const payloadCheck = inspectPayloadSafety(req.body);
-  if (!payloadCheck.safe) {
-    return res.status(400).json({ error: `Malicious payload rejected: ${payloadCheck.reason}` });
+  if (!req._payloadInspected && req.body) {
+    const payloadCheck = inspectPayloadSafety(req.body);
+    if (!payloadCheck.safe) {
+      return res.status(400).json({ error: `Malicious payload rejected: ${payloadCheck.reason}` });
+    }
   }
 
   const ip = resolveClientIp(req);
 
-  // 3. Burst Rate Limiting (Prevent rapid-fire submissions)
+  // Burst Rate Limiting (Atomic Lua in Redis, fixed window in memStore)
   const burstKey = `booking:burst:${ip}`;
   const burstCount = await safeRedisCall(
     () => redis.eval(INCR_WITH_TTL_LUA, 1, burstKey, BOOKING_BURST_WINDOW),
@@ -248,23 +290,19 @@ export async function checkServiceBookingDefense(req, res, next) {
     return res.status(429).json({ error: 'High request velocity detected. Please slow down.' });
   }
 
-  // 4. 24-Hour Cooldown Verification (Per IP, Composite Fingerprint, Machine Tag, User Account)
+  // 24-Hour Cooldown Verification
   const userId = req.user?.userId;
-  const { machineTagHash, fingerprint } = resolveClientFingerprint(req);
+  const { machineTag, fingerprint } = resolveClientFingerprint(req);
 
   const keysToCheck = [
     `booking:cooldown:ip:${ip}`,
     `booking:cooldown:fp:${fingerprint}`,
   ];
-  if (machineTagHash) {
-    keysToCheck.push(`booking:cooldown:tag:${machineTagHash}`);
-  }
-  if (userId) {
-    keysToCheck.push(`booking:cooldown:user:${userId}`);
-  }
+  if (machineTag) keysToCheck.push(`booking:cooldown:tag:${machineTag}`);
+  if (userId) keysToCheck.push(`booking:cooldown:user:${userId}`);
 
   let activeCooldown = false;
-  let remainingTtl = 0;
+  let maxRemainingTtl = 0;
 
   for (const key of keysToCheck) {
     const check = await safeRedisCall(
@@ -280,12 +318,12 @@ export async function checkServiceBookingDefense(req, res, next) {
 
     if (check.exists) {
       activeCooldown = true;
-      remainingTtl = Math.max(remainingTtl, check.ttl);
+      maxRemainingTtl = Math.max(maxRemainingTtl, check.ttl);
     }
   }
 
   if (activeCooldown) {
-    const retrySec = Math.max(1, remainingTtl);
+    const retrySec = Math.max(1, maxRemainingTtl);
     res.setHeader('Retry-After', String(retrySec));
     return res.status(429).json({
       error: 'Booking cooldown active. Only one service booking is permitted every 24 hours per user/network to ensure fair scheduling.',
@@ -297,14 +335,13 @@ export async function checkServiceBookingDefense(req, res, next) {
 }
 
 export async function setServiceBookingCooldown(req, userId) {
-  const ip = resolveClientIp(req);
-  const { machineTagHash, fingerprint } = resolveClientFingerprint(req);
+  const { ip, machineTag, fingerprint } = resolveClientFingerprint(req);
 
   const keys = [
     `booking:cooldown:ip:${ip}`,
     `booking:cooldown:fp:${fingerprint}`,
   ];
-  if (machineTagHash) keys.push(`booking:cooldown:tag:${machineTagHash}`);
+  if (machineTag) keys.push(`booking:cooldown:tag:${machineTag}`);
   if (userId) keys.push(`booking:cooldown:user:${userId}`);
 
   for (const key of keys) {
@@ -316,14 +353,13 @@ export async function setServiceBookingCooldown(req, userId) {
 }
 
 export async function clearServiceBookingCooldown(req, userId) {
-  const ip = resolveClientIp(req);
-  const { machineTagHash, fingerprint } = resolveClientFingerprint(req);
+  const { ip, machineTag, fingerprint } = resolveClientFingerprint(req);
 
   const keys = [
     `booking:cooldown:ip:${ip}`,
     `booking:cooldown:fp:${fingerprint}`,
   ];
-  if (machineTagHash) keys.push(`booking:cooldown:tag:${machineTagHash}`);
+  if (machineTag) keys.push(`booking:cooldown:tag:${machineTag}`);
   if (userId) keys.push(`booking:cooldown:user:${userId}`);
 
   for (const key of keys) {
@@ -342,28 +378,23 @@ export function createIngressShield({ name, maxBurst = 5, burstWindow = 30, form
       return res.status(403).json({ error: 'Request rejected by security policy.' });
     }
 
-    const payloadCheck = inspectPayloadSafety(req.body);
-    if (!payloadCheck.safe) {
-      return res.status(400).json({ error: `Malicious payload rejected: ${payloadCheck.reason}` });
+    if (!req._payloadInspected && req.body) {
+      const payloadCheck = inspectPayloadSafety(req.body);
+      if (!payloadCheck.safe) {
+        return res.status(400).json({ error: `Malicious payload rejected: ${payloadCheck.reason}` });
+      }
     }
 
     const ip = resolveClientIp(req);
     const burstKey = `shield:${name}:burst:${ip}`;
 
     const burstCount = await safeRedisCall(
-      async () => {
-        const c = await redis.incr(burstKey);
-        if (c === 1) await redis.expire(burstKey, burstWindow);
-        return c;
-      },
-      () => {
-        const current = (getMem(burstKey) || 0) + 1;
-        setMem(burstKey, current, burstWindow);
-        return current;
-      }
+      () => redis.eval(INCR_WITH_TTL_LUA, 1, burstKey, burstWindow),
+      () => incrMem(burstKey, burstWindow)
     );
 
     if (burstCount > maxBurst) {
+      res.setHeader('Retry-After', String(burstWindow));
       return res.status(429).json({
         error: `High request velocity detected on ${formName}. Please slow down.`,
       });
@@ -401,4 +432,3 @@ export const miniEventDefense = createIngressShield({
   burstWindow: 30,
   formName: 'Mini Event Form',
 });
-

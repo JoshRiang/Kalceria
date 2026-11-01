@@ -78,27 +78,55 @@ async function safeRedisCall(fn, fallbackFn) {
   }
 }
 
+export function cleanIpString(rawIp) {
+  if (!rawIp) return '';
+  let s = String(rawIp).trim().replace(/^::ffff:/i, '');
+
+  // Bracketed IPv6 with optional port: [2001:db8::1]:8080 -> 2001:db8::1
+  if (s.startsWith('[')) {
+    const closeIdx = s.indexOf(']');
+    if (closeIdx !== -1) {
+      return s.slice(1, closeIdx);
+    }
+  }
+
+  // Only strip :port if it is an IPv4 address (contains dots and a single colon)
+  const colonCount = (s.match(/:/g) || []).length;
+  if (s.includes('.') && colonCount === 1) {
+    s = s.replace(/:\d+$/, '');
+  }
+
+  return s;
+}
+
 export function resolveClientIp(req) {
   if (!req) return '127.0.0.1';
   // 1. Prefer Express's trusted proxy resolution (when app.set('trust proxy', ...) is configured)
-  if (req.ip) return String(req.ip).replace(/^::ffff:/, '');
+  if (req.ip) return cleanIpString(req.ip);
 
   // 2. Cloudflare ingress when proxy header is present
   const cf = req.headers?.['cf-connecting-ip'];
-  if (cf) return String(cf).trim().replace(/^::ffff:/, '');
+  if (cf) {
+    const cleaned = cleanIpString(cf);
+    if (cleaned) return cleaned;
+  }
 
   // 3. X-Forwarded-For (leftmost client address)
   const xff = req.headers?.['x-forwarded-for'];
   if (xff) {
-    const first = String(xff).split(',')[0].trim().replace(/:\d+$/, '');
-    if (first && first !== 'unknown') return first.replace(/^::ffff:/, '');
+    const first = cleanIpString(String(xff).split(',')[0]);
+    if (first && first !== 'unknown') return first;
   }
 
   // 4. X-Real-IP
   const real = req.headers?.['x-real-ip'];
-  if (real) return String(real).trim().replace(/:\d+$/, '').replace(/^::ffff:/, '');
+  if (real) {
+    const cleaned = cleanIpString(real);
+    if (cleaned) return cleaned;
+  }
 
-  return String(req.socket?.remoteAddress || '127.0.0.1').replace(/^::ffff:/, '');
+  const direct = req.ip || req.socket?.remoteAddress || '127.0.0.1';
+  return cleanIpString(direct) || '127.0.0.1';
 }
 
 export function resolveClientFingerprint(req) {

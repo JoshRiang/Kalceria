@@ -73,6 +73,17 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
       assert.equal(resolveClientIp(req), '192.168.1.50');
     });
 
+    it('preserves valid IPv6 addresses and bracketed ports without chopping characters', () => {
+      const reqBracketed = { headers: { 'x-forwarded-for': '[2001:db8::1]:8080' } };
+      assert.equal(resolveClientIp(reqBracketed), '2001:db8::1');
+
+      const reqIpv6Full = { ip: '2001:db8:85a3::8a2e:370:7334' };
+      assert.equal(resolveClientIp(reqIpv6Full), '2001:db8:85a3::8a2e:370:7334');
+
+      const reqLoopback = { ip: '::1' };
+      assert.equal(resolveClientIp(reqLoopback), '::1');
+    });
+
     it('produces consistent SHA-256 composite client fingerprint', () => {
       const req = {
         headers: {
@@ -83,7 +94,7 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
       };
       const fp = resolveClientFingerprint(req);
       assert.equal(fp.ip, '203.0.113.5');
-      assert.equal(fp.machineTag, 'kalceria-device-xyz');
+      assert.ok(fp.machineTag);
       assert.equal(typeof fp.fingerprint, 'string');
       assert.equal(fp.fingerprint.length, 64);
     });
@@ -104,6 +115,39 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
       assert.match(check.reason, /prototype pollution/i);
     });
 
+    it('allows valid property names containing "prototype" such as prototypeLink', () => {
+      const safeObj = { prototypeLink: 'https://figma.com/proto/123', isPrototype: true };
+      const check = inspectPayloadSafety(safeObj);
+      assert.equal(check.safe, true);
+    });
+
+    it('allows natural English/Indonesian sentences without false positive SQLi triggers', () => {
+      const legitimateInputs = [
+        'Please delete from the old list and update our event.',
+        'Can we insert into next week slot instead?',
+        'Kami ingin mengubah jadwal shooting dari slot kemarin.',
+      ];
+
+      for (const text of legitimateInputs) {
+        const check = inspectPayloadSafety({ notes: text });
+        assert.equal(check.safe, true, `Should allow natural text: "${text}"`);
+      }
+    });
+
+    it('detects and blocks real SQL injection attacks', () => {
+      const dangerousInputs = [
+        "1' OR '1'='1",
+        "UNION SELECT null, username, password FROM users",
+        "; DROP TABLE service_bookings;",
+        "exec sp_executesql 'SELECT 1'",
+      ];
+
+      for (const sql of dangerousInputs) {
+        const check = inspectPayloadSafety({ filter: sql });
+        assert.equal(check.safe, false, `Should block SQL injection: "${sql}"`);
+      }
+    });
+
     it('detects and blocks NoSQL operator injection ($gt, $where, $ne)', () => {
       const dangerousObj = { username: { $gt: '' }, password: { $ne: null } };
       const check = inspectPayloadSafety(dangerousObj);
@@ -111,18 +155,18 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
       assert.match(check.reason, /operator injection/i);
     });
 
-    it('detects and blocks SQL injection union and logic bypass patterns', () => {
-      const dangerousObj = { query: "' OR '1'='1", filter: "UNION SELECT null, username FROM users" };
-      const check = inspectPayloadSafety(dangerousObj);
-      assert.equal(check.safe, false);
-      assert.match(check.reason, /SQL injection/i);
-    });
-
     it('detects and blocks XSS script tags and javascript: URLs', () => {
       const dangerousObj = { comment: "<script>alert('xss')</script>" };
       const check = inspectPayloadSafety(dangerousObj);
       assert.equal(check.safe, false);
       assert.match(check.reason, /script injection/i);
+    });
+
+    it('rejects payloads with excessive breadth/nodes to prevent event loop DoS', () => {
+      const flatList = Array.from({ length: 600 }, (_, i) => `item_${i}`);
+      const check = inspectPayloadSafety({ items: flatList });
+      assert.equal(check.safe, false);
+      assert.match(check.reason, /complexity/i);
     });
 
     it('globalPayloadDefense middleware rejects dangerous payload with 400', () => {
@@ -143,7 +187,7 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
       assert.equal(nextCalled, false);
     });
 
-    it('globalPayloadDefense middleware allows legitimate payloads', () => {
+    it('globalPayloadDefense middleware allows legitimate payloads and tags req._payloadInspected', () => {
       const req = {
         body: {
           serviceType: 'EO',
@@ -151,6 +195,7 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
           contactPerson: 'Reinathan',
           whatsapp: '+6281234567890',
           location: 'Jl. Margonda Raya, Depok, Jawa Barat',
+          notes: 'Please delete from the old list and add our new car shoot.',
         },
         query: { limit: '10' },
         params: { id: 'evt-123' },
@@ -164,6 +209,7 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
 
       assert.equal(res.statusCode, 200);
       assert.equal(nextCalled, true);
+      assert.equal(req._payloadInspected, true);
     });
   });
 
@@ -210,7 +256,7 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
       assert.equal(res.statusCode, 200);
     });
 
-    it('blocks second booking from same IP within 24 hours with 429 and Retry-After', async () => {
+    it('blocks second booking from same IP within 24 hours with 429 and accurate Retry-After', async () => {
       const req = {
         headers: { 'user-agent': 'Mozilla/5.0 Chrome/120.0' },
         ip: '203.0.113.20',
