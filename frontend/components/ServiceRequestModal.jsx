@@ -119,26 +119,59 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
     }
   };
 
-  // ── High-Fidelity Heatmap Matrix ──────────────────────────────────────────
+  // ── Synchronize to WIB (Asia/Jakarta, UTC+7) ──────────────────────────────
+  const getWibNow = () => {
+    const now = new Date();
+    const wibFormatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    const parts = wibFormatter.formatToParts(now);
+    const getPart = (type) => parts.find(p => p.type === type)?.value;
+    const y = parseInt(getPart("year") || "2026", 10);
+    const m = parseInt(getPart("month") || "11", 10) - 1;
+    const d = parseInt(getPart("day") || "1", 10);
+    return new Date(y, m, d);
+  };
+
+  // High-Fidelity Heatmap Matrix
   const hoursA = Array.from({ length: 8 }, (_, i) => 9 + i);  // 09:00 - 16:00
   const hoursB = Array.from({ length: 8 }, (_, i) => 17 + i); // 17:00 - 00:00
   
   const getDays = () => {
     const days = [];
-    const startOfWeek = new Date();
+    const startOfWeek = getWibNow();
     startOfWeek.setDate(startOfWeek.getDate() + (weekOffset * 7));
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(startOfWeek.getDate() + i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const dayNum = String(d.getDate()).padStart(2, "0");
+      const dateStr = `${y}-${m}-${dayNum}`;
       days.push({
-        date: d.toISOString().split('T')[0],
-        label: d.toLocaleDateString('en-US', { weekday: 'narrow' }),
+        date: dateStr,
+        label: d.toLocaleDateString("en-US", { weekday: "narrow", timeZone: "Asia/Jakarta" }),
         dayNum: d.getDate(),
         isMonday: d.getDay() === 1
       });
     }
     return days;
   };
+
+  const currentMonthYear = useMemo(() => {
+    const startOfWeek = getWibNow();
+    startOfWeek.setDate(startOfWeek.getDate() + (weekOffset * 7));
+    const month = startOfWeek.toLocaleDateString("en-US", { month: "long", timeZone: "Asia/Jakarta" });
+    const year = startOfWeek.toLocaleDateString("en-US", { year: "numeric", timeZone: "Asia/Jakarta" });
+    return `${month}, ${year}`;
+  }, [weekOffset]);
 
   const toggleSlot = (dStr, hour) => {
     const key = `${dStr}-${hour}`;
@@ -218,14 +251,60 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
     return SERVICE_TYPES.find(s => s.id === form.serviceType)?.label || form.serviceType || "—";
   }, [form.serviceType]);
 
-  const formattedDates = useMemo(() => {
+  const bookingSchedule = useMemo(() => {
     const rawKeys = Object.entries(selectedSlots).filter(([, val]) => val).map(([k]) => k);
-    if (!rawKeys.length) return "—";
-    const dates = [...new Set(rawKeys.map(k => k.split(/-(?=\d+$)/)[0]))].sort();
-    return dates.map(d => {
-      const dObj = new Date(d);
-      return isNaN(dObj.getTime()) ? d : dObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    }).join(', ');
+    if (!rawKeys.length) return { dates: "—", hours: "—" };
+
+    const dateMap = {};
+    rawKeys.forEach(k => {
+      const [date, hourStr] = k.split(/-(?=\d+$)/);
+      const h = parseInt(hourStr, 10);
+      if (!dateMap[date]) dateMap[date] = [];
+      dateMap[date].push(h);
+    });
+
+    const sortedDates = Object.keys(dateMap).sort();
+    const formattedDatesList = sortedDates.map(d => {
+      const [y, m, day] = d.split("-").map(Number);
+      const dObj = new Date(y, m - 1, day);
+      return dObj.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    }).join(", ");
+
+    const formattedHoursList = sortedDates.map(d => {
+      const hours = dateMap[d].sort((a, b) => a - b);
+      const blocks = [];
+      let start = hours[0];
+      let prev = hours[0];
+
+      for (let i = 1; i < hours.length; i++) {
+        if (hours[i] === prev + 1) {
+          prev = hours[i];
+        } else {
+          blocks.push({ start, end: prev + 1 });
+          start = hours[i];
+          prev = hours[i];
+        }
+      }
+      blocks.push({ start, end: prev + 1 });
+
+      const blockStrs = blocks.map(b => {
+        const sStr = (b.start === 24 ? 0 : b.start).toString().padStart(2, "0") + ":00";
+        const eStr = (b.end === 24 ? "00" : b.end === 25 ? "01" : b.end).toString().padStart(2, "0") + ":00";
+        return `${sStr} - ${eStr}`;
+      });
+
+      const [y, m, day] = d.split("-").map(Number);
+      const dObj = new Date(y, m - 1, day);
+      const shortDate = dObj.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+      if (sortedDates.length === 1) {
+        return blockStrs.join(", ") + " WIB";
+      } else {
+        return `${shortDate} (${blockStrs.join(", ")} WIB)`;
+      }
+    }).join("; ");
+
+    return { dates: formattedDatesList, hours: formattedHoursList };
   }, [selectedSlots]);
 
   const truncatedNotes = useMemo(() => {
@@ -267,8 +346,8 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
           />
         </div>
 
-        {/* Main Card Container */}
-        <div className="relative z-10 w-full max-h-[92vh] overflow-y-auto custom-scrollbar bg-black/85 backdrop-blur-3xl border border-white/20 rounded-[30px] flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.95)]">
+        {/* Main Card Container: Semi-transparent (~20% translucency) for authentic glassmorphism */}
+        <div className="relative z-10 w-full max-h-[92vh] overflow-y-auto custom-scrollbar bg-black/80 backdrop-blur-2xl border border-white/15 rounded-[30px] flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.85)]">
           
           {/* Dynamic Ambient Blobs: 60% Black, 25% Pink, 15% Yellow */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[30px]">
@@ -450,7 +529,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                   <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full items-center">
                     <div className="flex flex-col xl:flex-row gap-6 items-center xl:items-start justify-center w-full">
                       {/* Column 1: Intel Hub */}
-                      <div className="w-full max-w-[384px] bg-black/60 backdrop-blur-xl border border-white/20 rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                      <div className="w-full max-w-[384px] bg-black/50 backdrop-blur-xl border border-white/15 rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-2xl relative overflow-hidden">
                         <div className="relative z-10 space-y-1">
                           <Field id="serviceName" label="Request Title" type="text" placeholder="Project name/ID" val={form.serviceName} onChange={setField} required />
                           <Field id="contactPerson" label="Operator Name" type="text" placeholder="Full name" val={form.contactPerson} onChange={setField} required />
@@ -464,9 +543,9 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                       <div className="flex flex-col gap-4 md:gap-6 w-full max-w-[736px] items-center">
                         <div className="flex flex-row gap-2 sm:gap-4 w-full justify-center items-start">
                           {/* Shift 1 */}
-                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-black/60 border border-white/20 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
+                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-black/50 border border-white/15 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[10px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">09.00 - 16.00</p>
+                              <p className="font-sans text-white text-[10px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">09.00 - 16.00 WIB</p>
                               <div className="overflow-y-auto max-h-[180px] sm:max-h-[320px] pr-1 sm:pr-2 custom-scrollbar">
                                 {mounted ? renderGrid(hoursA) : null}
                               </div>
@@ -474,9 +553,9 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                           </div>
 
                           {/* Shift 2 */}
-                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-black/60 border border-white/20 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
+                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-black/50 border border-white/15 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[10px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">17.00 - 00.00</p>
+                              <p className="font-sans text-white text-[10px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">17.00 - 00.00 WIB</p>
                               <div className="overflow-y-auto max-h-[180px] sm:max-h-[320px] pr-1 sm:pr-2 custom-scrollbar">
                                 {mounted ? renderGrid(hoursB) : null}
                               </div>
@@ -484,8 +563,8 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                           </div>
                         </div>
 
-                        {/* Extended Legend & Counter */}
-                        <div className="flex flex-row items-center justify-between gap-2 sm:gap-5 text-[9px] sm:text-[11px] font-black text-white font-sans uppercase tracking-[0.1em] bg-black/60 px-4 sm:px-10 py-3 sm:py-6 rounded-full border border-white/20 shadow-2xl w-full mt-2 sm:mt-4">
+                        {/* Extended Legend & Counter: Replaced "|" with Month Year e.g. November, 2026 */}
+                        <div className="flex flex-row items-center justify-between gap-2 sm:gap-5 text-[9px] sm:text-[11px] font-black text-white font-sans uppercase tracking-[0.1em] bg-black/50 px-4 sm:px-10 py-3 sm:py-6 rounded-full border border-white/15 shadow-2xl w-full mt-2 sm:mt-4">
                           <div className="flex flex-row items-center gap-2 sm:gap-8 flex-wrap">
                             <div className="flex items-center gap-1 sm:gap-4 text-white">
                               <div className="w-2 h-2 sm:w-3 sm:h-3 bg-emerald-500 border border-emerald-400 rounded-[2px] sm:rounded-[4px]" /> 
@@ -501,9 +580,13 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                             </div>
                           </div>
                           
-                          <div className="flex flex-row items-center gap-2 sm:gap-5">
-                            <div className="w-[1px] h-5 bg-white/20 hidden sm:block" />
-                            <span className="text-white font-sans font-bold normal-case tracking-normal text-[10px] sm:text-[12px] whitespace-nowrap">Week {weekOffset + 1}</span>
+                          <div className="flex flex-row items-center gap-2 sm:gap-4">
+                            <span className="text-white font-sans font-semibold normal-case tracking-normal text-[10px] sm:text-[12px] whitespace-nowrap">
+                              {currentMonthYear}
+                            </span>
+                            <span className="text-white/80 font-sans font-medium normal-case tracking-normal text-[10px] sm:text-[12px] whitespace-nowrap">
+                              Week {weekOffset + 1}
+                            </span>
                             <div className="flex gap-1">
                               <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors border border-white/20 cursor-pointer" aria-label="Previous Week">
                                 <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
@@ -553,22 +636,22 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                   </h3>
 
                   {/* Description in firm white */}
-                  <p className="text-white font-sans font-medium text-xs sm:text-sm md:text-base leading-relaxed max-w-[460px] text-center mt-3 sm:mt-4">
+                  <p className="text-white font-sans font-normal text-xs sm:text-sm md:text-base leading-relaxed max-w-[460px] text-center mt-3 sm:mt-4">
                     System link established. Redirecting to operational headquarters via WhatsApp:
                   </p>
 
-                  {/* Hyperlink: YES & Confirm via WhatsApp */}
+                  {/* Hyperlink: Sky Blue, NOT bold, NOT all capital */}
                   <a 
                     href={done.whatsappUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 font-sans font-bold text-sm sm:text-base md:text-lg text-emerald-400 hover:text-emerald-300 underline underline-offset-4 transition-colors my-2.5 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 font-sans font-normal text-sm sm:text-base md:text-lg text-sky-400 hover:text-sky-300 underline underline-offset-4 transition-colors my-2.5 cursor-pointer"
                   >
-                    YES & Confirm via WhatsApp
+                    Yes & Confirm via WhatsApp
                   </a>
 
                   {/* Booking Details Card with Clean Rows and Colon Alignment */}
-                  <div className="w-full max-w-[460px] bg-black/60 border border-white/20 rounded-2xl p-4 sm:p-5 text-left my-3 backdrop-blur-md shadow-2xl">
+                  <div className="w-full max-w-[460px] bg-black/50 border border-white/15 rounded-2xl p-4 sm:p-5 text-left my-3 backdrop-blur-md shadow-xl">
                     <p className="font-sans font-bold text-white text-xs sm:text-sm uppercase tracking-wider mb-3 pb-2 border-b border-white/10 flex items-center justify-between">
                       <span>Booking Details:</span>
                       <span className="text-[10px] text-white/50 font-normal">ID #{done.bookingId ? done.bookingId.slice(-6) : "NEW"}</span>
@@ -602,7 +685,12 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                       <div className="grid grid-cols-[125px_12px_1fr] items-start">
                         <span className="font-bold text-white">Selected Date</span>
                         <span className="text-white/60 text-center">:</span>
-                        <span className="text-white font-normal break-words">{formattedDates}</span>
+                        <span className="text-white font-normal break-words">{bookingSchedule.dates}</span>
+                      </div>
+                      <div className="grid grid-cols-[125px_12px_1fr] items-start">
+                        <span className="font-bold text-white">Selected Hours</span>
+                        <span className="text-white/60 text-center">:</span>
+                        <span className="text-white font-normal break-words">{bookingSchedule.hours}</span>
                       </div>
                       {form.additionalNotes ? (
                         <div className="grid grid-cols-[125px_12px_1fr] items-start">
@@ -614,15 +702,15 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                     </div>
                   </div>
 
-                  {/* Middle Bottom CANCEL Action (No outer box, enlarged text) */}
+                  {/* Middle Bottom Cancel Action: NOT bold, NOT all capital */}
                   <div className="mt-2 pt-2 flex flex-col items-center">
                     <button 
                       type="button"
                       onClick={handleCancel}
                       disabled={loading}
-                      className="font-sans font-bold text-sm sm:text-base text-white/50 hover:text-red-400 transition-colors uppercase tracking-widest cursor-pointer py-1.5 focus:outline-none"
+                      className="font-sans font-normal text-sm sm:text-base text-white/50 hover:text-red-400 transition-colors cursor-pointer py-1.5 focus:outline-none"
                     >
-                      {loading ? "Cancelling..." : "CANCEL"}
+                      {loading ? "Cancelling..." : "Cancel"}
                     </button>
                   </div>
                 </motion.div>
@@ -632,19 +720,29 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
         </div>
       </motion.div>
 
+      {/* Lint-style Clean Red Toast Error (No AI slop, no red pinging dot, Arial white small font, non-capital) */}
       {error && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/90 border border-red-500/40 px-6 py-3 rounded-full flex items-center gap-3 backdrop-blur-xl z-[10000] shadow-2xl">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-          <p className="text-red-400 text-[10px] font-sans font-black uppercase tracking-widest">{error}</p>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-600/95 border border-red-400/50 text-white px-4 py-2.5 rounded-md flex items-center gap-3 backdrop-blur-md z-[10000] shadow-[0_10px_25px_rgba(220,38,38,0.4)] max-w-[90vw]">
+          <p className="font-sans text-xs text-white font-normal tracking-normal select-none">
+            {error}
+          </p>
           {(!isLoggedIn || error.toLowerCase().includes("log") || error.toLowerCase().includes("token")) && onRequireAuth && (
             <button
               type="button"
               onClick={onRequireAuth}
-              className="ml-2 px-3 py-1 rounded-full bg-white text-black font-sans font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-colors"
+              className="ml-2 px-2.5 py-1 rounded bg-white text-red-700 font-sans text-xs font-semibold hover:bg-slate-100 transition-colors whitespace-nowrap cursor-pointer"
             >
               Sign In
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setError("")}
+            className="text-white/80 hover:text-white text-xs ml-1 font-mono cursor-pointer"
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>,
