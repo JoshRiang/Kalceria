@@ -91,7 +91,6 @@ export default function MapPage() {
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showPirate, setShowPirate] = useState(false);
   const [showStartup, setShowStartup] = useState(() => {
     if (typeof window !== "undefined") {
       try {
@@ -225,10 +224,6 @@ export default function MapPage() {
   }, [mapCenter, mapUsersData, currentUser]);
 
   const mapRef = useRef(null);
-  const pirateHideRef = useRef(null);
-  const pirateNextRef = useRef(null);
-  const pirateStarted = useRef(false);
-  const [pirateKey, setPirateKey] = useState(0);
 
   // Map Event Tracking
   const handleMapReady = useCallback((mapInstance) => {
@@ -446,34 +441,6 @@ export default function MapPage() {
     }
     setBusy(false);
   }
-
-  // Independent Pirate manifestation logic
-  useEffect(() => {
-    if (notLoggedIn || pirateStarted.current) return;
-    pirateStarted.current = true;
-    const random = createRuntimeSeededRandom("map-pirate-timer-v1");
-
-    const triggerPirate = () => {
-      setPirateKey((prev) => prev + 1);
-      setShowPirate(true);
-
-      // Set to 12.9s to ensure it cuts off just before a potential second loop
-      pirateHideRef.current = setTimeout(() => {
-        setShowPirate(false);
-
-        const nextDelay = 30000 + random() * 60000;
-        pirateNextRef.current = setTimeout(triggerPirate, nextDelay);
-      }, 12000);
-    };
-
-    const initialTimeout = setTimeout(triggerPirate, 15000);
-
-    return () => {
-      clearTimeout(initialTimeout);
-      if (pirateHideRef.current) clearTimeout(pirateHideRef.current);
-      if (pirateNextRef.current) clearTimeout(pirateNextRef.current);
-    };
-  }, [notLoggedIn]);
 
   // login gate
   if (notLoggedIn) {
@@ -700,44 +667,26 @@ export default function MapPage() {
 
       {!showStartup && hasMounted && (
         <motion.div
-          animate={{ y: [0, -4, 0] }}
+          animate={{ y: [0, -3, 0] }}
           transition={{
             duration: 5,
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="fixed bottom-0 md:bottom-[4px] left-1/2 -translate-x-1/2 z-[20] pointer-events-none select-none flex flex-col items-center"
+          className="fixed bottom-1 xs:bottom-1.5 md:bottom-2 left-1/2 -translate-x-1/2 z-[20] pointer-events-none select-none flex flex-col items-center"
         >
           <Image
             src="/kalcermap_bottom.webp"
             alt="Kalceria Maps"
-            width={400}
-            height={400}
-            sizes="(max-width: 768px) 140px, 256px"
-            quality={80}
+            width={360}
+            height={130}
+            sizes="(max-width: 768px) 120px, (max-width: 1024px) 150px, 180px"
+            quality={85}
             loading="lazy"
-            className="h-[125px] xs:h-[140px] md:h-[256px] w-auto object-contain opacity-95 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+            className="h-[40px] xs:h-[46px] sm:h-[54px] md:h-[62px] lg:h-[70px] w-auto object-contain opacity-90 filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]"
             draggable={false}
           />
         </motion.div>
-      )}
-
-      {/* Randomized Pirate Interception Overlay */}
-      {showPirate && (
-        <div className="fixed bottom-0 right-0 z-[900] w-[15vw] pointer-events-none animate-in fade-in slide-in-from-bottom-20 duration-1000">
-          <video
-            key={pirateKey}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            className="w-full h-auto opacity-80 mix-blend-screen pointer-events-none"
-          >
-            <source src="/map/pirate_overview_looped.webm" type="video/webm" />
-            <source src="/map/pirate_overview_looped.mp4" type="video/mp4" />
-          </video>
-        </div>
       )}
 
       <style jsx global>{`

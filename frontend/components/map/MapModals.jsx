@@ -87,6 +87,22 @@ export const MapModals = memo(function MapModals({
   const fileInputRef = useRef(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [quitChoice, setQuitChoice] = useState(null);
+
+  const handleQuitYesClick = () => {
+    setQuitChoice("yes");
+    setTimeout(() => {
+      handleQuitConfirm?.();
+    }, 220);
+  };
+
+  const handleQuitNoClick = () => {
+    setQuitChoice("no");
+    setTimeout(() => {
+      setShowQuitModal(false);
+      setQuitChoice(null);
+    }, 160);
+  };
 
   const handleMediaUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -459,44 +475,95 @@ export const MapModals = memo(function MapModals({
 
       {/* Quit Modal */}
       {showQuitModal && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center animate-in fade-in duration-200">
-          {/* Backdrop with near-zero dimming to let map colors fully bleed through */}
-          <div 
-            className="absolute inset-0 bg-black/[0.05]" 
-            onClick={() => setShowQuitModal(false)} 
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 select-none pointer-events-auto">
+          {/* Backdrop Blur */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className={`absolute inset-0 backdrop-blur-2xl transition-colors duration-300 ${
+              isMapDark ? "bg-black/80" : "bg-white/70"
+            }`}
+            onClick={handleQuitNoClick} 
           />
-          
-          {/* Modal Glass Box */}
-          <div 
-            className="relative z-[2010] w-[90%] max-w-[400px] p-8 rounded-2xl flex flex-col items-center justify-center backdrop-blur-xl overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.6),0_0_50px_rgba(0,255,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.3)] border border-white/[0.2] animate-in zoom-in-95 duration-200"
-            style={{
-              background: "rgba(255, 255, 255, 0.05)",
-            }}
+
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }} 
+            animate={{ 
+              scale: 1, 
+              opacity: 1,
+              y: [0, -5, 0]
+            }} 
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{
+              opacity: { duration: 0.25 },
+              scale: { duration: 0.25 },
+              y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+            }} 
+            className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
           >
-            {/* Cyan Blob */}
-            <div 
-              className="absolute -top-16 -left-16 w-44 h-44 bg-[#00FFFF] rounded-full blur-[40px] opacity-40 z-0 pointer-events-none animate-pulse"
-            />
-            
-            <h3 className="relative z-10 text-xl font-sans font-black text-white mb-8 tracking-tighter text-center uppercase">
-              Wanna quit the map?
+            <h3 
+              className={`relative z-10 text-2xl sm:text-3xl md:text-4xl font-sans font-bold mb-8 sm:mb-10 tracking-tighter ${
+                isMapDark ? "text-white" : "text-black"
+              }`}
+              style={{
+                textShadow: isMapDark 
+                  ? "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)" 
+                  : "0 2px 10px rgba(255,255,255,0.7), 0 0 20px rgba(255,255,255,0.5)"
+              }}
+            >
+              Quit the map?
             </h3>
-            
-            <div className="relative z-10 w-full flex items-center gap-4">
+
+            {/* 2D Responsive Yes / No Buttons: Arial, Not Bold, Not All Capital, Scaling on hover/click */}
+            <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16">
               <button 
-                onClick={handleQuitConfirm} 
-                className="flex-1 py-4 bg-red-600 rounded-xl text-white font-black uppercase tracking-tighter hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                type="button"
+                onClick={handleQuitYesClick} 
+                className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 ${
+                  quitChoice === 'yes'
+                    ? 'text-red-600 scale-110'
+                    : isMapDark
+                    ? 'text-white hover:text-red-500 active:text-red-600'
+                    : 'text-black hover:text-red-600 active:text-red-600'
+                }`}
+                style={{
+                  fontFamily: "Arial, sans-serif",
+                  fontWeight: "normal",
+                  textTransform: "none",
+                  textShadow: quitChoice === 'yes' 
+                    ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
+                    : (isMapDark ? "0 2px 12px rgba(0,0,0,0.8)" : "none")
+                }}
               >
                 Yes
               </button>
               <button 
-                onClick={() => setShowQuitModal(false)} 
-                className="flex-1 py-4 bg-white/10 rounded-xl text-white font-black uppercase tracking-tighter hover:bg-white/20 transition-all"
+                type="button"
+                onClick={handleQuitNoClick} 
+                className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 ${
+                  isMapDark
+                    ? (quitChoice === 'no' ? 'scale-110 text-white' : 'text-white hover:text-white active:text-white')
+                    : (quitChoice === 'no' ? 'scale-110 text-black' : 'text-black hover:text-black active:text-black')
+                }`}
+                style={{
+                  fontFamily: "Arial, sans-serif",
+                  fontWeight: "normal",
+                  textTransform: "none",
+                  textShadow: isMapDark
+                    ? (quitChoice === 'no' 
+                        ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
+                        : "0 2px 12px rgba(0,0,0,0.8)")
+                    : (quitChoice === 'no'
+                        ? "0 0 4px rgba(0,0,0,0.3)"
+                        : "none")
+                }}
               >
                 No
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
     </>
