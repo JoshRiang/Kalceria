@@ -311,15 +311,24 @@ describe('Comment Form Defense & Hardening Vertical Slice', () => {
   });
 
   describe('4. Input Validation & Boundaries', () => {
-    it('rejects comment with content length < 5 characters', async () => {
-      const req = {
-        body: { content: 'Hi', type: 'IDEA', category: 'General' },
+    it('rejects comment with content length < 20 or > 200 characters', async () => {
+      const reqShort = {
+        body: { content: 'Short test', type: 'IDEA', category: 'Event' },
       };
-      const res = createMockRes();
-      await createComment(req, res, () => {});
+      const resShort = createMockRes();
+      await createComment(reqShort, resShort, () => {});
 
-      assert.equal(res.statusCode, 400);
-      assert.match(res.body.error, /between 5 and 2000/i);
+      assert.equal(resShort.statusCode, 400);
+      assert.match(resShort.body.error, /between 20 and 200/i);
+
+      const reqLong = {
+        body: { content: 'A'.repeat(201), type: 'IDEA', category: 'Event' },
+      };
+      const resLong = createMockRes();
+      await createComment(reqLong, resLong, () => {});
+
+      assert.equal(resLong.statusCode, 400);
+      assert.match(resLong.body.error, /between 20 and 200/i);
     });
 
     it('rejects comment with invalid type (not ADVICE or IDEA)', async () => {

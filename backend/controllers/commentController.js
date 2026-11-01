@@ -7,8 +7,8 @@ export async function createComment(req, res, next) {
     const cleanContent = typeof content === 'string' ? content.trim() : '';
     const cleanCategory = typeof category === 'string' ? category.trim() : 'Other';
 
-    if (cleanContent.length < 5 || cleanContent.length > 2000) {
-      return res.status(400).json({ error: 'Comment must be between 5 and 2000 characters.' });
+    if (cleanContent.length < 20 || cleanContent.length > 200) {
+      return res.status(400).json({ error: 'Comment must be between 20 and 200 characters.' });
     }
     if (!['ADVICE', 'IDEA'].includes(type) || cleanCategory.length > 60) {
       return res.status(400).json({ error: 'Please provide a valid comment category and type.' });

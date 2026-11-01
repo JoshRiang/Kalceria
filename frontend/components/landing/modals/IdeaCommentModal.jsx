@@ -11,10 +11,8 @@ const COMMENT_TYPES = [
 ];
 
 const CATEGORIES = [
-  { id: "General", label: "General" },
   { id: "Event", label: "Event" },
   { id: "Web Development", label: "Web Dev" },
-  { id: "Gladiators", label: "Gladiators" },
   { id: "Other", label: "Other" },
 ];
 
@@ -34,7 +32,7 @@ function getClientFingerprint() {
 
 export function IdeaCommentModal({ onClose }) {
   const [feedbackType, setFeedbackType] = useState("ADVICE");
-  const [category, setCategory] = useState("General");
+  const [category, setCategory] = useState("Event");
   const [identity, setIdentity] = useState("Anonymous");
   const [username, setUsername] = useState("");
   const [content, setContent] = useState("");
@@ -62,9 +60,18 @@ export function IdeaCommentModal({ onClose }) {
     if (e) e.preventDefault();
     setError("");
 
+    if (identity === "User" && !hasUserSession()) {
+      setError("Please sign in to post as an Authenticated User.");
+      return;
+    }
+
     const cleanContent = content.trim();
-    if (cleanContent.length < 5) {
-      setError("Please write at least 5 characters for your message.");
+    if (cleanContent.length < 20) {
+      setError("Message must be at least 20 characters.");
+      return;
+    }
+    if (cleanContent.length > 200) {
+      setError("Message cannot exceed 200 characters.");
       return;
     }
 
@@ -94,7 +101,7 @@ export function IdeaCommentModal({ onClose }) {
     }
   };
 
-  const isFormValid = content.trim().length >= 5 && !isSubmitting;
+  const isFormValid = content.trim().length >= 20 && content.trim().length <= 200 && !isSubmitting;
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-3 sm:p-4">
@@ -107,7 +114,7 @@ export function IdeaCommentModal({ onClose }) {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
 
-      {/* Full-screen Processing Blur Buffer Overlay (Matching LOGGING OUT) */}
+      {/* Full-screen Processing Blur Buffer Overlay */}
       <AnimatePresence>
         {isSubmitting && (
           <motion.div
@@ -150,9 +157,29 @@ export function IdeaCommentModal({ onClose }) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96 }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden backdrop-blur-2xl bg-[#0a0f1a]/75 border border-white/[0.18] z-[1001]"
+        className="relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden backdrop-blur-2xl bg-[#0a0f1a]/85 border border-white/[0.18] z-[1001]"
         onClick={(e) => e.stopPropagation()}
       >
+        <style jsx>{`
+          .comment-scrollbar::-webkit-scrollbar {
+            width: 4px;
+          }
+          .comment-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .comment-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+          }
+          .comment-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+          }
+          .comment-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+          }
+        `}</style>
+
         {/* Dynamic Distributed Blobs: 75% Black, 25% Navy Blue */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           {/* 75% Dominant Dynamic Black Blob */}
@@ -184,7 +211,7 @@ export function IdeaCommentModal({ onClose }) {
           </h2>
           <button
             type="button"
-            className="text-2xl leading-none text-white/40 hover:text-white transition-all p-1 cursor-pointer"
+            className="text-2xl leading-none text-white/40 hover:text-white transition-all p-1 cursor-pointer focus:outline-none"
             onClick={onClose}
             aria-label="Close"
           >
@@ -192,7 +219,7 @@ export function IdeaCommentModal({ onClose }) {
           </button>
         </div>
 
-        {/* Error Notification — Directly Under Title (Consolas Red Login Form Style) */}
+        {/* Error Notification — Directly Under Title (Login Form Style) */}
         <AnimatePresence>
           {error && (
             <motion.div
@@ -204,12 +231,12 @@ export function IdeaCommentModal({ onClose }) {
               <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-red-500 text-sm select-none">✕</span>
-                  <span className="text-red-400 font-mono text-xs font-normal">{error}</span>
+                  <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setError("")}
-                  className="text-red-400/60 hover:text-red-300 text-xs font-mono ml-2 cursor-pointer"
+                  className="text-red-400/60 hover:text-red-300 text-xs font-mono ml-2 cursor-pointer focus:outline-none"
                   aria-label="Dismiss error"
                 >
                   ✕
@@ -219,10 +246,10 @@ export function IdeaCommentModal({ onClose }) {
           )}
         </AnimatePresence>
 
-        {/* Single Part Form Content */}
+        {/* Single Part Form Content with Clean Scrollbar */}
         <form
           onSubmit={handleSubmit}
-          className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3.5 sm:gap-4 custom-scrollbar"
+          className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3.5 sm:gap-4 comment-scrollbar"
         >
           {/* Description Paragraph */}
           <p className="text-white/70 text-xs sm:text-sm leading-relaxed tracking-wide font-sans">
@@ -257,7 +284,7 @@ export function IdeaCommentModal({ onClose }) {
             </div>
           </div>
 
-          {/* Category Selector */}
+          {/* Category Selector (Event, Web Dev, Other) */}
           <div className="flex flex-col gap-1.5 sm:gap-2">
             <label className="text-[11px] sm:text-xs font-semibold tracking-wider text-slate-400 font-sans">
               Category
@@ -283,7 +310,7 @@ export function IdeaCommentModal({ onClose }) {
             </div>
           </div>
 
-          {/* Identity: Anonymous or User */}
+          {/* Identity: Anonymous vs Authenticated User */}
           <div className="flex flex-col gap-1.5 sm:gap-2">
             <div className="flex items-center justify-between">
               <label className="text-[11px] sm:text-xs font-semibold tracking-wider text-slate-400 font-sans">
@@ -291,7 +318,7 @@ export function IdeaCommentModal({ onClose }) {
               </label>
               {username && identity === "User" && (
                 <span className="text-[10px] text-emerald-400 font-sans">
-                  Posting as {username}
+                  Signed in as {username}
                 </span>
               )}
             </div>
@@ -309,55 +336,56 @@ export function IdeaCommentModal({ onClose }) {
               </button>
               <button
                 type="button"
-                onClick={() => { setIdentity("User"); setError(""); }}
-                className={`py-2 px-3 rounded-lg border text-center transition-all duration-200 outline-none cursor-pointer text-xs font-sans ${
+                onClick={() => {
+                  if (!hasUserSession()) {
+                    setError("Please sign in to post as an Authenticated User.");
+                    setIdentity("Anonymous");
+                    return;
+                  }
+                  setIdentity("User");
+                  setError("");
+                }}
+                className={`py-2 px-1.5 rounded-lg border text-center transition-all duration-200 outline-none cursor-pointer text-[10px] xs:text-[11px] leading-tight font-sans tracking-tight overflow-hidden text-ellipsis whitespace-nowrap ${
                   identity === "User"
                     ? "bg-white/20 border-white text-white font-bold"
                     : "border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/80"
                 }`}
               >
-                {username ? username : "Custom Handle"}
+                {username ? username : "Authenticated User"}
               </button>
             </div>
-            {identity === "User" && !username && (
-              <input
-                type="text"
-                placeholder="Enter display name / alias"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full border rounded-lg p-2.5 text-xs focus:border-slate-400 outline-none transition-all bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 font-sans mt-1"
-                maxLength={40}
-              />
-            )}
           </div>
 
-          {/* Description Paragraph Textarea (The single needed inner box) */}
+          {/* Message Textarea (0/200, minimum 20 chars, Arial not bold) */}
           <div className="flex flex-col gap-1.5 sm:gap-2">
             <div className="flex items-center justify-between">
               <label className="text-[11px] sm:text-xs font-semibold tracking-wider text-slate-400 font-sans">
                 Message
               </label>
-              <span className={`text-[10px] font-mono ${content.trim().length < 5 ? "text-white/30" : "text-white/60"}`}>
-                {content.length}/2000
+              <span 
+                style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'normal' }}
+                className={`text-xs ${content.trim().length < 20 ? "text-white/40" : "text-white/70"}`}
+              >
+                {content.length}/200
               </span>
             </div>
             <textarea
               className="w-full border rounded-lg p-2.5 sm:p-3.5 text-xs sm:text-sm focus:border-slate-400 outline-none min-h-[110px] resize-y transition-all bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 font-sans"
               value={content}
-              onChange={(e) => { setContent(e.target.value.slice(0, 2000)); setError(""); }}
-              placeholder={feedbackType === "IDEA" ? "Describe your idea in detail..." : "Write your advice or feedback here..."}
+              maxLength={200}
+              onChange={(e) => { setContent(e.target.value.slice(0, 200)); setError(""); }}
+              placeholder={feedbackType === "IDEA" ? "Describe your idea in detail (minimum 20 characters)..." : "Write your advice or feedback here (minimum 20 characters)..."}
               required
             />
           </div>
 
-
-
-          {/* Submit Action Button */}
+          {/* Submit Action Button: Arial, Not bold, Not all capital */}
           <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
             <button
               type="submit"
               disabled={!isFormValid || isSubmitting}
-              className="w-full py-3 sm:py-3.5 backdrop-blur-md border text-xs font-bold tracking-wider rounded-xl transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)] bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer uppercase"
+              style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'normal', textTransform: 'none' }}
+              className="w-full py-3 sm:py-3.5 backdrop-blur-md border text-sm sm:text-base rounded-xl transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)] bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSubmitting ? "Submitting..." : "Send Message"}
             </button>
