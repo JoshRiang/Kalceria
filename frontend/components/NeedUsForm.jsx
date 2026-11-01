@@ -26,6 +26,25 @@ export default function NeedUsForm({ userName }) {
   const [publicBookings, setPublicBookings] = useState([]);
   const [weekOffset, setWeekOffset] = useState(0);
 
+  const currentWeekNumber = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + (weekOffset * 7));
+    const targetMonth = d.getMonth();
+    const targetYear = d.getFullYear();
+
+    let weekNum = 1;
+    const runner = new Date(d);
+    while (true) {
+      runner.setDate(runner.getDate() - 7);
+      if (runner.getMonth() === targetMonth && runner.getFullYear() === targetYear) {
+        weekNum++;
+      } else {
+        break;
+      }
+    }
+    return weekNum;
+  }, [weekOffset]);
+
   const fetchBookings = useCallback(() => {
     api.get("/services/bookings")
       .then(res => setPublicBookings(res.data.bookings || []))
@@ -338,10 +357,10 @@ export default function NeedUsForm({ userName }) {
                 {/* Heatmap Footer: Week Navigation */}
                 <div className="pt-6 border-t border-white/10">
                   <div className="flex items-center justify-between bg-white/5 px-6 py-3 rounded-xl border border-white/5 shadow-inner">
-                    <span className="font-mono text-[11px] text-white tracking-[0.3em] uppercase font-black italic">Temporal Segment: Week {weekOffset + 1}</span>
-                    <div className="flex gap-3">
-                      <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full transition-all text-base border border-white/10 bg-black/20">←</button>
-                      <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full transition-all text-base border border-white/10 bg-black/20">→</button>
+                    <span className="font-mono text-[11px] text-white tracking-[0.3em] uppercase font-black italic">Temporal Segment: Week {currentWeekNumber}</span>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="p-1.5 flex items-center justify-center hover:scale-110 active:scale-95 transition-all text-base bg-transparent border-none text-white/80 hover:text-white cursor-pointer outline-none" aria-label="Previous Week">←</button>
+                      <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="p-1.5 flex items-center justify-center hover:scale-110 active:scale-95 transition-all text-base bg-transparent border-none text-white/80 hover:text-white cursor-pointer outline-none" aria-label="Next Week">→</button>
                     </div>
                   </div>
                 </div>

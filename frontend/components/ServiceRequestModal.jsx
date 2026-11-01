@@ -236,6 +236,25 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
     return `${month}, ${year}`;
   }, [weekOffset]);
 
+  const currentWeekNumber = useMemo(() => {
+    const startOfWeek = getWibNow();
+    startOfWeek.setDate(startOfWeek.getDate() + (weekOffset * 7));
+    const targetMonth = startOfWeek.getMonth();
+    const targetYear = startOfWeek.getFullYear();
+
+    let weekNum = 1;
+    const runner = new Date(startOfWeek);
+    while (true) {
+      runner.setDate(runner.getDate() - 7);
+      if (runner.getMonth() === targetMonth && runner.getFullYear() === targetYear) {
+        weekNum++;
+      } else {
+        break;
+      }
+    }
+    return weekNum;
+  }, [weekOffset]);
+
   const toggleSlot = (dStr, hour) => {
     const key = `${dStr}-${hour}`;
     const currentlySelectedCount = Object.values(selectedSlots).filter(Boolean).length;
@@ -679,14 +698,24 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                           
                           <div className="flex flex-row items-center gap-2 sm:gap-3">
                             <span className="text-white/80 font-sans font-medium normal-case tracking-normal text-[10px] sm:text-[12px] whitespace-nowrap">
-                              Week {weekOffset + 1}
+                              Week {currentWeekNumber}
                             </span>
-                            <div className="flex gap-1">
-                              <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors border border-white/20 cursor-pointer" aria-label="Previous Week">
-                                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
+                            <div className="flex items-center gap-1">
+                              <button 
+                                type="button" 
+                                onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} 
+                                className="p-1 sm:p-1.5 flex items-center justify-center bg-transparent border-none text-white/70 hover:text-white transition-all hover:scale-110 active:scale-95 cursor-pointer outline-none select-none" 
+                                aria-label="Previous Week"
+                              >
+                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
                               </button>
-                              <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors border border-white/20 cursor-pointer" aria-label="Next Week">
-                                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg>
+                              <button 
+                                type="button" 
+                                onClick={() => setWeekOffset(weekOffset + 1)} 
+                                className="p-1 sm:p-1.5 flex items-center justify-center bg-transparent border-none text-white/70 hover:text-white transition-all hover:scale-110 active:scale-95 cursor-pointer outline-none select-none" 
+                                aria-label="Next Week"
+                              >
+                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg>
                               </button>
                             </div>
                           </div>
