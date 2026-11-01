@@ -262,23 +262,21 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
           </>
         )}
       </AnimatePresence>
-      {/* Back Button - Cloudy Borderless */}
+      {/* Back Button - Pure Icon Without Outer Box */}
       <button
+        type="button"
         onClick={() => setShowQuit(true)}
-        className="absolute top-4 left-4 sm:top-10 sm:left-10 z-50 flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/10 backdrop-blur-2xl border-none shadow-[0_0_25px_rgba(255,255,255,0.25)] hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] group transition-all hover:scale-105 active:scale-95 overflow-hidden"
+        aria-label="Quit game"
+        className="absolute top-4 left-4 sm:top-10 sm:left-10 z-50 flex items-center justify-center p-2 bg-transparent border-none text-white/80 hover:text-white transition-all hover:scale-110 active:scale-95 cursor-pointer outline-none select-none"
       >
-        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl opacity-60">
-          <div className="absolute -top-3 -left-3 w-14 h-14 bg-[#FFB07C] rounded-full blur-[18px] opacity-70" />
-          <div className="absolute -bottom-3 -right-3 w-14 h-14 bg-cyan-400 rounded-full blur-[18px] opacity-60" />
-        </div>
         <svg 
-          className="relative z-10 w-5 h-5 sm:w-6 sm:h-6 text-white" 
+          className="w-6 h-6 sm:w-8 sm:h-8 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]" 
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24" 
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M15 19l-7-7 7-7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7" />
         </svg>
       </button>
 
@@ -390,8 +388,8 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 <button 
                   type="button"
                   onClick={handleQuitYes} 
-                  className={`transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl ${
-                    quitChoice === 'yes' ? 'text-red-600' : 'text-white hover:text-red-500 active:text-red-600'
+                  className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 ${
+                    quitChoice === 'yes' ? 'text-red-600 scale-110' : 'text-white hover:text-red-500 active:text-red-600'
                   }`}
                   style={{
                     fontFamily: "Arial, sans-serif",
@@ -407,8 +405,8 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 <button 
                   type="button"
                   onClick={handleQuitNo} 
-                  className={`transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl ${
-                    quitChoice === 'no' ? 'text-black' : 'text-white hover:text-black active:text-black'
+                  className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 text-white hover:text-white active:text-white ${
+                    quitChoice === 'no' ? 'scale-110 text-white' : ''
                   }`}
                   style={{
                     fontFamily: "Arial, sans-serif",
@@ -467,8 +465,8 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 <button 
                   type="button"
                   onClick={handleSaveYesClick} 
-                  className={`transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl ${
-                    saveChoice === 'yes' ? 'text-red-600' : 'text-white hover:text-red-500 active:text-red-600'
+                  className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 ${
+                    saveChoice === 'yes' ? 'text-red-600 scale-110' : 'text-white hover:text-red-500 active:text-red-600'
                   }`}
                   style={{
                     fontFamily: "Arial, sans-serif",
@@ -484,8 +482,8 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 <button 
                   type="button"
                   onClick={handleSaveNoClick} 
-                  className={`transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl ${
-                    saveChoice === 'no' ? 'text-black' : 'text-white hover:text-black active:text-black'
+                  className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 text-white hover:text-white active:text-white ${
+                    saveChoice === 'no' ? 'scale-110 text-white' : ''
                   }`}
                   style={{
                     fontFamily: "Arial, sans-serif",

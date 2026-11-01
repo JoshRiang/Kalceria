@@ -37,9 +37,9 @@ export default function LandingPage({ onNavigateAuth }) {
             if (res.data?.formatted) {
               setDetectedLocation(res.data.formatted);
             }
-          } catch {}
+          } catch { }
         },
-        () => {},
+        () => { },
         { timeout: 8000 }
       );
     }
@@ -71,7 +71,7 @@ export default function LandingPage({ onNavigateAuth }) {
     const v = heroVideoRef.current;
     if (!v) return;
     if (isHeroActive) {
-      v.play().catch(() => {});
+      v.play().catch(() => { });
     } else {
       v.pause();
     }
@@ -106,15 +106,14 @@ export default function LandingPage({ onNavigateAuth }) {
       }, 1800);
     }
     // Check login status
+    // Check login status & heal session if cookie exists
     setIsLoggedIn(hasUserSession());
-    if (typeof window !== "undefined") {
-      api.get("/users/me").then((res) => {
-        if (res.data?.user) {
-          establishSession(res.data.user);
-          setIsLoggedIn(true);
-        }
-      }).catch(() => {});
-    }
+    api.get("/users/me").then((res) => {
+      if (res.data?.user) {
+        establishSession(res.data.user);
+        setIsLoggedIn(true);
+      }
+    }).catch(() => { });
 
     // Smooth scroll restoration on fallback navigation
     const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
@@ -124,16 +123,16 @@ export default function LandingPage({ onNavigateAuth }) {
       if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
         window.history.scrollRestoration = "manual";
       }
-      
+
       sessionStorage.removeItem("landingScrollTarget");
       sessionStorage.removeItem("landingScrollY");
-      
+
       // Clean query parameters from address bar to keep UX clean
       if (typeof window !== "undefined" && window.history.replaceState) {
         const cleanUrl = window.location.pathname + window.location.hash;
         window.history.replaceState({}, document.title, cleanUrl);
       }
-      
+
       // Industrial-grade recurring scroll lock to force viewport position through dynamic loading reflows
       const scrollInterval = setInterval(() => {
         if (scrollY) {
@@ -145,7 +144,7 @@ export default function LandingPage({ onNavigateAuth }) {
           }
         }
       }, 150);
-      
+
       const timer = setTimeout(() => {
         clearInterval(scrollInterval);
         if (!scrollY) {
@@ -211,19 +210,19 @@ export default function LandingPage({ onNavigateAuth }) {
           <video ref={heroVideoRef} autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover bg-[#000000]/60">
             <source src="/video_landingatas.mp4" type="video/mp4" />
           </video>
-          
+
           <div className="absolute inset-0 bg-black/50 pointer-events-none" />
 
           <div className="relative z-10 flex flex-col items-center gap-6 md:gap-10 px-4 w-full">
-            <motion.img 
-              src="/logo_landing.webp" 
-              alt="Kalceria" 
-              className="w-[85%] md:w-[70%] max-w-3xl h-auto object-contain drop-shadow-2xl" 
+            <motion.img
+              src="/logo_landing.webp"
+              alt="Kalceria"
+              className="w-[85%] md:w-[70%] max-w-3xl h-auto object-contain drop-shadow-2xl"
               draggable={false}
               animate={{ y: [-6, 6, -6] }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
             />
-            
+
             {isLoggedIn ? (
               <button
                 onClick={() => setShowLogoutConfirm(true)}
@@ -269,8 +268,8 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
 
         {/* Center: Event Slider Card (Relative on Mobile & iPad, Absolutely Centered on Desktop Widescreen) */}
-        <div 
-          className="relative xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2 z-10 w-full max-w-[260px] sm:max-w-[290px] md:max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm" 
+        <div
+          className="relative xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2 z-10 w-full max-w-[260px] sm:max-w-[290px] md:max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm"
           style={{ clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" }}
         >
           <EventSlider />
@@ -297,39 +296,39 @@ export default function LandingPage({ onNavigateAuth }) {
 
         {/* Floating Crystal 2 (Meteors) - Dynamically framed around Event Card on Mobile with zero cutoffs */}
         <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-           {/* Meteor 1: Upper Left */}
-           <motion.img 
-             src="/crystal_2.webp" 
-             className="absolute h-[26px] md:h-[36px] object-contain opacity-85 left-[calc(50%-142px)] top-[16%] md:left-[calc(50%-260px)] md:top-[55%] filter drop-shadow-[0_0_12px_rgba(255,0,255,0.7)]"
-             animate={{ y: [0, -14, 0], x: [0, 5, 0], rotate: [-35, -15, -35], scale: [1, 1.1, 1] }}
-             transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-           />
-           {/* Meteor 2: Right Center */}
-           <motion.img 
-             src="/crystal_2.webp" 
-             className="absolute h-[30px] md:h-[47px] object-contain opacity-85 left-[calc(50%+118px)] top-[26%] md:left-[calc(50%+175px)] md:top-[18%] filter drop-shadow-[0_0_15px_rgba(255,215,0,0.7)]"
-             animate={{ y: [0, -16, 0], x: [0, -6, 0], rotate: [25, 45, 25], scale: [1, 1.12, 1] }}
-             transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-           />
-           {/* Meteor 3: Lower Left */}
-           <motion.img 
-             src="/crystal_2.webp" 
-             className="absolute h-[22px] md:h-[28px] object-contain opacity-85 left-[calc(50%-132px)] top-[42%] md:left-[35%] md:bottom-[5%] md:top-auto filter drop-shadow-[0_0_10px_rgba(255,140,0,0.6)]"
-             animate={{ y: [0, -10, 0], x: [0, 4, 0], rotate: [50, 70, 50], scale: [1, 1.08, 1] }}
-             transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-           />
-           {/* Meteor 4: Desktop Only */}
-           <motion.img 
-             src="/crystal_2.webp" 
-             className="hidden md:block absolute h-[45px] md:h-[63px] object-contain opacity-70 md:left-[calc(50%+200px)] md:top-[50%]"
-             animate={{ y: [0, -18, 0], rotate: [0, 10, 0] }}
-             transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-           />
+          {/* Meteor 1: Upper Left */}
+          <motion.img
+            src="/crystal_2.webp"
+            className="absolute h-[26px] md:h-[36px] object-contain opacity-85 left-[calc(50%-142px)] top-[16%] md:left-[calc(50%-260px)] md:top-[55%] filter drop-shadow-[0_0_12px_rgba(255,0,255,0.7)]"
+            animate={{ y: [0, -14, 0], x: [0, 5, 0], rotate: [-35, -15, -35], scale: [1, 1.1, 1] }}
+            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+          {/* Meteor 2: Right Center */}
+          <motion.img
+            src="/crystal_2.webp"
+            className="absolute h-[30px] md:h-[47px] object-contain opacity-85 left-[calc(50%+118px)] top-[26%] md:left-[calc(50%+175px)] md:top-[18%] filter drop-shadow-[0_0_15px_rgba(255,215,0,0.7)]"
+            animate={{ y: [0, -16, 0], x: [0, -6, 0], rotate: [25, 45, 25], scale: [1, 1.12, 1] }}
+            transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          />
+          {/* Meteor 3: Lower Left */}
+          <motion.img
+            src="/crystal_2.webp"
+            className="absolute h-[22px] md:h-[28px] object-contain opacity-85 left-[calc(50%-132px)] top-[42%] md:left-[35%] md:bottom-[5%] md:top-auto filter drop-shadow-[0_0_10px_rgba(255,140,0,0.6)]"
+            animate={{ y: [0, -10, 0], x: [0, 4, 0], rotate: [50, 70, 50], scale: [1, 1.08, 1] }}
+            transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+          />
+          {/* Meteor 4: Desktop Only */}
+          <motion.img
+            src="/crystal_2.webp"
+            className="hidden md:block absolute h-[45px] md:h-[63px] object-contain opacity-70 md:left-[calc(50%+200px)] md:top-[50%]"
+            animate={{ y: [0, -18, 0], rotate: [0, 10, 0] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          />
         </div>
 
         {/* Silhouettes - Static Background */}
         <div className="absolute bottom-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden px-8 md:px-24">
-          
+
           {/* Crystal 3 Top Right (Truncated at Top) */}
           <div className="absolute top-[-20px] md:top-[-40px] right-12 md:right-40 hidden md:flex flex-col items-center pointer-events-none opacity-80">
             <Image src="/crystal_3.webp" alt="Crystal 3" width={2480} height={1728} loading="lazy" decoding="async" className="h-[75px] md:h-[120px] w-auto object-contain rotate-180" />
@@ -345,7 +344,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
           <div className="absolute bottom-0 right-4 md:right-2 lg:right-6 xl:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
             {/* Magenta Tapakan (Base) - Wedge Shape from Sketch */}
-            <div 
+            <div
               className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[75px] md:h-[80px] lg:h-[110px] xl:h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[16px] md:blur-[18px] xl:blur-[22px] z-0 opacity-80"
               style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%, 0 100%)" }}
             />
@@ -391,15 +390,15 @@ export default function LandingPage({ onNavigateAuth }) {
       <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center py-20 z-40 border-t border-white/10 bg-transparent isolate overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }}>
         {/* Golden Glow Border Aura - Aggressive */}
         <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_50px_rgba(251,191,36,0.7)] z-50 pointer-events-none" />
-        
+
         {/* The Ultimate Background */}
         <SupportUsBackground />
-        
+
         {/* Altar Border Element (Reversed 180, Truncated at Border) */}
         <div className="absolute top-[-60px] md:top-[-220px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-5 opacity-80">
           <Image
-            src={isMobileOrTablet ? "/hp/altar_hp.webp" : "/altar.webp"} 
-            alt="Altar" 
+            src={isMobileOrTablet ? "/hp/altar_hp.webp" : "/altar.webp"}
+            alt="Altar"
             width={isMobileOrTablet ? 2048 : 2400}
             height={isMobileOrTablet ? 2048 : 1589}
             unoptimized
@@ -417,19 +416,19 @@ export default function LandingPage({ onNavigateAuth }) {
 
 
         <div className="relative z-10 mb-24 flex justify-center w-full">
-           <motion.h2 
-             className="relative text-6xl md:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text"
-             style={{ 
-               backgroundColor: "white",
-               backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
-               backgroundSize: "100% 200%",
-               textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)" 
-             }}
-             animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
-             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-           >
-             <Typewriter text="SUPPORT US" mode="none" delay={isMobile ? 0 : 400} skipAnim={isMobile || skipAnim} />
-           </motion.h2>
+          <motion.h2
+            className="relative text-6xl md:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text"
+            style={{
+              backgroundColor: "white",
+              backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
+              backgroundSize: "100% 200%",
+              textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)"
+            }}
+            animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Typewriter text="SUPPORT US" mode="none" delay={isMobile ? 0 : 400} skipAnim={isMobile || skipAnim} />
+          </motion.h2>
         </div>
 
         <div className="relative z-10 w-full max-w-6xl px-4 mb-20 flex justify-center">
@@ -439,9 +438,9 @@ export default function LandingPage({ onNavigateAuth }) {
               <MerchCard key={idx} item={item} isInitial={merchInitial} index={idx} isMobile={isMobile} />
             ))}
             {!displayedMerch.length && (
-               <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-3xl w-full">
-                 <p className="font-mono text-slate-500 uppercase tracking-widest text-sm">Synchronizing Inventory...</p>
-               </div>
+              <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-3xl w-full">
+                <p className="font-mono text-slate-500 uppercase tracking-widest text-sm">Synchronizing Inventory...</p>
+              </div>
             )}
           </div>
         </div>
@@ -474,7 +473,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
       {/* ── Section 5: Find More ── */}
       <section className="relative w-full min-h-[1080px] md:min-h-[90vh] bg-[#050a14] flex flex-col items-center justify-center py-16 md:py-20 z-50 border-t border-slate-900 overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}>
-        
+
         {/* Ambient Blobs */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-50 mix-blend-screen">
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[20%] left-[30%] w-[30vw] h-[30vw] rounded-full blur-[120px] bg-[#00FFFF]" />
@@ -485,13 +484,13 @@ export default function LandingPage({ onNavigateAuth }) {
         <PrinceRupertDrop />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 flex flex-col xl:grid xl:grid-cols-2 items-center gap-6 xl:gap-10">
-          
+
           {/* Typography: Top center on mobile & iPad, Column 1 on desktop widescreen */}
           <div className="relative flex flex-col items-center xl:items-start justify-center text-center xl:text-left p-2 md:p-4 order-1 w-full">
             <GoldenDust />
             <div className="relative z-10 flex flex-col items-center xl:items-start w-full">
               {/* 1. Title: Top center on mobile and iPad */}
-              <motion.h2 
+              <motion.h2
                 animate={isMobile ? { opacity: 1 } : { opacity: [0.3, 1, 0.3] }}
                 transition={isMobile ? { duration: 0 } : { repeat: Infinity, duration: 3, ease: "easeInOut" }}
                 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-3 xl:mb-6 font-mono text-center xl:text-left"
@@ -507,33 +506,33 @@ export default function LandingPage({ onNavigateAuth }) {
               {/* 3. Social Media Icon List: Shown in left column on desktop widescreen */}
               <div className="hidden xl:flex flex-col gap-6 mt-8 items-start w-full">
                 {/* Instagram Icon */}
-                <a 
-                  href="https://www.instagram.com/kalceria_?exln=cHBnaW5qOWs0czFj" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                <a
+                  href="https://www.instagram.com/kalceria_?exln=cHBnaW5qOWs0czFj"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex flex-row items-center gap-4 group cursor-pointer"
                 >
                   <div className="relative shrink-0 flex items-center justify-center w-8 md:w-10 h-8 md:h-10">
                     <Image
-                      src="/ig_gray.webp" 
-                      alt="Instagram" 
-                      width={1077} 
-                      height={976} 
-                      unoptimized 
-                      loading="lazy" 
-                      decoding="async" 
-                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.4]" 
+                      src="/ig_gray.webp"
+                      alt="Instagram"
+                      width={1077}
+                      height={976}
+                      unoptimized
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.4]"
                       draggable={false}
                     />
                     <Image
-                      src="/ig.webp" 
-                      alt="Instagram Colored" 
-                      width={1077} 
-                      height={976} 
-                      unoptimized 
-                      loading="lazy" 
-                      decoding="async" 
-                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.4]" 
+                      src="/ig.webp"
+                      alt="Instagram Colored"
+                      width={1077}
+                      height={976}
+                      unoptimized
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.4]"
                       draggable={false}
                     />
                   </div>
@@ -543,33 +542,33 @@ export default function LandingPage({ onNavigateAuth }) {
                 </a>
 
                 {/* TikTok Icon */}
-                <a 
-                  href="https://www.tiktok.com/@gallerykalceria" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                <a
+                  href="https://www.tiktok.com/@gallerykalceria"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex flex-row items-center gap-4 group cursor-pointer"
                 >
                   <div className="relative shrink-0 w-8 md:w-10 h-8 md:h-10">
                     <Image
-                      src="/tiktok_gray.webp" 
-                      alt="TikTok" 
-                      width={944} 
-                      height={1117} 
-                      unoptimized 
-                      loading="lazy" 
-                      decoding="async" 
-                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" 
+                      src="/tiktok_gray.webp"
+                      alt="TikTok"
+                      width={944}
+                      height={1117}
+                      unoptimized
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0"
                       draggable={false}
                     />
                     <Image
-                      src="/tiktok.webp" 
-                      alt="TikTok Colored" 
-                      width={944} 
-                      height={1117} 
-                      unoptimized 
-                      loading="lazy" 
-                      decoding="async" 
-                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" 
+                      src="/tiktok.webp"
+                      alt="TikTok Colored"
+                      width={944}
+                      height={1117}
+                      unoptimized
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                       draggable={false}
                     />
                   </div>
@@ -593,25 +592,25 @@ export default function LandingPage({ onNavigateAuth }) {
           {/* Flying & Floating Coki Mascot (Mobile Phone & Tablet Family Only) - Placed in between video and TikTok/IG logo */}
           <div className="flex xl:hidden items-center justify-center w-full order-3 z-20 my-4 sm:my-6 md:my-8 pointer-events-none">
             <motion.div
-              animate={{ 
-                y: [-12, 12, -12], 
+              animate={{
+                y: [-12, 12, -12],
                 x: [-5, 5, -5],
-                rotate: [-3, 3, -3] 
+                rotate: [-3, 3, -3]
               }}
-              transition={{ 
-                duration: 5.5, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
+              transition={{
+                duration: 5.5,
+                repeat: Infinity,
+                ease: "easeInOut"
               }}
               className="relative w-44 xs:w-48 sm:w-56 md:w-64 max-w-[75vw] h-auto drop-shadow-[0_10px_35px_rgba(255,0,255,0.35)]"
             >
-              <Image 
-                src="/hp/kalcer_man_hp.webp" 
-                alt="Coki Flying Mascot" 
-                width={2048} 
-                height={2048} 
+              <Image
+                src="/hp/kalcer_man_hp.webp"
+                alt="Coki Flying Mascot"
+                width={2048}
+                height={2048}
                 priority
-                className="w-full h-auto object-contain select-none" 
+                className="w-full h-auto object-contain select-none"
               />
             </motion.div>
           </div>
@@ -619,33 +618,33 @@ export default function LandingPage({ onNavigateAuth }) {
           {/* Social Media Icon List: Below Coki Mascot on mobile & tablet */}
           <div className="flex xl:hidden flex-row gap-6 mt-2 mb-4 items-center justify-center w-full order-4 z-20">
             {/* Instagram Icon */}
-            <a 
-              href="https://www.instagram.com/kalceria_?exln=cHBnaW5qOWs0czFj" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href="https://www.instagram.com/kalceria_?exln=cHBnaW5qOWs0czFj"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex flex-col sm:flex-row items-center gap-2 group cursor-pointer"
             >
               <div className="relative shrink-0 flex items-center justify-center w-8 h-8">
                 <Image
-                  src="/ig_gray.webp" 
-                  alt="Instagram" 
-                  width={1077} 
-                  height={976} 
-                  unoptimized 
-                  loading="lazy" 
-                  decoding="async" 
-                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.3]" 
+                  src="/ig_gray.webp"
+                  alt="Instagram"
+                  width={1077}
+                  height={976}
+                  unoptimized
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.3]"
                   draggable={false}
                 />
                 <Image
-                  src="/ig.webp" 
-                  alt="Instagram Colored" 
-                  width={1077} 
-                  height={976} 
-                  unoptimized 
-                  loading="lazy" 
-                  decoding="async" 
-                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.3]" 
+                  src="/ig.webp"
+                  alt="Instagram Colored"
+                  width={1077}
+                  height={976}
+                  unoptimized
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.3]"
                   draggable={false}
                 />
               </div>
@@ -655,33 +654,33 @@ export default function LandingPage({ onNavigateAuth }) {
             </a>
 
             {/* TikTok Icon */}
-            <a 
-              href="https://www.tiktok.com/@gallerykalceria" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href="https://www.tiktok.com/@gallerykalceria"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex flex-col sm:flex-row items-center gap-2 group cursor-pointer"
             >
               <div className="relative shrink-0 w-8 h-8">
                 <Image
-                  src="/tiktok_gray.webp" 
-                  alt="TikTok" 
-                  width={944} 
-                  height={1117} 
-                  unoptimized 
-                  loading="lazy" 
-                  decoding="async" 
-                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" 
+                  src="/tiktok_gray.webp"
+                  alt="TikTok"
+                  width={944}
+                  height={1117}
+                  unoptimized
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0"
                   draggable={false}
                 />
                 <Image
-                  src="/tiktok.webp" 
-                  alt="TikTok Colored" 
-                  width={944} 
-                  height={1117} 
-                  unoptimized 
-                  loading="lazy" 
-                  decoding="async" 
-                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" 
+                  src="/tiktok.webp"
+                  alt="TikTok Colored"
+                  width={944}
+                  height={1117}
+                  unoptimized
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                   draggable={false}
                 />
               </div>
@@ -698,8 +697,8 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="hidden xl:block absolute bottom-0 right-0 xl:w-72 2xl:w-80 z-20 pointer-events-none">
           {/* Hat placed above the head */}
           <Image
-            src="/kalcer_hat.webp" 
-            alt="Kalcer Hat" 
+            src="/kalcer_hat.webp"
+            alt="Kalcer Hat"
             width={1408}
             height={768}
             unoptimized
@@ -707,10 +706,10 @@ export default function LandingPage({ onNavigateAuth }) {
             decoding="async"
             className="absolute top-[-30%] left-1/2 -translate-x-[56%] w-[185%] h-auto z-30 drop-shadow-[0_15px_10px_rgba(0,0,0,0.5)]"
           />
-          
+
           <Image
-            src={mascotFrame === 1 ? "/kalcer_man.webp" : "/kalcer_man2.webp"} 
-            alt="Kalcer Mascot" 
+            src={mascotFrame === 1 ? "/kalcer_man.webp" : "/kalcer_man2.webp"}
+            alt="Kalcer Mascot"
             width={912}
             height={1181}
             unoptimized
@@ -735,7 +734,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
       {/* ── Section 6: Need Help? ── */}
       <section className="relative w-full min-h-[107vh] bg-white flex flex-col items-center justify-center py-32 z-50 overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}>
-        
+
         {/* Solid Section Divider */}
         <div className="absolute top-0 left-0 w-full h-[2px] bg-[#050a14] z-[70]" />
 
@@ -746,23 +745,23 @@ export default function LandingPage({ onNavigateAuth }) {
 
         {/* Dynamic Aggressive Blobs (Magenta & Gold) */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.4, 1], 
-              x: ["-15%", "25%", "-15%"], 
+          <motion.div
+            animate={{
+              scale: [1, 1.4, 1],
+              x: ["-15%", "25%", "-15%"],
               y: ["-10%", "15%", "-10%"]
-            }} 
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} 
-            className="absolute top-0 left-0 w-[70vw] h-[70vw] rounded-full blur-[140px] bg-[#D946EF] opacity-40 mix-blend-multiply" 
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-0 left-0 w-[70vw] h-[70vw] rounded-full blur-[140px] bg-[#D946EF] opacity-40 mix-blend-multiply"
           />
-          <motion.div 
-            animate={{ 
-              scale: [1.2, 1.6, 1.2], 
-              x: ["20%", "-20%", "20%"], 
+          <motion.div
+            animate={{
+              scale: [1.2, 1.6, 1.2],
+              x: ["20%", "-20%", "20%"],
               y: ["20%", "-5%", "20%"]
-            }} 
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }} 
-            className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#FACC15] opacity-40 mix-blend-multiply" 
+            }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#FACC15] opacity-40 mix-blend-multiply"
           />
         </div>
 
@@ -785,7 +784,7 @@ export default function LandingPage({ onNavigateAuth }) {
           </div>
         </div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -793,85 +792,85 @@ export default function LandingPage({ onNavigateAuth }) {
         >
           {/* Shrunk square box, centered perfectly with Moto photographers (Dark translucent for white bg) */}
           <div className="relative bg-black/[0.08] border border-black/10 backdrop-blur-xl rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-12 aspect-square w-full max-w-[290px] md:max-w-[420px] flex flex-col items-center justify-center shadow-[0_40px_100px_rgba(0,0,0,0.1)]">
-             
-             {/* Moto Figures: Locked tightly to box edges using wrappers for perfect alignment */}
-             
-             {/* TOP (Normal, 0deg) */}
-             <div className="hidden md:block absolute inset-0 pointer-events-none z-20">
-               <motion.img 
-                 src="/moto_1.webp" 
-                 alt="Moto 1"
-                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
-                 initial={{ opacity: 0, scale: 0.8 }}
-                 whileInView={{ opacity: 1, scale: 1 }}
-                 viewport={{ once: true }}
-               />
-             </div>
 
-             {/* Mobile Cokineed HP on top of the box in the middle top */}
-             {isMobile && (
-               <div className="absolute inset-0 pointer-events-none z-20">
-                 <motion.img 
-                   src="/hp/cokineed_hp.webp" 
-                   alt="Cokineed HP" 
-                   animate={{ rotate: [-6, 6, -6], y: [0, -4, 0] }}
-                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                   className="absolute bottom-full left-1/2 -translate-x-1/2 w-28 h-auto object-contain origin-bottom select-none"
-                   draggable={false}
-                 />
-               </div>
-             )}
+            {/* Moto Figures: Locked tightly to box edges using wrappers for perfect alignment */}
 
-             {/* RIGHT (90deg) */}
-             <div className="hidden md:block absolute inset-0 rotate-90 pointer-events-none z-20">
-               <motion.img 
-                 src="/moto_2.webp" 
-                 alt="Moto 2"
-                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
-                 initial={{ opacity: 0, scale: 0.8 }}
-                 whileInView={{ opacity: 1, scale: 1 }}
-                 viewport={{ once: true }}
-               />
-             </div>
+            {/* TOP (Normal, 0deg) */}
+            <div className="hidden md:block absolute inset-0 pointer-events-none z-20">
+              <motion.img
+                src="/moto_1.webp"
+                alt="Moto 1"
+                className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+              />
+            </div>
 
-             {/* BOTTOM (180deg) */}
-             <div className="hidden md:block absolute inset-0 rotate-180 pointer-events-none z-20">
-               <motion.img 
-                 src="/moto_3.webp" 
-                 alt="Moto 3"
-                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-44 md:h-60 w-auto object-contain origin-bottom"
-                 initial={{ opacity: 0, scale: 0.8 }}
-                 whileInView={{ opacity: 1, scale: 1 }}
-                 viewport={{ once: true }}
-               />
-             </div>
+            {/* Mobile Cokineed HP on top of the box in the middle top */}
+            {isMobile && (
+              <div className="absolute inset-0 pointer-events-none z-20">
+                <motion.img
+                  src="/hp/cokineed_hp.webp"
+                  alt="Cokineed HP"
+                  animate={{ rotate: [-6, 6, -6], y: [0, -4, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 w-28 h-auto object-contain origin-bottom select-none"
+                  draggable={false}
+                />
+              </div>
+            )}
 
-             {/* LEFT (-90deg) */}
-             <div className="hidden md:block absolute inset-0 -rotate-90 pointer-events-none z-20">
-               <motion.img 
-                 src="/moto_4.webp" 
-                 alt="Moto 4"
-                 className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
-                 initial={{ opacity: 0, scale: 0.8 }}
-                 whileInView={{ opacity: 1, scale: 1 }}
-                 viewport={{ once: true }}
-               />
-             </div>
+            {/* RIGHT (90deg) */}
+            <div className="hidden md:block absolute inset-0 rotate-90 pointer-events-none z-20">
+              <motion.img
+                src="/moto_2.webp"
+                alt="Moto 2"
+                className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+              />
+            </div>
 
-             <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white mb-8 md:mb-10 text-center leading-none" style={{ textShadow: "0 0 20px rgba(255,255,255,0.3)" }}>
-               Need Our Help?
-             </h2>
-             
-             <motion.button
-               onClick={handleApplyRequest}
-               whileHover={{ scale: 1.05 }}
-               whileTap={{ scale: 0.95 }}
-               className="relative px-8 md:px-12 py-3 md:py-4 font-sans font-black uppercase tracking-tighter text-sm md:text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none"
-               style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
-             >
-               <span className="relative z-10">APPLY A REQUEST</span>
-               <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
-             </motion.button>
+            {/* BOTTOM (180deg) */}
+            <div className="hidden md:block absolute inset-0 rotate-180 pointer-events-none z-20">
+              <motion.img
+                src="/moto_3.webp"
+                alt="Moto 3"
+                className="absolute bottom-full left-1/2 -translate-x-1/2 h-44 md:h-60 w-auto object-contain origin-bottom"
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+              />
+            </div>
+
+            {/* LEFT (-90deg) */}
+            <div className="hidden md:block absolute inset-0 -rotate-90 pointer-events-none z-20">
+              <motion.img
+                src="/moto_4.webp"
+                alt="Moto 4"
+                className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+              />
+            </div>
+
+            <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white mb-8 md:mb-10 text-center leading-none" style={{ textShadow: "0 0 20px rgba(255,255,255,0.3)" }}>
+              Need Our Help?
+            </h2>
+
+            <motion.button
+              onClick={handleApplyRequest}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative px-8 md:px-12 py-3 md:py-4 font-sans font-black uppercase tracking-tighter text-sm md:text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none"
+              style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+            >
+              <span className="relative z-10">APPLY A REQUEST</span>
+              <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+            </motion.button>
           </div>
         </motion.div>
 
@@ -879,14 +878,14 @@ export default function LandingPage({ onNavigateAuth }) {
           <div className="absolute bottom-0 left-0 w-full h-48 pointer-events-none z-30 overflow-visible">
             {/* Camera HP: Centered at the middle bottom and scaled 75% bigger */}
             <Image
-              src="/hp/camera_hp.webp" 
-              alt="Camera HP" 
+              src="/hp/camera_hp.webp"
+              alt="Camera HP"
               width={1210}
               height={864}
               unoptimized
               loading="lazy"
               decoding="async"
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[196px] h-auto object-contain select-none translate-y-[2px]" 
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[196px] h-auto object-contain select-none translate-y-[2px]"
               draggable={false}
             />
           </div>
@@ -910,9 +909,9 @@ export default function LandingPage({ onNavigateAuth }) {
           />
         )}
         {showLogoutConfirm && (
-          <LogoutConfirmModal 
-            onConfirm={handleLogout} 
-            onCancel={() => setShowLogoutConfirm(false)} 
+          <LogoutConfirmModal
+            onConfirm={handleLogout}
+            onCancel={() => setShowLogoutConfirm(false)}
           />
         )}
         {showIdeaModal && (
