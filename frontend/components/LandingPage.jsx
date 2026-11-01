@@ -23,6 +23,27 @@ export default function LandingPage({ onNavigateAuth }) {
   const [aboutIndex, setAboutIndex] = useState(0);
   const [mascotFrame, setMascotFrame] = useState(1);
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [detectedLocation, setDetectedLocation] = useState("");
+
+  const handleApplyRequest = () => {
+    setShowServiceModal(true);
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const res = await api.get("/location/reverse", {
+              params: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+            });
+            if (res.data?.formatted) {
+              setDetectedLocation(res.data.formatted);
+            }
+          } catch {}
+        },
+        () => {},
+        { timeout: 8000 }
+      );
+    }
+  };
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showIdeaModal, setShowIdeaModal] = useState(false);
   const openIdeaModal = useCallback(() => setShowIdeaModal(true), []);
@@ -834,7 +855,7 @@ export default function LandingPage({ onNavigateAuth }) {
              </h2>
              
              <motion.button
-               onClick={() => setShowServiceModal(true)}
+               onClick={handleApplyRequest}
                whileHover={{ scale: 1.05 }}
                whileTap={{ scale: 0.95 }}
                className="relative px-8 md:px-12 py-3 md:py-4 font-sans font-black uppercase tracking-tighter text-sm md:text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none"
@@ -869,7 +890,11 @@ export default function LandingPage({ onNavigateAuth }) {
       <AnimatePresence>
         {showServiceModal && (
           <ServiceRequestModal
-            onClose={() => setShowServiceModal(false)}
+            initialLocation={detectedLocation}
+            onClose={() => {
+              setShowServiceModal(false);
+              setDetectedLocation("");
+            }}
             onRequireAuth={() => {
               setShowServiceModal(false);
               onNavigateAuth?.();

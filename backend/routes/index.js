@@ -4,6 +4,7 @@ import {
   requestPasswordReset, resetPassword, checkUsername, verifyJitPassword, getMe
 } from "../controllers/authController.js";
 import { updateLiveLocation, getNearbyUsers, setLiveLocationPreference } from "../controllers/locationController.js";
+import { searchIndonesianLocations, reverseGeocodeLocation } from "../controllers/geoController.js";
 import { getMedia, createMedia } from "../controllers/mediaController.js";
 import { createMiniEvent, getActiveMiniEvents, updateMiniEvent, deleteMiniEvent } from "../controllers/miniEventController.js";
 import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from "../controllers/serviceController.js";
@@ -97,7 +98,9 @@ router.get("/events/:eventId", getPublicEvent);
 // ─── Event Registration (Auth required) ──────────────────────────────────────
 router.post("/events/:eventId/register", optionalAuth, bookingRateLimit, registerEvent);
 
-// ─── Location ────────────────────────────────────────────────────────────────
+// ─── Location & Geocoding ────────────────────────────────────────────────────
+router.get("/location/search", searchIndonesianLocations);
+router.get("/location/reverse", reverseGeocodeLocation);
 router.post("/location/update", requireAuth, updateLiveLocation);
 router.patch("/location/visibility", requireAuth, setLiveLocationPreference);
 router.get("/location/nearby", requireAuth, getNearbyUsers);

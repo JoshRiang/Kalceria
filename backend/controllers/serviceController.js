@@ -5,6 +5,7 @@ import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { safeNotify, sendServiceRequestSubmittedEmail, sendServiceRequestAdminAlertEmail } from '../lib/mailer.js';
 import { notifyServiceRequestCreated } from '../lib/whatsappBroker.js';
+import { isValidIndonesianLocation } from './geoController.js';
 
 const RATE_PER_HOUR = 120000;
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
@@ -211,7 +212,23 @@ export async function createServiceRequest(req, res, next) {
       }
     }
 
-    const user = await resolveServiceRequestor(req, contactPerson, whatsapp);
+    // 1. Strict Indonesian WhatsApp regex validation (+628xxxxxxxxxx)
+    const cleanWa = typeof whatsapp === 'string' ? whatsapp.trim().replace(/[\s-]/g, '') : '';
+    if (!/^\+628[1-9][0-9]{7,11}$/.test(cleanWa)) {
+      return res.status(400).json({
+        error: 'Please provide a valid Indonesian WhatsApp contact (+62 8xx-xxxx-xxxx).',
+      });
+    }
+
+    // 2. Strict Indonesian Deployment Area location validation
+    const cleanLocation = typeof location === 'string' ? location.trim() : '';
+    if (!isValidIndonesianLocation(cleanLocation)) {
+      return res.status(400).json({
+        error: 'Please provide a valid Indonesian deployment area (Street, City, Province).',
+      });
+    }
+
+    const user = await resolveServiceRequestor(req, contactPerson, cleanWa);
     if (!user) {
       return res.status(400).json({ error: 'Please provide operator name and WhatsApp contact.' });
     }

@@ -54,7 +54,14 @@ export function Field({ label, type, placeholder, options, val, onChange, id, re
     // Automatically strip leading 0 (e.g., 0812 -> 812)
     raw = raw.replace(/^0+/, "");
     // Filter to only digits
-    const digits = raw.replace(/\D/g, "");
+    let digits = raw.replace(/\D/g, "");
+    // Strict Indonesian mobile prefix: must start with 8
+    if (digits.length > 0 && digits[0] !== "8") {
+      digits = digits.replace(/^[^8]+/, "");
+    }
+    // Limit to max 12 digits after +62
+    digits = digits.slice(0, 12);
+
     if (digits) {
       onChange(id, `+62${digits}`);
     } else {
@@ -62,11 +69,17 @@ export function Field({ label, type, placeholder, options, val, onChange, id, re
     }
   };
 
+  const isPhoneIncomplete = isPhone && phoneDigits.length > 0 && phoneDigits.length < 9;
+
   return (
     <div className="flex flex-col mb-4">
       <label className="mb-1.5 font-sans text-xs font-bold text-white tracking-wide flex items-center justify-between">
         <span>{label}</span>
-        {maxLength ? (
+        {isPhone ? (
+          <span className={`text-[10px] ${phoneDigits.length >= 9 ? "text-emerald-400" : "text-white/50"}`}>
+            {phoneDigits ? `+62 ${phoneDigits}` : "Format: 8xx-xxxx-xxxx"}
+          </span>
+        ) : maxLength ? (
           <span className="text-[10px] text-white/50 font-normal">
             {(val || "").length}/{maxLength}
           </span>
@@ -101,24 +114,31 @@ export function Field({ label, type, placeholder, options, val, onChange, id, re
           required={required}
         />
       ) : isPhone ? (
-        <div className={`flex items-center w-full bg-black/60 border rounded-xl overflow-hidden transition-all duration-300 ${
-          focused ? "border-white ring-1 ring-white/50 bg-black/80 shadow-[0_0_20px_rgba(255,255,255,0.1)]" : "border-white/20 hover:border-white/40 bg-black/50"
-        }`}>
-          <div className="flex items-center pl-3.5 pr-2.5 py-3 text-white font-sans font-bold text-xs sm:text-sm select-none border-r border-white/15 bg-white/[0.04] shrink-0">
-            +62
+        <div className="flex flex-col gap-1">
+          <div className={`flex items-center w-full bg-black/60 border rounded-xl overflow-hidden transition-all duration-300 ${
+            focused ? "border-white ring-1 ring-white/50 bg-black/80 shadow-[0_0_20px_rgba(255,255,255,0.1)]" : "border-white/20 hover:border-white/40 bg-black/50"
+          }`}>
+            <div className="flex items-center pl-3.5 pr-2.5 py-3 text-white font-sans font-bold text-xs sm:text-sm select-none border-r border-white/15 bg-white/[0.04] shrink-0">
+              +62
+            </div>
+            <input 
+              type="tel"
+              inputMode="numeric"
+              placeholder={placeholder || "812-3456-7890"}
+              value={phoneDigits}
+              maxLength={13}
+              onChange={handlePhoneInput}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              className="w-full bg-transparent px-3.5 py-3 font-sans text-xs sm:text-sm text-white font-medium outline-none placeholder:text-white/30"
+              required={required}
+            />
           </div>
-          <input 
-            type="tel"
-            inputMode="numeric"
-            placeholder={placeholder || "812-3456-7890"}
-            value={phoneDigits}
-            maxLength={14}
-            onChange={handlePhoneInput}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            className="w-full bg-transparent px-3.5 py-3 font-sans text-xs sm:text-sm text-white font-medium outline-none placeholder:text-white/30"
-            required={required}
-          />
+          {isPhoneIncomplete && (
+            <span className="text-[10px] text-amber-400 font-sans">
+              Enter at least 9 digits (e.g. 812345678)
+            </span>
+          )}
         </div>
       ) : (
         <input 

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Field } from "./service-request/FormControls";
+import { LocationAutocomplete } from "./service-request/LocationAutocomplete";
 import api from "@/lib/api";
 import { hasUserSession } from "@/lib/session";
 import { useHasMounted } from "@/hooks/useHasMounted";
@@ -43,18 +44,26 @@ function FormErrorBox({ error, onDismiss }) {
   );
 }
 
-export default function ServiceRequestModal({ onClose, userName, onRequireAuth }) {
+export default function ServiceRequestModal({ onClose, userName, onRequireAuth, initialLocation }) {
   const [step, setStep] = useState(0); // 0: Type, 1: Details, 2: Done
   const [weekOffset, setWeekOffset] = useState(0);
   const mounted = useHasMounted();
+  const [isLocationVerified, setIsLocationVerified] = useState(Boolean(initialLocation));
   const [form, setForm] = useState({ 
     serviceType: "", 
     serviceName: "", 
     contactPerson: userName || "", 
     whatsapp: "", 
-    location: "", 
+    location: initialLocation || "", 
     additionalNotes: "" 
   });
+
+  useEffect(() => {
+    if (initialLocation && !form.location) {
+      setForm(p => ({ ...p, location: initialLocation }));
+      setIsLocationVerified(true);
+    }
+  }, [initialLocation, form.location]);
   const [selectedSlots, setSelectedSlots] = useState({}); // { "date-hour": true }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -120,8 +129,25 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.serviceName || !form.contactPerson || !form.whatsapp || !form.location) {
-      setError("Please provide operator name and WhatsApp contact.");
+    if (!form.serviceName || form.serviceName.trim().length < 2) {
+      setError("Please provide a valid request title.");
+      return;
+    }
+    if (!form.contactPerson || form.contactPerson.trim().length < 2) {
+      setError("Please provide operator name.");
+      return;
+    }
+
+    // Strict Indonesian phone validation (+628xxxxxxxxxx, 9 to 13 digits)
+    const cleanWa = (form.whatsapp || "").replace(/[\s-]/g, "");
+    if (!/^\+628[1-9][0-9]{7,11}$/.test(cleanWa)) {
+      setError("Please provide a valid Indonesian WhatsApp contact (+62 8xx-xxxx-xxxx, 9-13 digits).");
+      return;
+    }
+
+    // Strict location verification against verified suggestions
+    if (!isLocationVerified || !form.location || form.location.trim().length < 5) {
+      setError("Deployment area must be selected from the verified locations list (Street, City, Province).");
       return;
     }
     if (Object.values(selectedSlots).filter(Boolean).length === 0) {
@@ -576,7 +602,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                           <Field id="serviceName" label="Request Title" type="text" placeholder="Project name/ID" val={form.serviceName} onChange={setField} required />
                           <Field id="contactPerson" label="Operator Name" type="text" placeholder="Full name" val={form.contactPerson} onChange={setField} required />
                           <Field id="whatsapp" label="Comms Channel" type="tel" placeholder="812-3456-7890" val={form.whatsapp} onChange={setField} required />
-                          <Field id="location" label="Deployment Area" type="text" placeholder="City / Venue" val={form.location} onChange={setField} required />
+                          <LocationAutocomplete value={form.location} onChange={(loc) => setField("location", loc)} isVerified={isLocationVerified} setIsVerified={setIsLocationVerified} required />
                           <Field id="additionalNotes" label="Technical Brief" type="textarea" placeholder="Specific requirements..." val={form.additionalNotes} onChange={setField} maxLength={50} />
                         </div>
                       </div>
