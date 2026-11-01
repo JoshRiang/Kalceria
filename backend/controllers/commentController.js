@@ -1,12 +1,12 @@
 import prisma from '../lib/prisma.js';
-
-
+import { setCommentCooldown } from '../middleware/commentDefense.js';
 
 export async function createComment(req, res, next) {
   try {
-    const { content, category, type, identity } = req.body || {};
+    const { content, category, type, identity, username, userId: bodyUserId } = req.body || {};
     const cleanContent = typeof content === 'string' ? content.trim() : '';
     const cleanCategory = typeof category === 'string' ? category.trim() : 'Other';
+
     if (cleanContent.length < 5 || cleanContent.length > 2000) {
       return res.status(400).json({ error: 'Comment must be between 5 and 2000 characters.' });
     }
@@ -17,17 +17,46 @@ export async function createComment(req, res, next) {
       return res.status(400).json({ error: 'Please provide a valid identity.' });
     }
 
-    const userId = req.user ? req.user.userId : null;
-    if (identity === 'User' && !userId) {
-      return res.status(401).json({ error: 'Sign in to post with your account name.' });
+    const authUserId = req.user ? req.user.userId : null;
+
+    // Defense: Identity Verification & Anti-Spoofing
+    if (identity === 'User') {
+      if (!authUserId) {
+        return res.status(401).json({ error: 'Sign in to post with your account name.' });
+      }
+      if (bodyUserId && String(bodyUserId) !== String(authUserId)) {
+        return res.status(403).json({ error: 'Account mismatch: Cannot post on behalf of another user ID.' });
+      }
     }
-    const user = userId
-      ? await prisma.user.findUnique({ where: { id: userId }, select: { name: true, nickname: true } })
-      : null;
-    const finalUsername = identity === 'Anonymous'
-      ? 'Anonymous'
-      : identity === 'User'
-        ? (user?.nickname || user?.name || 'User')
+
+    let dbUser = null;
+    if (authUserId) {
+      dbUser = await prisma.user.findUnique({
+        where: { id: authUserId },
+        select: { id: true, name: true, nickname: true, email: true },
+      });
+      if (!dbUser && identity === 'User') {
+        return res.status(401).json({ error: 'User session not found.' });
+      }
+    }
+
+    // Verify claimed username matches authenticated user
+    if (identity === 'User' && dbUser && typeof username === 'string' && username.trim().length > 0) {
+      const allowedNames = [dbUser.nickname, dbUser.name, dbUser.email]
+        .filter(Boolean)
+        .map((s) => s.trim().toLowerCase());
+      if (!allowedNames.includes(username.trim().toLowerCase())) {
+        return res.status(403).json({
+          error: 'Account mismatch: Display name does not match your authenticated account.',
+        });
+      }
+    }
+
+    const finalUsername =
+      identity === 'Anonymous'
+        ? 'Anonymous'
+        : identity === 'User'
+        ? dbUser?.nickname || dbUser?.name || 'User'
         : 'Guest';
 
     const comment = await prisma.comment.create({
@@ -36,9 +65,12 @@ export async function createComment(req, res, next) {
         category: cleanCategory || 'Other',
         type,
         username: finalUsername,
-        userId: userId,
+        userId: identity === 'Anonymous' ? null : authUserId,
       },
     });
+
+    // Enforce 2-hour cooldown across identity layers
+    await setCommentCooldown(req, authUserId);
 
     res.status(201).json({ success: true, comment });
   } catch (err) {

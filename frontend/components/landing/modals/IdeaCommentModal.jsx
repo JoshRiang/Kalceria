@@ -18,6 +18,20 @@ const CATEGORIES = [
   { id: "Other", label: "Other" },
 ];
 
+function getClientFingerprint() {
+  if (typeof window === "undefined") return "";
+  try {
+    let tag = localStorage.getItem("kalceria_device_tag");
+    if (!tag) {
+      tag = "dev_" + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
+      localStorage.setItem("kalceria_device_tag", tag);
+    }
+    return tag;
+  } catch {
+    return "";
+  }
+}
+
 export function IdeaCommentModal({ onClose }) {
   const [feedbackType, setFeedbackType] = useState("ADVICE");
   const [category, setCategory] = useState("General");
@@ -56,13 +70,20 @@ export function IdeaCommentModal({ onClose }) {
 
     setIsSubmitting(true);
     try {
-      const submitPromise = api.post("/comments", {
-        content: cleanContent,
-        category,
-        type: feedbackType,
-        username: identity === "User" ? (username.trim() || "User") : "Anonymous",
-        identity: identity === "User" ? "User" : "Anonymous",
-      });
+      const clientTag = getClientFingerprint();
+      const submitPromise = api.post(
+        "/comments",
+        {
+          content: cleanContent,
+          category,
+          type: feedbackType,
+          username: identity === "User" ? (username.trim() || "User") : "Anonymous",
+          identity: identity === "User" ? "User" : "Anonymous",
+        },
+        {
+          headers: clientTag ? { "x-client-fingerprint": clientTag } : {},
+        }
+      );
 
       const minDelay = new Promise((resolve) => setTimeout(resolve, 1100));
       await Promise.all([submitPromise, minDelay]);
@@ -170,6 +191,33 @@ export function IdeaCommentModal({ onClose }) {
             ×
           </button>
         </div>
+
+        {/* Error Notification — Directly Under Title (Consolas Red Login Form Style) */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="px-4 xs:px-6 pt-3 relative z-10 shrink-0 overflow-hidden"
+            >
+              <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-red-500 text-sm select-none">✕</span>
+                  <span className="text-red-400 font-mono text-xs font-normal">{error}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setError("")}
+                  className="text-red-400/60 hover:text-red-300 text-xs font-mono ml-2 cursor-pointer"
+                  aria-label="Dismiss error"
+                >
+                  ✕
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Single Part Form Content */}
         <form
@@ -302,23 +350,7 @@ export function IdeaCommentModal({ onClose }) {
             />
           </div>
 
-          {/* Standard Login-Form Error Box */}
-          {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-red-500 text-sm select-none">✕</span>
-                <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setError("")}
-                className="text-red-400/60 hover:text-red-300 text-xs font-mono ml-2 cursor-pointer"
-                aria-label="Dismiss"
-              >
-                ✕
-              </button>
-            </div>
-          )}
+
 
           {/* Submit Action Button */}
           <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">

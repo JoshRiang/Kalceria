@@ -32,6 +32,7 @@ import {
   listUsers, getUser, setUserRole, deleteUser,
 } from "../controllers/adminUserController.js";
 import { createComment } from "../controllers/commentController.js";
+import { checkCommentDefense } from "../middleware/commentDefense.js";
 import { listComments, togglePinComment, deleteComment } from "../controllers/adminCommentController.js";
 import { getEarnings } from "../controllers/adminEarningsController.js";
 import { sendGeneralEmail } from "../controllers/emailController.js";
@@ -175,7 +176,7 @@ router.patch("/admin/users/:id/role", requireAdmin, requireJIT, setUserRole);
 router.delete("/admin/users/:id", requireAdmin, requireJIT, deleteUser);
 
 // ─── Comments ───────────────────────────────────────────────────────────────
-router.post("/comments", commentRateLimit, optionalAuth, createComment);
+router.post("/comments", optionalAuth, checkCommentDefense, createComment);
 router.get("/admin/comments", requireAdmin, listComments);
 router.patch("/admin/comments/:id/pin", requireAdmin, togglePinComment);
 router.delete("/admin/comments/:id", requireAdmin, requireJIT, deleteComment);
