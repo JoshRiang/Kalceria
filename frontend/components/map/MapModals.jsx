@@ -476,14 +476,14 @@ export const MapModals = memo(function MapModals({
       {/* Quit Modal */}
       {showQuitModal && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 select-none pointer-events-auto">
-          {/* Backdrop Blur */}
+          {/* Pure Optical Lens Blur — Never covering the map in opaque paint */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className={`absolute inset-0 backdrop-blur-2xl transition-colors duration-300 ${
-              isMapDark ? "bg-black/80" : "bg-white/70"
+            transition={{ duration: 0.25 }}
+            className={`absolute inset-0 backdrop-blur-md transition-colors duration-300 ${
+              isMapDark ? "bg-black/30" : "bg-black/[0.04]"
             }`}
             onClick={handleQuitNoClick} 
           />
@@ -510,7 +510,7 @@ export const MapModals = memo(function MapModals({
               style={{
                 textShadow: isMapDark 
                   ? "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)" 
-                  : "0 2px 10px rgba(255,255,255,0.7), 0 0 20px rgba(255,255,255,0.5)"
+                  : "0 2px 14px rgba(255,255,255,0.95), 0 0 24px rgba(255,255,255,0.9)"
               }}
             >
               Quit the map?
@@ -534,7 +534,9 @@ export const MapModals = memo(function MapModals({
                   textTransform: "none",
                   textShadow: quitChoice === 'yes' 
                     ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
-                    : (isMapDark ? "0 2px 12px rgba(0,0,0,0.8)" : "none")
+                    : isMapDark 
+                    ? "0 2px 12px rgba(0,0,0,0.8)" 
+                    : "0 1px 8px rgba(255,255,255,0.9)"
                 }}
               >
                 Yes
@@ -556,8 +558,8 @@ export const MapModals = memo(function MapModals({
                         ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
                         : "0 2px 12px rgba(0,0,0,0.8)")
                     : (quitChoice === 'no'
-                        ? "0 0 4px rgba(0,0,0,0.3)"
-                        : "none")
+                        ? "0 0 6px rgba(0,0,0,0.5)"
+                        : "0 1px 8px rgba(255,255,255,0.9)")
                 }}
               >
                 No
