@@ -17,6 +17,7 @@ const QUOTES = [
 export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
   const [isDark, setIsDark] = useState(false);
   const isDarkRef = useRef(false);
+  const isReadyRef = useRef(isReady);
   const [currentQuote, setCurrentQuote] = useState("Composing the map...");
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const tiltTargetRef = useRef({ x: 0, y: 0 });
@@ -24,6 +25,11 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
   const percentTextRef = useRef(null);
   const progressValRef = useRef(0);
   const completedRef = useRef(false);
+
+  // Keep isReadyRef synchronized without tearing down or resetting the progress loop
+  useEffect(() => {
+    isReadyRef.current = isReady;
+  }, [isReady]);
 
   // 1. Precision Direct-DOM Hardware rAF Progress Engine (Zero React reconciliation overhead, zero stutter)
   useEffect(() => {
@@ -45,11 +51,12 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
       lastTime = now;
 
       const current = progressValRef.current;
+      const ready = isReadyRef.current;
       // Target: smoothly crawl toward 88% while waiting, or rush straight to 100% when backend isReady
-      const target = isReady ? 100 : 88;
+      const target = ready ? 100 : 88;
 
       let speed;
-      if (isReady) {
+      if (ready) {
         // Fast, authoritative sweep to 100% (~250ms)
         speed = Math.max(55, (100 - current) * 6.5);
       } else {
@@ -75,7 +82,7 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
         setIsDark(true);
       }
 
-      if (next >= 99.9 && isReady) {
+      if (next >= 99.9 && ready) {
         completedRef.current = true;
         if (barFillRef.current) barFillRef.current.style.width = "100%";
         if (percentTextRef.current) percentTextRef.current.textContent = "100";
@@ -94,7 +101,7 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
       completedRef.current = true;
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [showStartup, isReady, onComplete]);
+  }, [showStartup, onComplete]);
 
   // 2. High-performance Throttled 3D Tilt Tracking (Guarded for Mouse/Pointer, disabled on touch/iPad)
   useEffect(() => {
@@ -319,9 +326,9 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
               {isDark && (
                 <motion.div
                   key="kalcermanmap-revisi-entrance"
-                  initial={{ x: -1200, opacity: 0 }}
+                  initial={{ x: -1600, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: 1200, opacity: 0 }}
+                  exit={{ opacity: 0 }}
                   transition={{
                     x: { type: "spring", stiffness: 50, damping: 14 },
                     opacity: { duration: 0.4 },

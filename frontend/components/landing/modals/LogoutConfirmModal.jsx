@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import { createSeededRandom } from "@/lib/seededRandom";
-import ContentImage from "@/components/ui/ContentImage";
 
 const LOGOUT_PARTICLE_COLORS = [
   "#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"
@@ -63,6 +63,14 @@ export function LineParticles() {
 export function LogoutConfirmModal({ onConfirm, onCancel }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutChoice, setLogoutChoice] = useState(null); // 'yes' | 'no' | null
+
+  // Ensure /flying_cat.webp is preloaded immediately into browser memory
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const img = new window.Image();
+      img.src = "/flying_cat.webp";
+    }
+  }, []);
 
   useEffect(() => {
     if (isLoggingOut) {
@@ -135,12 +143,16 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                 <LineParticles />
               </div>
               
-              <ContentImage
+              {/* Immediate high-priority delivery, no dark blocking blur box */}
+              <Image
                 src="/flying_cat.webp"
                 alt="Flying Cat"
-                width={1600}
-                height={893}
-                loading="eager"
+                width={600}
+                height={335}
+                unoptimized
+                priority
+                fetchPriority="high"
+                placeholder="empty"
                 className="w-full h-auto object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.7)] relative z-10"
               />
             </motion.div>

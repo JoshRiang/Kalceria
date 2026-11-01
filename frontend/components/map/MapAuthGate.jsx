@@ -81,7 +81,7 @@ export const MapAuthGate = memo(function MapAuthGate() {
 
         <Link
           href="/?auth=true"
-          className="relative inline-block pointer-events-auto mt-2 px-12 py-4 font-sans font-extrabold uppercase tracking-widest text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.15)]"
+          className="relative inline-block pointer-events-auto mt-2 px-12 sm:px-14 py-4 sm:py-4.5 font-sans font-black uppercase tracking-[0.2em] text-sm sm:text-base md:text-[17px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.15)]"
           style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
           onClick={() => {
             if (typeof window !== "undefined") {
