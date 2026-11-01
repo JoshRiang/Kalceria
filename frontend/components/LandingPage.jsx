@@ -386,7 +386,6 @@ export default function LandingPage({ onNavigateAuth }) {
           <Image src="/wall_1.webp" alt="Wall 1" width={2400} height={1603} loading="lazy" decoding="async" className="absolute bottom-0 left-[-2%] md:left-[9%] h-[175px] md:h-[304px] w-auto object-contain opacity-90 brightness-110" />
         </div>
 
-        <FloatingSpareParts />
 
         <div className="relative z-10 mb-24 flex justify-center w-full">
            <motion.h2 
@@ -480,7 +479,7 @@ export default function LandingPage({ onNavigateAuth }) {
               <div className="hidden xl:flex flex-col gap-6 mt-8 items-start w-full">
                 {/* Instagram Icon */}
                 <a 
-                  href="https://www.instagram.com/kalceria/" 
+                  href="https://www.instagram.com/kalceria_?exln=cHBnaW5qOWs0czFj" 
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="flex flex-row items-center gap-4 group cursor-pointer"
@@ -592,7 +591,7 @@ export default function LandingPage({ onNavigateAuth }) {
           <div className="flex xl:hidden flex-row gap-6 mt-2 mb-4 items-center justify-center w-full order-4 z-20">
             {/* Instagram Icon */}
             <a 
-              href="https://www.instagram.com/kalceria/" 
+              href="https://www.instagram.com/kalceria_?exln=cHBnaW5qOWs0czFj" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="flex flex-col sm:flex-row items-center gap-2 group cursor-pointer"

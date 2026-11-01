@@ -2,19 +2,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { StepIndicator, Field } from "./service-request/FormControls";
-import ContentImage from "@/components/ui/ContentImage";
+import { Field } from "./service-request/FormControls";
 import api from "@/lib/api";
 import { hasUserSession } from "@/lib/session";
 import { useHasMounted } from "@/hooks/useHasMounted";
-
-// ── Shared Components ────────────────────────────────────────────────────────
-
-
-
-
-
-
 
 const SERVICE_TYPES = [
   { id: "EO", label: "Event Organizer", desc: "Full EO service for your automotive event" },
@@ -70,9 +61,14 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
     return map;
   }, [publicBookings]);
 
-  // Form Validation (now includes checking if targetDate/time is selected)
   // Form Validation
-  const isFormValid = form.serviceName && form.contactPerson && form.whatsapp && form.location && Object.values(selectedSlots).filter(Boolean).length > 0;
+  const isFormValid = Boolean(
+    form.serviceName && 
+    form.contactPerson && 
+    form.whatsapp && 
+    form.location && 
+    Object.values(selectedSlots).filter(Boolean).length > 0
+  );
 
   const isLoggedIn = hasUserSession();
 
@@ -101,7 +97,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
         .filter(([, val]) => val)
         .map(([key]) => {
           const [date, hour] = key.split(/-(?=\d+$)/);
-          return { date, hour: parseInt(hour) };
+          return { date, hour: parseInt(hour, 10) };
         });
 
       const slots = selectedArray.map(s => ({
@@ -163,13 +159,13 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
       <div className="grid grid-cols-[14px_repeat(7,1fr)] xs:grid-cols-[18px_repeat(7,1fr)] sm:grid-cols-[25px_repeat(7,1fr)] gap-0.5 sm:gap-1">
         <div />
         {days.map((d, i) => (
-          <div key={i} className={`text-center font-sans text-[5px] xs:text-[6px] sm:text-[7px] font-black uppercase ${d.isMonday ? 'text-red-500' : 'text-white'} leading-tight`}>
+          <div key={i} className={`text-center font-sans text-[6px] xs:text-[7px] sm:text-[8px] font-black uppercase ${d.isMonday ? 'text-red-400' : 'text-white'} leading-tight`}>
             {d.label}<br/>{d.dayNum}
           </div>
         ))}
         {hourList.map((h) => (
           <React.Fragment key={h}>
-            <div className="text-[5px] xs:text-[6px] sm:text-[7px] font-black text-white flex items-center justify-end pr-0.5 xs:pr-1 sm:pr-1.5 font-sans leading-none">
+            <div className="text-[6px] xs:text-[7px] sm:text-[8px] font-black text-white flex items-center justify-end pr-0.5 xs:pr-1 sm:pr-1.5 font-sans leading-none">
               {h === 24 ? "00" : h.toString().padStart(2, '0')}
             </div>
             {days.map((d, i) => {
@@ -200,7 +196,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
     );
   };
 
-  const buttonStyle = "w-full py-4 rounded-xl font-sans font-black uppercase tracking-tight text-lg transition-all duration-300 flex items-center justify-center gap-2";
+  const buttonStyle = "w-full py-4 rounded-xl font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-all duration-300 flex items-center justify-center gap-2";
 
   const handleCancel = async () => {
     if (!done?.bookingId) { onClose(); return; }
@@ -217,28 +213,49 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
     }
   };
 
+  // Format Booking Details
+  const serviceLabel = useMemo(() => {
+    return SERVICE_TYPES.find(s => s.id === form.serviceType)?.label || form.serviceType || "—";
+  }, [form.serviceType]);
+
+  const formattedDates = useMemo(() => {
+    const rawKeys = Object.entries(selectedSlots).filter(([, val]) => val).map(([k]) => k);
+    if (!rawKeys.length) return "—";
+    const dates = [...new Set(rawKeys.map(k => k.split(/-(?=\d+$)/)[0]))].sort();
+    return dates.map(d => {
+      const dObj = new Date(d);
+      return isNaN(dObj.getTime()) ? d : dObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }).join(', ');
+  }, [selectedSlots]);
+
+  const truncatedNotes = useMemo(() => {
+    if (!form.additionalNotes) return "";
+    const trimmed = form.additionalNotes.trim();
+    return trimmed.length > 50 ? trimmed.slice(0, 50) + "..." : trimmed;
+  }, [form.additionalNotes]);
+
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/30" 
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
         onClick={onClose}
       />
       
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 30 }}
-        animate={{ opacity: 1, scale: 0.9, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-        className={`relative z-10 w-full ${step === 1 ? "max-w-[95%] xl:max-w-[1320px]" : "max-w-[95%] sm:max-w-[500px]"}`}
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+        className={`relative z-10 w-full ${step === 1 ? "max-w-[95%] xl:max-w-[1320px]" : "max-w-[95%] sm:max-w-[540px]"}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Animated Conic Glow Overlay */}
-        <div className="absolute -inset-[2px] rounded-[32px] z-0 overflow-hidden opacity-30">
+        <div className="absolute -inset-[2px] rounded-[32px] z-0 overflow-hidden opacity-30 pointer-events-none">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -251,127 +268,158 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
         </div>
 
         {/* Main Card Container */}
-        <div className="relative z-10 w-full max-h-[90vh] overflow-y-auto custom-scrollbar bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[30px] flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.8)]">
+        <div className="relative z-10 w-full max-h-[92vh] overflow-y-auto custom-scrollbar bg-black/85 backdrop-blur-3xl border border-white/20 rounded-[30px] flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.95)]">
           
-          {/* Internal Cinematic Blobs (Register Form Style) */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-60">
+          {/* Dynamic Ambient Blobs: 60% Black, 25% Pink, 15% Yellow */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[30px]">
+            {/* 60% Dominant Dynamic Black Blobs */}
             <motion.div
               animate={{ 
-                x: [-20, 20, -20], 
-                y: [-20, 20, -20],
+                x: [-30, 30, -30], 
+                y: [-20, 25, -20],
+                scale: [1, 1.15, 1],
               }}
-              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              className="absolute -top-20 -left-20 w-[300px] h-[300px] bg-[#FF00FF]/20 blur-[80px] rounded-full"
+              transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[480px] h-[480px] bg-black/95 blur-[70px] rounded-full z-[1]"
             />
             <motion.div
               animate={{ 
-                x: [20, -20, 20], 
+                x: [25, -25, 25], 
+                y: [30, -30, 30],
+                scale: [1.1, 0.95, 1.1],
+              }}
+              transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -bottom-16 -left-16 w-[420px] h-[420px] bg-black/90 blur-[80px] rounded-full z-[1]"
+            />
+            <motion.div
+              animate={{ 
+                x: [-20, 20, -20], 
                 y: [20, -20, 20],
               }}
-              transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-              className="absolute -bottom-20 -right-20 w-[350px] h-[350px] bg-[#FACC15]/15 blur-[90px] rounded-full"
+              transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -top-16 -right-16 w-[380px] h-[380px] bg-black/95 blur-[65px] rounded-full z-[1]"
+            />
+
+            {/* 25% Pink / Magenta Dynamic Blobs */}
+            <motion.div
+              animate={{ 
+                x: [-30, 30, -30], 
+                y: [-15, 20, -15],
+              }}
+              transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -top-12 -left-12 w-[300px] h-[300px] bg-[#FF00FF]/25 blur-[75px] rounded-full z-[2]"
             />
             <motion.div
               animate={{ 
                 scale: [1, 1.2, 1],
+                x: [15, -15, 15],
               }}
-              transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-emerald-500/10 blur-[100px] rounded-full"
+              transition={{ duration: 13, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute bottom-1/3 -right-10 w-[240px] h-[240px] bg-[#EC4899]/20 blur-[65px] rounded-full z-[2]"
+            />
+
+            {/* 15% Yellow Dynamic Blob */}
+            <motion.div
+              animate={{ 
+                x: [20, -20, 20], 
+                y: [20, -20, 20],
+                scale: [0.95, 1.1, 0.95],
+              }}
+              transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -bottom-10 right-1/4 w-[220px] h-[220px] bg-[#FACC15]/20 blur-[70px] rounded-full z-[2]"
             />
           </div>
           
           {/* Top Progress Bar */}
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-white/5 overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-white/5 overflow-hidden z-20">
             <motion.div 
               initial={{ width: "0%" }}
               animate={{ width: `${((step + 1) / 3) * 100}%` }}
               className="h-full bg-gradient-to-r from-[#FF00FF] via-[#FACC15] to-[#FF00FF] bg-[length:200%_auto]"
-              transition={{ duration: 1, ease: "circOut" }}
-              style={{ animation: "gradientMove 3s linear infinite" }}
+              transition={{ duration: 0.8, ease: "circOut" }}
             />
           </div>
 
           <style jsx>{`
             .custom-scrollbar::-webkit-scrollbar { width: 3px; }
             .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-            .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
           `}</style>
 
-          {/* Header Section */}
-          <div className={`p-8 pb-0 flex justify-between items-center ${step === 1 ? "hidden" : "flex"}`}>
-            <h2 className="font-sans text-3xl font-black text-white uppercase tracking-tight leading-none">
-              Need Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">Help?</span>
-            </h2>
+          {/* Unified Header with Close Button */}
+          <div className="p-6 sm:p-8 pb-3 flex justify-between items-center relative z-20">
+            {step === 1 ? (
+              <div className="flex flex-col">
+                <h2 className="font-sans text-xl sm:text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">
+                  Project <span className="text-white">Details</span>
+                </h2>
+                <p className="text-white/85 text-xs leading-snug font-sans max-w-[500px]">
+                  Configure mission parameters & select your operational window.
+                </p>
+              </div>
+            ) : (
+              <h2 className="font-sans text-2xl sm:text-3xl font-black text-white uppercase tracking-tight leading-none">
+                Need Our <span className="text-white">Help?</span>
+              </h2>
+            )}
             <button 
+              type="button"
               onClick={onClose} 
-              className="group p-2.5 bg-white/5 hover:bg-white/10 rounded-full transition-all duration-300"
+              className="group p-2.5 bg-white/10 hover:bg-white/20 rounded-full transition-all duration-300 border border-white/10 cursor-pointer"
+              aria-label="Close"
             >
-              <svg className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
 
-          <div className="p-6 pt-4 pb-2">
-            <div className={`flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-12 ${step === 1 ? "mb-6 sm:mb-10" : ""}`}>
-              <div className="flex-shrink-0">
-                <StepIndicator total={3} current={step} />
-              </div>
-              {step === 1 && (
-                <div className="flex flex-col pt-1">
-                  <h2 className="font-sans text-xl sm:text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">
-                    Project <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/40">Details</span>
-                  </h2>
-                  <p className="text-slate-400 text-[11px] leading-snug font-sans max-w-[500px]">
-                    Configure mission parameters & select your operational window.
-                  </p>
-                </div>
-              )}
-            </div>
-
+          <div className="p-6 pt-2 pb-6 relative z-20">
             <AnimatePresence mode="wait">
+              {/* ── STEP 0: SERVICE TYPE SELECTION ── */}
               {step === 0 && (
                 <motion.div 
                   key="step0" 
                   initial={{ opacity: 0, x: 20 }} 
                   animate={{ opacity: 1, x: 0 }} 
                   exit={{ opacity: 0, x: -20 }}
-                  className="min-h-[400px] flex flex-col"
+                  className="min-h-[380px] flex flex-col"
                 >
-                  <p className="text-slate-400 text-[12px] mb-8 leading-relaxed font-sans max-w-[400px]">
+                  <p className="text-white font-medium text-xs sm:text-sm mb-6 leading-relaxed font-sans max-w-[440px]">
                     Select the operational tier for your project. Our crew handles everything from creative shoots to full-scale event infrastructure.
                   </p>
                   
-                  <div className="grid grid-cols-1 gap-4 mb-auto">
+                  <div className="grid grid-cols-1 gap-3.5 mb-auto">
                     {SERVICE_TYPES.map((s) => (
                       <button
                         key={s.id}
+                        type="button"
                         onClick={() => setField("serviceType", form.serviceType === s.id ? "" : s.id)}
-                        className={`group relative text-left p-5 rounded-2xl border transition-all duration-500 overflow-hidden ${
+                        className={`group relative text-left p-5 rounded-2xl border transition-all duration-300 overflow-hidden cursor-pointer ${
                           form.serviceType === s.id 
-                          ? "bg-[#FF00FF]/5 border-[#FF00FF]/40 shadow-[0_0_30px_rgba(255,0,255,0.05)]" 
-                          : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                          ? "bg-white/15 border-white shadow-[0_0_25px_rgba(255,255,255,0.15)] ring-1 ring-white/50" 
+                          : "bg-white/[0.05] border-white/20 hover:border-white/40 hover:bg-white/[0.08]"
                         }`}
                       >
-                        {form.serviceType === s.id && (
-                          <motion.div layoutId="glow" className="absolute inset-0 bg-gradient-to-br from-[#FF00FF]/5 to-transparent" />
-                        )}
-
                         <div className="relative flex items-center justify-between gap-6">
                           <div className="flex-1">
-                            <p className={`font-sans font-black text-[14px] uppercase tracking-wider transition-colors ${form.serviceType === s.id ? "text-white" : "text-slate-400 group-hover:text-white"}`}>
+                            <p className="font-sans font-bold text-sm sm:text-base uppercase tracking-wider text-white">
                               {s.label}
                             </p>
-                            <p className="font-sans text-[11px] text-slate-500 transition-colors group-hover:text-slate-400 mt-1">{s.desc}</p>
+                            <p className="font-sans text-xs text-white/85 font-medium mt-1 leading-snug">
+                              {s.desc}
+                            </p>
                           </div>
-                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-500 ${
+                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
                             form.serviceType === s.id 
-                            ? "bg-[#FF00FF] border-[#FF00FF] shadow-[0_0_15px_rgba(255,0,255,0.4)]" 
-                            : "border-white/10 group-hover:border-white/20"
+                            ? "bg-white border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
+                            : "border-white/30 group-hover:border-white/60"
                           }`}>
                             {form.serviceType === s.id ? (
-                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"></path></svg>
+                              <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3.5" d="M5 13l4 4L19 7"></path>
+                              </svg>
                             ) : null}
                           </div>
                         </div>
@@ -380,51 +428,45 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                   </div>
 
                   <button 
+                    type="button"
                     onClick={handleNext}
                     disabled={!form.serviceType}
-                    className={`${buttonStyle} mt-10 bg-white text-black hover:bg-slate-200 disabled:opacity-30`}
+                    className={`${buttonStyle} mt-8 bg-white text-black hover:bg-slate-200 disabled:opacity-30 cursor-pointer`}
                   >
                     NEXT
                   </button>
                 </motion.div>
               )}
+
+              {/* ── STEP 1: PROJECT DETAILS & HEATMAP ── */}
               {step === 1 && (
                 <motion.div 
                   key="step1" 
-                  initial={{ opacity: 0, scale: 0.92 }} 
-                  animate={{ opacity: 1, scale: 0.92 }} 
-                  exit={{ opacity: 0, scale: 0.92 }}
-                  className="flex flex-col gap-4 items-center origin-top"
+                  initial={{ opacity: 0, scale: 0.95 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="flex flex-col gap-4 items-center origin-top w-full"
                 >
                   <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full items-center">
                     <div className="flex flex-col xl:flex-row gap-6 items-center xl:items-start justify-center w-full">
                       {/* Column 1: Intel Hub */}
-                      <div className="w-full max-w-[384px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-[24px] md:rounded-[32px] p-6 md:p-10 shadow-2xl relative overflow-hidden">
-                        {/* Internal Red-Orange Atmospheric Blob */}
-                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/10 blur-[40px] rounded-full pointer-events-none" />
-                        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-red-500/10 blur-[40px] rounded-full pointer-events-none" />
-                        
-                        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-white/10 to-transparent opacity-20" />
-                        <div className="relative z-10 space-y-0.5">
+                      <div className="w-full max-w-[384px] bg-black/60 backdrop-blur-xl border border-white/20 rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                        <div className="relative z-10 space-y-1">
                           <Field id="serviceName" label="Request Title" type="text" placeholder="Project name/ID" val={form.serviceName} onChange={setField} required />
                           <Field id="contactPerson" label="Operator Name" type="text" placeholder="Full name" val={form.contactPerson} onChange={setField} required />
                           <Field id="whatsapp" label="Comms Channel" type="tel" placeholder="+62..." val={form.whatsapp} onChange={setField} required />
                           <Field id="location" label="Deployment Area" type="text" placeholder="City / Venue" val={form.location} onChange={setField} required />
-                          <Field id="additionalNotes" label="Technical Brief" type="textarea" placeholder="Specific requirements..." val={form.additionalNotes} onChange={setField} />
+                          <Field id="additionalNotes" label="Technical Brief" type="textarea" placeholder="Specific requirements..." val={form.additionalNotes} onChange={setField} maxLength={50} />
                         </div>
                       </div>
                       
-                      {/* Temporal Matrix Section - ALIGNED TO HUB TOP */}
+                      {/* Temporal Matrix Section */}
                       <div className="flex flex-col gap-4 md:gap-6 w-full max-w-[736px] items-center">
                         <div className="flex flex-row gap-2 sm:gap-4 w-full justify-center items-start">
                           {/* Shift 1 */}
-                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-white/5 border border-white/10 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
-                            {/* Internal Red-Orange Atmospheric Blob */}
-                            <div className="absolute -top-5 -left-5 w-24 h-24 bg-red-500/10 blur-[30px] rounded-full pointer-events-none" />
-                            
-                            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-white/20 to-transparent opacity-20" />
+                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-black/60 border border-white/20 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[9px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">09.00 - 16.00</p>
+                              <p className="font-sans text-white text-[10px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">09.00 - 16.00</p>
                               <div className="overflow-y-auto max-h-[180px] sm:max-h-[320px] pr-1 sm:pr-2 custom-scrollbar">
                                 {mounted ? renderGrid(hoursA) : null}
                               </div>
@@ -432,13 +474,9 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                           </div>
 
                           {/* Shift 2 */}
-                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-white/5 border border-white/10 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
-                            {/* Internal Red-Orange Atmospheric Blob */}
-                            <div className="absolute -bottom-5 -right-5 w-24 h-24 bg-orange-500/10 blur-[30px] rounded-full pointer-events-none" />
-                            
-                            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-white/20 to-transparent opacity-20" />
+                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-black/60 border border-white/20 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
                             <div className="relative z-10">
-                              <p className="font-sans text-white text-[9px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">17.00 - 00.00</p>
+                              <p className="font-sans text-white text-[10px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">17.00 - 00.00</p>
                               <div className="overflow-y-auto max-h-[180px] sm:max-h-[320px] pr-1 sm:pr-2 custom-scrollbar">
                                 {mounted ? renderGrid(hoursB) : null}
                               </div>
@@ -447,17 +485,17 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                         </div>
 
                         {/* Extended Legend & Counter */}
-                        <div className="flex flex-row items-center justify-between gap-2 sm:gap-5 text-[9px] sm:text-[11px] font-black text-white font-sans uppercase tracking-[0.1em] bg-white/5 px-4 sm:px-10 py-3 sm:py-6 rounded-full border border-white/10 shadow-2xl w-full mt-2 sm:mt-4">
+                        <div className="flex flex-row items-center justify-between gap-2 sm:gap-5 text-[9px] sm:text-[11px] font-black text-white font-sans uppercase tracking-[0.1em] bg-black/60 px-4 sm:px-10 py-3 sm:py-6 rounded-full border border-white/20 shadow-2xl w-full mt-2 sm:mt-4">
                           <div className="flex flex-row items-center gap-2 sm:gap-8 flex-wrap">
-                            <div className="flex items-center gap-1 sm:gap-4">
+                            <div className="flex items-center gap-1 sm:gap-4 text-white">
                               <div className="w-2 h-2 sm:w-3 sm:h-3 bg-emerald-500 border border-emerald-400 rounded-[2px] sm:rounded-[4px]" /> 
                               READY
                             </div>
-                            <div className="flex items-center gap-1 sm:gap-4">
+                            <div className="flex items-center gap-1 sm:gap-4 text-white">
                               <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 border border-red-400 rounded-[2px] sm:rounded-[4px]" /> 
                               BUSY
                             </div>
-                            <div className="flex items-center gap-1 sm:gap-4">
+                            <div className="flex items-center gap-1 sm:gap-4 text-white">
                               <div className="w-2 h-2 sm:w-3 sm:h-3 bg-[#FF00FF] border border-[#FF00FF] shadow-[0_0_15px_#FF00FF] rounded-[2px] sm:rounded-[4px]" /> 
                               LOCK
                             </div>
@@ -465,10 +503,14 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                           
                           <div className="flex flex-row items-center gap-2 sm:gap-5">
                             <div className="w-[1px] h-5 bg-white/20 hidden sm:block" />
-                            <span className="text-white font-sans italic normal-case tracking-normal text-[10px] sm:text-[12px] opacity-100 whitespace-nowrap">Week {weekOffset + 1}</span>
+                            <span className="text-white font-sans font-bold normal-case tracking-normal text-[10px] sm:text-[12px] whitespace-nowrap">Week {weekOffset + 1}</span>
                             <div className="flex gap-1">
-                              <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"><svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg></button>
-                              <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/10"><svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg></button>
+                              <button type="button" onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))} className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors border border-white/20 cursor-pointer" aria-label="Previous Week">
+                                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
+                              </button>
+                              <button type="button" onClick={() => setWeekOffset(weekOffset + 1)} className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors border border-white/20 cursor-pointer" aria-label="Next Week">
+                                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7"></path></svg>
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -480,14 +522,14 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                       <button 
                         type="button" 
                         onClick={() => setStep(0)} 
-                        className="flex-1 py-3.5 sm:py-6 bg-white/5 text-slate-400 font-sans font-black uppercase text-[10px] sm:text-[12px] tracking-[0.15em] sm:tracking-[0.3em] rounded-[20px] sm:rounded-[25px] hover:bg-white/10 transition-all border border-white/5"
+                        className="flex-1 py-3.5 sm:py-6 bg-white/10 text-white font-sans font-bold uppercase text-[10px] sm:text-[12px] tracking-[0.15em] sm:tracking-[0.25em] rounded-[20px] sm:rounded-[25px] hover:bg-white/20 transition-all border border-white/20 cursor-pointer"
                       >
                         ← BACK
                       </button>
                       <button 
                         type="submit" 
                         disabled={loading || !isFormValid} 
-                        className={`${buttonStyle} flex-[2] sm:flex-[2.5] py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] ${isFormValid ? "bg-white text-black opacity-100 shadow-[0_0_50px_rgba(255,255,255,0.4)]" : "bg-white/10 text-white/20 cursor-not-allowed"}`}
+                        className={`${buttonStyle} flex-[2] sm:flex-[2.5] py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] ${isFormValid ? "bg-white text-black opacity-100 shadow-[0_0_50px_rgba(255,255,255,0.4)] cursor-pointer" : "bg-white/10 text-white/30 cursor-not-allowed"}`}
                       >
                         {loading ? "SENDING..." : "NEXT"}
                       </button>
@@ -496,92 +538,91 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                 </motion.div>
               )}
 
-
-
-
-
-
-
-
-
+              {/* ── STEP 2: CONFIRMATION & BOOKING DETAILS ── */}
               {step === 2 && done && (
                 <motion.div 
                   key="step2" 
-                  initial={{ opacity: 0, scale: 0.9 }} 
+                  initial={{ opacity: 0, scale: 0.95 }} 
                   animate={{ opacity: 1, scale: 1 }} 
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="py-6 flex flex-col items-center text-center"
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="py-4 sm:py-6 flex flex-col items-center text-center w-full"
                 >
-                  <div className="space-y-6 flex flex-col items-center">
-                    <div className="w-20 h-20 rounded-[28px] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center relative transform translate-x-[10%]">
-                      <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full animate-pulse" />
-                      <svg className="w-10 h-10 text-emerald-500 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                    </div>
-                    
-                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Transmission<br/>Received</h3>
-                    <p className="text-slate-400 text-[12px] leading-relaxed font-sans max-w-[320px]">
-                      System link established. Redirecting to operational headquarters via WhatsApp.
+                  {/* Transmission Received Header (Enlarged to cover upper half responsively) */}
+                  <h3 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-black text-white uppercase tracking-tight leading-none text-center">
+                    Transmission<br className="hidden xs:inline" /> Received
+                  </h3>
+
+                  {/* Description in firm white */}
+                  <p className="text-white font-sans font-medium text-xs sm:text-sm md:text-base leading-relaxed max-w-[460px] text-center mt-3 sm:mt-4">
+                    System link established. Redirecting to operational headquarters via WhatsApp:
+                  </p>
+
+                  {/* Hyperlink: YES & Confirm via WhatsApp */}
+                  <a 
+                    href={done.whatsappUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 font-sans font-bold text-sm sm:text-base md:text-lg text-emerald-400 hover:text-emerald-300 underline underline-offset-4 transition-colors my-2.5 cursor-pointer"
+                  >
+                    YES & Confirm via WhatsApp
+                  </a>
+
+                  {/* Booking Details Card with Clean Rows and Colon Alignment */}
+                  <div className="w-full max-w-[460px] bg-black/60 border border-white/20 rounded-2xl p-4 sm:p-5 text-left my-3 backdrop-blur-md shadow-2xl">
+                    <p className="font-sans font-bold text-white text-xs sm:text-sm uppercase tracking-wider mb-3 pb-2 border-b border-white/10 flex items-center justify-between">
+                      <span>Booking Details:</span>
+                      <span className="text-[10px] text-white/50 font-normal">ID #{done.bookingId ? done.bookingId.slice(-6) : "NEW"}</span>
                     </p>
+                    <div className="space-y-2.5 font-sans text-xs sm:text-sm">
+                      <div className="grid grid-cols-[125px_12px_1fr] items-start">
+                        <span className="font-bold text-white">Service</span>
+                        <span className="text-white/60 text-center">:</span>
+                        <span className="text-white font-normal break-words">{serviceLabel}</span>
+                      </div>
+                      <div className="grid grid-cols-[125px_12px_1fr] items-start">
+                        <span className="font-bold text-white">Request Title</span>
+                        <span className="text-white/60 text-center">:</span>
+                        <span className="text-white font-normal break-words">{form.serviceName || "—"}</span>
+                      </div>
+                      <div className="grid grid-cols-[125px_12px_1fr] items-start">
+                        <span className="font-bold text-white">Operator Name</span>
+                        <span className="text-white/60 text-center">:</span>
+                        <span className="text-white font-normal break-words">{form.contactPerson || "—"}</span>
+                      </div>
+                      <div className="grid grid-cols-[125px_12px_1fr] items-start">
+                        <span className="font-bold text-white">WhatsApp</span>
+                        <span className="text-white/60 text-center">:</span>
+                        <span className="text-white font-normal break-words">{form.whatsapp || "—"}</span>
+                      </div>
+                      <div className="grid grid-cols-[125px_12px_1fr] items-start">
+                        <span className="font-bold text-white">Deployment Area</span>
+                        <span className="text-white/60 text-center">:</span>
+                        <span className="text-white font-normal break-words">{form.location || "—"}</span>
+                      </div>
+                      <div className="grid grid-cols-[125px_12px_1fr] items-start">
+                        <span className="font-bold text-white">Selected Date</span>
+                        <span className="text-white/60 text-center">:</span>
+                        <span className="text-white font-normal break-words">{formattedDates}</span>
+                      </div>
+                      {form.additionalNotes ? (
+                        <div className="grid grid-cols-[125px_12px_1fr] items-start">
+                          <span className="font-bold text-white">Notes</span>
+                          <span className="text-white/60 text-center">:</span>
+                          <span className="text-white font-normal break-words">{truncatedNotes}</span>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
 
-                  <div className="mt-8 flex flex-col items-center gap-6">
+                  {/* Middle Bottom CANCEL Action (No outer box, enlarged text) */}
+                  <div className="mt-2 pt-2 flex flex-col items-center">
                     <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText("0811811811");
-                        alert("WA Number copied to clipboard: 0811811811");
-                      }}
-                      className="group relative flex flex-col items-center"
-                    >
-                      <div className="absolute inset-0 bg-emerald-500/20 blur-[50px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                      <motion.span 
-                        animate={{ y: [0, -8, 0] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                        className="font-sans text-[14px] text-cyan-400 underline underline-offset-8 decoration-cyan-400/30 hover:decoration-cyan-400 font-light transition-all uppercase tracking-[0.2em] cursor-pointer"
-                      >
-                        CLICK ME !
-                      </motion.span>
-                    </button>
-                    <a 
-                      href={done.whatsappUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="relative z-10 hover:scale-110 transition-transform duration-500"
-                    >
-                      <ContentImage
-                        src="/wa_logo.webp" 
-                        alt="WhatsApp" 
-                        width={1024}
-                        height={1024}
-                        className="w-40 h-40 object-contain" 
-                      />
-                    </a>
-                  </div>
-
-                  <div className="mt-12 flex justify-center gap-4">
-                    <button 
-                      onClick={onClose}
-                      className="group relative px-20 py-6 rounded-[24px] overflow-hidden transition-all duration-500"
-                    >
-                      <div className="absolute inset-0 bg-emerald-500/20 group-hover:bg-emerald-500/30 transition-colors shadow-[0_0_40px_rgba(16,185,129,0.3)]" />
-                      <div className="absolute inset-0 border border-emerald-500/40 group-hover:border-emerald-500/60 rounded-[24px]" />
-                      <span className="relative z-10 font-sans font-black text-white uppercase tracking-tight text-[18px]">
-                        OK
-                      </span>
-                    </button>
-
-                    <button 
+                      type="button"
                       onClick={handleCancel}
                       disabled={loading}
-                      className="group relative px-8 py-6 rounded-[24px] overflow-hidden transition-all duration-500"
+                      className="font-sans font-bold text-sm sm:text-base text-white/50 hover:text-red-400 transition-colors uppercase tracking-widest cursor-pointer py-1.5 focus:outline-none"
                     >
-                      <div className="absolute inset-0 bg-red-500/5 group-hover:bg-red-500/10 transition-colors" />
-                      <div className="absolute inset-0 border border-white/10 group-hover:border-red-500/20 rounded-[24px]" />
-                      
-                      <span className="relative z-10 font-sans font-black text-white/40 group-hover:text-red-500 uppercase tracking-tight text-[14px]">
-                        {loading ? "..." : "NO"}
-                      </span>
+                      {loading ? "Cancelling..." : "CANCEL"}
                     </button>
                   </div>
                 </motion.div>
@@ -592,7 +633,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
       </motion.div>
 
       {error && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/85 border border-red-500/40 px-6 py-3 rounded-full flex items-center gap-3 backdrop-blur-xl z-[10000] shadow-2xl">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-black/90 border border-red-500/40 px-6 py-3 rounded-full flex items-center gap-3 backdrop-blur-xl z-[10000] shadow-2xl">
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
           <p className="text-red-400 text-[10px] font-sans font-black uppercase tracking-widest">{error}</p>
           {(!isLoggedIn || error.toLowerCase().includes("log") || error.toLowerCase().includes("token")) && onRequireAuth && (

@@ -30,21 +30,26 @@ export function StepIndicator({ total, current }) {
   );
 }
 
-export function Field({ label, type, placeholder, options, val, onChange, id, required = false }) {
+export function Field({ label, type, placeholder, options, val, onChange, id, required = false, maxLength }) {
   const [focused, setFocused] = useState(false);
   const isSelect = type === "select";
   const isTextarea = type === "textarea";
 
   const baseClasses = `
-    w-full bg-[#0c1528]/50 border rounded-xl px-4 py-3 
-    font-sans text-[12px] text-white outline-none transition-all duration-300 placeholder:text-slate-600
-    ${focused ? "border-[#FF00FF] shadow-[0_0_15px_rgba(255,0,255,0.15)] bg-[#0f1a30]" : "border-slate-800/50 hover:border-slate-700 bg-[#0c1528]/30"}
+    w-full bg-black/60 border rounded-xl px-4 py-3 
+    font-sans text-xs sm:text-sm text-white font-medium outline-none transition-all duration-300 placeholder:text-white/40
+    ${focused ? "border-white ring-1 ring-white/50 bg-black/80 shadow-[0_0_20px_rgba(255,255,255,0.1)]" : "border-white/20 hover:border-white/40 bg-black/50"}
   `;
 
   return (
     <div className="flex flex-col mb-4">
-      <label className="mb-1.5 font-sans text-[11px] font-bold text-slate-400 flex items-center gap-1">
-        {label}
+      <label className="mb-1.5 font-sans text-xs font-bold text-white tracking-wide flex items-center justify-between">
+        <span>{label}</span>
+        {maxLength ? (
+          <span className="text-[10px] text-white/50 font-normal">
+            {(val || "").length}/{maxLength}
+          </span>
+        ) : null}
       </label>
       {isSelect ? (
         <select 
@@ -55,14 +60,19 @@ export function Field({ label, type, placeholder, options, val, onChange, id, re
           className={baseClasses}
           required={required}
         >
-          <option value="">Select Option…</option>
-          {options.map((o) => <option key={o.id || o} value={o.id || o}>{o.label || o}</option>)}
+          <option value="" className="bg-neutral-900 text-white">Select Option…</option>
+          {options.map((o) => (
+            <option key={o.id || o} value={o.id || o} className="bg-neutral-900 text-white">
+              {o.label || o}
+            </option>
+          ))}
         </select>
       ) : isTextarea ? (
         <textarea 
           rows={3} 
           placeholder={placeholder} 
           value={val} 
+          maxLength={maxLength}
           onChange={(e) => onChange(id, e.target.value)} 
           onFocus={() => setFocused(true)} 
           onBlur={() => setFocused(false)} 
@@ -74,6 +84,7 @@ export function Field({ label, type, placeholder, options, val, onChange, id, re
           type={type} 
           placeholder={placeholder} 
           value={val} 
+          maxLength={maxLength}
           onChange={(e) => onChange(id, e.target.value)} 
           onFocus={() => setFocused(true)} 
           onBlur={() => setFocused(false)} 

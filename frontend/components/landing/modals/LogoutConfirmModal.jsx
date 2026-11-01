@@ -9,14 +9,14 @@ const LOGOUT_PARTICLE_COLORS = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#00
 export function LineParticles() {
   const particles = useMemo(() => {
     const random = createSeededRandom("logout-line-particles-v1");
-    return Array.from({ length: 25 }, () => ({
-      x: random() * 20,
+    return Array.from({ length: 28 }, () => ({
+      x: random() * 40 - 20,
       y: random() * 100,
       color: LOGOUT_PARTICLE_COLORS[Math.floor(random() * LOGOUT_PARTICLE_COLORS.length)],
-      size: random() * 5 + 2,
+      size: random() * 5 + 3,
       duration: 1.5 + random() * 2.5,
-      delay: random() * 5,
-      xDrift: 20 + random() * 60,
+      delay: random() * 4,
+      xDrift: (random() - 0.5) * 100,
       yDrift: (random() - 0.5) * 120
     }));
   }, []);
@@ -38,13 +38,13 @@ export function LineParticles() {
             width: p.size,
             height: p.size,
             backgroundColor: p.color,
-            boxShadow: `0 0 12px ${p.color}`
+            boxShadow: `0 0 14px ${p.color}`
           }}
           animate={{
             x: [0, p.xDrift],
             y: [0, p.yDrift],
             opacity: [0, 1, 0],
-            scale: [0.5, 1.5, 0.5]
+            scale: [0.5, 1.6, 0.5]
           }}
           transition={{ 
             duration: p.duration, 
@@ -59,40 +59,42 @@ export function LineParticles() {
 }
 
 export function LogoutConfirmModal({ onConfirm, onCancel }) {
-  const [catFrame, setCatFrame] = useState(1);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutChoice, setLogoutChoice] = useState(null); // 'yes' | 'no' | null
 
   useEffect(() => {
-    let interval;
     if (isLoggingOut) {
-      // Auto-refresh after exactly 1s (Faster)
+      // Allow the buffering animation to spin briefly then trigger onConfirm
       const timer = setTimeout(() => {
         onConfirm();
-      }, 1000);
-
+      }, 1200);
       return () => clearTimeout(timer);
-    } else {
-      // Normal toggling cats every 1s
-      interval = setInterval(() => {
-        setCatFrame(prev => (prev === 1 ? 2 : 1));
-      }, 1000);
     }
-    return () => clearInterval(interval);
   }, [isLoggingOut, onConfirm]);
 
-  const handleYes = () => {
-    setIsLoggingOut(true);
+  const handleYesClick = () => {
+    setLogoutChoice('yes');
+    setTimeout(() => {
+      setIsLoggingOut(true);
+    }, 180);
+  };
+
+  const handleNoClick = () => {
+    setLogoutChoice('no');
+    setTimeout(() => {
+      onCancel();
+    }, 180);
   };
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-      {/* Background Overlay */}
+      {/* Background Overlay - Deep Blur & Dimmed */}
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={!isLoggingOut ? onCancel : undefined}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/80 backdrop-blur-2xl"
       />
 
       <AnimatePresence mode="wait">
@@ -101,95 +103,75 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
             key="confirm-box"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-            className="relative w-full max-w-[450px] rounded-[30px] overflow-visible border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.6)]"
+            exit={{ opacity: 0, scale: 1.05, filter: "blur(20px)" }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 flex flex-col items-center text-center max-w-lg w-full select-none"
           >
-            {/* Cat Mascot Area with L-Border like Coki on SeeEvent */}
-            <div className="absolute bottom-[100%] left-1/2 -translate-x-[55%] w-32 h-32 z-50 pointer-events-none">
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="absolute inset-0 pointer-events-none z-30" 
-              >
+            {/* Flying Cat with Floating Animation & Preserved Particles (No White Border Box) */}
+            <motion.div
+              animate={{ 
+                y: [0, -10, 0],
+                rotate: [-2, 2, -2]
+              }}
+              transition={{ 
+                duration: 4, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="relative w-44 xs:w-52 sm:w-64 md:w-80 h-auto flex items-center justify-center pointer-events-none"
+            >
+              {/* Preserved Floating Colorful Dynamic Particles */}
+              <div className="absolute -inset-10 pointer-events-none z-30">
                 <LineParticles />
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-                className="relative w-full h-full"
-              >
-                <ContentImage
-                  src={`/kucing${catFrame}.webp`}
-                  alt="Cat"
-                  width={512}
-                  height={512}
-                  loading="eager"
-                  className={`w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(255,255,255,0.2)] z-10 ${catFrame === 1 ? "object-bottom-left" : "object-bottom"}`}
-                />
-                {/* White corner L-border under cat mascot (matching Coki on SeeEvent) */}
-                <div className="absolute left-0 bottom-0 w-[4px] h-[55%] bg-white z-20 shadow-[0_0_8px_white]" />
-                <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20 shadow-[0_0_8px_white]" />
-              </motion.div>
-            </div>
-
-            {/* Modal Card Content */}
-            <div className="relative bg-[#0c1528]/90 backdrop-blur-2xl rounded-[30px] p-10 flex flex-col items-center text-center">
-              <motion.div
-                animate={{ x: [-20, 20], opacity: [0.1, 0.2] }}
-                transition={{ duration: 8, repeat: Infinity, repeatType: "mirror" }}
-                className="absolute -top-20 -left-20 w-64 h-64 bg-red-600 rounded-full blur-[80px] pointer-events-none"
-              />
-              <h3 className="relative z-10 font-sans text-2xl font-black text-white uppercase tracking-tight mt-4 mb-12">
-                You sure want to <span className="text-red-500">Log -Out?</span>
-              </h3>
-              <div className="relative z-10 flex gap-6 w-full">
-                <button
-                  onClick={handleYes}
-                  className="flex-1 group relative py-4 rounded-[22px] overflow-hidden border-none bg-emerald-500/15 backdrop-blur-2xl shadow-[0_0_30px_rgba(16,185,129,0.35)] hover:shadow-[0_0_45px_rgba(16,185,129,0.55)] hover:bg-emerald-500/25 transition-all duration-300"
-                >
-                  {/* Green Fader Cloud Atmosphere */}
-                  <div 
-                    className="absolute inset-0 pointer-events-none bg-gradient-to-r from-emerald-500/20 via-emerald-400/35 to-emerald-500/20 opacity-80 group-hover:opacity-100 transition-opacity duration-300" 
-                    style={{
-                      maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 75%, transparent 100%)",
-                      WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 75%, transparent 100%)"
-                    }}
-                  />
-                  <span
-                    className="relative z-10 font-sans font-black text-white uppercase tracking-[0.25em] text-base md:text-lg"
-                    style={{
-                      textShadow: "0 1px 0 #ffffff, 0 2px 0 #cbd5e1, 0 3px 0 #94a3b8, 0 4px 0 #64748b, 0 5px 8px rgba(0,0,0,0.8)"
-                    }}
-                  >
-                    YES
-                  </span>
-                </button>
-                <button
-                  onClick={onCancel}
-                  className="flex-1 group relative py-4 rounded-[22px] overflow-hidden border-none bg-red-500/15 backdrop-blur-2xl shadow-[0_0_30px_rgba(239,68,68,0.35)] hover:shadow-[0_0_45px_rgba(239,68,68,0.55)] hover:bg-red-500/25 transition-all duration-300"
-                >
-                  {/* Red Fader Cloud Atmosphere */}
-                  <div 
-                    className="absolute inset-0 pointer-events-none bg-gradient-to-r from-red-500/20 via-red-400/35 to-red-500/20 opacity-80 group-hover:opacity-100 transition-opacity duration-300" 
-                    style={{
-                      maskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 75%, transparent 100%)",
-                      WebkitMaskImage: "radial-gradient(ellipse at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 75%, transparent 100%)"
-                    }}
-                  />
-                  <span
-                    className="relative z-10 font-sans font-black text-white uppercase tracking-[0.25em] text-base md:text-lg"
-                    style={{
-                      textShadow: "0 1px 0 #ffffff, 0 2px 0 #cbd5e1, 0 3px 0 #94a3b8, 0 4px 0 #64748b, 0 5px 8px rgba(0,0,0,0.8)"
-                    }}
-                  >
-                    NO
-                  </span>
-                </button>
               </div>
+              
+              <ContentImage
+                src="/flying_cat.webp"
+                alt="Flying Cat"
+                width={1600}
+                height={893}
+                loading="eager"
+                className="w-full h-auto object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.7)] relative z-10"
+              />
+            </motion.div>
+
+            {/* Pure 2D Text - No Outer Box, No Sub-Boxes */}
+            <h3 
+              className="relative z-10 font-sans text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-tight text-center drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] mt-4 sm:mt-6 mb-8 sm:mb-10"
+            >
+              You sure want to <span className="text-red-500">Log -Out?</span>
+            </h3>
+
+            {/* 2D Responsive Yes / No Buttons (No Bevel, Yes turns Red, No turns Black) */}
+            <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16 w-full">
+              <button
+                type="button"
+                onClick={handleYesClick}
+                className={`font-sans font-black uppercase tracking-tighter text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                  logoutChoice === 'yes' ? 'text-red-600' : 'text-white hover:text-red-500 active:text-red-600'
+                }`}
+                style={{
+                  textShadow: logoutChoice === 'yes' 
+                    ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
+                    : "0 2px 12px rgba(0,0,0,0.8)"
+                }}
+              >
+                YES
+              </button>
+              <button
+                type="button"
+                onClick={handleNoClick}
+                className={`font-sans font-black uppercase tracking-tighter text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                  logoutChoice === 'no' ? 'text-black' : 'text-white hover:text-black active:text-black'
+                }`}
+                style={{
+                  textShadow: logoutChoice === 'no' 
+                    ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
+                    : "0 2px 12px rgba(0,0,0,0.8)"
+                }}
+              >
+                NO
+              </button>
             </div>
           </motion.div>
         ) : (
@@ -197,9 +179,11 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
             key="logout-loading"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center z-[1000]"
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center justify-center z-[1000] text-center select-none px-4"
           >
-            <div className="relative w-24 h-24 mb-6">
+            {/* BIG Responsive Arc Spinner */}
+            <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 mb-6 sm:mb-8">
               <div className="absolute inset-0 flex items-center justify-center">
                 <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
                   <circle 
@@ -209,12 +193,13 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                     strokeWidth="4" 
                     strokeDasharray="70 200" 
                     strokeLinecap="round"
-                    className="opacity-90 shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                    className="opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.6)]"
                   />
                 </svg>
               </div>
             </div>
-            <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg opacity-80">
+            {/* BIG Responsive Monospace / Sans Spaced Typography */}
+            <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg sm:text-2xl md:text-3xl opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
               LOGGING OUT
             </p>
           </motion.div>

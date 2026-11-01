@@ -104,7 +104,7 @@ export function DungeonGate() {
               animate={{ opacity: 1, scale: 1, x: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, scale: 0.8, x: 40, filter: "blur(15px)" }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              className="mb-6 flex items-center gap-4 pointer-events-auto"
+              className="mb-6 flex items-center gap-3 sm:gap-4 md:gap-5 pointer-events-auto select-none"
             >
               {/* Floating dgf_2.webp */}
               <motion.div
@@ -113,53 +113,27 @@ export function DungeonGate() {
                   rotate: [-5, 5, -5]
                 }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="relative"
+                className="relative shrink-0"
               >
                 <ContentImage
                   src="/dgf_2.webp" 
                   alt="Guide" 
                   width={523}
                   height={675}
-                  className="w-20 md:w-28 h-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+                  className="w-16 xs:w-20 sm:w-24 md:w-28 h-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
                 />
                 <div className="absolute -inset-4 bg-red-500/20 blur-2xl rounded-full z-[-1] opacity-50" />
               </motion.div>
               
-              {/* Glassmorphic Popup Box - Black 3D Style */}
-              <div className="relative w-[240px] md:w-[300px] p-6 flex flex-col items-center justify-center overflow-hidden rounded-[2rem]">
-                {/* Dynamic Animated Blobs - Black */}
-                <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
-                  <motion.div 
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.8, 0.4] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-[-50%] left-[-20%] w-[140%] h-[200%] bg-black rounded-full blur-[60px]" 
-                  />
-                  <motion.div 
-                    animate={{ scale: [1.2, 1, 1.2], opacity: [0.3, 0.7, 0.3] }}
-                    transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute bottom-[-50%] right-[-20%] w-[140%] h-[200%] bg-black rounded-full blur-[70px]" 
-                  />
-                </div>
-
-                {/* Box Shape & Border */}
-                <div className="absolute inset-0 border border-white/20 bg-white/5 backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.1)] z-0 pointer-events-none rounded-[2rem]" />
-                
-                <div className="relative z-10 w-full text-center">
-                  <h4 
-                    className="text-sm md:text-base font-black uppercase tracking-tighter mb-2 text-white"
-                    style={{ 
-                      textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
-                    }}
-                  >
-                    LOGIN FIRST
-                  </h4>
-                  <div className="py-2 px-4 bg-black/40 rounded-xl border border-white/5 backdrop-blur-sm">
-                    <span className="text-lg md:text-xl font-mono font-bold text-white tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-                      00:00:00:00
-                    </span>
-                  </div>
-                </div>
-              </div>
+              {/* Pure LOGIN\nFIRST - No outer box, No clock */}
+              <h4 
+                className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-white leading-tight font-sans whitespace-pre-line text-left"
+                style={{ 
+                  textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 12px rgba(0,0,0,0.85)"
+                }}
+              >
+                {"LOGIN\nFIRST"}
+              </h4>
             </motion.div>
           )}
         </AnimatePresence>

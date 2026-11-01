@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useTimeoutRegistry } from "../../hooks/useTimeoutRegistry";
 import { createSeededRandom } from "@/lib/seededRandom";
+import api from "@/lib/api";
 
 const CARD_IMAGES = ["/ge_1.webp", "/ge_2.webp", "/ge_3.webp", "/ge_4.webp"];
 
@@ -53,8 +54,10 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
   const [timerOn, setTimerOn] = useState(false);
   const [showQuit, setShowQuit] = useState(false);
   const [showSave, setShowSave] = useState(false);
-  const [showSubmitted, setShowSubmitted] = useState(false);
+  const [submissionPhase, setSubmissionPhase] = useState("idle"); // idle | submitting | submitted
   const [blurOut, setBlurOut] = useState(false);
+  const [quitChoice, setQuitChoice] = useState(null); // 'yes' | 'no' | null
+  const [saveChoice, setSaveChoice] = useState(null); // 'yes' | 'no' | null
   
   const lockRef = useRef(false);
   const timerRef = useRef(null);
@@ -108,15 +111,15 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
     }, 800);
   }, [phase, scheduleTimeout]);
 
-  // Timer
+  // Timer - automatically pauses when showQuit (pause) is active
   useEffect(() => {
-    if (timerOn) {
+    if (timerOn && !showQuit) {
       timerRef.current = setInterval(() => setMs(t => t + 1), 10);
     } else {
       clearInterval(timerRef.current);
     }
     return () => clearInterval(timerRef.current);
-  }, [timerOn]);
+  }, [timerOn, showQuit]);
 
   // Win condition
   useEffect(() => {
@@ -171,14 +174,60 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
     return { x: 0, y: 0, scale: 1, rotate: 0 };
   };
 
-  const handleSaveYes = () => {
-    setShowSave(false);
-    setShowSubmitted(true);
+  const handleQuitYes = () => {
+    setQuitChoice('yes');
     scheduleTimeout(() => {
-      setShowSubmitted(false);
-      setBlurOut(true);
-      scheduleTimeout(() => onFinish(), 1400);
-    }, 3200);
+      onQuit();
+    }, 180);
+  };
+
+  const handleQuitNo = () => {
+    setQuitChoice('no');
+    scheduleTimeout(() => {
+      setShowQuit(false);
+      setQuitChoice(null);
+    }, 180);
+  };
+
+  const handleSaveYesClick = () => {
+    setSaveChoice('yes');
+    scheduleTimeout(() => {
+      handleSaveYes();
+    }, 180);
+  };
+
+  const handleSaveNoClick = () => {
+    setSaveChoice('no');
+    scheduleTimeout(() => {
+      handleSaveNo();
+    }, 180);
+  };
+
+  const handleSaveYes = async () => {
+    setShowSave(false);
+    setSubmissionPhase("submitting");
+    try {
+      const submitPromise = api.post("/map/telemetry", {
+        type: "MINIGAME_SCORE",
+        ms,
+        seed
+      }).catch(() => {});
+      const minDelay = new Promise(resolve => setTimeout(resolve, 1400));
+      await Promise.all([submitPromise, minDelay]);
+      setSubmissionPhase("submitted");
+      scheduleTimeout(() => {
+        setSubmissionPhase("idle");
+        setBlurOut(true);
+        scheduleTimeout(() => onFinish(), 1400);
+      }, 1200);
+    } catch {
+      setSubmissionPhase("submitted");
+      scheduleTimeout(() => {
+        setSubmissionPhase("idle");
+        setBlurOut(true);
+        scheduleTimeout(() => onFinish(), 1400);
+      }, 1200);
+    }
   };
 
   const handleSaveNo = () => {
@@ -314,7 +363,14 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
       <AnimatePresence>
         {showQuit && (
           <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowQuit(false)} />
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-2xl" 
+              onClick={handleQuitNo} 
+            />
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }} 
               animate={{ 
@@ -322,18 +378,49 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 opacity: 1,
                 y: [0, -5, 0]
               }} 
+              exit={{ scale: 0.9, opacity: 0 }}
               transition={{
+                opacity: { duration: 0.25 },
+                scale: { duration: 0.25 },
                 y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
-              }}
-              className="relative bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[2.5rem] p-10 text-center shadow-2xl max-w-sm w-full overflow-hidden"
+              }} 
+              className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
             >
-              <div className="absolute inset-0 pointer-events-none opacity-40">
-                <div className="absolute inset-0 bg-black rounded-full blur-3xl" />
-              </div>
-              <h3 className="relative z-10 text-xl font-sans font-bold text-white mb-8 tracking-tighter">Quit the game?</h3>
-              <div className="relative z-10 flex gap-4">
-                <button onClick={() => onQuit()} className="flex-1 py-4 bg-red-600 rounded-xl text-white font-black uppercase tracking-tighter hover:bg-red-700 transition-all">Yes</button>
-                <button onClick={() => setShowQuit(false)} className="flex-1 py-4 bg-white/10 rounded-xl text-white font-black uppercase tracking-tighter hover:bg-white/20 transition-all">No</button>
+              <h3 
+                className="relative z-10 text-2xl sm:text-3xl md:text-4xl font-sans font-bold text-white mb-8 sm:mb-10 tracking-tighter"
+                style={{ textShadow: "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)" }}
+              >
+                Quit the game?
+              </h3>
+              <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16">
+                <button 
+                  type="button"
+                  onClick={handleQuitYes} 
+                  className={`font-sans font-black uppercase tracking-tighter text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                    quitChoice === 'yes' ? 'text-red-600' : 'text-white hover:text-red-500 active:text-red-600'
+                  }`}
+                  style={{
+                    textShadow: quitChoice === 'yes' 
+                      ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
+                      : "0 2px 12px rgba(0,0,0,0.8)"
+                  }}
+                >
+                  Yes
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleQuitNo} 
+                  className={`font-sans font-black uppercase tracking-tighter text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                    quitChoice === 'no' ? 'text-black' : 'text-white hover:text-black active:text-black'
+                  }`}
+                  style={{
+                    textShadow: quitChoice === 'no' 
+                      ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
+                      : "0 2px 12px rgba(0,0,0,0.8)"
+                  }}
+                >
+                  No
+                </button>
               </div>
             </motion.div>
           </div>
@@ -341,7 +428,13 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
 
         {showSave && (
           <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-2xl" 
+            />
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }} 
               animate={{ 
@@ -349,49 +442,104 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 opacity: 1,
                 y: [0, -5, 0]
               }} 
+              exit={{ scale: 0.9, opacity: 0 }}
               transition={{
+                opacity: { duration: 0.25 },
+                scale: { duration: 0.25 },
                 y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
-              }}
-              className="relative bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[2.5rem] p-12 text-center shadow-2xl max-w-md w-full overflow-hidden"
+              }} 
+              className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
             >
-              <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
-                <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute -top-[30%] -left-[20%] w-[100%] h-[100%] bg-fuchsia-600 rounded-full blur-[60px]" />
-                <motion.div animate={{ scale: [1.3, 1, 1.3], opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute -bottom-[30%] -right-[20%] w-[100%] h-[100%] bg-amber-500 rounded-full blur-[60px]" />
-              </div>
-
-              <div className="relative z-10">
-                <p className="text-white font-sans text-xl tracking-tighter mb-4">Final Time</p>
-                <Timer ms={ms} />
-                <h3 className="text-xl font-sans font-bold text-white mt-10 mb-10 tracking-tighter">Save this score?</h3>
-                <div className="flex gap-4">
-                  <button onClick={() => handleSaveYes()} className="flex-1 py-4 bg-white text-black font-black uppercase tracking-tighter rounded-xl hover:bg-white/90 transition-all">Yes</button>
-                  <button onClick={() => handleSaveNo()} className="flex-1 py-4 bg-white/10 rounded-xl text-white font-black uppercase tracking-tighter hover:bg-white/20 transition-all">No</button>
-                </div>
+              <p 
+                className="text-white font-sans text-lg sm:text-xl md:text-2xl tracking-tight mb-3 sm:mb-4 opacity-90"
+                style={{ textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}
+              >
+                Final Time
+              </p>
+              <Timer ms={ms} />
+              <h3 
+                className="text-xl sm:text-2xl md:text-3xl font-sans font-bold text-white mt-8 sm:mt-10 mb-8 sm:mb-10 tracking-tight"
+                style={{ textShadow: "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)" }}
+              >
+                Save this score?
+              </h3>
+              <div className="flex items-center justify-center gap-10 sm:gap-16">
+                <button 
+                  type="button"
+                  onClick={handleSaveYesClick} 
+                  className={`font-sans font-black uppercase tracking-tighter text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                    saveChoice === 'yes' ? 'text-red-600' : 'text-white hover:text-red-500 active:text-red-600'
+                  }`}
+                  style={{
+                    textShadow: saveChoice === 'yes' 
+                      ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
+                      : "0 2px 12px rgba(0,0,0,0.8)"
+                  }}
+                >
+                  Yes
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleSaveNoClick} 
+                  className={`font-sans font-black uppercase tracking-tighter text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                    saveChoice === 'no' ? 'text-black' : 'text-white hover:text-black active:text-black'
+                  }`}
+                  style={{
+                    textShadow: saveChoice === 'no' 
+                      ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
+                      : "0 2px 12px rgba(0,0,0,0.8)"
+                  }}
+                >
+                  No
+                </button>
               </div>
             </motion.div>
           </div>
         )}
 
-        {showSubmitted && (
+        {submissionPhase !== "idle" && (
           <motion.div 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
-            exit={{ opacity: 0, scale: 0.9, filter: "blur(20px)" }}
-            transition={{ duration: 0.8 }}
-            className="fixed inset-0 z-[700] flex items-center justify-center p-6"
+            exit={{ opacity: 0, scale: 0.95, filter: "blur(20px)" }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[700] flex flex-col items-center justify-center p-6 text-center select-none"
           >
-            <div className="absolute inset-0 bg-black/90 backdrop-blur-3xl" />
-            <div className="relative flex flex-col items-center">
-              <div className="text-center">
-                <motion.h2 
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: 1.5, ease: "linear" }}
-                  className="overflow-hidden whitespace-nowrap text-5xl font-sans font-black text-emerald-400 tracking-tighter filter drop-shadow-[0_0_15px_rgba(52,211,153,0.8)]"
+            {/* Preserved blurred BG behind */}
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-2xl" />
+
+            <div className="relative z-10 flex flex-col items-center justify-center px-4">
+              {submissionPhase === "submitting" ? (
+                <>
+                  {/* BIG Responsive Arc Spinner matching LOGGING OUT */}
+                  <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 mb-6 sm:mb-8">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
+                        <circle 
+                          cx="50" cy="50" r="45" 
+                          fill="none" 
+                          stroke="white" 
+                          strokeWidth="4" 
+                          strokeDasharray="70 200" 
+                          strokeLinecap="round"
+                          className="opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.6)]"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg sm:text-2xl md:text-3xl opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+                    SUBMITTING SCORE
+                  </p>
+                </>
+              ) : (
+                <motion.p 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-emerald-400 font-sans font-black uppercase tracking-[0.4em] text-lg sm:text-2xl md:text-3xl opacity-100 drop-shadow-[0_0_25px_rgba(52,211,153,0.8)]"
                 >
-                  Score Submitted
-                </motion.h2>
-              </div>
+                  SCORE SUBMITTED
+                </motion.p>
+              )}
             </div>
           </motion.div>
         )}

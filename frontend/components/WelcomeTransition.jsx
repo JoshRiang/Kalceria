@@ -231,18 +231,18 @@ export default function WelcomeTransition({ username, onComplete }) {
       <DominoChevrons active={showGears && !isExiting} isMobile={isMobile} />
       
       <div className="relative z-20 flex flex-col items-center w-full">
-        {/* Main Text Container - Fixed Vertical Area to avoid jumping */}
-        <div className="h-[120px] flex flex-row items-center justify-center gap-x-2 sm:gap-x-4 font-sans font-black tracking-tighter w-full px-2 sm:px-4 whitespace-nowrap overflow-hidden">
+        {/* Main Text Container - Tight Vertical Area without sparse gap */}
+        <div className="h-auto min-h-[50px] sm:min-h-[70px] md:min-h-[90px] py-1 flex flex-row items-center justify-center gap-x-2 sm:gap-x-4 font-sans font-black tracking-tighter w-full px-2 sm:px-4 whitespace-nowrap overflow-hidden">
           <h1 className="text-[34px] xs:text-[42px] md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF4D00] via-[#FFD700] to-[#FFCC00] drop-shadow-[0_0_20px_rgba(255,140,0,0.3)]">
             <Typewriter text="Welcome Back," delay={800} speed={130} />
           </h1>
           <h1 className="text-[34px] xs:text-[42px] md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)]">
-             <Typewriter text={`${username} !`} delay={800} speed={130} dir="ltr" />
+             <Typewriter text={username} delay={800} speed={130} dir="ltr" />
           </h1>
         </div>
         
         {/* Redirect Status - Tight, modern spacing */}
-        <div className="flex flex-col items-center mt-3 sm:mt-5 h-8 justify-center">
+        <div className="flex flex-col items-center mt-1 sm:mt-2 h-7 justify-center">
           {showGears && <RedirectText />}
         </div>
       </div>

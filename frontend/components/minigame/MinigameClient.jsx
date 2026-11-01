@@ -431,22 +431,18 @@ export default function MinigamePage() {
           }}
           className="absolute bottom-3 right-3 xs:bottom-4 xs:right-4 sm:bottom-[4%] sm:right-[2%] z-30 flex items-center justify-center gap-3 sm:gap-6"
         >
-          <motion.div whileHover={{ scale: 1.05 }} onClick={() => setShowTrailer(true)} className="relative group cursor-pointer">
-            <div className="relative w-[140px] sm:w-[180px] py-2 sm:py-3 flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-[20px] shadow-2xl">
-              <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
-                <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.6, 0.9, 0.6] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-50%] left-[-20%] w-[120%] h-[150%] bg-amber-500 rounded-full blur-[40px]" />
-                <motion.div animate={{ scale: [1.3, 1, 1.3], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute bottom-[-50%] right-[-20%] w-[120%] h-[150%] bg-red-600 rounded-full blur-[40px]" />
-              </div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowTrailer(true)} className="relative group cursor-pointer">
+            <div className="relative w-[140px] sm:w-[180px] py-2 sm:py-3 flex items-center justify-center overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-white bg-[#e60000] shadow-[0_0_25px_rgba(230,0,0,0.5)]">
               <span className="relative z-10 text-base sm:text-xl font-rog font-black text-white tracking-widest" style={{ textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 10px rgba(0,0,0,0.8)" }}>THE EVENT</span>
             </div>
           </motion.div>
-          <div className="relative group w-10 h-10">
-            {/* Green blob behind the glass */}
-            <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-green-500/60 blur-[6px]" />
-            </div>
-            <button aria-label="Game rules" onClick={() => setShowInfo(true)} className="relative z-10 w-full h-full rounded-full border border-white/20 bg-black/40 backdrop-blur-[20px] flex items-center justify-center text-white font-serif text-xl hover:bg-black/60 hover:scale-110 transition-all shadow-lg">
-              <span>i</span>
+          <div className="relative group w-10 h-10 sm:w-11 sm:h-11">
+            <button 
+              aria-label="Game rules" 
+              onClick={() => setShowInfo(true)} 
+              className="relative z-10 w-full h-full rounded-full border-2 border-white bg-[#15803d] flex items-center justify-center text-white font-serif font-bold text-xl sm:text-2xl hover:scale-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(21,128,61,0.5)]"
+            >
+              <span className="leading-none">i</span>
             </button>
           </div>
         </motion.div>

@@ -375,7 +375,7 @@ export default function AboutUs() {
                    initial={{ opacity: 0, y: 15, scale: 0.9 }}
                    animate={{ opacity: 1, y: 0, scale: 1 }}
                    exit={{ opacity: 0, y: 15, scale: 0.9 }}
-                   className="absolute bottom-[200px] xs:bottom-[210px] sm:bottom-[230px] md:bottom-[295px] lg:bottom-[320px] left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-2xl border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.85)] z-[50] w-max flex flex-col items-center p-3.5 md:p-4 rounded-[1.2rem] md:rounded-[1.5rem] pointer-events-auto"
+                   className="absolute bottom-[200px] xs:bottom-[210px] sm:bottom-[230px] md:bottom-[295px] lg:bottom-[320px] left-1/2 -translate-x-1/2 z-[50] w-max flex flex-col items-center p-2 pointer-events-auto select-none"
                    style={{ fontFamily: "'Times New Roman', Times, serif" }}
                  >
                    {/* Photo Box */}
@@ -428,7 +428,7 @@ export default function AboutUs() {
                       initial={{ opacity: 0, y: 20, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                      className="absolute bottom-[80%] left-1/2 -translate-x-1/2 bg-black/75 backdrop-blur-xl border border-white/15 shadow-[0_0_40px_rgba(0,0,0,0.7)] z-[30] w-max flex flex-col items-center p-5 rounded-[2rem]"
+                      className="absolute bottom-[80%] left-1/2 -translate-x-1/2 z-[30] w-max flex flex-col items-center p-2 select-none"
                       style={{ fontFamily: "'Times New Roman', Times, serif" }}
                     >
                       {/* Photo Box */}
@@ -472,7 +472,7 @@ export default function AboutUs() {
                       initial={{ opacity: 0, x: 20, scale: 0.9 }}
                       animate={{ opacity: 1, x: 0, scale: 1 }}
                       exit={{ opacity: 0, x: 20, scale: 0.9 }}
-                      className="absolute bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start top-[40%] right-[85%] p-5 rounded-[2rem]"
+                      className="absolute z-[30] w-max flex flex-col items-start top-[40%] right-[85%] p-2 select-none"
                       style={{ fontFamily: "'Times New Roman', Times, serif" }}
                     >
                       {/* Photo Box */}
@@ -516,7 +516,7 @@ export default function AboutUs() {
                       initial={{ opacity: 0, x: -20, scale: 0.9 }}
                       animate={{ opacity: 1, x: 0, scale: 1 }}
                       exit={{ opacity: 0, x: -20, scale: 0.9 }}
-                      className="absolute top-[25%] left-[95%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max flex flex-col items-start p-5 rounded-[2rem]"
+                      className="absolute top-[25%] left-[95%] z-[30] w-max flex flex-col items-start p-2 select-none"
                       style={{ fontFamily: "'Times New Roman', Times, serif" }}
                     >
                       {/* Photo Box */}
@@ -656,7 +656,7 @@ export default function AboutUs() {
                 initial={{ opacity: 0, x: -20, scale: 0.9 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: -20, scale: 0.9 }}
-                className="absolute top-[20%] left-[95%] bg-black/60 backdrop-blur-xl border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] z-[30] w-max rounded-[1.5rem] px-4 py-2.5 md:px-6 md:py-4"
+                className="absolute top-[20%] left-[95%] z-[30] w-max p-2 select-none"
                 style={{ 
                   fontFamily: "'Times New Roman', Times, serif"
                 }}
@@ -697,11 +697,35 @@ export default function AboutUs() {
           <AnimatedReiiPair isMobile={isMobile} />
         </div>
 
+        {/* Top Center Segment Title - FAQs (Matching Webdev Team typography & 3D texture) */}
+        <div className="absolute top-8 xs:top-10 sm:top-12 md:top-16 lg:top-20 left-1/2 -translate-x-1/2 z-30 text-center w-full px-4 flex flex-col items-center pointer-events-none">
+          <motion.h2 
+            initial={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-normal tracking-tighter text-white leading-none select-none"
+            style={{ 
+              fontFamily: "'Times New Roman', Times, serif",
+              textShadow: `
+                1px 1px 0px #ccc,
+                2px 2px 0px #bbb,
+                3px 3px 0px #aaa,
+                4px 4px 0px #999,
+                5px 5px 0px #888,
+                6px 6px 15px rgba(0,0,0,0.5)
+              `
+            }}
+          >
+            FAQs
+          </motion.h2>
+        </div>
+
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-50px" }}
-          className="relative z-10 w-[90%] max-w-4xl flex flex-col my-auto"
+          className="relative z-10 w-[90%] max-w-4xl flex flex-col my-auto mt-28 sm:mt-32 md:mt-40"
         >
           {/* 1. GLASS BACKGROUND LAYER (Blurs the quotes behind it) */}
           <div 

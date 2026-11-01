@@ -16,7 +16,7 @@ export function IdeaCommentModal({ onClose }) {
   const [error, setError] = useState("");
   const [ideaType, setIdeaType] = useState(null);
   const [adviceText, setAdviceText] = useState("");
-  const [successText, setSuccessText] = useState("");
+  const [submissionStatus, setSubmissionStatus] = useState("submitting"); // submitting | submitted
 
   // Pre-fill active signed-in user's name if already authenticated
   useEffect(() => {
@@ -35,27 +35,7 @@ export function IdeaCommentModal({ onClose }) {
     return () => { active = false; };
   }, []);
 
-  // Typewriter for success screen
-  useEffect(() => {
-    if (step !== 4) return;
-    const msg = "Successfully Submitted!";
-    let i = 0;
-    let closeTimeout;
-    // ~130ms interval * 23 chars = ~3 seconds. To get 4-5s, let's use 180ms.
-    const iv = setInterval(() => {
-      setSuccessText(msg.slice(0, i + 1));
-      i++;
-      if (i >= msg.length) {
-        clearInterval(iv);
-        // Blur out immediately after typing (small delay for legibility)
-        closeTimeout = setTimeout(onClose, 800);
-      }
-    }, 180);
-    return () => {
-      clearInterval(iv);
-      if (closeTimeout) clearTimeout(closeTimeout);
-    };
-  }, [step, onClose]);
+  // Success close managed in handleSubmit
 
   const checkUser = async () => {
     setError("");
@@ -109,17 +89,25 @@ export function IdeaCommentModal({ onClose }) {
     if (isSubmitting) return;
     setError("");
     setIsSubmitting(true);
+    setStep(4);
+    setSubmissionStatus("submitting");
     try {
-      await api.post("/comments", {
+      const submitPromise = api.post("/comments", {
         content: adviceText,
         category: ideaType,
-        type: mainType.toUpperCase(), // ADVICE or IDEA
+        type: mainType.toUpperCase(),
         username: identity === "User" ? username.trim() : identity,
         identity,
       });
-      setStep(4); // Success blur
+      const minDelay = new Promise(resolve => setTimeout(resolve, 1400));
+      await Promise.all([submitPromise, minDelay]);
+      setSubmissionStatus("submitted");
+      setTimeout(() => {
+        onClose();
+      }, 1200);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to submit. Please try again.");
+      setStep(3);
     } finally {
       setIsSubmitting(false);
     }
@@ -159,39 +147,50 @@ export function IdeaCommentModal({ onClose }) {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
 
-      {/* Full-screen processing blur overlay */}
+      {/* Full-screen processing blur overlay matching LOGGING OUT */}
       <AnimatePresence>
         {step === 4 && (
           <motion.div
             key="blur-overlay"
-            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-            animate={{ opacity: 1, backdropFilter: "blur(20px)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
-            className="absolute inset-0 z-[1000] bg-black/60 flex items-center justify-center"
-            style={{ backdropFilter: "blur(20px)" }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[1000] bg-black/85 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center select-none"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col items-center gap-8 text-center px-8"
-            >
-              <div className="relative">
-                <motion.div
-                  animate={{ scale: [1, 1.02, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight"
-                  style={{
-                    fontFamily: "'Google Sans', 'Inter', sans-serif",
-                    textShadow: "0 0 15px rgba(74,222,128,0.6), 0 0 30px rgba(74,222,128,0.4)",
-                  }}
+            <div className="relative z-10 flex flex-col items-center justify-center px-4">
+              {submissionStatus === "submitting" ? (
+                <>
+                  {/* BIG Responsive Arc Spinner matching LOGGING OUT */}
+                  <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 mb-6 sm:mb-8">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
+                        <circle 
+                          cx="50" cy="50" r="45" 
+                          fill="none" 
+                          stroke="white" 
+                          strokeWidth="4" 
+                          strokeDasharray="70 200" 
+                          strokeLinecap="round"
+                          className="opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.6)]"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg sm:text-2xl md:text-3xl opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+                    SUBMITTING COMMENT
+                  </p>
+                </>
+              ) : (
+                <motion.p 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-emerald-400 font-sans font-black uppercase tracking-[0.4em] text-lg sm:text-2xl md:text-3xl opacity-100 drop-shadow-[0_0_25px_rgba(52,211,153,0.8)]"
                 >
-                  {successText}
-                  <span className="animate-pulse ml-1 font-light text-green-400">|</span>
-                </motion.div>
-              </div>
-            </motion.div>
+                  COMMENT SUBMITTED
+                </motion.p>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

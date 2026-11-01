@@ -164,8 +164,8 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
         {/* Elegant Form or Confirmation */}
         {doneData ? (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative z-30 space-y-4 text-center py-2">
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-              <p className="text-emerald-400 font-black uppercase tracking-wider text-sm">Spot Secured!</p>
+            <div className="py-2">
+              <p className="text-emerald-400 font-sans font-bold text-sm sm:text-base">Spot Secured</p>
               <p className="text-slate-300 font-sans text-xs mt-1">
                 Registered for <span className="text-white font-bold">{event?.title}</span> ({form.session}).
               </p>
@@ -180,13 +180,13 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
                 💳 Pay Online Now (QRIS / VA / E-Wallet)
               </a>
             )}
-            <div className="flex gap-3">
+            <div className="flex items-center justify-center gap-6 pt-2">
               {doneData.whatsappUrl && (
                 <a
                   href={doneData.whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-[2] py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-tight text-xs rounded-lg transition-all flex items-center justify-center"
+                  className="font-sans font-bold text-xs sm:text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4 transition-colors"
                 >
                   Confirm via WhatsApp
                 </a>
@@ -194,7 +194,7 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-black uppercase tracking-tight text-xs rounded-lg border border-white/15 transition-all"
+                className="font-sans font-bold text-xs sm:text-sm text-white hover:text-slate-300 transition-colors"
               >
                 Done
               </button>
