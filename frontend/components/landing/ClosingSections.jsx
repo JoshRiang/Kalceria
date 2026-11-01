@@ -70,9 +70,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             />
           )}
 
-          {/* Find The Others Button - Natural Cloud Fader */}
-          {/* On Desktop & iPad/Tablet: Centered directly on Earth (top-1/2 -translate-y-1/2) */}
-          {/* On Mobile HP: Bottom positioned (bottom-[8%]) near Earthman's hands */}
+          {/* Find The Others Button - Firm Typography (No Outer Box) */}
           <motion.button
             onClick={() => {
               sessionStorage.setItem("landingScrollTarget", "section-map");
@@ -81,34 +79,14 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               sessionStorage.setItem("playMapIntro", "true");
               window.location.href = "/map";
             }}
-            whileHover={{ 
-              scale: 1.05,
-              boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
-            }}
+            whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}
-            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-base sm:text-lg md:text-2xl px-6 py-3.5 md:px-12 md:py-5 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 transform-gpu will-change-transform focus-visible:ring-2 focus-visible:ring-fuchsia-400 focus-visible:outline-none focus:outline-none"
-            style={{
-              maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
-              WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
-            }}
+            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer transition-transform duration-300 focus:outline-none"
           >
-            {/* Peach Blob */}
-            <motion.div 
-              animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -top-8 -left-4 w-28 h-28 bg-[#FFB07C] rounded-full blur-[26px] opacity-75 z-0 pointer-events-none"
-            />
-            {/* Green Blob */}
-            <motion.div 
-              animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="absolute -bottom-8 -right-4 w-28 h-28 bg-green-400 rounded-full blur-[26px] opacity-70 z-0 pointer-events-none"
-            />
-            
             <span 
-              className="relative z-10 whitespace-nowrap"
+              className="font-sans font-black uppercase tracking-tighter text-lg sm:text-2xl md:text-3xl text-white hover:text-cyan-300 transition-colors whitespace-nowrap select-none"
               style={{
-                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
+                textShadow: "0 0 25px rgba(255,255,255,0.9), 0 2px 10px rgba(0,0,0,0.9), 0 0 50px rgba(6,182,212,0.6)"
               }}
             >
               FIND THE OTHERS
@@ -371,51 +349,44 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              JOIN US
            </motion.h2>
 
-           {/* 3. WhatsApp Logo - Dead center aligned */}
-           <motion.img 
-             src="/wa_logo.webp" 
-             alt="WhatsApp" 
-             className="h-14 sm:h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_35px_rgba(37,211,102,0.5)] z-20 cursor-pointer"
-             animate={{ y: [0, -6, 0] }}
-             transition={{ 
-               y: { duration: 5, repeat: Infinity, ease: "easeInOut" }
-             }}
-           />
+           {/* Small Arial, not all capital, not bold 2-line description */}
+           <p className="font-sans text-xs sm:text-sm font-normal text-white/80 max-w-[300px] sm:max-w-[380px] mx-auto leading-relaxed -mt-1 sm:-mt-2 z-20 select-none">
+             Connect with our community headquarters directly.<br />Tap the WhatsApp icon below to start a chat.
+           </p>
 
-           {/* 4. See The Journey Button - Dead center aligned */}
+           {/* 3. WhatsApp Logo - Dead center aligned */}
+           <a 
+             href="https://wa.me/628111" 
+             target="_blank" 
+             rel="noopener noreferrer"
+             className="z-20 inline-block focus:outline-none"
+             aria-label="Connect via WhatsApp"
+           >
+             <motion.img 
+               src="/wa_logo.webp" 
+               alt="WhatsApp" 
+               className="h-14 sm:h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_35px_rgba(37,211,102,0.5)] cursor-pointer hover:scale-105 transition-transform"
+               animate={{ y: [0, -6, 0] }}
+               transition={{ 
+                 y: { duration: 5, repeat: Infinity, ease: "easeInOut" }
+               }}
+             />
+           </a>
+
+           {/* 4. See The Journey Button - Pure Firm Typography (No Outer Box) */}
            <Link href="/journey" onClick={() => {
              sessionStorage.setItem("landingScrollTarget", "section-journey");
              sessionStorage.setItem("landingScrollY", window.scrollY);
            }}>
              <motion.button
-               whileHover={{ 
-                 scale: 1.05,
-                 boxShadow: "0 0 65px rgba(255,255,255,0.5), inset 0 0 25px rgba(255,255,255,0.25)",
-               }}
+               whileHover={{ scale: 1.08 }}
                whileTap={{ scale: 0.95 }}
-               className="relative mx-auto z-30 bg-white/10 backdrop-blur-3xl border-none rounded-3xl text-white font-black uppercase tracking-tighter text-lg md:text-3xl px-8 py-4 md:px-14 md:py-6 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.3)] hover:shadow-[0_0_75px_rgba(255,255,255,0.55)] transition-all duration-300 focus-visible:ring-2 focus-visible:ring-fuchsia-400 focus-visible:outline-none focus:outline-none"
-               style={{
-                 maskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)",
-                 WebkitMaskImage: "radial-gradient(ellipse 95% 85% at center, rgba(0,0,0,1) 45%, rgba(0,0,0,0.7) 75%, transparent 100%)"
-               }}
+               className="relative mx-auto z-30 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer transition-transform duration-300 focus:outline-none"
              >
-               {/* Peach Blob */}
-               <motion.div 
-                 animate={{ x: [0, 30, 0], scale: [1, 1.2, 1] }}
-                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                 className="absolute -top-8 -left-4 w-28 h-28 bg-[#FFB07C] rounded-full blur-[26px] opacity-75 z-0 pointer-events-none"
-               />
-               {/* Green Blob */}
-               <motion.div 
-                 animate={{ x: [0, -30, 0], scale: [1, 1.3, 1] }}
-                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                 className="absolute -bottom-8 -right-4 w-28 h-28 bg-green-400 rounded-full blur-[26px] opacity-70 z-0 pointer-events-none"
-               />
-               
                <span 
-                 className="relative z-10 whitespace-nowrap"
+                 className="font-sans font-black uppercase tracking-tighter text-xl sm:text-3xl md:text-4xl text-white hover:text-emerald-300 transition-colors whitespace-nowrap select-none"
                  style={{
-                   textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)"
+                   textShadow: "0 0 30px rgba(255,255,255,0.9), 0 2px 12px rgba(0,0,0,0.9), 0 0 60px rgba(52,211,153,0.5)"
                  }}
                >
                  SEE THE JOURNEY
@@ -525,34 +496,22 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              </h2>
            </motion.div>
 
-           {/* The Box - Clean Rounded Rectangle, Cloudy & Borderless */}
+           {/* Leave it here - Distinctive Styling, No Outer Box */}
            <motion.button
              onClick={onOpenIdeaModal}
+             whileHover={{ scale: 1.08 }}
              whileTap={{ scale: 0.95 }}
-             className="relative group cursor-pointer z-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-400 rounded-2xl"
+             className="relative group cursor-pointer z-40 focus:outline-none bg-transparent border-none p-0"
            >
-              <div className="relative w-48 md:w-[240px] py-4 md:py-6 bg-white/10 backdrop-blur-2xl border-none rounded-2xl overflow-hidden shadow-[0_0_35px_rgba(255,255,255,0.25)] group-hover:bg-white/15 group-hover:shadow-[0_0_50px_rgba(255,255,255,0.4)] transition-all duration-500 flex items-center justify-center">
-                {/* Glassmorphism Blobs - always visible, subtle */}
-                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-30 group-hover:opacity-50 transition-opacity duration-500">
-                   <motion.div 
-                     animate={{ x: [-10, 30, -10], y: [-10, 10, -10], scale: [1, 1.2, 1] }}
-                     transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                     className="absolute -top-4 -left-4 w-24 h-24 bg-[#00FFFF] rounded-full blur-[30px]" 
-                   />
-                   <motion.div 
-                     animate={{ x: [10, -30, 10], y: [10, -10, 10], scale: [1.2, 1, 1.2] }}
-                     transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                     className="absolute -bottom-4 -right-4 w-28 h-28 bg-[#D946EF] rounded-full blur-[40px]" 
-                   />
-                </div>
-                
-                <div className="relative z-10 flex flex-col items-center">
-                  <span className="font-sans font-black text-white uppercase tracking-widest text-lg md:text-xl text-center px-4">
-                    Leave it here
-                  </span>
-                </div>
-              </div>
-            </motion.button>
+             <span 
+               className="font-sans font-black uppercase tracking-[0.25em] text-lg sm:text-xl md:text-2xl text-cyan-300 hover:text-white transition-colors whitespace-nowrap select-none inline-block pb-1 border-b border-cyan-400/40 hover:border-cyan-400"
+               style={{
+                 textShadow: "0 0 25px rgba(6,182,212,0.9), 0 2px 10px rgba(0,0,0,0.8), 0 0 45px rgba(217,70,239,0.5)"
+               }}
+             >
+               Leave it here
+             </span>
+           </motion.button>
           </div>
           <DungeonGate />
         </section>

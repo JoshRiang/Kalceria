@@ -135,19 +135,19 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
               />
             </motion.div>
 
-            {/* Pure 2D Text - No Outer Box, No Sub-Boxes */}
+            {/* Pure 2D Text - Balanced Size, No Outer Box, No Sub-Boxes */}
             <h3 
-              className="relative z-10 font-sans text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-tight text-center drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] mt-4 sm:mt-6 mb-8 sm:mb-10"
+              className="relative z-10 font-sans text-lg xs:text-xl sm:text-2xl md:text-3xl font-black text-white uppercase tracking-tight text-center drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] mt-3 sm:mt-4 mb-6 sm:mb-8"
             >
               You sure want to <span className="text-red-500">Log -Out?</span>
             </h3>
 
-            {/* 2D Responsive Yes / No Buttons (No Bevel, Yes turns Red, No turns Black) */}
+            {/* 2D Responsive Yes / No Buttons: Arial, Not Bold, Not All Capital */}
             <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16 w-full">
               <button
                 type="button"
                 onClick={handleYesClick}
-                className={`font-sans font-black uppercase tracking-tighter text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                className={`font-sans font-normal text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
                   logoutChoice === 'yes' ? 'text-red-600' : 'text-white hover:text-red-500 active:text-red-600'
                 }`}
                 style={{
@@ -156,12 +156,12 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                     : "0 2px 12px rgba(0,0,0,0.8)"
                 }}
               >
-                YES
+                Yes
               </button>
               <button
                 type="button"
                 onClick={handleNoClick}
-                className={`font-sans font-black uppercase tracking-tighter text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                className={`font-sans font-normal text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
                   logoutChoice === 'no' ? 'text-black' : 'text-white hover:text-black active:text-black'
                 }`}
                 style={{
@@ -170,7 +170,7 @@ export function LogoutConfirmModal({ onConfirm, onCancel }) {
                     : "0 2px 12px rgba(0,0,0,0.8)"
                 }}
               >
-                NO
+                No
               </button>
             </div>
           </motion.div>
