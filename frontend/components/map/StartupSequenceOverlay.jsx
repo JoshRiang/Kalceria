@@ -1,19 +1,154 @@
 "use client";
-import { useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VintageLaserGrid, DominoChevrons } from "@/components/map/AtmosphereLayers";
-import { createSeededRandom } from "@/lib/seededRandom";
+import { createSeededRandom, createRuntimeSeededRandom } from "@/lib/seededRandom";
 import ContentImage from "@/components/ui/ContentImage";
 
-export function StartupSequenceOverlay({ showStartup, startupProgress, particles, hasMounted, currentQuote, tilt }) {
+const QUOTES = [
+  "Composing the map...",
+  "Adjusting the position...",
+  "Wahib embut...",
+  "Otniel keren banget...",
+  "Connecting Kalcerians nodes...",
+  "Calibrating neural markers..."
+];
+
+export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
+  const [startupProgress, setStartupProgress] = useState(0);
+  const [currentQuote, setCurrentQuote] = useState("Composing the map...");
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const tiltTargetRef = useRef({ x: 0, y: 0 });
+  const progressValRef = useRef(0);
+  const completedRef = useRef(false);
+
+  // 1. Precision 60 FPS Deterministic Progress Engine
+  useEffect(() => {
+    if (!showStartup) return;
+
+    let rafId = null;
+    let lastTime = performance.now();
+    completedRef.current = false;
+    progressValRef.current = 0;
+
+    const tick = (now) => {
+      if (completedRef.current) return;
+      const dt = Math.min((now - lastTime) / 1000, 0.1); // clamp delta
+      lastTime = now;
+
+      const current = progressValRef.current;
+      // Target: smoothly crawl toward 88% while waiting, or rush straight to 100% when backend isReady
+      const target = isReady ? 100 : 88;
+
+      let speed;
+      if (isReady) {
+        // Fast, authoritative sweep to 100% (~250ms)
+        speed = Math.max(55, (100 - current) * 6.5);
+      } else {
+        // Smooth cinematic ramp up to 88% (~1.4s)
+        const diff = target - current;
+        speed = Math.max(8, diff * 1.8);
+      }
+
+      const next = Math.min(target, current + speed * dt);
+      progressValRef.current = next;
+      setStartupProgress(next);
+
+      if (next >= 99.9 && isReady) {
+        completedRef.current = true;
+        setStartupProgress(100);
+        // Snappy, precise hold: exactly 120ms to register 100%, then immediately dismiss
+        const timer = setTimeout(() => {
+          onComplete?.();
+        }, 120);
+        return () => clearTimeout(timer);
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => {
+      completedRef.current = true;
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [showStartup, isReady, onComplete]);
+
+  // 2. High-performance Throttled 3D Tilt Tracking (Isolated to Overlay)
+  useEffect(() => {
+    if (!showStartup) return;
+
+    let tiltRaf = null;
+    const handleMouseMove = (e) => {
+      const { innerWidth, innerHeight } = window;
+      tiltTargetRef.current = {
+        x: (e.clientX / innerWidth - 0.5) * 22,
+        y: (e.clientY / innerHeight - 0.5) * -22,
+      };
+    };
+
+    const updateTilt = () => {
+      setTilt((prev) => {
+        const dx = tiltTargetRef.current.x - prev.x;
+        const dy = tiltTargetRef.current.y - prev.y;
+        if (Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05) return prev;
+        return { x: prev.x + dx * 0.15, y: prev.y + dy * 0.15 };
+      });
+      tiltRaf = requestAnimationFrame(updateTilt);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    tiltRaf = requestAnimationFrame(updateTilt);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (tiltRaf) cancelAnimationFrame(tiltRaf);
+    };
+  }, [showStartup]);
+
+  // 3. Cycle Quotes with randomized pacing
+  useEffect(() => {
+    if (!showStartup) return;
+    const random = createRuntimeSeededRandom("map-startup-quotes-v1");
+    let timeoutId = null;
+
+    const changeQuote = () => {
+      setCurrentQuote((prev) => {
+        const available = QUOTES.filter((q) => q !== prev);
+        return available[Math.floor(random() * available.length)];
+      });
+      const nextDelay = 750 + random() * 950;
+      timeoutId = setTimeout(changeQuote, nextDelay);
+    };
+
+    timeoutId = setTimeout(changeQuote, 900);
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [showStartup]);
+
+  // 4. Ambient Speed Lines & Microparticles
   const speedLines = useMemo(() => {
     const random = createSeededRandom("map-startup-speed-lines-v1");
-    return Array.from({ length: 20 }, (_, id) => ({
+    return Array.from({ length: 16 }, (_, id) => ({
       id,
-      duration: random() * 0.5 + 0.3,
-      delay: random() * 2,
+      duration: random() * 0.4 + 0.3,
+      delay: random() * 1.8,
       top: `${random() * 100}%`,
-      width: `${random() * 300 + 100}px`,
+      width: `${random() * 260 + 90}px`,
+    }));
+  }, []);
+
+  const particles = useMemo(() => {
+    const random = createSeededRandom("map-startup-particles-v1");
+    return Array.from({ length: 20 }).map((_, i) => ({
+      id: i,
+      left: `${random() * 100}%`,
+      size: `${random() * 4 + 3}px`,
+      color: random() > 0.5 ? "#ff006e" : (random() > 0.5 ? "#ffd60a" : "#ffc300"),
+      duration: random() * 4 + 4,
+      delay: random() * 3.5,
+      opacity: random() * 0.35 + 0.45,
     }));
   }, []);
 
@@ -24,126 +159,129 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
           key="startup-overlay"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className={`fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden transition-colors duration-[3000ms] ease-in-out ${startupProgress < 50 ? "bg-white" : "bg-[#050a14]"}`}
+          transition={{ duration: 0.32, ease: "easeOut" }}
+          className={`fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden transition-colors duration-[1500ms] ease-in-out ${
+            startupProgress < 50 ? "bg-white" : "bg-[#050a14]"
+          }`}
+          style={{ willChange: "opacity" }}
         >
-          {/* Smooth 4x Chevron Dash Transition (B&W on White, Red-Black on Dark) */}
-          {showStartup && (
-            <DominoChevrons
-              key={
-                startupProgress < 25 ? "wave1" :
-                  startupProgress < 50 ? "wave2" :
-                    startupProgress < 75 ? "wave3" : "wave4"
-              }
-              active={showStartup}
-              isDark={startupProgress >= 50}
-            />
-          )}
+          {/* Smooth 4x Chevron Dash Transition */}
+          <DominoChevrons active={showStartup} isDark={startupProgress >= 50} />
 
-          {/* Faint vintage laser grid: spawning black on white, and turning into golden glow on black background */}
+          {/* Faint Vintage Laser Grid (GPU-Optimized) */}
           <VintageLaserGrid active={showStartup} startupProgress={startupProgress} />
-
 
           {/* Adaptive Atmospheric Background */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
             <div
-              className={`absolute inset-0 transition-colors duration-1000 ${startupProgress < 50 ? "bg-white" : "bg-gradient-to-br from-[#ff006e]/20 via-transparent to-[#ffd60a]/20"}`}
+              className={`absolute inset-0 transition-colors duration-1000 ${
+                startupProgress < 50
+                  ? "bg-white"
+                  : "bg-gradient-to-br from-[#ff006e]/20 via-transparent to-[#ffd60a]/20"
+              }`}
             />
 
             {/* Dynamic Speed Lines */}
             <div className="absolute inset-0 opacity-20">
-              {hasMounted &&
-                speedLines.map((line) => (
-                  <motion.div
-                    key={line.id}
-                    initial={{ x: "-100%", opacity: 0 }}
-                    animate={{ x: "200%", opacity: [0, 1, 0] }}
-                    transition={{
-                      duration: line.duration,
-                      repeat: Infinity,
-                      delay: line.delay,
-                      ease: "linear",
-                    }}
-                    className={`absolute h-[1px] transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-200" : "bg-white"}`}
-                    style={{
-                      top: line.top,
-                      width: line.width,
-                      transform: "rotate(-5deg)",
-                    }}
-                  />
-                ))}
+              {speedLines.map((line) => (
+                <motion.div
+                  key={line.id}
+                  initial={{ x: "-100%", opacity: 0 }}
+                  animate={{ x: "200%", opacity: [0, 1, 0] }}
+                  transition={{
+                    duration: line.duration,
+                    repeat: Infinity,
+                    delay: line.delay,
+                    ease: "linear",
+                  }}
+                  className={`absolute h-[1px] transition-colors duration-1000 ${
+                    startupProgress < 50 ? "bg-slate-200" : "bg-white"
+                  }`}
+                  style={{
+                    top: line.top,
+                    width: line.width,
+                    transform: "rotate(-5deg)",
+                  }}
+                />
+              ))}
             </div>
 
             <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none">
               <h2
-                className={`text-[25vw] font-black tracking-tighter uppercase leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-200" : "text-white"}`}
+                className={`text-[25vw] font-black tracking-tighter uppercase leading-none transition-colors duration-1000 ${
+                  startupProgress < 50 ? "text-slate-200" : "text-white"
+                }`}
               >
                 KALCERIA
               </h2>
             </div>
           </div>
 
-          {/* Ambient Golden & Magenta Microparticles (Spawns at 10% progress and morphs dynamically on black background) */}
+          {/* Ambient Golden & Magenta Microparticles */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-[5]">
-            {startupProgress >= 10 && particles.map((p) => {
-              const isDark = startupProgress >= 50;
-              // Dynamically morph Neon Magenta (#ff006e) into Cyan (#00f0ff) once screen is black!
-              const activeColor = isDark
-                ? (p.color === "#ff006e" ? "#00f0ff" : p.color)
-                : p.color;
+            {startupProgress >= 10 &&
+              particles.map((p) => {
+                const isDark = startupProgress >= 50;
+                const activeColor = isDark
+                  ? p.color === "#ff006e" ? "#00f0ff" : p.color
+                  : p.color;
 
-              return (
-                <div
-                  key={p.id}
-                  className="absolute rounded-full blur-[0.5px] pointer-events-none"
-                  style={{
-                    left: p.left,
-                    bottom: "-20px", // Pinned below visible boundary to prevent traffic jams
-                    width: p.size,
-                    height: p.size,
-                    backgroundColor: activeColor,
-                    boxShadow: `0 0 8px ${activeColor}, 0 0 16px ${activeColor}`,
-                    animation: `floatUp ${p.duration}s linear ${p.delay}s infinite both`,
-                    opacity: 0, // Fully transparent during positive delays
-                    transition: "background-color 1.5s ease-in-out, box-shadow 1.5s ease-in-out", // Smooth morphing
-                  }}
-                />
-              );
-            })}
+                return (
+                  <div
+                    key={p.id}
+                    className="absolute rounded-full blur-[0.5px] pointer-events-none"
+                    style={{
+                      left: p.left,
+                      bottom: "-20px",
+                      width: p.size,
+                      height: p.size,
+                      backgroundColor: activeColor,
+                      boxShadow: `0 0 6px ${activeColor}, 0 0 12px ${activeColor}`,
+                      animation: `floatUp ${p.duration}s linear ${p.delay}s infinite both`,
+                      opacity: p.opacity,
+                    }}
+                  />
+                );
+              })}
           </div>
 
-          {/* Inner Content that fades in dramatically over solid background */}
+          {/* Inner Content that fades in dramatically */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.2, ease: "easeOut" }}
-            className="relative z-10 w-full h-screen flex flex-col items-center justify-center pb-24 md:pb-0 md:justify-start pt-16 md:pt-20 lg:pt-24"
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="relative z-10 w-full h-screen flex flex-col items-center justify-center pb-24 md:pb-0 md:justify-start pt-16 md:pt-20 lg:pt-24 select-none"
           >
-            {/* Main Title Section - Stacked for mobile & iPad to consume upper half */}
+            {/* Main Title Section */}
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, ease: "circOut" }}
+              transition={{ duration: 0.6, ease: "circOut" }}
               className="flex flex-col items-center mb-2 sm:mb-4 px-4 w-full text-center"
             >
               <h1
-                className={`text-5xl xs:text-6xl sm:text-7xl md:text-8xl xl:text-9xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-1000 text-center flex flex-col xl:flex-row items-center justify-center gap-1 xl:gap-4 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
+                className={`text-5xl xs:text-6xl sm:text-7xl md:text-8xl xl:text-9xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-700 text-center flex flex-col xl:flex-row items-center justify-center gap-1 xl:gap-4 ${
+                  startupProgress < 50 ? "text-slate-800" : "text-white"
+                }`}
                 style={{
-                  textShadow: startupProgress >= 50 ? `
-                      2px 2px 0 #1a1a24,
-                      4px 4px 0 #1a1a24,
-                      6px 6px 0 #1a1a24,
-                      8px 8px 0 #FF00FF,
-                      10px 10px 0 #00FFFF,
-                      12px 12px 30px rgba(255, 0, 255, 0.6)
-                    ` : `
-                      2px 2px 0 #cbd5e1,
-                      4px 4px 0 #cbd5e1,
-                      6px 6px 0 #cbd5e1,
-                      8px 8px 0 #FF00FF,
-                      10px 10px 0 #00FFFF,
-                      12px 12px 30px rgba(0, 255, 255, 0.4)
-                    `,
+                  textShadow:
+                    startupProgress >= 50
+                      ? `
+                        2px 2px 0 #1a1a24,
+                        4px 4px 0 #1a1a24,
+                        6px 6px 0 #1a1a24,
+                        8px 8px 0 #FF00FF,
+                        10px 10px 0 #00FFFF,
+                        12px 12px 30px rgba(255, 0, 255, 0.6)
+                      `
+                      : `
+                        2px 2px 0 #cbd5e1,
+                        4px 4px 0 #cbd5e1,
+                        6px 6px 0 #cbd5e1,
+                        8px 8px 0 #FF00FF,
+                        10px 10px 0 #00FFFF,
+                        12px 12px 30px rgba(0, 255, 255, 0.4)
+                      `,
                 }}
               >
                 <span>Kalcerians</span>
@@ -159,7 +297,8 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                   <div
                     className="absolute bottom-[-40px] md:bottom-[-60px] w-[360px] sm:w-[480px] md:w-[640px] lg:w-[800px] h-[160px] md:h-[240px] opacity-25 pointer-events-none transition-all duration-1000 ease-out"
                     style={{
-                      background: "linear-gradient(rgba(0, 240, 255, 0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.25) 1px, transparent 1px)",
+                      background:
+                        "linear-gradient(rgba(0, 240, 255, 0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.25) 1px, transparent 1px)",
                       backgroundSize: "30px 30px",
                       transform: "rotateX(75deg) translateZ(-60px)",
                       maskImage: "radial-gradient(ellipse at center, black, transparent 70%)",
@@ -173,7 +312,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                       perspective: "1000px",
                       transformStyle: "preserve-3d",
                       transform: `rotateX(${tilt.y}deg) rotateY(${tilt.x}deg)`,
-                      transition: "transform 0.15s ease-out",
+                      transition: "transform 0.08s ease-out",
                       width: "100%",
                       height: "100%",
                       position: "relative",
@@ -208,6 +347,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                       style={{
                         transformStyle: "preserve-3d",
                         transform: "translateZ(60px)",
+                        willChange: "transform",
                       }}
                     >
                       {/* Sized decently big to cover the middle of the screen */}
@@ -238,11 +378,13 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                   <AnimatePresence mode="wait">
                     <motion.p
                       key={currentQuote}
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 0.85, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.35, ease: "easeOut" }}
-                      className={`text-[11px] sm:text-xs md:text-sm font-normal tracking-wide transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-500" : "text-white"}`}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                      className={`text-[11px] sm:text-xs md:text-sm font-normal tracking-wide transition-colors duration-700 ${
+                        startupProgress < 50 ? "text-slate-500" : "text-white"
+                      }`}
                       style={{ fontFamily: "Arial, sans-serif" }}
                     >
                       {currentQuote}
@@ -251,7 +393,9 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                 </div>
                 <div className="text-right">
                   <span
-                    className={`text-3xl sm:text-4xl md:text-5xl font-sans font-black tracking-tighter leading-none transition-colors duration-1000 ${startupProgress < 50 ? "text-slate-800" : "text-white"}`}
+                    className={`text-3xl sm:text-4xl md:text-5xl font-sans font-black tracking-tighter leading-none transition-colors duration-700 ${
+                      startupProgress < 50 ? "text-slate-800" : "text-white"
+                    }`}
                   >
                     {Math.round(startupProgress)}
                     <span className="text-[14px] sm:text-[20px] ml-1 opacity-40">%</span>
@@ -259,15 +403,24 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                 </div>
               </div>
 
-              {/* Progress Bar */}
+              {/* Progress Bar (Crisp, Smooth, No Elastic Jitter) */}
               <div
-                className={`relative h-2.5 sm:h-3.5 md:h-4 w-full overflow-hidden border transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-100 border-slate-200" : "bg-white/5 border-white/10"}`}
+                className={`relative h-2.5 sm:h-3.5 md:h-4 w-full overflow-hidden border transition-colors duration-700 ${
+                  startupProgress < 50
+                    ? "bg-slate-100 border-slate-200"
+                    : "bg-white/5 border-white/10"
+                }`}
               >
-                <motion.div
-                  className={`absolute top-0 left-0 h-full transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-600" : "bg-gradient-to-r from-[#ff6f00] via-[#ffd60a] to-[#ffc300] shadow-[0_0_30px_#ffd60a]"}`}
-                  initial={{ width: "0%" }}
-                  animate={{ width: `${startupProgress}%` }}
-                  transition={{ ease: "easeOut", duration: 0.1 }}
+                <div
+                  className={`absolute top-0 left-0 h-full transition-all duration-75 ease-out ${
+                    startupProgress < 50
+                      ? "bg-slate-600"
+                      : "bg-gradient-to-r from-[#ff6f00] via-[#ffd60a] to-[#ffc300] shadow-[0_0_25px_#ffd60a]"
+                  }`}
+                  style={{
+                    width: `${startupProgress}%`,
+                    willChange: "width",
+                  }}
                 />
                 {/* Subtle stripes over progress */}
                 <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.1)_50%,transparent_100%)] bg-[length:20px_100%] pointer-events-none" />
@@ -276,8 +429,8 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
           </motion.div>
 
           {/* Corner Decorative Elements */}
-          <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-[#ffd60a]/10 to-transparent rounded-br-full blur-3xl" />
-          <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-[#ff006e]/10 to-transparent rounded-tl-full blur-3xl" />
+          <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-[#ffd60a]/10 to-transparent rounded-br-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-[#ff006e]/10 to-transparent rounded-tl-full blur-3xl pointer-events-none" />
         </motion.div>
       )}
     </AnimatePresence>

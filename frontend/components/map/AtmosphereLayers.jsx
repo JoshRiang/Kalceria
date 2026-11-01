@@ -62,28 +62,20 @@ export function VintageLaserGrid({ active, startupProgress }) {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // ─── Faint Drafting Coordinate Grid ─────────────────────────────
-      if (isDark) {
-        ctx.strokeStyle = "rgba(255, 214, 10, 0.04)"; // Glowing Gold
-      } else {
-        ctx.strokeStyle = "rgba(128, 128, 128, 0.04)"; // Glowing Grey
-      }
+      // ─── Faint Drafting Coordinate Grid (Single Batched Draw Call) ───
+      ctx.strokeStyle = isDark ? "rgba(255, 214, 10, 0.04)" : "rgba(128, 128, 128, 0.04)";
       ctx.lineWidth = 0.5;
+      ctx.beginPath();
       const grid = 60;
       for (let x = 0; x < canvas.width; x += grid) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
+        ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
       }
       for (let y = 0; y < canvas.height; y += grid) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
+        ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
       }
+      ctx.stroke();
 
-      // ─── Spawning Laser Grid Lines (20% more density) ─────────────────
+      // ─── Spawning Laser Grid Lines (GPU-friendly without CPU shadowBlur lag) ───
       lines.forEach((line) => {
         line.life++;
         if (line.life < 25) {
@@ -92,43 +84,45 @@ export function VintageLaserGrid({ active, startupProgress }) {
           line.opacity += (0 - line.opacity) * 0.15;
         }
 
-        if (isDark) {
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = "rgba(255, 195, 0, 0.5)";
-          ctx.strokeStyle = `rgba(255, 214, 10, ${line.opacity * 1.6})`;
-        } else {
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(120, 120, 120, 0.4)";
-          ctx.strokeStyle = `rgba(80, 80, 80, ${line.opacity * 1.6})`;
-        }
+        const strokeColor = isDark
+          ? `rgba(255, 214, 10, ${line.opacity * 1.6})`
+          : `rgba(80, 80, 80, ${line.opacity * 1.6})`;
+        const glowColor = isDark
+          ? `rgba(255, 195, 0, ${line.opacity * 0.4})`
+          : `rgba(120, 120, 120, ${line.opacity * 0.3})`;
 
+        // Glow pass (replaces slow CPU shadowBlur)
+        ctx.strokeStyle = glowColor;
+        ctx.lineWidth = line.width * 3;
+        ctx.beginPath();
+        if (line.isVertical) {
+          ctx.moveTo(line.pos, 0); ctx.lineTo(line.pos, canvas.height);
+        } else {
+          ctx.moveTo(0, line.pos); ctx.lineTo(canvas.width, line.pos);
+        }
+        ctx.stroke();
+
+        // Crisp core line
+        ctx.strokeStyle = strokeColor;
         ctx.lineWidth = line.width;
         ctx.beginPath();
-
         if (line.isVertical) {
-          ctx.moveTo(line.pos, 0);
-          ctx.lineTo(line.pos, canvas.height);
+          ctx.moveTo(line.pos, 0); ctx.lineTo(line.pos, canvas.height);
         } else {
-          ctx.moveTo(0, line.pos);
-          ctx.lineTo(canvas.width, line.pos);
+          ctx.moveTo(0, line.pos); ctx.lineTo(canvas.width, line.pos);
         }
         ctx.stroke();
 
         // Dual offset line simulating oscilloscope drawings
-        ctx.shadowBlur = 0;
-        if (isDark) {
-          ctx.strokeStyle = `rgba(255, 195, 0, ${line.opacity * 0.5})`;
-        } else {
-          ctx.strokeStyle = `rgba(140, 140, 140, ${line.opacity * 0.5})`;
-        }
+        ctx.strokeStyle = isDark
+          ? `rgba(255, 195, 0, ${line.opacity * 0.5})`
+          : `rgba(140, 140, 140, ${line.opacity * 0.5})`;
         ctx.lineWidth = line.width * 0.5;
         ctx.beginPath();
         if (line.isVertical) {
-          ctx.moveTo(line.pos - 2, 0);
-          ctx.lineTo(line.pos - 2, canvas.height);
+          ctx.moveTo(line.pos - 2, 0); ctx.lineTo(line.pos - 2, canvas.height);
         } else {
-          ctx.moveTo(0, line.pos - 2);
-          ctx.lineTo(canvas.width, line.pos - 2);
+          ctx.moveTo(0, line.pos - 2); ctx.lineTo(canvas.width, line.pos - 2);
         }
         ctx.stroke();
       });

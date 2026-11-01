@@ -103,8 +103,6 @@ export default function MapPage() {
     }
     return true;
   });
-  const [startupProgress, setStartupProgress] = useState(0);
-  const [particles, setParticles] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const hasMounted = useHasMounted();
   const [notLoggedIn, setNotLoggedIn] = useState(() => (typeof window !== "undefined" ? !hasUserSession() : false));
@@ -117,10 +115,6 @@ export default function MapPage() {
 
   const [showQuitModal, setShowQuitModal] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
-
-  // Quotes changing at loading bar & 3D tilt tracking states
-  const [currentQuote, setCurrentQuote] = useState("Composing  the map...");
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
   const handleQuitConfirm = () => {
     setIsExiting(true);
@@ -235,127 +229,6 @@ export default function MapPage() {
   const pirateNextRef = useRef(null);
   const pirateStarted = useRef(false);
   const [pirateKey, setPirateKey] = useState(0);
-
-  // Startup Sequence Logic - Tied directly to Real Backend Preparation
-  useEffect(() => {
-    if (notLoggedIn) return;
-
-    // Determine target progress based on backend lifecycle
-    let target = 25; // Initial handshake
-    if (currentUser) target = Math.max(target, 55); // User auth & profile confirmed
-    if (!isDataLoading) target = Math.max(target, 88); // Users, Kalcerians & mini-events loaded
-    if (!isDataLoading && hasMounted) target = 100; // Ready for interactive map
-
-    let animationFrame = null;
-    let isFinished = false;
-
-    const updateProgress = () => {
-      if (isFinished) return;
-
-      setStartupProgress((prev) => {
-        if (prev >= 100) {
-          isFinished = true;
-          return 100;
-        }
-
-        const diff = target - prev;
-        // When caught up with current intermediate target, pause frame loop until target advances
-        if (diff <= 0.08) {
-          if (target >= 100) {
-            isFinished = true;
-            scheduleTimeout(() => {
-              setShowStartup(false);
-            }, 600);
-            return 100;
-          }
-          return prev;
-        }
-
-        // Smooth, non-jitter step interpolation
-        const step = Math.min(diff, Math.max(0.4, diff * 0.12));
-        const next = prev + step;
-
-        if (next >= 99.9 && target >= 100) {
-          isFinished = true;
-          scheduleTimeout(() => {
-            setShowStartup(false);
-          }, 600);
-          return 100;
-        }
-
-        return next;
-      });
-
-      if (!isFinished) {
-        animationFrame = requestAnimationFrame(updateProgress);
-      }
-    };
-
-    animationFrame = requestAnimationFrame(updateProgress);
-
-    return () => {
-      isFinished = true;
-      if (animationFrame) cancelAnimationFrame(animationFrame);
-    };
-  }, [notLoggedIn, currentUser, isDataLoading, hasMounted, scheduleTimeout]);
-
-  // Spawns premium magenta & golden microparticles once loading progress is >= 10%
-  useEffect(() => {
-    if (startupProgress >= 10 && particles.length === 0) {
-      const random = createSeededRandom("map-startup-particles-v1");
-      const generated = Array.from({ length: 25 }).map((_, i) => ({
-        id: i,
-        left: `${random() * 100}%`,
-        size: `${random() * 5 + 3}px`, // 3px to 8px
-        color: random() > 0.5 ? "#ff006e" : (random() > 0.5 ? "#ffd60a" : "#ffc300"), // Neon Magenta, Golden Yellow, Gold
-        duration: random() * 5 + 4, // 4s to 9s
-        delay: random() * 5, // 0s to 5s
-        opacity: random() * 0.4 + 0.4, // 0.4 to 0.8
-      }));
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- The particle layer must begin at the existing progress threshold.
-      setParticles(generated);
-    }
-  }, [startupProgress, particles.length]);
-
-  // Random Loading Quotes Timeline
-  useEffect(() => {
-    if (!showStartup) return;
-    const random = createRuntimeSeededRandom("map-startup-quotes-v1");
-    const quotes = [
-      "Composing  the map...",
-      "Adjusting the position...",
-      "Wahib embut...",
-      "Otniel keren banget..."
-    ];
-    let timeoutId;
-    const changeQuote = () => {
-      setCurrentQuote((prev) => {
-        const available = quotes.filter((q) => q !== prev);
-        return available[Math.floor(random() * available.length)];
-      });
-      const nextDelay = 700 + random() * 1100; // random delay between 700ms and 1800ms
-      timeoutId = setTimeout(changeQuote, nextDelay);
-    };
-    timeoutId = setTimeout(changeQuote, 1000);
-    return () => clearTimeout(timeoutId);
-  }, [showStartup]);
-
-  // 3D Parallax Mouse Tracking
-  useEffect(() => {
-    if (!showStartup) return;
-    const handleMouseMove = (e) => {
-      const { clientX, clientY } = e;
-      const { innerWidth, innerHeight } = window;
-      // Max tilt angle around 12 degrees
-      const x = (clientX / innerWidth - 0.5) * 24;
-      const y = (clientY / innerHeight - 0.5) * -24;
-      setTilt({ x, y });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, [showStartup]);
 
   // Map Event Tracking
   const handleMapReady = useCallback((mapInstance) => {
@@ -965,9 +838,9 @@ export default function MapPage() {
       `}</style>
       {/* Startup Sequence Overlay :: FORZA HORIZON STYLE */}
       <StartupSequenceOverlay
-        showStartup={showStartup} startupProgress={startupProgress}
-        particles={particles} hasMounted={hasMounted}
-        currentQuote={currentQuote} tilt={tilt}
+        showStartup={showStartup}
+        isReady={!isDataLoading && hasMounted && !notLoggedIn}
+        onComplete={() => setShowStartup(false)}
       />
 
       <MapModals
