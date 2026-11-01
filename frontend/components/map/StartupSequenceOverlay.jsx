@@ -151,13 +151,13 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
               </h1>
             </motion.div>
 
-            {/* Floating Kalcerman Image & Portal - Middle/Bottom for iPad, Top/Center for Desktop */}
+            {/* Floating Kalcerman Revisi Hero Image (Desktop & iPad/Tablet family) */}
             <AnimatePresence>
               {startupProgress >= 50 && (
-                <div className="hidden md:flex relative w-[280px] xs:w-[320px] sm:w-[360px] md:w-[440px] lg:w-[460px] h-[220px] sm:h-[300px] md:h-[420px] lg:h-[450px] flex-col items-center justify-center my-3 sm:my-4 md:my-6 lg:my-4 z-20 mx-auto translate-x-0 xl:-translate-x-[15%] translate-y-10 sm:translate-y-14 md:translate-y-16 lg:translate-y-24 xl:-translate-y-[15%]">
+                <div className="hidden md:flex relative w-full max-w-[520px] md:max-w-[640px] lg:max-w-[760px] xl:max-w-[900px] h-[280px] sm:h-[340px] md:h-[420px] lg:h-[480px] xl:h-[520px] flex-col items-center justify-center my-2 sm:my-3 md:my-4 z-20 mx-auto">
                   {/* Glowing 3D Grid Floor when background is dark */}
                   <div
-                    className="absolute bottom-[-60px] md:bottom-[-100px] w-[300px] sm:w-[400px] md:w-[500px] h-[200px] md:h-[300px] opacity-20 pointer-events-none transition-all duration-1000 ease-out"
+                    className="absolute bottom-[-40px] md:bottom-[-60px] w-[360px] sm:w-[480px] md:w-[640px] lg:w-[800px] h-[160px] md:h-[240px] opacity-25 pointer-events-none transition-all duration-1000 ease-out"
                     style={{
                       background: "linear-gradient(rgba(0, 240, 255, 0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.25) 1px, transparent 1px)",
                       backgroundSize: "30px 30px",
@@ -183,40 +183,15 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                       justifyContent: "center",
                     }}
                   >
-                    {/* Fixed Position Portal: Equal scale with hero underneath */}
-                    <motion.img
-                      key="portal-bg"
-                      src="/portal.webp"
-                      alt="Portal background"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{
-                        opacity: 0.7,
-                        scale: 1,
-                        rotate: 360,
-                      }}
-                      exit={{ opacity: 0 }}
-                      transition={{
-                        opacity: { duration: 1.2, ease: "easeOut" },
-                        scale: { duration: 1.2, ease: "easeOut" },
-                        rotate: { duration: 22, repeat: Infinity, ease: "linear" },
-                      }}
-                      className="absolute top-2 left-1/2 translate-x-10 xs:translate-x-14 md:translate-x-0 md:left-[56%] w-[160px] xs:w-[175px] sm:w-[260px] md:w-[400px] h-[160px] xs:h-[175px] sm:h-[260px] md:h-[400px] object-contain pointer-events-none filter drop-shadow-[0_0_25px_rgba(0,240,255,0.3)]"
-                      style={{
-                        transformStyle: "preserve-3d",
-                        transform: "translateZ(0px)",
-                        zIndex: 0,
-                      }}
-                    />
-
-                    {/* Floating Character & Subtitle Subgroup */}
+                    {/* Floating Character - Inherits the left-to-center spring movement */}
                     <motion.div
-                      key="kalcerman-character"
+                      key="kalcermanmap-revisi"
                       initial={{ x: "-100vw", opacity: 0, scale: 0.7 }}
                       animate={{
                         x: 0,
-                        opacity: 0.9,
+                        opacity: 1,
                         scale: 1,
-                        y: [0, -15, 0],
+                        y: [0, -16, 0],
                       }}
                       exit={{ x: "100vw", opacity: 0 }}
                       transition={{
@@ -225,40 +200,30 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                         scale: { duration: 0.5 },
                         y: {
                           repeat: Infinity,
-                          duration: 3,
+                          duration: 3.2,
                           ease: "easeInOut",
                         },
                       }}
-                      className="relative z-10 w-full flex flex-col items-center justify-center"
+                      className="relative z-10 w-full h-full flex items-center justify-center"
                       style={{
                         transformStyle: "preserve-3d",
-                        transform: "translateZ(80px)",
+                        transform: "translateZ(60px)",
                       }}
                     >
-                      {/* Character Sprite - Equal sizing with portal */}
+                      {/* Sized decently big to cover the middle of the screen */}
                       <ContentImage
-                        src="/kalcermanmap.webp"
+                        src="/kalcermanmap_revisi.webp"
                         alt="Kalcerman Map"
-                        width={400}
-                        height={400}
-                        sizes="(max-width: 768px) 240px, 275px"
-                        className="relative w-[160px] h-[160px] xs:w-[175px] xs:h-[175px] sm:w-[240px] sm:h-[240px] md:w-[275px] md:h-[275px] object-contain filter drop-shadow-[0_0_35px_rgba(255,214,10,0.35)] mb-2 sm:mb-4 md:mb-6 z-10 -translate-x-10 xs:-translate-x-14 md:translate-x-0"
+                        width={1200}
+                        height={1200}
+                        sizes="(max-width: 1024px) 580px, (max-width: 1280px) 720px, 840px"
+                        priority
+                        className="relative w-auto h-full max-h-[260px] sm:max-h-[320px] md:max-h-[400px] lg:max-h-[460px] xl:max-h-[500px] max-w-[95%] object-contain filter drop-shadow-[0_0_35px_rgba(255,0,110,0.45)] drop-shadow-[0_0_60px_rgba(255,214,10,0.25)] select-none pointer-events-none"
                         style={{
                           transformStyle: "preserve-3d",
                           transform: "translateZ(20px)",
                         }}
                       />
-
-                      {/* Dialog Subtitle */}
-                      <p
-                        className="relative text-white font-sans font-bold text-base sm:text-[22px] tracking-wide text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] z-10"
-                        style={{
-                          transformStyle: "preserve-3d",
-                          transform: "translateZ(40px)",
-                        }}
-                      >
-                        &quot;Let me in, Coki!&quot;
-                      </p>
                     </motion.div>
                   </div>
                 </div>
@@ -302,7 +267,7 @@ export function StartupSequenceOverlay({ showStartup, startupProgress, particles
                   className={`absolute top-0 left-0 h-full transition-colors duration-1000 ${startupProgress < 50 ? "bg-slate-600" : "bg-gradient-to-r from-[#ff6f00] via-[#ffd60a] to-[#ffc300] shadow-[0_0_30px_#ffd60a]"}`}
                   initial={{ width: "0%" }}
                   animate={{ width: `${startupProgress}%` }}
-                  transition={{ type: "spring", stiffness: 40, damping: 15 }}
+                  transition={{ ease: "easeOut", duration: 0.1 }}
                 />
                 {/* Subtle stripes over progress */}
                 <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(0,0,0,0.1)_50%,transparent_100%)] bg-[length:20px_100%] pointer-events-none" />

@@ -19,17 +19,9 @@ const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then(
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
 import { hasUserSession } from "@/lib/session";
 import {
-  fetchMe,
-  fetchMapUsers,
-  fetchKalcerians,
-  fetchMiniEvents,
-  postBroadcast,
-  putBroadcast,
-  postLocation,
-  patchVisibility,
-  postMiniEvent,
-  putMiniEvent,
-  delMiniEvent,
+  fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents,
+  postBroadcast, putBroadcast, postLocation, patchVisibility,
+  postMiniEvent, putMiniEvent, delMiniEvent,
 } from "@/lib/api";
 
 const SnapMap = dynamic(() => import("@/components/SnapMap"), {
@@ -51,12 +43,7 @@ const hqPoint = {
   lng: 106.7135,
   gifUrl: "/media/gifs/hq_feed_1.mp4",
   videoUrl: "/media/gifs/hq_feed_1.mp4",
-  mediaUrls: [
-    "/media/gifs/hq_feed_1.mp4",
-    "/media/gifs/hq_feed_2.mp4",
-    "/media/gifs/hq_feed_3.mp4",
-    "/media/gifs/hq_feed_4.mp4",
-  ],
+  mediaUrls: ["/media/gifs/hq_feed_1.mp4", "/media/gifs/hq_feed_2.mp4", "/media/gifs/hq_feed_3.mp4", "/media/gifs/hq_feed_4.mp4"],
 };
 
 const cleanEventDesc = (item) => {
@@ -259,27 +246,55 @@ export default function MapPage() {
     if (!isDataLoading) target = Math.max(target, 88); // Users, Kalcerians & mini-events loaded
     if (!isDataLoading && hasMounted) target = 100; // Ready for interactive map
 
-    let animationFrame;
+    let animationFrame = null;
+    let isFinished = false;
+
     const updateProgress = () => {
+      if (isFinished) return;
+
       setStartupProgress((prev) => {
-        if (prev >= 100) return 100;
+        if (prev >= 100) {
+          isFinished = true;
+          return 100;
+        }
+
         const diff = target - prev;
-        const step = Math.max(0.6, diff * 0.12);
-        const next = Math.min(target, prev + step);
-        if (next >= 100) {
+        // When caught up with current intermediate target, pause frame loop until target advances
+        if (diff <= 0.08) {
+          if (target >= 100) {
+            isFinished = true;
+            scheduleTimeout(() => {
+              setShowStartup(false);
+            }, 600);
+            return 100;
+          }
+          return prev;
+        }
+
+        // Smooth, non-jitter step interpolation
+        const step = Math.min(diff, Math.max(0.4, diff * 0.12));
+        const next = prev + step;
+
+        if (next >= 99.9 && target >= 100) {
+          isFinished = true;
           scheduleTimeout(() => {
             setShowStartup(false);
           }, 600);
           return 100;
         }
+
         return next;
       });
-      animationFrame = requestAnimationFrame(updateProgress);
+
+      if (!isFinished) {
+        animationFrame = requestAnimationFrame(updateProgress);
+      }
     };
 
     animationFrame = requestAnimationFrame(updateProgress);
 
     return () => {
+      isFinished = true;
       if (animationFrame) cancelAnimationFrame(animationFrame);
     };
   }, [notLoggedIn, currentUser, isDataLoading, hasMounted, scheduleTimeout]);
@@ -948,37 +963,23 @@ export default function MapPage() {
           transform: rotate(180deg);
         }
       `}</style>
-      {/* Startup Sequence Overlay :: FORZA HORZON STYLE */}
+      {/* Startup Sequence Overlay :: FORZA HORIZON STYLE */}
       <StartupSequenceOverlay
-        showStartup={showStartup}
-        startupProgress={startupProgress}
-        particles={particles}
-        hasMounted={hasMounted}
-        currentQuote={currentQuote}
-        tilt={tilt}
+        showStartup={showStartup} startupProgress={startupProgress}
+        particles={particles} hasMounted={hasMounted}
+        currentQuote={currentQuote} tilt={tilt}
       />
 
       <MapModals
-        offlineUserObj={offlineUserObj}
-        setSelectedOfflineUser={setSelectedOfflineUser}
-        showStatusModal={showStatusModal}
-        setShowStatusModal={setShowStatusModal}
-        isMapDark={isMapDark}
-        saveBroadcast={saveBroadcast}
-        statusText={statusText}
-        setStatusText={setStatusText}
-        busy={busy}
-        showEventModal={showEventModal}
-        setShowEventModal={handleOpenEventModal}
-        saveMiniEvent={saveMiniEvent}
-        eventForm={eventForm}
-        setEventForm={setEventForm}
-        activeOwnEvent={activeOwnEvent}
-        deleteMiniEvent={deleteMiniEvent}
-        isExiting={isExiting}
-        showQuitModal={showQuitModal}
-        setShowQuitModal={setShowQuitModal}
-        handleQuitConfirm={handleQuitConfirm}
+        offlineUserObj={offlineUserObj} setSelectedOfflineUser={setSelectedOfflineUser}
+        showStatusModal={showStatusModal} setShowStatusModal={setShowStatusModal}
+        isMapDark={isMapDark} saveBroadcast={saveBroadcast}
+        statusText={statusText} setStatusText={setStatusText} busy={busy}
+        showEventModal={showEventModal} setShowEventModal={handleOpenEventModal}
+        saveMiniEvent={saveMiniEvent} eventForm={eventForm} setEventForm={setEventForm}
+        activeOwnEvent={activeOwnEvent} deleteMiniEvent={deleteMiniEvent}
+        isExiting={isExiting} showQuitModal={showQuitModal}
+        setShowQuitModal={setShowQuitModal} handleQuitConfirm={handleQuitConfirm}
       />
     </main>
   );
