@@ -471,21 +471,25 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                 </motion.div>
               </AnimatePresence>
 
-              {/* ── Error / Success (Consistent with Login Form style) ── */}
+              {/* ── Error / Success (Consolas, No outer box, No icons, 20% bigger font) ── */}
               <AnimatePresence>
                 {error && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
-                    <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
-                      <span className="text-red-500 text-sm select-none">✕</span>
-                      <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-3">
+                    <div 
+                      style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                      className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+                    >
+                      {error}
                     </div>
                   </motion.div>
                 )}
                 {success && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
-                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-md flex items-center gap-2">
-                      <span className="text-emerald-400 text-sm select-none">✓</span>
-                      <span className="text-emerald-300 font-sans text-xs font-normal">{success}</span>
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-3">
+                    <div 
+                      style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                      className="text-emerald-400 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+                    >
+                      {success}
                     </div>
                   </motion.div>
                 )}

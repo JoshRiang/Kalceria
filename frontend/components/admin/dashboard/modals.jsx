@@ -97,9 +97,11 @@ export function JITResetModal({ onClose, onConfirm }) {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
-                <span className="text-red-500 text-sm select-none">✕</span>
-                <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
+              <div 
+                style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none mb-2 text-left"
+              >
+                {error}
               </div>
             )}
 
@@ -189,9 +191,11 @@ export function JITActionModal({ title, description, onClose, onConfirm }) {
             </div>
 
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
-                <span className="text-red-500 text-sm select-none">✕</span>
-                <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
+              <div 
+                style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none mb-2 text-left"
+              >
+                {error}
               </div>
             )}
 

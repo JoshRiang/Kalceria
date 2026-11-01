@@ -15,30 +15,20 @@ const SERVICE_TYPES = [
 ];
 
 // ── Clean Login-Form Consistent Error Box ──
-function FormErrorBox({ error, onDismiss }) {
+function FormErrorBox({ error }) {
   if (!error) return null;
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
       exit={{ opacity: 0, height: 0 }}
-      className="w-full overflow-hidden my-2"
+      className="overflow-hidden w-full my-1.5"
     >
-      <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-red-500 text-sm select-none">✕</span>
-          <span className="font-sans text-xs text-red-400 font-normal tracking-normal">{error}</span>
-        </div>
-        {onDismiss && (
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="text-red-400/60 hover:text-red-300 text-xs font-mono ml-2 cursor-pointer"
-            aria-label="Dismiss error"
-          >
-            ✕
-          </button>
-        )}
+      <div 
+        style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+        className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+      >
+        {error}
       </div>
     </motion.div>
   );

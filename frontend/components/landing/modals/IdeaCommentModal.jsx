@@ -206,8 +206,8 @@ export function IdeaCommentModal({ onClose }) {
 
         {/* Header — Title matching Create Mini Event font */}
         <div className="shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-b border-white/[0.08]">
-          <h2 className="font-sans font-bold text-base sm:text-lg tracking-tight text-white uppercase">
-            SPEAK FOR US
+          <h2 className="font-sans font-bold text-base sm:text-lg tracking-tight text-white">
+            Speak for us
           </h2>
           <button
             type="button"
@@ -219,28 +219,20 @@ export function IdeaCommentModal({ onClose }) {
           </button>
         </div>
 
-        {/* Error Notification — Directly Under Title (Login Form Style) */}
+        {/* Error Notification — Directly Under Title (Consolas, No outer box, No X, 20% bigger font) */}
         <AnimatePresence>
           {error && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="px-4 xs:px-6 pt-3 relative z-10 shrink-0 overflow-hidden"
+              className="px-4 xs:px-6 pt-2 relative z-10 shrink-0 overflow-hidden"
             >
-              <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-red-500 text-sm select-none">✕</span>
-                  <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setError("")}
-                  className="text-red-400/60 hover:text-red-300 text-xs font-mono ml-2 cursor-pointer focus:outline-none"
-                  aria-label="Dismiss error"
-                >
-                  ✕
-                </button>
+              <div 
+                style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none"
+              >
+                {error}
               </div>
             </motion.div>
           )}
@@ -326,9 +318,9 @@ export function IdeaCommentModal({ onClose }) {
               <button
                 type="button"
                 onClick={() => { setIdentity("Anonymous"); setError(""); }}
-                className={`py-2 px-3 rounded-lg border text-center transition-all duration-200 outline-none cursor-pointer text-xs font-sans ${
+                className={`py-2 px-3 rounded-lg border text-center transition-all duration-200 outline-none cursor-pointer text-xs font-sans font-bold ${
                   identity === "Anonymous"
-                    ? "bg-white/20 border-white text-white font-bold"
+                    ? "bg-white/20 border-white text-white"
                     : "border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/80"
                 }`}
               >
@@ -345,9 +337,9 @@ export function IdeaCommentModal({ onClose }) {
                   setIdentity("User");
                   setError("");
                 }}
-                className={`py-2 px-1.5 rounded-lg border text-center transition-all duration-200 outline-none cursor-pointer text-[10px] xs:text-[11px] leading-tight font-sans tracking-tight overflow-hidden text-ellipsis whitespace-nowrap ${
+                className={`py-2 px-1 rounded-lg border text-center transition-all duration-200 outline-none cursor-pointer text-[10px] xs:text-[11px] leading-tight font-sans font-bold tracking-tight overflow-hidden text-ellipsis whitespace-nowrap ${
                   identity === "User"
-                    ? "bg-white/20 border-white text-white font-bold"
+                    ? "bg-white/20 border-white text-white"
                     : "border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/80"
                 }`}
               >

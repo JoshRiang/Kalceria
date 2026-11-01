@@ -166,11 +166,13 @@ export default function AdminLoginPage() {
                     {error && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
+                        className="overflow-hidden mb-2"
                       >
-                        <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
-                          <span className="text-red-500 text-sm select-none">✕</span>
-                          <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
+                        <div 
+                          style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                          className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+                        >
+                          {error}
                         </div>
                       </motion.div>
                     )}
