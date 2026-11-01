@@ -194,23 +194,19 @@ export function Field({
       <label className="mb-1.5 font-sans text-xs font-bold text-white tracking-wide flex items-center justify-between">
         <span>{label}</span>
         {isCommsField ? (
-          <span
-            className={`text-[10px] font-medium ${
-              isVerified
-                ? "text-emerald-400"
-                : hasError
-                ? "text-amber-400"
-                : "text-white/50"
-            }`}
-          >
-            {!validation.empty
-              ? validation.message
-              : isPhone
-              ? "Format: 812-xxxx-xxxx"
-              : isEmail
-              ? "name@domain.com"
-              : "@username"}
-          </span>
+          !validation.empty ? (
+            <span
+              className={`text-[10px] font-medium ${
+                isVerified
+                  ? "text-emerald-400"
+                  : hasError
+                  ? "text-amber-400"
+                  : "text-white/50"
+              }`}
+            >
+              {validation.message}
+            </span>
+          ) : null
         ) : maxLength ? (
           <span className="text-[10px] text-white/50 font-normal">
             {String(safeVal).length}/{maxLength}

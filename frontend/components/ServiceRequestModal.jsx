@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Field, validateCommsValue } from "./service-request/FormControls";
@@ -37,6 +37,15 @@ function FormErrorBox({ error }) {
 export default function ServiceRequestModal({ onClose, userName, onRequireAuth, initialLocation }) {
   const [step, setStep] = useState(0); // 0: Type, 1: Details, 2: Done
   const [weekOffset, setWeekOffset] = useState(0);
+  const modalScrollRef = useRef(null);
+
+  // Automatically reset modal scroll position to top whenever stepping forward/backward
+  useEffect(() => {
+    if (modalScrollRef.current) {
+      modalScrollRef.current.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [step]);
+
   const mounted = useHasMounted();
   const [isLocationVerified, setIsLocationVerified] = useState(Boolean(initialLocation));
   const [form, setForm] = useState({ 
@@ -401,7 +410,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
         </div>
 
         {/* Main Card Container: Semi-transparent (~20% translucency) for authentic glassmorphism */}
-        <div className="relative z-10 w-full max-h-[92vh] overflow-y-auto custom-scrollbar bg-black/80 backdrop-blur-2xl border border-white/15 rounded-[30px] flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.85)]">
+        <div className="relative z-10 w-full max-h-[92vh] overflow-hidden bg-black/80 backdrop-blur-2xl border border-white/15 rounded-[30px] flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.85)]">
           
           {/* Dynamic Ambient Blobs: 60% Black, 25% Pink, 15% Yellow */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[30px]">
@@ -480,8 +489,10 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
             .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
           `}</style>
 
-          {/* Unified Header with Close Button */}
-          <div className="p-6 sm:p-8 pb-3 flex justify-between items-center relative z-20">
+          {/* Scrollable Modal Body strictly clipped within rounded corners */}
+          <div ref={modalScrollRef} className="w-full flex-1 overflow-y-auto custom-scrollbar flex flex-col relative z-20">
+            {/* Unified Header with Close Button */}
+            <div className="p-6 sm:p-8 pb-3 flex justify-between items-center relative z-20">
             {step === 1 ? (
               <div className="flex flex-col">
                 <h2 className="font-sans text-xl sm:text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">
@@ -738,9 +749,9 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                     Yes & Confirm via WhatsApp
                   </a>
 
-                  {/* Booking Details Card with Clean Rows and Colon Alignment */}
-                  <div className="w-full max-w-[460px] bg-black/50 border border-white/15 rounded-2xl p-4 sm:p-5 text-left my-3 backdrop-blur-md shadow-xl">
-                    <p className="font-sans font-bold text-white text-xs sm:text-sm uppercase tracking-wider mb-3 pb-2 border-b border-white/10 flex items-center justify-between">
+                  {/* Booking Details with Clean Rows and Colon Alignment (No subouter box) */}
+                  <div className="w-full max-w-[460px] text-left my-4 px-1 sm:px-0">
+                    <p className="font-sans font-bold text-white text-xs sm:text-sm uppercase tracking-wider mb-3 pb-2 border-b border-white/15 flex items-center justify-between">
                       <span>Booking Details:</span>
                       <span className="text-[10px] text-white/50 font-normal">ID #{done.bookingId ? done.bookingId.slice(-6) : "NEW"}</span>
                     </p>
@@ -808,7 +819,8 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
             </AnimatePresence>
           </div>
         </div>
-      </motion.div>
+      </div>
+    </motion.div>
 
 
     </div>,

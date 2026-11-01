@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
 import { redis } from '../lib/redis.js';
 
-// All 38 Provinces of Indonesia (kept exported for compatibility)
 export const INDONESIAN_PROVINCES = [
   'Aceh', 'Sumatera Utara', 'Sumatera Barat', 'Riau', 'Kepulauan Riau',
   'Jambi', 'Sumatera Selatan', 'Kepulauan Bangka Belitung', 'Bengkulu', 'Lampung',
@@ -13,14 +12,7 @@ export const INDONESIAN_PROVINCES = [
   'Papua Pegunungan', 'Papua Barat Daya',
 ];
 
-// Indonesia Geographic Bounding Box (Sabang to Merauke, Miangas to Rote)
-const ID_BOUNDS = {
-  minLat: -11.2,
-  maxLat: 6.2,
-  minLon: 94.9,
-  maxLon: 141.1,
-};
-
+const ID_BOUNDS = { minLat: -11.2, maxLat: 6.2, minLon: 94.9, maxLon: 141.1 };
 const CACHE_TTL_SEC = 24 * 60 * 60; // 24 hours
 const LOCATION_HMAC_SECRET = process.env.LOCATION_HMAC_SECRET || process.env.JWT_SECRET || 'kalceria-geo-validation-secret';
 
@@ -58,138 +50,14 @@ async function setCache(key, value, ttlSec = CACHE_TTL_SEC) {
   fallbackCache.set(key, { value, expiry: Date.now() + ttlSec * 1000 });
 }
 
-/**
- * Normalizes messy Indonesian address input:
- * Example: "Perumahan Azul, Jl Swadarma Raya, RT/RW 02/05, No. 14"
- * Produces progressive search candidates:
- *   1. "Jalan Swadarma Raya" (extracted street + area without RT/RW/Perumahan noise)
- *   2. Full cleaned string without RT/RW/Blok/No
- */
-export function buildIndonesianSearchCandidates(rawInput) {
-  const clean = String(rawInput || '').trim();
-  if (!clean) return [];
-
-  // 1. Strip RT/RW, Blok, Nomor, Kode Pos noise that breaks OSM geocoders
-  let stripped = clean
-    .replace(/\b(?:rt|rw)\s*[./:-]?\s*\d+(?:\s*[/|-]\s*(?:rw\s*)?\d+)?/gi, ' ')
-    .replace(/\b(?:no|nomor|blok|kav|kavling|lantai|lt)\s*[.:-]?\s*[a-z0-9/-]+/gi, ' ')
-    .replace(/\b\d{5}\b/g, ' ') // postal codes
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  // 2. Normalize "Jl.", "Jln.", "Gg." to full words for better OSM tokenization
-  const expanded = stripped
-    .replace(/\b(?:jl|jln)\.?\s+/gi, 'Jalan ')
-    .replace(/\bgg\.?\s+/gi, 'Gang ');
-
-  const candidates = new Set();
-
-  // If the user only typed "Jl" or "Jalan", search major "Jalan Raya" in Indonesia
-  if (/^(?:jl|jln|jalan)\.?$/i.test(clean)) {
-    return ['Jalan Raya'];
-  }
-
-  // 3. Extract from "Jalan ..." onward if preceded by "Perumahan X, Komplek Y, ..."
-  const jalanMatch = expanded.match(/\b(Jalan\s+[^,]+(?:,\s*[^,]+)*)/i);
-  if (jalanMatch) {
-    candidates.add(jalanMatch[1].trim());
-  }
-
-  // 4. Strip "Perumahan ...", "Komplek ...", "Cluster ...", "Apartemen ..." prefix
-  const withoutComplex = expanded
-    .replace(/\b(?:perumahan|perum|komplek|komp|cluster|apartemen|apt|gedung|ruko)\s+[^,]+,?\s*/gi, '')
-    .trim();
-
-  if (withoutComplex.length >= 2) {
-    candidates.add(withoutComplex);
-  }
-
-  if (expanded.length >= 2) {
-    candidates.add(expanded);
-  }
-
-  return Array.from(candidates);
-}
-
-/**
- * Normalizes OSM/Photon province names to official Indonesian names
- */
-function normalizeProvinceName(rawProvince, city = '') {
-  const p = String(rawProvince || '').trim();
-  const c = String(city || '').toLowerCase();
-
-  if (!p) {
-    if (c.includes('jakarta')) return 'DKI Jakarta';
-    if (c.includes('yogyakarta') || c.includes('sleman') || c.includes('bantul')) {
-      return 'Daerah Istimewa Yogyakarta';
-    }
-    return '';
-  }
-
-  const lower = p.toLowerCase();
-  if (lower.includes('jakarta')) return 'DKI Jakarta';
-  if (lower.includes('yogyakarta') || lower === 'diy') return 'Daerah Istimewa Yogyakarta';
-  if (lower.includes('bangka')) return 'Kepulauan Bangka Belitung';
-  if (lower === 'west java') return 'Jawa Barat';
-  if (lower === 'central java') return 'Jawa Tengah';
-  if (lower === 'east java') return 'Jawa Timur';
-  if (lower === 'north sumatra') return 'Sumatera Utara';
-  if (lower === 'south sumatra') return 'Sumatera Selatan';
-  if (lower === 'west sumatra') return 'Sumatera Barat';
-  if (lower === 'east kalimantan') return 'Kalimantan Timur';
-  if (lower === 'south sulawesi') return 'Sulawesi Selatan';
-
-  const matched = INDONESIAN_PROVINCES.find(
-    (prov) => prov.toLowerCase() === lower || lower.includes(prov.toLowerCase())
-  );
-  return matched || p;
-}
-
-/**
- * Signs a location string so the backend can cryptographically verify
- * that the submitted address came from the validated autocomplete/reverse list.
- */
 export function signLocationToken(formatted, lat = '', lon = '') {
-  const normalized = String(formatted || '').trim().toLowerCase();
+  const norm = String(formatted || '').trim().toLowerCase();
+  const latStr = lat !== '' && lat !== null && lat !== undefined ? Number(lat).toFixed(4) : '';
+  const lonStr = lon !== '' && lon !== null && lon !== undefined ? Number(lon).toFixed(4) : '';
   return crypto
     .createHmac('sha256', LOCATION_HMAC_SECRET)
-    .update(`${normalized}|${lat}|${lon}`)
+    .update(`${norm}:${latStr}:${lonStr}`)
     .digest('hex');
-}
-
-/**
- * Formats location strictly as: "Road/Area, City/Regency, Province" (Stops at Province)
- */
-function buildStandardLocation({ road, suburb, city, province, lat, lon, sourceId }) {
-  const normProvince = normalizeProvinceName(province, city);
-  const primaryWay = (road || suburb || '').trim();
-  const cleanCity = (city || '').trim();
-
-  const parts = [];
-  if (primaryWay) parts.push(primaryWay);
-  if (cleanCity && cleanCity.toLowerCase() !== primaryWay.toLowerCase()) {
-    parts.push(cleanCity);
-  }
-  if (normProvince && normProvince.toLowerCase() !== cleanCity.toLowerCase()) {
-    parts.push(normProvince);
-  }
-
-  const formatted = parts.join(', ');
-  const numLat = Number(lat);
-  const numLon = Number(lon);
-
-  const token = signLocationToken(formatted, numLat, numLon);
-
-  return {
-    id: sourceId || `loc-${crypto.createHash('md5').update(formatted).digest('hex').slice(0, 10)}`,
-    formatted,
-    road: primaryWay,
-    city: cleanCity,
-    province: normProvince,
-    lat: Number.isFinite(numLat) ? numLat : null,
-    lon: Number.isFinite(numLon) ? numLon : null,
-    selectionToken: token,
-  };
 }
 
 export function isWithinIndonesiaBounds(lat, lon) {
@@ -205,51 +73,273 @@ export function isWithinIndonesiaBounds(lat, lon) {
 }
 
 /**
- * Queries Photon (Komoot's free OSM autocomplete engine) bounded to Indonesia
+ * 1. DECONSTRUCTOR:
+ * Splits "Perumahan Green Permata, Blok Olive 9, Pesanggrahan" into:
+ * - estateOrComplex: "Perumahan Green Permata"
+ * - microUnit: "Blok Olive 9"
+ * - searchCandidates: ordered from most specific to broadest so OSM doesn't choke on "Blok Olive 9"
  */
-async function queryPhotonIndonesia(candidateQuery, limit = 8) {
+export function deconstructIndonesianAddress(rawQuery) {
+  const raw = String(rawQuery || '').trim();
+  if (!raw) return { raw: '', estateOrComplex: '', microUnit: '', searchCandidates: [] };
+
+  // Extract micro-unit details (Blok X, No. Y, RT/RW, Kavling, Lantai)
+  const microRegex =
+    /\b((?:blok|block|no|nomor|rt|rw|kav|kavling|unit|lt|lantai)\b\s*[.:/-]?\s*[a-z0-9]+(?:\s+[a-z0-9/-]+)?)/gi;
+  const microMatches = [];
+  let match;
+  while ((match = microRegex.exec(raw)) !== null) {
+    microMatches.push(match[1].trim());
+  }
+  const microUnit = microMatches.join(', ');
+
+  // Extract explicit Estate / Perumahan / Cluster / Apartemen name if typed by user
+  const estateRegex =
+    /\b((?:perumahan|perum|komplek|komp|cluster|apartemen|apt|villa|graha|griyo|griya|pesona|taman)\s+[a-z0-9\s.'-]+?)(?=,|$|\b(?:blok|no|rt|rw|jl|jalan)\b)/i;
+  const estateMatch = raw.match(estateRegex);
+  const estateOrComplex = estateMatch ? estateMatch[1].trim() : '';
+
+  // Remove micro-unit details (like "Blok Olive 9") from the geocoder search string
+  // because OSM does not index individual block numbers
+  const withoutMicro = raw
+    .replace(microRegex, '')
+    .replace(/\b(?:jl|jln)\.?\s+/gi, 'Jalan ')
+    .replace(/\bgg\.?\s+/gi, 'Gang ')
+    .replace(/,\s*,+/g, ',')
+    .replace(/^,\s*|\s*,\s*$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Strip the word "Perumahan/Komplek/Cluster" for an alternative search candidate
+  // because OSM often names the polygon "Green Permata" instead of "Perumahan Green Permata"
+  const coreNameQuery = withoutMicro
+    .replace(/\b(?:perumahan|perum|komplek|komp|cluster)\s+/gi, '')
+    .trim();
+
+  // Also split comma segments so if "Green Permata, Pesanggrah" fails, we can search "Green Permata" and "Pesanggrah"
+  const segments = withoutMicro
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 3);
+
+  const candidates = new Set();
+  if (withoutMicro.length >= 2) candidates.add(withoutMicro);
+  if (coreNameQuery.length >= 2) candidates.add(coreNameQuery);
+
+  // If user typed "Perumahan Green Permata, Pesanggrah", try the first segment ("Green Permata")
+  // and last segment ("Pesanggrah") if full string yields few matches
+  if (segments.length >= 2) {
+    const firstCore = segments[0].replace(/\b(?:perumahan|perum|komplek|cluster)\s+/gi, '').trim();
+    if (firstCore.length >= 3) candidates.add(firstCore);
+    candidates.add(`${firstCore} ${segments[segments.length - 1]}`);
+    candidates.add(segments[segments.length - 1]);
+  }
+
+  // Also extract "Jalan ..." street name if present
+  const jalanMatch = withoutMicro.match(/\b(Jalan\s+[a-z0-9\s.'-]+?)(?=,|$)/i);
+  if (jalanMatch && jalanMatch[1].trim().length >= 5) {
+    candidates.add(jalanMatch[1].trim());
+  }
+
+  return {
+    raw,
+    estateOrComplex,
+    microUnit,
+    searchCandidates: Array.from(candidates),
+  };
+}
+
+/**
+ * Builds search candidates for geocoding queries, maintaining backwards compatibility
+ */
+export function buildIndonesianSearchCandidates(rawInput) {
+  const raw = String(rawInput || '').trim();
+  if (!raw) return [];
+
+  // Special shortcut: "Jl" -> "Jalan Raya" for quick autocomplete
+  if (/^jl\.?$/i.test(raw)) {
+    return ['Jalan Raya'];
+  }
+
+  const deconstructed = deconstructIndonesianAddress(raw);
+  const candidates = new Set(deconstructed.searchCandidates);
+
+  // Progressive cleaner: replace "Jl" with "Jalan", strip RT/RW and No.
+  const cleaned = raw
+    .replace(/\b(?:jl|jln)\.?\s+/gi, 'Jalan ')
+    .replace(/\b(?:rt|rw)\s*\/?\s*\d+\s*\/?\s*\d*/gi, '')
+    .replace(/\bno\.?\s*\d+[a-z]?\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (cleaned.length >= 3) {
+    candidates.add(cleaned);
+  }
+
+  // Extract core street if "Jalan ..." exists
+  const streetMatch = cleaned.match(/Jalan\s+[a-z0-9\s]+?(?=,|$)/i);
+  if (streetMatch && streetMatch[0].trim().length >= 5) {
+    candidates.add(streetMatch[0].trim());
+  }
+
+  return Array.from(candidates);
+}
+
+/**
+ * Fixes province mismatches (like Jakarta Selatan showing "Banten")
+ */
+export function resolveAccurateProvince(rawProvince, city = '', district = '') {
+  const combined = `${city} ${district} ${rawProvince}`.toLowerCase();
+
+  // Strict override: Any Jakarta administrative city/kecamatan is ALWAYS DKI Jakarta
+  if (
+    /jakarta\s+(selatan|pusat|barat|timur|utara)|kepulauan\s+seribu|pesanggrahan|kebayoran|cilandak|tebet|setiabudi|mampang|pancoran|jagakarsa|pasar\s+minggu/i.test(
+      combined
+    )
+  ) {
+    return 'DKI Jakarta';
+  }
+  if (/kota\s+depok|kota\s+bekasi|kabupaten\s+bekasi|kota\s+bogor|kabupaten\s+bogor|kota\s+bandung/i.test(combined)) {
+    return 'Jawa Barat';
+  }
+  if (/tangerang|cilegon|serang|lebakk|pandeglang/i.test(combined)) {
+    return 'Banten';
+  }
+  if (/yogyakarta|sleman|bantul|kulon\s+progo|gunung\s+kidul/i.test(combined)) {
+    return 'Daerah Istimewa Yogyakarta';
+  }
+
+  const pLower = String(rawProvince || '').toLowerCase();
+  const found = INDONESIAN_PROVINCES.find(
+    (p) => p.toLowerCase() === pLower || pLower.includes(p.toLowerCase())
+  );
+  return found || rawProvince || '';
+}
+
+/**
+ * 2. FULL HIERARCHY EXTRACTOR + RE-COMPOSITOR:
+ * Extracts Perumahan -> Jalan -> Kelurahan -> Kecamatan -> Kota -> Provinsi
+ * AND re-attaches the user's "Blok Olive 9" / "Perumahan Green Permata" so nothing is lost.
+ */
+export function composeDetailedIndonesianLocation(osmData, deconstructed = {}) {
+  const {
+    name = '',
+    road = '',
+    residential = '',
+    neighbourhood = '',
+    kelurahan = '',
+    kecamatan = '',
+    city = '',
+    province = '',
+    lat = 0,
+    lon = 0,
+    sourceId,
+  } = osmData;
+
+  const { estateOrComplex = '', microUnit = '' } = deconstructed;
+  const trueProvince = resolveAccurateProvince(province, city, kecamatan);
+
+  // Determine the most specific place/estate name
+  // Priority: 1. OSM residential/estate name, 2. User's typed "Perumahan X"
+  let primaryPlace = residential || neighbourhood || name || '';
+  if (
+    estateOrComplex &&
+    (!primaryPlace ||
+      primaryPlace.toLowerCase() === kecamatan.toLowerCase() ||
+      primaryPlace.toLowerCase() === kelurahan.toLowerCase())
+  ) {
+    primaryPlace = estateOrComplex;
+  }
+
+  // Build Headline (Line 1 in dropdown):
+  // e.g. "Perumahan Green Permata, Blok Olive 9" or "Perumahan Green Permata, Jl. Swadarma Raya"
+  const headlineParts = [];
+  if (primaryPlace) headlineParts.push(primaryPlace);
+  if (microUnit && !primaryPlace.toLowerCase().includes(microUnit.toLowerCase())) {
+    headlineParts.push(microUnit);
+  }
+  if (road && road.toLowerCase() !== primaryPlace.toLowerCase()) {
+    headlineParts.push(road);
+  }
+
+  // Build Administrative Subtitle (Line 2 in dropdown, stopping cleanly at Province):
+  // e.g. "Ulujami, Kec. Pesanggrahan, Kota Jakarta Selatan, DKI Jakarta"
+  const adminParts = [];
+  if (kelurahan) adminParts.push(kelurahan);
+  if (kecamatan && kecamatan.toLowerCase() !== kelurahan.toLowerCase()) {
+    adminParts.push(kecamatan.startsWith('Kec.') ? kecamatan : `Kec. ${kecamatan}`);
+  }
+  if (
+    city &&
+    city.toLowerCase() !== kecamatan.toLowerCase() &&
+    !city.toLowerCase().includes('daerah khusus ibukota')
+  ) {
+    adminParts.push(city);
+  }
+  if (trueProvince) {
+    adminParts.push(trueProvince);
+  }
+
+  // Deduplicate across headline and adminParts
+  const headline = headlineParts.join(', ') || adminParts[0] || '';
+  const subtitle = adminParts.filter((p) => p.toLowerCase() !== headline.toLowerCase()).join(', ');
+  const fullFormatted = [headline, subtitle].filter(Boolean).join(', ');
+
+  const token = signLocationToken(fullFormatted, lat, lon);
+
+  return {
+    id: sourceId || `id-${crypto.createHash('md5').update(fullFormatted).digest('hex').slice(0, 10)}`,
+    headline,
+    subtitle,
+    formatted: fullFormatted,
+    selectionToken: token,
+    estate: primaryPlace,
+    unit: microUnit,
+    road,
+    kelurahan,
+    kecamatan,
+    city,
+    province: trueProvince,
+    lat: Number(lat),
+    lon: Number(lon),
+  };
+}
+
+/**
+ * 3. MULTI-ENGINE FREE QUERIES (Photon for Prefix Autocomplete + Nominatim for Deep Address Details)
+ */
+async function fetchPhoton(candidate, deconstructed) {
   const bbox = `${ID_BOUNDS.minLon},${ID_BOUNDS.minLat},${ID_BOUNDS.maxLon},${ID_BOUNDS.maxLat}`;
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(candidateQuery)}&bbox=${bbox}&limit=${limit}`;
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(candidate)}&bbox=${bbox}&limit=6`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 1800);
-
   try {
-    const resp = await fetch(url, {
-      headers: {
-        'User-Agent': 'Kalceria-Platform/1.0 (contact@kalceria.com)',
-        Accept: 'application/json',
-      },
-      signal: controller.signal,
-    });
-    if (!resp.ok) return [];
-    const data = await resp.json();
-    if (!Array.isArray(data?.features)) return [];
-
-    return data.features
-      .filter((f) => {
-        const cc = f.properties?.countrycode?.toUpperCase();
-        return !cc || cc === 'ID';
-      })
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.features || [])
+      .filter((f) => !f.properties?.countrycode || f.properties.countrycode.toUpperCase() === 'ID')
       .map((f) => {
         const p = f.properties || {};
-        const [lon, lat] = Array.isArray(f.geometry?.coordinates) ? f.geometry.coordinates : [];
-        const road = p.street || p.name || '';
-        const suburb = p.district || p.locality || '';
-        const city = p.city || p.county || p.municipality || '';
-        const province = p.state || '';
-
-        return buildStandardLocation({
-          road,
-          suburb,
-          city,
-          province,
-          lat,
-          lon,
-          sourceId: `photon-${p.osm_id || Math.random()}`,
-        });
-      })
-      .filter((loc) => loc.formatted && loc.province);
+        const [lon, lat] = f.geometry?.coordinates || [];
+        return composeDetailedIndonesianLocation(
+          {
+            name: p.name || '',
+            road: p.street || '',
+            residential: p.osm_key === 'landuse' ? p.name : '',
+            neighbourhood: p.district || '',
+            kelurahan: p.locality || '',
+            kecamatan: p.district || '',
+            city: p.city || p.county || '',
+            province: p.state || '',
+            lat,
+            lon,
+            sourceId: `photon-${p.osm_id}`,
+          },
+          deconstructed
+        );
+      });
   } catch {
     return [];
   } finally {
@@ -257,53 +347,39 @@ async function queryPhotonIndonesia(candidateQuery, limit = 8) {
   }
 }
 
-/**
- * Queries Nominatim bounded to countrycodes=id
- */
-async function queryNominatimIndonesia(candidateQuery, limit = 8) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=id&limit=${limit}&q=${encodeURIComponent(candidateQuery)}`;
+async function fetchNominatim(candidate, deconstructed) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&namedetails=1&countrycodes=id&limit=6&q=${encodeURIComponent(candidate)}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 2000);
-
   try {
-    const resp = await fetch(url, {
+    const res = await fetch(url, {
       headers: {
         'User-Agent': 'Kalceria-Platform/1.0 (contact@kalceria.com)',
         'Accept-Language': 'id,en',
-        Accept: 'application/json',
       },
       signal: controller.signal,
     });
-    if (!resp.ok) return [];
-    const data = await resp.json();
-    if (!Array.isArray(data)) return [];
-
-    return data
-      .map((item) => {
-        const addr = item.address || {};
-        const road = addr.road || addr.pedestrian || addr.street || addr.residential || item.name || '';
-        const suburb = addr.suburb || addr.village || addr.neighbourhood || '';
-        const city =
-          addr.city ||
-          addr.town ||
-          addr.municipality ||
-          addr.county ||
-          addr.city_district ||
-          '';
-        const province = addr.state || addr.province || addr.region || '';
-
-        return buildStandardLocation({
-          road,
-          suburb,
-          city,
-          province,
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data || []).map((item) => {
+      const a = item.address || {};
+      return composeDetailedIndonesianLocation(
+        {
+          name: item.name || item.namedetails?.name || '',
+          residential: a.residential || a.neighbourhood || a.quarter || a.hamlet || '',
+          road: a.road || a.pedestrian || a.street || a.footway || '',
+          kelurahan: a.village || a.suburb || '',
+          kecamatan: a.city_district || a.municipality || a.town || '',
+          city: a.city || a.county || a.state_district || '',
+          province: a.state || a.province || a.region || '',
           lat: item.lat,
           lon: item.lon,
-          sourceId: `osm-${item.place_id || item.osm_id}`,
-        });
-      })
-      .filter((loc) => loc.formatted && loc.province);
+          sourceId: `osm-${item.place_id}`,
+        },
+        deconstructed
+      );
+    });
   } catch {
     return [];
   } finally {
@@ -313,10 +389,6 @@ async function queryNominatimIndonesia(candidateQuery, limit = 8) {
 
 /**
  * Validates whether a submitted location is an authentic Indonesian location.
- * Supports:
- * 1. Signed object/token from autocomplete list
- * 2. Exact match in Redis-cached verified search results
- * 3. Structured string "Road/Area, City/Kabupaten, Province" ending in a valid province
  */
 export function isValidIndonesianLocation(locationInput, options = {}) {
   // Case 1: Object or options with cryptographic selectionToken
@@ -348,11 +420,10 @@ export function isValidIndonesianLocation(locationInput, options = {}) {
     return true;
   }
 
-  // Reject gibberish without comma-separated structure (must have at least "Area/Road, Province" or "City, Province")
+  // Reject gibberish without comma-separated structure
   const segments = clean.split(',').map((s) => s.trim()).filter(Boolean);
   if (segments.length < 2) return false;
 
-  // Must contain a valid Indonesian street/area prefix OR at least 2 segments where the final/penultimate segment is a real Indonesian Province
   const lastSegment = segments[segments.length - 1].toLowerCase();
   const secondLastSegment = segments.length >= 2 ? segments[segments.length - 2].toLowerCase() : '';
 
@@ -363,7 +434,6 @@ export function isValidIndonesianLocation(locationInput, options = {}) {
 
   if (!matchesProvince) return false;
 
-  // Ensure the first segment isn't random keyboard mash (must contain recognizable letters & valid address tokens)
   const firstSegment = segments[0];
   if (!/^[a-zA-Z0-9\s.,'()/-]{3,}$/.test(firstSegment)) return false;
 
@@ -371,8 +441,7 @@ export function isValidIndonesianLocation(locationInput, options = {}) {
 }
 
 /**
- * GET /api/location/search?q=...
- * Autocomplete endpoint that handles "Jl", "Perumahan Azul, Jl Swadarma Raya, RT/RW 02", etc.
+ * 4. MAIN SEARCH CONTROLLER
  */
 export async function searchIndonesianLocations(req, res) {
   const rawQuery = typeof req.query?.q === 'string' ? req.query.q.trim() : '';
@@ -380,42 +449,36 @@ export async function searchIndonesianLocations(req, res) {
     return res.json({ results: [] });
   }
 
-  const cacheKey = `geo:search:v2:${rawQuery.toLowerCase()}`;
+  const cacheKey = `geo:search:v3:${rawQuery.toLowerCase()}`;
   const cached = await getCache(cacheKey);
   if (cached) {
     return res.json({ results: cached });
   }
 
-  const candidates = buildIndonesianSearchCandidates(rawQuery);
+  const deconstructed = deconstructIndonesianAddress(rawQuery);
   const combined = [];
   const seen = new Set();
 
-  const addUnique = (items) => {
-    for (const item of items) {
+  for (const candidate of deconstructed.searchCandidates) {
+    const [photonResults, nominatimResults] = await Promise.all([
+      fetchPhoton(candidate, deconstructed),
+      fetchNominatim(candidate, deconstructed),
+    ]);
+
+    for (const item of [...nominatimResults, ...photonResults]) {
+      if (!item.province) continue;
       const key = item.formatted.toLowerCase();
-      if (!seen.has(key) && item.formatted.includes(',')) {
+      if (!seen.has(key)) {
         seen.add(key);
         combined.push(item);
       }
     }
-  };
 
-  // Progressive candidate resolution:
-  for (const candidate of candidates) {
-    const [photonMatches, nominatimMatches] = await Promise.all([
-      queryPhotonIndonesia(candidate, 8),
-      queryNominatimIndonesia(candidate, 6),
-    ]);
-
-    addUnique(photonMatches);
-    addUnique(nominatimMatches);
-
-    if (combined.length >= 5) break;
+    if (combined.length >= 4) break;
   }
 
-  const results = combined.slice(0, 10);
+  const results = combined.slice(0, 8);
 
-  // Cache every returned formatted string in Redis so server-side validation can verify it was on the list
   if (results.length > 0) {
     await setCache(cacheKey, results, CACHE_TTL_SEC);
     for (const r of results) {
@@ -426,9 +489,6 @@ export async function searchIndonesianLocations(req, res) {
   return res.json({ results });
 }
 
-/**
- * Helper to check in your form submission controller if the location was actually in the search results list
- */
 export async function isLocationFromVerifiedList(locationStr, selectionToken, lat, lon) {
   if (typeof locationStr !== 'string' || !locationStr.trim()) return false;
   const clean = locationStr.trim();
@@ -447,10 +507,6 @@ export async function isLocationFromVerifiedList(locationStr, selectionToken, la
   return isValidIndonesianLocation(clean);
 }
 
-/**
- * GET /api/location/reverse?lat=...&lng=...
- * Used when the user taps "Allow to identify location"
- */
 export async function reverseGeocodeLocation(req, res) {
   const lat = Number(req.query?.lat);
   const lng = Number(req.query?.lng ?? req.query?.lon);
@@ -465,7 +521,7 @@ export async function reverseGeocodeLocation(req, res) {
     });
   }
 
-  const cacheKey = `geo:rev:v2:${lat.toFixed(4)},${lng.toFixed(4)}`;
+  const cacheKey = `geo:rev:v3:${lat.toFixed(4)},${lng.toFixed(4)}`;
   const cached = await getCache(cacheKey);
   if (cached) {
     return res.json(cached);
@@ -489,13 +545,22 @@ export async function reverseGeocodeLocation(req, res) {
 
     if (resp.ok) {
       const data = await resp.json();
-      const addr = data.address || {};
-      const road = addr.road || addr.pedestrian || addr.street || addr.residential || '';
-      const suburb = addr.suburb || addr.village || addr.neighbourhood || '';
-      const city = addr.city || addr.town || addr.municipality || addr.county || addr.city_district || '';
-      const province = addr.state || addr.province || addr.region || '';
-
-      const built = buildStandardLocation({ road, suburb, city, province, lat, lon: lng });
+      const a = data.address || {};
+      const deconstructed = { estateOrComplex: '', microUnit: '' };
+      const built = composeDetailedIndonesianLocation(
+        {
+          name: a.residential || a.building || a.neighbourhood || '',
+          road: a.road || a.pedestrian || a.street || a.residential || '',
+          kelurahan: a.village || a.suburb || '',
+          kecamatan: a.city_district || a.municipality || a.town || '',
+          city: a.city || a.county || '',
+          province: a.state || a.province || '',
+          lat,
+          lon: lng,
+          sourceId: `osm-rev-${data.place_id || ''}`,
+        },
+        deconstructed
+      );
       const responseData = { ...built, lng };
 
       await setCache(cacheKey, responseData, CACHE_TTL_SEC);
@@ -504,7 +569,7 @@ export async function reverseGeocodeLocation(req, res) {
     }
   } catch {}
 
-  // 2. Secondary Fallback: Photon Reverse Geocode (never fake Depok!)
+  // 2. Secondary Fallback: Photon Reverse Geocode
   try {
     const photonUrl = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`;
     const controller = new AbortController();
@@ -517,14 +582,21 @@ export async function reverseGeocodeLocation(req, res) {
       const data = await resp.json();
       const p = data?.features?.[0]?.properties;
       if (p) {
-        const built = buildStandardLocation({
-          road: p.street || p.name || '',
-          suburb: p.district || p.locality || '',
-          city: p.city || p.county || '',
-          province: p.state || '',
-          lat,
-          lon: lng,
-        });
+        const deconstructed = { estateOrComplex: '', microUnit: '' };
+        const built = composeDetailedIndonesianLocation(
+          {
+            name: p.name || '',
+            road: p.street || '',
+            kelurahan: p.locality || '',
+            kecamatan: p.district || '',
+            city: p.city || p.county || '',
+            province: p.state || '',
+            lat,
+            lon: lng,
+            sourceId: `photon-rev-${p.osm_id || ''}`,
+          },
+          deconstructed
+        );
         const responseData = { ...built, lng };
         await setCache(cacheKey, responseData, CACHE_TTL_SEC);
         await setCache(`geo:verified:${built.formatted.toLowerCase()}`, responseData, CACHE_TTL_SEC);
@@ -533,7 +605,6 @@ export async function reverseGeocodeLocation(req, res) {
     }
   } catch {}
 
-  // 3. Honest error response if both geocoders are unreachable
   return res.status(503).json({
     error: 'Unable to automatically resolve street address right now. Please search and select your street from the list.',
   });
