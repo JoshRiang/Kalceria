@@ -369,3 +369,4 @@ export const miniEventDefense = createIngressShield({
   burstWindow: 30,
   formName: 'Mini Event Form',
 });
+

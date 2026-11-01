@@ -70,8 +70,9 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             />
           )}
 
-          {/* Find The Others Button - Firm Typography (No Outer Box) */}
-          <motion.button
+          {/* Find The Others Button - 3D Typography (Same font, 3D-ness, size & behavior) */}
+          <button
+            type="button"
             onClick={() => {
               sessionStorage.setItem("landingScrollTarget", "section-map");
               sessionStorage.setItem("landingScrollY", window.scrollY);
@@ -79,19 +80,18 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               sessionStorage.setItem("playMapIntro", "true");
               window.location.href = "/map";
             }}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.95 }}
-            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer transition-transform duration-300 focus:outline-none"
+            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer focus:outline-none active:scale-[0.98] transition-transform"
           >
             <span 
-              className="font-sans font-black uppercase tracking-tighter text-lg sm:text-2xl md:text-3xl text-white hover:text-cyan-300 transition-colors whitespace-nowrap select-none"
+              className="font-sans font-black uppercase tracking-tighter text-xl xs:text-2xl sm:text-3xl md:text-4xl text-white whitespace-nowrap select-none"
               style={{
-                textShadow: "0 0 25px rgba(255,255,255,0.9), 0 2px 10px rgba(0,0,0,0.9), 0 0 50px rgba(6,182,212,0.6)"
+                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
+                filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
               }}
             >
               FIND THE OTHERS
             </span>
-          </motion.button>
+          </button>
 
           {/* Earthman - Desktop Hero Figure at Bottom */}
           {!isMobile && (
@@ -343,7 +343,8 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              transition={{ duration: 1, ease: "easeOut" }}
              className="w-full max-w-2xl mx-auto text-center text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter text-white select-none"
              style={{ 
-               textShadow: "2px 2px 0px #444, 4px 4px 0px #222, 0 0 30px rgba(255,255,255,0.2)"
+               textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
+                filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
              }}
            >
              JOIN US
@@ -373,26 +374,26 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              />
            </a>
 
-           {/* 4. See The Journey Button - Pure Firm Typography (No Outer Box) */}
-           <Link href="/journey" onClick={() => {
-             sessionStorage.setItem("landingScrollTarget", "section-journey");
-             sessionStorage.setItem("landingScrollY", window.scrollY);
-           }}>
-             <motion.button
-               whileHover={{ scale: 1.08 }}
-               whileTap={{ scale: 0.95 }}
-               className="relative mx-auto z-30 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer transition-transform duration-300 focus:outline-none"
-             >
-               <span 
-                 className="font-sans font-black uppercase tracking-tighter text-xl sm:text-3xl md:text-4xl text-white hover:text-emerald-300 transition-colors whitespace-nowrap select-none"
-                 style={{
-                   textShadow: "0 0 30px rgba(255,255,255,0.9), 0 2px 12px rgba(0,0,0,0.9), 0 0 60px rgba(52,211,153,0.5)"
-                 }}
-               >
-                 SEE THE JOURNEY
-               </span>
-             </motion.button>
-           </Link>
+           {/* 4. See The Journey Button - 3D Typography (Same font, 3D-ness, size & behavior) */}
+            <Link href="/journey" onClick={() => {
+              sessionStorage.setItem("landingScrollTarget", "section-journey");
+              sessionStorage.setItem("landingScrollY", window.scrollY);
+            }}>
+              <button
+                type="button"
+                className="relative mx-auto z-30 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer focus:outline-none active:scale-[0.98] transition-transform"
+              >
+                <span 
+                  className="font-sans font-black uppercase tracking-tighter text-xl xs:text-2xl sm:text-3xl md:text-4xl text-white whitespace-nowrap select-none"
+                  style={{
+                    textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
+                    filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
+                  }}
+                >
+                  SEE THE JOURNEY
+                </span>
+              </button>
+            </Link>
         </div>
       </section>
 
@@ -496,22 +497,22 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              </h2>
            </motion.div>
 
-           {/* Leave it here - Distinctive Typography, Not Uppercase, Firm, No Outer Box */}
-           <motion.button
-             onClick={onOpenIdeaModal}
-             whileHover={{ scale: 1.06 }}
-             whileTap={{ scale: 0.96 }}
-             className="relative group cursor-pointer z-40 focus:outline-none bg-transparent border-none p-0 flex items-center justify-center mx-auto"
-           >
-             <span 
-               className="font-sans font-bold normal-case text-xl sm:text-2xl md:text-3xl text-cyan-400 hover:text-cyan-200 transition-colors tracking-wide select-none inline-block underline underline-offset-8 decoration-cyan-400/70 hover:decoration-cyan-200"
-               style={{
-                 textShadow: "0 0 25px rgba(6,182,212,0.9), 0 2px 10px rgba(0,0,0,0.85), 0 0 40px rgba(217,70,239,0.4)"
-               }}
-             >
-               Leave it here
-             </span>
-           </motion.button>
+           {/* Leave It Here Button - 3D Typography (Same font, 3D-ness, size & behavior) */}
+            <button
+              type="button"
+              onClick={onOpenIdeaModal}
+              className="relative cursor-pointer z-40 focus:outline-none bg-transparent border-none p-0 flex items-center justify-center mx-auto active:scale-[0.98] transition-transform"
+            >
+              <span 
+                className="font-sans font-black uppercase tracking-tighter text-xl xs:text-2xl sm:text-3xl md:text-4xl text-white whitespace-nowrap select-none"
+                style={{
+                  textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
+                  filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
+                }}
+              >
+                LEAVE IT HERE
+              </span>
+            </button>
           </div>
           <DungeonGate />
         </section>
