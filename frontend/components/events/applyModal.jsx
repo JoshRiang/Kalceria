@@ -22,7 +22,7 @@ export const ChevronRight = () => (
 
 export function ApplyModal({ events, startIndex, isMobile, onClose }) {
   const [idx, setIdx] = useState(startIndex);
-  const [mode, setMode] = useState("account");
+  const [mode, setMode] = useState(hasUserSession() ? "account" : "guest");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [doneData, setDoneData] = useState(null);
@@ -276,8 +276,9 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
                 </div>
 
                 {error && (
-                  <div className="p-2.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 font-sans text-[11px] font-medium">
-                    {error}
+                  <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-md flex items-center gap-2">
+                    <span className="text-red-400 text-xs font-mono select-none">✕</span>
+                    <span className="font-sans text-xs text-red-200 font-normal">{error}</span>
                   </div>
                 )}
 

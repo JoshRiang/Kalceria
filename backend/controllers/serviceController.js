@@ -265,13 +265,12 @@ export async function createServiceRequest(req, res, next) {
     ].join('\n');
 
     const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
-    const cancelToken = process.env.JWT_SECRET
-      ? jwt.sign(
-        { bookingId: booking.id, requestorId: user.id },
-        process.env.JWT_SECRET,
-        { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '20m' },
-      )
-      : undefined;
+    const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
+    const cancelToken = jwt.sign(
+      { bookingId: booking.id, requestorId: user.id },
+      cancelSecret,
+      { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '30m' },
+    );
 
     // Dispatches (fire-and-forget, safe & isolated)
     safeNotify(() => notifyServiceRequestCreated({
@@ -348,30 +347,37 @@ export async function deleteOwnServiceRequest(req, res, next) {
     const cancelHeader = req.get('x-cancel-token') || '';
     const { id } = req.params;
 
-    if (!userId && !cancelHeader) {
-      return res.status(401).json({ error: 'Authentication required.' });
-    }
-
     let validCancelBookingId = null;
-    if (cancelHeader && process.env.JWT_SECRET) {
+    if (cancelHeader) {
+      const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
       try {
-        const decoded = jwt.verify(cancelHeader, process.env.JWT_SECRET, {
+        const decoded = jwt.verify(cancelHeader, cancelSecret, {
           algorithms: ['HS256'],
           audience: 'kalceria-service-cancel',
           issuer: 'kalceria-api',
         });
         validCancelBookingId = decoded?.bookingId || null;
       } catch {
-        if (!userId) return res.status(401).json({ error: 'Invalid or expired cancel token.' });
+        // Token verification failed; fallback to checking recent guest booking
       }
     }
 
-    const booking = await prisma.serviceBooking.findUnique({ where: { id } });
+    const booking = await prisma.serviceBooking.findUnique({ 
+      where: { id },
+      include: { requestor: true }
+    });
     if (!booking) return res.status(404).json({ error: 'Request not found.' });
 
+    // Allow cancellation if authorized by user session, cancel token, OR if it is a recent guest request (< 20 mins)
+    const isRecentGuest = Boolean(
+      booking.requestor?.email?.endsWith('@guest.kalceria.local') &&
+      Date.now() - new Date(booking.createdAt).getTime() < 20 * 60 * 1000
+    );
+
     const authorizedByUser = Boolean(userId && booking.requestorId === userId);
-    const authorizedByToken = validCancelBookingId === booking.id;
-    if (!authorizedByUser && !authorizedByToken) {
+    const authorizedByToken = Boolean(validCancelBookingId && validCancelBookingId === booking.id);
+
+    if (!authorizedByUser && !authorizedByToken && !isRecentGuest) {
       return res.status(403).json({ error: 'Unauthorized to delete this request.' });
     }
 

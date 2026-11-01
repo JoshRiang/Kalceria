@@ -340,7 +340,10 @@ export function IdeaCommentModal({ onClose }) {
                             </p>
                           )}
                           {error && (
-                            <p className="text-[10px] text-red-500 font-sans mt-1 ml-1">{error}</p>
+                            <div className="p-2.5 bg-red-500/15 border border-red-500/30 rounded-md flex items-center gap-2 mt-2">
+                              <span className="text-red-400 text-xs font-mono select-none">✕</span>
+                              <span className="font-sans text-xs text-red-200 font-normal">{error}</span>
+                            </div>
                           )}
                         </div>
 
@@ -500,7 +503,10 @@ export function IdeaCommentModal({ onClose }) {
                       <span className="text-white/20">/200</span>
                     </div>
                     {error && (
-                      <p className="text-[10px] text-red-500 font-sans mt-1 ml-1">{error}</p>
+                      <div className="p-2.5 bg-red-500/15 border border-red-500/30 rounded-md flex items-center gap-2 mt-2">
+                        <span className="text-red-400 text-xs font-mono select-none">✕</span>
+                        <span className="font-sans text-xs text-red-200 font-normal">{error}</span>
+                      </div>
                     )}
                   </div>
 

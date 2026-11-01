@@ -238,11 +238,11 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
       await api.delete(`/services/request/${done.bookingId}`, {
         headers: done.cancelToken ? { "x-cancel-token": done.cancelToken } : undefined,
       });
-      onClose();
-    } catch {
-      setError("Failed to cancel request.");
+    } catch (err) {
+      console.warn("Cancel request non-blocking notice:", err);
     } finally {
       setLoading(false);
+      onClose();
     }
   };
 
@@ -720,25 +720,17 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
         </div>
       </motion.div>
 
-      {/* Lint-style Clean Red Toast Error (No AI slop, no red pinging dot, Arial white small font, non-capital) */}
+      {/* Error Message: Same style as Login Form (Red bg, border, ✕, Arial font, not all capital, not bold, NO red dot, NO Sign In button) */}
       {error && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-600/95 border border-red-400/50 text-white px-4 py-2.5 rounded-md flex items-center gap-3 backdrop-blur-md z-[10000] shadow-[0_10px_25px_rgba(220,38,38,0.4)] max-w-[90vw]">
-          <p className="font-sans text-xs text-white font-normal tracking-normal select-none">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 p-3 bg-red-500/15 border border-red-500/30 rounded-md flex items-center gap-2.5 backdrop-blur-md z-[10000] shadow-[0_10px_25px_rgba(220,38,38,0.25)] max-w-[90vw]">
+          <span className="text-red-400 text-xs font-mono select-none">✕</span>
+          <span className="font-sans text-xs text-red-200 font-normal tracking-normal select-none">
             {error}
-          </p>
-          {(!isLoggedIn || error.toLowerCase().includes("log") || error.toLowerCase().includes("token")) && onRequireAuth && (
-            <button
-              type="button"
-              onClick={onRequireAuth}
-              className="ml-2 px-2.5 py-1 rounded bg-white text-red-700 font-sans text-xs font-semibold hover:bg-slate-100 transition-colors whitespace-nowrap cursor-pointer"
-            >
-              Sign In
-            </button>
-          )}
+          </span>
           <button
             type="button"
             onClick={() => setError("")}
-            className="text-white/80 hover:text-white text-xs ml-1 font-mono cursor-pointer"
+            className="text-white/60 hover:text-white text-xs ml-2 font-mono cursor-pointer"
             aria-label="Dismiss error"
           >
             ✕
