@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
-import { hasUserSession } from "@/lib/session";
+import { establishSession, hasUserSession } from "@/lib/session";
 import { CLIP } from "./constants";
 import ContentImage from "@/components/ui/ContentImage";
 
@@ -36,12 +36,13 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
   });
 
   useEffect(() => {
-    if (!hasUserSession()) return;
+
     let active = true;
     api.get("/users/me")
       .then((res) => {
         if (!active) return;
         const me = res.data?.user;
+        if (me) establishSession(me);
         if (me?.nickname || me?.name) {
           setForm((prev) => ({
             ...prev,

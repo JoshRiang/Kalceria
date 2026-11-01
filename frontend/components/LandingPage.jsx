@@ -16,7 +16,7 @@ const IdeaCommentModal = dynamic(() => import("./landing/modals/IdeaCommentModal
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { useIsMobileViewport, useIsMobileOrTabletViewport } from "@/hooks/useIsMobileViewport";
 import api from "@/lib/api";
-import { clearSession, hasUserSession } from "@/lib/session";
+import { clearSession, establishSession, hasUserSession } from "@/lib/session";
 
 export default function LandingPage({ onNavigateAuth }) {
   const mounted = useHasMounted();
@@ -107,6 +107,14 @@ export default function LandingPage({ onNavigateAuth }) {
     }
     // Check login status
     setIsLoggedIn(hasUserSession());
+    if (typeof window !== "undefined") {
+      api.get("/users/me").then((res) => {
+        if (res.data?.user) {
+          establishSession(res.data.user);
+          setIsLoggedIn(true);
+        }
+      }).catch(() => {});
+    }
 
     // Smooth scroll restoration on fallback navigation
     const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;

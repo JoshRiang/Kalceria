@@ -42,7 +42,7 @@ export async function createComment(req, res, next) {
 
     // Verify claimed username matches authenticated user
     if (identity === 'User' && dbUser && typeof username === 'string' && username.trim().length > 0) {
-      const allowedNames = [dbUser.nickname, dbUser.name, dbUser.email]
+      const allowedNames = [dbUser.nickname, dbUser.name, dbUser.email, 'user', 'authenticated user']
         .filter(Boolean)
         .map((s) => s.trim().toLowerCase());
       if (!allowedNames.includes(username.trim().toLowerCase())) {

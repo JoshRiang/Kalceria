@@ -308,6 +308,49 @@ describe('Comment Form Defense & Hardening Vertical Slice', () => {
         prisma.comment.create = originalCreate;
       }
     });
+
+    it('allows authenticated user posting with generic "Authenticated User" or omitting username and assigns verified name', async () => {
+      const originalFindUnique = prisma.user.findUnique;
+      const originalCreate = prisma.comment.create;
+
+      let createdCommentData = null;
+      prisma.user.findUnique = async () => ({
+        id: 'real-user-123',
+        name: 'Ditya Alif',
+        nickname: 'dityalif',
+        email: 'ditya@kalceria.com',
+      });
+      prisma.comment.create = async ({ data }) => {
+        createdCommentData = data;
+        return { id: 'comment-uuid-2', ...data, createdAt: new Date() };
+      };
+
+      try {
+        const req = {
+          body: {
+            content: 'Legitimate advice from verified user without custom handle.',
+            category: 'Event',
+            type: 'ADVICE',
+            identity: 'User',
+            username: 'Authenticated User',
+          },
+          user: { userId: 'real-user-123' },
+          ip: '127.0.0.1',
+          headers: {},
+        };
+        const res = createMockRes();
+
+        await createComment(req, res, () => {});
+
+        assert.equal(res.statusCode, 201);
+        assert.equal(res.body.success, true);
+        assert.equal(createdCommentData.username, 'dityalif');
+        assert.equal(createdCommentData.userId, 'real-user-123');
+      } finally {
+        prisma.user.findUnique = originalFindUnique;
+        prisma.comment.create = originalCreate;
+      }
+    });
   });
 
   describe('4. Input Validation & Boundaries', () => {

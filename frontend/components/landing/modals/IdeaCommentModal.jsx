@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import api from "@/lib/api";
-import { hasUserSession } from "@/lib/session";
+import { establishSession, hasUserSession } from "@/lib/session";
 
 const COMMENT_TYPES = [
   { id: "ADVICE", label: "Advice" },
@@ -41,28 +41,71 @@ export function IdeaCommentModal({ onClose }) {
 
   // Pre-fill active signed-in user's name if authenticated
   useEffect(() => {
-    if (!hasUserSession()) return;
     let active = true;
     api.get("/users/me")
       .then((res) => {
         if (!active) return;
         const me = res.data?.user;
-        if (me?.nickname || me?.name) {
-          setUsername(me.nickname || me.name);
-          setIdentity("User");
+        if (me) {
+          establishSession(me);
+          const name = me.nickname || me.name;
+          if (name) {
+            setUsername(name);
+            setIdentity("User");
+          }
         }
       })
       .catch(() => {});
     return () => { active = false; };
   }, []);
 
+  const handleSelectAuthenticated = async () => {
+    setError("");
+    if (username) {
+      setIdentity("User");
+      return;
+    }
+
+    try {
+      const res = await api.get("/users/me");
+      const me = res.data?.user;
+      if (me) {
+        establishSession(me);
+        const name = me.nickname || me.name;
+        if (name) {
+          setUsername(name);
+          setIdentity("User");
+          return;
+        }
+      }
+    } catch {}
+
+    setError("Please sign in to post as an Authenticated User.");
+    setIdentity("Anonymous");
+  };
+
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setError("");
 
-    if (identity === "User" && !hasUserSession()) {
-      setError("Please sign in to post as an Authenticated User.");
-      return;
+    if (identity === "User") {
+      let activeName = username;
+      if (!activeName) {
+        try {
+          const res = await api.get("/users/me");
+          const me = res.data?.user;
+          if (me) {
+            establishSession(me);
+            activeName = me.nickname || me.name;
+            if (activeName) setUsername(activeName);
+          }
+        } catch {}
+      }
+
+      if (!activeName && !hasUserSession()) {
+        setError("Please sign in to post as an Authenticated User.");
+        return;
+      }
     }
 
     const cleanContent = content.trim();
@@ -78,15 +121,23 @@ export function IdeaCommentModal({ onClose }) {
     setIsSubmitting(true);
     try {
       const clientTag = getClientFingerprint();
+      const payload = {
+        content: cleanContent,
+        category,
+        type: feedbackType,
+        identity: identity === "User" ? "User" : "Anonymous",
+      };
+      if (identity === "User") {
+        if (username?.trim()) {
+          payload.username = username.trim();
+        }
+      } else {
+        payload.username = "Anonymous";
+      }
+
       const submitPromise = api.post(
         "/comments",
-        {
-          content: cleanContent,
-          category,
-          type: feedbackType,
-          username: identity === "User" ? (username.trim() || "User") : "Anonymous",
-          identity: identity === "User" ? "User" : "Anonymous",
-        },
+        payload,
         {
           headers: clientTag ? { "x-client-fingerprint": clientTag } : {},
         }
@@ -328,15 +379,7 @@ export function IdeaCommentModal({ onClose }) {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (!hasUserSession()) {
-                    setError("Please sign in to post as an Authenticated User.");
-                    setIdentity("Anonymous");
-                    return;
-                  }
-                  setIdentity("User");
-                  setError("");
-                }}
+                onClick={handleSelectAuthenticated}
                 className={`py-2 px-1 rounded-lg border text-center transition-all duration-200 outline-none cursor-pointer text-[10px] xs:text-[11px] leading-tight font-sans font-bold tracking-tight overflow-hidden text-ellipsis whitespace-nowrap ${
                   identity === "User"
                     ? "bg-white/20 border-white text-white"

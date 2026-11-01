@@ -2,7 +2,11 @@ const USER_SESSION_KEY = "kalceriaSessionActive";
 const ADMIN_SESSION_KEY = "kalceriaAdminSessionActive";
 
 export function hasUserSession() {
-  return typeof window !== "undefined" && localStorage.getItem(USER_SESSION_KEY) === "true";
+  if (typeof window === "undefined") return false;
+  return (
+    localStorage.getItem(USER_SESSION_KEY) === "true" ||
+    localStorage.getItem(ADMIN_SESSION_KEY) === "true"
+  );
 }
 
 export function hasAdminSession() {
