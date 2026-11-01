@@ -15,14 +15,17 @@ const QUOTES = [
 ];
 
 export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
-  const [startupProgress, setStartupProgress] = useState(0);
+  const [isDark, setIsDark] = useState(false);
+  const isDarkRef = useRef(false);
   const [currentQuote, setCurrentQuote] = useState("Composing the map...");
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const tiltTargetRef = useRef({ x: 0, y: 0 });
+  const barFillRef = useRef(null);
+  const percentTextRef = useRef(null);
   const progressValRef = useRef(0);
   const completedRef = useRef(false);
 
-  // 1. Precision 60 FPS Deterministic Progress Engine
+  // 1. Precision Direct-DOM Hardware rAF Progress Engine (Zero React reconciliation overhead, zero stutter)
   useEffect(() => {
     if (!showStartup) return;
 
@@ -30,6 +33,11 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
     let lastTime = performance.now();
     completedRef.current = false;
     progressValRef.current = 0;
+    isDarkRef.current = false;
+    setIsDark(false);
+
+    if (barFillRef.current) barFillRef.current.style.width = "0%";
+    if (percentTextRef.current) percentTextRef.current.textContent = "0";
 
     const tick = (now) => {
       if (completedRef.current) return;
@@ -52,11 +60,25 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
 
       const next = Math.min(target, current + speed * dt);
       progressValRef.current = next;
-      setStartupProgress(next);
+
+      // Direct DOM updates: eliminates 60/120 FPS React re-renders and CSS transition conflicts
+      if (barFillRef.current) {
+        barFillRef.current.style.width = `${next}%`;
+      }
+      if (percentTextRef.current) {
+        percentTextRef.current.textContent = String(Math.round(next));
+      }
+
+      // Single state update threshold at 50% for smooth theme transition
+      if (next >= 50 && !isDarkRef.current) {
+        isDarkRef.current = true;
+        setIsDark(true);
+      }
 
       if (next >= 99.9 && isReady) {
         completedRef.current = true;
-        setStartupProgress(100);
+        if (barFillRef.current) barFillRef.current.style.width = "100%";
+        if (percentTextRef.current) percentTextRef.current.textContent = "100";
         // Snappy, precise hold: exactly 120ms to register 100%, then immediately dismiss
         const timer = setTimeout(() => {
           onComplete?.();
@@ -74,9 +96,14 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
     };
   }, [showStartup, isReady, onComplete]);
 
-  // 2. High-performance Throttled 3D Tilt Tracking (Isolated to Overlay)
+  // 2. High-performance Throttled 3D Tilt Tracking (Guarded for Mouse/Pointer, disabled on touch/iPad)
   useEffect(() => {
     if (!showStartup) return;
+    // Guard against touch devices (iPad / tablets / mobile) where hover is not supported.
+    // Synthetic touch events on iPad flip tilt and distort 3D perspective.
+    if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(hover: none)").matches) {
+      return;
+    }
 
     let tiltRaf = null;
     const handleMouseMove = (e) => {
@@ -161,21 +188,21 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.32, ease: "easeOut" }}
           className={`fixed inset-0 z-[10000] flex items-center justify-center overflow-hidden transition-colors duration-[1500ms] ease-in-out ${
-            startupProgress < 50 ? "bg-white" : "bg-[#050a14]"
+            !isDark ? "bg-white" : "bg-[#050a14]"
           }`}
           style={{ willChange: "opacity" }}
         >
           {/* Smooth 4x Chevron Dash Transition */}
-          <DominoChevrons active={showStartup} isDark={startupProgress >= 50} />
+          <DominoChevrons active={showStartup} isDark={isDark} />
 
           {/* Faint Vintage Laser Grid (GPU-Optimized) */}
-          <VintageLaserGrid active={showStartup} startupProgress={startupProgress} />
+          <VintageLaserGrid active={showStartup} startupProgress={isDark ? 50 : 0} />
 
           {/* Adaptive Atmospheric Background */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
             <div
               className={`absolute inset-0 transition-colors duration-1000 ${
-                startupProgress < 50
+                !isDark
                   ? "bg-white"
                   : "bg-gradient-to-br from-[#ff006e]/20 via-transparent to-[#ffd60a]/20"
               }`}
@@ -195,7 +222,7 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
                     ease: "linear",
                   }}
                   className={`absolute h-[1px] transition-colors duration-1000 ${
-                    startupProgress < 50 ? "bg-slate-200" : "bg-white"
+                    !isDark ? "bg-slate-200" : "bg-white"
                   }`}
                   style={{
                     top: line.top,
@@ -209,7 +236,7 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
             <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none">
               <h2
                 className={`text-[25vw] font-black tracking-tighter uppercase leading-none transition-colors duration-1000 ${
-                  startupProgress < 50 ? "text-slate-200" : "text-white"
+                  !isDark ? "text-slate-200" : "text-white"
                 }`}
               >
                 KALCERIA
@@ -217,32 +244,30 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
             </div>
           </div>
 
-          {/* Ambient Golden & Magenta Microparticles */}
+          {/* Ambient Golden & Cyan/Magenta Microparticles */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-[5]">
-            {startupProgress >= 10 &&
-              particles.map((p) => {
-                const isDark = startupProgress >= 50;
-                const activeColor = isDark
-                  ? p.color === "#ff006e" ? "#00f0ff" : p.color
-                  : p.color;
+            {particles.map((p) => {
+              const activeColor = isDark
+                ? p.color === "#ff006e" ? "#00f0ff" : p.color
+                : p.color;
 
-                return (
-                  <div
-                    key={p.id}
-                    className="absolute rounded-full blur-[0.5px] pointer-events-none"
-                    style={{
-                      left: p.left,
-                      bottom: "-20px",
-                      width: p.size,
-                      height: p.size,
-                      backgroundColor: activeColor,
-                      boxShadow: `0 0 6px ${activeColor}, 0 0 12px ${activeColor}`,
-                      animation: `floatUp ${p.duration}s linear ${p.delay}s infinite both`,
-                      opacity: p.opacity,
-                    }}
-                  />
-                );
-              })}
+              return (
+                <div
+                  key={p.id}
+                  className="absolute rounded-full blur-[0.5px] pointer-events-none"
+                  style={{
+                    left: p.left,
+                    bottom: "-20px",
+                    width: p.size,
+                    height: p.size,
+                    backgroundColor: activeColor,
+                    boxShadow: `0 0 6px ${activeColor}, 0 0 12px ${activeColor}`,
+                    animation: `floatUp ${p.duration}s linear ${p.delay}s infinite both`,
+                    opacity: p.opacity,
+                  }}
+                />
+              );
+            })}
           </div>
 
           {/* Inner Content that fades in dramatically */}
@@ -261,11 +286,11 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
             >
               <h1
                 className={`text-5xl xs:text-6xl sm:text-7xl md:text-8xl xl:text-9xl font-sans font-black italic tracking-tighter uppercase leading-[0.9] transition-all duration-700 text-center flex flex-col xl:flex-row items-center justify-center gap-1 xl:gap-4 ${
-                  startupProgress < 50 ? "text-slate-800" : "text-white"
+                  !isDark ? "text-slate-800" : "text-white"
                 }`}
                 style={{
                   textShadow:
-                    startupProgress >= 50
+                    isDark
                       ? `
                         2px 2px 0 #1a1a24,
                         4px 4px 0 #1a1a24,
@@ -291,8 +316,19 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
 
             {/* Floating Kalcerman Revisi Hero Image (Desktop & iPad/Tablet family) */}
             <AnimatePresence>
-              {startupProgress >= 50 && (
-                <div className="hidden md:flex relative w-full max-w-[520px] md:max-w-[640px] lg:max-w-[760px] xl:max-w-[900px] h-[280px] sm:h-[340px] md:h-[420px] lg:h-[480px] xl:h-[520px] flex-col items-center justify-center my-2 sm:my-3 md:my-4 z-20 mx-auto">
+              {isDark && (
+                <motion.div
+                  key="kalcermanmap-revisi-entrance"
+                  initial={{ x: -1200, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 1200, opacity: 0 }}
+                  transition={{
+                    x: { type: "spring", stiffness: 50, damping: 14 },
+                    opacity: { duration: 0.4 },
+                  }}
+                  className="hidden sm:flex relative w-full max-w-[480px] sm:max-w-[560px] md:max-w-[640px] lg:max-w-[760px] xl:max-w-[900px] h-[260px] sm:h-[320px] md:h-[420px] lg:h-[480px] xl:h-[520px] flex-col items-center justify-center my-2 sm:my-3 md:my-4 z-20 mx-auto pointer-events-none"
+                  style={{ willChange: "transform, opacity" }}
+                >
                   {/* Glowing 3D Grid Floor when background is dark */}
                   <div
                     className="absolute bottom-[-40px] md:bottom-[-60px] w-[360px] sm:w-[480px] md:w-[640px] lg:w-[800px] h-[160px] md:h-[240px] opacity-25 pointer-events-none transition-all duration-1000 ease-out"
@@ -322,21 +358,13 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
                       justifyContent: "center",
                     }}
                   >
-                    {/* Floating Character - Inherits the left-to-center spring movement */}
+                    {/* Floating Character - Vertical bobbing inside 3D perspective */}
                     <motion.div
-                      key="kalcermanmap-revisi"
-                      initial={{ x: "-100vw", opacity: 0, scale: 0.7 }}
+                      key="kalcermanmap-revisi-sprite"
                       animate={{
-                        x: 0,
-                        opacity: 1,
-                        scale: 1,
                         y: [0, -16, 0],
                       }}
-                      exit={{ x: "100vw", opacity: 0 }}
                       transition={{
-                        x: { type: "spring", stiffness: 60, damping: 14 },
-                        opacity: { duration: 0.5 },
-                        scale: { duration: 0.5 },
                         y: {
                           repeat: Infinity,
                           duration: 3.2,
@@ -366,7 +394,7 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
                       />
                     </motion.div>
                   </div>
-                </div>
+                </motion.div>
               )}
             </AnimatePresence>
 
@@ -383,7 +411,7 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
                       exit={{ opacity: 0, y: -6 }}
                       transition={{ duration: 0.25, ease: "easeOut" }}
                       className={`text-[11px] sm:text-xs md:text-sm font-normal tracking-wide transition-colors duration-700 ${
-                        startupProgress < 50 ? "text-slate-500" : "text-white"
+                        !isDark ? "text-slate-500" : "text-white"
                       }`}
                       style={{ fontFamily: "Arial, sans-serif" }}
                     >
@@ -394,10 +422,10 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
                 <div className="text-right">
                   <span
                     className={`text-3xl sm:text-4xl md:text-5xl font-sans font-black tracking-tighter leading-none transition-colors duration-700 ${
-                      startupProgress < 50 ? "text-slate-800" : "text-white"
+                      !isDark ? "text-slate-800" : "text-white"
                     }`}
                   >
-                    {Math.round(startupProgress)}
+                    <span ref={percentTextRef}>0</span>
                     <span className="text-[14px] sm:text-[20px] ml-1 opacity-40">%</span>
                   </span>
                 </div>
@@ -406,19 +434,20 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
               {/* Progress Bar (Crisp, Smooth, No Elastic Jitter) */}
               <div
                 className={`relative h-2.5 sm:h-3.5 md:h-4 w-full overflow-hidden border transition-colors duration-700 ${
-                  startupProgress < 50
+                  !isDark
                     ? "bg-slate-100 border-slate-200"
                     : "bg-white/5 border-white/10"
                 }`}
               >
                 <div
-                  className={`absolute top-0 left-0 h-full transition-all duration-75 ease-out ${
-                    startupProgress < 50
+                  ref={barFillRef}
+                  className={`absolute top-0 left-0 h-full transition-none ${
+                    !isDark
                       ? "bg-slate-600"
                       : "bg-gradient-to-r from-[#ff6f00] via-[#ffd60a] to-[#ffc300] shadow-[0_0_25px_#ffd60a]"
                   }`}
                   style={{
-                    width: `${startupProgress}%`,
+                    width: "0%",
                     willChange: "width",
                   }}
                 />
