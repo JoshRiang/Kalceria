@@ -201,8 +201,29 @@ export default function NeedUsForm({ userName }) {
               ].map(({ k, label, ph, type }) => (
                 <div key={k}>
                   <label className={LABEL}>{label}</label>
-                  <input type={type || "text"} className={INPUT} placeholder={ph}
-                    value={form[k]} onChange={(e) => setField(k, e.target.value)} required />
+                  {k === "whatsapp" ? (
+                    <div className="flex items-center w-full bg-white/5 border border-white/10 rounded-xl overflow-hidden focus-within:border-white/30 transition-all">
+                      <div className="flex items-center pl-3.5 pr-2.5 py-3 text-white font-sans font-bold text-xs select-none border-r border-white/10 bg-white/[0.04] shrink-0">
+                        +62
+                      </div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        className="w-full bg-transparent px-3 py-3 font-mono text-xs text-white outline-none placeholder:text-white/30"
+                        placeholder="812-3456-7890"
+                        value={(form.whatsapp || "").replace(/^\+?62/, "").replace(/\D/g, "")}
+                        onChange={(e) => {
+                          let raw = (e.target.value || "").replace(/^\+?62/, "").replace(/^0+/, "");
+                          const digits = raw.replace(/\D/g, "");
+                          setField("whatsapp", digits ? `+62${digits}` : "");
+                        }}
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <input type={type || "text"} className={INPUT} placeholder={ph}
+                      value={form[k]} onChange={(e) => setField(k, e.target.value)} required />
+                  )}
                 </div>
               ))}
 
@@ -302,15 +323,15 @@ export default function NeedUsForm({ userName }) {
                 <div className="flex flex-wrap justify-center gap-10 mb-8">
                   <div className="flex items-center gap-3">
                     <div className="w-3.5 h-3.5 rounded-[4px] bg-emerald-500/20 border border-emerald-500/30" />
-                    <span className="font-mono text-[10px] uppercase text-slate-400 tracking-[0.2em] font-black">READY</span>
+                    <span style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }} className="text-white text-xs">Ready</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-3.5 h-3.5 rounded-[4px] bg-red-500/20 border border-red-500/30" />
-                    <span className="font-mono text-[10px] uppercase text-slate-400 tracking-[0.2em] font-black">BUSY</span>
+                    <span style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }} className="text-white text-xs">Busy</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-3.5 h-3.5 rounded-[4px] bg-[#FF00FF] shadow-[0_0_12px_rgba(255,0,255,0.7)]" />
-                    <span className="font-mono text-[10px] uppercase text-slate-400 tracking-[0.2em] font-black">LOCK</span>
+                    <span style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }} className="text-white text-xs">Lock</span>
                   </div>
                 </div>
 

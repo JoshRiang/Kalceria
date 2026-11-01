@@ -575,14 +575,21 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                         <div className="relative z-10 space-y-1">
                           <Field id="serviceName" label="Request Title" type="text" placeholder="Project name/ID" val={form.serviceName} onChange={setField} required />
                           <Field id="contactPerson" label="Operator Name" type="text" placeholder="Full name" val={form.contactPerson} onChange={setField} required />
-                          <Field id="whatsapp" label="Comms Channel" type="tel" placeholder="+62..." val={form.whatsapp} onChange={setField} required />
+                          <Field id="whatsapp" label="Comms Channel" type="tel" placeholder="812-3456-7890" val={form.whatsapp} onChange={setField} required />
                           <Field id="location" label="Deployment Area" type="text" placeholder="City / Venue" val={form.location} onChange={setField} required />
                           <Field id="additionalNotes" label="Technical Brief" type="textarea" placeholder="Specific requirements..." val={form.additionalNotes} onChange={setField} maxLength={50} />
                         </div>
                       </div>
                       
                       {/* Temporal Matrix Section */}
-                      <div className="flex flex-col gap-4 md:gap-6 w-full max-w-[736px] items-center">
+                      <div className="flex flex-col gap-3 sm:gap-4 md:gap-5 w-full max-w-[736px] items-center">
+                        {/* Month Year centered in the space between the upper form and calendar grids */}
+                        <div className="w-full flex items-center justify-center -mb-1 sm:mb-0 select-none">
+                          <span className="text-white/80 font-sans font-medium normal-case tracking-normal text-xs sm:text-sm whitespace-nowrap">
+                            {currentMonthYear}
+                          </span>
+                        </div>
+
                         <div className="flex flex-row gap-2 sm:gap-4 w-full justify-center items-start">
                           {/* Shift 1 */}
                           <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-black/50 border border-white/15 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
@@ -605,27 +612,33 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                           </div>
                         </div>
 
-                        {/* Extended Legend & Counter: Replaced "|" with Month Year e.g. November, 2026 */}
-                        <div className="flex flex-row items-center justify-between gap-2 sm:gap-5 text-[9px] sm:text-[11px] font-black text-white font-sans uppercase tracking-[0.1em] bg-black/50 px-4 sm:px-10 py-3 sm:py-6 rounded-full border border-white/15 shadow-2xl w-full mt-2 sm:mt-4">
-                          <div className="flex flex-row items-center gap-2 sm:gap-8 flex-wrap">
-                            <div className="flex items-center gap-1 sm:gap-4 text-white">
+                        {/* Extended Legend & Counter: Ready, Busy, Lock (Arial, not all capital, not bold) + Week Navigation */}
+                        <div className="flex flex-row items-center justify-between gap-2 sm:gap-5 bg-black/50 px-4 sm:px-10 py-3 sm:py-6 rounded-full border border-white/15 shadow-2xl w-full mt-2 sm:mt-4">
+                          <div className="flex flex-row items-center gap-2.5 sm:gap-6 flex-wrap">
+                            <div 
+                              className="flex items-center gap-1 sm:gap-2 text-white text-[10px] sm:text-[12px]" 
+                              style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'normal', textTransform: 'none' }}
+                            >
                               <div className="w-2 h-2 sm:w-3 sm:h-3 bg-emerald-500 border border-emerald-400 rounded-[2px] sm:rounded-[4px]" /> 
-                              READY
+                              Ready
                             </div>
-                            <div className="flex items-center gap-1 sm:gap-4 text-white">
+                            <div 
+                              className="flex items-center gap-1 sm:gap-2 text-white text-[10px] sm:text-[12px]" 
+                              style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'normal', textTransform: 'none' }}
+                            >
                               <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 border border-red-400 rounded-[2px] sm:rounded-[4px]" /> 
-                              BUSY
+                              Busy
                             </div>
-                            <div className="flex items-center gap-1 sm:gap-4 text-white">
+                            <div 
+                              className="flex items-center gap-1 sm:gap-2 text-white text-[10px] sm:text-[12px]" 
+                              style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'normal', textTransform: 'none' }}
+                            >
                               <div className="w-2 h-2 sm:w-3 sm:h-3 bg-[#FF00FF] border border-[#FF00FF] shadow-[0_0_15px_#FF00FF] rounded-[2px] sm:rounded-[4px]" /> 
-                              LOCK
+                              Lock
                             </div>
                           </div>
                           
-                          <div className="flex flex-row items-center gap-2 sm:gap-4">
-                            <span className="text-white font-sans font-semibold normal-case tracking-normal text-[10px] sm:text-[12px] whitespace-nowrap">
-                              {currentMonthYear}
-                            </span>
+                          <div className="flex flex-row items-center gap-2 sm:gap-3">
                             <span className="text-white/80 font-sans font-medium normal-case tracking-normal text-[10px] sm:text-[12px] whitespace-nowrap">
                               Week {weekOffset + 1}
                             </span>
