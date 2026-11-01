@@ -169,8 +169,8 @@ export default function AdminLoginPage() {
                         className="overflow-hidden"
                       >
                         <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
-                          <span className="text-red-500 text-sm">✕</span>
-                          <span className="text-red-400 font-mono text-xs">{error}</span>
+                          <span className="text-red-500 text-sm select-none">✕</span>
+                          <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
                         </div>
                       </motion.div>
                     )}

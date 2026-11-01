@@ -208,7 +208,12 @@ export function EventsPanel({ initialEvents = [], onRefresh }) {
               ))}
               <button type="button" onClick={addSession} className="text-xs text-slate-500 hover:text-slate-300 underline mt-1">+ Add Session</button>
             </div>
-            {error && <p className="text-red-400 font-mono text-xs">{error}</p>}
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
+                <span className="text-red-500 text-sm select-none">✕</span>
+                <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
+              </div>
+            )}
             <div className="flex gap-3 mt-2">
               <button type="submit" disabled={loading} className={BTN_PRIMARY} style={CLIP_BTN}>
                 {loading ? "Saving..." : editing ? "Update Event" : "Create Event"}

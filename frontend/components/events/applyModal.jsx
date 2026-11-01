@@ -276,9 +276,9 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
                 </div>
 
                 {error && (
-                  <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-md flex items-center gap-2">
-                    <span className="text-red-400 text-xs font-mono select-none">✕</span>
-                    <span className="font-sans text-xs text-red-200 font-normal">{error}</span>
+                  <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
+                    <span className="text-red-500 text-sm select-none">✕</span>
+                    <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
                   </div>
                 )}
 

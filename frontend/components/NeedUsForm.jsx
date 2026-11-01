@@ -335,9 +335,9 @@ export default function NeedUsForm({ userName }) {
               <AnimatePresence>
                 {error && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded flex items-center gap-2">
-                      <span className="text-red-500 text-sm">✕</span>
-                      <span className="text-red-400 font-mono text-xs">{error}</span>
+                    <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
+                      <span className="text-red-500 text-sm select-none">✕</span>
+                      <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
                     </div>
                   </motion.div>
                 )}

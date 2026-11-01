@@ -471,16 +471,22 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                 </motion.div>
               </AnimatePresence>
 
-              {/* ── Error / Success (Pure borderless typography without box or symbol) ── */}
+              {/* ── Error / Success (Consistent with Login Form style) ── */}
               <AnimatePresence>
                 {error && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <p className="mb-4 text-red-500 font-mono text-xs text-center">{error}</p>
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
+                    <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
+                      <span className="text-red-500 text-sm select-none">✕</span>
+                      <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
+                    </div>
                   </motion.div>
                 )}
                 {success && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                    <p className="mb-4 text-emerald-400 font-mono text-xs text-center">{success}</p>
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mb-4">
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-md flex items-center gap-2">
+                      <span className="text-emerald-400 text-sm select-none">✓</span>
+                      <span className="text-emerald-300 font-sans text-xs font-normal">{success}</span>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>

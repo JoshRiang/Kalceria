@@ -174,7 +174,12 @@ export default function ApplyModal({ event, onClose }) {
                   ))}
                 </div>
                 <p className="font-mono text-xs text-slate-600 mb-6">After registering, you will be directed to WhatsApp to complete payment.</p>
-                {error && <p className="font-mono text-xs text-red-400 mb-4">{error}</p>}
+                {error && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2 mb-4">
+                    <span className="text-red-500 text-sm select-none">✕</span>
+                    <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <button onClick={() => setStep(1)} className="flex-1 py-3 font-sans font-bold text-xs uppercase tracking-wider text-slate-500 bg-slate-800 hover:bg-slate-700 transition-colors rounded">← Back</button>
                   <button

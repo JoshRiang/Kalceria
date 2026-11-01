@@ -83,7 +83,12 @@ export default function AdminEventForm({ events, onCreated, onDeleted }) {
             <button type="button" onClick={addSession} className="text-xs text-gray-500 hover:text-gray-900 underline mt-1">+ Tambah Sesi</button>
           </div>
 
-          {error && <p className="text-red-500 text-xs">{error}</p>}
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2 mb-3">
+              <span className="text-red-500 text-sm select-none">✕</span>
+              <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
+            </div>
+          )}
 
           <button type="submit" disabled={loading} className="bg-gray-900 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-700 transition disabled:opacity-40">
             {loading ? "Menyimpan..." : "Buat Event"}

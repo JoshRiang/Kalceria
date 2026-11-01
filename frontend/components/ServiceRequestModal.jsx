@@ -13,6 +13,36 @@ const SERVICE_TYPES = [
   { id: "HOST_EVENT", label: "Host Event", desc: "We host and manage your event end-to-end" },
 ];
 
+// ── Clean Login-Form Consistent Error Box ──
+function FormErrorBox({ error, onDismiss }) {
+  if (!error) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      className="w-full overflow-hidden my-2"
+    >
+      <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-red-500 text-sm select-none">✕</span>
+          <span className="font-sans text-xs text-red-400 font-normal tracking-normal">{error}</span>
+        </div>
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="text-red-400/60 hover:text-red-300 text-xs font-mono ml-2 cursor-pointer"
+            aria-label="Dismiss error"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 export default function ServiceRequestModal({ onClose, userName, onRequireAuth }) {
   const [step, setStep] = useState(0); // 0: Type, 1: Details, 2: Done
   const [weekOffset, setWeekOffset] = useState(0);
@@ -84,12 +114,20 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
 
   const handleNext = () => {
     if (!form.serviceType) { setError("Please select a service type."); return; }
+    setError("");
     setStep(1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isFormValid) return;
+    if (!form.serviceName || !form.contactPerson || !form.whatsapp || !form.location) {
+      setError("Please provide operator name and WhatsApp contact.");
+      return;
+    }
+    if (Object.values(selectedSlots).filter(Boolean).length === 0) {
+      setError("Please select at least one operational time slot.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -506,11 +544,15 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                     ))}
                   </div>
 
+                  <div className="mt-6 w-full">
+                    <FormErrorBox error={error} onDismiss={() => setError("")} />
+                  </div>
+
                   <button 
                     type="button"
                     onClick={handleNext}
                     disabled={!form.serviceType}
-                    className={`${buttonStyle} mt-8 bg-white text-black hover:bg-slate-200 disabled:opacity-30 cursor-pointer`}
+                    className={`${buttonStyle} mt-4 bg-white text-black hover:bg-slate-200 disabled:opacity-30 cursor-pointer`}
                   >
                     NEXT
                   </button>
@@ -600,19 +642,24 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                       </div>
                     </div>
 
+                    {/* Inline Form Error Box (Matching Login Form style) */}
+                    <div className="w-full max-w-[900px] mx-auto">
+                      <FormErrorBox error={error} onDismiss={() => setError("")} />
+                    </div>
+
                     {/* Horizontal Footer Navigation */}
                     <div className="flex gap-4 sm:gap-6 max-w-[900px] mx-auto w-full mt-2">
                       <button 
                         type="button" 
-                        onClick={() => setStep(0)} 
+                        onClick={() => { setError(""); setStep(0); }} 
                         className="flex-1 py-3.5 sm:py-6 bg-white/10 text-white font-sans font-bold uppercase text-[10px] sm:text-[12px] tracking-[0.15em] sm:tracking-[0.25em] rounded-[20px] sm:rounded-[25px] hover:bg-white/20 transition-all border border-white/20 cursor-pointer"
                       >
                         ← BACK
                       </button>
                       <button 
                         type="submit" 
-                        disabled={loading || !isFormValid} 
-                        className={`${buttonStyle} flex-[2] sm:flex-[2.5] py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] ${isFormValid ? "bg-white text-black opacity-100 shadow-[0_0_50px_rgba(255,255,255,0.4)] cursor-pointer" : "bg-white/10 text-white/30 cursor-not-allowed"}`}
+                        disabled={loading} 
+                        className={`${buttonStyle} flex-[2] sm:flex-[2.5] py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] ${isFormValid ? "bg-white text-black opacity-100 shadow-[0_0_50px_rgba(255,255,255,0.4)] cursor-pointer" : "bg-white/10 text-white/60 hover:bg-white/20 cursor-pointer"}`}
                       >
                         {loading ? "SENDING..." : "NEXT"}
                       </button>
@@ -703,7 +750,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                   </div>
 
                   {/* Middle Bottom Cancel Action: NOT bold, NOT all capital */}
-                  <div className="mt-2 pt-2 flex flex-col items-center">
+                  <div className="mt-2 pt-2 flex flex-col items-center w-full max-w-[460px]">
                     <button 
                       type="button"
                       onClick={handleCancel}
@@ -712,6 +759,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
                     >
                       {loading ? "Cancelling..." : "Cancel"}
                     </button>
+                    <FormErrorBox error={error} onDismiss={() => setError("")} />
                   </div>
                 </motion.div>
               )}
@@ -720,23 +768,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth }
         </div>
       </motion.div>
 
-      {/* Error Message: Same style as Login Form (Red bg, border, ✕, Arial font, not all capital, not bold, NO red dot, NO Sign In button) */}
-      {error && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 p-3 bg-red-500/15 border border-red-500/30 rounded-md flex items-center gap-2.5 backdrop-blur-md z-[10000] shadow-[0_10px_25px_rgba(220,38,38,0.25)] max-w-[90vw]">
-          <span className="text-red-400 text-xs font-mono select-none">✕</span>
-          <span className="font-sans text-xs text-red-200 font-normal tracking-normal select-none">
-            {error}
-          </span>
-          <button
-            type="button"
-            onClick={() => setError("")}
-            className="text-white/60 hover:text-white text-xs ml-2 font-mono cursor-pointer"
-            aria-label="Dismiss error"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+
     </div>,
     document.body
   );

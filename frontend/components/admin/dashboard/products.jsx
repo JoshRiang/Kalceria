@@ -104,7 +104,12 @@ export function RecordSaleModal({ product, onClose, onConfirm }) {
             )}
           </div>
 
-          {error && <p className="font-mono text-xs text-red-400">{error}</p>}
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-md flex items-center gap-2">
+              <span className="text-red-500 text-sm select-none">✕</span>
+              <span className="text-red-400 font-sans text-xs font-normal">{error}</span>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-1">
