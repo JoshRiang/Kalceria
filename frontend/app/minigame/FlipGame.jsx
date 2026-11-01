@@ -390,10 +390,13 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 <button 
                   type="button"
                   onClick={handleQuitYes} 
-                  className={`font-sans font-normal text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                  className={`transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl ${
                     quitChoice === 'yes' ? 'text-red-600' : 'text-white hover:text-red-500 active:text-red-600'
                   }`}
                   style={{
+                    fontFamily: "Arial, sans-serif",
+                    fontWeight: "normal",
+                    textTransform: "none",
                     textShadow: quitChoice === 'yes' 
                       ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
                       : "0 2px 12px rgba(0,0,0,0.8)"
@@ -404,10 +407,13 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 <button 
                   type="button"
                   onClick={handleQuitNo} 
-                  className={`font-sans font-normal text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                  className={`transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl ${
                     quitChoice === 'no' ? 'text-black' : 'text-white hover:text-black active:text-black'
                   }`}
                   style={{
+                    fontFamily: "Arial, sans-serif",
+                    fontWeight: "normal",
+                    textTransform: "none",
                     textShadow: quitChoice === 'no' 
                       ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
                       : "0 2px 12px rgba(0,0,0,0.8)"
@@ -461,10 +467,13 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 <button 
                   type="button"
                   onClick={handleSaveYesClick} 
-                  className={`font-sans font-normal text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                  className={`transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl ${
                     saveChoice === 'yes' ? 'text-red-600' : 'text-white hover:text-red-500 active:text-red-600'
                   }`}
                   style={{
+                    fontFamily: "Arial, sans-serif",
+                    fontWeight: "normal",
+                    textTransform: "none",
                     textShadow: saveChoice === 'yes' 
                       ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
                       : "0 2px 12px rgba(0,0,0,0.8)"
@@ -475,10 +484,13 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
                 <button 
                   type="button"
                   onClick={handleSaveNoClick} 
-                  className={`font-sans font-normal text-xl sm:text-2xl md:text-3xl transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none ${
+                  className={`transition-colors duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl ${
                     saveChoice === 'no' ? 'text-black' : 'text-white hover:text-black active:text-black'
                   }`}
                   style={{
+                    fontFamily: "Arial, sans-serif",
+                    fontWeight: "normal",
+                    textTransform: "none",
                     textShadow: saveChoice === 'no' 
                       ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
                       : "0 2px 12px rgba(0,0,0,0.8)"

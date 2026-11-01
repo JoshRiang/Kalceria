@@ -496,17 +496,17 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              </h2>
            </motion.div>
 
-           {/* Leave it here - Distinctive Styling, No Outer Box */}
+           {/* Leave it here - Distinctive Typography, Not Uppercase, Firm, No Outer Box */}
            <motion.button
              onClick={onOpenIdeaModal}
-             whileHover={{ scale: 1.08 }}
-             whileTap={{ scale: 0.95 }}
-             className="relative group cursor-pointer z-40 focus:outline-none bg-transparent border-none p-0"
+             whileHover={{ scale: 1.06 }}
+             whileTap={{ scale: 0.96 }}
+             className="relative group cursor-pointer z-40 focus:outline-none bg-transparent border-none p-0 flex items-center justify-center mx-auto"
            >
              <span 
-               className="font-sans font-black uppercase tracking-[0.25em] text-lg sm:text-xl md:text-2xl text-cyan-300 hover:text-white transition-colors whitespace-nowrap select-none inline-block pb-1 border-b border-cyan-400/40 hover:border-cyan-400"
+               className="font-sans font-bold normal-case text-xl sm:text-2xl md:text-3xl text-cyan-400 hover:text-cyan-200 transition-colors tracking-wide select-none inline-block underline underline-offset-8 decoration-cyan-400/70 hover:decoration-cyan-200"
                style={{
-                 textShadow: "0 0 25px rgba(6,182,212,0.9), 0 2px 10px rgba(0,0,0,0.8), 0 0 45px rgba(217,70,239,0.5)"
+                 textShadow: "0 0 25px rgba(6,182,212,0.9), 0 2px 10px rgba(0,0,0,0.85), 0 0 40px rgba(217,70,239,0.4)"
                }}
              >
                Leave it here
