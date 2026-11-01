@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Field } from "./service-request/FormControls";
+import { Field, validateCommsValue } from "./service-request/FormControls";
 import { LocationAutocomplete } from "./service-request/LocationAutocomplete";
 import api from "@/lib/api";
 import { hasUserSession } from "@/lib/session";
@@ -138,10 +138,10 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
       return;
     }
 
-    // Strict Indonesian phone validation (+628xxxxxxxxxx, 9 to 13 digits)
-    const cleanWa = (form.whatsapp || "").replace(/[\s-]/g, "");
-    if (!/^\+628[1-9][0-9]{7,11}$/.test(cleanWa)) {
-      setError("Please provide a valid Indonesian WhatsApp contact (+62 8xx-xxxx-xxxx, 9-13 digits).");
+    // Strict Indonesian phone validation (+628xxxxxxxxxx, valid carrier code)
+    const commsCheck = validateCommsValue("tel", "whatsapp", form.whatsapp);
+    if (!commsCheck.valid) {
+      setError(commsCheck.message || "Please provide a valid Indonesian WhatsApp contact (+62 8xx-xxxx-xxxx).");
       return;
     }
 
@@ -605,7 +605,16 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                           <Field id="serviceName" label="Request Title" type="text" placeholder="Project name/ID" val={form.serviceName} onChange={setField} required />
                           <Field id="contactPerson" label="Operator Name" type="text" placeholder="Full name" val={form.contactPerson} onChange={setField} required />
                           <Field id="whatsapp" label="Comms Channel" type="tel" placeholder="812-3456-7890" val={form.whatsapp} onChange={setField} required />
-                          <LocationAutocomplete value={form.location} onChange={(loc) => setField("location", loc)} isVerified={isLocationVerified} setIsVerified={setIsLocationVerified} required />
+                          <LocationAutocomplete value={form.location} onChange={(loc, item) => {
+                            setForm(p => ({
+                              ...p,
+                              location: loc,
+                              selectionToken: item?.selectionToken || p.selectionToken,
+                              lat: item?.lat ?? p.lat,
+                              lon: item?.lon ?? p.lon,
+                            }));
+                            setError("");
+                          }} isVerified={isLocationVerified} setIsVerified={setIsLocationVerified} required />
                           <Field id="additionalNotes" label="Technical Brief" type="textarea" placeholder="Specific requirements..." val={form.additionalNotes} onChange={setField} maxLength={50} />
                         </div>
                       </div>

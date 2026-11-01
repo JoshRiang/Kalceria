@@ -5,7 +5,7 @@ import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { safeNotify, sendServiceRequestSubmittedEmail, sendServiceRequestAdminAlertEmail } from '../lib/mailer.js';
 import { notifyServiceRequestCreated } from '../lib/whatsappBroker.js';
-import { isValidIndonesianLocation } from './geoController.js';
+import { isValidIndonesianLocation, isLocationFromVerifiedList } from './geoController.js';
 import { setServiceBookingCooldown, clearServiceBookingCooldown } from '../middleware/ingressDefense.js';
 
 const RATE_PER_HOUR = 120000;
@@ -216,7 +216,11 @@ export async function createServiceRequest(req, res, next) {
 
     // 1. Strict Indonesian WhatsApp regex validation (+628xxxxxxxxxx)
     const cleanWa = typeof whatsapp === 'string' ? whatsapp.trim().replace(/[\s-]/g, '') : '';
-    if (!/^\+628[1-9][0-9]{7,11}$/.test(cleanWa)) {
+    const phoneDigits = cleanWa.replace(/^\+?62/, '').replace(/^0+/, '').replace(/\D/g, '');
+    const ID_MOBILE_REGEX = /^8(?:1[1-9]|2[1-3]|3[1238]|5[1-35-9]|7[78]|8[1-9]|9[5-9])\d{6,10}$/;
+    const REPEATING_DIGITS_REGEX = /(\d){6,}/;
+
+    if (!cleanWa.startsWith('+62') || !ID_MOBILE_REGEX.test(phoneDigits) || REPEATING_DIGITS_REGEX.test(phoneDigits)) {
       return res.status(400).json({
         error: 'Please provide a valid Indonesian WhatsApp contact (+62 8xx-xxxx-xxxx).',
       });
@@ -224,7 +228,11 @@ export async function createServiceRequest(req, res, next) {
 
     // 2. Strict Indonesian Deployment Area location validation
     const cleanLocation = typeof location === 'string' ? location.trim() : '';
-    if (!isValidIndonesianLocation(cleanLocation)) {
+    const selectionToken = body.selectionToken;
+    const lat = body.lat;
+    const lon = body.lon ?? body.lng;
+    const isLocValid = await isLocationFromVerifiedList(cleanLocation, selectionToken, lat, lon);
+    if (!isLocValid) {
       return res.status(400).json({
         error: 'Please provide a valid Indonesian deployment area (Street, City, Province).',
       });

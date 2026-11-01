@@ -39,44 +39,73 @@ export function resolveClientIp(req) {
 export function resolveClientFingerprint(req) {
   const ip = resolveClientIp(req);
   const tag = req.headers?.['x-client-fingerprint'] || req.headers?.['x-machine-tag'] || '';
-  const ua = req.headers?.['user-agent'] || '';
-  const acceptLang = req.headers?.['accept-language'] || '';
-  const secChUa = req.headers?.['sec-ch-ua'] || '';
+  const rawTag = String(tag).trim().slice(0, 128);
+  const ua = String(req.headers?.['user-agent'] || '').slice(0, 256);
+  const acceptLang = String(req.headers?.['accept-language'] || '').slice(0, 64);
+  const secChUa = String(req.headers?.['sec-ch-ua'] || '').slice(0, 128);
 
-  const raw = `${ip}|${tag}|${ua}|${acceptLang}|${secChUa}`;
+  // Exclude IP from fingerprint so it tracks browser profile across dynamic IPs
+  const raw = `${rawTag}|${ua}|${acceptLang}|${secChUa}`;
   return {
     ip,
-    machineTag: tag ? String(tag).trim() : null,
+    machineTag: rawTag || null,
+    machineTagHash: rawTag
+      ? crypto.createHash('sha256').update(rawTag).digest('hex')
+      : null,
     fingerprint: crypto.createHash('sha256').update(raw).digest('hex'),
   };
 }
 
 // ── In-Memory Fallback Store (Resilience when Redis unavailable) ─────────────
+const MAX_MEM_KEYS = 10_000;
 const memStore = new Map();
 
-function getMem(key) {
+function pruneMemStore() {
+  if (memStore.size < MAX_MEM_KEYS) return;
+  const now = Date.now();
+  for (const [k, v] of memStore.entries()) {
+    if (now > v.expiry) memStore.delete(k);
+  }
+  if (memStore.size >= MAX_MEM_KEYS) {
+    const oldestKey = memStore.keys().next().value;
+    if (oldestKey !== undefined) memStore.delete(oldestKey);
+  }
+}
+
+function getMemEntry(key) {
   const item = memStore.get(key);
   if (!item) return null;
   if (Date.now() > item.expiry) {
     memStore.delete(key);
     return null;
   }
-  return item.value;
+  return item;
+}
+
+function getMem(key) {
+  const item = getMemEntry(key);
+  return item ? item.value : null;
 }
 
 function getMemTtl(key) {
-  const item = memStore.get(key);
+  const item = getMemEntry(key);
   if (!item) return -1;
-  const rem = Math.ceil((item.expiry - Date.now()) / 1000);
-  if (rem <= 0) {
-    memStore.delete(key);
-    return -1;
-  }
-  return rem;
+  return Math.max(1, Math.ceil((item.expiry - Date.now()) / 1000));
 }
 
 function setMem(key, value, ttlSeconds) {
+  pruneMemStore();
   memStore.set(key, { value, expiry: Date.now() + ttlSeconds * 1000 });
+}
+
+function incrMem(key, ttlSeconds) {
+  const existing = getMemEntry(key);
+  if (!existing) {
+    setMem(key, 1, ttlSeconds);
+    return 1;
+  }
+  existing.value += 1;
+  return existing.value;
 }
 
 function delMem(key) {
@@ -87,17 +116,28 @@ export function clearMemStoreForTesting() {
   memStore.clear();
 }
 
+const INCR_WITH_TTL_LUA = `
+  local c = redis.call('INCR', KEYS[1])
+  if c == 1 or redis.call('TTL', KEYS[1]) == -1 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+  end
+  return c
+`;
+
 async function safeRedisCall(fn, fallbackFn) {
   if (!redis || redis.status !== 'ready') {
     return fallbackFn();
   }
+  let timer;
   try {
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Redis timeout')), 400)
-    );
+    const timeoutPromise = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Redis timeout')), 400);
+    });
     return await Promise.race([fn(), timeoutPromise]);
   } catch {
     return fallbackFn();
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -199,39 +239,32 @@ export async function checkServiceBookingDefense(req, res, next) {
   // 3. Burst Rate Limiting (Prevent rapid-fire submissions)
   const burstKey = `booking:burst:${ip}`;
   const burstCount = await safeRedisCall(
-    async () => {
-      const c = await redis.incr(burstKey);
-      if (c === 1) await redis.expire(burstKey, BOOKING_BURST_WINDOW);
-      return c;
-    },
-    () => {
-      const current = (getMem(burstKey) || 0) + 1;
-      setMem(burstKey, current, BOOKING_BURST_WINDOW);
-      return current;
-    }
+    () => redis.eval(INCR_WITH_TTL_LUA, 1, burstKey, BOOKING_BURST_WINDOW),
+    () => incrMem(burstKey, BOOKING_BURST_WINDOW)
   );
 
   if (burstCount > BOOKING_BURST_MAX) {
+    res.setHeader('Retry-After', String(BOOKING_BURST_WINDOW));
     return res.status(429).json({ error: 'High request velocity detected. Please slow down.' });
   }
 
   // 4. 24-Hour Cooldown Verification (Per IP, Composite Fingerprint, Machine Tag, User Account)
   const userId = req.user?.userId;
-  const { machineTag, fingerprint } = resolveClientFingerprint(req);
+  const { machineTagHash, fingerprint } = resolveClientFingerprint(req);
 
   const keysToCheck = [
     `booking:cooldown:ip:${ip}`,
     `booking:cooldown:fp:${fingerprint}`,
   ];
-  if (machineTag) {
-    keysToCheck.push(`booking:cooldown:tag:${machineTag}`);
+  if (machineTagHash) {
+    keysToCheck.push(`booking:cooldown:tag:${machineTagHash}`);
   }
   if (userId) {
     keysToCheck.push(`booking:cooldown:user:${userId}`);
   }
 
   let activeCooldown = false;
-  let remainingTtl = BOOKING_COOLDOWN_SECONDS;
+  let remainingTtl = 0;
 
   for (const key of keysToCheck) {
     const check = await safeRedisCall(
@@ -248,15 +281,15 @@ export async function checkServiceBookingDefense(req, res, next) {
     if (check.exists) {
       activeCooldown = true;
       remainingTtl = Math.max(remainingTtl, check.ttl);
-      break;
     }
   }
 
   if (activeCooldown) {
-    res.setHeader('Retry-After', String(remainingTtl));
+    const retrySec = Math.max(1, remainingTtl);
+    res.setHeader('Retry-After', String(retrySec));
     return res.status(429).json({
       error: 'Booking cooldown active. Only one service booking is permitted every 24 hours per user/network to ensure fair scheduling.',
-      retryAfter: remainingTtl,
+      retryAfter: retrySec,
     });
   }
 
@@ -265,33 +298,32 @@ export async function checkServiceBookingDefense(req, res, next) {
 
 export async function setServiceBookingCooldown(req, userId) {
   const ip = resolveClientIp(req);
-  const { machineTag, fingerprint } = resolveClientFingerprint(req);
+  const { machineTagHash, fingerprint } = resolveClientFingerprint(req);
 
   const keys = [
     `booking:cooldown:ip:${ip}`,
     `booking:cooldown:fp:${fingerprint}`,
   ];
-  if (machineTag) keys.push(`booking:cooldown:tag:${machineTag}`);
+  if (machineTagHash) keys.push(`booking:cooldown:tag:${machineTagHash}`);
   if (userId) keys.push(`booking:cooldown:user:${userId}`);
 
   for (const key of keys) {
-    setMem(key, '1', BOOKING_COOLDOWN_SECONDS);
     await safeRedisCall(
       () => redis.set(key, '1', 'EX', BOOKING_COOLDOWN_SECONDS),
-      () => {}
+      () => setMem(key, '1', BOOKING_COOLDOWN_SECONDS)
     );
   }
 }
 
 export async function clearServiceBookingCooldown(req, userId) {
   const ip = resolveClientIp(req);
-  const { machineTag, fingerprint } = resolveClientFingerprint(req);
+  const { machineTagHash, fingerprint } = resolveClientFingerprint(req);
 
   const keys = [
     `booking:cooldown:ip:${ip}`,
     `booking:cooldown:fp:${fingerprint}`,
   ];
-  if (machineTag) keys.push(`booking:cooldown:tag:${machineTag}`);
+  if (machineTagHash) keys.push(`booking:cooldown:tag:${machineTagHash}`);
   if (userId) keys.push(`booking:cooldown:user:${userId}`);
 
   for (const key of keys) {

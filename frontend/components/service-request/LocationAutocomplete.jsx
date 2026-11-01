@@ -73,7 +73,7 @@ export function LocationAutocomplete({
   const handleSelectSuggestion = (item) => {
     const formatted = item.formatted;
     setQuery(formatted);
-    onChange(formatted);
+    onChange(formatted, item);
     setIsVerified(true);
     setSuggestions([]);
     setIsOpen(false);
@@ -96,11 +96,15 @@ export function LocationAutocomplete({
           const res = await api.get("/location/reverse", {
             params: { lat: latitude, lng: longitude },
           });
-          const formatted = res.data?.formatted || "Kota Depok, Jawa Barat";
-          setQuery(formatted);
-          onChange(formatted);
-          setIsVerified(true);
-          setIsOpen(false);
+          const formatted = res.data?.formatted;
+          if (formatted) {
+            setQuery(formatted);
+            onChange(formatted, res.data);
+            setIsVerified(true);
+            setIsOpen(false);
+          } else {
+            setDetectError("Unable to reverse-geocode your location.");
+          }
         } catch {
           setDetectError("Unable to reverse-geocode your location.");
         } finally {
