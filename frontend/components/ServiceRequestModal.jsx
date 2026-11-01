@@ -501,18 +501,21 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                   Configure mission parameters & select your operational window.
                 </p>
               </div>
+            ) : step === 2 ? (
+              <div />
             ) : (
               <h2 className="font-sans text-2xl sm:text-3xl font-black text-white uppercase tracking-tight leading-none">
                 Need Our <span className="text-white">Help?</span>
               </h2>
-            )}
+            )
+            }
             <button 
               type="button"
               onClick={onClose} 
-              className="group p-2.5 bg-white/10 hover:bg-white/20 rounded-full transition-all duration-300 border border-white/10 cursor-pointer"
+              className="text-white/70 hover:text-white transition-colors p-1 cursor-pointer focus:outline-none"
               aria-label="Close"
             >
-              <svg className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white/70 hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
@@ -794,7 +797,8 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                       type="button"
                       onClick={handleCancel}
                       disabled={loading}
-                      className="font-sans font-normal text-sm sm:text-base text-white/50 hover:text-red-400 transition-colors cursor-pointer py-1.5 focus:outline-none"
+                      style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'normal', textTransform: 'none' }}
+                      className="font-normal text-sm sm:text-base text-white/60 hover:text-red-400 transition-colors cursor-pointer py-1.5 focus:outline-none"
                     >
                       {loading ? "Cancelling..." : "Cancel"}
                     </button>

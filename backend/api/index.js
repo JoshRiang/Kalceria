@@ -6,6 +6,7 @@ import prisma from '../lib/prisma.js';
 import { redis } from "../lib/redis.js";
 import router from "../routes/index.js";
 import { apiRateLimit } from "../middleware/rateLimit.js";
+import { globalPayloadDefense } from "../middleware/ingressDefense.js";
 import { csrfProtection } from "../middleware/csrf.js";
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
@@ -14,7 +15,9 @@ import { csrfProtection } from "../middleware/csrf.js";
 // ─── App ──────────────────────────────────────────────────────────────────────
 const app = express();
 app.disable('x-powered-by');
-if (process.env.VERCEL === '1') app.set('trust proxy', 1);
+if (process.env.VERCEL === '1' || process.env.TRUST_PROXY) {
+  app.set('trust proxy', process.env.TRUST_PROXY || 1);
+}
 
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -42,7 +45,7 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "x-jit-token", "x-csrf-token"],
+    allowedHeaders: ["Content-Type", "x-jit-token", "x-csrf-token", "x-cancel-token", "x-client-fingerprint", "x-machine-tag"],
   }),
 );
 
@@ -77,6 +80,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
+app.use("/api", globalPayloadDefense);
 app.use("/api", router);
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────

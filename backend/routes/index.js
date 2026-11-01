@@ -34,6 +34,13 @@ import {
 } from "../controllers/adminUserController.js";
 import { createComment } from "../controllers/commentController.js";
 import { checkCommentDefense } from "../middleware/commentDefense.js";
+import {
+  checkServiceBookingDefense,
+  eventRegistrationDefense,
+  authLoginDefense,
+  authSignupDefense,
+  miniEventDefense
+} from "../middleware/ingressDefense.js";
 import { listComments, togglePinComment, deleteComment } from "../controllers/adminCommentController.js";
 import { getEarnings } from "../controllers/adminEarningsController.js";
 import { sendGeneralEmail } from "../controllers/emailController.js";
@@ -79,8 +86,8 @@ router.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 router.get("/auth/csrf", issueCsrfToken);
-router.post("/auth/register", signupRateLimit, requirePublicSignup, register);
-router.post("/auth/login", loginIpRateLimit, loginIdentityRateLimit, login);
+router.post("/auth/register", signupRateLimit, authSignupDefense, requirePublicSignup, register);
+router.post("/auth/login", loginIpRateLimit, loginIdentityRateLimit, authLoginDefense, login);
 router.post("/auth/logout", logout);
 router.post("/auth/otp/request", otpRequestIpRateLimit, otpRequestEmailRateLimit, requireEmailAuth, requestOtp);
 router.post("/auth/otp/verify", otpVerifyRateLimit, requireEmailAuth, verifyOtp);
@@ -96,7 +103,7 @@ router.get("/events", listPublicEvents);
 router.get("/events/:eventId", getPublicEvent);
 
 // ─── Event Registration (Auth required) ──────────────────────────────────────
-router.post("/events/:eventId/register", optionalAuth, bookingRateLimit, registerEvent);
+router.post("/events/:eventId/register", optionalAuth, bookingRateLimit, eventRegistrationDefense, registerEvent);
 
 // ─── Location & Geocoding ────────────────────────────────────────────────────
 router.get("/location/search", searchIndonesianLocations);
@@ -110,14 +117,14 @@ router.get("/media", getMedia);
 router.post("/media", requireAdmin, createMedia);
 
 // ─── Mini Events ─────────────────────────────────────────────────────────────
-router.post("/mini-events", requireAuth, miniEventRateLimit, createMiniEvent);
+router.post("/mini-events", requireAuth, miniEventRateLimit, miniEventDefense, createMiniEvent);
 router.get("/mini-events/active", requireAuth, getActiveMiniEvents);
-router.put("/mini-events/:id", requireAuth, miniEventRateLimit, updateMiniEvent);
+router.put("/mini-events/:id", requireAuth, miniEventRateLimit, miniEventDefense, updateMiniEvent);
 router.delete("/mini-events/:id", requireAuth, miniEventRateLimit, deleteMiniEvent);
 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
-router.post("/services/book", requireAuth, bookingRateLimit, createBooking);
-router.post("/services/request", optionalAuth, bookingRateLimit, createServiceRequest);
+router.post("/services/book", requireAuth, bookingRateLimit, checkServiceBookingDefense, createBooking);
+router.post("/services/request", optionalAuth, bookingRateLimit, checkServiceBookingDefense, createServiceRequest);
 router.get("/services/bookings", listPublicServiceBookings);
 router.delete("/services/request/:id", optionalAuth, deleteOwnServiceRequest);
 

@@ -6,6 +6,7 @@ import { redis } from '../lib/redis.js';
 import { safeNotify, sendServiceRequestSubmittedEmail, sendServiceRequestAdminAlertEmail } from '../lib/mailer.js';
 import { notifyServiceRequestCreated } from '../lib/whatsappBroker.js';
 import { isValidIndonesianLocation } from './geoController.js';
+import { setServiceBookingCooldown, clearServiceBookingCooldown } from '../middleware/ingressDefense.js';
 
 const RATE_PER_HOUR = 120000;
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
@@ -124,6 +125,7 @@ export async function createBooking(req, res, next) {
 
       const whatsappUrl = buildWaUrl(booking, user);
 
+      await setServiceBookingCooldown(req, userId);
       res.status(201).json({ bookingId: booking.id, totalAmount, whatsappUrl });
     } finally {
       // Release lock immediately after DB write
@@ -254,8 +256,9 @@ export async function createServiceRequest(req, res, next) {
       include: { slots: true }
     });
 
-    // Invalidate public bookings cache
+    // Invalidate public bookings cache & enforce 24-hour rate limit cooldown
     await redis.del('cache:public_bookings');
+    await setServiceBookingCooldown(req, user.id);
 
     const firstSlot = slots && slots.length > 0 ? slots[0] : null;
     const dateStr = firstSlot ? new Date(firstSlot.date).toLocaleDateString('id-ID', {
@@ -400,6 +403,7 @@ export async function deleteOwnServiceRequest(req, res, next) {
 
     await prisma.serviceBooking.delete({ where: { id } });
     await redis.del('cache:public_bookings');
+    await clearServiceBookingCooldown(req, booking.requestorId);
     res.json({ message: 'Request deleted successfully.' });
   } catch (err) {
     next(err);
