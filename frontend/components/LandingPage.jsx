@@ -864,7 +864,7 @@ export default function LandingPage({ onNavigateAuth }) {
               unoptimized
               loading="lazy"
               decoding="async"
-              className="w-[460px] sm:w-[540px] md:w-[620px] lg:w-[700px] xl:w-[780px] max-h-[38vh] sm:max-h-[40vh] md:max-h-[42vh] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
+              className="w-[500px] sm:w-[580px] md:w-[680px] lg:w-[780px] xl:w-[880px] 2xl:w-[940px] max-h-[38vh] sm:max-h-[42vh] md:max-h-[45vh] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
               draggable={false}
             />
           </div>
