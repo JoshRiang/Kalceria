@@ -310,19 +310,19 @@ export function MerchCard({ item, index, isMobile }) {
           transition={{ duration: 0.65, ease: [0.45, 0.05, 0.55, 0.95] }}
           style={{ width: "100%", height: "100%", position: "relative", transformStyle: "preserve-3d" }}
         >
-          {/* Back Face: Solid Black Base with original Minigame Logo */}
+          {/* Back Face: Metallic Black Base with 50% enlarged standard fiery K logo */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               backfaceVisibility: "hidden",
-              background: "#000000",
+              background: "radial-gradient(ellipse at 25% 15%, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 58%), radial-gradient(ellipse at 75% 85%, rgba(255, 255, 255, 0.06) 0%, rgba(0, 0, 0, 0.45) 65%), linear-gradient(135deg, #24282f 0%, #14161a 22%, #0a0b0d 45%, #22262d 60%, #0d0e12 78%, #1a1d23 100%)",
               borderRadius: "1.25rem",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 15px 35px rgba(0,0,0,0.6)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "inset 0 1.5px 1.5px rgba(255, 255, 255, 0.35), inset 0 -1.5px 2px rgba(0, 0, 0, 0.85), inset 1px 0 2px rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.75)",
+              border: "1.5px solid rgba(255, 255, 255, 0.15)",
               padding: "16px",
             }}
           >
@@ -334,7 +334,7 @@ export function MerchCard({ item, index, isMobile }) {
               unoptimized
               loading="eager"
               decoding="auto"
-              className="w-[58px] h-[58px] sm:w-[72px] sm:h-[72px] md:w-[84px] md:h-[84px] object-contain drop-shadow-[0_0_20px_rgba(255,100,0,0.4)]"
+              className="w-[88px] h-[88px] xs:w-[98px] xs:h-[98px] sm:w-[110px] sm:h-[110px] md:w-[126px] md:h-[126px] lg:w-[134px] lg:h-[134px] object-contain drop-shadow-[0_0_25px_rgba(255,120,0,0.5)] transition-transform duration-300"
             />
           </div>
 
