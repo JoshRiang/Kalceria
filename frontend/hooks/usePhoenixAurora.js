@@ -16,12 +16,8 @@ export function usePhoenixAurora(canvasRef, active, duration = 5000) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
-    const resize = () => {
-      canvas.width  = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
 
     const TOTAL_MS       = duration;
     const FADE_IN_MS     = 600;
@@ -49,43 +45,56 @@ export function usePhoenixAurora(canvasRef, active, duration = 5000) {
     function buildThreads(W, H) {
       const CY = H * 0.50;
       const R  = () => random() * Math.PI * 2; // seeded random phase
+      // Responsive amplitude & frequency for iPad / tablet family:
+      // Desktop widescreen baseline (W >= 1920 -> baseDim = H, freqScale = 1.0) remains 100% identical.
+      const baseDim = Math.min(H, W * 0.5625);
+      const freqScale = Math.min(1.0, Math.max(0.70, W / 1440));
 
       const left = [
         // ── Main threads — varied speeds, small amps
-        { dir: 1, yBase: CY, amp: H*0.035, freq: 5.2,  phase: R(), speed: 0.72, thick: 2.2, delay: 0,   pal: "gold"    },
-        { dir: 1, yBase: CY, amp: H*0.042, freq: 4.5,  phase: R(), speed: 0.55, thick: 2.0, delay: 120, pal: "magenta" },
-        { dir: 1, yBase: CY, amp: H*0.028, freq: 6.1,  phase: R(), speed: 0.88, thick: 1.8, delay: 60,  pal: "white"   },
-        { dir: 1, yBase: CY, amp: H*0.050, freq: 3.8,  phase: R(), speed: 0.38, thick: 1.6, delay: 300, pal: "gold"    },
-        { dir: 1, yBase: CY, amp: H*0.045, freq: 3.5,  phase: R(), speed: 0.25, thick: 1.5, delay: 480, pal: "magenta" },
+        { dir: 1, yBase: CY, amp: baseDim*0.035, freq: 5.2*freqScale,  phase: R(), speed: 0.72, thick: 2.2, delay: 0,   pal: "gold"    },
+        { dir: 1, yBase: CY, amp: baseDim*0.042, freq: 4.5*freqScale,  phase: R(), speed: 0.55, thick: 2.0, delay: 120, pal: "magenta" },
+        { dir: 1, yBase: CY, amp: baseDim*0.028, freq: 6.1*freqScale,  phase: R(), speed: 0.88, thick: 1.8, delay: 60,  pal: "white"   },
+        { dir: 1, yBase: CY, amp: baseDim*0.050, freq: 3.8*freqScale,  phase: R(), speed: 0.38, thick: 1.6, delay: 300, pal: "gold"    },
+        { dir: 1, yBase: CY, amp: baseDim*0.045, freq: 3.5*freqScale,  phase: R(), speed: 0.25, thick: 1.5, delay: 480, pal: "magenta" },
         // ── Fast thin filaments — race out ahead
-        { dir: 1, yBase: CY, amp: H*0.018, freq: 9.8,  phase: R(), speed: 1.10, thick: 0.9, delay: 20,  pal: "white"   },
-        { dir: 1, yBase: CY, amp: H*0.022, freq: 8.5,  phase: R(), speed: 0.95, thick: 0.8, delay: 80,  pal: "gold"    },
-        { dir: 1, yBase: CY, amp: H*0.020, freq: 10.2, phase: R(), speed: 1.20, thick: 0.7, delay: 0,   pal: "magenta" },
+        { dir: 1, yBase: CY, amp: baseDim*0.018, freq: 9.8*freqScale,  phase: R(), speed: 1.10, thick: 0.9, delay: 20,  pal: "white"   },
+        { dir: 1, yBase: CY, amp: baseDim*0.022, freq: 8.5*freqScale,  phase: R(), speed: 0.95, thick: 0.8, delay: 80,  pal: "gold"    },
+        { dir: 1, yBase: CY, amp: baseDim*0.020, freq: 10.2*freqScale, phase: R(), speed: 1.20, thick: 0.7, delay: 0,   pal: "magenta" },
         // ── Slow laggers — arrive last
-        { dir: 1, yBase: CY, amp: H*0.060, freq: 2.9,  phase: R(), speed: 0.18, thick: 1.3, delay: 600, pal: "white"   },
-        { dir: 1, yBase: CY, amp: H*0.055, freq: 3.1,  phase: R(), speed: 0.20, thick: 1.2, delay: 700, pal: "gold"    },
-        { dir: 1, yBase: CY, amp: H*0.016, freq: 12.0, phase: R(), speed: 1.40, thick: 0.6, delay: 10,  pal: "white"   },
+        { dir: 1, yBase: CY, amp: baseDim*0.060, freq: 2.9*freqScale,  phase: R(), speed: 0.18, thick: 1.3, delay: 600, pal: "white"   },
+        { dir: 1, yBase: CY, amp: baseDim*0.055, freq: 3.1*freqScale,  phase: R(), speed: 0.20, thick: 1.2, delay: 700, pal: "gold"    },
+        { dir: 1, yBase: CY, amp: baseDim*0.016, freq: 12.0*freqScale, phase: R(), speed: 1.40, thick: 0.6, delay: 10,  pal: "white"   },
       ];
 
       const right = [
         // ── Right side threads — travel leftwards, slightly more jittery amp/freq
-        { dir: -1, yBase: CY, amp: H*0.045, freq: 6.5,  phase: R(), speed: 0.68, thick: 2.2, delay: 50,  pal: "white"   },
-        { dir: -1, yBase: CY, amp: H*0.052, freq: 5.5,  phase: R(), speed: 0.50, thick: 2.0, delay: 150, pal: "gold"    },
-        { dir: -1, yBase: CY, amp: H*0.035, freq: 7.2,  phase: R(), speed: 0.85, thick: 1.8, delay: 100, pal: "magenta" },
-        { dir: -1, yBase: CY, amp: H*0.060, freq: 4.2,  phase: R(), speed: 0.35, thick: 1.6, delay: 280, pal: "white"   },
-        { dir: -1, yBase: CY, amp: H*0.055, freq: 4.8,  phase: R(), speed: 0.22, thick: 1.5, delay: 520, pal: "gold"    },
-        { dir: -1, yBase: CY, amp: H*0.025, freq: 11.5, phase: R(), speed: 1.15, thick: 0.9, delay: 10,  pal: "magenta" },
-        { dir: -1, yBase: CY, amp: H*0.030, freq: 9.5,  phase: R(), speed: 0.90, thick: 0.8, delay: 90,  pal: "white"   },
-        { dir: -1, yBase: CY, amp: H*0.075, freq: 3.2,  phase: R(), speed: 0.15, thick: 1.3, delay: 650, pal: "gold"    },
-        { dir: -1, yBase: CY, amp: H*0.020, freq: 13.0, phase: R(), speed: 1.35, thick: 0.6, delay: 30,  pal: "magenta" },
+        { dir: -1, yBase: CY, amp: baseDim*0.045, freq: 6.5*freqScale,  phase: R(), speed: 0.68, thick: 2.2, delay: 50,  pal: "white"   },
+        { dir: -1, yBase: CY, amp: baseDim*0.052, freq: 5.5*freqScale,  phase: R(), speed: 0.50, thick: 2.0, delay: 150, pal: "gold"    },
+        { dir: -1, yBase: CY, amp: baseDim*0.035, freq: 7.2*freqScale,  phase: R(), speed: 0.85, thick: 1.8, delay: 100, pal: "magenta" },
+        { dir: -1, yBase: CY, amp: baseDim*0.060, freq: 4.2*freqScale,  phase: R(), speed: 0.35, thick: 1.6, delay: 280, pal: "white"   },
+        { dir: -1, yBase: CY, amp: baseDim*0.055, freq: 4.8*freqScale,  phase: R(), speed: 0.22, thick: 1.5, delay: 520, pal: "gold"    },
+        { dir: -1, yBase: CY, amp: baseDim*0.025, freq: 11.5*freqScale, phase: R(), speed: 1.15, thick: 0.9, delay: 10,  pal: "magenta" },
+        { dir: -1, yBase: CY, amp: baseDim*0.030, freq: 9.5*freqScale,  phase: R(), speed: 0.90, thick: 0.8, delay: 90,  pal: "white"   },
+        { dir: -1, yBase: CY, amp: baseDim*0.075, freq: 3.2*freqScale,  phase: R(), speed: 0.15, thick: 1.3, delay: 650, pal: "gold"    },
+        { dir: -1, yBase: CY, amp: baseDim*0.020, freq: 13.0*freqScale, phase: R(), speed: 1.35, thick: 0.6, delay: 30,  pal: "magenta" },
       ];
 
       return [...left, ...right].map(t => ({ ...t, progress: 0 }));
     }
 
-    const W = canvas.width;
-    const H = canvas.height;
-    const threads = buildThreads(W, H);
+    let threads = buildThreads(canvas.width, canvas.height);
+
+    const resize = () => {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const nextThreads = buildThreads(canvas.width, canvas.height);
+      threads = threads.map((oldT, idx) => ({
+        ...(nextThreads[idx] || oldT),
+        progress: oldT.progress,
+      }));
+    };
+    window.addEventListener("resize", resize);
 
     // ── Draw one thread ───────────────────────────────────────────────────────
     function drawThread(th, gEnv, el) {

@@ -172,6 +172,23 @@ function WakingUpText() {
   );
 }
 
+// ─── Responsive Grid Dimensions for Video Collage ───────────────────
+function getGridDimensions() {
+  if (typeof window === "undefined") return { cols: 7, rows: 6 };
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const aspect = w / h;
+  if (aspect >= 1.35) {
+    return { cols: 7, rows: 6 };
+  }
+  // iPad & Tablet family: compute rows dynamically so nodes aren't vertically stretched
+  const cols = w >= 1000 ? 6 : 5;
+  const cellW = w / cols;
+  const idealCellH = cellW / 1.38;
+  const rows = Math.max(6, Math.round(h / idealCellH));
+  return { cols, rows };
+}
+
 // ─── Tiled Video Canvas (MCU Optimization) ─────────────────────────
 function MCUVideoGridCanvas({ active }) {
   const canvasRef = useRef(null);
@@ -182,12 +199,10 @@ function MCUVideoGridCanvas({ active }) {
     if (!canvas) return;
     
     const ctx = canvas.getContext("2d");
-    const updateSize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    updateSize();
-    window.addEventListener("resize", updateSize);
+    let { cols, rows } = getGridDimensions();
+    let totalCells = cols * rows;
+    const random = createRuntimeSeededRandom("intro-video-grid-v1");
+    let cellAssignments = Array.from({ length: totalCells }).map(() => Math.floor(random() * 3));
 
     // Load all 3 videos into memory
     const videos = [1, 2, 3].map(num => {
@@ -200,19 +215,31 @@ function MCUVideoGridCanvas({ active }) {
       return v;
     });
 
-    let raf;
-    const cols = window.innerWidth > 768 ? 7 : 6;
-    const rows = window.innerWidth > 768 ? 6 : 7;
-    const totalCells = cols * rows;
-    const random = createRuntimeSeededRandom("intro-video-grid-v1");
+    const updateSize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const dims = getGridDimensions();
+      cols = dims.cols;
+      rows = dims.rows;
+      totalCells = cols * rows;
+      if (cellAssignments.length < totalCells) {
+        const extra = Array.from({ length: totalCells - cellAssignments.length }).map(() => Math.floor(random() * videos.length));
+        cellAssignments = [...cellAssignments, ...extra];
+      }
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
 
-    const cellAssignments = Array.from({ length: totalCells }).map(() => Math.floor(random() * videos.length));
+    let raf;
 
     const switchInterval = setInterval(() => {
+      if (totalCells <= 0) return;
       const flips = Math.floor(random() * 6) + 1;
       for (let i = 0; i < flips; i++) {
         const cellIdx = Math.floor(random() * totalCells);
-        cellAssignments[cellIdx] = Math.floor(random() * videos.length);
+        if (cellIdx < cellAssignments.length) {
+          cellAssignments[cellIdx] = Math.floor(random() * videos.length);
+        }
       }
     }, 150);
 
@@ -233,7 +260,23 @@ function MCUVideoGridCanvas({ active }) {
           }
 
           if (v) {
-            ctx.drawImage(v, c * cellW, r * cellH, cellW, cellH);
+            const vw = v.videoWidth;
+            const vh = v.videoHeight;
+            if (vw && vh) {
+              const videoAspect = vw / vh;
+              const cellAspect = cellW / cellH;
+              let sx = 0, sy = 0, sw = vw, sh = vh;
+              if (videoAspect > cellAspect) {
+                sw = vh * cellAspect;
+                sx = (vw - sw) / 2;
+              } else {
+                sh = vw / cellAspect;
+                sy = (vh - sh) / 2;
+              }
+              ctx.drawImage(v, sx, sy, sw, sh, c * cellW, r * cellH, cellW, cellH);
+            } else {
+              ctx.drawImage(v, c * cellW, r * cellH, cellW, cellH);
+            }
           }
           
           ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
@@ -268,6 +311,28 @@ function MCUVideoGridCanvas({ active }) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // IntroPreloader — Dynamic desktop/mobile hybrid
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const BASELINE_K_CLIP = "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)";
+
+function getResponsiveKClipPath() {
+  if (typeof window === "undefined") return BASELINE_K_CLIP;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const aspect = w / h;
+  // Desktop widescreen baseline (aspect >= 1.35) remains 100% unchanged
+  if (aspect >= 1.35) {
+    return BASELINE_K_CLIP;
+  }
+  // iPad and tablet family: constrain vertical elongation
+  const spanPercent = Math.min(94, Math.max(50, aspect * 78));
+  const yMid = 48;
+  const halfSpan = spanPercent / 2;
+  const yTop = Math.max(0, yMid - halfSpan);
+  const yBottom = Math.min(100, yMid + halfSpan);
+  const yMidUpper = yMid - (yMid - yTop) * 0.10;
+  const yMidLower = yMid + (yBottom - yMid) * 0.10;
+  return `polygon(20% ${yTop.toFixed(2)}%, 32% ${yTop.toFixed(2)}%, 28.5% ${yMidUpper.toFixed(2)}%, 70% ${yTop.toFixed(2)}%, 85% ${yTop.toFixed(2)}%, 42% ${yMid.toFixed(2)}%, 85% ${yBottom.toFixed(2)}%, 70% ${yBottom.toFixed(2)}%, 27.5% ${yMidLower.toFixed(2)}%, 24% ${yBottom.toFixed(2)}%, 12% ${yBottom.toFixed(2)}%)`;
+}
+
 export default function IntroPreloader({ onComplete }) {
   const mounted = useHasMounted();
   const isMobile = useIsMobileViewport();
@@ -276,6 +341,14 @@ export default function IntroPreloader({ onComplete }) {
   const [showGears,     setShowGears]    = useState(false);
   const [laserActive,   setLaserActive]  = useState(false);
   const [done,          setDone]         = useState(false);
+  const [kClipPath,     setKClipPath]    = useState(BASELINE_K_CLIP);
+
+  useEffect(() => {
+    const updateClip = () => setKClipPath(getResponsiveKClipPath());
+    updateClip();
+    window.addEventListener("resize", updateClip);
+    return () => window.removeEventListener("resize", updateClip);
+  }, []);
 
   const threadsCanvasRef = useRef(null);
   usePhoenixAurora(threadsCanvasRef, mounted && !done && !isMobile, 9500);
@@ -381,7 +454,7 @@ export default function IntroPreloader({ onComplete }) {
             animate={{ opacity: showSubtitle ? 0.35 : 0, scale: showSubtitle ? 1 : 0.98 }}
             transition={{ duration: 3, ease: "easeInOut" }}
             className="absolute inset-0"
-            style={{ clipPath: "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)" }}
+            style={{ clipPath: kClipPath }}
           >
             <MCUVideoGridCanvas active={true} />
             {/* Gradient Tint Overlays */}
