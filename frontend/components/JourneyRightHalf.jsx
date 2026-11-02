@@ -62,10 +62,10 @@ export function JourneyDescriptionBox({ description, className }) {
 
   return (
     <div 
-      className={`${defaultClasses} ${className || ""} bg-white/10 backdrop-blur-3xl border-none shadow-[0_0_50px_rgba(255,255,255,0.25)]`}
+      className={`${defaultClasses} ${className || ""} bg-black/40 border border-white/15 shadow-[0_0_50px_rgba(255,255,255,0.2)]`}
       style={{
-        maskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)",
-        WebkitMaskImage: "radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,1) 25%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 75%, transparent 100%)"
+        WebkitBackdropFilter: "blur(24px)",
+        backdropFilter: "blur(24px)",
       }}
     >
       {/* Cloud Dynamic Glow Blobs */}

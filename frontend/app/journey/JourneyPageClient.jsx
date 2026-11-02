@@ -139,7 +139,7 @@ export default function JourneyPageClient() {
         style={{ pointerEvents: isIntroActive ? 'none' : 'auto' }}
       >
         {/* Section 1 - Mist */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_1.webp')] md:bg-cover md:bg-center flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp_arcade.webp')] bg-cover bg-center md:bg-[url('/bgj_1_arcade.webp')] md:bg-cover md:bg-center flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             {/* Mobile Stack for Section 1 */}
             {isMobile && (
@@ -191,7 +191,7 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 3 - Dream Shift Labs */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_3.webp')] md:bg-cover md:bg-center flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp_arcade.webp')] bg-cover bg-center md:bg-[url('/bgj_3.webp')] md:bg-cover md:bg-center flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
           <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
             {/* Mobile Stack for Section 3 */}
             {isMobile && (
