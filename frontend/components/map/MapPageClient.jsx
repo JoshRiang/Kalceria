@@ -33,18 +33,6 @@ const avatarUrl = (user) =>
   user?.profilePicture ||
   `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.name || "anon")}`;
 
-const hqPoint = {
-  id: "hq_bintaro",
-  title: "Kalceria Headquarter",
-  role: "Meet Center",
-  description: "Place where people meet",
-  lat: -6.2715,
-  lng: 106.7135,
-  gifUrl: "/media/gifs/hq_feed_1.mp4",
-  videoUrl: "/media/gifs/hq_feed_1.mp4",
-  mediaUrls: ["/media/gifs/hq_feed_1.mp4", "/media/gifs/hq_feed_2.mp4", "/media/gifs/hq_feed_3.mp4", "/media/gifs/hq_feed_4.mp4"],
-};
-
 const cleanEventDesc = (item) => {
   if (!item) return item;
   const raw = item.description || "";
@@ -509,7 +497,6 @@ export default function MapPage() {
         <SnapMap
           users={mapUsers}
           events={events}
-          hqPoint={hqPoint}
           onMapReady={handleMapReady}
           focusUserId={focusedUserId}
           isMapDark={isMapDark}

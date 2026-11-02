@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createUserIcon, escapeMapHtml, getSafeMapAvatarUrl, getSafeMapColor } from "./map/UserIcon";
-import { createHqIcon } from "./map/HqIcon";
 import { createEventIcon } from "./map/EventIcon";
 import { userPopup } from "./map/UserPopup";
-import { hqPopup } from "./map/HqPopup";
 import { eventPopup } from "./map/EventPopup";
 
 import "leaflet/dist/leaflet.css";
@@ -26,7 +24,6 @@ async function loadLeaflet() {
 export default function SnapMap({
   users,
   events,
-  hqPoint,
   onMapReady,
   focusUserId,
   isMapDark = false,
@@ -230,26 +227,7 @@ export default function SnapMap({
       }
     });
 
-    // 3. Reconcile HQ
-    if (hqPoint) {
-      currentEventIds.add("hq");
-      if (markerRefs.current["hq"]) {
-        markerRefs.current["hq"].setIcon(createHqIcon(L, isMapDark));
-      } else {
-        const hqMarker = L.marker([hqPoint.lat, hqPoint.lng], {
-          icon: createHqIcon(L, isMapDark),
-          userData: { color: "#ffd60a", nickname: "HQ", avatarSeed: "hq" },
-        }).bindPopup(hqPopup(hqPoint), {
-          className: "tactical-popup hq-tactical-popup",
-          offset: [0, -30],
-          autoClose: true,
-        });
-        markerRefs.current["hq"] = hqMarker;
-        layer.addLayer(hqMarker);
-      }
-    }
-
-    // 4. Remove Stale Markers
+    // 3. Remove Stale Markers
     Object.keys(markerRefs.current).forEach((id) => {
       if (!currentUserIds.has(id) && !currentEventIds.has(id)) {
         layer.removeLayer(markerRefs.current[id]);
@@ -258,7 +236,7 @@ export default function SnapMap({
     });
 
     layer.addTo(mapRef.current);
-  }, [users, events, hqPoint, isReady, isMapDark]);
+  }, [users, events, isReady, isMapDark]);
 
   return (
     <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>

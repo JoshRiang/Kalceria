@@ -214,7 +214,7 @@ export async function getActiveMiniEvents(req, res, next) {
       {
         id: "mini_eat_1",
         title: "Late Night Sate & Tongseng",
-        description: "Post-cruise street food feast near Fresh Market strip.",
+        description: "Post-cruise street food feast near Sector 7 strip.",
         lat: -6.2710,
         lng: 106.7145,
         isActive: true,

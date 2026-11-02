@@ -114,7 +114,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
   {
     id: "mini_eat_1",
     title: "Late Night Sate & Tongseng",
-    description: "Post-cruise street food feast near Fresh Market strip.",
+    description: "Post-cruise street food feast near Sector 7 strip.",
     category: "eat",
     mediaUrl: "/media/gifs/event_eat_1.mp4",
     mediaUrls: ["/media/gifs/event_eat_1.mp4", "/media/gifs/event_eat_2.mp4"],

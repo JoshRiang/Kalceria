@@ -47,15 +47,16 @@ export function getEventIconHtml(event, isMapDark = false) {
   
   // Icon color: white when dark mode, black when light mode (for solid icons like special and eat)
   const iconColor = isMapDark ? "#ffffff" : "#000000";
+  // Non-glowing crisp drop-shadow (no fuzzy white or neon halo)
   const dropShadow = isMapDark
-    ? "drop-shadow(0 2px 4px rgba(0,0,0,0.95)) drop-shadow(0 0 6px rgba(255,255,255,0.4))"
-    : "drop-shadow(0 1px 3px rgba(255,255,255,0.95)) drop-shadow(0 2px 5px rgba(0,0,0,0.4))";
+    ? "drop-shadow(0 2px 4px rgba(0,0,0,0.85))"
+    : "drop-shadow(0 1.5px 3px rgba(0,0,0,0.25))";
 
   // Profile picture of the user who declared the event
   const creatorUser = event?.creator || { name: event?.name || "Kalcerian" };
   const safeAvatar = escapeMapHtml(getSafeMapAvatarUrl(creatorUser));
   const safeCreator = escapeMapHtml(creatorUser.name || creatorUser.nickname || "Kalcerian");
-  const avatarBorder = isMapDark ? "#0a0f1a" : "#ffffff";
+  const avatarBorder = isMapDark ? "#000000" : "#ffffff";
 
   return `
     <div class="clean-event-node" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer;">

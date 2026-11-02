@@ -41,15 +41,8 @@ export function getUserIconHtml(user) {
   const safeName = escapeMapHtml(displayName);
   const safeAvatar = escapeMapHtml(getSafeMapAvatarUrl(user));
 
-  // Echoing animation is only for people who are online (green color #10b981)
-  const isOnline = user?.isOnline !== false;
-  const pulseHtml = isOnline
-    ? `<div class="radar-pulse online-green-pulse" style="animation-delay: ${randomDelay}s; border: 2px solid #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);"></div>`
-    : "";
-
   return `
     <div class="radar-node" style="--user-color: ${cleanColor}">
-      ${pulseHtml}
       <div class="radar-nametag">${safeName}</div>
       <div class="radar-float-wrapper" style="animation-delay: ${randomDelay}s">
         <div class="radar-avatar"><img src="${safeAvatar}" alt="${safeName}"></div>
@@ -72,8 +65,8 @@ export function getBroadcastUserIconHtml(user, isMapDark = false) {
   const dotFill = isMapDark ? "#000000" : "#ffffff";
   const avatarBorder = isMapDark ? "#000000" : "#ffffff";
   const dropShadow = isMapDark
-    ? "drop-shadow(0 2px 6px rgba(0,0,0,0.95)) drop-shadow(0 0 4px rgba(255,255,255,0.35))"
-    : "drop-shadow(0 2px 4px rgba(0,0,0,0.35)) drop-shadow(0 1px 2px rgba(255,255,255,0.8))";
+    ? "drop-shadow(0 2px 4px rgba(0,0,0,0.8))"
+    : "drop-shadow(0 1.5px 3px rgba(0,0,0,0.25))";
 
   const isOnline = user?.isOnline !== false;
   const statusDot = isOnline
