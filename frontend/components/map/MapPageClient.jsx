@@ -7,7 +7,6 @@ import ContentImage from "@/components/ui/ContentImage";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import { useHasMounted } from "@/hooks/useHasMounted";
-import RadialPing from "@/components/map/RadialPing";
 import { MapAuthGate } from "@/components/map/MapAuthGate";
 import { INITIAL_MOCK_MINI_EVENTS } from "@/components/map/mockMiniEvents";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
@@ -591,6 +590,8 @@ export default function MapPage() {
             avatarUrl={avatarUrl}
             presence={presence}
             handlePresenceChange={handlePresenceChange}
+            recenterMap={recenterMap}
+            isRecentering={isRecentering}
           />
 
           {/* Kalcerians Panel */}
@@ -620,48 +621,6 @@ export default function MapPage() {
             sidebarKalcerians={sidebarKalcerians}
             focusUser={focusUser}
           />
-
-          {/* Recenter Button Bottom Right */}
-          <button
-            type="button"
-            className="fixed p-2 z-[1000] bottom-8 right-2 w-[44px] h-[44px] bg-[#0c0c0e] border border-[#1f2937] text-white flex items-center justify-center shadow-[inset_0_2px_4px_rgba(255,255,255,0.15),_0_4px_12px_rgba(0,0,0,0.6),_inset_0_-3px_5px_rgba(0,0,0,0.8)] backdrop-blur-md transition-all hover:bg-[#121215] hover:border-slate-700 rounded-[14px] group active:scale-95 focus-visible:ring-2 focus-visible:ring-white/30 outline-none"
-            onClick={recenterMap}
-            aria-label="Recenter Map Radar"
-            title="Recenter Map"
-          >
-            <RadialPing
-              mode={isCentered ? "in" : "out"}
-              color={isCentered ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.4)"}
-              className="scale-150"
-            />
-            <motion.svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              className="relative z-10 text-white"
-              animate={isRecentering ? { rotate: [0, 1080] } : { rotate: 360 }}
-              transition={
-                isRecentering
-                  ? { duration: 1.2, ease: "circOut" }
-                  : { repeat: Infinity, duration: 25, ease: "linear" }
-              }
-            >
-              {/* Center Target Ring */}
-              <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="2.5" fill="none" />
-              
-              {/* Radiating spokes (Claude / Roda styling) */}
-              <line x1="12" y1="2" x2="12" y2="7.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="12" y1="16.5" x2="12" y2="22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="2" y1="12" x2="7.5" y2="12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="16.5" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              
-              <line x1="4.93" y1="4.93" x2="8.82" y2="8.82" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="15.18" y1="15.18" x2="19.07" y2="19.07" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="4.93" y1="19.07" x2="8.82" y2="15.18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="15.18" y1="8.82" x2="19.07" y2="4.93" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-            </motion.svg>
-          </button>
         </>
       )}
 

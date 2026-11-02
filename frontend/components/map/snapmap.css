@@ -18,14 +18,8 @@
   background: transparent !important;
 }
 
-/*
-  Classic Inverted Dark Mode.
-  Inverts the standard OSM light tiles directly.
-  hue-rotate(180deg) preserves original water/park colors (blue stays blue, green stays green)
-  while turning the off-white land into dark charcoal!
-*/
 .snap-tactical-map.dark-theme .leaflet-tile {
-  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) !important;
+  filter: none !important;
 }
 
 /* Shared */
