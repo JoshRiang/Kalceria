@@ -36,14 +36,8 @@ export default function SnapMap({
   const markerRefs = useRef({});
   const [isReady, setIsReady] = useState(false);
 
-  // Update tile layer & invalidate map size on theme toggle
+  // Invalidate map size on theme toggle
   useEffect(() => {
-    if (tileLayerRef.current) {
-      const tileUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png";
-      tileLayerRef.current.setUrl(tileUrl);
-    }
     if (mapRef.current) {
       mapRef.current.invalidateSize();
     }
@@ -97,25 +91,14 @@ export default function SnapMap({
         closePopupOnClick: true,
       });
 
-      // High-performance CartoDB tiles (Voyager for Light, Dark Matter for Dark)
-      const tileUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png";
-
-      const tileLayer = L.tileLayer(tileUrl, {
-        subdomains: "abcd",
-        maxZoom: 19,
-        attribution: '&copy; CARTO &copy; OpenStreetMap',
-      }).addTo(map);
-
-      // Automatic fallback to OpenStreetMap if any tile fails to load
-      tileLayer.on("tileerror", function (error) {
-        if (error.tile && !error.tile._hasFallenBack) {
-          error.tile._hasFallenBack = true;
-          const coords = error.coords;
-          error.tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
+      // Standard OpenStreetMap with zero API keys or watermarks
+      const tileLayer = L.tileLayer(
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors',
         }
-      });
+      ).addTo(map);
 
       tileLayerRef.current = tileLayer;
       mapRef.current = map;

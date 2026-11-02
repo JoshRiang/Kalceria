@@ -255,7 +255,7 @@ export default function LandingPage({ onNavigateAuth }) {
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }} className="absolute top-[20%] right-[-10%] w-[45vw] h-[45vw] rounded-full blur-[120px] bg-[#FF8C00]" />
         </div>
 
-        {/* Mobile & Half-Desktop Silhouette: grup_hp.webp (dragged 30% more to the bottom so it grounds firmly rather than hanging) */}
+        {/* Mobile & Half-Desktop Silhouette: grup_hp.webp (dragged an extra 30% more down to completely eliminate overlap and ground firmly) */}
         <div className="absolute bottom-0 left-0 w-full h-[460px] xs:h-[500px] sm:h-[560px] md:h-[620px] pointer-events-none z-[1] overflow-hidden xl:hidden flex justify-center items-end">
           <Image 
             src="/hp/grup_hp.webp" 
@@ -264,7 +264,7 @@ export default function LandingPage({ onNavigateAuth }) {
             height={1848} 
             loading="lazy" 
             decoding="async" 
-            className="h-full w-auto object-contain opacity-60 translate-y-[28%] xs:translate-y-[30%] sm:translate-y-[32%]" 
+            className="h-full w-auto object-contain opacity-60 translate-y-[58%] xs:translate-y-[60%] sm:translate-y-[62%]" 
           />
         </div>
 
