@@ -688,29 +688,7 @@ export default function MapPage() {
         </>
       )}
 
-      {!showStartup && hasMounted && (
-        <motion.div
-          animate={{ y: [0, -3, 0] }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="fixed bottom-1 xs:bottom-1.5 md:bottom-2 left-1/2 -translate-x-1/2 z-[20] pointer-events-none select-none flex flex-col items-center"
-        >
-          <Image
-            src="/kalcermap_bottom.webp"
-            alt="Kalceria Maps"
-            width={360}
-            height={130}
-            sizes="(max-width: 768px) 120px, (max-width: 1024px) 150px, 180px"
-            quality={85}
-            loading="lazy"
-            className="h-[40px] xs:h-[46px] sm:h-[54px] md:h-[62px] lg:h-[70px] w-auto object-contain opacity-90 filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]"
-            draggable={false}
-          />
-        </motion.div>
-      )}
+
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {

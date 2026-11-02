@@ -9,6 +9,37 @@ const avatarUrl = (user) =>
   user?.profilePicture ||
   `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.name || "anon")}`;
 
+const FIND_TITLE_LETTERS = "Find other Kalcerians".split("");
+
+const titleWaveContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.022,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const titleLetterVariant = {
+  hidden: {
+    opacity: 0,
+    x: -14,
+    scale: 0.9,
+  },
+  visible: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      damping: 15,
+      stiffness: 160,
+    },
+  },
+};
+
 function cleanDesc(value) {
   return String(value || "")
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
@@ -181,29 +212,33 @@ export function KalceriansPanel({
         />
       </button>
 
-      {/* 2. Header: Kalcerians Title & Subtitle (Clean GitHub style, No 3D font, No < chevron) */}
+      {/* 2. Header: "Find other Kalcerians" replacing Kalcerians with left wave-in animation */}
       <div
         onClick={() => setDrawerOpen((prev) => !prev)}
-        className={`px-4 pb-3 pt-0.5 cursor-pointer flex justify-between items-center transition-colors select-none ${
+        className={`px-4 pb-2.5 pt-0.5 cursor-pointer flex justify-between items-center transition-colors select-none ${
           isMapDark ? "hover:bg-[#21262d]/40" : "hover:bg-[#f6f8fa]/60"
         }`}
       >
-        <div className="flex flex-col">
-          <h2
-            className={`text-[15px] sm:text-[16px] font-semibold leading-tight tracking-tight ${
-              isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-            }`}
-          >
-            Kalcerians
-          </h2>
-          <p
-            className={`text-[11px] sm:text-[11.5px] mt-0.5 leading-snug ${
-              isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-            }`}
-          >
-            Find other Kalcerians
-          </p>
-        </div>
+        <motion.h2
+          key={drawerOpen ? "drawer-open" : "drawer-closed"}
+          variants={titleWaveContainer}
+          initial={drawerOpen ? "hidden" : "visible"}
+          animate="visible"
+          className={`font-sans font-bold text-base sm:text-lg tracking-tight select-none flex flex-wrap items-center ${
+            isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+          }`}
+        >
+          {FIND_TITLE_LETTERS.map((char, index) => (
+            <motion.span
+              key={index}
+              variants={titleLetterVariant}
+              className="inline-block will-change-transform"
+              style={{ whiteSpace: char === " " ? "pre" : "normal" }}
+            >
+              {char === " " ? "\u00A0" : char}
+            </motion.span>
+          ))}
+        </motion.h2>
       </div>
 
       {/* 3. Search Bar - Modern GitHub Style */}

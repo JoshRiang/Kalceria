@@ -35,8 +35,14 @@ export default function SnapMap({
   const markerRefs = useRef({});
   const [isReady, setIsReady] = useState(false);
 
-  // Invalidate map size on theme toggle
+  // Update tile layer & invalidate map size on theme toggle
   useEffect(() => {
+    if (tileLayerRef.current) {
+      const tileUrl = isMapDark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+      tileLayerRef.current.setUrl(tileUrl);
+    }
     if (mapRef.current) {
       mapRef.current.invalidateSize();
     }
@@ -73,14 +79,16 @@ export default function SnapMap({
         closePopupOnClick: true,
       });
 
-      // Standard OpenStreetMap with zero API keys or watermarks
-      const tileLayer = L.tileLayer(
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap',
-        }
-      ).addTo(map);
+      // High-performance CartoDB tiles (Voyager for Light, Dark Matter for Dark)
+      const tileUrl = isMapDark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+
+      const tileLayer = L.tileLayer(tileUrl, {
+        subdomains: "abcd",
+        maxZoom: 19,
+        attribution: '&copy; CARTO',
+      }).addTo(map);
 
       tileLayerRef.current = tileLayer;
       mapRef.current = map;

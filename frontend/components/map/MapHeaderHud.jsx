@@ -244,12 +244,12 @@ export const MapHeaderHud = memo(function MapHeaderHud({
             </svg>
           </button>
 
-          {/* Quick Actions Dropdown Menu - Modern GitHub style */}
+          {/* Quick Actions Dropdown Menu - Modern GitHub style with tactile expansion & mode-aware color shift */}
           <div
-            className={`absolute top-[44px] right-0 z-[1001] w-[210px] sm:w-[220px] py-1 transition-all duration-200 origin-top-right overflow-hidden rounded-lg font-sans ${
+            className={`absolute top-[44px] right-0 z-[1001] w-[215px] sm:w-[225px] p-1.5 transition-all duration-200 origin-top-right overflow-hidden rounded-xl font-sans ${
               isMapDark
-                ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc] shadow-[0_8px_24px_rgba(0,0,0,0.6)]"
-                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328] shadow-[0_8px_24px_rgba(140,149,159,0.2)]"
+                ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc] shadow-[0_12px_28px_rgba(0,0,0,0.7)]"
+                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328] shadow-[0_12px_28px_rgba(140,149,159,0.25)]"
             } ${
               actionMenuOpen
                 ? "opacity-100 translate-y-0 pointer-events-auto"
@@ -259,24 +259,39 @@ export const MapHeaderHud = memo(function MapHeaderHud({
             {/* Item 1: Broadcast */}
             <button
               type="button"
-              className={`w-full flex flex-col px-3 py-2 text-left transition-colors cursor-pointer ${
-                isMapDark ? "hover:bg-[#21262d]" : "hover:bg-[#f6f8fa]"
-              }`}
+              className="group relative w-full flex flex-col px-3.5 py-2.5 text-left rounded-lg transition-all duration-200 cursor-pointer overflow-hidden outline-none hover:scale-[1.03] active:scale-[0.98] origin-center"
               onClick={() => {
                 setShowStatusModal(true);
                 setActionMenuOpen(false);
               }}
             >
+              {/* Dynamic Color Shift Blobs like in Kalcerian */}
+              <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-lg">
+                {isMapDark ? (
+                  <>
+                    <div className="absolute -top-[20%] -left-[20%] w-[90px] h-[90px] bg-red-500/30 rounded-full blur-[14px] mix-blend-screen animate-pulse duration-[2800ms]" />
+                    <div className="absolute -bottom-[20%] -right-[20%] w-[90px] h-[90px] bg-[#ffd60a]/30 rounded-full blur-[14px] mix-blend-screen animate-pulse duration-[3600ms] delay-100" />
+                    <div className="absolute top-[10%] right-[20%] w-[80px] h-[70px] bg-[#ff006e]/25 rounded-full blur-[15px] mix-blend-screen animate-pulse duration-[2200ms] delay-200" />
+                  </>
+                ) : (
+                  <>
+                    <div className="absolute -top-[20%] -left-[20%] w-[90px] h-[90px] bg-rose-400/25 rounded-full blur-[14px] mix-blend-multiply animate-pulse duration-[2800ms]" />
+                    <div className="absolute -bottom-[20%] -right-[20%] w-[90px] h-[90px] bg-amber-300/35 rounded-full blur-[14px] mix-blend-multiply animate-pulse duration-[3600ms] delay-100" />
+                    <div className="absolute top-[10%] right-[20%] w-[80px] h-[70px] bg-pink-300/25 rounded-full blur-[15px] mix-blend-multiply animate-pulse duration-[2200ms] delay-200" />
+                  </>
+                )}
+              </div>
+
               <span
-                className={`text-[13.5px] leading-snug font-semibold ${
-                  isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                className={`relative z-10 text-[13.5px] leading-snug font-semibold transition-colors duration-200 ${
+                  isMapDark ? "text-[#f0f6fc] group-hover:text-white" : "text-[#1f2328] group-hover:text-black"
                 }`}
               >
                 Broadcast
               </span>
               <span
-                className={`text-[11.5px] leading-tight mt-0.5 ${
-                  isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+                className={`relative z-10 text-[11.5px] leading-tight mt-0.5 transition-colors duration-200 ${
+                  isMapDark ? "text-[#8b949e] group-hover:text-[#c9d1d9]" : "text-[#656d76] group-hover:text-[#424a53]"
                 }`}
               >
                 Share message &amp; location
@@ -285,32 +300,47 @@ export const MapHeaderHud = memo(function MapHeaderHud({
 
             {/* Subtle Divider */}
             <div
-              className={`h-[1px] my-1 ${
-                isMapDark ? "bg-[#30363d]" : "bg-[#d0d7de]"
+              className={`h-[1px] my-1 mx-2 ${
+                isMapDark ? "bg-[#30363d]/80" : "bg-[#d0d7de]/80"
               }`}
             />
 
             {/* Item 2: Mini event */}
             <button
               type="button"
-              className={`w-full flex flex-col px-3 py-2 text-left transition-colors cursor-pointer ${
-                isMapDark ? "hover:bg-[#21262d]" : "hover:bg-[#f6f8fa]"
-              }`}
+              className="group relative w-full flex flex-col px-3.5 py-2.5 text-left rounded-lg transition-all duration-200 cursor-pointer overflow-hidden outline-none hover:scale-[1.03] active:scale-[0.98] origin-center"
               onClick={() => {
                 setShowEventModal(true);
                 setActionMenuOpen(false);
               }}
             >
+              {/* Dynamic Color Shift Blobs like in Kalcerian */}
+              <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-lg">
+                {isMapDark ? (
+                  <>
+                    <div className="absolute -top-[20%] -left-[20%] w-[90px] h-[90px] bg-red-500/30 rounded-full blur-[14px] mix-blend-screen animate-pulse duration-[2800ms]" />
+                    <div className="absolute -bottom-[20%] -right-[20%] w-[90px] h-[90px] bg-[#ffd60a]/30 rounded-full blur-[14px] mix-blend-screen animate-pulse duration-[3600ms] delay-100" />
+                    <div className="absolute top-[10%] right-[20%] w-[80px] h-[70px] bg-[#ff006e]/25 rounded-full blur-[15px] mix-blend-screen animate-pulse duration-[2200ms] delay-200" />
+                  </>
+                ) : (
+                  <>
+                    <div className="absolute -top-[20%] -left-[20%] w-[90px] h-[90px] bg-rose-400/25 rounded-full blur-[14px] mix-blend-multiply animate-pulse duration-[2800ms]" />
+                    <div className="absolute -bottom-[20%] -right-[20%] w-[90px] h-[90px] bg-amber-300/35 rounded-full blur-[14px] mix-blend-multiply animate-pulse duration-[3600ms] delay-100" />
+                    <div className="absolute top-[10%] right-[20%] w-[80px] h-[70px] bg-pink-300/25 rounded-full blur-[15px] mix-blend-multiply animate-pulse duration-[2200ms] delay-200" />
+                  </>
+                )}
+              </div>
+
               <span
-                className={`text-[13.5px] leading-snug font-semibold ${
-                  isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                className={`relative z-10 text-[13.5px] leading-snug font-semibold transition-colors duration-200 ${
+                  isMapDark ? "text-[#f0f6fc] group-hover:text-white" : "text-[#1f2328] group-hover:text-black"
                 }`}
               >
                 Mini event
               </span>
               <span
-                className={`text-[11.5px] leading-tight mt-0.5 ${
-                  isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+                className={`relative z-10 text-[11.5px] leading-tight mt-0.5 transition-colors duration-200 ${
+                  isMapDark ? "text-[#8b949e] group-hover:text-[#c9d1d9]" : "text-[#656d76] group-hover:text-[#424a53]"
                 }`}
               >
                 Start an instant meetup
