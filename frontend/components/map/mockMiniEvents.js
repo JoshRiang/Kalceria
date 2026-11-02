@@ -19,7 +19,15 @@ export const INITIAL_MOCK_MINI_EVENTS = [
       name: "Ahmad Bintaro",
       nickname: "Ahmad",
       profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad",
-      broadcast: { message: "Riding around Sector 9!", createdAt: new Date().toISOString() }
+      broadcast: { message: "Riding around Sector 9!", createdAt: new Date().toISOString() },
+      coverType: "video",
+      coverImage: "/media/gifs/event_cafe_1.mp4",
+      socialPlatform: null,
+      socialLink: null,
+      instagram: null,
+      whatsapp: null,
+      phone: null,
+      reason: "Cruising Bintaro streets, keeping engine tuning sharp and clean runs."
     }
   },
   {
@@ -202,7 +210,16 @@ export const INITIAL_MOCK_MINI_EVENTS = [
       id: "mock_adit",
       name: "Adit Bintaro",
       nickname: "Adit",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit"
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit",
+      broadcast: { message: "Dyno run booked for Saturday!", createdAt: new Date().toISOString() },
+      coverType: "gif",
+      coverImage: "/media/gifs/event_cafe_1.gif",
+      socialPlatform: "IG",
+      socialLink: "aditbintaro",
+      instagram: "aditbintaro",
+      whatsapp: "+6281234567890",
+      phone: "+6281234567890",
+      reason: "Chasing suspension balance, track day prep, and car enthusiast community."
     }
   },
   {

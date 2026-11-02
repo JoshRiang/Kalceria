@@ -229,7 +229,6 @@ export function KalceriansPanel({
   const [hoveredEventIconId, setHoveredEventIconId] = useState(null);
   const [confirmingAction, setConfirmingAction] = useState(null); // { userId, type: "block" | "unblock" }
   const [expandedUserId, setExpandedUserId] = useState(null);
-  const [mobileProfileUser, setMobileProfileUser] = useState(null);
   const [deviceFamily, setDeviceFamily] = useState("desktop");
 
   useEffect(() => {
@@ -251,18 +250,12 @@ export function KalceriansPanel({
     e.stopPropagation();
     if (blockedUserIds.includes(user.id)) return;
     focusUser(user);
-
-    if (typeof window !== "undefined" && window.innerWidth < 860) {
-      setDrawerOpen(false);
-      setMobileProfileUser(user);
-    } else {
-      setExpandedUserId((prev) => (prev === user.id ? null : user.id));
-    }
+    // On all device families, keep drawer open and smoothly elongate profile card inline
+    setExpandedUserId((prev) => (prev === user.id ? null : user.id));
   }
 
   return (
-    <>
-      <motion.aside
+    <motion.aside
       initial={{ y: 80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
@@ -674,7 +667,8 @@ export function KalceriansPanel({
                       <KalcerianProfileCard
                         user={user}
                         isMapDark={isMapDark}
-                        showMobileClose={false}
+                        showMobileClose={deviceFamily === "hp" || deviceFamily === "tab"}
+                        onClose={() => setExpandedUserId(null)}
                       />
                     </motion.div>
                   )}
@@ -831,36 +825,5 @@ export function KalceriansPanel({
         )}
       </div>
     </motion.aside>
-
-    {/* Mobile Floating Profile Card Modal */}
-    <AnimatePresence>
-      {mobileProfileUser && (
-        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setMobileProfileUser(null)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 280 }}
-            className="relative z-10 w-full max-w-[310px]"
-          >
-            <KalcerianProfileCard
-              user={mobileProfileUser}
-              isMapDark={isMapDark}
-              showMobileClose={true}
-              onClose={() => setMobileProfileUser(null)}
-              isMobileCompact={true}
-            />
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  </>
   );
 }

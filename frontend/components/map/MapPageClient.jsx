@@ -301,6 +301,7 @@ export default function MapPage() {
         map.set(creatorId, {
           id: creatorId,
           name: ev.creator.name || ev.creator.nickname || "Kalcerian",
+          displayName: ev.creator.displayName || ev.creator.name || ev.creator.nickname || "Kalcerian",
           nickname: ev.creator.nickname || ev.creator.name || "Kalcerian",
           profilePicture: ev.creator.profilePicture || null,
           isOnline: true,
@@ -308,6 +309,15 @@ export default function MapPage() {
           lat: ev.lat,
           lng: ev.lng,
           event: ev,
+          coverType: ev.creator.coverType || null,
+          coverImage: ev.creator.coverImage || null,
+          socialPlatform: ev.creator.socialPlatform || null,
+          socialLink: ev.creator.socialLink || null,
+          instagram: ev.creator.instagram || null,
+          whatsapp: ev.creator.whatsapp || null,
+          phone: ev.creator.phone || null,
+          reason: ev.creator.reason || null,
+          createdAt: ev.creator.createdAt || null,
         });
       }
     });
@@ -319,6 +329,15 @@ export default function MapPage() {
         existing.isOnline = u.isOnline;
         existing.broadcast = u.broadcast;
         if (u.profilePicture) existing.profilePicture = u.profilePicture;
+        if (u.coverImage) existing.coverImage = u.coverImage;
+        if (u.coverType) existing.coverType = u.coverType;
+        if (u.socialPlatform) existing.socialPlatform = u.socialPlatform;
+        if (u.socialLink) existing.socialLink = u.socialLink;
+        if (u.instagram) existing.instagram = u.instagram;
+        if (u.whatsapp) existing.whatsapp = u.whatsapp;
+        if (u.phone) existing.phone = u.phone;
+        if (u.reason) existing.reason = u.reason;
+        if (u.createdAt) existing.createdAt = u.createdAt;
       } else {
         map.set(u.id, { ...u });
       }
