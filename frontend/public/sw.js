@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kalceria-pwa-v1';
+const CACHE_NAME = 'kalceria-pwa-v2';
 const MAX_TILE_ENTRIES = 150;
 
 const PRECACHE_ASSETS = [
@@ -92,15 +92,16 @@ self.addEventListener('fetch', (event) => {
 
   if (isStaticSprite) {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        return fetch(req).then((res) => {
+      caches.open(CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(req);
+        const networkFetch = fetch(req).then((res) => {
           if (res && res.status === 200) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+            cache.put(req, res.clone());
           }
           return res;
         }).catch(() => cached);
+
+        return cached || networkFetch;
       })
     );
     return;

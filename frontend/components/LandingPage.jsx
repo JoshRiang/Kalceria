@@ -873,7 +873,7 @@ export default function LandingPage({ onNavigateAuth }) {
         {!isMobile && (
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-20 flex justify-center items-end overflow-hidden">
             <Image
-              src="/png/Subtitute_NeedOurHelp.png"
+              src="/png/Subtitute_NeedOurHelp.png?v=3"
               alt="Photographers"
               width={2400}
               height={1340}
