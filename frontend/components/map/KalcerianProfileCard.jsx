@@ -123,6 +123,7 @@ export default function KalcerianProfileCard({
   const displayName = user?.displayName || user?.name || user?.nickname || "Kalcerian";
   const rawUsername = user?.nickname || user?.username || (user?.name ? user.name.toLowerCase().replace(/\s+/g, '_') : "kalcerian");
   const cleanUsername = String(rawUsername).replace(/^@/, '');
+  const joinedText = formatJoinedDate(user?.createdAt);
 
   // 24-hour broadcast freshness check
   const b = user?.broadcast;

@@ -49,13 +49,13 @@ const nextConfig: NextConfig = {
         { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
         { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-        { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+        { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ...(process.env.NODE_ENV === 'production'
           ? [
               { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
               {
                 key: 'Content-Security-Policy',
-                value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' wss:; media-src 'self' blob: https:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+                value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; media-src 'self' blob: https:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
               },
             ]
           : []),

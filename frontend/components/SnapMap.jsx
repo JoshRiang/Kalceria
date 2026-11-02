@@ -41,8 +41,8 @@ export default function SnapMap({
   useEffect(() => {
     if (tileLayerRef.current) {
       const tileUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+        : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
       tileLayerRef.current.setUrl(tileUrl);
     }
     if (mapRef.current) {
@@ -119,16 +119,33 @@ export default function SnapMap({
         closePopupOnClick: true,
       });
 
-      // High-performance CartoDB tiles (Voyager for Light, Dark Matter for Dark)
+      // Multi-layer reliable basemap:
+      // OpenStreetMap is the primary standard basemap with zero API key requirements
+      // In dark mode: Carto Dark Matter, with automatic fallback to inverted OSM
       const tileUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+        : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
       const tileLayer = L.tileLayer(tileUrl, {
-        subdomains: "abcd",
+        subdomains: isMapDark ? "abcd" : "abc",
         maxZoom: 19,
-        attribution: '&copy; CARTO',
+        attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
+
+      // Automatic bulletproof fallback: if any tile fails to load, fallback to alternate mirror
+      tileLayer.on("tileerror", function (error) {
+        if (error.tile && !error.tile._hasFallenBack) {
+          error.tile._hasFallenBack = true;
+          const coords = error.coords;
+          if (coords) {
+            if (isMapDark) {
+              error.tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
+            } else {
+              error.tile.src = `https://a.basemaps.cartocdn.com/rastertiles/voyager/${coords.z}/${coords.x}/${coords.y}.png`;
+            }
+          }
+        }
+      });
 
       tileLayerRef.current = tileLayer;
       mapRef.current = map;

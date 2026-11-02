@@ -7,6 +7,8 @@
 }
 .snap-tactical-map.light-theme .leaflet-tile {
   filter: none !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* ─── DARK MODE ─── */
@@ -19,7 +21,8 @@
 }
 
 .snap-tactical-map.dark-theme .leaflet-tile {
-  filter: none !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* ─── Ultra-clean Floating Scrollbar for Kalcerians and Panels ─── */
