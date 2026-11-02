@@ -37,12 +37,12 @@ export function KalceriansPanel({
       initial={{ y: 80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-      className={`absolute z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col transition-transform duration-300 ease-out overflow-hidden font-sans select-none max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[72vh] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
+      className={`absolute z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col transition-transform duration-300 ease-out overflow-hidden font-sans select-none backdrop-blur-[28px] max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[72vh] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
         drawerOpen ? "translate-y-0" : "translate-y-[calc(100%-66px)]"
       } ${
         isMapDark
-          ? "bg-[#161b22] border border-white text-[#f0f6fc] shadow-[0_12px_36px_rgba(0,0,0,0.8)]"
-          : "bg-[#ffffff] border border-black text-[#1f2328] shadow-[0_12px_36px_rgba(0,0,0,0.18)]"
+          ? "bg-[#161b22]/85 border border-white text-[#f0f6fc] shadow-[0_12px_36px_rgba(0,0,0,0.8)]"
+          : "bg-white/85 border border-black text-[#1f2328] shadow-[0_12px_36px_rgba(0,0,0,0.18)]"
       }`}
       style={{
         fontFamily:
@@ -65,7 +65,7 @@ export function KalceriansPanel({
         />
       </button>
 
-      {/* 2. Header: Kalcerians Title & Subtitle (No 3D font, GitHub style, No < chevron) */}
+      {/* 2. Header: Kalcerians Title & Subtitle (Clean GitHub style, No 3D font, No < chevron) */}
       <div
         onClick={() => setDrawerOpen((prev) => !prev)}
         className={`px-4 pb-3 pt-0.5 cursor-pointer flex justify-between items-center transition-colors select-none ${
@@ -100,8 +100,8 @@ export function KalceriansPanel({
             onChange={(e) => setSearchQuery(e.target.value)}
             className={`w-full border rounded-md py-1.5 pl-8 pr-3 text-[12px] font-sans outline-none transition-colors ${
               isMapDark
-                ? "bg-[#0d1117] border-[#30363d] text-[#f0f6fc] placeholder:text-[#8b949e] focus:border-[#1f6feb] focus:bg-[#161b22]"
-                : "bg-[#f6f8fa] border-[#d0d7de] text-[#1f2328] placeholder:text-[#656d76] focus:border-[#0969da] focus:bg-[#ffffff]"
+                ? "bg-[#0d1117]/80 border-[#30363d] text-[#f0f6fc] placeholder:text-[#8b949e] focus:border-[#1f6feb] focus:bg-[#161b22]"
+                : "bg-[#f6f8fa]/80 border-[#d0d7de] text-[#1f2328] placeholder:text-[#656d76] focus:border-[#0969da] focus:bg-[#ffffff]"
             }`}
           />
           <svg
@@ -119,173 +119,71 @@ export function KalceriansPanel({
         </div>
       </div>
 
-      {/* 4. Content List: Rolls down cleanly with effective scrollbar */}
+      {/* 4. Content List: Unified Kalcerians list without subheaders, photo circle on left 1/3, color shift on hover/click */}
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
-        {/* Mini Events Section */}
-        {events.length > 0 && (
+        {isDataLoading ? (
           <div className="flex flex-col">
-            <div
-              className={`px-3.5 py-1.5 border-t border-b flex items-center justify-between ${
-                isMapDark
-                  ? "bg-[#161b22] border-[#30363d]"
-                  : "bg-[#f6f8fa] border-[#d0d7de]"
-              }`}
-            >
-              <span
-                className={`text-[11.5px] font-semibold tracking-wide ${
-                  isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className={`grid grid-cols-[64px_1fr] items-center gap-3 px-3.5 py-3 border-b animate-pulse ${
+                  isMapDark ? "border-[#30363d]/60" : "border-[#d0d7de]/70"
                 }`}
               >
-                Mini Events
-              </span>
-              <span
-                className={`text-[10.5px] ${
-                  isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-                }`}
-              >
-                Total: {events.length}
-              </span>
-            </div>
-
-            <div className="flex flex-col">
-              {events.map((event) => (
-                <button
-                  key={event.id}
-                  type="button"
-                  aria-label={`View event: ${event.title}`}
-                  className={`w-full px-3.5 py-2.5 text-left transition-colors border-b flex flex-col gap-0.5 outline-none cursor-pointer ${
-                    isMapDark
-                      ? "border-[#30363d] hover:bg-[#21262d]"
-                      : "border-[#d0d7de] hover:bg-[#f6f8fa]"
-                  }`}
-                  onClick={() => focusUser(event)}
-                >
-                  <b
-                    className={`text-[13px] font-medium leading-snug ${
-                      isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-                    }`}
-                  >
-                    {event.title}
-                  </b>
-                  <p
-                    className={`text-[11px] line-clamp-1 italic ${
-                      isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-                    }`}
-                  >
-                    &quot;{cleanDesc(event.description)}&quot;
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-0.5 opacity-80">
-                    <div
-                      className={`w-4 h-4 rounded-full overflow-hidden border ${
-                        isMapDark ? "border-[#30363d]" : "border-[#d0d7de]"
-                      }`}
-                    >
-                      <ContentImage
-                        className="w-full h-full object-cover"
-                        src={avatarUrl(event.creator)}
-                        alt="Host"
-                        width={32}
-                        height={32}
-                      />
-                    </div>
-                    <span
-                      className={`text-[10.5px] ${
-                        isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-                      }`}
-                    >
-                      by {event.creator?.nickname || event.creator?.name || "Kalcerian"}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Kalcerians Section Header */}
-        <div
-          className={`px-3.5 py-1.5 border-t border-b flex items-center justify-between sticky top-0 z-10 ${
-            isMapDark
-              ? "bg-[#161b22] border-[#30363d]"
-              : "bg-[#f6f8fa] border-[#d0d7de]"
-          }`}
-        >
-          <span
-            className={`text-[11.5px] font-semibold tracking-wide ${
-              isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-            }`}
-          >
-            Kalcerians
-          </span>
-          <div className="flex items-center gap-2.5">
-            <span
-              className={`text-[10.5px] font-medium ${
-                isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-              }`}
-            >
-              Online:{" "}
-              <span className={isMapDark ? "text-[#3fb950]" : "text-[#1a7f37]"}>
-                {kalcerians.filter((k) => k.isOnline).length}
-              </span>
-            </span>
-            <span
-              className={`text-[10.5px] ${
-                isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-              }`}
-            >
-              Total: {sidebarKalcerians.length}
-            </span>
-          </div>
-        </div>
-
-        {/* Kalcerians User List */}
-        <div className="flex-1 bg-transparent">
-          {isDataLoading ? (
-            <div className="flex flex-col">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div
-                  key={i}
-                  className={`px-3.5 py-3 border-b animate-pulse flex items-center gap-3 ${
-                    isMapDark ? "border-[#30363d]" : "border-[#d0d7de]"
-                  }`}
-                >
+                <div className="flex justify-center">
                   <div
-                    className={`w-9 h-9 rounded-full ${
+                    className={`w-11 h-11 rounded-full ${
                       isMapDark ? "bg-[#21262d]" : "bg-[#eaecf0]"
                     }`}
                   />
-                  <div className="flex-1 space-y-2">
-                    <div
-                      className={`h-3 w-[120px] rounded ${
-                        isMapDark ? "bg-[#21262d]" : "bg-[#eaecf0]"
-                      }`}
-                    />
-                    <div
-                      className={`h-2 w-[70px] rounded ${
-                        isMapDark ? "bg-[#21262d]" : "bg-[#eaecf0]"
-                      }`}
-                    />
-                  </div>
                 </div>
-              ))}
-            </div>
-          ) : sidebarKalcerians.length > 0 ? (
-            sidebarKalcerians.map((user) => (
+                <div className="space-y-2">
+                  <div
+                    className={`h-3.5 w-[130px] rounded ${
+                      isMapDark ? "bg-[#21262d]" : "bg-[#eaecf0]"
+                    }`}
+                  />
+                  <div
+                    className={`h-2.5 w-[180px] rounded ${
+                      isMapDark ? "bg-[#21262d]" : "bg-[#eaecf0]"
+                    }`}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : sidebarKalcerians.length > 0 ? (
+          sidebarKalcerians.map((user) => {
+            // Check if this Kalcerian created an event or has a broadcast message
+            const userEvent = events.find(
+              (e) =>
+                e.creator?.id === user.id ||
+                e.creator?.nickname?.toLowerCase() === user.nickname?.toLowerCase() ||
+                e.creator?.name?.toLowerCase() === user.name?.toLowerCase()
+            );
+            const district = mapUsersData.find((u) => u.id === user.id)?.district;
+            const hasValidDistrict = district && !/^(scanning|unknown)/i.test(district.trim());
+
+            return (
               <div
                 key={user.id}
-                className={`border-b ${
-                  isMapDark ? "border-[#30363d]" : "border-[#d0d7de]"
+                className={`relative border-b ${
+                  isMapDark ? "border-[#30363d]/60" : "border-[#d0d7de]/70"
                 }`}
               >
                 <div
-                  className={`relative w-full grid grid-cols-[36px_1fr_auto] items-center gap-3 px-3.5 py-2.5 text-left transition-colors cursor-pointer group ${
-                    isMapDark ? "hover:bg-[#21262d]" : "hover:bg-[#f6f8fa]"
+                  className={`relative w-full grid grid-cols-[64px_1fr] items-center gap-3 px-3 py-3 text-left transition-all cursor-pointer group active:scale-[0.99] outline-none ${
+                    isMapDark ? "hover:bg-white/[0.03]" : "hover:bg-black/[0.02]"
                   }`}
                   onMouseEnter={() => setHoveredKalcerian(user.id)}
                   onMouseLeave={() => setHoveredKalcerian(null)}
                   onClick={() => {
-                    if (user.isOnline) {
+                    if (userEvent) {
+                      focusUser(userEvent);
+                      if (window.innerWidth < 860) setDrawerOpen(false);
+                    } else if (user.isOnline) {
                       setFocusedUserId(user.id);
+                      focusUser(user);
                       scheduleTimeout(() => setFocusedUserId(null), 100);
                       if (window.innerWidth < 860) setDrawerOpen(false);
                     } else {
@@ -293,85 +191,127 @@ export function KalceriansPanel({
                     }
                   }}
                 >
-                  {/* Avatar with Status Dot */}
-                  <div className="relative">
-                    <div
-                      className={`w-9 h-9 border overflow-hidden rounded-full ${
-                        user.isOnline
-                          ? isMapDark
-                            ? "border-[#3fb950]"
-                            : "border-[#1a7f37]"
-                          : isMapDark
-                          ? "border-[#30363d] opacity-50"
-                          : "border-[#d0d7de] opacity-60"
-                      }`}
-                    >
-                      <ContentImage
-                        className="w-full h-full object-cover"
-                        src={avatarUrl(user)}
-                        alt={user.nickname || user.name}
-                        width={48}
-                        height={48}
-                      />
-                    </div>
-                    <span
-                      className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-[1.5px] rounded-full ${
-                        isMapDark ? "border-[#161b22]" : "border-white"
-                      } ${user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
-                    />
+                  {/* Dynamic Color Shift Blobs (Picture 4) across hover & click/active on all families */}
+                  <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-xl">
+                    {/* Blob 1: Left - Soft Coral/Red */}
+                    <div className="absolute top-[15%] -left-[15%] w-[120px] h-[120px] bg-red-500/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[3000ms]" />
+                    {/* Blob 2: Right - Warm Gold/Amber */}
+                    <div className="absolute bottom-[15%] -right-[15%] w-[120px] h-[120px] bg-[#ffd60a]/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[4000ms] delay-100" />
+                    {/* Blob 3: Top - Soft Pink/Magenta */}
+                    <div className="absolute -top-[35%] left-[25%] w-[130px] h-[100px] bg-[#ff006e]/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[2500ms] delay-200" />
+                    {/* Blob 4: Bottom - Peach/Rose */}
+                    <div className="absolute -bottom-[35%] right-[25%] w-[130px] h-[100px] bg-pink-500/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[3500ms] delay-300" />
                   </div>
 
-                  {/* User details */}
-                  <div className="min-w-0 flex flex-col">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`text-[13px] font-medium truncate ${
+                  {/* LEFT 1/3: Photo Profile Circle with Online/Offline Indicator */}
+                  <div className="relative z-10 flex justify-center items-center">
+                    <div className="relative">
+                      <div
+                        className={`w-11 h-11 sm:w-12 sm:h-12 border overflow-hidden rounded-full transition-transform group-hover:scale-105 ${
                           user.isOnline
                             ? isMapDark
-                              ? "text-[#f0f6fc]"
-                              : "text-[#1f2328]"
+                              ? "border-[#3fb950]"
+                              : "border-[#1a7f37]"
                             : isMapDark
-                            ? "text-[#8b949e]"
-                            : "text-[#656d76]"
+                            ? "border-[#30363d] opacity-50"
+                            : "border-[#d0d7de] opacity-60"
+                        }`}
+                      >
+                        <ContentImage
+                          className="w-full h-full object-cover"
+                          src={avatarUrl(user)}
+                          alt={user.nickname || user.name}
+                          width={64}
+                          height={64}
+                        />
+                      </div>
+                      <span
+                        className={`absolute bottom-0 right-0 w-3 h-3 border-2 rounded-full ${
+                          isMapDark ? "border-[#161b22]" : "border-white"
+                        } ${user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* RIGHT 2/3: User Information & Activity with Consistent Typography */}
+                  <div className="relative z-10 min-w-0 flex flex-col justify-center pr-1">
+                    {/* Line 1: User Name & Category Badge */}
+                    <div className="flex items-center justify-between gap-1.5">
+                      <b
+                        className={`text-[13.5px] sm:text-[14px] font-bold tracking-tight truncate leading-snug transition-all duration-300 ${
+                          isMapDark
+                            ? "text-white group-hover:text-white group-hover:drop-shadow-[1.5px_1.5px_0px_#ff006e] group-hover:drop-shadow-[-1px_-1px_0px_#ffd60a]"
+                            : "text-slate-900 group-hover:text-slate-900 group-hover:drop-shadow-[1.5px_1.5px_0px_rgba(15,23,42,0.15)] group-hover:drop-shadow-[-1.5px_-1.5px_0px_rgba(255,255,255,0.9)]"
                         }`}
                       >
                         {user.name}
-                      </span>
-                      {(() => {
-                        const district = mapUsersData.find((u) => u.id === user.id)?.district;
-                        if (!district || /^(scanning|unknown)/i.test(district.trim())) return null;
-                        return (
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-medium border leading-none ${
-                              isMapDark
-                                ? "bg-[#21262d] border-[#30363d] text-[#8b949e]"
-                                : "bg-[#f6f8fa] border-[#d0d7de] text-[#656d76]"
-                            }`}
-                          >
-                            {district}
-                          </span>
-                        );
-                      })()}
+                      </b>
+                      {userEvent ? (
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider shrink-0 border ${
+                            isMapDark
+                              ? "bg-[#ff006e]/15 border-[#ff006e]/30 text-[#ff7597]"
+                              : "bg-red-50 border-red-200 text-red-700"
+                          }`}
+                        >
+                          {userEvent.category || "Event"}
+                        </span>
+                      ) : hasValidDistrict ? (
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9.5px] font-medium border leading-none shrink-0 ${
+                            isMapDark
+                              ? "bg-[#21262d] border-[#30363d] text-[#8b949e]"
+                              : "bg-[#f6f8fa] border-[#d0d7de] text-[#656d76]"
+                          }`}
+                        >
+                          {district}
+                        </span>
+                      ) : null}
                     </div>
-                    {user.broadcast?.message && (
-                      <p
-                        className={`mt-0.5 text-[11px] italic truncate ${
-                          isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-                        }`}
-                      >
-                        &quot;{user.broadcast.message}&quot;
-                      </p>
-                    )}
+
+                    {/* Line 2: What they are doing (Event Title or Broadcast Motto or Status) */}
+                    <p
+                      className={`text-[12px] sm:text-[12.5px] font-medium leading-snug truncate mt-0.5 ${
+                        userEvent
+                          ? isMapDark
+                            ? "text-[#ffd60a]"
+                            : "text-[#b45309]"
+                          : isMapDark
+                          ? "text-[#f0f6fc]"
+                          : "text-[#1f2328]"
+                      }`}
+                    >
+                      {userEvent
+                        ? userEvent.title
+                        : user.broadcast?.message
+                        ? `"${user.broadcast.message}"`
+                        : user.isOnline
+                        ? "Active on radar"
+                        : "Offline"}
+                    </p>
+
+                    {/* Line 3: Description Quote or User Nickname */}
+                    <p
+                      className={`text-[11px] italic truncate mt-0.5 ${
+                        isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+                      }`}
+                    >
+                      {userEvent?.description
+                        ? `"${cleanDesc(userEvent.description)}"`
+                        : user.nickname
+                        ? `@${user.nickname}`
+                        : "Kalcerian"}
+                    </p>
                   </div>
                 </div>
 
                 {/* Desktop Hover Card */}
                 {hoveredKalcerian === user.id && (
                   <div
-                    className={`absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 w-[220px] border rounded-lg shadow-xl p-3 flex flex-col gap-2.5 pointer-events-auto hidden md:flex font-sans ${
+                    className={`absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 w-[220px] border rounded-lg shadow-xl p-3 flex flex-col gap-2.5 pointer-events-auto hidden md:flex font-sans backdrop-blur-md ${
                       isMapDark
-                        ? "bg-[#161b22] border-[#30363d] text-[#f0f6fc]"
-                        : "bg-[#ffffff] border-[#d0d7de] text-[#1f2328]"
+                        ? "bg-[#161b22]/95 border-[#30363d] text-[#f0f6fc]"
+                        : "bg-[#ffffff]/95 border-[#d0d7de] text-[#1f2328]"
                     }`}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -405,15 +345,15 @@ export function KalceriansPanel({
                       </div>
                     </div>
 
-                    {user.broadcast?.message && (
+                    {(userEvent?.description || user.broadcast?.message) && (
                       <p
                         className={`text-[11px] italic border-l-2 pl-2 line-clamp-2 ${
                           isMapDark
-                            ? "text-[#8b949e] border-[#30363d]"
-                            : "text-[#656d76] border-[#d0d7de]"
+                            ? "text-[#8b949e] border-[#ffd60a]/40"
+                            : "text-[#656d76] border-[#d97706]"
                         }`}
                       >
-                        &quot;{user.broadcast.message}&quot;
+                        &quot;{cleanDesc(userEvent?.description || user.broadcast?.message)}&quot;
                       </p>
                     )}
 
@@ -428,7 +368,7 @@ export function KalceriansPanel({
                       >
                         Profile
                       </a>
-                      {user.isOnline && (
+                      {(user.isOnline || userEvent) && (
                         <button
                           type="button"
                           className={`flex-1 py-1.5 text-center text-[10.5px] font-medium border rounded transition-colors cursor-pointer ${
@@ -437,8 +377,13 @@ export function KalceriansPanel({
                               : "bg-[#1f883d] border-[#1a7f37] text-white hover:bg-[#1a7f37]"
                           }`}
                           onClick={() => {
-                            setFocusedUserId(user.id);
-                            scheduleTimeout(() => setFocusedUserId(null), 100);
+                            if (userEvent) {
+                              focusUser(userEvent);
+                            } else {
+                              setFocusedUserId(user.id);
+                              focusUser(user);
+                              scheduleTimeout(() => setFocusedUserId(null), 100);
+                            }
                             setHoveredKalcerian(null);
                           }}
                         >
@@ -449,27 +394,27 @@ export function KalceriansPanel({
                   </div>
                 )}
               </div>
-            ))
-          ) : (
-            <div className="py-12 text-center flex flex-col items-center gap-2">
-              <p
-                className={`text-xs ${
-                  isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-                }`}
-              >
-                No Kalcerians found
-              </p>
-            </div>
-          )}
-        </div>
+            );
+          })
+        ) : (
+          <div className="py-12 text-center flex flex-col items-center gap-2">
+            <p
+              className={`text-xs ${
+                isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+              }`}
+            >
+              No Kalcerians found
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 5. Bottom Bar: Kalcerians stats bar */}
       <div
         className={`px-4 py-2.5 border-t flex items-center justify-between text-[11.5px] select-none ${
           isMapDark
-            ? "bg-[#161b22] border-white text-[#f0f6fc]"
-            : "bg-[#ffffff] border-black text-[#1f2328]"
+            ? "bg-[#161b22]/90 border-white text-[#f0f6fc]"
+            : "bg-[#ffffff]/90 border-black text-[#1f2328]"
         }`}
       >
         <span className="font-semibold">Kalcerians</span>
