@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VintageLaserGrid, DominoChevrons } from "@/components/map/AtmosphereLayers";
+import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 import { createSeededRandom, createRuntimeSeededRandom } from "@/lib/seededRandom";
 import ContentImage from "@/components/ui/ContentImage";
 
@@ -15,6 +16,7 @@ const QUOTES = [
 ];
 
 export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
+  const isMobile = useIsMobileViewport();
   const [isDark, setIsDark] = useState(false);
   const isDarkRef = useRef(false);
   const isReadyRef = useRef(isReady);
@@ -42,38 +44,47 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
     isDarkRef.current = false;
     setIsDark(false);
 
-    if (barFillRef.current) barFillRef.current.style.width = "0%";
+    let lastPercentInt = -1;
+    if (barFillRef.current) {
+      barFillRef.current.style.transform = "scaleX(0)";
+    }
     if (percentTextRef.current) percentTextRef.current.textContent = "0";
 
     const tick = (now) => {
       if (completedRef.current) return;
-      const dt = Math.min((now - lastTime) / 1000, 0.1); // clamp delta
+      const dt = Math.min((now - lastTime) / 1000, 0.05); // clamp delta
       lastTime = now;
 
       const current = progressValRef.current;
       const ready = isReadyRef.current;
-      // Target: smoothly crawl toward 88% while waiting, or rush straight to 100% when backend isReady
-      const target = ready ? 100 : 88;
 
+      // Silky-smooth constant and responsive velocity without stutter
       let speed;
       if (ready) {
-        // Fast, authoritative sweep to 100% (~250ms)
-        speed = Math.max(55, (100 - current) * 6.5);
+        // Fast, authoritative sweep to 100% (~200ms)
+        speed = Math.max(90, (100 - current) * 7.5);
       } else {
-        // Smooth cinematic ramp up to 88% (~1.4s)
-        const diff = target - current;
-        speed = Math.max(8, diff * 1.8);
+        // Steady cinematic sweep from 0 to 92% (~1.2s), then gentle buffer crawl (never halts)
+        if (current < 85) {
+          speed = 68; // constant smooth velocity (no decay stutter)
+        } else if (current < 94) {
+          speed = 20; // gentle buffer rate
+        } else {
+          speed = 6;  // micro-rate while awaiting backend ready signal
+        }
       }
 
-      const next = Math.min(target, current + speed * dt);
+      const next = Math.min(100, current + speed * dt);
       progressValRef.current = next;
 
-      // Direct DOM updates: eliminates 60/120 FPS React re-renders and CSS transition conflicts
+      // GPU-accelerated transform: scaleX eliminates expensive layout reflows (0 stutter)
       if (barFillRef.current) {
-        barFillRef.current.style.width = `${next}%`;
+        barFillRef.current.style.transform = `scaleX(${Math.min(1, next / 100)})`;
       }
-      if (percentTextRef.current) {
-        percentTextRef.current.textContent = String(Math.round(next));
+      const roundInt = Math.round(next);
+      if (roundInt !== lastPercentInt && percentTextRef.current) {
+        lastPercentInt = roundInt;
+        percentTextRef.current.textContent = String(roundInt);
       }
 
       // Single state update threshold at 50% for smooth theme transition
@@ -82,14 +93,14 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
         setIsDark(true);
       }
 
-      if (next >= 99.9 && ready) {
+      if (next >= 99.8 && ready) {
         completedRef.current = true;
-        if (barFillRef.current) barFillRef.current.style.width = "100%";
+        if (barFillRef.current) barFillRef.current.style.transform = "scaleX(1)";
         if (percentTextRef.current) percentTextRef.current.textContent = "100";
-        // Snappy, precise hold: exactly 120ms to register 100%, then immediately dismiss
+        // Snappy, precise hold: exactly 100ms to register 100%, then immediately dismiss
         const timer = setTimeout(() => {
           onComplete?.();
-        }, 120);
+        }, 100);
         return () => clearTimeout(timer);
       }
 
@@ -200,7 +211,7 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
           style={{ willChange: "opacity" }}
         >
           {/* Smooth 4x Chevron Dash Transition */}
-          <DominoChevrons active={showStartup} isDark={isDark} />
+          <DominoChevrons active={showStartup} isDark={isDark} isMobile={isMobile} />
 
           {/* Faint Vintage Laser Grid (GPU-Optimized) */}
           <VintageLaserGrid active={showStartup} startupProgress={isDark ? 50 : 0} />
@@ -448,14 +459,15 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
               >
                 <div
                   ref={barFillRef}
-                  className={`absolute top-0 left-0 h-full transition-none ${
+                  className={`absolute top-0 left-0 h-full w-full transition-none ${
                     !isDark
                       ? "bg-slate-600"
                       : "bg-gradient-to-r from-[#ff6f00] via-[#ffd60a] to-[#ffc300] shadow-[0_0_25px_#ffd60a]"
                   }`}
                   style={{
-                    width: "0%",
-                    willChange: "width",
+                    transform: "scaleX(0)",
+                    transformOrigin: "left",
+                    willChange: "transform",
                   }}
                 />
                 {/* Subtle stripes over progress */}

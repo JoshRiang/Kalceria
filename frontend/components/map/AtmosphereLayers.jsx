@@ -149,12 +149,58 @@ export function VintageLaserGrid({ active, startupProgress }) {
   );
 }
 
-export function DominoChevrons({ active, isDark }) {
+export function DominoChevrons({ active, isDark, isMobile }) {
   const lightColors = ["#000000", "#1f2937", "#4b5563", "#9ca3af", "#e5e7eb", "#ffffff"];
   const darkColors = ["#000000", "#1a0505", "#4c0505", "#991b1b", "#dc2626", "#ef4444"];
   const colors = isDark ? darkColors : lightColors;
-  const chevronCount = 18;
+  const chevronCount = isMobile ? 12 : 18;
 
+  if (isMobile) {
+    // Upward vertical sweep from bottom to top spanning full horizontal width for mobile
+    return (
+      <div 
+        className="absolute pointer-events-none z-[5] overflow-hidden flex items-center mix-blend-screen"
+        style={{
+          transform: "rotate(-90deg)",
+          transformOrigin: "center center",
+          width: "100vh",
+          height: "100vw",
+          left: "50%",
+          top: "50%",
+          marginLeft: "-50vh",
+          marginTop: "-50vw",
+        }}
+      >
+        {active && Array.from({ length: chevronCount }).map((_, i) => {
+          const colorIndex = Math.floor((i / chevronCount) * colors.length);
+          const color = colors[colorIndex];
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: "-100%" }}
+              animate={{ 
+                opacity: isDark ? [0, 0.7, 0] : [0, 0.8, 0],
+                x: ["-100%", "0%", "100%"],
+              }}
+              transition={{ 
+                duration: 2.2, 
+                delay: i * 0.12, 
+                ease: "circOut" 
+              }}
+              className="h-[100vh] -ml-[10vw] flex-shrink-0"
+              style={{ width: "22vw" }}
+            >
+              <svg viewBox="0 0 24 24" preserveAspectRatio="none" className="w-full h-full" style={{ color }}>
+                <path d="M 0 0 L 12 12 L 0 24 L 8 24 L 20 12 L 8 0 Z" fill="currentColor" />
+              </svg>
+            </motion.div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Desktop & Tablet horizontal sweep
   return (
     <div className="absolute inset-0 pointer-events-none z-[5] overflow-hidden flex items-center">
       {active && Array.from({ length: chevronCount }).map((_, i) => {

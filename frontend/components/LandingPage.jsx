@@ -255,9 +255,17 @@ export default function LandingPage({ onNavigateAuth }) {
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }} className="absolute top-[20%] right-[-10%] w-[45vw] h-[45vw] rounded-full blur-[120px] bg-[#FF8C00]" />
         </div>
 
-        {/* Mobile & Half-Desktop Silhouette: grup_hp.webp (positioned and scaled so the silhouette of the guy is clearly seen) */}
-        <div className="absolute bottom-0 left-0 w-full h-[380px] xs:h-[420px] sm:h-[460px] md:h-[500px] pointer-events-none z-[1] overflow-hidden xl:hidden flex justify-center items-end">
-          <Image src="/hp/grup_hp.webp" alt="Group Mobile" width={2304} height={1848} loading="lazy" decoding="async" className="h-full w-auto object-contain opacity-60 translate-y-2" />
+        {/* Mobile & Half-Desktop Silhouette: grup_hp.webp (dragged 30% more to the bottom so it grounds firmly rather than hanging) */}
+        <div className="absolute bottom-0 left-0 w-full h-[460px] xs:h-[500px] sm:h-[560px] md:h-[620px] pointer-events-none z-[1] overflow-hidden xl:hidden flex justify-center items-end">
+          <Image 
+            src="/hp/grup_hp.webp" 
+            alt="Group Mobile" 
+            width={2304} 
+            height={1848} 
+            loading="lazy" 
+            decoding="async" 
+            className="h-full w-auto object-contain opacity-60 translate-y-[28%] xs:translate-y-[30%] sm:translate-y-[32%]" 
+          />
         </div>
 
         {/* Header: Title above carousel for Mobile and iPad family; hidden on desktop widescreen */}
@@ -733,7 +741,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 6: Need Help? ── */}
-      <section className="relative w-full min-h-[107vh] bg-white flex flex-col items-center justify-start pt-20 xs:pt-24 sm:pt-28 md:pt-32 lg:pt-36 pb-32 z-50 overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}>
+      <section className="relative w-full min-h-[100vh] lg:min-h-[107vh] bg-white flex flex-col items-center justify-center py-20 sm:py-24 z-50 overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}>
 
         {/* Solid Section Divider */}
         <div className="absolute top-0 left-0 w-full h-[2px] bg-[#050a14] z-[70]" />
@@ -788,28 +796,36 @@ export default function LandingPage({ onNavigateAuth }) {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center"
+          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center my-auto"
         >
-          {/* Title Area with Mobile & Half-Desktop Cokineed Face beside "NEED" */}
-          <div className="relative inline-flex items-center justify-center mb-8 md:mb-12">
-            {/* Cokineed face beside NEED on mobile & half desktop */}
+          {/* Title Area with Mobile & Half-Desktop Cokineed Face ABOVE "NEED OUR HELP?" */}
+          <div className="relative flex flex-col items-center justify-center mb-8 sm:mb-10 md:mb-12 w-full">
+            {/* Cokineed face above NEED OUR HELP? on mobile & half desktop, bigger and non-overlapping */}
             {isMobileOrTablet && (
-              <motion.img
-                src="/hp/cokineed_hp.webp"
-                alt="Cokineed HP"
+              <motion.div
+                className="relative -mb-2 xs:-mb-3 sm:-mb-4 z-20 flex justify-center items-center pointer-events-none select-none"
                 animate={{
-                  rotate: [-24, -16, -24],
-                  y: [0, -4, 0],
+                  rotate: [-8, 8, -8],
+                  y: [0, -6, 0],
                 }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -left-9 xs:-left-12 sm:-left-16 md:-left-20 -top-8 xs:-top-10 sm:-top-12 md:-top-14 w-12 xs:w-16 sm:w-20 md:w-24 h-auto object-contain origin-bottom select-none pointer-events-none filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
-                style={{ transform: "rotate(-20deg)" }}
-                draggable={false}
-              />
+              >
+                <Image
+                  src="/hp/cokineed_hp.webp"
+                  alt="Cokineed HP"
+                  width={300}
+                  height={300}
+                  unoptimized
+                  loading="lazy"
+                  decoding="async"
+                  className="w-24 xs:w-28 sm:w-32 md:w-36 h-auto object-contain select-none filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)]"
+                  draggable={false}
+                />
+              </motion.div>
             )}
 
             <motion.h2
-              className="relative text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text text-center select-none"
+              className="relative text-5xl xs:text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black uppercase tracking-tighter text-transparent bg-clip-text text-center select-none leading-none"
               style={{
                 backgroundColor: "white",
                 backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
@@ -823,13 +839,13 @@ export default function LandingPage({ onNavigateAuth }) {
             </motion.h2>
           </div>
 
-          {/* Apply A Request Button (Kept the same) */}
+          {/* Apply A Request Button - Big & Impactful */}
           <motion.button
             onClick={handleApplyRequest}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="relative px-8 md:px-12 py-3 md:py-4 font-sans font-black uppercase tracking-tighter text-sm md:text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none z-10"
-            style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+            className="relative px-10 xs:px-12 sm:px-16 py-4 xs:py-5 sm:py-6 font-sans font-black uppercase tracking-tighter text-base sm:text-lg md:text-xl text-black bg-white group cursor-pointer shadow-[0_0_35px_rgba(255,255,255,0.3)] focus-polygon focus-visible:outline-none z-10"
+            style={{ clipPath: "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)" }}
           >
             <span className="relative z-10">APPLY A REQUEST</span>
             <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
