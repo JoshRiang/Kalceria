@@ -87,7 +87,7 @@ export function JourneyDescriptionBox({ description, className }) {
 
 export default function JourneyRightHalf({ images, logo, logoAlt, logoWidth, logoHeight, description, className }) {
   return (
-    <div className={`hidden md:flex flex-col items-center justify-center gap-8 z-30 ${className || "absolute right-0 top-1/2 -translate-y-1/2 w-1/2"}`}>
+    <div className={`hidden xl:flex flex-col items-center justify-center gap-8 z-30 ${className || "absolute right-0 top-1/2 -translate-y-1/2 w-1/2"}`}>
       <JourneySlider images={images} logo={logo} logoAlt={logoAlt} logoWidth={logoWidth} logoHeight={logoHeight} />
       <JourneyDescriptionBox description={description} />
     </div>

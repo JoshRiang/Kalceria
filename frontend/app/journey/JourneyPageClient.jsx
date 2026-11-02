@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { useIsMobileViewport, useIsMobileOrTabletViewport } from '@/hooks/useIsMobileViewport';
 import JourneySection4 from '../../components/JourneySection4';
 import JourneyRightHalf, { JourneySlider, JourneyDescriptionBox } from '../../components/JourneyRightHalf';
 
@@ -10,13 +11,8 @@ export default function JourneyPageClient() {
   const [displayedText, setDisplayedText] = useState("");
   const fullText = "KALCERIA'S JOURNEY";
 
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  const isMobile = useIsMobileViewport();
+  const isMobileOrTablet = useIsMobileOrTabletViewport();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -139,40 +135,40 @@ export default function JourneyPageClient() {
         style={{ pointerEvents: isIntroActive ? 'none' : 'auto' }}
       >
         {/* Section 1 - Mist */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp_arcade.webp')] bg-cover bg-center md:bg-[url('/bgj_1_arcade.webp')] md:bg-cover md:bg-center flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
-          <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
-            {/* Mobile Stack for Section 1 */}
-            {isMobile && (
-              <div className="w-full flex flex-col items-center gap-6 z-30">
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp_arcade.webp')] bg-cover bg-center xl:bg-[url('/bgj_1_arcade.webp')] xl:bg-cover xl:bg-center flex items-center justify-center overflow-hidden ${isMobileOrTablet ? "flex-col justify-center pt-0" : "pt-[7vh]"}`}>
+          <div className="container mx-auto px-6 md:px-12 flex flex-col items-center justify-center relative z-20">
+            {/* Center Stack for Mobile and iPad / Tablet Family */}
+            {isMobileOrTablet && (
+              <div className="w-full flex flex-col items-center justify-center gap-6 z-30">
                 <JourneySlider 
                   logo="/se1.webp" 
                   logoAlt="Mist" 
                   images={['/mist_1.webp', '/mist_1.webp']} 
-                  className="max-w-[280px]" 
+                  className={isMobile ? "max-w-[280px]" : "max-w-[360px]"} 
                 />
                 <JourneyDescriptionBox 
                   description="Mist is a legendary entity in the underground automotive scene, bringing unparalleled style and performance." 
                   delay={1000} 
-                  className="max-w-[320px]"
+                  className={isMobile ? "max-w-[320px]" : "max-w-[460px]"} 
                 />
               </div>
             )}
           </div>
 
-          {!isMobile && (
+          {!isMobileOrTablet && (
             <JourneyRightHalf 
               logo="/se1.webp"
               logoAlt="Mist"
               images={['/mist_1.webp', '/mist_1.webp']} 
               description="Mist is a legendary entity in the underground automotive scene, bringing unparalleled style and performance." 
               delay={1000} 
-              className="absolute right-0 md:right-[5%] top-[7vh] w-1/2"
+              className="absolute right-0 xl:right-[5%] top-[7vh] w-1/2"
             />
           )}
         </section>
 
         {/* Section 2 - UI Racing Team */}
-        <section className="relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center md:bg-[url('/bgj_2.webp')] md:bg-cover md:bg-center flex flex-col items-center justify-center overflow-hidden">
+        <section className="relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center xl:bg-[url('/bgj_2.webp')] xl:bg-cover xl:bg-center flex flex-col items-center justify-center overflow-hidden">
           <div className="container mx-auto px-6 md:px-12 relative z-20 flex flex-col items-center">
             <div className="w-full flex flex-col items-center gap-6 z-30">
               <JourneySlider 
@@ -191,27 +187,27 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 3 - Dream Shift Labs */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp_arcade.webp')] bg-cover bg-center md:bg-[url('/bgj_3.webp')] md:bg-cover md:bg-center flex items-center pt-[7vh] ${isMobile ? "flex-col justify-center pt-0" : ""}`}>
-          <div className={`container mx-auto px-6 md:px-12 ${isMobile ? "flex flex-col items-center" : ""}`}>
-            {/* Mobile Stack for Section 3 */}
-            {isMobile && (
-              <div className="w-full flex flex-col items-center gap-6 z-30">
+        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp_arcade.webp')] bg-cover bg-center xl:bg-[url('/bgj_3.webp')] xl:bg-cover xl:bg-center flex items-center justify-center overflow-hidden ${isMobileOrTablet ? "flex-col justify-center pt-0" : "pt-[7vh]"}`}>
+          <div className="container mx-auto px-6 md:px-12 flex flex-col items-center justify-center relative z-20">
+            {/* Center Stack for Mobile and iPad / Tablet Family */}
+            {isMobileOrTablet && (
+              <div className="w-full flex flex-col items-center justify-center gap-6 z-30">
                 <JourneySlider 
                   logo="/dsl.webp" 
                   logoAlt="Dream Shift Labs" 
                   images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} 
-                  className="max-w-[280px]" 
+                  className={isMobile ? "max-w-[280px]" : "max-w-[360px]"} 
                 />
                 <JourneyDescriptionBox 
                   description="Dream Shift Labs pioneers the digital frontier of automotive culture, crafting immersive experiences that transcend reality." 
                   delay={1400} 
-                  className="max-w-[320px]"
+                  className={isMobile ? "max-w-[320px]" : "max-w-[460px]"}
                 />
               </div>
             )}
           </div>
 
-          {!isMobile && (
+          {!isMobileOrTablet && (
             <JourneyRightHalf 
               logo="/dsl.webp"
               logoAlt="Dream Shift Labs"
