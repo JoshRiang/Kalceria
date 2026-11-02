@@ -15,9 +15,6 @@ export default function HomeClient() {
     if (urlParams.get("auth") === "true" || sessionStorage.getItem("triggerAuth") === "true") {
       return "auth";
     }
-    if (sessionStorage.getItem("introPlayed") === "true") {
-      return "landing";
-    }
     return "intro";
   });
   const [username, setUsername] = useState("User");
@@ -29,19 +26,11 @@ export default function HomeClient() {
 
     if (triggerAuth === "true" || isAuthParam) {
       sessionStorage.removeItem("triggerAuth");
-      sessionStorage.setItem("introPlayed", "true");
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- The route's first phase is intentionally selected from URL/session state after hydration.
       setPhase("auth");
-    } else {
-      const hasPlayed = sessionStorage.getItem("introPlayed") === "true";
-      if (hasPlayed) {
-        setPhase("landing");
-      }
     }
   }, []);
 
   const handleIntroComplete = () => {
-    sessionStorage.setItem("introPlayed", "true");
     setPhase("landing");
   };
 

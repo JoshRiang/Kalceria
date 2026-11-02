@@ -94,17 +94,10 @@ export default function LandingPage({ onNavigateAuth }) {
   const currentAboutImage = currentAboutImages[aboutIndex % currentAboutImages.length];
 
   useEffect(() => {
-    let gateTimer;
-    if (sessionStorage.getItem("landingSeen")) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- This reads a session flag to preserve the returning-visitor animation behavior.
-      setSkipAnim(true);
+    setSkipAnim(false);
+    const gateTimer = setTimeout(() => {
       setAmbientGated(false);
-    } else {
-      sessionStorage.setItem("landingSeen", "true");
-      gateTimer = setTimeout(() => {
-        setAmbientGated(false);
-      }, 1800);
-    }
+    }, 1800);
     // Check login status
     // Check login status & heal session if cookie exists
     setIsLoggedIn(hasUserSession());
@@ -271,7 +264,7 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Header: Title above carousel for Mobile and iPad family; hidden on desktop widescreen */}
         <div className="relative z-20 flex flex-col items-center gap-2 mb-2 sm:mb-4 xl:hidden">
           <h2 className="text-center text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
-            <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={skipAnim} />
+            <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={false} />
           </h2>
         </div>
 
@@ -286,7 +279,7 @@ export default function LandingPage({ onNavigateAuth }) {
         {/* Explore Button: Underneath carousel on Mobile & iPad, on Left on Desktop Widescreen */}
         <div className="relative xl:absolute left-0 xl:left-24 bottom-0 xl:top-1/2 xl:-translate-y-1/2 z-20 flex flex-col items-center xl:items-start gap-4 xl:gap-6 mt-4 sm:mt-6 xl:mt-0">
           <h2 className="hidden xl:block text-center xl:text-left text-5xl xl:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
-            <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={skipAnim} />
+            <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={false} />
           </h2>
           <Link href="/events" onClick={() => {
             sessionStorage.setItem("landingScrollTarget", "section-events");
@@ -376,7 +369,7 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="relative z-20 w-full max-w-6xl px-8 flex justify-center md:justify-start">
           <div className="flex flex-col items-center md:items-start gap-6 border-l-0 md:border-l-2 pl-0 md:pl-8">
             <h2 className="text-center md:text-left text-5xl md:text-7xl font-black uppercase tracking-tighter text-white">
-              <Typewriter text="ABOUT US" mode="word" delay={3000} skipAnim={skipAnim} />
+              <Typewriter text="ABOUT US" mode="word" delay={3000} skipAnim={false} />
             </h2>
             <Link href="/about" onClick={() => {
               sessionStorage.setItem("landingScrollTarget", "section-about");
@@ -435,7 +428,7 @@ export default function LandingPage({ onNavigateAuth }) {
             animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           >
-            <Typewriter text="SUPPORT US" mode="none" delay={isMobile ? 0 : 400} skipAnim={isMobile || skipAnim} />
+            <Typewriter text="SUPPORT US" mode="none" delay={400} skipAnim={false} />
           </motion.h2>
         </div>
 
@@ -835,7 +828,7 @@ export default function LandingPage({ onNavigateAuth }) {
               animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
               transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Typewriter text="NEED OUR HELP?" mode="none" delay={isMobile ? 0 : 400} skipAnim={isMobile || skipAnim} />
+              <Typewriter text="NEED OUR HELP?" mode="none" delay={400} skipAnim={false} />
             </motion.h2>
           </div>
 
