@@ -255,9 +255,9 @@ export default function LandingPage({ onNavigateAuth }) {
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }} className="absolute top-[20%] right-[-10%] w-[45vw] h-[45vw] rounded-full blur-[120px] bg-[#FF8C00]" />
         </div>
 
-        {/* Mobile-only Silhouette: grup_hp.webp (on top of background layer z-0 but behind crystal_2 z-10) */}
-        <div className="absolute bottom-0 left-0 w-full h-[300px] pointer-events-none z-[1] overflow-hidden md:hidden flex justify-center items-end">
-          <Image src="/hp/grup_hp.webp" alt="Group Mobile" width={2304} height={1848} loading="lazy" decoding="async" className="h-full w-auto object-contain opacity-35" />
+        {/* Mobile & Half-Desktop Silhouette: grup_hp.webp (positioned and scaled so the silhouette of the guy is clearly seen) */}
+        <div className="absolute bottom-0 left-0 w-full h-[380px] xs:h-[420px] sm:h-[460px] md:h-[500px] pointer-events-none z-[1] overflow-hidden xl:hidden flex justify-center items-end">
+          <Image src="/hp/grup_hp.webp" alt="Group Mobile" width={2304} height={1848} loading="lazy" decoding="async" className="h-full w-auto object-contain opacity-60 translate-y-2" />
         </div>
 
         {/* Header: Title above carousel for Mobile and iPad family; hidden on desktop widescreen */}
@@ -269,8 +269,8 @@ export default function LandingPage({ onNavigateAuth }) {
 
         {/* Center: Event Slider Card (Relative on Mobile & iPad, Absolutely Centered on Desktop Widescreen) */}
         <div
-          className="relative xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2 z-10 w-full max-w-[260px] sm:max-w-[290px] md:max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm"
-          style={{ clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" }}
+          className="relative xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2 z-10 w-full max-w-[190px] xs:max-w-[205px] sm:max-w-[225px] md:max-w-[250px] xl:max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm"
+          style={{ clipPath: "polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px)" }}
         >
           <EventSlider />
         </div>
@@ -299,21 +299,21 @@ export default function LandingPage({ onNavigateAuth }) {
           {/* Meteor 1: Upper Left */}
           <motion.img
             src="/crystal_2.webp"
-            className="absolute h-[26px] md:h-[36px] object-contain opacity-85 left-[calc(50%-142px)] top-[16%] md:left-[calc(50%-260px)] md:top-[55%] filter drop-shadow-[0_0_12px_rgba(255,0,255,0.7)]"
+            className="absolute h-[22px] xs:h-[26px] md:h-[36px] object-contain opacity-85 left-[calc(50%-115px)] top-[18%] md:left-[calc(50%-260px)] md:top-[55%] filter drop-shadow-[0_0_12px_rgba(255,0,255,0.7)]"
             animate={{ y: [0, -14, 0], x: [0, 5, 0], rotate: [-35, -15, -35], scale: [1, 1.1, 1] }}
             transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
           />
           {/* Meteor 2: Right Center */}
           <motion.img
             src="/crystal_2.webp"
-            className="absolute h-[30px] md:h-[47px] object-contain opacity-85 left-[calc(50%+118px)] top-[26%] md:left-[calc(50%+175px)] md:top-[18%] filter drop-shadow-[0_0_15px_rgba(255,215,0,0.7)]"
+            className="absolute h-[26px] xs:h-[30px] md:h-[47px] object-contain opacity-85 left-[calc(50%+92px)] top-[27%] md:left-[calc(50%+175px)] md:top-[18%] filter drop-shadow-[0_0_15px_rgba(255,215,0,0.7)]"
             animate={{ y: [0, -16, 0], x: [0, -6, 0], rotate: [25, 45, 25], scale: [1, 1.12, 1] }}
             transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
           />
           {/* Meteor 3: Lower Left */}
           <motion.img
             src="/crystal_2.webp"
-            className="absolute h-[22px] md:h-[28px] object-contain opacity-85 left-[calc(50%-132px)] top-[42%] md:left-[35%] md:bottom-[5%] md:top-auto filter drop-shadow-[0_0_10px_rgba(255,140,0,0.6)]"
+            className="absolute h-[18px] xs:h-[22px] md:h-[28px] object-contain opacity-85 left-[calc(50%-105px)] top-[42%] md:left-[35%] md:bottom-[5%] md:top-auto filter drop-shadow-[0_0_10px_rgba(255,140,0,0.6)]"
             animate={{ y: [0, -10, 0], x: [0, 4, 0], rotate: [50, 70, 50], scale: [1, 1.08, 1] }}
             transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
           />
@@ -788,95 +788,57 @@ export default function LandingPage({ onNavigateAuth }) {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative z-10 flex flex-col items-center justify-center w-full h-full"
+          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center"
         >
-          {/* Shrunk square box, centered perfectly with Moto photographers (Dark translucent for white bg) */}
-          <div className="relative bg-black/[0.08] border border-black/10 backdrop-blur-xl rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-12 aspect-square w-full max-w-[290px] md:max-w-[420px] flex flex-col items-center justify-center shadow-[0_40px_100px_rgba(0,0,0,0.1)]">
-
-            {/* Moto Figures: Locked tightly to box edges using wrappers for perfect alignment */}
-
-            {/* TOP (Normal, 0deg) */}
-            <div className="hidden md:block absolute inset-0 pointer-events-none z-20">
+          {/* Title Area with Mobile & Half-Desktop Cokineed Face beside "NEED" */}
+          <div className="relative inline-flex items-center justify-center mb-8 md:mb-12">
+            {/* Cokineed face beside NEED on mobile & half desktop */}
+            {isMobileOrTablet && (
               <motion.img
-                src="/moto_1.webp"
-                alt="Moto 1"
-                className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
+                src="/hp/cokineed_hp.webp"
+                alt="Cokineed HP"
+                animate={{
+                  rotate: [-24, -16, -24],
+                  y: [0, -4, 0],
+                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute -left-9 xs:-left-12 sm:-left-16 md:-left-20 -top-8 xs:-top-10 sm:-top-12 md:-top-14 w-12 xs:w-16 sm:w-20 md:w-24 h-auto object-contain origin-bottom select-none pointer-events-none filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
+                style={{ transform: "rotate(-20deg)" }}
+                draggable={false}
               />
-            </div>
-
-            {/* Mobile Cokineed HP on top of the box in the middle top */}
-            {isMobile && (
-              <div className="absolute inset-0 pointer-events-none z-20">
-                <motion.img
-                  src="/hp/cokineed_hp.webp"
-                  alt="Cokineed HP"
-                  animate={{ rotate: [-6, 6, -6], y: [0, -4, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute bottom-full left-1/2 -translate-x-1/2 w-28 h-auto object-contain origin-bottom select-none"
-                  draggable={false}
-                />
-              </div>
             )}
 
-            {/* RIGHT (90deg) */}
-            <div className="hidden md:block absolute inset-0 rotate-90 pointer-events-none z-20">
-              <motion.img
-                src="/moto_2.webp"
-                alt="Moto 2"
-                className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-              />
-            </div>
-
-            {/* BOTTOM (180deg) */}
-            <div className="hidden md:block absolute inset-0 rotate-180 pointer-events-none z-20">
-              <motion.img
-                src="/moto_3.webp"
-                alt="Moto 3"
-                className="absolute bottom-full left-1/2 -translate-x-1/2 h-44 md:h-60 w-auto object-contain origin-bottom"
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-              />
-            </div>
-
-            {/* LEFT (-90deg) */}
-            <div className="hidden md:block absolute inset-0 -rotate-90 pointer-events-none z-20">
-              <motion.img
-                src="/moto_4.webp"
-                alt="Moto 4"
-                className="absolute bottom-full left-1/2 -translate-x-1/2 h-48 md:h-64 w-auto object-contain origin-bottom"
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-              />
-            </div>
-
-            <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-white mb-8 md:mb-10 text-center leading-none" style={{ textShadow: "0 0 20px rgba(255,255,255,0.3)" }}>
-              Need Our Help?
-            </h2>
-
-            <motion.button
-              onClick={handleApplyRequest}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="relative px-8 md:px-12 py-3 md:py-4 font-sans font-black uppercase tracking-tighter text-sm md:text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none"
-              style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+            <motion.h2
+              className="relative text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text text-center select-none"
+              style={{
+                backgroundColor: "white",
+                backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
+                backgroundSize: "100% 200%",
+                textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)"
+              }}
+              animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
             >
-              <span className="relative z-10">APPLY A REQUEST</span>
-              <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
-            </motion.button>
+              <Typewriter text="NEED OUR HELP?" mode="none" delay={isMobile ? 0 : 400} skipAnim={isMobile || skipAnim} />
+            </motion.h2>
           </div>
+
+          {/* Apply A Request Button (Kept the same) */}
+          <motion.button
+            onClick={handleApplyRequest}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="relative px-8 md:px-12 py-3 md:py-4 font-sans font-black uppercase tracking-tighter text-sm md:text-base text-black bg-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none z-10"
+            style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+          >
+            <span className="relative z-10">APPLY A REQUEST</span>
+            <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+          </motion.button>
         </motion.div>
 
+        {/* Mobile: Enlarged camera hands at the bottom middle */}
         {isMobile && (
-          <div className="absolute bottom-0 left-0 w-full h-48 pointer-events-none z-30 overflow-visible">
-            {/* Camera HP: Centered at the middle bottom and scaled 75% bigger */}
+          <div className="absolute bottom-0 left-0 w-full h-56 pointer-events-none z-30 overflow-visible flex justify-center items-end">
             <Image
               src="/hp/camera_hp.webp"
               alt="Camera HP"
@@ -885,7 +847,24 @@ export default function LandingPage({ onNavigateAuth }) {
               unoptimized
               loading="lazy"
               decoding="async"
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[196px] h-auto object-contain select-none translate-y-[2px]"
+              className="w-[280px] xs:w-[320px] sm:w-[360px] h-auto object-contain select-none translate-y-[2px]"
+              draggable={false}
+            />
+          </div>
+        )}
+
+        {/* Desktop & iPad Family: Subtitute_NeedOurHelp.png tight to bottom middle, filled & standard */}
+        {!isMobile && (
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-20 flex justify-center items-end overflow-hidden">
+            <Image
+              src="/png/Subtitute_NeedOurHelp.png"
+              alt="Photographers"
+              width={2400}
+              height={1340}
+              unoptimized
+              loading="lazy"
+              decoding="async"
+              className="w-[460px] sm:w-[540px] md:w-[620px] lg:w-[700px] xl:w-[780px] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
               draggable={false}
             />
           </div>
