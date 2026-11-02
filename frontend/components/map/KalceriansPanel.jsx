@@ -408,28 +408,6 @@ export function KalceriansPanel({
           </div>
         )}
       </div>
-
-      {/* 5. Bottom Bar: Kalcerians stats bar */}
-      <div
-        className={`px-4 py-2.5 border-t flex items-center justify-between text-[11.5px] select-none ${
-          isMapDark
-            ? "bg-[#161b22]/90 border-white text-[#f0f6fc]"
-            : "bg-[#ffffff]/90 border-black text-[#1f2328]"
-        }`}
-      >
-        <span className="font-semibold">Kalcerians</span>
-        <div className="flex items-center gap-3">
-          <span className="font-medium">
-            Online:{" "}
-            <span className={isMapDark ? "text-[#3fb950] font-bold" : "text-[#1a7f37] font-bold"}>
-              {kalcerians.filter((k) => k.isOnline).length}
-            </span>
-          </span>
-          <span className={isMapDark ? "text-[#8b949e]" : "text-[#656d76]"}>
-            Total: {sidebarKalcerians.length}
-          </span>
-        </div>
-      </div>
     </motion.aside>
   );
 }

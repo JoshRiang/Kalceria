@@ -10,14 +10,13 @@ import "leaflet/dist/leaflet.css";
 import "./map/snapmap.css";
 
 // Constants & Helpers
-const DEFAULT_CENTER = [-6.2715, 106.7135];
+const DEFAULT_CENTER = [-6.2735, 106.7150];
 
 async function loadLeaflet() {
   if (typeof window === "undefined") return null;
   const Leaflet = await import("leaflet");
   const L = Leaflet.default || Leaflet;
   window.L = L;
-  await import("leaflet.markercluster");
   return L;
 }
 
@@ -30,19 +29,14 @@ export default function SnapMap({
 }) {
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
-  const layerRef = useRef(null);
+  const usersLayerRef = useRef(null);
+  const eventsLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
   const markerRefs = useRef({});
   const [isReady, setIsReady] = useState(false);
 
-  // Force tile container size invalidation and update tile URL on theme class transitions
+  // Invalidate map size on theme toggle
   useEffect(() => {
-    if (tileLayerRef.current) {
-      const nextUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-      tileLayerRef.current.setUrl(nextUrl);
-    }
     if (mapRef.current) {
       mapRef.current.invalidateSize();
     }
@@ -55,7 +49,6 @@ export default function SnapMap({
     const marker = markerRefs.current[markerId];
     let focusTimeout;
     if (marker && mapRef.current) {
-      // Small delay to ensure marker is in a layer if it was just added
       focusTimeout = setTimeout(() => {
         const latLng = marker.getLatLng();
         mapRef.current.flyTo(latLng, 16);
@@ -76,50 +69,25 @@ export default function SnapMap({
         zoomControl: false,
         attributionControl: false,
         center: DEFAULT_CENTER,
-        zoom: 13,
+        zoom: 14,
         closePopupOnClick: true,
       });
 
-      const tileUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-
-      const tileLayer = L.tileLayer(tileUrl, {
-        subdomains: "abcd",
-        maxZoom: 19,
-      }).addTo(map);
+      // Standard OpenStreetMap with zero API keys or watermarks
+      const tileLayer = L.tileLayer(
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap',
+        }
+      ).addTo(map);
 
       tileLayerRef.current = tileLayer;
-
       mapRef.current = map;
 
-      layerRef.current = L.markerClusterGroup({
-        maxClusterRadius: 50,
-        iconCreateFunction(cluster) {
-          const firstMarker = cluster.getAllChildMarkers()[0];
-          const firstUser = firstMarker.options.userData || {
-            color: "#ffc300",
-            nickname: "Kalcerian",
-          };
-          const remaining = cluster.getChildCount() - 1;
-          const rawClusterColor = getSafeMapColor(firstUser.color);
-          const clusterColor = (rawClusterColor.toLowerCase() === "#ffd60a" || rawClusterColor.toLowerCase() === "#ffea00") ? "#ffc300" : rawClusterColor;
-          const clusterAvatar = escapeMapHtml(getSafeMapAvatarUrl(firstUser));
-          const clusterNickname = escapeMapHtml(firstUser.nickname || "");
-          return L.divIcon({
-            html: `
-              <div class="cluster-node" style="--user-color: ${clusterColor}">
-                <div class="cluster-pulse"></div>
-                <div class="cluster-avatar"><img src="${clusterAvatar}" alt="${clusterNickname}"></div>
-                <div class="cluster-count">+${remaining}</div>
-              </div>
-            `,
-            className: "custom-cluster-icon",
-            iconSize: [48, 48],
-            iconAnchor: [24, 24],
-          });
-        },
-      }).addTo(map);
+      // Unclustered dedicated layer groups so dummy events and users are ALWAYS visible
+      eventsLayerRef.current = L.featureGroup().addTo(map);
+      usersLayerRef.current = L.featureGroup().addTo(map);
 
       if (onMapReady) onMapReady(map);
       setIsReady(true);
@@ -135,9 +103,10 @@ export default function SnapMap({
   }, [onMapReady]);
 
   useEffect(() => {
-    if (!isReady || !mapRef.current || !layerRef.current || !window.L) return;
+    if (!isReady || !mapRef.current || !usersLayerRef.current || !eventsLayerRef.current || !window.L) return;
     const L = window.L;
-    const layer = layerRef.current;
+    const usersLayer = usersLayerRef.current;
+    const eventsLayer = eventsLayerRef.current;
 
     if (!markerRefs.current) markerRefs.current = {};
 
@@ -186,11 +155,11 @@ export default function SnapMap({
         });
         marker._lastPopupContent = userPopup(user, isMapDark);
         markerRefs.current[markerId] = marker;
-        layer.addLayer(marker);
+        usersLayer.addLayer(marker);
       }
     });
 
-    // 2. Reconcile Events
+    // 2. Reconcile Dummy & Live Events (Always unclustered and visible!)
     const currentEventIds = new Set();
     (events || []).forEach((item) => {
       if (!Number.isFinite(item.lat) || !Number.isFinite(item.lng)) return;
@@ -223,19 +192,22 @@ export default function SnapMap({
         });
         marker._lastPopupContent = eventPopup(item);
         markerRefs.current[markerId] = marker;
-        layer.addLayer(marker);
+        eventsLayer.addLayer(marker);
       }
     });
 
     // 3. Remove Stale Markers
     Object.keys(markerRefs.current).forEach((id) => {
       if (!currentUserIds.has(id) && !currentEventIds.has(id)) {
-        layer.removeLayer(markerRefs.current[id]);
+        if (usersLayer.hasLayer(markerRefs.current[id])) {
+          usersLayer.removeLayer(markerRefs.current[id]);
+        }
+        if (eventsLayer.hasLayer(markerRefs.current[id])) {
+          eventsLayer.removeLayer(markerRefs.current[id]);
+        }
         delete markerRefs.current[id];
       }
     });
-
-    layer.addTo(mapRef.current);
   }, [users, events, isReady, isMapDark]);
 
   return (

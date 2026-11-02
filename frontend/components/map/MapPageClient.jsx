@@ -181,29 +181,18 @@ export default function MapPage() {
     setIsRecentering(true);
     const me = mapUsersData.find((u) => u.id === currentUser?.id);
     if (me && me.lat && me.lng) {
-      mapRef.current.flyTo([me.lat, me.lng], 16);
+      mapRef.current.flyTo([me.lat, me.lng], 15);
     } else {
-      mapRef.current.flyTo([-6.2715, 106.7135], 14);
+      mapRef.current.flyTo([-6.2735, 106.7150], 14);
     }
   }, [mapUsersData, currentUser]);
 
-  // Auto-center on initial load once user location is known
-  useEffect(() => {
-    if (!hasInitialCenteredRef.current && mapRef.current && mapUsersData.length > 0 && currentUser) {
-      const me = mapUsersData.find((u) => u.id === currentUser.id);
-      if (me && me.lat && me.lng) {
-        recenterMap();
-        hasInitialCenteredRef.current = true;
-      }
-    }
-  }, [mapUsersData, currentUser, recenterMap]);
-
-  const [mapCenter, setMapCenter] = useState({ lat: -6.234, lng: 106.749 });
-  const [mapZoom, setMapZoom] = useState(13);
+  const [mapCenter, setMapCenter] = useState({ lat: -6.2735, lng: 106.7150 });
+  const [mapZoom, setMapZoom] = useState(14);
 
   const isCentered = useMemo(() => {
     const me = mapUsersData.find((u) => u.id === currentUser?.id);
-    const target = (me && me.lat && me.lng) ? [me.lat, me.lng] : [-6.2715, 106.7135];
+    const target = (me && me.lat && me.lng) ? [me.lat, me.lng] : [-6.2735, 106.7150];
     const dist = Math.sqrt(
       Math.pow(mapCenter.lat - target[0], 2) + Math.pow(mapCenter.lng - target[1], 2),
     );
@@ -234,24 +223,59 @@ export default function MapPage() {
   // derived: users for the map (only online users with coords)
   const mapUsers = useMemo(() => mapUsersData, [mapUsersData]);
 
-  // derived: kalcerians for the sidebar (search filter)
+  // derived: kalcerians for the sidebar (merging all event creators so every dummy event has its kalcerian entry!)
   const sidebarKalcerians = useMemo(() => {
-    let list = kalcerians;
+    const map = new Map();
+
+    // 1. Add all event creators first so all dummy events (Dinda, Melati, Adit, etc.) are prominently listed
+    (events || []).forEach((ev) => {
+      if (ev.creator) {
+        const creatorId = ev.creator.id || `creator_${ev.creator.name || ev.id}`;
+        map.set(creatorId, {
+          id: creatorId,
+          name: ev.creator.name || ev.creator.nickname || "Kalcerian",
+          nickname: ev.creator.nickname || ev.creator.name || "Kalcerian",
+          profilePicture: ev.creator.profilePicture || null,
+          isOnline: true,
+          broadcast: null,
+          lat: ev.lat,
+          lng: ev.lng,
+          event: ev,
+        });
+      }
+    });
+
+    // 2. Add or enrich with registered kalcerians
+    (kalcerians || []).forEach((u) => {
+      const existing = map.get(u.id);
+      if (existing) {
+        existing.isOnline = u.isOnline;
+        existing.broadcast = u.broadcast;
+        if (u.profilePicture) existing.profilePicture = u.profilePicture;
+      } else {
+        map.set(u.id, { ...u });
+      }
+    });
+
+    let list = Array.from(map.values());
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
         (u) =>
           u.name.toLowerCase().includes(q) ||
-          (u.nickname && u.nickname.toLowerCase().includes(q)),
+          (u.nickname && u.nickname.toLowerCase().includes(q)) ||
+          (u.event && u.event.title.toLowerCase().includes(q)),
       );
     }
-    // sort: online first, then alphabetical
+    // sort: event creators & online first, then alphabetical
     return list.sort((a, b) => {
+      if (a.event && !b.event) return -1;
+      if (!a.event && b.event) return 1;
       if (a.isOnline && !b.isOnline) return -1;
       if (!a.isOnline && b.isOnline) return 1;
       return a.name.localeCompare(b.name);
     });
-  }, [kalcerians, searchQuery]);
+  }, [kalcerians, events, searchQuery]);
 
   const activeOwnEvent = events.find((e) => e.id === "own");
 
