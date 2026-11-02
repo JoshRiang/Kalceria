@@ -133,53 +133,82 @@ export const MapHeaderHud = memo(function MapHeaderHud({
             </svg>
           </button>
 
-          {/* Quick Actions Dropdown Menu */}
+          {/* Quick Actions Dropdown Menu - Modern GitHub style */}
           <div
-            className={`absolute top-[48px] right-0 z-[1001] w-[240px] p-2 bg-black/60 backdrop-blur-[32px] border border-white/20 rounded-[20px] shadow-[inset_0_2px_6px_rgba(255,255,255,0.15),_0_12px_48px_rgba(0,0,0,0.7)] transition-all duration-300 origin-top-right overflow-hidden ${
+            className={`absolute top-[44px] right-0 z-[1001] w-[210px] sm:w-[220px] py-1 transition-all duration-200 origin-top-right overflow-hidden rounded-lg font-sans ${
+              isMapDark
+                ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc] shadow-[0_8px_24px_rgba(0,0,0,0.6)]"
+                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328] shadow-[0_8px_24px_rgba(140,149,159,0.2)]"
+            } ${
               actionMenuOpen
                 ? "opacity-100 translate-y-0 pointer-events-auto"
-                : "opacity-0 -translate-y-2 pointer-events-none"
+                : "opacity-0 -translate-y-1.5 pointer-events-none"
             }`}
+            style={{
+              fontFamily:
+                "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif",
+            }}
           >
-            <div className="absolute inset-0 pointer-events-none z-[-1]">
-              <div className="absolute -top-[20%] -left-[20%] w-[80%] h-[60%] bg-white/[0.02] rounded-full blur-[40px]" />
-            </div>
+            {/* Item 1: Broadcast */}
+            <button
+              type="button"
+              className={`w-full flex flex-col px-3 py-2 text-left transition-colors cursor-pointer ${
+                isMapDark ? "hover:bg-[#21262d]" : "hover:bg-[#f6f8fa]"
+              }`}
+              onClick={() => {
+                setShowStatusModal(true);
+                setActionMenuOpen(false);
+              }}
+            >
+              <span
+                className={`text-[13.5px] leading-snug font-medium ${
+                  isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                }`}
+              >
+                Broadcast
+              </span>
+              <span
+                className={`text-[11px] leading-tight mt-0.5 ${
+                  isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+                }`}
+              >
+                Share message &amp; location
+              </span>
+            </button>
 
-            <p className="px-3 py-1 text-[11px] font-bold tracking-wider text-slate-200">
-              Quick Actions
-            </p>
-            <div className="flex flex-col gap-0.5 mt-1 relative z-10">
-              <button
-                type="button"
-                className="w-full flex flex-col px-3 py-2.5 text-left border border-transparent hover:border-white/10 hover:bg-white/[0.05] rounded-lg transition-all duration-300 relative overflow-hidden group"
-                onClick={() => {
-                  setShowStatusModal(true);
-                  setActionMenuOpen(false);
-                }}
+            {/* Subtle Divider */}
+            <div
+              className={`h-[1px] my-1 ${
+                isMapDark ? "bg-[#30363d]" : "bg-[#d0d7de]"
+              }`}
+            />
+
+            {/* Item 2: Mini event */}
+            <button
+              type="button"
+              className={`w-full flex flex-col px-3 py-2 text-left transition-colors cursor-pointer ${
+                isMapDark ? "hover:bg-[#21262d]" : "hover:bg-[#f6f8fa]"
+              }`}
+              onClick={() => {
+                setShowEventModal(true);
+                setActionMenuOpen(false);
+              }}
+            >
+              <span
+                className={`text-[13.5px] leading-snug font-medium ${
+                  isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                }`}
               >
-                <div className="relative z-10">
-                  <b className="text-[13px] font-bold text-white">Update Status</b>
-                  <p className="text-[9px] text-white/40 transition-colors mt-0.5">
-                    Update activity & location
-                  </p>
-                </div>
-              </button>
-              <button
-                type="button"
-                className="w-full flex flex-col px-3 py-2.5 text-left border border-transparent hover:border-white/10 hover:bg-white/[0.05] rounded-lg transition-all duration-300 relative overflow-hidden group"
-                onClick={() => {
-                  setShowEventModal(true);
-                  setActionMenuOpen(false);
-                }}
+                Mini event
+              </span>
+              <span
+                className={`text-[11px] leading-tight mt-0.5 ${
+                  isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+                }`}
               >
-                <div className="relative z-10">
-                  <b className="text-[13px] font-bold text-white">Create Mini Event</b>
-                  <p className="text-[9px] text-white/40 transition-colors mt-0.5">
-                    Start an instant meetup
-                  </p>
-                </div>
-              </button>
-            </div>
+                Start an instant meetup
+              </span>
+            </button>
           </div>
         </div>
 
@@ -287,48 +316,62 @@ export const MapHeaderHud = memo(function MapHeaderHud({
             />
           </button>
 
-          {/* Radar Visibility Dropdown Menu */}
+          {/* Radar Visibility Dropdown Menu - Modern GitHub style */}
           <div
-            className={`absolute top-[48px] right-0 z-[1001] w-[230px] p-2 bg-black/60 backdrop-blur-[32px] border border-white/20 rounded-[20px] shadow-[inset_0_2px_6px_rgba(255,255,255,0.15),_0_12px_48px_rgba(0,0,0,0.7)] transition-all duration-300 origin-top-right overflow-hidden ${
+            className={`absolute top-[44px] right-0 z-[1001] w-[210px] sm:w-[220px] py-1 transition-all duration-200 origin-top-right overflow-hidden rounded-lg font-sans ${
+              isMapDark
+                ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc] shadow-[0_8px_24px_rgba(0,0,0,0.6)]"
+                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328] shadow-[0_8px_24px_rgba(140,149,159,0.2)]"
+            } ${
               menuOpen
                 ? "opacity-100 translate-y-0 pointer-events-auto"
-                : "opacity-0 -translate-y-2 pointer-events-none"
+                : "opacity-0 -translate-y-1.5 pointer-events-none"
             }`}
+            style={{
+              fontFamily:
+                "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif",
+            }}
           >
-            <div className="absolute inset-0 pointer-events-none z-[-1]">
-              <div className="absolute -top-[20%] -left-[20%] w-[80%] h-[60%] bg-white/[0.02] rounded-full blur-[40px]" />
-            </div>
-
-            <p className="px-3 py-1.5 text-[11px] font-bold tracking-wider text-slate-200">
+            <p
+              className={`px-3 py-1.5 text-[11px] font-semibold tracking-wider ${
+                isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+              }`}
+            >
               Radar visibility
             </p>
-            <div className="flex flex-col gap-0.5 mt-1 relative z-10">
+            <div className="flex flex-col gap-0.5 mt-0.5">
               {["online", "invisible"].map((item) => (
                 <button
                   key={item}
                   type="button"
                   disabled={isStatusBusy}
-                  className={`group relative w-full grid grid-cols-[12px_1fr] gap-3 px-3 py-2.5 text-left transition-all rounded-none border-l-[3px] overflow-hidden ${
+                  className={`group relative w-full grid grid-cols-[12px_1fr] gap-3 px-3 py-2 text-left transition-colors cursor-pointer ${
                     presence === item
-                      ? item === "online"
-                        ? "bg-emerald-500/[0.08] border-emerald-400/80 text-white"
-                        : "bg-slate-500/[0.08] border-slate-400/80 text-white"
-                      : "border-transparent text-white/40 hover:bg-white/[0.05] hover:border-white/10 hover:text-white"
+                      ? isMapDark
+                        ? "bg-[#21262d] text-white"
+                        : "bg-[#f6f8fa] text-[#1f2328]"
+                      : isMapDark
+                      ? "text-[#8b949e] hover:bg-[#21262d] hover:text-[#f0f6fc]"
+                      : "text-[#656d76] hover:bg-[#f6f8fa] hover:text-[#1f2328]"
                   } ${isStatusBusy ? "opacity-50 cursor-not-allowed" : ""}`}
                   onClick={() => handlePresenceChange(item)}
                 >
                   <span
-                    className={`relative z-10 w-[10px] h-[10px] rounded-full self-center ${
+                    className={`w-[8px] h-[8px] rounded-full self-center ${
                       item === "online"
-                        ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
-                        : "bg-slate-400 shadow-[0_0_8px_#94a3b8]"
+                        ? "bg-emerald-400 shadow-[0_0_6px_#34d399]"
+                        : "bg-slate-400"
                     }`}
                   />
-                  <div className="relative z-10 flex flex-col">
-                    <span className="text-[12px] font-bold tracking-wide text-white capitalize">
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-medium leading-snug capitalize">
                       {item}
                     </span>
-                    <span className="text-[9px] text-white font-normal leading-tight mt-0.5">
+                    <span
+                      className={`text-[10px] leading-tight mt-0.5 ${
+                        isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+                      }`}
+                    >
                       {isStatusBusy && presence === item
                         ? "Syncing..."
                         : item === "online"

@@ -78,7 +78,7 @@ export async function getMapUsers(req, res, next) {
         socialLink: true,
         createdAt: true,
         broadcast: {
-          select: { id: true, message: true, expiresAt: true },
+          select: { id: true, message: true, expiresAt: true, createdAt: true },
         },
       },
     });
@@ -118,7 +118,7 @@ export async function getMapUsers(req, res, next) {
         district: "Bintaro",
         lat: -6.2730,
         lng: 106.7140,
-        broadcast: { message: "Riding around Sector 9!", expiresAt: new Date(now.getTime() + 86400000) }
+        broadcast: { message: "Riding around Sector 9!", createdAt: new Date(), expiresAt: new Date(now.getTime() + 86400000) }
       },
       {
         id: "mock_2",
@@ -173,7 +173,7 @@ export async function getAllKalcerians(req, res, next) {
         socialLink: true,
         createdAt: true,
         broadcast: {
-          select: { id: true, message: true, expiresAt: true },
+          select: { id: true, message: true, expiresAt: true, createdAt: true },
         },
       },
       orderBy: { name: "asc" },
@@ -194,7 +194,7 @@ export async function getAllKalcerians(req, res, next) {
     });
 
     const mockKalcerians = [
-      { id: "mock_1", name: "Ahmad Bintaro", nickname: "Ahmad", profilePicture: null, isOnline: true, broadcast: { message: "Riding around Sector 9!" } },
+      { id: "mock_1", name: "Ahmad Bintaro", nickname: "Ahmad", profilePicture: null, isOnline: true, broadcast: { message: "Riding around Sector 9!", createdAt: new Date() } },
       { id: "mock_2", name: "Kalcerian Alpha", nickname: "Alpha", profilePicture: null, isOnline: true, broadcast: null },
       { id: "mock_3", name: "Ghost Rider", nickname: "Ghost", profilePicture: null, isOnline: false, broadcast: null }
     ];

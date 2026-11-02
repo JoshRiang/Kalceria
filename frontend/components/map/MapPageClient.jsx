@@ -304,6 +304,8 @@ export default function MapPage() {
       // refresh user data
       const user = await fetchMe();
       setCurrentUser(user);
+      const updatedMapUsers = await fetchMapUsers();
+      if (updatedMapUsers) setMapUsersData(updatedMapUsers);
       setNotice("Broadcast updated.");
       setShowStatusModal(false);
     } catch (err) {

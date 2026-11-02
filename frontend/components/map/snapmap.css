@@ -79,7 +79,8 @@
   z-index: 20;
 }
 
-.radar-node:hover .radar-nametag {
+.radar-node:hover .radar-nametag,
+.broadcast-map-node:hover .radar-nametag {
   opacity: 1;
   transform: translateX(-50%) translateY(-100%) translateY(-4px);
 }

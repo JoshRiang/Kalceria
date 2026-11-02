@@ -137,7 +137,7 @@ export async function getNearbyUsers(req, res, next) {
         profilePicture: true,
         socialPlatform: true,
         socialLink: true,
-        broadcast: { select: { id: true, message: true, expiresAt: true } },
+        broadcast: { select: { id: true, message: true, expiresAt: true, createdAt: true } },
       },
     });
 

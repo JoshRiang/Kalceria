@@ -159,23 +159,35 @@ export default function SnapMap({
           marker.setLatLng([user.lat, user.lng]);
         }
 
-        const newPopupContent = userPopup(user);
+        marker.setIcon(createUserIcon(L, user, isMapDark));
+
+        const hasBroadcast = Boolean(
+          (typeof user?.broadcast === "string" ? user.broadcast : user?.broadcast?.message)?.trim()
+        );
+        const newPopupContent = userPopup(user, isMapDark);
         if (marker._lastPopupContent !== newPopupContent) {
           marker.getPopup().setContent(newPopupContent);
+          if (marker.getPopup().options) {
+            marker.getPopup().options.offset = hasBroadcast ? [0, -26] : [0, -60];
+          }
           marker._lastPopupContent = newPopupContent;
         }
 
         marker.options.userData = user;
       } else {
+        const hasBroadcast = Boolean(
+          (typeof user?.broadcast === "string" ? user.broadcast : user?.broadcast?.message)?.trim()
+        );
         const marker = L.marker([user.lat, user.lng], {
-          icon: createUserIcon(L, user),
+          icon: createUserIcon(L, user, isMapDark),
           userData: user,
-        }).bindPopup(userPopup(user), {
+        }).bindPopup(userPopup(user, isMapDark), {
           className: "tactical-popup",
-          offset: [0, -60],
+          offset: hasBroadcast ? [0, -26] : [0, -60],
           autoClose: true,
+          closeButton: false,
         });
-        marker._lastPopupContent = userPopup(user);
+        marker._lastPopupContent = userPopup(user, isMapDark);
         markerRefs.current[markerId] = marker;
         layer.addLayer(marker);
       }
