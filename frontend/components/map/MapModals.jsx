@@ -167,10 +167,10 @@ export const MapModals = memo(function MapModals({
   const [uploadError, setUploadError] = useState("");
   const [quitChoice, setQuitChoice] = useState(null);
 
-  // User specification:
-  // Light mode on map (isMapDark === false): modal background turns BLACK (isModalDark = true), elements inside turn WHITE.
-  // Dark mode on map (isMapDark === true): modal background turns WHITE (isModalDark = false), elements inside turn BLACK.
-  const isModalDark = !isMapDark;
+  // Modal colors match map mode:
+  // Light mode (isMapDark === false): modal is white with black borders/elements.
+  // Dark mode (isMapDark === true): modal is dark (#161b22) with white borders/elements.
+  const isModalDark = Boolean(isMapDark);
 
   const handleQuitYesClick = () => {
     setQuitChoice("yes");

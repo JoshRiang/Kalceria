@@ -290,8 +290,8 @@ export function KalceriansPanel({
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
-                className={`grid grid-cols-[64px_1fr] items-center gap-3 px-3.5 py-3 border-b animate-pulse ${
-                  isMapDark ? "border-[#30363d]/60" : "border-[#d0d7de]/70"
+                className={`shrink-0 min-h-[66px] my-1 rounded-xl border grid grid-cols-[64px_1fr] items-center gap-3 px-3.5 py-3 animate-pulse ${
+                  isMapDark ? "border-[#30363d]/60 bg-[#21262d]/30" : "border-[#d0d7de]/70 bg-white/40"
                 }`}
               >
                 <div className="flex justify-center">
@@ -331,7 +331,7 @@ export function KalceriansPanel({
             return (
               <div
                 key={user.id}
-                className={`relative my-1 sm:my-1.5 rounded-xl border transition-all duration-200 overflow-hidden ${
+                className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-all duration-200 overflow-hidden ${
                   isBlocked
                     ? isMapDark
                       ? "bg-[#161b22]/30 border-[#30363d]/40 opacity-40 select-none shadow-none"
