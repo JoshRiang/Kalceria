@@ -99,28 +99,24 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
           </button>
         </div>
 
-          {/* Find The Others Button - 3D Typography (Same font, 3D-ness, size and behavior) */}
-          <button
-            type="button"
-            onClick={() => {
-              sessionStorage.setItem("landingScrollTarget", "section-map");
-              sessionStorage.setItem("landingScrollY", window.scrollY);
-              sessionStorage.removeItem("mapIntroSeen");
-              sessionStorage.setItem("playMapIntro", "true");
-              window.location.href = "/map";
-            }}
-            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer focus:outline-none active:scale-[0.98] transition-transform"
-          >
-            <span 
-              className="font-sans font-black uppercase tracking-tighter text-xl xs:text-2xl sm:text-3xl md:text-4xl text-white whitespace-nowrap select-none"
-              style={{
-                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
-                filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
+          {/* Find The Others Button - Exact Explore Style & Behaviour */}
+          <div className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                sessionStorage.setItem("landingScrollTarget", "section-map");
+                sessionStorage.setItem("landingScrollY", window.scrollY);
+                sessionStorage.removeItem("mapIntroSeen");
+                sessionStorage.setItem("playMapIntro", "true");
+                window.location.href = "/map";
               }}
+              className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none"
+              style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
             >
-              FIND THE OTHERS
-            </span>
-          </button>
+              <span className="relative z-10">FIND THE OTHERS</span>
+              <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+            </button>
+          </div>
 
           {/* Earthman - Desktop Hero Figure at Bottom */}
           {!isMobile && (
@@ -403,24 +399,18 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              />
            </a>
 
-           {/* 4. See The Journey Button - 3D Typography (Same font, 3D-ness, size & behavior) */}
+           {/* 4. See The Journey Button - Exact Get to Know More Style & Behaviour */}
             <Link href="/journey" onClick={() => {
               sessionStorage.setItem("landingScrollTarget", "section-journey");
               sessionStorage.setItem("landingScrollY", window.scrollY);
-            }}>
+            }} className="z-30 inline-block focus:outline-none">
               <button
                 type="button"
-                className="relative mx-auto z-30 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer focus:outline-none active:scale-[0.98] transition-transform"
+                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
+                style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
               >
-                <span 
-                  className="font-sans font-black uppercase tracking-tighter text-xl xs:text-2xl sm:text-3xl md:text-4xl text-white whitespace-nowrap select-none"
-                  style={{
-                    textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
-                    filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
-                  }}
-                >
-                  SEE THE JOURNEY
-                </span>
+                <span className="relative z-10">SEE THE JOURNEY</span>
+                <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
               </button>
             </Link>
         </div>
@@ -526,22 +516,18 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              </h2>
            </motion.div>
 
-           {/* Leave It Here Button - 3D Typography (Same font, 3D-ness, size & behavior) */}
-            <button
+           {/* Leave It Here Button - Exact Apply a Request Style & Behaviour */}
+            <motion.button
               type="button"
               onClick={onOpenIdeaModal}
-              className="relative cursor-pointer z-40 focus:outline-none bg-transparent border-none p-0 flex items-center justify-center mx-auto active:scale-[0.98] transition-transform"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative px-10 xs:px-12 sm:px-16 py-4 xs:py-5 sm:py-6 font-sans font-black uppercase tracking-tighter text-base sm:text-lg md:text-xl text-black bg-white group cursor-pointer shadow-[0_0_35px_rgba(255,255,255,0.3)] focus-polygon focus-visible:outline-none z-40 mx-auto"
+              style={{ clipPath: "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)" }}
             >
-              <span 
-                className="font-sans font-black uppercase tracking-tighter text-xl xs:text-2xl sm:text-3xl md:text-4xl text-white whitespace-nowrap select-none"
-                style={{
-                  textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
-                  filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
-                }}
-              >
-                LEAVE IT HERE
-              </span>
-            </button>
+              <span className="relative z-10">LEAVE IT HERE</span>
+              <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+            </motion.button>
           </div>
           <DungeonGate />
         </section>
