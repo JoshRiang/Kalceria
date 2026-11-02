@@ -201,12 +201,12 @@ export function KalceriansPanel({
       initial={{ y: 80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-      className={`absolute z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col transition-transform duration-300 ease-out overflow-hidden font-sans select-none backdrop-blur-[28px] max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[72vh] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
+      className={`absolute z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col transition-transform duration-300 ease-out overflow-hidden font-sans select-none backdrop-blur-[28px] max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[46vh] max-[860px]:max-h-[385px] max-[860px]:min-h-[340px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
         drawerOpen ? "translate-y-0" : "translate-y-[calc(100%-66px)]"
       } ${
         isMapDark
-          ? "bg-[#161b22]/85 border border-white text-[#f0f6fc] shadow-[0_12px_36px_rgba(0,0,0,0.8)]"
-          : "bg-white/85 border border-black text-[#1f2328] shadow-[0_12px_36px_rgba(0,0,0,0.18)]"
+          ? "bg-[#161b22]/85 border border-[#30363d]/90 text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.15),inset_-1px_-1.5px_2px_rgba(0,0,0,0.7),0_14px_36px_rgba(0,0,0,0.8)]"
+          : "bg-white/80 border border-[#c4cbd4] text-[#1f2328] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.95),inset_-1px_-1.5px_2px_rgba(160,174,192,0.35),0_12px_36px_rgba(0,0,0,0.12)]"
       }`}
     >
       {/* 1. Top Scroll Bar / Pull Handle (Rolls down to bottom / rolls up across all families) */}
@@ -262,10 +262,10 @@ export function KalceriansPanel({
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full border rounded-md py-1.5 pl-8 pr-3 text-[12px] font-sans outline-none transition-colors ${
+            className={`w-full border rounded-xl py-1.5 pl-8 pr-3 text-[12px] font-sans outline-none transition-all ${
               isMapDark
-                ? "bg-[#0d1117]/80 border-[#30363d] text-[#f0f6fc] placeholder:text-[#8b949e] focus:border-[#1f6feb] focus:bg-[#161b22]"
-                : "bg-[#f6f8fa]/80 border-[#d0d7de] text-[#1f2328] placeholder:text-[#656d76] focus:border-[#0969da] focus:bg-[#ffffff]"
+                ? "bg-[#21262d]/45 border-[#38404a] text-[#f0f6fc] placeholder:text-[#8b949e] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_2px_6px_rgba(0,0,0,0.3)] focus:border-[#58a6ff]"
+                : "bg-white/60 border-[#d1d5db] text-[#1f2328] placeholder:text-[#656d76] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] focus:border-[#0969da]"
             }`}
           />
           <svg
@@ -284,7 +284,7 @@ export function KalceriansPanel({
       </div>
 
       {/* 4. Content List: Unified Kalcerians list without subheaders, photo circle on left 1/3, color shift on hover/click */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-2 py-1 modern-kalcerian-scrollbar">
         {isDataLoading ? (
           <div className="flex flex-col">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -319,6 +319,7 @@ export function KalceriansPanel({
         ) : sidebarKalcerians.length > 0 ? (
           sidebarKalcerians.map((user) => {
             const isBlocked = blockedUserIds.includes(user.id);
+            const isConfirming = confirmingAction?.userId === user.id;
             // Check if this Kalcerian created an event
             const userEvent = events.find(
               (e) =>
@@ -330,20 +331,26 @@ export function KalceriansPanel({
             return (
               <div
                 key={user.id}
-                className={`relative border-b transition-all duration-300 ${
-                  isMapDark ? "border-[#30363d]/60" : "border-[#d0d7de]/70"
-                } ${isBlocked ? "opacity-35 select-none" : ""}`}
+                className={`relative my-1 sm:my-1.5 rounded-xl border transition-all duration-200 overflow-hidden ${
+                  isBlocked
+                    ? isMapDark
+                      ? "bg-[#161b22]/30 border-[#30363d]/40 opacity-40 select-none shadow-none"
+                      : "bg-white/30 border-[#e5e7eb]/60 opacity-40 select-none shadow-none"
+                    : isMapDark
+                    ? "bg-[#21262d]/40 border-[#38404a] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_2px_6px_rgba(0,0,0,0.3)] hover:border-[#4d5663] hover:bg-[#21262d]/60"
+                    : "bg-white/55 border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] hover:border-[#b0b8c2] hover:bg-white/75"
+                }`}
               >
                 <div
-                  className={`relative w-full grid grid-cols-[64px_1fr] items-center gap-3 px-3 py-3 text-left transition-all group outline-none ${
+                  className={`relative w-full grid grid-cols-[64px_1fr] items-center gap-3 px-3 py-2.5 text-left transition-all group outline-none ${
                     isBlocked
                       ? "cursor-default pointer-events-none"
-                      : "cursor-pointer active:scale-[0.99] " + (isMapDark ? "hover:bg-white/[0.03]" : "hover:bg-black/[0.02]")
-                  }`}
-                  onMouseEnter={() => !isBlocked && setHoveredKalcerian(user.id)}
-                  onMouseLeave={() => !isBlocked && setHoveredKalcerian(null)}
+                      : "cursor-pointer active:scale-[0.99]"
+                  } ${isConfirming ? "blur-[4px] pointer-events-none select-none" : ""}`}
+                  onMouseEnter={() => !isBlocked && !isConfirming && setHoveredKalcerian(user.id)}
+                  onMouseLeave={() => !isBlocked && !isConfirming && setHoveredKalcerian(null)}
                   onClick={() => {
-                    if (isBlocked) return;
+                    if (isBlocked || isConfirming) return;
                     if (userEvent) {
                       focusUser(userEvent);
                       if (window.innerWidth < 860) setDrawerOpen(false);
@@ -535,13 +542,13 @@ export function KalceriansPanel({
                   </div>
                 </div>
 
-                {/* 5. Block / Unblock Confirmation Overlay */}
-                {confirmingAction?.userId === user.id && (
+                {/* 5. Block / Unblock Confirmation Overlay - Flush, Semi-Transparent Glass, Underlying Card Blurred */}
+                {isConfirming && (
                   <div
                     className={`absolute inset-0 z-30 flex items-center justify-between px-3.5 sm:px-4 py-2 backdrop-blur-md rounded-xl transition-all ${
                       isMapDark
-                        ? "bg-[#161b22]/90 border border-white/20 text-white shadow-xl"
-                        : "bg-white/90 border border-black/20 text-black shadow-xl"
+                        ? "bg-[#161b22]/75 border border-[#38404a]/80 text-[#f0f6fc] shadow-md"
+                        : "bg-white/75 border border-[#d1d5db]/90 text-[#1f2328] shadow-md"
                     }`}
                     onClick={(e) => e.stopPropagation()}
                   >

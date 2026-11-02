@@ -8,6 +8,7 @@ import { eventPopup } from "./map/EventPopup";
 
 import "leaflet/dist/leaflet.css";
 import "./map/snapmap.css";
+import "./map/map-card.css";
 
 // Constants & Helpers
 const DEFAULT_CENTER = [-6.2735, 106.7150];
@@ -39,14 +40,31 @@ export default function SnapMap({
   useEffect(() => {
     if (tileLayerRef.current) {
       const tileUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png";
       tileLayerRef.current.setUrl(tileUrl);
     }
     if (mapRef.current) {
       mapRef.current.invalidateSize();
     }
   }, [isMapDark]);
+
+  // Continuously ensure map size and tiles are active on mount & window resize
+  useEffect(() => {
+    if (!isReady || !mapRef.current) return;
+    mapRef.current.invalidateSize();
+    const handleResize = () => {
+      mapRef.current?.invalidateSize();
+    };
+    window.addEventListener("resize", handleResize);
+    const t1 = setTimeout(() => mapRef.current?.invalidateSize(), 150);
+    const t2 = setTimeout(() => mapRef.current?.invalidateSize(), 600);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [isReady]);
 
   // Handle programmatic focus/popup opening
   useEffect(() => {
@@ -81,14 +99,23 @@ export default function SnapMap({
 
       // High-performance CartoDB tiles (Voyager for Light, Dark Matter for Dark)
       const tileUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png";
 
       const tileLayer = L.tileLayer(tileUrl, {
         subdomains: "abcd",
         maxZoom: 19,
-        attribution: '&copy; CARTO',
+        attribution: '&copy; CARTO &copy; OpenStreetMap',
       }).addTo(map);
+
+      // Automatic fallback to OpenStreetMap if any tile fails to load
+      tileLayer.on("tileerror", function (error) {
+        if (error.tile && !error.tile._hasFallenBack) {
+          error.tile._hasFallenBack = true;
+          const coords = error.coords;
+          error.tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
+        }
+      });
 
       tileLayerRef.current = tileLayer;
       mapRef.current = map;

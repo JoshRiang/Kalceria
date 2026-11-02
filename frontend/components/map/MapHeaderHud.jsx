@@ -244,29 +244,33 @@ export const MapHeaderHud = memo(function MapHeaderHud({
             </svg>
           </button>
 
-          {/* Quick Actions Dropdown Menu - Modern GitHub style with tactile expansion & mode-aware color shift */}
+          {/* Quick Actions Dropdown Menu - Shutterstock Glassmorphic 3D Bevel with soft grey edge and depth */}
           <div
-            className={`absolute top-[44px] right-0 z-[1001] w-[215px] sm:w-[225px] p-1.5 transition-all duration-200 origin-top-right overflow-hidden rounded-xl font-sans ${
+            className={`absolute top-[44px] right-0 z-[1001] w-[215px] sm:w-[225px] p-2 transition-all duration-200 origin-top-right overflow-hidden rounded-2xl font-sans backdrop-blur-2xl ${
               isMapDark
-                ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc] shadow-[0_12px_28px_rgba(0,0,0,0.7)]"
-                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328] shadow-[0_12px_28px_rgba(140,149,159,0.25)]"
+                ? "bg-[#161b22]/85 border border-[#30363d]/90 text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.15),inset_-1px_-1.5px_2px_rgba(0,0,0,0.7),0_14px_36px_rgba(0,0,0,0.8)]"
+                : "bg-white/80 border border-[#c4cbd4] text-[#1f2328] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.95),inset_-1px_-1.5px_2px_rgba(160,174,192,0.3),0_12px_32px_rgba(0,0,0,0.08)]"
             } ${
               actionMenuOpen
                 ? "opacity-100 translate-y-0 pointer-events-auto"
                 : "opacity-0 -translate-y-1.5 pointer-events-none"
             }`}
           >
-            {/* Item 1: Broadcast */}
+            {/* Item 1: Broadcast - 3D Glass Pill */}
             <button
               type="button"
-              className="group relative w-full flex flex-col px-3.5 py-2.5 text-left rounded-lg transition-all duration-200 cursor-pointer overflow-hidden outline-none hover:scale-[1.03] active:scale-[0.98] origin-center"
+              className={`group relative w-full flex flex-col px-3.5 py-2.5 text-left rounded-xl transition-all duration-200 cursor-pointer overflow-hidden outline-none hover:scale-[1.02] active:scale-[0.98] origin-center my-0.5 ${
+                isMapDark
+                  ? "bg-[#21262d]/45 border border-[#38404a] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_2px_6px_rgba(0,0,0,0.3)]"
+                  : "bg-white/60 border border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)]"
+              }`}
               onClick={() => {
                 setShowStatusModal(true);
                 setActionMenuOpen(false);
               }}
             >
               {/* Dynamic Color Shift Blobs like in Kalcerian */}
-              <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-lg">
+              <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-xl">
                 {isMapDark ? (
                   <>
                     <div className="absolute -top-[20%] -left-[20%] w-[90px] h-[90px] bg-red-500/30 rounded-full blur-[14px] mix-blend-screen animate-pulse duration-[2800ms]" />
@@ -298,17 +302,14 @@ export const MapHeaderHud = memo(function MapHeaderHud({
               </span>
             </button>
 
-            {/* Subtle Divider */}
-            <div
-              className={`h-[1px] my-1 mx-2 ${
-                isMapDark ? "bg-[#30363d]/80" : "bg-[#d0d7de]/80"
-              }`}
-            />
-
-            {/* Item 2: Mini event */}
+            {/* Item 2: Mini event - 3D Glass Pill */}
             <button
               type="button"
-              className="group relative w-full flex flex-col px-3.5 py-2.5 text-left rounded-lg transition-all duration-200 cursor-pointer overflow-hidden outline-none hover:scale-[1.03] active:scale-[0.98] origin-center"
+              className={`group relative w-full flex flex-col px-3.5 py-2.5 text-left rounded-xl transition-all duration-200 cursor-pointer overflow-hidden outline-none hover:scale-[1.02] active:scale-[0.98] origin-center my-0.5 ${
+                isMapDark
+                  ? "bg-[#21262d]/45 border border-[#38404a] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_2px_6px_rgba(0,0,0,0.3)]"
+                  : "bg-white/60 border border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)]"
+              }`}
               onClick={() => {
                 setShowEventModal(true);
                 setActionMenuOpen(false);

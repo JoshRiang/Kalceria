@@ -210,6 +210,9 @@ export default function MapPage() {
     setMapCenter(mapInstance.getCenter());
     setMapZoom(mapInstance.getZoom());
 
+    // Invalidate size immediately so tiles compute & load in background
+    mapInstance.invalidateSize();
+
     mapInstance.on("moveend", () => {
       setMapCenter(mapInstance.getCenter());
       setIsRecentering(false);
@@ -220,6 +223,21 @@ export default function MapPage() {
     });
     mapInstance.on("movestart", () => {});
   }, []);
+
+  // Guarantee tile loading & full viewport invalidation when startup sequence completes
+  useEffect(() => {
+    if (!showStartup && mapRef.current) {
+      mapRef.current.invalidateSize();
+      const t1 = setTimeout(() => mapRef.current?.invalidateSize(), 150);
+      const t2 = setTimeout(() => mapRef.current?.invalidateSize(), 600);
+      const t3 = setTimeout(() => mapRef.current?.invalidateSize(), 1200);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    }
+  }, [showStartup]);
 
   // Blocked users state (synced with localStorage + backend API)
   const [blockedUserIds, setBlockedUserIds] = useState(() => {
@@ -559,10 +577,9 @@ export default function MapPage() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: showStartup || !hasMounted ? 0 : 1 }}
-        transition={{ duration: 1.2, ease: "easeOut" }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
         className="fixed inset-0 z-[10] w-full h-full"
         style={{
-          visibility: showStartup || !hasMounted ? "hidden" : "visible",
           pointerEvents: showStartup || !hasMounted ? "none" : "auto",
         }}
       >
