@@ -110,7 +110,7 @@ export function IdeaCommentModal({ onClose }) {
 
     const cleanContent = content.trim();
     if (cleanContent.length < 20) {
-      setError(`Message must be at least 20 characters (currently ${cleanContent.length}/200).`);
+      setError("Message must be at least 20 characters.");
       return;
     }
     if (cleanContent.length > 200) {
@@ -173,8 +173,8 @@ export function IdeaCommentModal({ onClose }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            className="fixed inset-0 z-[1000] bg-black/85 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center select-none"
+            transition={{ duration: 0.35 }}
+            className="fixed inset-0 z-[1002] bg-black/85 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center select-none"
           >
             <div className="relative z-10 flex flex-col items-center justify-center px-4">
               <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 mb-6 sm:mb-8">
@@ -203,14 +203,17 @@ export function IdeaCommentModal({ onClose }) {
       </AnimatePresence>
 
       {/* Single-Part Modal Form — Styled Like Mini Event Form on Map Page */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.94, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden backdrop-blur-2xl bg-[#0a0f1a]/85 border border-white/[0.18] z-[1001]"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <AnimatePresence>
+        {!isSubmitting && (
+          <motion.div
+            key="comment-form-modal"
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 12, transition: { duration: 0.25, ease: "easeOut" } }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden backdrop-blur-2xl bg-[#0a0f1a]/85 border border-white/[0.18] z-[1001]"
+            onClick={(e) => e.stopPropagation()}
+          >
         <style jsx>{`
           .comment-scrollbar::-webkit-scrollbar {
             width: 4px;
@@ -399,7 +402,7 @@ export function IdeaCommentModal({ onClose }) {
               </label>
               <span 
                 style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'normal' }}
-                className={`text-xs ${content.trim().length < 20 ? "text-amber-400/80" : "text-white/70"}`}
+                className="text-xs text-white/70"
               >
                 {content.length}/200{content.length > 0 && content.length < 20 ? " (min 20)" : ""}
               </span>
@@ -427,6 +430,8 @@ export function IdeaCommentModal({ onClose }) {
           </div>
         </form>
       </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
