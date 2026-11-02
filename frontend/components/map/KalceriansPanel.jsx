@@ -394,7 +394,9 @@ export function KalceriansPanel({
             return (
               <div
                 key={user.id}
-                className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-all duration-200 overflow-hidden ${
+                className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-all duration-200 ${
+                  isExpanded ? "overflow-hidden" : "overflow-visible"
+                } ${
                   isBlocked
                     ? isMapDark
                       ? "bg-[#161b22]/30 border-[#30363d]/40 opacity-40 select-none shadow-none"
@@ -416,15 +418,14 @@ export function KalceriansPanel({
                     if (isBlocked || isConfirming) return;
                     if (userEvent) {
                       focusUser(userEvent);
-                      if (window.innerWidth < 860) setDrawerOpen(false);
                     } else if (user.isOnline) {
                       setFocusedUserId(user.id);
                       focusUser(user);
                       scheduleTimeout(() => setFocusedUserId(null), 100);
-                      if (window.innerWidth < 860) setDrawerOpen(false);
                     } else {
-                      setSelectedOfflineUser((prev) => (prev === user.id ? null : user.id));
+                      focusUser(user);
                     }
+                    setExpandedUserId((prev) => (prev === user.id ? null : user.id));
                   }}
                 >
                   {/* Dynamic Color Shift Blobs across hover & click/active on non-blocked cards */}
@@ -564,13 +565,13 @@ export function KalceriansPanel({
                             <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
                           </button>
 
-                          {/* Hover Tooltip Box */}
+                          {/* Hover Tooltip Box - Positioned safely to the left inside row, never chopped */}
                           {hoveredEventIconId === userEvent.id && (
                             <div
-                              className={`absolute bottom-full right-0 mb-1.5 z-50 px-2 py-1 rounded shadow-xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
+                              className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-md shadow-2xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
                                 isMapDark
-                                  ? "bg-black border border-white text-white"
-                                  : "bg-white border border-black text-black"
+                                  ? "bg-black border border-white text-white shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+                                  : "bg-white border border-black text-black shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
                               }`}
                               style={{ fontFamily: "Arial, sans-serif" }}
                             >

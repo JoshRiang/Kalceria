@@ -229,11 +229,15 @@ export function ShowcaseTypewriter({ text }) {
 
 // ─── Minigame Inherited Flip Card for Support Us ─────────────────────────────────
 export function MerchCard({ item, index, isMobile }) {
+  const cardRef = useRef(null);
+  const isActive = useViewportActivity(cardRef, { rootMargin: "250px 0px" });
   const [isFlipped, setIsFlipped] = useState(false);
   const [typedName, setTypedName] = useState("");
   const [currentName, setCurrentName] = useState(item?.name || "Placeholder");
 
   useEffect(() => {
+    if (!isActive) return;
+
     let isMounted = true;
     let timer = null;
     let typeInterval = null;
@@ -273,7 +277,7 @@ export function MerchCard({ item, index, isMobile }) {
             timer = setTimeout(() => {
               if (!isMounted) return;
 
-              // 4. Flip back to face-down (black base with minigame logo)
+              // 4. Flip back to face-down (metallic black base with fiery K logo)
               setIsFlipped(false);
               setTypedName("");
 
@@ -296,10 +300,10 @@ export function MerchCard({ item, index, isMobile }) {
       clearTimeout(timer);
       clearInterval(typeInterval);
     };
-  }, [index, item]);
+  }, [index, item, isActive]);
 
   return (
-    <div className="flex flex-col items-center justify-start select-none w-full max-w-[240px] sm:max-w-none">
+    <div ref={cardRef} className="flex flex-col items-center justify-start select-none w-full max-w-[240px] sm:max-w-none">
       {/* 3D Flip Card Container (Inheriting Minigame Card Dynamics) */}
       <div
         className="relative w-[190px] h-[250px] xs:w-[210px] xs:h-[275px] sm:w-[200px] sm:h-[265px] md:w-[215px] md:h-[285px] lg:w-[230px] lg:h-[305px] cursor-pointer"
@@ -308,7 +312,14 @@ export function MerchCard({ item, index, isMobile }) {
         <motion.div
           animate={{ rotateY: isFlipped ? 180 : 0 }}
           transition={{ duration: 0.65, ease: [0.45, 0.05, 0.55, 0.95] }}
-          style={{ width: "100%", height: "100%", position: "relative", transformStyle: "preserve-3d" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            position: "relative",
+            transformStyle: "preserve-3d",
+            willChange: "transform",
+            transform: "translateZ(0)",
+          }}
         >
           {/* Back Face: Metallic Black Base with 50% enlarged standard fiery K logo */}
           <div
