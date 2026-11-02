@@ -6,57 +6,135 @@ import { userPopup } from "@/components/map/UserPopup";
 import { uploadBlobMedia } from "@/lib/api";
 
 const EVENT_CATEGORIES_GRID = [
-  // Left top: Coffee Icon (Cafe Meeting) - Combination of black and white from Picture 3
+  // Left top: Coffee Icon (Cafe Meeting)
   {
     id: "cafe",
     label: "Cafe Meeting",
-    renderIcon: (isSelected) => (
+    renderIcon: (isSelected, isModalDark) => (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-        <path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke={isSelected ? "#101010" : "#9ca3af"} strokeWidth="1.4" strokeLinecap="round" />
-        <path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke={isSelected ? "#101010" : "#9ca3af"} strokeWidth="1.4" strokeLinecap="round" />
-        <path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill={isSelected ? "#000000" : "#64748b"} stroke="#ffffff" strokeWidth="0.75" />
-        <ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill="#ffffff" stroke="#000000" strokeWidth="0.6" />
-        <path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke="#ffffff" strokeWidth="1.3" strokeLinecap="round" />
-        <path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke={isSelected ? "#000000" : "#64748b"} strokeWidth="1.8" strokeLinecap="round" />
-        <ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill={isSelected ? "#000000" : "#64748b"} stroke="#ffffff" strokeWidth="0.6" />
-        <ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill="#ffffff" />
+        <path
+          d="M10 2c-.8 1.5.8 2.6 0 4.2"
+          stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5"
+          stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z"
+          fill={isModalDark ? "#ffffff" : "#000000"}
+          stroke={isModalDark ? "#000000" : "#ffffff"}
+          strokeWidth="0.75"
+        />
+        <ellipse
+          cx="10.5"
+          cy="9.5"
+          rx="6"
+          ry="1.6"
+          fill={isModalDark ? "#000000" : "#ffffff"}
+          stroke={isModalDark ? "#ffffff" : "#000000"}
+          strokeWidth="0.6"
+        />
+        <path
+          d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8"
+          stroke={isModalDark ? "#000000" : "#ffffff"}
+          strokeWidth="1.3"
+          strokeLinecap="round"
+        />
+        <path
+          d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8"
+          stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <ellipse
+          cx="10.5"
+          cy="19.2"
+          rx="8.5"
+          ry="1.7"
+          fill={isModalDark ? "#ffffff" : "#000000"}
+          stroke={isModalDark ? "#000000" : "#ffffff"}
+          strokeWidth="0.6"
+        />
+        <ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill={isModalDark ? "#000000" : "#ffffff"} />
       </svg>
     ),
   },
-  // Right top: Makanan Icon (Eat Together) - Pure black on light / pure white on dark / grey unselected
+  // Right top: Makanan Icon (Eat Together)
   {
     id: "eat",
     label: "Eat Together",
-    renderIcon: (isSelected, isMapDark) => (
-      <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isSelected ? (isMapDark ? "#ffffff" : "#000000") : "#9ca3af"}>
+    renderIcon: (isSelected, isModalDark) => (
+      <svg
+        viewBox="0 0 24 24"
+        className="w-5 h-5"
+        fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
+      >
         <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z" />
       </svg>
     ),
   },
-  // Left bottom: Tanda Seru Icon (Something Special - Picture 1) - Pure black on light / pure white on dark / grey unselected
+  // Left bottom: Tanda Seru Icon (Something Special)
   {
     id: "special",
     label: "Something Special",
-    renderIcon: (isSelected, isMapDark) => (
-      <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isSelected ? (isMapDark ? "#ffffff" : "#000000") : "#9ca3af"}>
+    renderIcon: (isSelected, isModalDark) => (
+      <svg
+        viewBox="0 0 24 24"
+        className="w-5 h-5"
+        fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
+      >
         <path d="M10.8 3h2.4l-.65 11h-1.1L10.8 3zM12 17.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5z" />
       </svg>
     ),
   },
-  // Right bottom: People Discuss Icon (Discuss More) - Combination of black and white
+  // Right bottom: People Discuss Icon (Discuss More)
   {
     id: "discuss",
     label: "Discuss More",
-    renderIcon: (isSelected) => (
+    renderIcon: (isSelected, isModalDark) => (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-        <path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill={isSelected ? "#000000" : "#64748b"} stroke="#ffffff" strokeWidth="0.8" />
-        <circle cx="10.5" cy="5.3" r="0.7" fill="#ffffff" />
-        <circle cx="12" cy="5.3" r="0.7" fill="#ffffff" />
-        <circle cx="13.5" cy="5.3" r="0.7" fill="#ffffff" />
-        <circle cx="7.5" cy="13" r="2.5" fill={isSelected ? "#000000" : "#475569"} stroke="#ffffff" strokeWidth="1" />
-        <path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={isSelected ? "#000000" : "#475569"} stroke="#ffffff" strokeWidth="1" />
-        <circle cx="16.5" cy="13" r="2.5" fill="#ffffff" stroke={isSelected ? "#000000" : "#64748b"} strokeWidth="1.2" />
-        <path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill="#ffffff" stroke={isSelected ? "#000000" : "#64748b"} strokeWidth="1.2" />
+        <path
+          d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z"
+          fill={isModalDark ? "#ffffff" : "#000000"}
+          stroke={isModalDark ? "#000000" : "#ffffff"}
+          strokeWidth="0.8"
+        />
+        <circle cx="10.5" cy="5.3" r="0.7" fill={isModalDark ? "#000000" : "#ffffff"} />
+        <circle cx="12" cy="5.3" r="0.7" fill={isModalDark ? "#000000" : "#ffffff"} />
+        <circle cx="13.5" cy="5.3" r="0.7" fill={isModalDark ? "#000000" : "#ffffff"} />
+        <circle
+          cx="7.5"
+          cy="13"
+          r="2.5"
+          fill={isModalDark ? "#ffffff" : "#000000"}
+          stroke={isModalDark ? "#000000" : "#ffffff"}
+          strokeWidth="1"
+        />
+        <path
+          d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8"
+          fill={isModalDark ? "#ffffff" : "#000000"}
+          stroke={isModalDark ? "#000000" : "#ffffff"}
+          strokeWidth="1"
+        />
+        <circle
+          cx="16.5"
+          cy="13"
+          r="2.5"
+          fill={isModalDark ? "#000000" : "#ffffff"}
+          stroke={isModalDark ? "#ffffff" : "#000000"}
+          strokeWidth="1.2"
+        />
+        <path
+          d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8"
+          fill={isModalDark ? "#000000" : "#ffffff"}
+          stroke={isModalDark ? "#ffffff" : "#000000"}
+          strokeWidth="1.2"
+        />
       </svg>
     ),
   },
@@ -88,6 +166,11 @@ export const MapModals = memo(function MapModals({
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [quitChoice, setQuitChoice] = useState(null);
+
+  // User specification:
+  // Light mode on map (isMapDark === false): modal background turns BLACK (isModalDark = true), elements inside turn WHITE.
+  // Dark mode on map (isMapDark === true): modal background turns WHITE (isModalDark = false), elements inside turn BLACK.
+  const isModalDark = !isMapDark;
 
   const handleQuitYesClick = () => {
     setQuitChoice("yes");
@@ -125,76 +208,91 @@ export const MapModals = memo(function MapModals({
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
+
   return (
     <>
-      {/* Modals with enhanced HUD design */}
-      
       {/* Offline User Global Popup */}
       {offlineUserObj && !offlineUserObj.isOnline && (
         <div
           className="fixed inset-0 md:inset-auto md:left-[380px] md:top-1/2 md:-translate-y-1/2 z-[3000] flex items-center justify-center md:block pointer-events-auto bg-black/60 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none"
           onClick={() => setSelectedOfflineUser(null)}
         >
-          <div 
-             onClick={(e) => e.stopPropagation()}
-             className="relative [&>.popup-tail]:hidden shadow-2xl rounded-[16px] overflow-hidden bg-[#0a0e27]/40 backdrop-blur-3xl" 
-             dangerouslySetInnerHTML={{ __html: userPopup(offlineUserObj) }} 
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative [&>.popup-tail]:hidden shadow-2xl rounded-[16px] overflow-hidden bg-[#0a0e27]/40 backdrop-blur-3xl"
+            dangerouslySetInnerHTML={{ __html: userPopup(offlineUserObj, isMapDark, true) }}
           />
         </div>
       )}
 
+      {/* 1. Update Status Modal */}
       {showStatusModal && (
         <div
-          className="fixed inset-0 z-[2000] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 select-none"
           onClick={() => setShowStatusModal(false)}
         >
           <motion.div
             animate={{ y: [0, -3, 0] }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className={`relative w-full max-w-[420px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[24px] shadow-2xl overflow-hidden backdrop-blur-xl transition-colors duration-500 ${
-              isMapDark ? "bg-[#0a0f1a]/85 border border-white/[0.15]" : "bg-white/85 border border-slate-200"
+            className={`relative w-full max-w-[420px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[24px] shadow-2xl overflow-hidden transition-colors duration-300 ${
+              isModalDark
+                ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"
+                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Dynamic Distributed Deepblue - Magenta Blobs */}
-            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-              <motion.div 
-                animate={{ scale: [1, 1.15, 0.9, 1], x: [0, 10, -10, 0], y: [0, -10, 10, 0] }}
-                transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-[20%] -left-[20%] w-[65%] h-[65%] bg-blue-600/[0.22] rounded-full blur-[50px]"
-              />
-              <motion.div 
-                animate={{ scale: [1.1, 0.9, 1.15, 1.1], x: [0, -10, 10, 0], y: [0, 10, -10, 0] }}
-                transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute -bottom-[25%] -right-[20%] w-[65%] h-[65%] bg-pink-500/[0.18] rounded-full blur-[50px]"
-              />
-            </div>
-
-            <div className="shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-b border-white/[0.08]">
-              <h2 className={`font-sans font-bold text-base sm:text-lg tracking-tight ${isMapDark ? "text-white" : "text-slate-900"}`}>
+            {/* Header */}
+            <div
+              className={`shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-b ${
+                isModalDark ? "border-[#30363d]" : "border-[#d0d7de]"
+              }`}
+            >
+              <h2
+                className={`font-sans font-bold text-base sm:text-lg tracking-tight ${
+                  isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                }`}
+              >
                 Update Status
               </h2>
               <button
                 type="button"
-                className={`text-2xl leading-none relative z-10 transition-all duration-200 hover:scale-110 active:scale-95 ${
-                  isMapDark ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"
+                className={`text-2xl leading-none relative z-10 transition-colors p-1 cursor-pointer ${
+                  isModalDark
+                    ? "text-[#8b949e] hover:text-[#f0f6fc]"
+                    : "text-[#57606a] hover:text-[#1f2328]"
                 }`}
                 onClick={() => setShowStatusModal(false)}
               >
                 ×
               </button>
             </div>
-            <form onSubmit={saveBroadcast} className="relative z-10 p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-4 sm:gap-5 custom-scrollbar">
-              <p className={isMapDark ? "text-white/60 text-xs sm:text-sm leading-relaxed tracking-wide" : "text-slate-600 text-xs sm:text-sm leading-relaxed tracking-wide"}>
+
+            {/* Form */}
+            <form
+              onSubmit={saveBroadcast}
+              className="relative z-10 p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-4 sm:gap-5 custom-scrollbar"
+            >
+              <p
+                className={`text-xs sm:text-sm leading-relaxed tracking-normal ${
+                  isModalDark ? "text-[#8b949e]" : "text-[#57606a]"
+                }`}
+              >
                 Share your current activity with other Kalcerians for 24h.
               </p>
+
               <div className="flex flex-col gap-2">
-                <label className={`text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
+                <label
+                  className={`text-xs font-semibold tracking-wider ${
+                    isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                  }`}
+                >
                   Broadcast
                 </label>
                 <textarea
-                  className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm focus:border-slate-500 outline-none min-h-[90px] sm:min-h-[120px] transition-all ${
-                    isMapDark ? "bg-white/[0.03] border-white/10 text-white" : "bg-slate-50 border-slate-300 text-slate-900"
+                  className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm outline-none min-h-[90px] sm:min-h-[120px] transition-all resize-none ${
+                    isModalDark
+                      ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
+                      : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
                   }`}
                   value={statusText}
                   onChange={(e) => setStatusText(e.target.value)}
@@ -202,13 +300,14 @@ export const MapModals = memo(function MapModals({
                   autoFocus
                 />
               </div>
+
               <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
                 <button
                   type="submit"
-                  className={`w-full py-3 sm:py-3.5 backdrop-blur-md border text-xs font-bold tracking-wider rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:opacity-50 disabled:pointer-events-none ${
-                    isMapDark 
-                      ? "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30" 
-                      : "bg-slate-900/10 border-slate-900/20 text-slate-800 hover:bg-slate-900/20 hover:border-slate-900/30"
+                  className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
+                    isModalDark
+                      ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
+                      : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
                   }`}
                   disabled={busy}
                 >
@@ -220,41 +319,41 @@ export const MapModals = memo(function MapModals({
         </div>
       )}
 
+      {/* 2. Create Your Own Event Modal */}
       {showEventModal && (
         <div
-          className="fixed inset-0 z-[2000] flex items-center justify-center p-2.5 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-2.5 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 select-none"
           onClick={() => setShowEventModal(false)}
         >
           <motion.div
             animate={{ y: [0, -3, 0] }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden backdrop-blur-2xl transition-colors duration-500 ${
-              isMapDark ? "bg-[#0a0f1a]/85 border border-white/[0.18]" : "bg-white/90 border border-slate-200"
+            className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[26px] shadow-2xl overflow-hidden transition-colors duration-300 ${
+              isModalDark
+                ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"
+                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Dynamic Distributed Deepblue - Gold Blobs */}
-            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-              <motion.div 
-                animate={{ scale: [1, 1.12, 0.92, 1], x: [0, 8, -8, 0], y: [0, -8, 8, 0] }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-[20%] -left-[20%] w-[65%] h-[65%] bg-blue-600/[0.22] rounded-full blur-[50px]"
-              />
-              <motion.div 
-                animate={{ scale: [1.08, 0.92, 1.1, 1.08], x: [0, -8, 8, 0], y: [0, 8, -8, 0] }}
-                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
-                className="absolute -bottom-[25%] -right-[20%] w-[65%] h-[65%] bg-[#ffd60a]/[0.16] rounded-full blur-[50px]"
-              />
-            </div>
-
-            <div className="shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-b border-white/[0.08]">
-              <h2 className={`font-sans font-bold text-base sm:text-lg tracking-tight ${isMapDark ? "text-white" : "text-slate-900"}`}>
+            {/* Header */}
+            <div
+              className={`shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-b ${
+                isModalDark ? "border-[#30363d]" : "border-[#d0d7de]"
+              }`}
+            >
+              <h2
+                className={`font-sans font-bold text-base sm:text-lg tracking-tight ${
+                  isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                }`}
+              >
                 Create Your Own Event
               </h2>
               <button
                 type="button"
-                className={`text-2xl leading-none relative z-10 p-1 transition-all duration-200 hover:scale-110 active:scale-95 ${
-                  isMapDark ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"
+                className={`text-2xl leading-none relative z-10 p-1 transition-colors cursor-pointer ${
+                  isModalDark
+                    ? "text-[#8b949e] hover:text-[#f0f6fc]"
+                    : "text-[#57606a] hover:text-[#1f2328]"
                 }`}
                 onClick={() => setShowEventModal(false)}
               >
@@ -262,14 +361,26 @@ export const MapModals = memo(function MapModals({
               </button>
             </div>
 
-            <form onSubmit={saveMiniEvent} className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3 sm:gap-4 custom-scrollbar">
-              <p className={isMapDark ? "text-white/70 text-xs sm:text-sm leading-relaxed tracking-wide" : "text-slate-600 text-xs sm:text-sm leading-relaxed tracking-wide"}>
+            {/* Form */}
+            <form
+              onSubmit={saveMiniEvent}
+              className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3 sm:gap-4 custom-scrollbar"
+            >
+              <p
+                className={`text-xs sm:text-sm leading-relaxed tracking-normal ${
+                  isModalDark ? "text-[#8b949e]" : "text-[#57606a]"
+                }`}
+              >
                 Share your current activity with other Kalcerians for 24h.
               </p>
 
               {/* 2x2 Category Selector */}
               <div className="flex flex-col gap-1.5 sm:gap-2">
-                <label className={`text-[11px] sm:text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
+                <label
+                  className={`text-[11px] sm:text-xs font-semibold tracking-wider ${
+                    isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                  }`}
+                >
                   Category
                 </label>
                 <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
@@ -280,23 +391,29 @@ export const MapModals = memo(function MapModals({
                         key={cat.id}
                         type="button"
                         onClick={() => setEventForm((f) => ({ ...f, category: cat.id }))}
-                        className={`flex flex-col items-center justify-center p-2.5 xs:p-3 rounded-xl border transition-all duration-300 outline-none ${
+                        className={`flex flex-col items-center justify-center p-2.5 xs:p-3 rounded-xl border transition-all duration-200 outline-none cursor-pointer ${
                           isSelected
-                            ? "bg-white/35 backdrop-blur-md border-white/80 shadow-[0_0_20px_rgba(255,255,255,0.45),inset_0_1px_3px_rgba(255,255,255,0.8)] ring-1 ring-white/60"
-                            : (isMapDark
-                                ? "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
-                                : "border-slate-200/80 bg-white/40 hover:border-slate-300 hover:bg-white/60")
+                            ? isModalDark
+                              ? "bg-[#21262d] border-2 border-[#ffffff] shadow-[0_0_12px_rgba(255,255,255,0.25)]"
+                              : "bg-[#f6f8fa] border-2 border-[#000000] shadow-[0_0_12px_rgba(0,0,0,0.15)]"
+                            : isModalDark
+                            ? "bg-[#0d1117] border-[#30363d] hover:border-[#8b949e]"
+                            : "bg-[#ffffff] border-[#d0d7de] hover:border-[#8c959f]"
                         }`}
                       >
                         <div className="transition-transform duration-200">
-                          {cat.renderIcon(isSelected, isMapDark)}
+                          {cat.renderIcon(isSelected, isModalDark)}
                         </div>
                         <span
                           style={{ fontFamily: "Arial, sans-serif" }}
                           className={`text-[10px] xs:text-[11px] leading-tight text-center mt-1.5 transition-colors duration-200 ${
                             isSelected
-                              ? (isMapDark ? "text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : "text-slate-900 font-bold")
-                              : "text-gray-400 font-medium"
+                              ? isModalDark
+                                ? "text-[#ffffff] font-bold"
+                                : "text-[#000000] font-bold"
+                              : isModalDark
+                              ? "text-[#8b949e] font-medium"
+                              : "text-[#57606a] font-medium"
                           }`}
                         >
                           {cat.label}
@@ -307,13 +424,20 @@ export const MapModals = memo(function MapModals({
                 </div>
               </div>
 
+              {/* Event Title */}
               <div className="flex flex-col gap-1.5 sm:gap-2">
-                <label className={`text-[11px] sm:text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
+                <label
+                  className={`text-[11px] sm:text-xs font-semibold tracking-wider ${
+                    isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                  }`}
+                >
                   Event Title
                 </label>
                 <input
-                  className={`w-full border rounded-lg p-2.5 sm:p-3.5 text-xs sm:text-sm focus:border-slate-500 outline-none transition-all ${
-                    isMapDark ? "bg-white/[0.03] border-white/10 text-white" : "bg-slate-50 border-slate-300 text-slate-900"
+                  className={`w-full border rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm outline-none transition-all ${
+                    isModalDark
+                      ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
+                      : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
                   }`}
                   value={eventForm.title}
                   onChange={(e) =>
@@ -323,13 +447,20 @@ export const MapModals = memo(function MapModals({
                 />
               </div>
 
+              {/* Briefing */}
               <div className="flex flex-col gap-1.5 sm:gap-2">
-                <label className={`text-[11px] sm:text-xs font-semibold tracking-wider ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
+                <label
+                  className={`text-[11px] sm:text-xs font-semibold tracking-wider ${
+                    isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                  }`}
+                >
                   Briefing
                 </label>
                 <textarea
-                  className={`w-full border rounded-lg p-2.5 sm:p-3.5 text-xs sm:text-sm focus:border-slate-500 outline-none min-h-[75px] sm:min-h-[100px] resize-y transition-all ${
-                    isMapDark ? "bg-white/[0.03] border-white/10 text-white" : "bg-slate-50 border-slate-300 text-slate-900"
+                  className={`w-full border rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm outline-none min-h-[75px] sm:min-h-[100px] resize-y transition-all ${
+                    isModalDark
+                      ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
+                      : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
                   }`}
                   value={eventForm.description}
                   onChange={(e) =>
@@ -342,8 +473,20 @@ export const MapModals = memo(function MapModals({
               {/* Video / GIF Live Feed Attachment */}
               <div className="flex flex-col gap-1.5 sm:gap-2">
                 <div className="flex items-center justify-between">
-                  <label className={`text-[11px] sm:text-xs font-semibold tracking-wider flex items-center gap-1.5 ${isMapDark ? "text-slate-400" : "text-slate-500"}`}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                  <label
+                    className={`text-[11px] sm:text-xs font-semibold tracking-wider flex items-center gap-1.5 ${
+                      isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                    }`}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3.5 h-3.5"
+                    >
                       <polygon points="23 7 16 12 23 17 23 7" />
                       <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                     </svg>
@@ -353,7 +496,9 @@ export const MapModals = memo(function MapModals({
                     <button
                       type="button"
                       onClick={() => setEventForm((f) => ({ ...f, mediaUrl: "" }))}
-                      className="text-[10px] text-pink-400 hover:underline"
+                      className={`text-[10px] hover:underline cursor-pointer ${
+                        isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
+                      }`}
                     >
                       Clear
                     </button>
@@ -363,8 +508,10 @@ export const MapModals = memo(function MapModals({
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs focus:border-slate-500 outline-none transition-all ${
-                      isMapDark ? "bg-white/[0.03] border-white/10 text-white" : "bg-slate-50 border-slate-300 text-slate-900"
+                    className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all ${
+                      isModalDark
+                        ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff]"
+                        : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da]"
                     }`}
                     value={eventForm.mediaUrl || ""}
                     onChange={(e) => setEventForm((f) => ({ ...f, mediaUrl: e.target.value }))}
@@ -381,13 +528,21 @@ export const MapModals = memo(function MapModals({
                     type="button"
                     disabled={isUploadingMedia || busy}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`px-3 py-2 border rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all shrink-0 ${
-                      isMapDark
-                        ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
-                        : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    className={`px-3 py-2 border rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                      isModalDark
+                        ? "border-[#30363d] bg-[#21262d] text-[#f0f6fc] hover:bg-[#30363d]"
+                        : "border-[#d0d7de] bg-[#eaeef2] text-[#1f2328] hover:bg-[#d0d7de]"
                     }`}
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3.5 h-3.5"
+                    >
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                       <polyline points="17 8 12 3 7 8" />
                       <line x1="12" y1="3" x2="12" y2="15" />
@@ -397,14 +552,18 @@ export const MapModals = memo(function MapModals({
                 </div>
 
                 {uploadError && (
-                  <p className="text-[11px] text-red-400 mt-0.5">{uploadError}</p>
+                  <p className="text-[11px] text-red-500 mt-0.5">{uploadError}</p>
                 )}
 
                 {/* Preview inside Modal */}
                 {eventForm.mediaUrl && (() => {
                   const firstUrl = eventForm.mediaUrl.split(",")[0].trim();
                   return (
-                    <div className="relative w-full h-[90px] rounded-lg overflow-hidden bg-black border border-white/10 mt-1 shrink-0">
+                    <div
+                      className={`relative w-full h-[90px] rounded-lg overflow-hidden border mt-1 shrink-0 ${
+                        isModalDark ? "bg-[#0d1117] border-[#30363d]" : "bg-[#f6f8fa] border-[#d0d7de]"
+                      }`}
+                    >
                       {/\.(mp4|webm|ogg)($|\?)/i.test(firstUrl) || /^data:video/i.test(firstUrl) ? (
                         <video
                           src={firstUrl}
@@ -412,18 +571,18 @@ export const MapModals = memo(function MapModals({
                           loop
                           muted
                           playsInline
-                          className="w-full h-full object-cover opacity-85"
+                          className="w-full h-full object-cover"
                         />
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={firstUrl}
                           alt="Preview"
-                          className="w-full h-full object-cover opacity-85"
+                          className="w-full h-full object-cover"
                         />
                       )}
                       <div className="absolute top-2 left-2 z-10">
-                        <span className="font-sans font-bold text-[10px] text-white uppercase tracking-tight leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                        <span className="font-sans font-bold text-[10px] text-white uppercase tracking-tight leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] bg-black/60 px-1.5 py-0.5 rounded">
                           PREVIEW
                         </span>
                       </div>
@@ -432,13 +591,14 @@ export const MapModals = memo(function MapModals({
                 })()}
               </div>
 
+              {/* Action Buttons */}
               <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
                 <button
                   type="submit"
-                  className={`w-full py-3 sm:py-3.5 backdrop-blur-md border text-xs font-bold tracking-wider rounded-xl hover:-translate-y-0.5 active:translate-y-0 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:opacity-50 disabled:pointer-events-none ${
-                    isMapDark 
-                      ? "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30" 
-                      : "bg-slate-900/10 border-slate-900/20 text-slate-800 hover:bg-slate-900/20 hover:border-slate-900/30"
+                  className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
+                    isModalDark
+                      ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
+                      : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
                   }`}
                   disabled={busy}
                 >
@@ -447,11 +607,15 @@ export const MapModals = memo(function MapModals({
                 {activeOwnEvent && (
                   <button
                     type="button"
-                    className="w-full py-3 sm:py-3.5 border border-pink-500/30 bg-pink-500/10 backdrop-blur-md text-pink-400 font-semibold text-xs tracking-wider rounded-xl hover:bg-pink-500/20 hover:border-pink-500/50 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                    className={`w-full py-3 sm:py-3.5 border font-semibold text-xs tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
+                      isModalDark
+                        ? "border-[#f85149]/40 bg-[#f85149]/10 text-[#f85149] hover:bg-[#f85149]/20"
+                        : "border-[#cf222e]/40 bg-[#cf222e]/10 text-[#cf222e] hover:bg-[#cf222e]/20"
+                    }`}
                     onClick={deleteMiniEvent}
                     disabled={busy}
                   >
-                    {busy ? "Recalling..." : "Recall Signal"}
+                    Cancel / Delete Signal
                   </button>
                 )}
               </div>
@@ -476,8 +640,7 @@ export const MapModals = memo(function MapModals({
       {/* Quit Modal */}
       {showQuitModal && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 select-none pointer-events-auto">
-          {/* Pure Optical Lens Blur — Never covering the map in opaque paint */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -485,84 +648,84 @@ export const MapModals = memo(function MapModals({
             className={`absolute inset-0 backdrop-blur-md transition-colors duration-300 ${
               isMapDark ? "bg-black/30" : "bg-black/[0.04]"
             }`}
-            onClick={handleQuitNoClick} 
+            onClick={handleQuitNoClick}
           />
 
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }} 
-            animate={{ 
-              scale: 1, 
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{
+              scale: 1,
               opacity: 1,
-              y: [0, -5, 0]
-            }} 
+              y: [0, -5, 0],
+            }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{
               opacity: { duration: 0.25 },
               scale: { duration: 0.25 },
-              y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
-            }} 
+              y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+            }}
             className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
           >
-            <h3 
+            <h3
               className={`relative z-10 text-2xl sm:text-3xl md:text-4xl font-sans font-bold mb-8 sm:mb-10 tracking-tighter ${
                 isMapDark ? "text-white" : "text-black"
               }`}
               style={{
-                textShadow: isMapDark 
-                  ? "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)" 
-                  : "0 2px 14px rgba(255,255,255,0.95), 0 0 24px rgba(255,255,255,0.9)"
+                textShadow: isMapDark
+                  ? "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)"
+                  : "0 2px 14px rgba(255,255,255,0.95), 0 0 24px rgba(255,255,255,0.9)",
               }}
             >
               Quit the map?
             </h3>
 
-            {/* 2D Responsive Yes / No Buttons: Arial, Not Bold, Not All Capital, Scaling on hover/click */}
             <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16">
-              <button 
+              <button
                 type="button"
-                onClick={handleQuitYesClick} 
-                className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 ${
-                  quitChoice === 'yes'
-                    ? 'text-red-600 scale-110'
-                    : isMapDark
-                    ? 'text-white hover:text-red-500 active:text-red-600'
-                    : 'text-black hover:text-red-600 active:text-red-600'
-                }`}
-                style={{
-                  fontFamily: "Arial, sans-serif",
-                  fontWeight: "normal",
-                  textTransform: "none",
-                  textShadow: quitChoice === 'yes' 
-                    ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
-                    : isMapDark 
-                    ? "0 2px 12px rgba(0,0,0,0.8)" 
-                    : "0 1px 8px rgba(255,255,255,0.9)"
-                }}
+                onClick={handleQuitYesClick}
+                className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2"
               >
-                Yes
+                <motion.span
+                  animate={quitChoice === "yes" ? { scale: 1.25 } : {}}
+                  transition={{ duration: 0.2 }}
+                  className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${
+                    isMapDark
+                      ? "text-white/80 group-hover:text-white"
+                      : "text-black/80 group-hover:text-black"
+                  }`}
+                  style={{
+                    fontFamily: "Arial, sans-serif",
+                    textShadow: isMapDark
+                      ? "0 2px 10px rgba(0,0,0,0.8)"
+                      : "0 1px 6px rgba(255,255,255,0.9)",
+                  }}
+                >
+                  Yes
+                </motion.span>
               </button>
-              <button 
+
+              <button
                 type="button"
-                onClick={handleQuitNoClick} 
-                className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 ${
-                  isMapDark
-                    ? (quitChoice === 'no' ? 'scale-110 text-white' : 'text-white hover:text-white active:text-white')
-                    : (quitChoice === 'no' ? 'scale-110 text-black' : 'text-black hover:text-black active:text-black')
-                }`}
-                style={{
-                  fontFamily: "Arial, sans-serif",
-                  fontWeight: "normal",
-                  textTransform: "none",
-                  textShadow: isMapDark
-                    ? (quitChoice === 'no' 
-                        ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
-                        : "0 2px 12px rgba(0,0,0,0.8)")
-                    : (quitChoice === 'no'
-                        ? "0 0 6px rgba(0,0,0,0.5)"
-                        : "0 1px 8px rgba(255,255,255,0.9)")
-                }}
+                onClick={handleQuitNoClick}
+                className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2"
               >
-                No
+                <motion.span
+                  animate={quitChoice === "no" ? { scale: 1.25 } : {}}
+                  transition={{ duration: 0.2 }}
+                  className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${
+                    isMapDark
+                      ? "text-white/80 group-hover:text-white"
+                      : "text-black/80 group-hover:text-black"
+                  }`}
+                  style={{
+                    fontFamily: "Arial, sans-serif",
+                    textShadow: isMapDark
+                      ? "0 2px 10px rgba(0,0,0,0.8)"
+                      : "0 1px 6px rgba(255,255,255,0.9)",
+                  }}
+                >
+                  No
+                </motion.span>
               </button>
             </div>
           </motion.div>
