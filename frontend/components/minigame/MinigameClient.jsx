@@ -5,6 +5,7 @@ import Image, { getImageProps } from "next/image";
 import dynamic from "next/dynamic";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import { createSeededRandom } from "@/lib/seededRandom";
+import api from "@/lib/api";
 
 const FlipGame = dynamic(() => import("@/app/minigame/FlipGame"), { ssr: false });
 
@@ -190,6 +191,19 @@ export default function MinigamePage() {
   const [gameSeed, setGameSeed] = useState("");
   const scheduleTimeout = useTimeoutRegistry();
 
+  useEffect(() => {
+    let active = true;
+    api.get("/minigame/status")
+      .then((res) => {
+        if (!active) return;
+        if (typeof res.data?.attempt === "number") {
+          setAttempt(res.data.attempt);
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const isGameStarting = gamePhase === "starting" || gamePhase === "playing" || gamePhase === "ending";
@@ -245,6 +259,13 @@ export default function MinigamePage() {
     // After game finishes, attempt becomes 0, start ending sequence
     setAttempt(0);
     setGamePhase("ending");
+    api.get("/minigame/status")
+      .then((res) => {
+        if (typeof res.data?.attempt === "number") {
+          setAttempt(res.data.attempt);
+        }
+      })
+      .catch(() => {});
 
     // Gradual cleanup and transition back to landing page state
     scheduleTimeout(() => {
@@ -405,7 +426,7 @@ export default function MinigamePage() {
 
             {/* Reset Countdown */}
             <AnimatePresence>
-              {showReset && attempt === 0 && (
+              {(showReset || attempt === 0) && (
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}

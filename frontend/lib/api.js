@@ -45,6 +45,17 @@ api.interceptors.request.use(async (config) => {
   if (typeof window !== 'undefined' && !SAFE_METHODS.has((config.method || 'get').toLowerCase())) {
     const token = await getCsrfToken();
     if (token) config.headers['x-csrf-token'] = token;
+
+    try {
+      let tag = localStorage.getItem('kalceria_device_tag');
+      if (!tag) {
+        tag = 'dev_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
+        localStorage.setItem('kalceria_device_tag', tag);
+      }
+      if (tag && !config.headers['x-client-fingerprint']) {
+        config.headers['x-client-fingerprint'] = tag;
+      }
+    } catch {}
   }
   return config;
 });

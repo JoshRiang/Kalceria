@@ -101,14 +101,22 @@ export function cleanIpString(rawIp) {
 
 export function resolveClientIp(req) {
   if (!req) return '127.0.0.1';
-  // 1. Prefer Express's trusted proxy resolution (when app.set('trust proxy', ...) is configured)
-  if (req.ip) return cleanIpString(req.ip);
 
-  // 2. Cloudflare ingress when proxy header is present
+  // 1. Cloudflare ingress when proxy header is present
   const cf = req.headers?.['cf-connecting-ip'];
   if (cf) {
     const cleaned = cleanIpString(cf);
     if (cleaned) return cleaned;
+  }
+
+  // 2. Standard RFC 7239 Forwarded header
+  const fwd = req.headers?.['forwarded'];
+  if (fwd) {
+    const match = /for="?([^;,"]+)/i.exec(fwd);
+    if (match?.[1]) {
+      const cleaned = cleanIpString(match[1]);
+      if (cleaned && cleaned !== 'unknown') return cleaned;
+    }
   }
 
   // 3. X-Forwarded-For (leftmost client address)
@@ -125,6 +133,7 @@ export function resolveClientIp(req) {
     if (cleaned) return cleaned;
   }
 
+  // 5. Express trusted proxy / direct socket remote address
   const direct = req.ip || req.socket?.remoteAddress || '127.0.0.1';
   return cleanIpString(direct) || '127.0.0.1';
 }
@@ -187,13 +196,12 @@ export async function checkCommentDefense(req, res, next) {
   const userId = req.user?.userId;
   const { machineTagHash, fingerprint } = resolveClientFingerprint(req);
 
-  const keysToCheck = userId
-    ? [`comment:cooldown:user:${userId}`, `comment:cooldown:ip:${ip}`]
-    : [
-        `comment:cooldown:ip:${ip}`,
-        `comment:cooldown:fp:${fingerprint}`,
-        ...(machineTagHash ? [`comment:cooldown:tag:${machineTagHash}`] : []),
-      ];
+  const keysToCheck = [
+    `comment:cooldown:ip:${ip}`,
+    `comment:cooldown:fp:${fingerprint}`,
+  ];
+  if (machineTagHash) keysToCheck.push(`comment:cooldown:tag:${machineTagHash}`);
+  if (userId) keysToCheck.push(`comment:cooldown:user:${userId}`);
 
   let activeCooldown = false;
   let maxRemainingTtl = 0;

@@ -7,6 +7,7 @@ import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cur
 import { safeNotify, sendEventRegistrationEmail, sendEventPaymentConfirmedEmail } from '../lib/mailer.js';
 import { createEventPaymentSession, isOnlinePaymentEnabled } from '../lib/paymentBroker.js';
 import { notifyEventRegistration, notifyEventPaymentConfirmed } from '../lib/whatsappBroker.js';
+import { setEventRegistrationCooldown } from '../middleware/ingressDefense.js';
 
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
 
@@ -135,6 +136,9 @@ export async function registerEvent(req, res, next) {
     if (result.error === 'SESSION') return res.status(400).json({ error: 'Please select a valid event session.' });
     if (result.error === 'FULL') return res.status(400).json({ error: 'Event is full.' });
     const { event, reg } = result;
+
+    // Set 24-hour registration cooldown per event & device/account
+    await setEventRegistrationCooldown(req, eventId, userId);
 
     const participantName = guestName || reg.user.name;
     const participantContact = guestContact || reg.user.phone || '';

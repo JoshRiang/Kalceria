@@ -9,6 +9,7 @@ import { getMedia, createMedia } from "../controllers/mediaController.js";
 import { createMiniEvent, getActiveMiniEvents, updateMiniEvent, deleteMiniEvent } from "../controllers/miniEventController.js";
 import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from "../controllers/serviceController.js";
 import { saveTelemetry, getMapUsers, getAllKalcerians } from "../controllers/telemetryController.js";
+import { getMinigameStatus, recordMinigameScore } from "../controllers/minigameController.js";
 import { getMyBroadcast, createBroadcast, updateBroadcast, deleteBroadcast } from "../controllers/broadcastController.js";
 import { redirectEvent } from "../controllers/redirectController.js";
 import { cleanupExpiredBroadcasts } from "../utils/cronWorker.js";
@@ -127,6 +128,10 @@ router.post("/services/book", requireAuth, bookingRateLimit, checkServiceBooking
 router.post("/services/request", optionalAuth, bookingRateLimit, checkServiceBookingDefense, createServiceRequest);
 router.get("/services/bookings", listPublicServiceBookings);
 router.delete("/services/request/:id", optionalAuth, deleteOwnServiceRequest);
+
+// ─── Minigame (Daily Attempt & Score Tracking) ─────────────────────────────────
+router.get("/minigame/status", optionalAuth, getMinigameStatus);
+router.post("/minigame/score", requireAuth, recordMinigameScore);
 
 // ─── Telemetry & Map ─────────────────────────────────────────────────────────
 router.post("/map/telemetry", requireAuth, saveTelemetry);

@@ -12,6 +12,7 @@ import {
   clearServiceBookingCooldown,
   clearMemStoreForTesting,
   eventRegistrationDefense,
+  setEventRegistrationCooldown,
   authLoginDefense,
   authSignupDefense,
   miniEventDefense,
@@ -335,6 +336,7 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
       const req = {
         headers: { 'user-agent': 'LOIC/1.0' },
         ip: '10.0.0.1',
+        params: { eventId: 'event-1' },
         body: { selectedSession: 'Morning' },
       };
       const res = createMockRes();
@@ -346,6 +348,51 @@ describe('Ingress Defense in Depth & Multi-Form Security Vertical Slice', () => 
 
       assert.equal(res.statusCode, 403);
       assert.equal(nextCalled, false);
+    });
+
+    it('Event Registration defense enforces 24-hour cooldown per device / guest', async () => {
+      const guestReq = {
+        headers: {
+          'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
+          'x-client-fingerprint': 'hp-device-tag-xyz-123',
+        },
+        ip: '114.122.10.55',
+        params: { eventId: 'event-night-cruise-2026' },
+        body: { name: 'Guest Tester', contact: '+628123456789' },
+      };
+
+      const res1 = createMockRes();
+      let nextCalled1 = false;
+      await eventRegistrationDefense(guestReq, res1, () => {
+        nextCalled1 = true;
+      });
+      assert.equal(nextCalled1, true);
+
+      await setEventRegistrationCooldown(guestReq, 'event-night-cruise-2026');
+
+      const res2 = createMockRes();
+      let nextCalled2 = false;
+      await eventRegistrationDefense(guestReq, res2, () => {
+        nextCalled2 = true;
+      });
+
+      assert.equal(res2.statusCode, 429);
+      assert.equal(nextCalled2, false);
+      assert.match(res2.body.error, /Registration cooldown active/i);
+
+      const guestReqDiffIp = {
+        ...guestReq,
+        ip: '180.244.15.99',
+      };
+      const res3 = createMockRes();
+      let nextCalled3 = false;
+      await eventRegistrationDefense(guestReqDiffIp, res3, () => {
+        nextCalled3 = true;
+      });
+
+      assert.equal(res3.statusCode, 429);
+      assert.equal(nextCalled3, false);
+      assert.match(res3.body.error, /Registration cooldown active/i);
     });
 
     it('Auth Login defense blocks prototype pollution in credentials', async () => {

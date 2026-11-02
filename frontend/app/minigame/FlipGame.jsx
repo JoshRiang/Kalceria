@@ -207,8 +207,7 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
     setShowSave(false);
     setSubmissionPhase("submitting");
     try {
-      const submitPromise = api.post("/map/telemetry", {
-        type: "MINIGAME_SCORE",
+      const submitPromise = api.post("/minigame/score", {
         ms,
         seed
       }).catch(() => {});
@@ -226,6 +225,7 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
 
   const handleSaveNo = () => {
     setShowSave(false);
+    api.post("/minigame/score", { ms, seed, skipped: true }).catch(() => {});
     setBlurOut(true);
     scheduleTimeout(() => onFinish(), 1200);
   };

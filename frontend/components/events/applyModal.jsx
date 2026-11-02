@@ -84,6 +84,11 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
         setError("Please enter a valid email address.");
         return;
       }
+      const rawDigits = form.contact.replace(/\D/g, "");
+      if (rawDigits.length < 9) {
+        setError("Please enter a valid WhatsApp number (+62 8xx...).");
+        return;
+      }
     }
 
     setLoading(true);
@@ -254,15 +259,25 @@ export function ApplyModal({ events, startIndex, isMobile, onClose }) {
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>Contact</label>
-                          <input
-                            type="tel"
-                            className={inputClass}
-                            placeholder="WhatsApp (+62...)"
-                            value={form.contact}
-                            onChange={(e) => { setForm({ ...form, contact: e.target.value }); setError(""); }}
-                            required
-                          />
+                          <label className={labelClass}>WhatsApp Contact</label>
+                          <div className="flex items-center w-full bg-white/90 border-none rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-fuchsia-500 transition-all shadow-xl">
+                            <div className="flex items-center pl-2.5 pr-2 py-2 text-black font-sans font-bold text-[11px] select-none border-r border-black/10 bg-black/[0.04] shrink-0">
+                              +62
+                            </div>
+                            <input
+                              type="tel"
+                              className="w-full bg-transparent border-none py-2 px-2 text-black outline-none font-sans text-[11px] font-medium placeholder:text-gray-400"
+                              placeholder="8xx-xxxx-xxxx"
+                              value={(form.contact || "").replace(/^\+?62/, "").replace(/^0+/, "")}
+                              onChange={(e) => {
+                                let raw = (e.target.value || "").replace(/^\+?62/, "").replace(/^0+/, "");
+                                const digits = raw.replace(/\D/g, "");
+                                setForm({ ...form, contact: digits ? `+62${digits}` : "" });
+                                setError("");
+                              }}
+                              required
+                            />
+                          </div>
                         </div>
                       </div>
                     </motion.div>

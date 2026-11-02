@@ -110,7 +110,7 @@ export function IdeaCommentModal({ onClose }) {
 
     const cleanContent = content.trim();
     if (cleanContent.length < 20) {
-      setError("Message must be at least 20 characters.");
+      setError(`Message must be at least 20 characters (currently ${cleanContent.length}/200).`);
       return;
     }
     if (cleanContent.length > 200) {
@@ -152,7 +152,7 @@ export function IdeaCommentModal({ onClose }) {
     }
   };
 
-  const isFormValid = content.trim().length >= 20 && content.trim().length <= 200 && !isSubmitting;
+  const isFormValid = content.trim().length > 0 && !isSubmitting;
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-3 sm:p-4">
@@ -399,9 +399,9 @@ export function IdeaCommentModal({ onClose }) {
               </label>
               <span 
                 style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'normal' }}
-                className={`text-xs ${content.trim().length < 20 ? "text-white/40" : "text-white/70"}`}
+                className={`text-xs ${content.trim().length < 20 ? "text-amber-400/80" : "text-white/70"}`}
               >
-                {content.length}/200
+                {content.length}/200{content.length > 0 && content.length < 20 ? " (min 20)" : ""}
               </span>
             </div>
             <textarea

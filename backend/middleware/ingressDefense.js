@@ -405,12 +405,99 @@ export function createIngressShield({ name, maxBurst = 5, burstWindow = 30, form
 }
 
 // ── Tailored Form Ingress Shields ─────────────────────────────────────────────
-export const eventRegistrationDefense = createIngressShield({
-  name: 'event-reg',
-  maxBurst: 5,
-  burstWindow: 20,
-  formName: 'Event Registration Form',
-});
+const EVENT_REG_COOLDOWN_SECONDS = 24 * 60 * 60; // 24 hours = 86,400s
+
+export async function checkEventRegistrationDefense(req, res, next) {
+  if (checkL7Botnet(req)) {
+    return res.status(403).json({ error: 'Request rejected by security policy.' });
+  }
+
+  if (!req._payloadInspected && req.body) {
+    const payloadCheck = inspectPayloadSafety(req.body);
+    if (!payloadCheck.safe) {
+      return res.status(400).json({ error: `Malicious payload rejected: ${payloadCheck.reason}` });
+    }
+  }
+
+  const ip = resolveClientIp(req);
+  const eventId = req.params?.eventId || req.body?.eventId || 'global';
+
+  // Burst Rate Limiting
+  const burstKey = `event-reg:burst:${ip}`;
+  const burstCount = await safeRedisCall(
+    () => redis.eval(INCR_WITH_TTL_LUA, 1, burstKey, 20),
+    () => incrMem(burstKey, 20)
+  );
+
+  if (burstCount > 5) {
+    res.setHeader('Retry-After', '20');
+    return res.status(429).json({ error: 'High request velocity detected on Event Registration. Please slow down.' });
+  }
+
+  // 24-Hour Cooldown Verification per event & device/guest
+  const userId = req.user?.userId;
+  const { machineTag, fingerprint } = resolveClientFingerprint(req);
+
+  const keysToCheck = [
+    `event-reg:cooldown:ev:${eventId}:ip:${ip}`,
+    `event-reg:cooldown:ev:${eventId}:fp:${fingerprint}`,
+  ];
+  if (machineTag) keysToCheck.push(`event-reg:cooldown:ev:${eventId}:tag:${machineTag}`);
+  if (userId) keysToCheck.push(`event-reg:cooldown:ev:${eventId}:user:${userId}`);
+
+  let activeCooldown = false;
+  let maxRemainingTtl = 0;
+
+  for (const key of keysToCheck) {
+    const check = await safeRedisCall(
+      async () => {
+        const ttl = await redis.ttl(key);
+        return { exists: ttl > 0, ttl };
+      },
+      () => {
+        const memTtl = getMemTtl(key);
+        return { exists: memTtl > 0, ttl: memTtl };
+      }
+    );
+
+    if (check.exists) {
+      activeCooldown = true;
+      maxRemainingTtl = Math.max(maxRemainingTtl, check.ttl);
+    }
+  }
+
+  if (activeCooldown) {
+    const retrySec = Math.max(1, maxRemainingTtl);
+    res.setHeader('Retry-After', String(retrySec));
+    return res.status(429).json({
+      error: 'Registration cooldown active. Only one registration is permitted per device/network to ensure fair scheduling.',
+      retryAfter: retrySec,
+    });
+  }
+
+  return next();
+}
+
+export async function setEventRegistrationCooldown(req, eventId, userId) {
+  const ip = resolveClientIp(req);
+  const { machineTag, fingerprint } = resolveClientFingerprint(req);
+
+  const keys = [
+    `event-reg:cooldown:ev:${eventId}:ip:${ip}`,
+    `event-reg:cooldown:ev:${eventId}:fp:${fingerprint}`,
+  ];
+  if (machineTag) keys.push(`event-reg:cooldown:ev:${eventId}:tag:${machineTag}`);
+  if (userId) keys.push(`event-reg:cooldown:ev:${eventId}:user:${userId}`);
+
+  for (const key of keys) {
+    await safeRedisCall(
+      () => redis.set(key, '1', 'EX', EVENT_REG_COOLDOWN_SECONDS),
+      () => setMem(key, '1', EVENT_REG_COOLDOWN_SECONDS)
+    );
+  }
+}
+
+export const eventRegistrationDefense = checkEventRegistrationDefense;
 
 export const authLoginDefense = createIngressShield({
   name: 'auth-login',

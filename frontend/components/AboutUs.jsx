@@ -626,25 +626,25 @@ export default function AboutUs() {
           Kalceria used to be a Final Project, now it is becoming a legacy of digital craftsmanship and automotive passion. It stands as a testament to the boundary-pushing creativity of our development team.
         </p>
         
-        {/* dy_3 (Fitra Eri / Mentor) image - 0deg and trimmed bottom horizontal line for mobile & iPad, -10.5deg on desktop widescreen */}
+        {/* dy_3 (Mentor / Ditya Alif K.) image - optimized for HP Family & desktop, touch-guarded */}
         <div 
           className="absolute left-1/2 -translate-x-1/2 xl:translate-x-0 xl:left-[50.4%] z-20 top-[7.5rem] xs:top-[8rem] sm:top-[8.75rem] md:top-[10rem] lg:top-[10.5rem] xl:top-[5.88rem]"
-          onMouseEnter={() => setHoverMentor(true)}
-          onMouseLeave={() => setHoverMentor(false)}
+          onMouseEnter={() => { if (!isMobileOrTablet) setHoverMentor(true); }}
+          onMouseLeave={() => { if (!isMobileOrTablet) setHoverMentor(false); }}
           onClick={() => setHoverMentor((p) => !p)}
         >
           <div className="relative w-max flex flex-col items-center justify-end mx-auto">
             <Image
               src="/dy_3.webp" 
               alt="Ditya Alif K."
-              width={1536}
-              height={2729}
+              width={768}
+              height={1364}
               sizes="(max-width: 768px) 145px, (max-width: 1280px) 185px, 372px"
-              quality={85}
+              quality={80}
               priority
               loading="eager"
               decoding="async"
-              className="object-contain block pointer-events-auto opacity-95 cursor-pointer xl:cursor-help w-[130px] xs:w-[145px] sm:w-[165px] md:w-[185px] lg:w-[200px] h-auto xl:w-[23.25rem] xl:h-[23.25rem] rotate-0 xl:-rotate-[10.5deg] transition-transform duration-300"
+              className="object-contain block pointer-events-auto opacity-95 cursor-pointer xl:cursor-help w-[130px] xs:w-[145px] sm:w-[165px] md:w-[185px] lg:w-[200px] h-auto xl:w-[23.25rem] xl:h-[23.25rem] rotate-0 xl:-rotate-[10.5deg] transition-transform duration-300 transform-gpu will-change-transform"
             />
             {/* Pure CSS Horizontal Line: integrated flush to the bottom edge with 0 space for mobile & iPad */}
             <div className="block xl:hidden absolute bottom-0 left-0 right-0 h-[2px] bg-white/95 shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
