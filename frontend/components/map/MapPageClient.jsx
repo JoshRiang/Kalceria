@@ -98,6 +98,7 @@ export default function MapPage() {
   const [isStatusBusy, setIsStatusBusy] = useState(false);
   const [isMapDark, setIsMapDark] = useState(false);
   const [focusedUserId, setFocusedUserId] = useState(null);
+  const [focusTarget, setFocusTarget] = useState(null);
   const [selectedOfflineUser, setSelectedOfflineUser] = useState(null);
 
   const [showQuitModal, setShowQuitModal] = useState(false);
@@ -357,6 +358,30 @@ export default function MapPage() {
     mapRef.current.flyTo([target.lat, target.lng], 16);
   }
 
+  function handleOpenItemOnMap(item, type = "user") {
+    if (!item) return;
+    setFocusTarget({
+      id: item.id,
+      type,
+      openPopup: true,
+      timestamp: Date.now(),
+    });
+    let lat = item.lat;
+    let lng = item.lng;
+    if (!lat || !lng) {
+      const found =
+        mapUsersData.find((u) => u.id === item.id) ||
+        events.find((e) => e.id === item.id);
+      if (found) {
+        lat = found.lat;
+        lng = found.lng;
+      }
+    }
+    if (lat && lng && mapRef.current) {
+      mapRef.current.flyTo([lat, lng], 16);
+    }
+  }
+
   // real broadcast save
   async function saveBroadcast(e) {
     e.preventDefault();
@@ -588,6 +613,7 @@ export default function MapPage() {
           events={visibleEvents}
           onMapReady={handleMapReady}
           focusUserId={focusedUserId}
+          focusTarget={focusTarget}
           isMapDark={isMapDark}
         />
       </motion.div>
@@ -701,6 +727,7 @@ export default function MapPage() {
             blockedUserIds={blockedUserIds}
             onBlockUser={handleBlockUser}
             onUnblockUser={handleUnblockUser}
+            onOpenItemOnMap={handleOpenItemOnMap}
           />
         </>
       )}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
 import { getEventCategory } from "./EventIcon";
+import KalcerianProfileCard from "./KalcerianProfileCard";
 
 const avatarUrl = (user) =>
   user?.profilePicture ||
@@ -68,19 +69,19 @@ function CategoryIcon({ category, isMapDark }) {
   switch (category) {
     case "eat":
       return (
-        <svg viewBox="0 0 24 24" className="w-[19px] h-[19px] sm:w-5 sm:h-5 shrink-0" fill={fg} stroke={border} strokeWidth="0.8">
+        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill={fg} stroke={border} strokeWidth="0.8">
           <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z" />
         </svg>
       );
     case "special":
       return (
-        <svg viewBox="0 0 24 24" className="w-[19px] h-[19px] sm:w-5 sm:h-5 shrink-0" fill={fg} stroke={border} strokeWidth="0.8">
+        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill={fg} stroke={border} strokeWidth="0.8">
           <path d="M10.8 3h2.4l-.65 11h-1.1L10.8 3zM12 17.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5z" />
         </svg>
       );
     case "discuss":
       return (
-        <svg viewBox="0 0 24 24" className="w-[19px] h-[19px] sm:w-5 sm:h-5 shrink-0" fill="none">
+        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
           <path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill={fg} stroke={border} strokeWidth="0.8" />
           <circle cx="10.5" cy="5.3" r="0.7" fill={border} />
           <circle cx="12" cy="5.3" r="0.7" fill={border} />
@@ -94,7 +95,7 @@ function CategoryIcon({ category, isMapDark }) {
     case "cafe":
     default:
       return (
-        <svg viewBox="0 0 24 24" className="w-[19px] h-[19px] sm:w-5 sm:h-5 shrink-0" fill="none">
+        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
           <path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke={fg} strokeWidth="1.4" strokeLinecap="round" />
           <path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke={fg} strokeWidth="1.4" strokeLinecap="round" />
           <path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill={fg} stroke={border} strokeWidth="0.8" />
@@ -113,7 +114,7 @@ function BroadcastLineIcon({ isMapDark }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
   return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-[17px] sm:h-[17px] shrink-0" fill="none">
+    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
       <path
         d="M20 12c0 3.86-3.58 7-8 7a9.3 9.3 0 0 1-3.1-.53L4 20l1.35-3.6A6.67 6.67 0 0 1 4 12c0-3.86 3.58-7 8-7s8 3.14 8 7z"
         fill={fg}
@@ -130,7 +131,7 @@ function ChatButtonIcon({ isMapDark }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
   return (
-    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="none">
+    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
       <path
         d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
         fill={fg}
@@ -147,7 +148,7 @@ function BlockButtonIcon({ isMapDark }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
   return (
-    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="none">
+    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
       <circle cx="12" cy="12" r="8.5" stroke={border} strokeWidth="3" />
       <circle cx="12" cy="12" r="8.5" stroke={fg} strokeWidth="2" />
       <line x1="6" y1="6" x2="18" y2="18" stroke={border} strokeWidth="3" strokeLinecap="round" />
@@ -161,7 +162,7 @@ function RestoreButtonIcon({ isMapDark }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
   return (
-    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] sm:w-5 sm:h-5" fill="none">
+    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
       <circle cx="12" cy="12" r="8.5" stroke={border} strokeWidth="3" />
       <circle cx="12" cy="12" r="8.5" stroke={fg} strokeWidth="2" />
       <line x1="6.2" y1="6.2" x2="9.8" y2="9.8" stroke={border} strokeWidth="3" strokeLinecap="round" />
@@ -192,12 +193,29 @@ export function KalceriansPanel({
   blockedUserIds = [],
   onBlockUser,
   onUnblockUser,
+  onOpenItemOnMap,
 }) {
   const [hoveredEventIconId, setHoveredEventIconId] = useState(null);
   const [confirmingAction, setConfirmingAction] = useState(null); // { userId, type: "block" | "unblock" }
+  const [expandedUserId, setExpandedUserId] = useState(null);
+  const [mobileProfileUser, setMobileProfileUser] = useState(null);
+
+  function handleAvatarClick(e, user) {
+    e.stopPropagation();
+    if (blockedUserIds.includes(user.id)) return;
+    focusUser(user);
+
+    if (typeof window !== "undefined" && window.innerWidth < 860) {
+      setDrawerOpen(false);
+      setMobileProfileUser(user);
+    } else {
+      setExpandedUserId((prev) => (prev === user.id ? null : user.id));
+    }
+  }
 
   return (
-    <motion.aside
+    <>
+      <motion.aside
       initial={{ y: 80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
@@ -284,7 +302,7 @@ export function KalceriansPanel({
       </div>
 
       {/* 4. Content List: Unified Kalcerians list without subheaders, photo circle on left 1/3, color shift on hover/click */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-2 py-1 modern-kalcerian-scrollbar">
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-2.5 pt-2 pb-3.5 modern-kalcerian-scrollbar overscroll-contain">
         {isDataLoading ? (
           <div className="flex flex-col">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -320,6 +338,8 @@ export function KalceriansPanel({
           sidebarKalcerians.map((user) => {
             const isBlocked = blockedUserIds.includes(user.id);
             const isConfirming = confirmingAction?.userId === user.id;
+            const isExpanded = expandedUserId === user.id;
+            const activeBroadcastMsg = getActiveBroadcast(user);
             // Check if this Kalcerian created an event
             const userEvent = events.find(
               (e) =>
@@ -342,7 +362,7 @@ export function KalceriansPanel({
                 }`}
               >
                 <div
-                  className={`relative w-full grid grid-cols-[64px_1fr] items-center gap-3 px-3 py-2.5 text-left transition-all group outline-none ${
+                  className={`relative w-full grid grid-cols-[52px_1fr_54px] items-center gap-2 px-3 py-2.5 text-left transition-all group outline-none ${
                     isBlocked
                       ? "cursor-default pointer-events-none"
                       : "cursor-pointer active:scale-[0.99]"
@@ -380,167 +400,222 @@ export function KalceriansPanel({
 
                   {/* LEFT 1/3: Photo Profile Circle with Online/Offline Indicator */}
                   <div className="relative z-10 flex justify-center items-center">
-                    <div className="relative">
+                    <div
+                      className="relative cursor-pointer group/avatar"
+                      onClick={(e) => handleAvatarClick(e, user)}
+                      title={isExpanded ? "Close profile" : `View ${user.name}'s profile`}
+                    >
                       <div
-                        className={`w-11 h-11 sm:w-12 sm:h-12 border overflow-hidden rounded-full transition-transform ${
+                        className={`w-11 h-11 sm:w-12 sm:h-12 border overflow-hidden rounded-full transition-all relative ${
                           isBlocked
                             ? "grayscale-[80%] border-[#8b949e]/40"
+                            : isExpanded
+                            ? "border-white ring-2 ring-white/50"
                             : user.isOnline
                             ? isMapDark
-                              ? "border-[#3fb950] group-hover:scale-105"
-                              : "border-[#1a7f37] group-hover:scale-105"
+                              ? "border-[#3fb950] group-hover/avatar:scale-105"
+                              : "border-[#1a7f37] group-hover/avatar:scale-105"
                             : isMapDark
-                            ? "border-[#30363d] opacity-50 group-hover:scale-105"
-                            : "border-[#d0d7de] opacity-60 group-hover:scale-105"
+                            ? "border-[#30363d] opacity-50 group-hover/avatar:scale-105"
+                            : "border-[#d0d7de] opacity-60 group-hover/avatar:scale-105"
                         }`}
                       >
                         <ContentImage
-                          className="w-full h-full object-cover"
+                          className={`w-full h-full object-cover transition-all ${
+                            isExpanded ? "blur-[2.5px] brightness-50" : ""
+                          }`}
                           src={avatarUrl(user)}
                           alt={user.nickname || user.name}
                           width={64}
                           height={64}
                         />
+
+                        {/* When Expanded (Desktop/iPad): profile picture blurs and gets redup with thin white X on the center */}
+                        {isExpanded && (
+                          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                            <svg viewBox="0 0 24 24" className="w-5 h-5 text-white stroke-white" fill="none" strokeWidth="1.5">
+                              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
-                      <span
-                        className={`absolute bottom-0 right-0 w-3 h-3 border-2 rounded-full ${
-                          isMapDark ? "border-[#161b22]" : "border-white"
-                        } ${isBlocked ? "bg-[#8b949e]/50" : user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
-                      />
+
+                      {/* Online status indicator dot (hidden while expanded to emphasize thin X) */}
+                      {!isExpanded && (
+                        <span
+                          className={`absolute bottom-0 right-0 w-3 h-3 border-2 rounded-full ${
+                            isMapDark ? "border-[#161b22]" : "border-white"
+                          } ${isBlocked ? "bg-[#8b949e]/50" : user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
+                        />
+                      )}
                     </div>
                   </div>
 
-                  {/* RIGHT 2/3: User Information & Clean Content */}
+                  {/* MIDDLE: User Name & Broadcast Message */}
                   <div className="relative z-10 min-w-0 flex flex-col justify-center pr-1">
-                    {/* Active 24h Broadcast Message */}
-                    {(() => {
-                      const activeBroadcastMsg = getActiveBroadcast(user);
-                      return (
-                        <>
-                          {/* Line 1: User Name + Mini Event Category Icon + Broadcast Icon */}
-                          <div className="flex items-center justify-between gap-1.5 min-w-0">
-                            <b
-                              className={`text-[13.5px] sm:text-[14px] font-bold tracking-tight truncate leading-snug ${
-                                isBlocked
-                                  ? isMapDark
-                                    ? "text-[#8b949e]/70"
-                                    : "text-[#656d76]/70"
-                                  : isMapDark
-                                  ? "text-[#f0f6fc]"
-                                  : "text-[#1f2328]"
-                              }`}
-                            >
-                              {user.name}
-                            </b>
+                    <b
+                      className={`text-[13.5px] sm:text-[14px] font-bold tracking-tight truncate leading-snug ${
+                        isBlocked
+                          ? isMapDark
+                            ? "text-[#8b949e]/70"
+                            : "text-[#656d76]/70"
+                          : isMapDark
+                          ? "text-[#f0f6fc]"
+                          : "text-[#1f2328]"
+                      }`}
+                    >
+                      {user.name}
+                    </b>
 
-                            {/* Icons: Category Event Icon + Broadcast Icon (Hidden if blocked) */}
-                            {!isBlocked && (
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                {/* Mini Event Icon with Hover Box Tooltip */}
-                                {userEvent && (
-                                  <div className="relative flex items-center">
-                                    <button
-                                      type="button"
-                                      onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                                      onMouseLeave={() => setHoveredEventIconId(null)}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        focusUser(userEvent);
-                                        if (window.innerWidth < 860) setDrawerOpen(false);
-                                      }}
-                                      className="p-1 rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer flex items-center justify-center"
-                                      title={userEvent.title}
-                                    >
-                                      <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                                    </button>
+                    {/* Active Broadcast Message Quote (Arial, not bold, not all capital, black/white by mode) */}
+                    {!isBlocked && activeBroadcastMsg ? (
+                      <p
+                        className={`text-[12px] sm:text-[12.5px] font-normal normal-case leading-snug truncate mt-0.5 ${
+                          isMapDark ? "text-white" : "text-black"
+                        }`}
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                      >
+                        &quot;{activeBroadcastMsg}&quot;
+                      </p>
+                    ) : (
+                      <div className="h-3" />
+                    )}
+                  </div>
 
-                                    {/* Hover Box: Floating Arial tooltip with event title */}
-                                    {hoveredEventIconId === userEvent.id && (
-                                      <div
-                                        className={`absolute bottom-full right-0 mb-1.5 z-50 px-2.5 py-1 rounded-md shadow-xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
-                                          isMapDark
-                                            ? "bg-black border border-white text-white"
-                                            : "bg-white border border-black text-black"
-                                        }`}
-                                        style={{ fontFamily: "Arial, sans-serif" }}
-                                      >
-                                        {userEvent.title}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                  {/* RIGHT: Synchronized 2x2 Grid Flank */}
+                  <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch py-0.5 pointer-events-auto">
+                    {/* Top Row: Category Event Icon + Broadcast Message Icon */}
+                    <div className="grid grid-cols-2 gap-1.5 items-center justify-items-center w-[54px]">
+                      {/* Slot 1: Category Event Icon */}
+                      {!isBlocked && userEvent ? (
+                        <div className="relative flex items-center justify-center w-6 h-6">
+                          <button
+                            type="button"
+                            onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                            onMouseLeave={() => setHoveredEventIconId(null)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onOpenItemOnMap) {
+                                onOpenItemOnMap(userEvent, "event");
+                              } else {
+                                focusUser(userEvent);
+                              }
+                              if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
+                            }}
+                            className="w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
+                            title={userEvent.title}
+                          >
+                            <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                          </button>
 
-                                {/* Broadcast Message Icon (Shown only when broadcast is active within 24h) */}
-                                {activeBroadcastMsg && (
-                                  <div className="p-1 flex items-center shrink-0" title="Broadcast message">
-                                    <BroadcastLineIcon isMapDark={isMapDark} />
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Line 2: ONLY active broadcast message in quotes (Arial, not bold, not all capital, black/white by mode) */}
-                          {!isBlocked && activeBroadcastMsg && (
-                            <p
-                              className={`text-[12px] sm:text-[12.5px] font-normal normal-case leading-snug truncate mt-0.5 ${
-                                isMapDark ? "text-white" : "text-black"
+                          {/* Hover Tooltip Box */}
+                          {hoveredEventIconId === userEvent.id && (
+                            <div
+                              className={`absolute bottom-full right-0 mb-1.5 z-50 px-2 py-1 rounded shadow-xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
+                                isMapDark
+                                  ? "bg-black border border-white text-white"
+                                  : "bg-white border border-black text-black"
                               }`}
                               style={{ fontFamily: "Arial, sans-serif" }}
                             >
-                              &quot;{activeBroadcastMsg}&quot;
-                            </p>
+                              {userEvent.title}
+                            </div>
                           )}
-                        </>
-                      );
-                    })()}
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6" />
+                      )}
 
-                    {/* Bottom Right Actions (Chat Icon + Block Button, or Restore Button when blocked) */}
-                    {!isBlocked ? (
-                      <div className="flex items-center justify-end gap-2.5 mt-1.5 pt-0.5 pointer-events-auto">
-                        {/* Chat Icon (message the user) */}
+                      {/* Slot 2: Broadcast Message Icon */}
+                      {!isBlocked && activeBroadcastMsg ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenItemOnMap) {
+                              onOpenItemOnMap(user, "user");
+                            } else {
+                              focusUser(user);
+                            }
+                            if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
+                          }}
+                          className="w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
+                          title="Open broadcast on map"
+                        >
+                          <BroadcastLineIcon isMapDark={isMapDark} />
+                        </button>
+                      ) : (
+                        <div className="w-6 h-6" />
+                      )}
+                    </div>
+
+                    {/* Bottom Row: Chat Button + Block/Restore Button */}
+                    <div className="grid grid-cols-2 gap-1.5 items-center justify-items-center w-[54px] mt-1.5">
+                      {/* Slot 1: Chat Button */}
+                      {!isBlocked ? (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
-                          className="p-1 transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer flex items-center justify-center"
+                          className="w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
                           title={`Message ${user.name}`}
                         >
                           <ChatButtonIcon isMapDark={isMapDark} />
                         </button>
+                      ) : (
+                        <div className="w-6 h-6" />
+                      )}
 
-                        {/* Block Button (Picture 4) */}
+                      {/* Slot 2: Block Button or Restore Button */}
+                      {!isBlocked ? (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setConfirmingAction({ userId: user.id, type: "block" });
                           }}
-                          className="p-1 transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer flex items-center justify-center"
+                          className="w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
                           title={`Block ${user.name}`}
                         >
                           <BlockButtonIcon isMapDark={isMapDark} />
                         </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-end mt-1.5 pt-0.5 pointer-events-auto">
-                        {/* Restore / Unblock Button (Picture 5 - ONLY touchable element on blocked card) */}
+                      ) : (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setConfirmingAction({ userId: user.id, type: "unblock" });
                           }}
-                          className="p-1 transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer flex items-center justify-center"
+                          className="w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
                           title={`Unblock ${user.name}`}
                         >
                           <RestoreButtonIcon isMapDark={isMapDark} />
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {/* Desktop & iPad Inline Profile Card Elongation */}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      key={`profile-${user.id}`}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                      className="overflow-hidden border-t border-[#30363d]/40 dark:border-[#30363d]/70"
+                    >
+                      <KalcerianProfileCard
+                        user={user}
+                        isMapDark={isMapDark}
+                        showMobileClose={false}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* 5. Block / Unblock Confirmation Overlay - Flush, Semi-Transparent Glass, Underlying Card Blurred */}
                 {isConfirming && (
@@ -693,5 +768,36 @@ export function KalceriansPanel({
         )}
       </div>
     </motion.aside>
+
+    {/* Mobile Floating Profile Card Modal */}
+    <AnimatePresence>
+      {mobileProfileUser && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMobileProfileUser(null)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 280 }}
+            className="relative z-10 w-full max-w-[310px]"
+          >
+            <KalcerianProfileCard
+              user={mobileProfileUser}
+              isMapDark={isMapDark}
+              showMobileClose={true}
+              onClose={() => setMobileProfileUser(null)}
+              isMobileCompact={true}
+            />
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  </>
   );
 }

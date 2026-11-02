@@ -188,6 +188,9 @@ export async function getAllKalcerians(req, res, next) {
         name: u.name,
         nickname: u.nickname,
         profilePicture: u.profilePicture,
+        socialPlatform: u.socialPlatform,
+        socialLink: u.socialLink,
+        createdAt: u.createdAt,
         isOnline,
         broadcast,
       };

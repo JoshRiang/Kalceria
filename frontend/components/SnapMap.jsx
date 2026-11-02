@@ -26,6 +26,7 @@ export default function SnapMap({
   events,
   onMapReady,
   focusUserId,
+  focusTarget,
   isMapDark = false,
 }) {
   const mapNodeRef = useRef(null);
@@ -60,23 +61,44 @@ export default function SnapMap({
     };
   }, [isReady]);
 
-  // Handle programmatic focus/popup opening
+  // Handle programmatic focus/popup opening (supports both user and event markers)
   useEffect(() => {
-    if (!isReady || !focusUserId || !markerRefs.current) return;
-    const markerId = `user_${focusUserId}`;
-    const marker = markerRefs.current[markerId];
-    let focusTimeout;
-    if (marker && mapRef.current) {
-      focusTimeout = setTimeout(() => {
+    if (!isReady || !markerRefs.current || !mapRef.current) return;
+
+    if (focusTarget) {
+      const { id, type, openPopup = true } = focusTarget;
+      const markerId = type === "event" ? `event_${id}` : `user_${id}`;
+      const marker =
+        markerRefs.current[markerId] ||
+        markerRefs.current[`event_${id}`] ||
+        markerRefs.current[`user_${id}`];
+
+      if (marker) {
         const latLng = marker.getLatLng();
-        mapRef.current.flyTo(latLng, 16);
-        marker.openPopup();
-      }, 50);
+        mapRef.current.flyTo(latLng, 16, { animate: true, duration: 0.6 });
+        if (openPopup) {
+          const timeout = setTimeout(() => {
+            marker.openPopup();
+          }, 120);
+          return () => clearTimeout(timeout);
+        }
+      }
+      return;
     }
-    return () => {
-      if (focusTimeout) clearTimeout(focusTimeout);
-    };
-  }, [focusUserId, isReady]);
+
+    if (focusUserId) {
+      const markerId = `user_${focusUserId}`;
+      const marker = markerRefs.current[markerId];
+      if (marker) {
+        const timeout = setTimeout(() => {
+          const latLng = marker.getLatLng();
+          mapRef.current.flyTo(latLng, 16);
+          marker.openPopup();
+        }, 50);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [focusUserId, focusTarget, isReady]);
 
   useEffect(() => {
     let alive = true;
