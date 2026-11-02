@@ -70,7 +70,7 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             />
           )}
 
-          {/* Find The Others Button - 3D Typography (Same font, 3D-ness, size & behavior) */}
+          {/* USERS MAP Button - SUPPORT US Typography and Style (Large size, responsive, sufficient) */}
           <button
             type="button"
             onClick={() => {
@@ -80,17 +80,21 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               sessionStorage.setItem("playMapIntro", "true");
               window.location.href = "/map";
             }}
-            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer focus:outline-none active:scale-[0.98] transition-transform"
+            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-[68%] left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer focus:outline-none hover:scale-105 active:scale-[0.98] transition-transform"
           >
-            <span 
-              className="font-sans font-black uppercase tracking-tighter text-xl xs:text-2xl sm:text-3xl md:text-4xl text-white whitespace-nowrap select-none"
+            <motion.span 
+              className="font-black uppercase tracking-tighter text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-transparent bg-clip-text whitespace-nowrap select-none"
               style={{
-                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
-                filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
+                backgroundColor: "white",
+                backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
+                backgroundSize: "100% 200%",
+                textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)"
               }}
+              animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
             >
-              FIND THE OTHERS
-            </span>
+              USERS MAP
+            </motion.span>
           </button>
 
           {/* Earthman - Desktop Hero Figure at Bottom */}

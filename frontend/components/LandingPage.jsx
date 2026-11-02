@@ -489,19 +489,13 @@ export default function LandingPage({ onNavigateAuth }) {
           <div className="relative flex flex-col items-center xl:items-start justify-center text-center xl:text-left p-2 md:p-4 order-1 w-full">
             <GoldenDust />
             <div className="relative z-10 flex flex-col items-center xl:items-start w-full">
-              {/* 1. Title: USERS MAP with SUPPORT US typography and style */}
+              {/* 1. Title: Top center on mobile and iPad */}
               <motion.h2
-                className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black uppercase tracking-tighter text-transparent bg-clip-text text-center xl:text-left mb-4 xl:mb-6 select-none"
-                style={{
-                  backgroundColor: "white",
-                  backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
-                  backgroundSize: "100% 200%",
-                  textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)"
-                }}
-                animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                animate={isMobile ? { opacity: 1 } : { opacity: [0.3, 1, 0.3] }}
+                transition={isMobile ? { duration: 0 } : { repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-3 xl:mb-6 font-mono text-center xl:text-left"
               >
-                <Typewriter text="USERS MAP" mode="none" delay={isMobile ? 0 : 400} skipAnim={isMobile || skipAnim} />
+                FIND MORE
               </motion.h2>
 
               {/* 2. Description: Sub description right below title on mobile & iPad */}
@@ -794,7 +788,7 @@ export default function LandingPage({ onNavigateAuth }) {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center"
+          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center -translate-y-14 sm:-translate-y-20 md:-translate-y-28 xl:-translate-y-36"
         >
           {/* Title Area with Mobile & Half-Desktop Cokineed Face beside "NEED" */}
           <div className="relative inline-flex items-center justify-center mb-8 md:mb-12">
