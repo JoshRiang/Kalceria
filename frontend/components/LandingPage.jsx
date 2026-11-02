@@ -733,7 +733,7 @@ export default function LandingPage({ onNavigateAuth }) {
       </section>
 
       {/* ── Section 6: Need Help? ── */}
-      <section className="relative w-full min-h-[107vh] bg-white flex flex-col items-center justify-center py-32 z-50 overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}>
+      <section className="relative w-full min-h-[107vh] bg-white flex flex-col items-center justify-start pt-20 xs:pt-24 sm:pt-28 md:pt-32 lg:pt-36 pb-32 z-50 overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}>
 
         {/* Solid Section Divider */}
         <div className="absolute top-0 left-0 w-full h-[2px] bg-[#050a14] z-[70]" />
@@ -788,7 +788,7 @@ export default function LandingPage({ onNavigateAuth }) {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center -translate-y-14 sm:-translate-y-20 md:-translate-y-28 xl:-translate-y-36"
+          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center"
         >
           {/* Title Area with Mobile & Half-Desktop Cokineed Face beside "NEED" */}
           <div className="relative inline-flex items-center justify-center mb-8 md:mb-12">
@@ -864,7 +864,7 @@ export default function LandingPage({ onNavigateAuth }) {
               unoptimized
               loading="lazy"
               decoding="async"
-              className="w-[460px] sm:w-[540px] md:w-[620px] lg:w-[700px] xl:w-[780px] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
+              className="w-[460px] sm:w-[540px] md:w-[620px] lg:w-[700px] xl:w-[780px] max-h-[38vh] sm:max-h-[40vh] md:max-h-[42vh] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
               draggable={false}
             />
           </div>

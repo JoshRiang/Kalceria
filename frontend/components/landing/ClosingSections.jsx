@@ -70,7 +70,8 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             />
           )}
 
-          {/* USERS MAP Button - SUPPORT US Typography and Style (Large size, responsive, sufficient) */}
+        {/* Top Header Title: USERS MAP with SUPPORT US Typography and Large Flexible Size */}
+        <div className="absolute top-6 xs:top-8 sm:top-10 md:top-12 lg:top-14 xl:top-16 left-1/2 -translate-x-1/2 z-40 w-full px-4 text-center select-none">
           <button
             type="button"
             onClick={() => {
@@ -80,10 +81,10 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               sessionStorage.setItem("playMapIntro", "true");
               window.location.href = "/map";
             }}
-            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-[68%] left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer focus:outline-none hover:scale-105 active:scale-[0.98] transition-transform"
+            className="bg-transparent border-none p-0 inline-block cursor-pointer focus:outline-none hover:scale-[1.02] active:scale-[0.98] transition-transform"
           >
-            <motion.span 
-              className="font-black uppercase tracking-tighter text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-transparent bg-clip-text whitespace-nowrap select-none"
+            <motion.h2
+              className="font-black uppercase tracking-tighter text-5xl xs:text-6xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[9.5rem] 2xl:text-[11rem] text-transparent bg-clip-text whitespace-nowrap leading-none drop-shadow-2xl"
               style={{
                 backgroundColor: "white",
                 backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
@@ -94,7 +95,31 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
             >
               USERS MAP
-            </motion.span>
+            </motion.h2>
+          </button>
+        </div>
+
+          {/* Find The Others Button - 3D Typography (Same font, 3D-ness, size and behavior) */}
+          <button
+            type="button"
+            onClick={() => {
+              sessionStorage.setItem("landingScrollTarget", "section-map");
+              sessionStorage.setItem("landingScrollY", window.scrollY);
+              sessionStorage.removeItem("mapIntroSeen");
+              sessionStorage.setItem("playMapIntro", "true");
+              window.location.href = "/map";
+            }}
+            className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 bg-transparent border-none p-0 flex items-center justify-center cursor-pointer focus:outline-none active:scale-[0.98] transition-transform"
+          >
+            <span 
+              className="font-sans font-black uppercase tracking-tighter text-xl xs:text-2xl sm:text-3xl md:text-4xl text-white whitespace-nowrap select-none"
+              style={{
+                textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
+                filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
+              }}
+            >
+              FIND THE OTHERS
+            </span>
           </button>
 
           {/* Earthman - Desktop Hero Figure at Bottom */}
