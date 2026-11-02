@@ -55,8 +55,8 @@ function getAvatarUrl(user) {
   );
 }
 
-// ─── 2D WhatsApp Icon (Vibrant green when registered, gray when not - matches Picture 3) ────
-function WhatsApp2DIcon({ isRegistered, size = 42 }) {
+// ─── 2D WhatsApp Icon (Smooth official handset, vibrant green when registered, gray when not) ────
+function WhatsApp2DIcon({ isRegistered, size = 46 }) {
   const bg = isRegistered ? "#25D366" : "#8b949e";
   return (
     <svg
@@ -68,20 +68,20 @@ function WhatsApp2DIcon({ isRegistered, size = 42 }) {
     >
       {/* Speech bubble with tail at bottom-left */}
       <path
-        d="M24 4C13 4 4 13 4 24c0 3.8 1.1 7.3 3 10.3L4 44l10.1-2.9C16.9 42.9 20.3 44 24 44c11 0 20-9 20-20S35 4 24 4z"
+        d="M24 4C12.95 4 4 12.95 4 24c0 3.55.93 6.9 2.56 9.8L4 44l10.45-2.51C17.27 43.1 20.52 44 24 44c11.05 0 20-8.95 20-20S35.05 4 24 4z"
         fill={bg}
       />
-      {/* Telephone handset */}
+      {/* Official smooth telephone handset - crisp, unrigged vector curves */}
       <path
-        d="M33.6 28.8c-.5 1.4-2.5 2.6-3.8 2.8-.9.1-2 .2-6.5-1.7-5.5-2.3-9-8-9.3-8.4-.3-.4-2.3-3.1-2.3-5.9 0-2.8 1.5-4.1 2-4.7.5-.5 1.2-.8 1.9-.8.2 0 .5 0 .7.1.5.1 1.2 0 1.7 1.2.6 1.4 2.1 5.2 2.3 5.6.2.4.3.9 0 1.4-.2.5-.5.8-.8 1.2-.3.4-.6.8-.9 1.1-.3.3-.6.7-.3 1.3.4.7 1.8 3 3.9 4.9 2.7 2.4 5 3.2 5.8 3.5.6.3 1.1.2 1.5-.2.5-.5 2.1-2.5 2.6-3.3.6-.8 1.1-.7 1.8-.4.7.3 4.5 2.1 5.3 2.5.8.4 1.3.6 1.5.9.2.4.2 2.4-.4 3.8z"
+        d="M34.8 29.3c-.6-.3-3.5-1.7-4-1.9-.5-.2-.9-.3-1.3.3s-1.5 1.9-1.9 2.3c-.4.4-.7.5-1.3.2-3.8-1.9-6.3-4.3-8.2-8.1-.3-.6 0-.9.2-1.3.3-.4.8-1 1.2-1.5.4-.5.5-.8.8-1.3.3-.5.1-.9 0-1.3-.2-.4-1.3-3.2-1.8-4.4-.5-1.2-1-1-1.4-1h-1.2c-.4 0-1.1.2-1.7.8-.6.6-2.3 2.2-2.3 5.4s2.4 6.3 2.7 6.7c.3.4 4.6 7.1 11.2 10 3.9 1.7 5.4 1.8 7.4 1.5 1.2-.2 3.6-1.5 4.1-2.9.5-1.4.5-2.6.4-2.8-.2-.3-.6-.5-1.2-.8z"
         fill="#ffffff"
       />
     </svg>
   );
 }
 
-// ─── 2D Instagram Icon (Vibrant gradient when registered, gray when not - matches Picture 4) ───
-function Instagram2DIcon({ isRegistered, size = 42 }) {
+// ─── 2D Instagram Icon (Vibrant gradient when registered, gray when not) ───
+function Instagram2DIcon({ isRegistered, size = 46 }) {
   const gradId = "igGradStandardCard";
   return (
     <svg
@@ -109,6 +109,113 @@ function Instagram2DIcon({ isRegistered, size = 42 }) {
       {/* Camera flash dot */}
       <circle cx="29.5" cy="18.5" r="1.4" fill="#ffffff" />
     </svg>
+  );
+}
+
+// ─── Media Normalization Engine (Video, Photo, GIF) ───────────────────────────
+function normalizeMediaConfig(rawUrl, rawType, { isAdit, isAhmad, fallbackCover }) {
+  let url = rawUrl;
+  let type = rawType;
+
+  if (isAhmad) {
+    url = "/media/gifs/event_cafe_1.mp4";
+    type = "video";
+  } else if (isAdit) {
+    url = "/media/gifs/event_cafe_1.gif";
+    type = "gif";
+  } else if (!url) {
+    url = fallbackCover;
+  }
+
+  const lowerUrl = String(url || "").toLowerCase();
+  if (!type) {
+    if (lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || lowerUrl.includes("video")) {
+      type = "video";
+    } else if (lowerUrl.endsWith(".gif") || lowerUrl.includes("gif")) {
+      type = "gif";
+    } else {
+      type = "image";
+    }
+  }
+
+  return {
+    url,
+    type,
+    aspectRatio: "1 / 1",
+  };
+}
+
+function NormalizedMediaCover({ media, altText, onError }) {
+  const [useFallback, setUseFallback] = useState(false);
+
+  if (useFallback) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border border-white/20 bg-white/10 flex items-center justify-center text-white/50 text-xs">
+          Kalceria
+        </div>
+      </div>
+    );
+  }
+
+  if (media.type === "video") {
+    return (
+      <video
+        src={media.url}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+        disablePictureInPicture
+        disableRemotePlayback
+        onError={() => setUseFallback(true)}
+        className="w-full h-full object-cover object-center pointer-events-none transition-transform duration-500 hover:scale-105"
+        style={{
+          transform: "translateZ(0)",
+          willChange: "transform",
+        }}
+      />
+    );
+  }
+
+  if (media.type === "gif") {
+    return (
+      // Optimized GIF: GPU-accelerated layer, content-visibility auto & async decoding prevents phone lag
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={media.url}
+        alt={altText}
+        loading="lazy"
+        decoding="async"
+        onError={() => {
+          if (onError) onError();
+          setUseFallback(true);
+        }}
+        className="w-full h-full object-cover object-center pointer-events-none transition-transform duration-500 hover:scale-105"
+        style={{
+          transform: "translateZ(0)",
+          willChange: "transform",
+          contain: "paint layout",
+          contentVisibility: "auto",
+        }}
+      />
+    );
+  }
+
+  return (
+    <Image
+      src={media.url}
+      alt={altText}
+      fill
+      sizes="(max-width: 640px) 320px, 420px"
+      unoptimized
+      onError={() => {
+        if (onError) onError();
+        setUseFallback(true);
+      }}
+      className="object-cover object-center transition-transform duration-500 hover:scale-105"
+    />
   );
 }
 
@@ -144,13 +251,11 @@ export default function KalcerianProfileCard({
   const isAdit = String(displayName).toLowerCase().includes("adit");
 
   const fallbackCover = getFallbackCover(user);
-  let resolvedCover = imgError || !user?.coverImage ? fallbackCover : user.coverImage;
-  if (isAhmad) resolvedCover = "/media/gifs/event_cafe_1.mp4";
-  if (isAdit) resolvedCover = "/media/gifs/event_cafe_1.gif";
-
-  const isVideo =
-    (!isAdit && (user?.coverType === "video" || String(resolvedCover).endsWith(".mp4") || String(resolvedCover).endsWith(".webm"))) ||
-    isAhmad;
+  const normalizedMedia = normalizeMediaConfig(
+    imgError ? fallbackCover : user?.coverImage,
+    user?.coverType,
+    { isAdit, isAhmad, fallbackCover }
+  );
 
   // Bio / Alasan masuk Kalceria (Arial, non-bold, not all-caps)
   const bioText =
@@ -185,8 +290,6 @@ export default function KalcerianProfileCard({
     waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
   }
 
-  const coverSrc = resolvedCover;
-
   return (
     <div
       className={`relative w-full overflow-hidden transition-colors select-none ${
@@ -198,27 +301,13 @@ export default function KalcerianProfileCard({
       }`}
       style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}
     >
-      {/* 1. Square 1:1 Cover Banner Background (Supporting Video, GIF, and Photo) */}
+      {/* 1. Square 1:1 Cover Banner Background (Normalized Video, GIF, and Photo pipeline) */}
       <div className="relative w-full aspect-square overflow-hidden bg-neutral-900">
-        {isVideo ? (
-          <video
-            src={coverSrc}
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105"
-          />
-        ) : (
-          <Image
-            src={coverSrc}
-            alt={`${displayName} cover`}
-            fill
-            unoptimized
-            onError={() => setImgError(true)}
-            className="object-cover object-center transition-transform duration-500 hover:scale-105"
-          />
-        )}
+        <NormalizedMediaCover
+          media={normalizedMedia}
+          altText={`${displayName} cover`}
+          onError={() => setImgError(true)}
+        />
         {/* Subtle top/bottom vignette to enhance depth */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
       </div>
@@ -320,7 +409,7 @@ export default function KalcerianProfileCard({
         </p>
       </div>
 
-      {/* 6. Bottom Social Section: Clean borderless depth, NO line and NO grid, size 42 standard */}
+      {/* 6. Bottom Social Section: Clean borderless depth, NO line and NO grid, size 46 standard */}
       <div className="flex items-center justify-center gap-8 py-3.5 mt-1">
         {/* Left: Instagram */}
         {igUrl ? (
@@ -331,14 +420,14 @@ export default function KalcerianProfileCard({
             title="See the Instagram"
             className="group flex items-center justify-center p-1 rounded-full transition-transform active:scale-95 outline-none cursor-pointer"
           >
-            <Instagram2DIcon isRegistered={true} size={42} />
+            <Instagram2DIcon isRegistered={true} size={46} />
           </a>
         ) : (
           <div
             title="Instagram not connected"
             className="flex items-center justify-center p-1 opacity-50 cursor-not-allowed"
           >
-            <Instagram2DIcon isRegistered={false} size={42} />
+            <Instagram2DIcon isRegistered={false} size={46} />
           </div>
         )}
 
@@ -351,14 +440,14 @@ export default function KalcerianProfileCard({
             title="See the WhatsApp"
             className="group flex items-center justify-center p-1 rounded-full transition-transform active:scale-95 outline-none cursor-pointer"
           >
-            <WhatsApp2DIcon isRegistered={true} size={42} />
+            <WhatsApp2DIcon isRegistered={true} size={46} />
           </a>
         ) : (
           <div
             title="WhatsApp not connected"
             className="flex items-center justify-center p-1 opacity-50 cursor-not-allowed"
           >
-            <WhatsApp2DIcon isRegistered={false} size={42} />
+            <WhatsApp2DIcon isRegistered={false} size={46} />
           </div>
         )}
       </div>

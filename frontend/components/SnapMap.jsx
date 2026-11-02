@@ -42,7 +42,7 @@ export default function SnapMap({
     if (tileLayerRef.current) {
       const tileUrl = isMapDark
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png";
       tileLayerRef.current.setUrl(tileUrl);
     }
     if (mapRef.current) {
@@ -119,17 +119,16 @@ export default function SnapMap({
         closePopupOnClick: true,
       });
 
-      // Multi-layer reliable basemap:
-      // OpenStreetMap is the primary standard basemap with zero API key requirements
-      // In dark mode: Carto Dark Matter, with automatic fallback to inverted OSM
+      // High-performance CartoDB tiles (Voyager for Light, Dark Matter for Dark)
+      // Fast Cloudflare-backed CDN with abcd domain sharding, zero API key requirement
       const tileUrl = isMapDark
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png";
 
       const tileLayer = L.tileLayer(tileUrl, {
-        subdomains: isMapDark ? "abcd" : "abc",
+        subdomains: "abcd",
         maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
+        attribution: '&copy; CARTO &copy; OpenStreetMap contributors',
       }).addTo(map);
 
       // Automatic bulletproof fallback: if any tile fails to load, fallback to alternate mirror
@@ -138,11 +137,8 @@ export default function SnapMap({
           error.tile._hasFallenBack = true;
           const coords = error.coords;
           if (coords) {
-            if (isMapDark) {
-              error.tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
-            } else {
-              error.tile.src = `https://a.basemaps.cartocdn.com/rastertiles/voyager/${coords.z}/${coords.x}/${coords.y}.png`;
-            }
+            const shard = ["a", "b", "c"][Math.abs(coords.x + coords.y) % 3];
+            error.tile.src = `https://${shard}.tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
           }
         }
       });
