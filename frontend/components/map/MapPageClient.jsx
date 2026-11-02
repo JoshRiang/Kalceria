@@ -728,10 +728,6 @@ export default function MapPage() {
             opacity: 0;
           }
         }
-
-        #panel-toggle:checked ~ section .toggle-arrow {
-          transform: rotate(180deg);
-        }
       `}</style>
       {/* Startup Sequence Overlay :: FORZA HORIZON STYLE */}
       <StartupSequenceOverlay

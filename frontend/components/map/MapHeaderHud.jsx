@@ -102,11 +102,39 @@ export const MapHeaderHud = memo(function MapHeaderHud({
             const nextMode = presence === "online" ? "invisible" : "online";
             handlePresenceChange(nextMode);
           }}
-          aria-label={presence === "online" ? "Online (Tap to go offline)" : "Offline (Tap to go online)"}
-          title={presence === "online" ? "Online (Tap to go offline)" : "Offline (Tap to go online)"}
+          aria-label={
+            isStatusBusy
+              ? "Updating status..."
+              : presence === "online"
+              ? "Online (Tap to go offline)"
+              : "Offline (Tap to go online)"
+          }
+          title={
+            isStatusBusy
+              ? "Updating status..."
+              : presence === "online"
+              ? "Online (Tap to go offline)"
+              : "Offline (Tap to go online)"
+          }
           className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 cursor-pointer group"
         >
-          {presence === "online" ? (
+          {isStatusBusy ? (
+            /* Small buffer inherited from logging out sequence buffer shape and behaviour */
+            <div className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center">
+              <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke={isMapDark ? "#ffffff" : "#000000"}
+                  strokeWidth="10"
+                  strokeDasharray="70 200"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+          ) : presence === "online" ? (
             /* Eye Enabled (Online) - Solid eye matching Picture 3 with sclera ring, pupil & reflection */
             <svg
               width="26"
@@ -348,124 +376,50 @@ export const MapHeaderHud = memo(function MapHeaderHud({
           )}
         </button>
 
-        {/* 4. Photo Profile - Strip Outer Box, Pure Circle Avatar with Online Dot */}
+        {/* 4. Photo Profile - Strip Outer Box, Pure Circle Avatar with Online Dot (Radar visibility box removed) */}
         <div className="relative flex items-center justify-center">
-          <button
-            type="button"
-            aria-label="User Profile and Radar Status"
-            aria-expanded={menuOpen}
-            aria-haspopup="true"
-            className="relative p-0.5 rounded-full transition-transform hover:scale-105 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/50 cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen((prev) => !prev);
-              setActionMenuOpen(false);
-            }}
-          >
-            <div
-              className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden relative ${
-                isMapDark
-                  ? "ring-1.5 ring-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
-                  : "ring-1.5 ring-black/40 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
-              }`}
-            >
-              {isStatusBusy && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10 backdrop-blur-[2px]">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full"
-                  />
-                </div>
-              )}
-              <ContentImage
-                src={avatarUrl(currentUser)}
-                alt="Profile"
-                width={128}
-                height={128}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <span
-              className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-[1.5px] ${
-                isMapDark ? "border-black" : "border-white"
-              } rounded-full ${
-                isStatusBusy
-                  ? "bg-amber-400"
-                  : presence === "online"
-                  ? "bg-emerald-400"
-                  : "bg-slate-500"
-              }`}
-            />
-          </button>
-
-          {/* Radar Visibility Dropdown Menu - Modern GitHub style */}
           <div
-            className={`absolute top-[44px] right-0 z-[1001] w-[210px] sm:w-[220px] py-1 transition-all duration-200 origin-top-right overflow-hidden rounded-lg font-sans ${
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden relative select-none ${
               isMapDark
-                ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc] shadow-[0_8px_24px_rgba(0,0,0,0.6)]"
-                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328] shadow-[0_8px_24px_rgba(140,149,159,0.2)]"
-            } ${
-              menuOpen
-                ? "opacity-100 translate-y-0 pointer-events-auto"
-                : "opacity-0 -translate-y-1.5 pointer-events-none"
+                ? "ring-1.5 ring-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+                : "ring-1.5 ring-black/40 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
             }`}
-            style={{
-              fontFamily:
-                "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif",
-            }}
           >
-            <p
-              className={`px-3 py-1.5 text-[11px] font-semibold tracking-wider ${
-                isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-              }`}
-            >
-              Radar visibility
-            </p>
-            <div className="flex flex-col gap-0.5 mt-0.5">
-              {["online", "invisible"].map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  disabled={isStatusBusy}
-                  className={`group relative w-full grid grid-cols-[12px_1fr] gap-3 px-3 py-2 text-left transition-colors cursor-pointer ${
-                    presence === item
-                      ? isMapDark
-                        ? "bg-[#21262d] text-white"
-                        : "bg-[#f6f8fa] text-[#1f2328]"
-                      : isMapDark
-                      ? "text-[#8b949e] hover:bg-[#21262d] hover:text-[#f0f6fc]"
-                      : "text-[#656d76] hover:bg-[#f6f8fa] hover:text-[#1f2328]"
-                  } ${isStatusBusy ? "opacity-50 cursor-not-allowed" : ""}`}
-                  onClick={() => handlePresenceChange(item)}
-                >
-                  <span
-                    className={`w-[8px] h-[8px] rounded-full self-center ${
-                      item === "online"
-                        ? "bg-emerald-400 shadow-[0_0_6px_#34d399]"
-                        : "bg-slate-400"
-                    }`}
+            {isStatusBusy && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10 backdrop-blur-[1px]">
+                <svg className="w-4 h-4 animate-spin" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="12"
+                    strokeDasharray="70 200"
+                    strokeLinecap="round"
                   />
-                  <div className="flex flex-col">
-                    <span className="text-[13px] font-medium leading-snug capitalize">
-                      {item}
-                    </span>
-                    <span
-                      className={`text-[10px] leading-tight mt-0.5 ${
-                        isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-                      }`}
-                    >
-                      {isStatusBusy && presence === item
-                        ? "Syncing..."
-                        : item === "online"
-                        ? "Visible to public"
-                        : "Stealth mode"}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
+                </svg>
+              </div>
+            )}
+            <ContentImage
+              src={avatarUrl(currentUser)}
+              alt="Profile"
+              width={128}
+              height={128}
+              className="w-full h-full object-cover"
+            />
           </div>
+          <span
+            className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-[1.5px] ${
+              isMapDark ? "border-black" : "border-white"
+            } rounded-full ${
+              isStatusBusy
+                ? "bg-amber-400 animate-pulse"
+                : presence === "online"
+                ? "bg-emerald-400"
+                : "bg-slate-500"
+            }`}
+          />
         </div>
       </div>
     </motion.header>
