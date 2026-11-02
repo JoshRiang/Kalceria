@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 import { useViewportActivity } from "@/hooks/useViewportActivity";
 
@@ -42,17 +43,15 @@ export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false 
         timeoutIds.push(tStartBack);
       } else if (mode === "word") {
         const tStartBack = setTimeout(() => {
-          // split by space but keep the spaces for slicing
           const words = text.match(/\S+|\s+/g) || [];
           let currentWords = [...words];
           words.forEach((_, i) => {
             const t = setTimeout(() => {
               if(!isCancelled) {
-                // remove the last word/space chunk
                 currentWords.pop();
                 setDisplayText(currentWords.join(""));
               }
-            }, i * 400); // Slower, per word chunk
+            }, i * 400);
             timeoutIds.push(t);
           });
         }, 3000);
@@ -65,10 +64,10 @@ export function Typewriter({ text, mode = "letter", delay = 0, skipAnim = false 
       if(isCancelled) return;
       playAnim();
       if (mode !== "none") {
-      loop = setInterval(() => {
-        if(!isCancelled) setDisplayText("");
-        playAnim();
-      }, 6000); // Base loop is 6 seconds
+        loop = setInterval(() => {
+          if(!isCancelled) setDisplayText("");
+          playAnim();
+        }, 6000);
       }
     }, delay);
     
@@ -137,7 +136,7 @@ const EVENT_IMAGES = ["/event_1.webp", "/event_2.webp", "/event_3.webp"];
 
 export function EventSlider() {
   const [index, setIndex] = useState(0);
-  const n = EVENT_IMAGES.length; // Variable n for dynamic expansion
+  const n = EVENT_IMAGES.length;
 
   useEffect(() => {
     const int = setInterval(() => {
@@ -169,44 +168,42 @@ export function EventSlider() {
   );
 }
 
+const PLACEHOLDER_POOL = ["Product Zero", "No Product", "Placeholder"];
+
 export function useMerchRandomizer() {
-  const [, setInventory] = useState([]);
   const [displayed, setDisplayed] = useState([]);
 
   useEffect(() => {
     const random = createRuntimeSeededRandom("landing-showcase-products-v1");
-    const INITIAL_DUMMIES = Array.from({ length: 10 }).map((_, i) => ({
-      id: `mock-${i}`,
-      productId: `KLCR-${100 + i}`,
-      name: i === 0 ? "Obsidian Shift Knob" : i === 1 ? "Carbon Fiber Lip" : i === 2 ? "Aero Dynamic Wing" : i === 3 ? "Forged Pistons Set" : i === 4 ? "Titanium Exhaust" : i === 5 ? "Cold Air Intake" : i === 6 ? "Racing Brake Pads" : i === 7 ? "Coilover Suspension" : i === 8 ? "Billet Fuel Rail" : "High Flow Injectors",
-      imageUrl: `https://picsum.photos/seed/kalceria${i}/600/800`,
-      label: i % 4 === 0 ? "HOT DEALS" : i % 4 === 1 ? "SOLD OUT" : "AVAILABLE"
+    // Generate 4 initial card slots
+    const initialSlots = Array.from({ length: 4 }).map((_, i) => ({
+      id: `slot-${i}`,
+      name: PLACEHOLDER_POOL[Math.floor(random() * PLACEHOLDER_POOL.length)],
+      imageUrl: null,
     }));
+    setDisplayed(initialSlots);
 
-    const loadAndPick = () => {
-      let items = [];
-      try {
-        const raw = localStorage.getItem("kalceria_dummy_products");
-        if (raw && raw !== "undefined" && raw !== "null") {
-          items = JSON.parse(raw);
+    // Fetch live backend products if available
+    fetch("/api/merch")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.merch && Array.isArray(data.merch) && data.merch.length > 0) {
+          const formatted = data.merch.slice(0, 4).map((m, i) => ({
+            id: m.id || `merch-${i}`,
+            name: m.name || PLACEHOLDER_POOL[i % PLACEHOLDER_POOL.length],
+            imageUrl: m.photoUrl || null,
+          }));
+          while (formatted.length < 4) {
+            formatted.push({
+              id: `slot-fallback-${formatted.length}`,
+              name: PLACEHOLDER_POOL[formatted.length % PLACEHOLDER_POOL.length],
+              imageUrl: null,
+            });
+          }
+          setDisplayed(formatted);
         }
-      } catch (e) {
-        console.error("Failed to parse dummy products", e);
-      }
-      
-      if (!Array.isArray(items) || items.length === 0) {
-        items = INITIAL_DUMMIES;
-        localStorage.setItem("kalceria_dummy_products", JSON.stringify(INITIAL_DUMMIES));
-      }
-
-      const picked = [...items].sort(() => 0.5 - random()).slice(0, 4);
-      setInventory(items);
-      setDisplayed(picked);
-    };
-
-    loadAndPick();
-    const interval = setInterval(loadAndPick, 6000); // Slightly slower for typewriter
-    return () => clearInterval(interval);
+      })
+      .catch(() => {});
   }, []);
 
   return displayed;
@@ -223,127 +220,168 @@ export function ShowcaseTypewriter({ text }) {
       setDisplayed(text.slice(0, i + 1));
       i++;
       if (i >= text.length) clearInterval(interval);
-    }, 40); // Fast but readable typing
+    }, 45);
     return () => clearInterval(interval);
   }, [text]);
 
-  return <span className="font-mono">{displayed}</span>;
+  return <span>{displayed}</span>;
 }
 
-export function MerchCard({ item, isInitial, index, isMobile }) {
-  const bg = item.imageUrl || `https://picsum.photos/seed/${item.id}/600/800`;
-  
-  // Dynamic Blobs based on Index
-  const blobConfigs = [
-    { c1: "bg-red-500", c2: "bg-emerald-500" }, // Index 0: Red - Green
-    { c1: "bg-yellow-500", c2: "bg-red-500" },   // Index 1: Gold - Red
-    { c1: "bg-yellow-500", c2: "bg-emerald-500" }, // Index 2: Gold - Green
-    { c1: "bg-yellow-500", c2: "bg-cyan-500" }     // Index 3: Gold - Blue Sea
-  ];
-  const blobs = blobConfigs[index % 4];
+// ─── Minigame Inherited Flip Card for Support Us ─────────────────────────────────
+export function MerchCard({ item, index, isMobile }) {
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [typedName, setTypedName] = useState("");
+  const [currentName, setCurrentName] = useState(item?.name || "Placeholder");
+
+  useEffect(() => {
+    let isMounted = true;
+    let timer = null;
+    let typeInterval = null;
+
+    // Stagger start delay based on card position so cards flip in a rhythmic wave
+    const initialDelay = 500 + index * 550;
+
+    const runFlipCycle = () => {
+      if (!isMounted) return;
+
+      // 1. Flip card to face-up (displaying product with white border)
+      setIsFlipped(true);
+
+      // Pick name: either actual product name or random placeholder
+      const candidateName =
+        item?.imageUrl && item?.name
+          ? item.name
+          : PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
+      setCurrentName(candidateName);
+
+      // 2. Start typing animation under the card shortly after flip starts
+      timer = setTimeout(() => {
+        if (!isMounted) return;
+        setTypedName("");
+        let charIdx = 0;
+
+        typeInterval = setInterval(() => {
+          if (!isMounted) return;
+          charIdx++;
+          setTypedName(candidateName.slice(0, charIdx));
+
+          if (charIdx >= candidateName.length) {
+            clearInterval(typeInterval);
+
+            // 3. Patokan: wait not less than (+ n seconds after typing animation finishes)
+            // n = 2.4 seconds
+            timer = setTimeout(() => {
+              if (!isMounted) return;
+
+              // 4. Flip back to face-down (black base with minigame logo)
+              setIsFlipped(false);
+              setTypedName("");
+
+              // 5. Rest face-down for 1.8s, then repeat cycle
+              timer = setTimeout(() => {
+                if (!isMounted) return;
+                runFlipCycle();
+              }, 1800);
+            }, 2400);
+          }
+        }, 50);
+      }, 350);
+    };
+
+    const startTimeout = setTimeout(runFlipCycle, initialDelay);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(startTimeout);
+      clearTimeout(timer);
+      clearInterval(typeInterval);
+    };
+  }, [index, item]);
 
   return (
-    <motion.div
-      layout
-      initial={isInitial ? { opacity: 0, y: 30 } : false}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-      className={`relative flex flex-col bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden group min-h-[374px] w-full max-w-[280px] sm:max-w-none ${isMobile ? "rounded-2xl" : ""}`}
-      style={{ 
-        clipPath: isMobile 
-          ? "none"
-          : "polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)"
-      }}
-    >
-      {/* Background Blobs */}
-      <div className="absolute inset-0 pointer-events-none z-0 opacity-30">
-        <motion.div 
-          animate={{ x: [0, 15, 0], y: [0, -15, 0], scale: [1, 1.1, 1] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          className={`absolute -top-8 -left-8 w-32 h-32 rounded-full blur-[35px] ${blobs.c1}`} 
-        />
-        <motion.div 
-          animate={{ x: [0, -15, 0], y: [0, 15, 0], scale: [1.1, 0.9, 1.1] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          className={`absolute -bottom-8 -right-8 w-32 h-32 rounded-full blur-[35px] ${blobs.c2}`} 
-        />
-      </div>
-
-      {/* Invisible Frame for Image */}
-      <div className="p-3 relative z-10">
-        <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-black/60 border border-white/5 shadow-inner">
-          <AnimatePresence mode="wait">
-            <motion.img 
-              key={item.id}
-              initial={{ opacity: 0, x: 30, filter: "blur(8px)" }}
-              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, x: -30, filter: "blur(8px)" }}
-              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-              src={bg} 
-              alt={item.name} 
-              className="absolute inset-0 w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-700" 
+    <div className="flex flex-col items-center justify-start select-none w-full max-w-[240px] sm:max-w-none">
+      {/* 3D Flip Card Container (Inheriting Minigame Card Dynamics) */}
+      <div
+        className="relative w-[190px] h-[250px] xs:w-[210px] xs:h-[275px] sm:w-[200px] sm:h-[265px] md:w-[215px] md:h-[285px] lg:w-[230px] lg:h-[305px] cursor-pointer"
+        style={{ perspective: "1000px" }}
+      >
+        <motion.div
+          animate={{ rotateY: isFlipped ? 180 : 0 }}
+          transition={{ duration: 0.65, ease: [0.45, 0.05, 0.55, 0.95] }}
+          style={{ width: "100%", height: "100%", position: "relative", transformStyle: "preserve-3d" }}
+        >
+          {/* Back Face: Solid Black Base with original Minigame Logo */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backfaceVisibility: "hidden",
+              background: "#000000",
+              borderRadius: "1.25rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 15px 35px rgba(0,0,0,0.6)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              padding: "16px",
+            }}
+          >
+            <Image
+              src="/favicon.webp"
+              alt="Kalceria Logo"
+              width={771}
+              height={681}
+              unoptimized
+              loading="eager"
+              decoding="auto"
+              className="w-[58px] h-[58px] sm:w-[72px] sm:h-[72px] md:w-[84px] md:h-[84px] object-contain drop-shadow-[0_0_20px_rgba(255,100,0,0.4)]"
             />
-          </AnimatePresence>
-          
-          <AnimatePresence mode="wait">
-            <motion.div 
-              key={item.id}
-              initial={{ opacity: 0, x: 15 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -15 }}
-              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-              className="absolute top-3 left-3 z-20"
-            >
-              {item.label === "HOT DEALS" && (
-                <span 
-                  className="text-[12px] font-mono font-black uppercase tracking-tighter text-yellow-400"
-                  style={{ textShadow: "1px 1.2px 0px #854d0e, 2px 2.5px 0px #713f12, 2.5px 4px 6px rgba(0,0,0,0.6)" }}
-                >
-                  HOT DEALS
-                </span>
-              )}
-              {item.label === "AVAILABLE" && (
-                <span 
-                  className="text-[10px] font-mono font-black uppercase tracking-tighter text-[#ffe2d1]"
-                  style={{ textShadow: "1px 0.8px 0px #94a3b8, 1.5px 1.5px 0px #64748b, 2px 2px 5px rgba(0,0,0,0.4)" }}
-                >
-                  AVAILABLE
-                </span>
-              )}
-              {item.label === "SOLD OUT" && (
-                <div className="relative inline-block">
-                  <span 
-                    className="text-[10px] font-mono font-black uppercase tracking-tighter text-white"
-                    style={{ textShadow: "1px 0.8px 0px #475569, 1.5px 1.5px 0px #334155, 2px 2px 5px rgba(0,0,0,0.5)" }}
-                  >
-                    SOLD OUT
-                  </span>
-                  <div className="absolute top-[55%] left-[-2px] w-[calc(100%+4px)] h-[1.2px] bg-red-600 shadow-[0_0_5px_rgba(220,38,38,0.5)]" />
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+          </div>
+
+          {/* Front Face: Product Screen with Rounded Edge White Border */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backfaceVisibility: "hidden",
+              transform: "rotateY(180deg)",
+              background: "#000000",
+              borderRadius: "1.25rem",
+              overflow: "hidden",
+              border: "2.5px solid #ffffff",
+              boxShadow: "0 15px 35px rgba(0,0,0,0.6)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {item?.imageUrl ? (
+              <img
+                src={item.imageUrl}
+                alt={currentName}
+                className="w-full h-full object-cover rounded-[calc(1.25rem-2.5px)]"
+              />
+            ) : (
+              /* Right now, when placeholder: full black base inside the white border */
+              <div className="w-full h-full bg-black rounded-[calc(1.25rem-2.5px)]" />
+            )}
+          </div>
+        </motion.div>
       </div>
 
-      <div className="px-5 pb-6 flex flex-col flex-1 relative z-10">
-        <div className="mt-3 mb-2 h-14 overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <h3 className="font-sans font-black text-base tracking-tight text-white uppercase leading-tight">
-                <ShowcaseTypewriter text={item.name} />
-              </h3>
-            </motion.div>
-          </AnimatePresence>
-        </div>
+      {/* Under the Card: Typing Animation with Picture 4 Font Style & Texture */}
+      <div className="mt-4 sm:mt-5 text-center min-h-[28px] flex items-center justify-center px-2">
+        <span
+          className="text-white text-sm sm:text-base md:text-[17px] font-normal tracking-tight"
+          style={{ fontFamily: "Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
+        >
+          {typedName}
+          {isFlipped && typedName && typedName.length < currentName.length && (
+            <span className="inline-block ml-0.5 text-white/70 animate-pulse">|</span>
+          )}
+        </span>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

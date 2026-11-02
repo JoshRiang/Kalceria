@@ -1,7 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { createLog } from './auditController.js';
 
-function validUrl(value, protocols = ['https:']) {
+export function validUrl(value, protocols = ['https:']) {
   if (typeof value !== 'string' || !value.trim() || value.length > 2048) return false;
   const clean = value.trim();
   if (clean.startsWith('/') && !clean.startsWith('//') && !clean.includes('\\')) return true;
@@ -18,8 +18,34 @@ export async function createMerch(req, res, next) {
     if (!Number.isFinite(Number(price)) || Number(price) < 0 || Number(price) > 1_000_000_000) {
       return res.status(400).json({ error: 'Price must be a non-negative amount.' });
     }
-    const merch = await prisma.merch.create({ data: { name: name.trim(), photoUrl: photoUrl.trim(), link: link.trim(), price: Number(price) } });
+    const merch = await prisma.merch.create({
+      data: {
+        name: name.trim(),
+        photoUrl: photoUrl.trim(),
+        link: link.trim(),
+        price: Number(price),
+        isSoldOut: false,
+      },
+    });
     res.status(201).json({ merch });
+  } catch (err) { next(err); }
+}
+
+// ─── GET /merch (Public catalog for Support Us Showcase) ────────────────────────
+export async function listPublicMerch(req, res, next) {
+  try {
+    const merch = await prisma.merch.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        photoUrl: true,
+        link: true,
+        price: true,
+        createdAt: true,
+      },
+    });
+    res.json({ merch: merch || [] });
   } catch (err) { next(err); }
 }
 
@@ -37,7 +63,10 @@ export async function listMerch(req, res, next) {
 // ─── PUT /admin/merch/:id ─────────────────────────────────────────────────────
 export async function updateMerch(req, res, next) {
   try {
-    const { price, photoUrl, link } = req.body || {};
+    const { name, price, photoUrl, link } = req.body || {};
+    if (name !== undefined && (typeof name !== 'string' || !name.trim() || name.length > 120)) {
+      return res.status(400).json({ error: 'Name must be a non-empty string under 120 characters.' });
+    }
     if (price !== undefined && (!Number.isFinite(Number(price)) || Number(price) < 0 || Number(price) > 1_000_000_000)) {
       return res.status(400).json({ error: 'Price must be a non-negative amount.' });
     }
@@ -46,25 +75,23 @@ export async function updateMerch(req, res, next) {
     const merch = await prisma.merch.update({
       where: { id: req.params.id },
       data: {
+        ...(name !== undefined && { name: name.trim() }),
         ...(price !== undefined && { price: Number(price) }),
-        ...(photoUrl && { photoUrl }),
-        ...(link && { link }),
+        ...(photoUrl && { photoUrl: photoUrl.trim() }),
+        ...(link && { link: link.trim() }),
       },
     });
     res.json({ merch });
   } catch (err) { next(err); }
 }
 
-// ─── PATCH /admin/merch/:id/soldout ──────────────────────────────────────────
+// ─── PATCH /admin/merch/:id/soldout (Wiped: Store stock is regulated via Tokopedia / Shopee) ──
 export async function toggleSoldOut(req, res, next) {
   try {
-    const current = await prisma.merch.findUnique({ where: { id: req.params.id }, select: { isSoldOut: true } });
-    if (!current) return res.status(404).json({ error: 'Merch not found.' });
-    const merch = await prisma.merch.update({
-      where: { id: req.params.id },
-      data: { isSoldOut: !current.isSoldOut },
+    res.json({
+      message: 'Product stock is managed externally via Tokopedia and Shopee marketplace storefronts.',
+      isSoldOut: false,
     });
-    res.json({ isSoldOut: merch.isSoldOut });
   } catch (err) { next(err); }
 }
 
@@ -88,7 +115,7 @@ export async function recordMerchSale(req, res, next) {
           qty: parsedQty,
           pricePerUnit: parsedPrice,
           totalAmount,
-          recordedBy: req.user.email,
+          recordedBy: req.user?.email || 'admin@kalceria.com',
         },
       }),
       prisma.merch.update({
@@ -101,7 +128,7 @@ export async function recordMerchSale(req, res, next) {
     ]);
 
     await createLog(
-      req.user.email,
+      req.user?.email || 'admin@kalceria.com',
       `Recorded sale for Merch ${req.params.id}: ${parsedQty} units @ IDR ${parsedPrice.toLocaleString('id-ID')} = IDR ${totalAmount.toLocaleString('id-ID')}`
     );
 
@@ -114,7 +141,7 @@ export async function deleteMerch(req, res, next) {
   try {
     await prisma.$transaction(async (tx) => {
       await tx.merch.delete({ where: { id: req.params.id } });
-      await createLog(req.user.email, 'MERCH_DELETED', `Merch item ${req.params.id} deleted.`, tx);
+      await createLog(req.user?.email || 'admin@kalceria.com', 'MERCH_DELETED', `Merch item ${req.params.id} deleted.`, tx);
     });
     res.json({ message: 'Merch deleted.' });
   } catch (err) { next(err); }

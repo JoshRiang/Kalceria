@@ -20,7 +20,7 @@ import {
   createEvent, listEvents, updateEvent, deleteEvent,
 } from "../controllers/adminEventController.js";
 import {
-  createMerch, listMerch, updateMerch, toggleSoldOut, deleteMerch, recordMerchSale,
+  createMerch, listMerch, listPublicMerch, updateMerch, toggleSoldOut, deleteMerch, recordMerchSale,
 } from "../controllers/adminMerchController.js";
 import {
   registerEvent, listPublicEvents, getPublicEvent,
@@ -116,6 +116,7 @@ router.get("/location/nearby", requireAuth, getNearbyUsers);
 // ─── Media ───────────────────────────────────────────────────────────────────
 router.get("/media", getMedia);
 router.post("/media", requireAdmin, createMedia);
+router.get("/merch", listPublicMerch);
 
 // ─── Mini Events ─────────────────────────────────────────────────────────────
 router.post("/mini-events", requireAuth, miniEventRateLimit, miniEventDefense, createMiniEvent);
