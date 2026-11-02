@@ -255,10 +255,6 @@ export const MapHeaderHud = memo(function MapHeaderHud({
                 ? "opacity-100 translate-y-0 pointer-events-auto"
                 : "opacity-0 -translate-y-1.5 pointer-events-none"
             }`}
-            style={{
-              fontFamily:
-                "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif",
-            }}
           >
             {/* Item 1: Broadcast */}
             <button
@@ -272,14 +268,14 @@ export const MapHeaderHud = memo(function MapHeaderHud({
               }}
             >
               <span
-                className={`text-[13.5px] leading-snug font-medium ${
+                className={`text-[13.5px] leading-snug font-semibold ${
                   isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
                 }`}
               >
                 Broadcast
               </span>
               <span
-                className={`text-[11px] leading-tight mt-0.5 ${
+                className={`text-[11.5px] leading-tight mt-0.5 ${
                   isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
                 }`}
               >
@@ -306,14 +302,14 @@ export const MapHeaderHud = memo(function MapHeaderHud({
               }}
             >
               <span
-                className={`text-[13.5px] leading-snug font-medium ${
+                className={`text-[13.5px] leading-snug font-semibold ${
                   isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
                 }`}
               >
                 Mini event
               </span>
               <span
-                className={`text-[11px] leading-tight mt-0.5 ${
+                className={`text-[11.5px] leading-tight mt-0.5 ${
                   isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
                 }`}
               >

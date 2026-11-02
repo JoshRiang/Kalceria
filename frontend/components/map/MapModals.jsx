@@ -311,7 +311,7 @@ export const MapModals = memo(function MapModals({
                   }`}
                   disabled={busy}
                 >
-                  {busy ? "Processing..." : "Post Status"}
+                  {busy ? "Posting..." : "Post"}
                 </button>
               </div>
             </form>
@@ -405,7 +405,6 @@ export const MapModals = memo(function MapModals({
                           {cat.renderIcon(isSelected, isModalDark)}
                         </div>
                         <span
-                          style={{ fontFamily: "Arial, sans-serif" }}
                           className={`text-[10px] xs:text-[11px] leading-tight text-center mt-1.5 transition-colors duration-200 ${
                             isSelected
                               ? isModalDark
@@ -602,7 +601,7 @@ export const MapModals = memo(function MapModals({
                   }`}
                   disabled={busy}
                 >
-                  {busy ? "Deploying..." : (activeOwnEvent ? "Update Signal" : "Deploy Signal")}
+                  {busy ? "Creating..." : (activeOwnEvent ? "Update" : "Create")}
                 </button>
                 {activeOwnEvent && (
                   <button
@@ -615,7 +614,7 @@ export const MapModals = memo(function MapModals({
                     onClick={deleteMiniEvent}
                     disabled={busy}
                   >
-                    Cancel / Delete Signal
+                    Cancel / Delete Event
                   </button>
                 )}
               </div>
@@ -694,7 +693,6 @@ export const MapModals = memo(function MapModals({
                       : "text-black/80 group-hover:text-black"
                   }`}
                   style={{
-                    fontFamily: "Arial, sans-serif",
                     textShadow: isMapDark
                       ? "0 2px 10px rgba(0,0,0,0.8)"
                       : "0 1px 6px rgba(255,255,255,0.9)",
@@ -718,7 +716,6 @@ export const MapModals = memo(function MapModals({
                       : "text-black/80 group-hover:text-black"
                   }`}
                   style={{
-                    fontFamily: "Arial, sans-serif",
                     textShadow: isMapDark
                       ? "0 2px 10px rgba(0,0,0,0.8)"
                       : "0 1px 6px rgba(255,255,255,0.9)",

@@ -44,10 +44,6 @@ export function KalceriansPanel({
           ? "bg-[#161b22]/85 border border-white text-[#f0f6fc] shadow-[0_12px_36px_rgba(0,0,0,0.8)]"
           : "bg-white/85 border border-black text-[#1f2328] shadow-[0_12px_36px_rgba(0,0,0,0.18)]"
       }`}
-      style={{
-        fontFamily:
-          "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif",
-      }}
     >
       {/* 1. Top Scroll Bar / Pull Handle (Rolls down to bottom / rolls up across all families) */}
       <button
@@ -238,10 +234,8 @@ export function KalceriansPanel({
                     {/* Line 1: User Name & Category Badge */}
                     <div className="flex items-center justify-between gap-1.5">
                       <b
-                        className={`text-[13.5px] sm:text-[14px] font-bold tracking-tight truncate leading-snug transition-all duration-300 ${
-                          isMapDark
-                            ? "text-white group-hover:text-white group-hover:drop-shadow-[1.5px_1.5px_0px_#ff006e] group-hover:drop-shadow-[-1px_-1px_0px_#ffd60a]"
-                            : "text-slate-900 group-hover:text-slate-900 group-hover:drop-shadow-[1.5px_1.5px_0px_rgba(15,23,42,0.15)] group-hover:drop-shadow-[-1.5px_-1.5px_0px_rgba(255,255,255,0.9)]"
+                        className={`text-[13.5px] sm:text-[14px] font-bold tracking-tight truncate leading-snug ${
+                          isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
                         }`}
                       >
                         {user.name}
@@ -292,7 +286,7 @@ export function KalceriansPanel({
 
                     {/* Line 3: Description Quote or User Nickname */}
                     <p
-                      className={`text-[11px] italic truncate mt-0.5 ${
+                      className={`text-[11px] truncate mt-0.5 ${
                         isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
                       }`}
                     >
@@ -347,7 +341,7 @@ export function KalceriansPanel({
 
                     {(userEvent?.description || user.broadcast?.message) && (
                       <p
-                        className={`text-[11px] italic border-l-2 pl-2 line-clamp-2 ${
+                        className={`text-[11px] border-l-2 pl-2 line-clamp-2 ${
                           isMapDark
                             ? "text-[#8b949e] border-[#ffd60a]/40"
                             : "text-[#656d76] border-[#d97706]"
