@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
 import { getEventCategory } from "./EventIcon";
@@ -46,6 +46,37 @@ function cleanDesc(value) {
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
     .trim();
+}
+
+// Device Family Character Limits for Name, Username, and Broadcast Status
+const FAMILY_LIMITS = {
+  hp: {
+    name: 12,        // e.g. "Alwahib Raf..."
+    username: 13,    // e.g. "alwahib_raf..."
+    broadcast: 36,   // 2 compact lines
+  },
+  tab: {
+    name: 20,
+    username: 22,
+    broadcast: 65,
+  },
+  ipad: {
+    name: 13,        // fixed width sidebar (340px)
+    username: 14,
+    broadcast: 38,
+  },
+  desktop: {
+    name: 16,        // fixed width sidebar (360px)
+    username: 17,
+    broadcast: 48,
+  },
+};
+
+function truncateWithEllipsis(str, maxLen) {
+  if (!str) return "";
+  const s = String(str).trim();
+  if (s.length <= maxLen) return s;
+  return s.slice(0, maxLen).trimEnd() + "...";
 }
 
 // 24-hour broadcast freshness check
@@ -199,6 +230,22 @@ export function KalceriansPanel({
   const [confirmingAction, setConfirmingAction] = useState(null); // { userId, type: "block" | "unblock" }
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [mobileProfileUser, setMobileProfileUser] = useState(null);
+  const [deviceFamily, setDeviceFamily] = useState("desktop");
+
+  useEffect(() => {
+    function handleResize() {
+      const w = window.innerWidth;
+      if (w < 640) setDeviceFamily("hp");
+      else if (w < 860) setDeviceFamily("tab");
+      else if (w < 1180) setDeviceFamily("ipad");
+      else setDeviceFamily("desktop");
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;
 
   function handleAvatarClick(e, user) {
     e.stopPropagation();
@@ -340,6 +387,9 @@ export function KalceriansPanel({
             const isConfirming = confirmingAction?.userId === user.id;
             const isExpanded = expandedUserId === user.id;
             const activeBroadcastMsg = getActiveBroadcast(user);
+            const displayName = user.displayName || user.name || user.nickname || "Kalcerian";
+            const rawUsername = user.nickname || user.username || (user.name ? user.name.toLowerCase().replace(/\s+/g, '_') : "kalcerian");
+            const cleanUsername = String(rawUsername).replace(/^@/, '');
             // Check if this Kalcerian created an event
             const userEvent = events.find(
               (e) =>
@@ -451,10 +501,11 @@ export function KalceriansPanel({
                     </div>
                   </div>
 
-                  {/* MIDDLE: User Name & Broadcast Message */}
-                  <div className="relative z-10 min-w-0 flex flex-col justify-center pr-1">
+                  {/* MIDDLE: Display Name, Real Username (@handle), and 24h Broadcast Status */}
+                  <div className="relative z-10 min-w-0 flex flex-col justify-center pr-1 overflow-hidden">
+                    {/* Line 1: Display Name */}
                     <b
-                      className={`text-[13.5px] sm:text-[14px] font-bold tracking-tight truncate leading-snug ${
+                      className={`text-[13px] sm:text-[13.5px] font-bold tracking-tight truncate leading-tight block ${
                         isBlocked
                           ? isMapDark
                             ? "text-[#8b949e]/70"
@@ -463,22 +514,34 @@ export function KalceriansPanel({
                           ? "text-[#f0f6fc]"
                           : "text-[#1f2328]"
                       }`}
+                      title={displayName}
                     >
-                      {user.name}
+                      {truncateWithEllipsis(displayName, limits.name)}
                     </b>
 
-                    {/* Active Broadcast Message Quote (Arial, not bold, not all capital, black/white by mode) */}
+                    {/* Line 2: Real Username (@handle in grey tiny font) */}
+                    <span
+                      className={`text-[10.5px] sm:text-[11px] font-normal leading-tight block truncate mt-0.5 ${
+                        isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+                      }`}
+                      title={`@${cleanUsername}`}
+                    >
+                      @{truncateWithEllipsis(cleanUsername, limits.username)}
+                    </span>
+
+                    {/* Line 3: 24h Broadcast Status (Arial, not bold, not all-caps, truncated per device family) */}
                     {!isBlocked && activeBroadcastMsg ? (
                       <p
-                        className={`text-[12px] sm:text-[12.5px] font-normal normal-case leading-snug truncate mt-0.5 ${
+                        className={`text-[11px] sm:text-[11.5px] font-normal normal-case leading-snug line-clamp-2 mt-1 break-words ${
                           isMapDark ? "text-white" : "text-black"
                         }`}
                         style={{ fontFamily: "Arial, sans-serif" }}
+                        title={activeBroadcastMsg}
                       >
-                        &quot;{activeBroadcastMsg}&quot;
+                        &quot;{truncateWithEllipsis(activeBroadcastMsg, limits.broadcast)}&quot;
                       </p>
                     ) : (
-                      <div className="h-3" />
+                      <div className="h-0.5" />
                     )}
                   </div>
 

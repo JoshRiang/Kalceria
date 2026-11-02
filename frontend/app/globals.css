@@ -50,19 +50,29 @@ a.focus-polygon:focus-visible {
   scrollbar-color: rgba(140, 149, 159, 0.4) transparent;
 }
 .modern-kalcerian-scrollbar::-webkit-scrollbar {
-  width: 5px;
+  width: 4px;
+}
+.modern-kalcerian-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+.modern-kalcerian-scrollbar::-webkit-scrollbar-corner {
+  display: none !important;
+  background: transparent !important;
 }
 .modern-kalcerian-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-  margin: 6px 0;
+  background: transparent !important;
+  margin: 0 !important;
 }
 .modern-kalcerian-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(140, 149, 159, 0.4);
+  background: rgba(100, 110, 120, 0.35);
   border-radius: 9999px;
   transition: background 0.2s ease;
 }
 .modern-kalcerian-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(140, 149, 159, 0.7);
+  background: rgba(100, 110, 120, 0.65);
 }
 .dark .modern-kalcerian-scrollbar,
 .dark-theme .modern-kalcerian-scrollbar {

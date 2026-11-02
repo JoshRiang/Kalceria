@@ -41,7 +41,25 @@ export default function KalcerianProfileCard({
   isMobileCompact = false,
 }) {
   const [imgError, setImgError] = useState(false);
-  const displayName = user?.name || user?.nickname || "Kalcerian";
+  const displayName = user?.displayName || user?.name || user?.nickname || "Kalcerian";
+  const rawUsername = user?.nickname || user?.username || (user?.name ? user.name.toLowerCase().replace(/\s+/g, '_') : "kalcerian");
+  const cleanUsername = String(rawUsername).replace(/^@/, '');
+
+  // 24-hour broadcast freshness check
+  const b = user?.broadcast;
+  const rawBroadcast = typeof b === "string" ? b.trim() : (b?.message || "").trim();
+  let activeBroadcastMsg = null;
+  if (rawBroadcast) {
+    if (b?.createdAt) {
+      const age = Date.now() - new Date(b.createdAt).getTime();
+      if (age <= 24 * 60 * 60 * 1000 && age >= 0) {
+        activeBroadcastMsg = rawBroadcast;
+      }
+    } else {
+      activeBroadcastMsg = rawBroadcast;
+    }
+  }
+
   const joinedText = formatJoinedDate(user?.createdAt);
   const coverSrc = imgError || !user?.coverImage ? getFallbackCover(user?.id) : user.coverImage;
 
@@ -148,7 +166,7 @@ export default function KalcerianProfileCard({
         </span>
       </div>
 
-      {/* 4. User Name: Centered, Bold */}
+      {/* 4. Display Name & Real Username */}
       <div className="text-center mt-0.5 px-4">
         <h3
           className={`text-[16px] sm:text-[17px] font-bold tracking-tight truncate leading-tight ${
@@ -157,7 +175,29 @@ export default function KalcerianProfileCard({
         >
           {displayName}
         </h3>
+        {/* Real Username in grey tiny font starting with @ */}
+        <span
+          className={`text-[11.5px] sm:text-[12px] font-normal block mt-0.5 ${
+            isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+          }`}
+        >
+          @{cleanUsername}
+        </span>
       </div>
+
+      {/* Broadcast Status (if user released active 24h broadcast) */}
+      {activeBroadcastMsg && (
+        <div className="text-center mt-1.5 px-4">
+          <p
+            className={`text-[11.5px] sm:text-[12px] font-normal normal-case leading-snug line-clamp-2 ${
+              isMapDark ? "text-white" : "text-black"
+            }`}
+            style={{ fontFamily: "Arial, sans-serif" }}
+          >
+            &quot;{activeBroadcastMsg}&quot;
+          </p>
+        </div>
+      )}
 
       {/* 5. Alasan Masuk Kalceria: Paragraph description, Arial, non-bold, not all capital */}
       <div className="px-4 py-2 mt-1">
@@ -252,3 +292,4 @@ export default function KalcerianProfileCard({
     </div>
   );
 }
+
