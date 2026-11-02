@@ -197,7 +197,36 @@ export async function getAllKalcerians(req, res, next) {
     });
 
     const mockKalcerians = [
-      { id: "mock_1", name: "Ahmad Bintaro", nickname: "Ahmad", profilePicture: null, isOnline: true, broadcast: { message: "Riding around Sector 9!", createdAt: new Date() } },
+      {
+        id: "mock_adit",
+        name: "Adit Bintaro",
+        nickname: "Adit",
+        profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit",
+        coverType: "gif",
+        coverImage: "/media/gifs/event_cafe_1.gif",
+        socialPlatform: "IG",
+        socialLink: "aditbintaro",
+        instagram: "aditbintaro",
+        whatsapp: "+6281234567890",
+        phone: "+6281234567890",
+        isOnline: true,
+        broadcast: { message: "Dyno run booked for Saturday!", createdAt: new Date() }
+      },
+      {
+        id: "mock_1",
+        name: "Ahmad Bintaro",
+        nickname: "Ahmad",
+        profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad",
+        coverType: "video",
+        coverImage: "/media/gifs/event_cafe_1.mp4",
+        socialPlatform: null,
+        socialLink: null,
+        instagram: null,
+        whatsapp: null,
+        phone: null,
+        isOnline: true,
+        broadcast: { message: "Riding around Sector 9!", createdAt: new Date() }
+      },
       { id: "mock_2", name: "Kalcerian Alpha", nickname: "Alpha", profilePicture: null, isOnline: true, broadcast: null },
       { id: "mock_3", name: "Ghost Rider", nickname: "Ghost", profilePicture: null, isOnline: false, broadcast: null }
     ];

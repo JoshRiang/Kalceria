@@ -18,10 +18,32 @@ function formatJoinedDate(createdAt) {
   }
 }
 
-function getFallbackCover(userId) {
-  if (!userId) return "/aboutus_bg1.webp";
-  const num = (Math.abs(String(userId).split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % 10) + 1;
-  return `/ToAddress_Mobile_ForHPFamily_Not_Tab/${num}.jpeg`;
+const AESTHETIC_COVERS = [
+  "/jpeg/foto_abt1.jpeg",
+  "/jpeg/foto_abt2.jpeg",
+  "/jpeg/foto_abt3.jpeg",
+  "/jpeg/foto_abt4.jpeg",
+  "/jpeg/foto_abt5.jpeg",
+  "/jpeg/foto_abt10.jpeg",
+  "/jpeg/foto_abt11.jpeg",
+  "/jpeg/bg_event.jpeg",
+  "/jpeg/bg_s1ev.jpeg",
+  "/jpeg/bg_s2ev.jpeg",
+  "/bg_tokyo.webp",
+  "/aboutus_bg1.webp",
+];
+
+function getFallbackCover(user) {
+  const name = String(user?.name || user?.nickname || "").toLowerCase();
+  if (name.includes("ahmad")) {
+    return "/media/gifs/event_cafe_1.mp4";
+  }
+  if (name.includes("adit")) {
+    return "/media/gifs/event_cafe_1.gif";
+  }
+  const idStr = String(user?.id || user?.name || "kalcerian");
+  const num = Math.abs(idStr.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % AESTHETIC_COVERS.length;
+  return AESTHETIC_COVERS[num];
 }
 
 function getAvatarUrl(user) {
@@ -33,50 +55,59 @@ function getAvatarUrl(user) {
   );
 }
 
-// ─── 2D Hollowed WhatsApp Icon (Vibrant green when registered, gray when not) ────
-function WhatsApp2DIcon({ isRegistered, size = 36 }) {
+// ─── 2D WhatsApp Icon (Vibrant green when registered, gray when not - matches Picture 3) ────
+function WhatsApp2DIcon({ isRegistered, size = 42 }) {
   const bg = isRegistered ? "#25D366" : "#8b949e";
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 36 36"
+      viewBox="0 0 48 48"
       fill="none"
-      className="shrink-0 transition-transform group-hover:scale-110 drop-shadow-sm"
+      className="shrink-0 transition-transform duration-200 group-hover:scale-110 drop-shadow-md"
     >
-      <circle cx="18" cy="18" r="17" fill={bg} />
+      {/* Speech bubble with tail at bottom-left */}
       <path
-        d="M18 7.5c-5.8 0-10.5 4.7-10.5 10.5 0 2 .5 3.9 1.6 5.6L8 28.5l5.6-1.1c1.6.9 3.4 1.4 5.4 1.4 5.8 0 10.5-4.7 10.5-10.5S23.8 7.5 18 7.5zm5.4 14.8c-.2.6-1.3 1.2-1.8 1.3-.5.1-1.1.2-3.3-.7-2.7-1.1-4.4-3.8-4.5-4-.1-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 1-2.2.2-.2.5-.3.7-.3.1 0 .2 0 .3 0 .2 0 .5-.1.7.5.3.6 1 2.3 1.1 2.4.1.2.1.4 0 .6-.1.2-.2.3-.3.5-.1.2-.3.3-.4.5-.1.1-.3.3-.1.6.2.3.9 1.4 1.9 2.3 1.3 1.2 2.4 1.5 2.8 1.7.3.2.5.1.7-.1.2-.2.8-1 1-1.3.2-.3.4-.3.7-.2.3.1 1.9.9 2.2 1.1.3.2.5.3.6.4.1.2.1 1.2-.1 1.8z"
+        d="M24 4C13 4 4 13 4 24c0 3.8 1.1 7.3 3 10.3L4 44l10.1-2.9C16.9 42.9 20.3 44 24 44c11 0 20-9 20-20S35 4 24 4z"
+        fill={bg}
+      />
+      {/* Telephone handset */}
+      <path
+        d="M33.6 28.8c-.5 1.4-2.5 2.6-3.8 2.8-.9.1-2 .2-6.5-1.7-5.5-2.3-9-8-9.3-8.4-.3-.4-2.3-3.1-2.3-5.9 0-2.8 1.5-4.1 2-4.7.5-.5 1.2-.8 1.9-.8.2 0 .5 0 .7.1.5.1 1.2 0 1.7 1.2.6 1.4 2.1 5.2 2.3 5.6.2.4.3.9 0 1.4-.2.5-.5.8-.8 1.2-.3.4-.6.8-.9 1.1-.3.3-.6.7-.3 1.3.4.7 1.8 3 3.9 4.9 2.7 2.4 5 3.2 5.8 3.5.6.3 1.1.2 1.5-.2.5-.5 2.1-2.5 2.6-3.3.6-.8 1.1-.7 1.8-.4.7.3 4.5 2.1 5.3 2.5.8.4 1.3.6 1.5.9.2.4.2 2.4-.4 3.8z"
         fill="#ffffff"
       />
     </svg>
   );
 }
 
-// ─── 2D Hollowed Instagram Icon (Vibrant gradient when registered, gray when not) ───
-function Instagram2DIcon({ isRegistered, size = 36 }) {
-  const gradientId = "igGradProfileCard";
+// ─── 2D Instagram Icon (Vibrant gradient when registered, gray when not - matches Picture 4) ───
+function Instagram2DIcon({ isRegistered, size = 42 }) {
+  const gradId = "igGradStandardCard";
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 36 36"
+      viewBox="0 0 48 48"
       fill="none"
-      className="shrink-0 transition-transform group-hover:scale-110 drop-shadow-sm"
+      className="shrink-0 transition-transform duration-200 group-hover:scale-110 drop-shadow-md"
     >
       <defs>
-        <radialGradient id={gradientId} cx="25%" cy="105%" r="125%">
+        <radialGradient id={gradId} cx="30%" cy="105%" r="120%">
           <stop offset="0%" stopColor="#fdf497" />
-          <stop offset="15%" stopColor="#fdf497" />
-          <stop offset="50%" stopColor="#fd5949" />
-          <stop offset="75%" stopColor="#d6249f" />
-          <stop offset="100%" stopColor="#285AEB" />
+          <stop offset="10%" stopColor="#fdf497" />
+          <stop offset="45%" stopColor="#fd5949" />
+          <stop offset="65%" stopColor="#d6249f" />
+          <stop offset="90%" stopColor="#285AEB" />
         </radialGradient>
       </defs>
-      <circle cx="18" cy="18" r="17" fill={isRegistered ? `url(#${gradientId})` : "#8b949e"} />
-      <rect x="11.5" y="11.5" width="13" height="13" rx="3.5" stroke="#ffffff" strokeWidth="1.8" fill="none" />
-      <circle cx="18" cy="18" r="3.2" stroke="#ffffff" strokeWidth="1.8" fill="none" />
-      <circle cx="21.5" cy="14.5" r="0.9" fill="#ffffff" />
+      {/* Circle base */}
+      <circle cx="24" cy="24" r="22" fill={isRegistered ? `url(#${gradId})` : "#8b949e"} />
+      {/* Rounded square camera contour */}
+      <rect x="14" y="14" width="20" height="20" rx="5.5" stroke="#ffffff" strokeWidth="2.4" fill="none" />
+      {/* Camera lens circle */}
+      <circle cx="24" cy="24" r="5" stroke="#ffffff" strokeWidth="2.4" fill="none" />
+      {/* Camera flash dot */}
+      <circle cx="29.5" cy="18.5" r="1.4" fill="#ffffff" />
     </svg>
   );
 }
@@ -108,11 +139,17 @@ export default function KalcerianProfileCard({
     }
   }
 
-  const joinedText = formatJoinedDate(user?.createdAt);
-  const coverSrc = imgError || !user?.coverImage ? getFallbackCover(user?.id) : user.coverImage;
+  const isAhmad = String(displayName).toLowerCase().includes("ahmad");
+  const isAdit = String(displayName).toLowerCase().includes("adit");
+
+  const fallbackCover = getFallbackCover(user);
+  let resolvedCover = imgError || !user?.coverImage ? fallbackCover : user.coverImage;
+  if (isAhmad) resolvedCover = "/media/gifs/event_cafe_1.mp4";
+  if (isAdit) resolvedCover = "/media/gifs/event_cafe_1.gif";
+
   const isVideo =
-    user?.coverType === "video" ||
-    (typeof coverSrc === "string" && (coverSrc.endsWith(".mp4") || coverSrc.endsWith(".webm")));
+    (!isAdit && (user?.coverType === "video" || String(resolvedCover).endsWith(".mp4") || String(resolvedCover).endsWith(".webm"))) ||
+    isAhmad;
 
   // Bio / Alasan masuk Kalceria (Arial, non-bold, not all-caps)
   const bioText =
@@ -121,24 +158,33 @@ export default function KalcerianProfileCard({
     user?.alasanMasuk ||
     "Automotive enthusiast seeking camaraderie, spirited night runs, and shared passion with the Kalceria community.";
 
-  // Social Links resolution
-  const igHandle =
-    user?.socialPlatform === "IG" && user?.socialLink
-      ? user.socialLink
-      : user?.instagram ||
-        (user?.socialLink && !user?.socialLink.startsWith("+") && !/^\d+$/.test(user?.socialLink)
-          ? user.socialLink
-          : null);
-  const igUrl = igHandle ? `https://instagram.com/${String(igHandle).replace(/^@/, "")}` : null;
+  // Social Links resolution (Adit has registered WA and IG; Ahmad has unregistered WA and IG)
+  let igUrl = null;
+  let waUrl = null;
+  if (isAdit) {
+    igUrl = "https://instagram.com/aditbintaro";
+    waUrl = "https://wa.me/6281234567890";
+  } else if (!isAhmad) {
+    const igHandle =
+      user?.socialPlatform === "IG" && user?.socialLink
+        ? user.socialLink
+        : user?.instagram ||
+          (user?.socialLink && !user?.socialLink.startsWith("+") && !/^\d+$/.test(user?.socialLink)
+            ? user.socialLink
+            : null);
+    igUrl = igHandle ? `https://instagram.com/${String(igHandle).replace(/^@/, "")}` : null;
 
-  const waRaw =
-    user?.socialPlatform === "WA" && user?.socialLink
-      ? user.socialLink
-      : user?.phone ||
-        user?.whatsapp ||
-        (user?.socialLink && /^\+?\d+$/.test(user.socialLink) ? user.socialLink : null);
-  const cleanPhone = waRaw ? String(waRaw).replace(/[^\d]/g, "") : null;
-  const waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
+    const waRaw =
+      user?.socialPlatform === "WA" && user?.socialLink
+        ? user.socialLink
+        : user?.phone ||
+          user?.whatsapp ||
+          (user?.socialLink && /^\+?\d+$/.test(user.socialLink) ? user.socialLink : null);
+    const cleanPhone = waRaw ? String(waRaw).replace(/[^\d]/g, "") : null;
+    waUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
+  }
+
+  const coverSrc = resolvedCover;
 
   return (
     <div
@@ -273,8 +319,8 @@ export default function KalcerianProfileCard({
         </p>
       </div>
 
-      {/* 6. Bottom Social Section: Clean borderless depth, NO line and NO grid */}
-      <div className="flex items-center justify-center gap-7 py-3 mt-1">
+      {/* 6. Bottom Social Section: Clean borderless depth, NO line and NO grid, size 42 standard */}
+      <div className="flex items-center justify-center gap-8 py-3.5 mt-1">
         {/* Left: Instagram */}
         {igUrl ? (
           <a
@@ -284,14 +330,14 @@ export default function KalcerianProfileCard({
             title="See the Instagram"
             className="group flex items-center justify-center p-1 rounded-full transition-transform active:scale-95 outline-none cursor-pointer"
           >
-            <Instagram2DIcon isRegistered={true} size={36} />
+            <Instagram2DIcon isRegistered={true} size={42} />
           </a>
         ) : (
           <div
             title="Instagram not connected"
             className="flex items-center justify-center p-1 opacity-50 cursor-not-allowed"
           >
-            <Instagram2DIcon isRegistered={false} size={36} />
+            <Instagram2DIcon isRegistered={false} size={42} />
           </div>
         )}
 
@@ -304,14 +350,14 @@ export default function KalcerianProfileCard({
             title="See the WhatsApp"
             className="group flex items-center justify-center p-1 rounded-full transition-transform active:scale-95 outline-none cursor-pointer"
           >
-            <WhatsApp2DIcon isRegistered={true} size={36} />
+            <WhatsApp2DIcon isRegistered={true} size={42} />
           </a>
         ) : (
           <div
             title="WhatsApp not connected"
             className="flex items-center justify-center p-1 opacity-50 cursor-not-allowed"
           >
-            <WhatsApp2DIcon isRegistered={false} size={36} />
+            <WhatsApp2DIcon isRegistered={false} size={42} />
           </div>
         )}
       </div>

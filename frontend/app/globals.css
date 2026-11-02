@@ -44,13 +44,26 @@ a.focus-polygon:focus-visible {
   }
 }
 
+/* ─── Global Scrollbar Normalization (Zero Arrow Buttons Anywhere) ─── */
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+*::-webkit-scrollbar-corner {
+  display: none !important;
+  background: transparent !important;
+}
+
 /* ─── Modern Floating Scrollbar for Kalcerians List ─── */
 .modern-kalcerian-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(140, 149, 159, 0.4) transparent;
 }
 .modern-kalcerian-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 5px !important;
+  height: 5px !important;
 }
 .modern-kalcerian-scrollbar::-webkit-scrollbar-button {
   display: none !important;
@@ -58,21 +71,21 @@ a.focus-polygon:focus-visible {
   height: 0 !important;
   background: transparent !important;
 }
-.modern-kalcerian-scrollbar::-webkit-scrollbar-corner {
-  display: none !important;
+.modern-kalcerian-scrollbar::-webkit-scrollbar-track,
+.modern-kalcerian-scrollbar::-webkit-scrollbar-track-piece {
   background: transparent !important;
-}
-.modern-kalcerian-scrollbar::-webkit-scrollbar-track {
-  background: transparent !important;
-  margin: 0 !important;
+  margin: 4px 0 !important;
+  border-radius: 9999px !important;
 }
 .modern-kalcerian-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(100, 110, 120, 0.35);
-  border-radius: 9999px;
+  background: rgba(120, 130, 142, 0.35) !important;
+  border-radius: 9999px !important;
+  border: 1px solid transparent !important;
+  background-clip: padding-box !important;
   transition: background 0.2s ease;
 }
 .modern-kalcerian-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 110, 120, 0.65);
+  background: rgba(120, 130, 142, 0.65) !important;
 }
 .dark .modern-kalcerian-scrollbar,
 .dark-theme .modern-kalcerian-scrollbar {
@@ -80,10 +93,10 @@ a.focus-polygon:focus-visible {
 }
 .dark .modern-kalcerian-scrollbar::-webkit-scrollbar-thumb,
 .dark-theme .modern-kalcerian-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(240, 246, 252, 0.25);
+  background: rgba(240, 246, 252, 0.25) !important;
 }
 .dark .modern-kalcerian-scrollbar::-webkit-scrollbar-thumb:hover,
 .dark-theme .modern-kalcerian-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(240, 246, 252, 0.5);
+  background: rgba(240, 246, 252, 0.5) !important;
 }
 

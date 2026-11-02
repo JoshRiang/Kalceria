@@ -256,7 +256,7 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
 
         {/* Mobile & Half-Desktop Silhouette: grup_hp.webp (dragged an extra 30% more down to completely eliminate overlap and ground firmly) */}
-        <div className="absolute bottom-0 left-0 w-full h-[460px] xs:h-[500px] sm:h-[560px] md:h-[620px] pointer-events-none z-[1] overflow-hidden xl:hidden flex justify-center items-end">
+        <div className="absolute bottom-0 left-0 w-full h-[360px] xs:h-[400px] sm:h-[450px] md:h-[500px] pointer-events-none z-[1] overflow-hidden xl:hidden flex justify-center items-end">
           <Image 
             src="/hp/grup_hp.webp" 
             alt="Group Mobile" 
@@ -264,7 +264,7 @@ export default function LandingPage({ onNavigateAuth }) {
             height={1848} 
             loading="lazy" 
             decoding="async" 
-            className="h-full w-auto object-contain opacity-60 translate-y-[58%] xs:translate-y-[60%] sm:translate-y-[62%]" 
+            className="h-full w-auto object-contain opacity-50 translate-y-[65%] xs:translate-y-[68%] sm:translate-y-[70%] md:translate-y-[72%]" 
           />
         </div>
 

@@ -75,7 +75,12 @@ export default function MapPage() {
   const [statusText, setStatusText] = useState("");
   const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe", mediaUrl: "" });
   const [busy, setBusy] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 860) {
+      return false;
+    }
+    return true;
+  });
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
