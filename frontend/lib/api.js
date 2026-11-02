@@ -120,6 +120,9 @@ export const fetchMapUsers = () => api.get('/map/users').then(r => r.data.users)
 export const fetchKalcerians = () => api.get('/map/kalcerians').then(r => r.data.kalcerians);
 export const fetchMiniEvents = () => fetchAllPages('/mini-events/active', 'events', 100);
 export const fetchPublicEvents = () => fetchAllPages('/events', 'events', 50);
+export const fetchBlockedUsers = () => api.get('/map/blocked').then(r => r.data?.blockedUsers || []).catch(() => []);
+export const blockKalcerian = (targetId) => api.post(`/map/block/${targetId}`).then(r => r.data);
+export const unblockKalcerian = (targetId) => api.delete(`/map/block/${targetId}`).then(r => r.data);
 export const postBroadcast = (message) => api.post('/broadcast', { message });
 export const putBroadcast = (message) => api.put('/broadcast', { message });
 export const delBroadcast = () => api.delete('/broadcast');

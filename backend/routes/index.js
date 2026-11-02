@@ -8,7 +8,7 @@ import { searchIndonesianLocations, reverseGeocodeLocation } from "../controller
 import { getMedia, createMedia } from "../controllers/mediaController.js";
 import { createMiniEvent, getActiveMiniEvents, updateMiniEvent, deleteMiniEvent } from "../controllers/miniEventController.js";
 import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from "../controllers/serviceController.js";
-import { saveTelemetry, getMapUsers, getAllKalcerians } from "../controllers/telemetryController.js";
+import { saveTelemetry, getMapUsers, getAllKalcerians, getBlockedUsers, blockUser, unblockUser } from "../controllers/telemetryController.js";
 import { getMinigameStatus, recordMinigameScore } from "../controllers/minigameController.js";
 import { getMyBroadcast, createBroadcast, updateBroadcast, deleteBroadcast } from "../controllers/broadcastController.js";
 import { redirectEvent } from "../controllers/redirectController.js";
@@ -137,6 +137,11 @@ router.post("/minigame/score", requireAuth, recordMinigameScore);
 router.post("/map/telemetry", requireAuth, saveTelemetry);
 router.get("/map/users", requireAuth, getMapUsers);
 router.get("/map/kalcerians", requireAuth, getAllKalcerians);
+// ─── Blocked Users ────────────────────────────────────────────────────────────
+router.get("/map/blocked", requireAuth, getBlockedUsers);
+router.post("/map/block/:targetId", requireAuth, blockUser);
+router.delete("/map/block/:targetId", requireAuth, unblockUser);
+
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────
 router.post("/broadcast", requireAuth, createBroadcast);

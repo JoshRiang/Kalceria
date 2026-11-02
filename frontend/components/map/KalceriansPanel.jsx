@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
+import { getEventCategory } from "./EventIcon";
 
 const avatarUrl = (user) =>
   user?.profilePicture ||
@@ -12,6 +14,118 @@ function cleanDesc(value) {
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
     .trim();
+}
+
+// ─── 1. Category Event Icons (2D crisp black/white normalized by mode) ───────────
+function CategoryIcon({ category, isMapDark }) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  const border = isMapDark ? "#000000" : "#ffffff";
+
+  switch (category) {
+    case "eat":
+      return (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill={fg} stroke={border} strokeWidth="0.8">
+          <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z" />
+        </svg>
+      );
+    case "special":
+      return (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill={fg} stroke={border} strokeWidth="0.8">
+          <path d="M10.8 3h2.4l-.65 11h-1.1L10.8 3zM12 17.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5z" />
+        </svg>
+      );
+    case "discuss":
+      return (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none">
+          <path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill={fg} stroke={border} strokeWidth="0.8" />
+          <circle cx="10.5" cy="5.3" r="0.7" fill={border} />
+          <circle cx="12" cy="5.3" r="0.7" fill={border} />
+          <circle cx="13.5" cy="5.3" r="0.7" fill={border} />
+          <circle cx="7.5" cy="13" r="2.5" fill={fg} stroke={border} strokeWidth="0.8" />
+          <path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={fg} stroke={border} strokeWidth="0.8" />
+          <circle cx="16.5" cy="13" r="2.5" fill={border} stroke={fg} strokeWidth="1" />
+          <path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={border} stroke={fg} strokeWidth="1" />
+        </svg>
+      );
+    case "cafe":
+    default:
+      return (
+        <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none">
+          <path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke={fg} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke={fg} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill={fg} stroke={border} strokeWidth="0.8" />
+          <ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill={border} stroke={fg} strokeWidth="0.6" />
+          <path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke={border} strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke={fg} strokeWidth="1.6" strokeLinecap="round" />
+          <ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill={fg} stroke={border} strokeWidth="0.8" />
+          <ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill={border} />
+        </svg>
+      );
+  }
+}
+
+// ─── 2. Broadcast Message Icon ───────────────────────────────────────────────────
+function BroadcastLineIcon({ isMapDark }) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  const border = isMapDark ? "#000000" : "#ffffff";
+  return (
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none">
+      <path
+        d="M20 12c0 3.86-3.58 7-8 7a9.3 9.3 0 0 1-3.1-.53L4 20l1.35-3.6A6.67 6.67 0 0 1 4 12c0-3.86 3.58-7 8-7s8 3.14 8 7z"
+        fill={fg}
+        stroke={border}
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ─── 3. Chat / Message Button Icon ───────────────────────────────────────────────
+function ChatButtonIcon({ isMapDark }) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  const border = isMapDark ? "#000000" : "#ffffff";
+  return (
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none">
+      <path
+        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+        fill={fg}
+        stroke={border}
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ─── 4. Block Button Icon (Picture 4: Prohibited circle with diagonal line) ──────
+function BlockButtonIcon({ isMapDark }) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  const border = isMapDark ? "#000000" : "#ffffff";
+  return (
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none">
+      <circle cx="12" cy="12" r="8.5" stroke={border} strokeWidth="3" />
+      <circle cx="12" cy="12" r="8.5" stroke={fg} strokeWidth="2" />
+      <line x1="6" y1="6" x2="18" y2="18" stroke={border} strokeWidth="3" strokeLinecap="round" />
+      <line x1="6" y1="6" x2="18" y2="18" stroke={fg} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ─── 5. Restore / Unblock Icon (Picture 5: Circle with broken diagonal slash) ────
+function RestoreButtonIcon({ isMapDark }) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  const border = isMapDark ? "#000000" : "#ffffff";
+  return (
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none">
+      <circle cx="12" cy="12" r="8.5" stroke={border} strokeWidth="3" />
+      <circle cx="12" cy="12" r="8.5" stroke={fg} strokeWidth="2" />
+      <line x1="6.2" y1="6.2" x2="9.8" y2="9.8" stroke={border} strokeWidth="3" strokeLinecap="round" />
+      <line x1="6.2" y1="6.2" x2="9.8" y2="9.8" stroke={fg} strokeWidth="2" strokeLinecap="round" />
+      <line x1="14.2" y1="14.2" x2="17.8" y2="17.8" stroke={border} strokeWidth="3" strokeLinecap="round" />
+      <line x1="14.2" y1="14.2" x2="17.8" y2="17.8" stroke={fg} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 export function KalceriansPanel({
@@ -31,7 +145,13 @@ export function KalceriansPanel({
   setSelectedOfflineUser,
   sidebarKalcerians,
   focusUser,
+  blockedUserIds = [],
+  onBlockUser,
+  onUnblockUser,
 }) {
+  const [hoveredEventIconId, setHoveredEventIconId] = useState(null);
+  const [confirmingAction, setConfirmingAction] = useState(null); // { userId, type: "block" | "unblock" }
+
   return (
     <motion.aside
       initial={{ y: 80, opacity: 0 }}
@@ -150,30 +270,32 @@ export function KalceriansPanel({
           </div>
         ) : sidebarKalcerians.length > 0 ? (
           sidebarKalcerians.map((user) => {
-            // Check if this Kalcerian created an event or has a broadcast message
+            const isBlocked = blockedUserIds.includes(user.id);
+            // Check if this Kalcerian created an event
             const userEvent = events.find(
               (e) =>
                 e.creator?.id === user.id ||
                 e.creator?.nickname?.toLowerCase() === user.nickname?.toLowerCase() ||
                 e.creator?.name?.toLowerCase() === user.name?.toLowerCase()
             );
-            const district = mapUsersData.find((u) => u.id === user.id)?.district;
-            const hasValidDistrict = district && !/^(scanning|unknown)/i.test(district.trim());
 
             return (
               <div
                 key={user.id}
-                className={`relative border-b ${
+                className={`relative border-b transition-all duration-300 ${
                   isMapDark ? "border-[#30363d]/60" : "border-[#d0d7de]/70"
-                }`}
+                } ${isBlocked ? "opacity-35 select-none" : ""}`}
               >
                 <div
-                  className={`relative w-full grid grid-cols-[64px_1fr] items-center gap-3 px-3 py-3 text-left transition-all cursor-pointer group active:scale-[0.99] outline-none ${
-                    isMapDark ? "hover:bg-white/[0.03]" : "hover:bg-black/[0.02]"
+                  className={`relative w-full grid grid-cols-[64px_1fr] items-center gap-3 px-3 py-3 text-left transition-all group outline-none ${
+                    isBlocked
+                      ? "cursor-default pointer-events-none"
+                      : "cursor-pointer active:scale-[0.99] " + (isMapDark ? "hover:bg-white/[0.03]" : "hover:bg-black/[0.02]")
                   }`}
-                  onMouseEnter={() => setHoveredKalcerian(user.id)}
-                  onMouseLeave={() => setHoveredKalcerian(null)}
+                  onMouseEnter={() => !isBlocked && setHoveredKalcerian(user.id)}
+                  onMouseLeave={() => !isBlocked && setHoveredKalcerian(null)}
                   onClick={() => {
+                    if (isBlocked) return;
                     if (userEvent) {
                       focusUser(userEvent);
                       if (window.innerWidth < 860) setDrawerOpen(false);
@@ -187,30 +309,34 @@ export function KalceriansPanel({
                     }
                   }}
                 >
-                  {/* Dynamic Color Shift Blobs (Picture 4) across hover & click/active on all families */}
-                  <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-xl">
-                    {/* Blob 1: Left - Soft Coral/Red */}
-                    <div className="absolute top-[15%] -left-[15%] w-[120px] h-[120px] bg-red-500/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[3000ms]" />
-                    {/* Blob 2: Right - Warm Gold/Amber */}
-                    <div className="absolute bottom-[15%] -right-[15%] w-[120px] h-[120px] bg-[#ffd60a]/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[4000ms] delay-100" />
-                    {/* Blob 3: Top - Soft Pink/Magenta */}
-                    <div className="absolute -top-[35%] left-[25%] w-[130px] h-[100px] bg-[#ff006e]/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[2500ms] delay-200" />
-                    {/* Blob 4: Bottom - Peach/Rose */}
-                    <div className="absolute -bottom-[35%] right-[25%] w-[130px] h-[100px] bg-pink-500/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[3500ms] delay-300" />
-                  </div>
+                  {/* Dynamic Color Shift Blobs across hover & click/active on non-blocked cards */}
+                  {!isBlocked && (
+                    <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-xl">
+                      {/* Blob 1: Left - Soft Coral/Red */}
+                      <div className="absolute top-[15%] -left-[15%] w-[120px] h-[120px] bg-red-500/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[3000ms]" />
+                      {/* Blob 2: Right - Warm Gold/Amber */}
+                      <div className="absolute bottom-[15%] -right-[15%] w-[120px] h-[120px] bg-[#ffd60a]/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[4000ms] delay-100" />
+                      {/* Blob 3: Top - Soft Pink/Magenta */}
+                      <div className="absolute -top-[35%] left-[25%] w-[130px] h-[100px] bg-[#ff006e]/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[2500ms] delay-200" />
+                      {/* Blob 4: Bottom - Peach/Rose */}
+                      <div className="absolute -bottom-[35%] right-[25%] w-[130px] h-[100px] bg-pink-500/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[3500ms] delay-300" />
+                    </div>
+                  )}
 
                   {/* LEFT 1/3: Photo Profile Circle with Online/Offline Indicator */}
                   <div className="relative z-10 flex justify-center items-center">
                     <div className="relative">
                       <div
-                        className={`w-11 h-11 sm:w-12 sm:h-12 border overflow-hidden rounded-full transition-transform group-hover:scale-105 ${
-                          user.isOnline
+                        className={`w-11 h-11 sm:w-12 sm:h-12 border overflow-hidden rounded-full transition-transform ${
+                          isBlocked
+                            ? "grayscale-[80%] border-[#8b949e]/40"
+                            : user.isOnline
                             ? isMapDark
-                              ? "border-[#3fb950]"
-                              : "border-[#1a7f37]"
+                              ? "border-[#3fb950] group-hover:scale-105"
+                              : "border-[#1a7f37] group-hover:scale-105"
                             : isMapDark
-                            ? "border-[#30363d] opacity-50"
-                            : "border-[#d0d7de] opacity-60"
+                            ? "border-[#30363d] opacity-50 group-hover:scale-105"
+                            : "border-[#d0d7de] opacity-60 group-hover:scale-105"
                         }`}
                       >
                         <ContentImage
@@ -224,83 +350,208 @@ export function KalceriansPanel({
                       <span
                         className={`absolute bottom-0 right-0 w-3 h-3 border-2 rounded-full ${
                           isMapDark ? "border-[#161b22]" : "border-white"
-                        } ${user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
+                        } ${isBlocked ? "bg-[#8b949e]/50" : user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
                       />
                     </div>
                   </div>
 
-                  {/* RIGHT 2/3: User Information & Activity with Consistent Typography */}
+                  {/* RIGHT 2/3: User Information & Clean Content */}
                   <div className="relative z-10 min-w-0 flex flex-col justify-center pr-1">
-                    {/* Line 1: User Name & Category Badge */}
-                    <div className="flex items-center justify-between gap-1.5">
+                    {/* Line 1: User Name + Mini Event Category Icon + Broadcast Icon */}
+                    <div className="flex items-center justify-between gap-1.5 min-w-0">
                       <b
                         className={`text-[13.5px] sm:text-[14px] font-bold tracking-tight truncate leading-snug ${
-                          isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                          isBlocked
+                            ? isMapDark
+                              ? "text-[#8b949e]/70"
+                              : "text-[#656d76]/70"
+                            : isMapDark
+                            ? "text-[#f0f6fc]"
+                            : "text-[#1f2328]"
                         }`}
                       >
                         {user.name}
                       </b>
-                      {userEvent ? (
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider shrink-0 border ${
-                            isMapDark
-                              ? "bg-[#ff006e]/15 border-[#ff006e]/30 text-[#ff7597]"
-                              : "bg-red-50 border-red-200 text-red-700"
-                          }`}
-                        >
-                          {userEvent.category || "Event"}
-                        </span>
-                      ) : hasValidDistrict ? (
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[9.5px] font-medium border leading-none shrink-0 ${
-                            isMapDark
-                              ? "bg-[#21262d] border-[#30363d] text-[#8b949e]"
-                              : "bg-[#f6f8fa] border-[#d0d7de] text-[#656d76]"
-                          }`}
-                        >
-                          {district}
-                        </span>
-                      ) : null}
+
+                      {/* Icons: Category Event Icon + Broadcast Icon (Hidden if blocked) */}
+                      {!isBlocked && (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {/* Mini Event Icon with Hover Box Tooltip */}
+                          {userEvent && (
+                            <div className="relative flex items-center">
+                              <button
+                                type="button"
+                                onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                                onMouseLeave={() => setHoveredEventIconId(null)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  focusUser(userEvent);
+                                  if (window.innerWidth < 860) setDrawerOpen(false);
+                                }}
+                                className="p-1 rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer flex items-center justify-center"
+                                title={userEvent.title}
+                              >
+                                <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                              </button>
+
+                              {/* Hover Box: Floating Arial tooltip with event title */}
+                              {hoveredEventIconId === userEvent.id && (
+                                <div
+                                  className={`absolute bottom-full right-0 mb-1.5 z-50 px-2.5 py-1 rounded-md shadow-xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
+                                    isMapDark
+                                      ? "bg-black border border-white text-white"
+                                      : "bg-white border border-black text-black"
+                                  }`}
+                                  style={{ fontFamily: "Arial, sans-serif" }}
+                                >
+                                  {userEvent.title}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Broadcast Message Icon (Excluded from event hover box) */}
+                          {user.broadcast?.message && (
+                            <div className="p-1 flex items-center shrink-0" title="Broadcast message">
+                              <BroadcastLineIcon isMapDark={isMapDark} />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Line 2: What they are doing (Event Title or Broadcast Motto or Status) */}
-                    <p
-                      className={`text-[12px] sm:text-[12.5px] font-medium leading-snug truncate mt-0.5 ${
-                        userEvent
-                          ? isMapDark
-                            ? "text-[#ffd60a]"
-                            : "text-[#b45309]"
-                          : isMapDark
-                          ? "text-[#f0f6fc]"
-                          : "text-[#1f2328]"
-                      }`}
-                    >
-                      {userEvent
-                        ? userEvent.title
-                        : user.broadcast?.message
-                        ? `"${user.broadcast.message}"`
-                        : user.isOnline
-                        ? "Active on radar"
-                        : "Offline"}
-                    </p>
+                    {/* Line 2 & Line 3: Real content only, NO redundant "Active on radar" or "Offline" or "Kalcerian" */}
+                    {!isBlocked && (
+                      <>
+                        {userEvent ? (
+                          <p
+                            className={`text-[12px] sm:text-[12.5px] font-medium leading-snug truncate mt-0.5 ${
+                              isMapDark ? "text-[#ffd60a]" : "text-[#b45309]"
+                            }`}
+                          >
+                            {userEvent.title}
+                          </p>
+                        ) : user.broadcast?.message ? (
+                          <p
+                            className={`text-[12px] sm:text-[12.5px] font-medium leading-snug truncate mt-0.5 ${
+                              isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                            }`}
+                          >
+                            &quot;{user.broadcast.message}&quot;
+                          </p>
+                        ) : null}
 
-                    {/* Line 3: Description Quote or User Nickname */}
-                    <p
-                      className={`text-[11px] truncate mt-0.5 ${
-                        isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-                      }`}
-                    >
-                      {userEvent?.description
-                        ? `"${cleanDesc(userEvent.description)}"`
-                        : user.nickname
-                        ? `@${user.nickname}`
-                        : "Kalcerian"}
-                    </p>
+                        {userEvent?.description ? (
+                          <p
+                            className={`text-[11px] truncate mt-0.5 ${
+                              isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+                            }`}
+                          >
+                            &quot;{cleanDesc(userEvent.description)}&quot;
+                          </p>
+                        ) : null}
+                      </>
+                    )}
+
+                    {/* Bottom Right Actions (Chat Icon + Block Button, or Restore Button when blocked) */}
+                    {!isBlocked ? (
+                      <div className="flex items-center justify-end gap-2.5 mt-1.5 pt-0.5 pointer-events-auto">
+                        {/* Chat Icon (message the user) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                          className="p-1 transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer flex items-center justify-center"
+                          title={`Message ${user.name}`}
+                        >
+                          <ChatButtonIcon isMapDark={isMapDark} />
+                        </button>
+
+                        {/* Block Button (Picture 4) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmingAction({ userId: user.id, type: "block" });
+                          }}
+                          className="p-1 transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer flex items-center justify-center"
+                          title={`Block ${user.name}`}
+                        >
+                          <BlockButtonIcon isMapDark={isMapDark} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-end mt-1.5 pt-0.5 pointer-events-auto">
+                        {/* Restore / Unblock Button (Picture 5 - ONLY touchable element on blocked card) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmingAction({ userId: user.id, type: "unblock" });
+                          }}
+                          className="p-1 transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer flex items-center justify-center"
+                          title={`Unblock ${user.name}`}
+                        >
+                          <RestoreButtonIcon isMapDark={isMapDark} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Desktop Hover Card */}
-                {hoveredKalcerian === user.id && (
+                {/* 5. Block / Unblock Confirmation Overlay */}
+                {confirmingAction?.userId === user.id && (
+                  <div
+                    className={`absolute inset-0 z-30 flex items-center justify-between px-3.5 sm:px-4 py-2 backdrop-blur-md rounded-xl transition-all ${
+                      isMapDark
+                        ? "bg-[#161b22]/90 border border-white/20 text-white shadow-xl"
+                        : "bg-white/90 border border-black/20 text-black shadow-xl"
+                    }`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span
+                      className="font-sans font-semibold text-[13px] sm:text-[13.5px] tracking-tight truncate mr-2"
+                      style={{ fontFamily: "Arial, sans-serif" }}
+                    >
+                      {confirmingAction.type === "block" ? `Block ${user.name}?` : `Unblock ${user.name}?`}
+                    </span>
+                    <div className="flex items-center gap-3 sm:gap-3.5 shrink-0">
+                      {/* Cancel ✕ (Thin but determined, red, scales on hover/click) */}
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingAction(null)}
+                        className="p-1 transition-transform hover:scale-125 active:scale-95 outline-none cursor-pointer"
+                        title="Cancel"
+                      >
+                        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+                          <path d="M18 6L6 18M6 6l12 12" stroke={isMapDark ? "#ff6b6b" : "#cf222e"} strokeWidth="1.8" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                      {/* Confirm ✓ (Thin but determined, green, scales on hover/click) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirmingAction.type === "block") {
+                            onBlockUser?.(user.id);
+                          } else {
+                            onUnblockUser?.(user.id);
+                          }
+                          setConfirmingAction(null);
+                        }}
+                        className="p-1 transition-transform hover:scale-125 active:scale-95 outline-none cursor-pointer"
+                        title="Confirm"
+                      >
+                        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+                          <path d="M20 6L9 17l-5-5" stroke={isMapDark ? "#3fb950" : "#1a7f37"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Desktop Hover Card (Only for non-blocked users) */}
+                {hoveredKalcerian === user.id && !isBlocked && (
                   <div
                     className={`absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 w-[220px] border rounded-lg shadow-xl p-3 flex flex-col gap-2.5 pointer-events-auto hidden md:flex font-sans backdrop-blur-md ${
                       isMapDark
@@ -378,10 +629,9 @@ export function KalceriansPanel({
                               focusUser(user);
                               scheduleTimeout(() => setFocusedUserId(null), 100);
                             }
-                            setHoveredKalcerian(null);
                           }}
                         >
-                          Locate
+                          Focus
                         </button>
                       )}
                     </div>
@@ -391,14 +641,12 @@ export function KalceriansPanel({
             );
           })
         ) : (
-          <div className="py-12 text-center flex flex-col items-center gap-2">
-            <p
-              className={`text-xs ${
-                isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-              }`}
-            >
-              No Kalcerians found
-            </p>
+          <div
+            className={`p-6 text-center text-xs ${
+              isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
+            }`}
+          >
+            No Kalcerians found.
           </div>
         )}
       </div>

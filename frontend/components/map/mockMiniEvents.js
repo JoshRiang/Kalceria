@@ -18,7 +18,8 @@ export const INITIAL_MOCK_MINI_EVENTS = [
       id: "mock_ahmad",
       name: "Ahmad Bintaro",
       nickname: "Ahmad",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad"
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad",
+      broadcast: { message: "Riding around Sector 9!", createdAt: new Date().toISOString() }
     }
   },
   {
@@ -35,7 +36,8 @@ export const INITIAL_MOCK_MINI_EVENTS = [
       id: "mock_rei",
       name: "Rei Nathan",
       nickname: "Rei",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rei"
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rei",
+      broadcast: { message: "Coffee & route check at FM", createdAt: new Date().toISOString() }
     }
   },
   {
@@ -72,7 +74,8 @@ export const INITIAL_MOCK_MINI_EVENTS = [
       id: "mock_alpha",
       name: "Kalcerian Alpha",
       nickname: "Alpha",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alpha"
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alpha",
+      broadcast: { message: "Highway run starts in 30 mins!", createdAt: new Date().toISOString() }
     }
   },
   {
@@ -126,7 +129,8 @@ export const INITIAL_MOCK_MINI_EVENTS = [
       id: "mock_coki",
       name: "Coki",
       nickname: "Coki",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Coki"
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Coki",
+      broadcast: { message: "Post-cruise street food feast near Sector 7 strip.", createdAt: new Date().toISOString() }
     }
   },
   {
@@ -143,7 +147,8 @@ export const INITIAL_MOCK_MINI_EVENTS = [
       id: "mock_bonita",
       name: "Bonita Bon",
       nickname: "Bonita",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bonita"
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bonita",
+      broadcast: { message: "Dimsum spot is full, parking outside", createdAt: new Date().toISOString() }
     }
   },
   {

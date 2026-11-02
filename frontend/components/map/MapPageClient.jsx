@@ -21,6 +21,7 @@ import {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents,
   postBroadcast, putBroadcast, postLocation, patchVisibility,
   postMiniEvent, putMiniEvent, delMiniEvent,
+  fetchBlockedUsers, blockKalcerian, unblockKalcerian,
 } from "@/lib/api";
 
 const SnapMap = dynamic(() => import("@/components/SnapMap"), {
@@ -220,8 +221,55 @@ export default function MapPage() {
     mapInstance.on("movestart", () => {});
   }, []);
 
-  // derived: users for the map (only online users with coords)
-  const mapUsers = useMemo(() => mapUsersData, [mapUsersData]);
+  // Blocked users state (synced with localStorage + backend API)
+  const [blockedUserIds, setBlockedUserIds] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("kalceria_blocked_users");
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    fetchBlockedUsers().then((ids) => {
+      if (Array.isArray(ids) && ids.length) {
+        setBlockedUserIds((prev) => Array.from(new Set([...prev, ...ids])));
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleBlockUser = useCallback(async (targetId) => {
+    setBlockedUserIds((prev) => {
+      const next = Array.from(new Set([...prev, targetId]));
+      try { localStorage.setItem("kalceria_blocked_users", JSON.stringify(next)); } catch {}
+      return next;
+    });
+    try {
+      await blockKalcerian(targetId);
+    } catch {}
+  }, []);
+
+  const handleUnblockUser = useCallback(async (targetId) => {
+    setBlockedUserIds((prev) => {
+      const next = prev.filter((id) => id !== targetId);
+      try { localStorage.setItem("kalceria_blocked_users", JSON.stringify(next)); } catch {}
+      return next;
+    });
+    try {
+      await unblockKalcerian(targetId);
+    } catch {}
+  }, []);
+
+  // derived: users and events for the map (filtering out blocked users)
+  const visibleMapUsers = useMemo(() => {
+    return (mapUsersData || []).filter((u) => !blockedUserIds.includes(u.id));
+  }, [mapUsersData, blockedUserIds]);
+
+  const visibleEvents = useMemo(() => {
+    return (events || []).filter((e) => !blockedUserIds.includes(e.creator?.id));
+  }, [events, blockedUserIds]);
 
   // derived: kalcerians for the sidebar (merging all event creators so every dummy event has its kalcerian entry!)
   const sidebarKalcerians = useMemo(() => {
@@ -237,7 +285,7 @@ export default function MapPage() {
           nickname: ev.creator.nickname || ev.creator.name || "Kalcerian",
           profilePicture: ev.creator.profilePicture || null,
           isOnline: true,
-          broadcast: null,
+          broadcast: ev.creator.broadcast || null,
           lat: ev.lat,
           lng: ev.lng,
           event: ev,
@@ -519,8 +567,8 @@ export default function MapPage() {
         }}
       >
         <SnapMap
-          users={mapUsers}
-          events={events}
+          users={visibleMapUsers}
+          events={visibleEvents}
           onMapReady={handleMapReady}
           focusUserId={focusedUserId}
           isMapDark={isMapDark}
@@ -633,6 +681,9 @@ export default function MapPage() {
             setSelectedOfflineUser={setSelectedOfflineUser}
             sidebarKalcerians={sidebarKalcerians}
             focusUser={focusUser}
+            blockedUserIds={blockedUserIds}
+            onBlockUser={handleBlockUser}
+            onUnblockUser={handleUnblockUser}
           />
         </>
       )}
