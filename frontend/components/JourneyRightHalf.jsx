@@ -58,36 +58,24 @@ export function JourneySlider({ images, logo, logoAlt, logoWidth = 260, logoHeig
 
 export function JourneyDescriptionBox({ description, className }) {
   const hasMaxWidth = className && className.includes("max-w-");
-  const defaultClasses = `relative w-full p-6 sm:p-8 flex items-center justify-center overflow-hidden rounded-3xl ${hasMaxWidth ? "" : "max-w-[400px]"}`;
+  const defaultClasses = `relative w-full px-2 py-0.5 flex items-center justify-center ${hasMaxWidth ? "" : "max-w-[360px] md:max-w-[480px]"}`;
 
   return (
-    <div 
-      className={`${defaultClasses} ${className || ""} bg-black/40 border border-white/15 shadow-[0_0_50px_rgba(255,255,255,0.2)]`}
-      style={{
-        WebkitBackdropFilter: "blur(24px)",
-        backdropFilter: "blur(24px)",
-      }}
-    >
-      {/* Cloud Dynamic Glow Blobs */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-50 mix-blend-screen">
-        <div className="absolute top-[-40%] left-[-20%] w-[120%] h-[160%] bg-[#FF00FF]/30 rounded-full blur-[50px] animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute bottom-[-40%] right-[-20%] w-[120%] h-[160%] bg-[#FFD700]/30 rounded-full blur-[50px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
-      </div>
-
-      <div className="relative z-10 w-full text-xs md:text-sm font-serif not-italic text-white/95 drop-shadow-md leading-relaxed text-justify">
+    <div className={`${defaultClasses} ${className || ""}`}>
+      <p className="relative z-10 w-full text-[15px] sm:text-base md:text-[17px] xl:text-[18px] font-serif not-italic text-white text-center leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
         {String(description || '').split(/(Universitas Indonesia Motorsport|Dream Shift Labs|Mist)/g).map((part, index) => (
           ['Mist', 'Dream Shift Labs', 'Universitas Indonesia Motorsport'].includes(part)
             ? <span key={`${part}-${index}`} className="underline font-bold italic">{part}</span>
             : part
         ))}
-      </div>
+      </p>
     </div>
   );
 }
 
 export default function JourneyRightHalf({ images, logo, logoAlt, logoWidth, logoHeight, description, className }) {
   return (
-    <div className={`hidden xl:flex flex-col items-center justify-center gap-8 z-30 ${className || "absolute right-0 top-1/2 -translate-y-1/2 w-1/2"}`}>
+    <div className={`hidden xl:flex flex-col items-center justify-center gap-4 xl:gap-5 z-30 ${className || "absolute right-0 top-1/2 -translate-y-1/2 w-1/2"}`}>
       <JourneySlider images={images} logo={logo} logoAlt={logoAlt} logoWidth={logoWidth} logoHeight={logoHeight} />
       <JourneyDescriptionBox description={description} />
     </div>

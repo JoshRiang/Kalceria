@@ -139,7 +139,7 @@ export default function JourneyPageClient() {
           <div className="container mx-auto px-6 md:px-12 flex flex-col items-center justify-center relative z-20">
             {/* Center Stack for Mobile and iPad / Tablet Family */}
             {isMobileOrTablet && (
-              <div className="w-full flex flex-col items-center justify-center gap-6 z-30">
+              <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4 z-30">
                 <JourneySlider 
                   logo="/se1.webp" 
                   logoAlt="Mist" 
@@ -149,7 +149,7 @@ export default function JourneyPageClient() {
                 <JourneyDescriptionBox 
                   description="Mist is a legendary entity in the underground automotive scene, bringing unparalleled style and performance." 
                   delay={1000} 
-                  className={isMobile ? "max-w-[320px]" : "max-w-[460px]"} 
+                  className={isMobile ? "max-w-[340px]" : "max-w-[480px]"} 
                 />
               </div>
             )}
@@ -170,7 +170,7 @@ export default function JourneyPageClient() {
         {/* Section 2 - UI Racing Team */}
         <section className="relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center xl:bg-[url('/bgj_2.webp')] xl:bg-cover xl:bg-center flex flex-col items-center justify-center overflow-hidden">
           <div className="container mx-auto px-6 md:px-12 relative z-20 flex flex-col items-center">
-            <div className="w-full flex flex-col items-center gap-6 z-30">
+            <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4 z-30">
               <JourneySlider 
                 logo="/se2.webp" 
                 logoAlt="UI Racing Team" 
@@ -180,7 +180,7 @@ export default function JourneyPageClient() {
               <JourneyDescriptionBox 
                 description="We partner with Universitas Indonesia Motorsport to deliver high-octane experiences and unparalleled performance." 
                 delay={1200} 
-                className={isMobile ? "max-w-[320px]" : "max-w-[460px]"} 
+                className={isMobile ? "max-w-[340px]" : "max-w-[480px]"} 
               />
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function JourneyPageClient() {
           <div className="container mx-auto px-6 md:px-12 flex flex-col items-center justify-center relative z-20">
             {/* Center Stack for Mobile and iPad / Tablet Family */}
             {isMobileOrTablet && (
-              <div className="w-full flex flex-col items-center justify-center gap-6 z-30">
+              <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4 z-30">
                 <JourneySlider 
                   logo="/dsl.webp" 
                   logoAlt="Dream Shift Labs" 
@@ -201,7 +201,7 @@ export default function JourneyPageClient() {
                 <JourneyDescriptionBox 
                   description="Dream Shift Labs pioneers the digital frontier of automotive culture, crafting immersive experiences that transcend reality." 
                   delay={1400} 
-                  className={isMobile ? "max-w-[320px]" : "max-w-[460px]"}
+                  className={isMobile ? "max-w-[340px]" : "max-w-[480px]"}
                 />
               </div>
             )}
