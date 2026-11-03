@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  register, login, requestOtp, verifyOtp,
+  register, login, requestOtp, verifyOtp, completeRegistration,
   requestPasswordReset, resetPassword, checkUsername, verifyJitPassword, getMe,
   updateMe, deleteMe, changePassword
 } from "../controllers/authController.js";
@@ -89,6 +89,7 @@ router.get("/health", (_req, res) => res.json({ ok: true }));
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 router.get("/auth/csrf", issueCsrfToken);
 router.post("/auth/register", signupRateLimit, authSignupDefense, requirePublicSignup, register);
+router.post("/auth/register/complete", signupRateLimit, authSignupDefense, requirePublicSignup, completeRegistration);
 router.post("/auth/login", loginIpRateLimit, loginIdentityRateLimit, authLoginDefense, login);
 router.post("/auth/logout", logout);
 router.post("/auth/otp/request", otpRequestIpRateLimit, otpRequestEmailRateLimit, requireEmailAuth, requestOtp);

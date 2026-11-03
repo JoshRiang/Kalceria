@@ -259,19 +259,11 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     // Start background process with loading buffer & blur
     setIsBuffering(true);
     try {
-      // 1. Verify OTP with backend
+      // 1. Verify OTP with backend (marks pending registration as verified)
       await api.post("/auth/otp/verify", { email: otpEmail, otp: code });
 
-      // 2. Establish authenticated session via backend login
+      // 2. Run Username Suggestion Algorithm based on name + email
       const creds = registeredCredsRef.current;
-      const loginRes = await api.post("/auth/login", {
-        email: creds.email,
-        password: creds.password,
-      });
-      establishSession(loginRes.data);
-      activeSessionRef.current = loginRes.data;
-
-      // 3. Run Username Suggestion Algorithm based on name + email
       const candidates = generateUsernameCandidates(creds.name, creds.email, creds.dob);
       const chosen = await findFirstAvailableUsername(candidates, async (cand) => {
         const checkRes = await api.get(`/auth/check-username/${encodeURIComponent(cand)}`);
@@ -294,27 +286,27 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   // ── Post-Username Submission -> Loading Buffer -> Welcome Back -> Landing ──
   async function handleUsernameDone(chosenUsername) {
     setIsBuffering(true);
+    setError("");
     try {
-      // 1. Save username to user profile
-      await api.put("/users/me", {
-        nickname: chosenUsername,
-        name: chosenUsername,
+      const creds = registeredCredsRef.current;
+      // Atomically commit user to database and issue authenticated session
+      const res = await api.post("/auth/register/complete", {
+        email: creds.email || otpEmail,
+        username: chosenUsername,
       });
 
-      // Update stored session user object
-      if (activeSessionRef.current?.user) {
-        activeSessionRef.current.user.nickname = chosenUsername;
-        activeSessionRef.current.user.name = chosenUsername;
-        establishSession(activeSessionRef.current);
+      if (res.data?.user) {
+        establishSession(res.data.user);
+        activeSessionRef.current = res.data;
       }
 
-      // 2. Redirect to Login Greeting: "Welcome Back, <username>"
+      // Redirect to Login Greeting: "Welcome Back, <username>"
       setTimeout(() => {
         setIsBuffering(false);
         setMode("login");
         setSuccess(`Welcome Back, ${chosenUsername}`);
         setTimeout(() => {
-          onAuthSuccess?.(activeSessionRef.current);
+          onAuthSuccess?.(res.data);
         }, 1200);
       }, 800);
     } catch (err) {
@@ -330,7 +322,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     setSuccess("");
     try {
       await api.post("/auth/password/reset-request", { email: emailToReset });
-      setSuccess("Magic link telah dikirim ke email kamu.");
+      setSuccess("Link reset password telah dikirim ke email kamu. Silakan periksa inbox Gmail kamu.");
     } catch (err) {
       setError(err.response?.data?.error || "Gagal mengirim link reset password.");
     } finally {

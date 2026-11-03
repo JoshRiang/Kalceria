@@ -93,9 +93,16 @@ export default function ForgotPasswordStep({
         <button
           type="submit"
           disabled={loading || !isEmailValid}
-          className="w-full py-3.5 bg-white hover:bg-slate-200 text-black font-sans font-bold text-sm tracking-wider uppercase rounded-md transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer mb-4"
+          className="w-full py-3.5 bg-white hover:bg-slate-200 text-black font-sans font-bold text-sm tracking-wider uppercase rounded-md transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer mb-4 flex items-center justify-center gap-2"
         >
-          {loading ? "Mengirim…" : "KIRIM MAGIC LINK"}
+          {loading ? (
+            <div className="flex items-center justify-center gap-2.5">
+              <div className="w-4 h-4 border-2 border-black/25 border-t-black rounded-full animate-spin" />
+              <span>Mengirim Link…</span>
+            </div>
+          ) : (
+            "Kirim Link"
+          )}
         </button>
       </form>
 
@@ -115,3 +122,4 @@ export default function ForgotPasswordStep({
     </div>
   );
 }
+

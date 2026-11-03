@@ -110,41 +110,49 @@ export async function register(req, res, next) {
     }
 
     const exists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (exists) return res.status(409).json({ error: 'Email already registered.' });
+    if (exists) {
+      if (exists.isEmailVerified) {
+        return res.status(409).json({ error: 'Email already registered.' });
+      }
+      // Stale / torn unverified registration from previous attempt: clean up so user can re-register cleanly
+      await prisma.user.delete({ where: { id: exists.id } }).catch(() => {});
+    }
 
     const passwordHash = await argon2.hash(password);
     const safeAvatar = sanitizeProfilePicture(profilePicture);
     const safePhone = (typeof phone === 'string' && phone.trim()) ? phone.trim().slice(0, 32) : '-';
     const emailAuthOn = process.env.ENABLE_EMAIL_AUTH === 'true';
 
-    const user = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        dob: new Date(dob),
-        email: normalizedEmail,
-        gender: gender ? gender.toUpperCase() : 'OTHER',
-        phone: safePhone,
-        passwordHash,
-        profilePicture: safeAvatar,
-        domicileLat: parsedLat,
-        domicileLng: parsedLng,
-      },
-    });
+    // Store pending registration payload in Redis (TTL: 1 hour)
+    // The account is ONLY committed to PostgreSQL when the user finishes choosing their username (Done)
+    const pendingData = {
+      name: name.trim(),
+      dob: new Date(dob).toISOString(),
+      email: normalizedEmail,
+      gender: gender ? gender.toUpperCase() : 'OTHER',
+      phone: safePhone,
+      passwordHash,
+      profilePicture: safeAvatar,
+      domicileLat: parsedLat,
+      domicileLng: parsedLng,
+    };
+    await redis.set(`pending:register:${normalizedEmail}`, JSON.stringify(pendingData), 'EX', 3600);
 
     if (emailAuthOn) {
       try {
-        await sendVerificationOtp(user.email);
-      } catch {
-        await redis.del(`otp:${user.email}`);
-        console.error('[OTP] Registration email delivery failed.');
+        await sendVerificationOtp(normalizedEmail);
+      } catch (err) {
+        await redis.del(`otp:${normalizedEmail}`);
+        await redis.del(`pending:register:${normalizedEmail}`);
+        console.error('[OTP] Registration email delivery failed:', err.message);
+        return res.status(500).json({ error: 'Failed to send verification email. Please try again.' });
       }
     }
 
     res.status(201).json({
       message: emailAuthOn ? 'Registered. Check email for OTP.' : 'Registration successful.',
       emailVerificationRequired: emailAuthOn,
-      userId: user.id,
-      username: user.name,
+      email: normalizedEmail,
     });
   } catch (err) {
     next(err);
@@ -204,7 +212,7 @@ export async function login(req, res, next) {
 
     res.json({
       userId: user.id,
-      username: user.name,
+      username: user.nickname || user.name,
       role: user.role,
       csrfToken,
     });
@@ -272,9 +280,116 @@ export async function verifyOtp(req, res, next) {
       return res.status(400).json({ error: 'Invalid or expired OTP.' });
     }
 
-    await prisma.user.update({ where: { email }, data: { isEmailVerified: true } });
+    // Mark pending registration as OTP-verified in Redis (valid for 30 minutes to choose username)
+    await redis.set(`pending:verified:${email}`, '1', 'EX', 1800);
 
-    res.json({ message: 'Email verified.' });
+    // If an unverified user record already exists in DB, update isEmailVerified
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      await prisma.user.update({ where: { email }, data: { isEmailVerified: true } });
+    }
+
+    res.json({ message: 'Email verified.', isPending: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Complete Registration (Choose Username & Commit to Postgres) ─────────────
+export async function completeRegistration(req, res, next) {
+  try {
+    const { email, username } = req.body || {};
+    if (
+      typeof email !== 'string' || !email.trim()
+      || typeof username !== 'string' || !username.trim()
+      || username.trim().length > 50
+    ) {
+      return res.status(400).json({ error: 'Please provide a valid email and username.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const cleanUsername = username.trim();
+
+    // Verify OTP was passed for this email
+    const isVerified = await redis.get(`pending:verified:${normalizedEmail}`);
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (!isVerified && (!existingUser || !existingUser.isEmailVerified)) {
+      return res.status(400).json({ error: 'Please verify OTP before choosing a username.' });
+    }
+
+    // Check if username is already taken by someone else
+    const taken = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { name: { equals: cleanUsername, mode: 'insensitive' } },
+          { nickname: { equals: cleanUsername, mode: 'insensitive' } },
+        ],
+      },
+    });
+    if (taken && taken.email.toLowerCase() !== normalizedEmail) {
+      console.warn(`[CompleteRegistration] Username taken by: ${taken.email} (matching ${cleanUsername})`);
+      return res.status(409).json({ error: 'Username is already taken.' });
+    }
+
+    // Retrieve pending registration data
+    const pendingJson = await redis.get(`pending:register:${normalizedEmail}`);
+    let user;
+
+    if (pendingJson) {
+      const data = JSON.parse(pendingJson);
+      // Atomically commit the user record to PostgreSQL now that username is finalized
+      user = await prisma.user.create({
+        data: {
+          name: data.name,
+          nickname: cleanUsername,
+          dob: new Date(data.dob),
+          email: data.email,
+          gender: data.gender || 'OTHER',
+          phone: data.phone || '-',
+          passwordHash: data.passwordHash,
+          profilePicture: data.profilePicture || null,
+          domicileLat: data.domicileLat,
+          domicileLng: data.domicileLng,
+          isEmailVerified: true,
+        },
+      });
+
+      // Cleanup pending Redis states
+      await redis.del(`pending:register:${normalizedEmail}`);
+      await redis.del(`pending:verified:${normalizedEmail}`);
+      await redis.del(`otp:${normalizedEmail}`);
+    } else if (existingUser) {
+      user = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          nickname: cleanUsername,
+          isEmailVerified: true,
+        },
+      });
+      await redis.del(`pending:verified:${normalizedEmail}`);
+    } else {
+      return res.status(400).json({ error: 'Registration session expired. Please register again.' });
+    }
+
+    // Issue clean authenticated session & cookie
+    const token = await createAuthSession(user);
+    setAuthCookie(res, token);
+    const csrfToken = issueLoginCsrfToken(res);
+
+    res.status(201).json({
+      message: 'Registration completed successfully.',
+      userId: user.id,
+      username: user.nickname || user.name,
+      user: {
+        id: user.id,
+        name: user.name,
+        nickname: user.nickname,
+        email: user.email,
+        role: user.role,
+      },
+      csrfToken,
+    });
   } catch (err) {
     next(err);
   }
@@ -288,7 +403,9 @@ export async function requestPasswordReset(req, res, next) {
       return res.status(400).json({ error: 'Please provide a valid email address.' });
     }
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(200).json({ message: 'If email exists, reset link sent.' });
+    if (!user) {
+      return res.status(404).json({ error: 'Email tidak terdaftar dalam sistem Kalceria.' });
+    }
 
     const token = crypto.randomBytes(32).toString('hex');
     await redis.set(`reset:${token}`, email, 'EX', 3600); // 1 hour
@@ -297,9 +414,10 @@ export async function requestPasswordReset(req, res, next) {
       await sendPasswordResetEmail(email, token);
     } catch (error) {
       await redis.del(`reset:${token}`);
-      throw error;
+      console.error('[ResetPassword] Email delivery failed:', error.message);
+      return res.status(500).json({ error: 'Gagal mengirim email reset password. Coba beberapa saat lagi.' });
     }
-    res.json({ message: 'If email exists, reset link sent.' });
+    res.json({ message: 'Link reset password telah dikirim ke email kamu.' });
   } catch (err) {
     next(err);
   }
@@ -337,7 +455,18 @@ export async function resetPassword(req, res, next) {
     const sessionToken = await createAuthSession(user);
     setAuthCookie(res, sessionToken);
 
-    res.json({ message: 'Password reset successful.', user });
+    res.json({
+      message: 'Password reset successful.',
+      user: {
+        id: user.id,
+        name: user.name,
+        nickname: user.nickname,
+        username: user.nickname || user.name,
+        email: user.email,
+        role: user.role,
+      },
+      username: user.nickname || user.name,
+    });
   } catch (err) {
     next(err);
   }

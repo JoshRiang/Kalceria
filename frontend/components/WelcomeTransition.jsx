@@ -61,7 +61,7 @@ function RedirectText() {
   }, [showDots]);
 
   return (
-    <div className="flex relative w-fit mx-auto" style={{ 
+    <div className="flex items-center justify-center w-fit mx-auto" style={{ 
       color: "rgba(255,255,255,0.7)", 
       fontFamily: "'Inter', sans-serif",
       fontSize: "9px", 
@@ -69,10 +69,7 @@ function RedirectText() {
       textTransform: "uppercase",
       fontWeight: 300,
     }}>
-      <span>{text}</span>
-      <span style={{ position: "absolute", left: "100%", whiteSpace: "pre" }}>
-        {showDots ? dots : ""}
-      </span>
+      <span>{text}{showDots ? dots : ""}</span>
     </div>
   );
 }
@@ -230,19 +227,19 @@ export default function WelcomeTransition({ username, onComplete }) {
       {!isMobile && <BackgroundBlobs />}
       <DominoChevrons active={showGears && !isExiting} isMobile={isMobile} />
       
-      <div className="relative z-20 flex flex-col items-center w-full">
-        {/* Main Text Container - Tight Vertical Area without sparse gap */}
-        <div className="h-auto min-h-[50px] sm:min-h-[70px] md:min-h-[90px] py-1 flex flex-row items-center justify-center gap-x-2 sm:gap-x-4 font-sans font-black tracking-tighter w-full px-2 sm:px-4 whitespace-nowrap overflow-hidden">
-          <h1 className="text-[34px] xs:text-[42px] md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF4D00] via-[#FFD700] to-[#FFCC00] drop-shadow-[0_0_20px_rgba(255,140,0,0.3)]">
+      <div className="relative z-20 flex flex-col items-center w-full px-4">
+        {/* Main Text Container - Fully Responsive with Next-line Wrapping */}
+        <div className="h-auto py-2 flex flex-wrap items-center justify-center gap-x-2 sm:gap-x-4 font-sans font-black tracking-tighter w-full max-w-5xl text-center leading-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF4D00] via-[#FFD700] to-[#FFCC00] drop-shadow-[0_0_20px_rgba(255,140,0,0.3)] inline-block">
             <Typewriter text="Welcome Back," delay={800} speed={130} />
           </h1>
-          <h1 className="text-[34px] xs:text-[42px] md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)]">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)] inline-block break-words max-w-full">
              <Typewriter text={username} delay={800} speed={130} dir="ltr" />
           </h1>
         </div>
         
-        {/* Redirect Status - Tight, modern spacing */}
-        <div className="flex flex-col items-center mt-1 sm:mt-2 h-7 justify-center">
+        {/* Redirect Status - Responsive Top Spacing so it NEVER overlaps long wrapped text */}
+        <div className="flex flex-col items-center mt-6 sm:mt-8 h-8 justify-center">
           {showGears && <RedirectText />}
         </div>
       </div>
