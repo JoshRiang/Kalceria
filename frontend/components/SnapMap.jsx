@@ -37,14 +37,8 @@ export default function SnapMap({
   const markerRefs = useRef({});
   const [isReady, setIsReady] = useState(false);
 
-  // Update tile layer & invalidate map size on theme toggle
+  // Invalidate map size on theme toggle
   useEffect(() => {
-    if (tileLayerRef.current) {
-      const tileUrl = isMapDark
-        ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-        : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
-      tileLayerRef.current.setUrl(tileUrl);
-    }
     if (mapRef.current) {
       mapRef.current.invalidateSize();
     }
@@ -119,25 +113,23 @@ export default function SnapMap({
         closePopupOnClick: true,
       });
 
-      // Ultra-reliable public basemap powered by Esri ArcGIS Online
-      // Free, zero API key requirement, zero watermarks, fast worldwide CDN
-      const tileUrl = isMapDark
-        ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-        : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+      // Standard OpenStreetMap tiles - matching Picture 3 and late October commits
+      const tileLayer = L.tileLayer(
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors',
+        }
+      ).addTo(map);
 
-      const tileLayer = L.tileLayer(tileUrl, {
-        maxZoom: 19,
-        attribution: "Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ",
-      }).addTo(map);
-
-      // Multi-layer fallback in case of regional edge timeout
+      // Multi-shard fallback in case of regional edge timeout
       tileLayer.on("tileerror", function (error) {
         if (error.tile && !error.tile._hasFallenBack) {
           error.tile._hasFallenBack = true;
           const coords = error.coords;
           if (coords) {
-            const fallbackService = isMapDark ? "Canvas/World_Dark_Gray_Base" : "Canvas/World_Light_Gray_Base";
-            error.tile.src = `https://services.arcgisonline.com/ArcGIS/rest/services/${fallbackService}/MapServer/tile/${coords.z}/${coords.y}/${coords.x}`;
+            const shard = ["a", "b", "c"][Math.abs(coords.x + coords.y) % 3];
+            error.tile.src = `https://${shard}.tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
           }
         }
       });

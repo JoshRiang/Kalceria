@@ -15,6 +15,9 @@ export default function HomeClient() {
     if (urlParams.get("auth") === "true" || sessionStorage.getItem("triggerAuth") === "true") {
       return "auth";
     }
+    if (sessionStorage.getItem("introPlayed") === "true") {
+      return "landing";
+    }
     return "intro";
   });
   const [username, setUsername] = useState("User");
@@ -31,6 +34,7 @@ export default function HomeClient() {
   }, []);
 
   const handleIntroComplete = () => {
+    sessionStorage.setItem("introPlayed", "true");
     setPhase("landing");
   };
 

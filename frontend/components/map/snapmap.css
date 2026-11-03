@@ -23,6 +23,7 @@
 }
 
 .snap-tactical-map.dark-theme .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7) !important;
   visibility: visible !important;
   opacity: 1 !important;
   max-width: none !important;

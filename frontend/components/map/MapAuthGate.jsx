@@ -86,6 +86,7 @@ export const MapAuthGate = memo(function MapAuthGate() {
           onClick={() => {
             if (typeof window !== "undefined") {
               sessionStorage.setItem("triggerAuth", "true");
+              sessionStorage.setItem("introPlayed", "true");
             }
           }}
         >
