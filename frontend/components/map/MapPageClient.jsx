@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { MapAuthGate } from "@/components/map/MapAuthGate";
-import { INITIAL_MOCK_MINI_EVENTS } from "@/components/map/mockMiniEvents";
+import { INITIAL_MOCK_MINI_EVENTS, INITIAL_ACCEPTED_COLLABS, INITIAL_EVENT_REQUESTS, cleanEventDesc, mergeEvents } from "@/components/map/mockMiniEvents";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
@@ -37,31 +37,7 @@ const avatarUrl = (user) =>
   user?.profilePicture ||
   `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.name || "anon")}`;
 
-const cleanEventDesc = (item) => {
-  if (!item) return item;
-  const raw = item.description || "";
-  const catMatch = raw.match(/\[CAT:([a-z_]+)\]/i);
-  const mediaMatch = raw.match(/\[MEDIA:([^\]]+)\]/i);
-  const cleanDescription = raw
-    .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
-    .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
-    .trim();
-  return {
-    ...item,
-    category: catMatch ? catMatch[1].toLowerCase() : (item.category || "cafe"),
-    mediaUrl: mediaMatch ? mediaMatch[1] : (item.mediaUrl || null),
-    description: cleanDescription,
-  };
-};
 
-const mergeEvents = (activeList) => {
-  const normalizedMocks = INITIAL_MOCK_MINI_EVENTS.map(cleanEventDesc);
-  if (!activeList || activeList.length === 0) return normalizedMocks;
-  const cleanedActive = activeList.map(cleanEventDesc);
-  const activeIds = new Set(cleanedActive.map((e) => e.id));
-  const missingMocks = normalizedMocks.filter((m) => !activeIds.has(m.id));
-  return [...cleanedActive, ...missingMocks];
-};
 
 export default function MapPage() {
   const scheduleTimeout = useTimeoutRegistry();
@@ -84,6 +60,15 @@ export default function MapPage() {
     }
     return null;
   });
+  const [acceptedCollabsMap, setAcceptedCollabsMap] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("kalceria_accepted_collabs");
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return INITIAL_ACCEPTED_COLLABS;
+  });
   const [eventRequestsMap, setEventRequestsMap] = useState(() => {
     if (typeof window !== "undefined") {
       try {
@@ -91,19 +76,7 @@ export default function MapPage() {
         if (stored) return JSON.parse(stored);
       } catch {}
     }
-    return {
-      mini_spec_3: [
-        { id: "req_adit_otniel", user: { id: "mock_adit", name: "Adit Bintaro", nickname: "Adit", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit", broadcast: "Dyno run booked for Saturday!" }, message: "Bro, count me in for the midnight widebody reveal! Bringing the GR Yaris.", createdAt: new Date(Date.now() - 1800000).toISOString() },
-        { id: "req_dinda_otniel", user: { id: "mock_dinda", name: "Dinda Laras", nickname: "Dinda", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda", broadcast: "Trackday tuning prep at FM" }, message: "Would love to collab on the aero build session tonight!", createdAt: new Date(Date.now() - 4200000).toISOString() }
-      ],
-      mini_cafe_1: [
-        { id: "req_adit", user: { id: "mock_adit", name: "Adit Bintaro", nickname: "Adit", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit", broadcast: "Dyno run booked for Saturday!" }, message: "Ready for highway convoy route!", createdAt: new Date(Date.now() - 3600000).toISOString() },
-        { id: "req_bonita", user: { id: "mock_bonita", name: "Bonita Bon", nickname: "Bonita", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bonita", broadcast: "Coffee & car chat in Sector 7" }, message: "Joining morning espresso catchup with my Silvia S15.", createdAt: new Date(Date.now() - 7200000).toISOString() }
-      ],
-      own: [
-        { id: "req_dinda", user: { id: "mock_dinda", name: "Dinda Laras", nickname: "Dinda", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda", broadcast: "Trackday tuning prep at FM" }, message: "Count me in for this session! Let's roll together.", createdAt: new Date(Date.now() - 1800000).toISOString() }
-      ]
-    };
+    return INITIAL_EVENT_REQUESTS;
   });
   const [cancelRequestTarget, setCancelRequestTarget] = useState(null);
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
@@ -685,16 +658,69 @@ export default function MapPage() {
 
   const handleAcceptCollabRequest = useCallback((requestId, eventId) => {
     playNotificationSound("event");
+    const targetId = eventId || viewingRequestsEventId;
     setEventRequestsMap((prev) => {
-      const targetId = eventId || viewingRequestsEventId;
       if (!targetId || !prev[targetId]) return prev;
+      const targetReq = prev[targetId].find((r) => r.id === requestId);
+      if (targetReq?.user?.id) {
+        setAcceptedCollabsMap((collabs) => {
+          const list = collabs[targetId] || [];
+          if (!list.includes(targetReq.user.id)) {
+            const next = { ...collabs, [targetId]: [...list, targetReq.user.id] };
+            try { localStorage.setItem("kalceria_accepted_collabs", JSON.stringify(next)); } catch {}
+            return next;
+          }
+          return collabs;
+        });
+      }
       const updatedList = prev[targetId].filter((r) => r.id !== requestId);
       const updated = { ...prev, [targetId]: updatedList };
       try { localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated)); } catch {}
       return updated;
     });
-    setNotice("Collab request accepted!");
+    setNotice("Collab request accepted! User is now a collaborator.");
   }, [viewingRequestsEventId]);
+
+  const handleCollaboratorUpload = useCallback((eventId) => {
+    playNotificationSound("event");
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4";
+    input.onchange = async (e) => {
+      const file = e.target?.files?.[0];
+      if (!file) return;
+      const ext = (file.name.split(".").pop() || "").toLowerCase();
+      if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
+        setNotice("Only .png, .jpeg, and .mp4 files are allowed");
+        return;
+      }
+      setNotice("Uploading media as collaborator...");
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/blob/upload", { method: "POST", body: fd });
+        const json = await res.json();
+        if (json.url) {
+          setEvents((prev) =>
+            prev.map((ev) => {
+              if (String(ev.id) === String(eventId)) {
+                const current = ev.mediaUrl ? ev.mediaUrl.split(",") : [];
+                return { ...ev, mediaUrl: [...current, json.url].join(",") };
+              }
+              return ev;
+            })
+          );
+          playNotificationSound("event");
+          setNotice("Media added to event by collaborator!");
+        } else {
+          setNotice(json.error || "Upload failed");
+        }
+      } catch (err) {
+        setNotice(err.message || "Upload error");
+      }
+    };
+    input.click();
+  }, []);
 
   const handleDeclineCollabRequest = useCallback((requestId, eventId) => {
     playNotificationSound("event");
@@ -815,8 +841,9 @@ export default function MapPage() {
           users={visibleMapUsers} events={visibleEvents} onMapReady={handleMapReady}
           focusUserId={focusedUserId} focusTarget={focusTarget} isMapDark={isMapDark}
           currentUser={currentUser} onEditEvent={handleOpenEditEvent} requestedEventId={requestedEventId}
-          eventRequestsMap={eventRequestsMap} onRequestCollab={handleRequestCollab}
+          eventRequestsMap={eventRequestsMap} acceptedCollabsMap={acceptedCollabsMap} onRequestCollab={handleRequestCollab}
           onPromptCancelRequest={handlePromptCancelRequest} onOpenRequests={handleOpenRequests}
+          onCollaboratorUpload={handleCollaboratorUpload}
         />
       </motion.div>
 
@@ -935,14 +962,9 @@ export default function MapPage() {
       )}
 
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 4px; }
-        @keyframes float { 0% { transform: translate(0, 0) scale(1); } 25% { transform: translate(15vw, 15vh) scale(1.2); } 50% { transform: translate(-10vw, 20vh) scale(0.9); } 75% { transform: translate(20vw, -15vh) scale(1.3); } 100% { transform: translate(-5vw, -10vh) scale(1.1); } }
-        @keyframes float-wide { 0% { transform: translate(0, 0) scale(1); opacity: 0.2; } 50% { transform: translate(40vw, 80vh) scale(0.8); opacity: 0.2; } 100% { transform: translate(0, 0) scale(1); opacity: 0.2; } }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 4px; }
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
         @keyframes floatUp { 0% { transform: translateY(10px); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } 100% { transform: translateY(-115vh); opacity: 0; } }
-        @keyframes floatUpBox { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } 100% { transform: translateY(-80vh) scale(1.1); opacity: 0; } }
       `}</style>
       {/* Startup Sequence Overlay :: FORZA HORIZON STYLE */}
       <StartupSequenceOverlay

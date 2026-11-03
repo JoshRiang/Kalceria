@@ -185,6 +185,12 @@ export const MapModals = memo(function MapModals({
   const handleMediaUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
+      setUploadError("Only .png, .jpeg, and .mp4 files are allowed");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
     setIsUploadingMedia(true);
     setUploadError("");
     try {
@@ -202,6 +208,14 @@ export const MapModals = memo(function MapModals({
       setIsUploadingMedia(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const handleRemoveCarouselMedia = (indexToRemove) => {
+    setEventForm((f) => {
+      const urls = (f.mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
+      const updated = urls.filter((_, idx) => idx !== indexToRemove).join(", ");
+      return { ...f, mediaUrl: updated };
+    });
   };
 
   return (
@@ -506,7 +520,7 @@ export const MapModals = memo(function MapModals({
                   <input
                     type="file"
                     ref={fileInputRef}
-                    accept="video/*,image/gif"
+                    accept=".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4"
                     className="hidden"
                     onChange={handleMediaUpload}
                   />
@@ -538,89 +552,123 @@ export const MapModals = memo(function MapModals({
                 </div>
 
                 {uploadError && (
-                  <p className="text-[11px] text-red-500 mt-0.5">{uploadError}</p>
+                  <p className={`text-xs font-semibold mt-1 animate-in fade-in ${
+                    isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
+                  }`}>
+                    {uploadError}
+                  </p>
                 )}
 
-                {/* Preview inside Modal */}
-                {eventForm.mediaUrl && (() => {
-                  const firstUrl = eventForm.mediaUrl.split(",")[0].trim();
-                  return (
-                    <div
-                      className={`relative w-full h-[90px] rounded-lg overflow-hidden border mt-1 shrink-0 ${
-                        isModalDark ? "bg-[#0d1117] border-[#30363d]" : "bg-[#f6f8fa] border-[#d0d7de]"
-                      }`}
-                    >
-                      {/\.(mp4|webm|ogg)($|\?)/i.test(firstUrl) || /^data:video/i.test(firstUrl) ? (
-                        <video
-                          src={firstUrl}
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={firstUrl}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                        />
+                {/* IN OWNER SIDE ONLY: Event Media Carousel (Picture 4) with Picture 5 delete (X) badge */}
+                {(editingEventId || activeOwnEvent) && (
+                  <div className={`mt-2.5 p-3 rounded-2xl border-2 border-dashed flex flex-col gap-2 ${
+                    isModalDark ? "border-[#30363d] bg-[#0d1117]/60" : "border-[#d0d7de] bg-[#f6f8fa]/80"
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-sans font-bold text-xs tracking-tight">
+                        Add more images carousel
+                      </span>
+                      {eventForm.mediaUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setEventForm((f) => ({ ...f, mediaUrl: "" }))}
+                          className={`text-[10px] font-bold hover:underline cursor-pointer ${
+                            isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
+                          }`}
+                        >
+                          Clear All
+                        </button>
                       )}
-                      <div className="absolute top-2 left-2 z-10">
-                        <span className="font-sans font-bold text-[10px] text-white uppercase tracking-tight leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] bg-black/60 px-1.5 py-0.5 rounded">
-                          PREVIEW
-                        </span>
-                      </div>
                     </div>
-                  );
-                })()}
+
+                    {(() => {
+                      const urls = (eventForm.mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
+                      if (urls.length === 0) return <p className="text-[11px] text-neutral-400 py-1">No media uploaded yet.</p>;
+                      return (
+                        <div className="flex items-center gap-2.5 overflow-x-auto py-1 custom-scrollbar">
+                          {urls.map((url, idx) => {
+                            const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
+                            return (
+                              <div key={idx} className="relative w-18 h-18 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden shadow-sm border border-black/10 dark:border-white/10 group">
+                                {isVideo ? (
+                                  <video src={url} muted autoPlay loop playsInline className="w-full h-full object-cover" />
+                                ) : (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover" />
+                                )}
+                                {/* Picture 5: white circular button with X to remove media */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveCarouselMedia(idx)}
+                                  title="Remove this media"
+                                  className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
+                    <div className="flex justify-center pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingMedia || busy}
+                        className={`px-4 py-1.5 rounded-full border text-xs font-bold tracking-tight transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isModalDark
+                            ? "border-white/40 bg-white/10 hover:bg-white/20 text-white"
+                            : "border-black/30 bg-black/5 hover:bg-black/10 text-black"
+                        }`}
+                      >
+                        + Add more images
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
               {(editingEventId || activeOwnEvent) ? (
                 <div className="flex items-center justify-between mt-auto pt-3 shrink-0 px-1">
-                  {/* Left: Red Trashcan Icon Button */}
+                  {/* Left: Red Trashcan Icon Button (Full of red, with white interior lines vice-versa) */}
                   <button
                     type="button"
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={busy}
                     title="Delete Event"
                     aria-label="Delete Event"
-                    className="p-2 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer group flex items-center justify-center"
+                    className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer group flex items-center justify-center"
                   >
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="w-7 h-7 sm:w-8 sm:h-8">
-                      <path d="M 3 6 H 21" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" />
-                      <path d="M 8 6 V 4 C 8 3.4 8.4 3 9 3 H 15 C 15.6 3 16 3.4 16 4 V 6" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M 19 6 L 18.1 19.3 C 18 20.3 17.2 21 16.2 21 H 7.8 C 6.8 21 6 20.3 5.9 19.3 L 5 6" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      <line x1="10" y1="10.5" x2="10" y2="16.5" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" />
-                      <line x1="14" y1="10.5" x2="14" y2="16.5" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" />
+                      <path
+                        d="M 19 6 L 18.1 19.3 C 18 20.3 17.2 21 16.2 21 H 7.8 C 6.8 21 6 20.3 5.9 19.3 L 5 6 Z"
+                        fill="#ef4444"
+                      />
+                      <path
+                        d="M 8 6 V 4 C 8 3.4 8.4 3 9 3 H 15 C 15.6 3 16 3.4 16 4 V 6 Z"
+                        fill="#ef4444"
+                      />
+                      <path d="M 3 6 H 21" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1="9.5" y1="9.5" x2="9.5" y2="17" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" />
+                      <line x1="14.5" y1="9.5" x2="14.5" y2="17" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" />
+                      <line x1="6" y1="6" x2="18" y2="6" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" />
                     </svg>
                   </button>
 
-                  {/* Right: Update Button using Right Sign Icon (Mirrored from Quit Map left sign) */}
+                  {/* Right: Box button with Update font, styled like Create button */}
                   <button
                     type="submit"
                     disabled={busy}
-                    title="Update Event"
-                    aria-label="Update Event"
-                    className="p-2 transition-transform hover:scale-110 hover:translate-x-1 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 cursor-pointer group flex items-center justify-center"
+                    className={`px-6 py-2.5 sm:py-3 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
+                      isModalDark
+                        ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
+                        : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                    }`}
                   >
-                    <svg width="28" height="28" viewBox="0 0 24 24" className="w-7 h-7 sm:w-8 sm:h-8">
-                      <path
-                        d="M 21 12 L 14.6 5.6 L 9.2 5.6 L 13.7 10.1 L 3 10.1 L 3 13.9 L 13.7 13.9 L 9.2 18.4 L 14.6 18.4 Z"
-                        fill={isModalDark ? "#ffffff" : "#000000"}
-                        stroke={isModalDark ? "#000000" : "#ffffff"}
-                        strokeWidth="1.2"
-                        strokeLinejoin="miter"
-                        style={{
-                          paintOrder: "stroke fill",
-                          filter: isModalDark
-                            ? "drop-shadow(0 1px 3px rgba(255,255,255,0.4))"
-                            : "drop-shadow(0 1px 3px rgba(0,0,0,0.5))",
-                        }}
-                      />
-                    </svg>
+                    {busy ? "Updating..." : "Update"}
                   </button>
                 </div>
               ) : (

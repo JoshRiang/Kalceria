@@ -32,9 +32,11 @@ export default function SnapMap({
   onEditEvent,
   requestedEventId = null,
   eventRequestsMap = {},
+  acceptedCollabsMap = {},
   onRequestCollab,
   onPromptCancelRequest,
   onOpenRequests,
+  onCollaboratorUpload,
 }) {
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -59,13 +61,17 @@ export default function SnapMap({
     window.__kalceriaOpenRequests = (id) => {
       onOpenRequests?.(id);
     };
+    window.__kalceriaCollaboratorUpload = (id) => {
+      onCollaboratorUpload?.(id);
+    };
     return () => {
       delete window.__kalceriaEditEvent;
       delete window.__kalceriaRequestCollab;
       delete window.__kalceriaPromptCancelRequest;
       delete window.__kalceriaOpenRequests;
+      delete window.__kalceriaCollaboratorUpload;
     };
-  }, [events, onEditEvent, onRequestCollab, onPromptCancelRequest, onOpenRequests]);
+  }, [events, onEditEvent, onRequestCollab, onPromptCancelRequest, onOpenRequests, onCollaboratorUpload]);
 
   // Invalidate map size on theme toggle
   useEffect(() => {
@@ -320,23 +326,34 @@ export default function SnapMap({
         marker.setIcon(createEventIcon(L, item, isMapDark));
 
         const pendingCount = (eventRequestsMap?.[item.id] || []).length;
-        const newPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount);
+        const isCollaborator = Boolean(
+          (acceptedCollabsMap?.[item.id] && currentUser?.id && acceptedCollabsMap[item.id].includes(currentUser.id)) ||
+          item.isCollaborator ||
+          (item.collaboratorIds && currentUser?.id && item.collaboratorIds.includes(currentUser.id))
+        );
+        const newPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount, isCollaborator);
         if (marker._lastPopupContent !== newPopupContent) {
           marker.getPopup().setContent(newPopupContent);
           marker._lastPopupContent = newPopupContent;
         }
       } else {
         const pendingCount = (eventRequestsMap?.[item.id] || []).length;
+        const isCollaborator = Boolean(
+          (acceptedCollabsMap?.[item.id] && currentUser?.id && acceptedCollabsMap[item.id].includes(currentUser.id)) ||
+          item.isCollaborator ||
+          (item.collaboratorIds && currentUser?.id && item.collaboratorIds.includes(currentUser.id))
+        );
+        const newPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount, isCollaborator);
         const marker = L.marker([item.lat, item.lng], {
           icon: createEventIcon(L, item, isMapDark),
           userData: { color: "#ff006e" },
-        }).bindPopup(eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount), {
+        }).bindPopup(newPopupContent, {
           className: "tactical-popup",
           offset: [0, -34],
           autoClose: true,
           closeButton: false,
         });
-        marker._lastPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount);
+        marker._lastPopupContent = newPopupContent;
         markerRefs.current[markerId] = marker;
         eventsLayer.addLayer(marker);
       }

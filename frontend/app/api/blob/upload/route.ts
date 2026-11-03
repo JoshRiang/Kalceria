@@ -13,6 +13,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Security Enforcement: Strictly accept only .png, .jpg, .jpeg, and .mp4
+    const filename = file.name || "";
+    const ext = (filename.split(".").pop() || "").toLowerCase();
+    const allowedExts = ["png", "jpg", "jpeg", "mp4"];
+    if (!allowedExts.includes(ext)) {
+      return NextResponse.json(
+        { error: "Security enforcement: Only .png, .jpeg, and .mp4 files are allowed" },
+        { status: 400 }
+      );
+    }
+
     const rawBuffer = Buffer.from(await file.arrayBuffer());
     const declaredMimeType = file.type || "application/octet-stream";
 

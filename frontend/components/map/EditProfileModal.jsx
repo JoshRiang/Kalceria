@@ -40,6 +40,7 @@ export function EditProfileModal({
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [fileError, setFileError] = useState(null);
 
   const avatarInputRef = useRef(null);
   const bgInputRef = useRef(null);
@@ -81,6 +82,13 @@ export function EditProfileModal({
   const handleAvatarFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
+      setFileError("Only .png, .jpeg, and .mp4 files are allowed");
+      e.target.value = "";
+      return;
+    }
+    setFileError(null);
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result;
@@ -93,6 +101,13 @@ export function EditProfileModal({
   const handleBgFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
+      setFileError("Only .png, .jpeg, and .mp4 files are allowed");
+      e.target.value = "";
+      return;
+    }
+    setFileError(null);
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result;
@@ -157,13 +172,11 @@ export function EditProfileModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95 ${
+              className={`text-2xl leading-none relative z-10 transition-colors p-1 cursor-pointer ${
                 isModalDark ? "text-[#8b949e] hover:text-[#f0f6fc]" : "text-[#57606a] hover:text-[#1f2328]"
               }`}
             >
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.4">
-                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              ×
             </button>
           </div>
 
@@ -260,6 +273,11 @@ export function EditProfileModal({
                   )}
                 </div>
               </div>
+              {fileError && (
+                <p className="text-[#ef4444] text-xs font-semibold px-4 pb-2 animate-in fade-in">
+                  {fileError}
+                </p>
+              )}
             </div>
 
             {/* 2. Display Name (Not all-caps, Arial bold grey) */}

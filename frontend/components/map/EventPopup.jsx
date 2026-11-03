@@ -164,7 +164,7 @@ function formatReleaseTime(createdAt) {
   return `${hours}.${mins}`;
 }
 
-export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null, pendingRequestsCount = 0) {
+export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null, pendingRequestsCount = 0, isCollaborator = false) {
   const displayDesc = cleanDesc(item.description);
   const creatorName = item.creator?.nickname || item.creator?.name || "Kalcerian";
   const mediaList = extractMediaList(item);
@@ -232,6 +232,36 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     </button>
   `;
 
+  // Picture 2 Icons8 Upload Icon (for accepted collaborators)
+  const pureUploadSvg = `
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
+      <path
+        d="M 5 13 V 17 C 5 18.1 5.9 19 7 19 H 17 C 18.1 19 19 18.1 19 17 V 13"
+        stroke="${iconFg}"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <line
+        x1="12"
+        y1="16"
+        x2="12"
+        y2="5"
+        stroke="${iconFg}"
+        stroke-width="2.2"
+        stroke-linecap="round"
+      />
+      <path
+        d="M 8 9 L 12 5 L 16 9"
+        fill="none"
+        stroke="${iconFg}"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  `;
+
   // Pure Hand SVG: Exact Flaticon finger gesture (Picture 1), centered at (12, 12), all black with white border (light mode) and vice versa
   const pureHandSvg = `
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
@@ -282,6 +312,20 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
           />
         </svg>
         ${redDotHtml}
+      </button>
+    `;
+  } else if (isCollaborator) {
+    // Picture 2 Upload Icon: Accepted collaborator can upload media to event card
+    requestOrEnvelopeIconHtml = `
+      <button
+        type="button"
+        onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaCollaboratorUpload?.('${esc(item.id)}')"
+        title="Upload Media (Collaborator)"
+        style="width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        onmouseover="this.style.transform='scale(1.15)'"
+        onmouseout="this.style.transform='scale(1)'"
+      >
+        ${pureUploadSvg}
       </button>
     `;
   } else if (hasRequestedThisEvent) {

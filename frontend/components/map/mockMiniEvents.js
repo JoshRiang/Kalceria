@@ -240,3 +240,47 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     }
   }
 ];
+
+export const INITIAL_ACCEPTED_COLLABS = {
+  mini_spec_2: ["mock_otniel", "own"]
+};
+
+export const INITIAL_EVENT_REQUESTS = {
+  mini_spec_3: [
+    { id: "req_adit_otniel", user: { id: "mock_adit", name: "Adit Bintaro", nickname: "Adit", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit", broadcast: "Dyno run booked for Saturday!" }, message: "Bro, count me in for the midnight widebody reveal! Bringing the GR Yaris.", createdAt: new Date(Date.now() - 1800000).toISOString() },
+    { id: "req_dinda_otniel", user: { id: "mock_dinda", name: "Dinda Laras", nickname: "Dinda", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda", broadcast: "Trackday tuning prep at FM" }, message: "Would love to collab on the aero build session tonight!", createdAt: new Date(Date.now() - 4200000).toISOString() }
+  ],
+  mini_cafe_1: [
+    { id: "req_adit", user: { id: "mock_adit", name: "Adit Bintaro", nickname: "Adit", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit", broadcast: "Dyno run booked for Saturday!" }, message: "Ready for highway convoy route!", createdAt: new Date(Date.now() - 3600000).toISOString() },
+    { id: "req_bonita", user: { id: "mock_bonita", name: "Bonita Bon", nickname: "Bonita", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bonita", broadcast: "Coffee & car chat in Sector 7" }, message: "Joining morning espresso catchup with my Silvia S15.", createdAt: new Date(Date.now() - 7200000).toISOString() }
+  ],
+  own: [
+    { id: "req_dinda", user: { id: "mock_dinda", name: "Dinda Laras", nickname: "Dinda", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda", broadcast: "Trackday tuning prep at FM" }, message: "Count me in for this session! Let's roll together.", createdAt: new Date(Date.now() - 1800000).toISOString() }
+  ]
+};
+
+export const cleanEventDesc = (item) => {
+  if (!item) return item;
+  const raw = item.description || "";
+  const catMatch = raw.match(/\[CAT:([a-z_]+)\]/i);
+  const mediaMatch = raw.match(/\[MEDIA:([^\]]+)\]/i);
+  const cleanDescription = raw
+    .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+    .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+    .trim();
+  return {
+    ...item,
+    category: catMatch ? catMatch[1].toLowerCase() : (item.category || "cafe"),
+    mediaUrl: mediaMatch ? mediaMatch[1] : (item.mediaUrl || null),
+    description: cleanDescription,
+  };
+};
+
+export const mergeEvents = (activeList) => {
+  const normalizedMocks = INITIAL_MOCK_MINI_EVENTS.map(cleanEventDesc);
+  if (!activeList || activeList.length === 0) return normalizedMocks;
+  const cleanedActive = activeList.map(cleanEventDesc);
+  const activeIds = new Set(cleanedActive.map((e) => e.id));
+  const missingMocks = normalizedMocks.filter((m) => !activeIds.has(m.id));
+  return [...cleanedActive, ...missingMocks];
+};
