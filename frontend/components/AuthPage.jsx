@@ -658,7 +658,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             disabled={!PUBLIC_SIGNUP_ENABLED}
                           />
 
-                          {/* Password Requirements Checklist (All 4 rules) */}
+                          {/* Password Requirements (All 4 rules - tiny boxes turn green when met, no checklist) */}
                           <div className="mb-4 -mt-1 grid grid-cols-2 gap-2 text-xs font-sans tracking-wide">
                             {[
                               { label: "Min 8 Chars", met: (form.password || "").length >= 8 },
@@ -673,15 +673,13 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                                 }`}
                               >
                                 <div
-                                  className={`w-3.5 h-3.5 rounded-[3px] flex items-center justify-center border transition-colors ${
+                                  className={`w-3.5 h-3.5 rounded-[3px] border transition-all duration-200 ${
                                     req.met
-                                      ? "bg-green-400/20 border-green-400/50"
+                                      ? "bg-emerald-400 border-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]"
                                       : "border-slate-700 bg-[#0c1528]"
                                   }`}
-                                >
-                                  {req.met && <span className="text-[10px] text-green-300 font-bold">✓</span>}
-                                </div>
-                                {req.label}
+                                />
+                                <span>{req.label}</span>
                               </div>
                             ))}
                           </div>
