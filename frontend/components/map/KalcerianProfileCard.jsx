@@ -36,10 +36,10 @@ const AESTHETIC_COVERS = [
 function getFallbackCover(user) {
   const name = String(user?.name || user?.nickname || "").toLowerCase();
   if (name.includes("ahmad")) {
-    return "/media/gifs/event_cafe_1.mp4";
+    return "/media/gifs/event_spec_1.mp4";
   }
   if (name.includes("adit")) {
-    return "/media/gifs/event_cafe_1.gif";
+    return "/media/gifs/event_spec_1.gif";
   }
   const idStr = String(user?.id || user?.name || "kalcerian");
   const num = Math.abs(idStr.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % AESTHETIC_COVERS.length;
@@ -55,25 +55,25 @@ function getAvatarUrl(user) {
   );
 }
 
-// ─── 2D WhatsApp Icon (Smooth official handset, vibrant green when registered, gray when not) ────
+// ─── 2D WhatsApp Icon (Official 100% authentic vector branding) ────
 function WhatsApp2DIcon({ isRegistered, size = 46 }) {
   const bg = isRegistered ? "#25D366" : "#8b949e";
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 48 48"
+      viewBox="0 0 24 24"
       fill="none"
       className="shrink-0 transition-transform duration-200 group-hover:scale-110 drop-shadow-md"
     >
-      {/* Speech bubble with tail at bottom-left */}
+      {/* 1. Official WhatsApp Speech Bubble with Lower-Left Tail */}
       <path
-        d="M24 4C12.95 4 4 12.95 4 24c0 3.55.93 6.9 2.56 9.8L4 44l10.45-2.51C17.27 43.1 20.52 44 24 44c11.05 0 20-8.95 20-20S35.05 4 24 4z"
+        d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z"
         fill={bg}
       />
-      {/* Official smooth telephone handset - crisp, unrigged vector curves */}
+      {/* 2. Official Smooth Telephone Handset */}
       <path
-        d="M34.8 29.3c-.6-.3-3.5-1.7-4-1.9-.5-.2-.9-.3-1.3.3s-1.5 1.9-1.9 2.3c-.4.4-.7.5-1.3.2-3.8-1.9-6.3-4.3-8.2-8.1-.3-.6 0-.9.2-1.3.3-.4.8-1 1.2-1.5.4-.5.5-.8.8-1.3.3-.5.1-.9 0-1.3-.2-.4-1.3-3.2-1.8-4.4-.5-1.2-1-1-1.4-1h-1.2c-.4 0-1.1.2-1.7.8-.6.6-2.3 2.2-2.3 5.4s2.4 6.3 2.7 6.7c.3.4 4.6 7.1 11.2 10 3.9 1.7 5.4 1.8 7.4 1.5 1.2-.2 3.6-1.5 4.1-2.9.5-1.4.5-2.6.4-2.8-.2-.3-.6-.5-1.2-.8z"
+        d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.08-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.91-2.2-.24-.6-.49-.5-.67-.51-.17-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.69.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35z"
         fill="#ffffff"
       />
     </svg>
@@ -114,24 +114,29 @@ function Instagram2DIcon({ isRegistered, size = 46 }) {
 
 // ─── Media Normalization Engine (Video, Photo, GIF) ───────────────────────────
 function normalizeMediaConfig(rawUrl, rawType, { isAdit, isAhmad, fallbackCover }) {
+  // 1. Honor user-uploaded / custom cover image FIRST
   let url = rawUrl;
   let type = rawType;
 
-  if (isAhmad) {
-    url = "/media/gifs/event_cafe_1.mp4";
-    type = "video";
-  } else if (isAdit) {
-    url = "/media/gifs/event_cafe_1.gif";
-    type = "gif";
-  } else if (!url) {
-    url = fallbackCover;
+  // 2. Only if no custom cover was uploaded, assign default/fallback based on user
+  if (!url) {
+    if (isAhmad) {
+      url = "/media/gifs/event_spec_1.mp4";
+      type = "video";
+    } else if (isAdit) {
+      url = "/media/gifs/event_spec_1.gif";
+      type = "gif";
+    } else {
+      url = fallbackCover;
+    }
   }
 
+  // 3. Auto-detect media type if not explicitly set
   const lowerUrl = String(url || "").toLowerCase();
   if (!type) {
-    if (lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || lowerUrl.includes("video")) {
+    if (lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || lowerUrl.startsWith("data:video") || lowerUrl.includes("video")) {
       type = "video";
-    } else if (lowerUrl.endsWith(".gif") || lowerUrl.includes("gif")) {
+    } else if (lowerUrl.endsWith(".gif") || lowerUrl.startsWith("data:image/gif") || lowerUrl.includes("gif")) {
       type = "gif";
     } else {
       type = "image";
@@ -250,10 +255,18 @@ export default function KalcerianProfileCard({
   const isAhmad = String(displayName).toLowerCase().includes("ahmad");
   const isAdit = String(displayName).toLowerCase().includes("adit");
 
+  const userCustomCover =
+    user?.coverImage ||
+    user?.coverUrl ||
+    user?.cover ||
+    user?.profileCover ||
+    user?.bannerUrl ||
+    null;
+
   const fallbackCover = getFallbackCover(user);
   const normalizedMedia = normalizeMediaConfig(
-    imgError ? fallbackCover : user?.coverImage,
-    user?.coverType,
+    imgError ? null : userCustomCover,
+    user?.coverType || user?.mediaType,
     { isAdit, isAhmad, fallbackCover }
   );
 
@@ -302,7 +315,7 @@ export default function KalcerianProfileCard({
       style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}
     >
       {/* 1. Square 1:1 Cover Banner Background (Normalized Video, GIF, and Photo pipeline) */}
-      <div className="relative w-full aspect-square overflow-hidden bg-neutral-900">
+      <div className="relative w-full aspect-square max-h-[250px] sm:max-h-[270px] mx-auto overflow-hidden bg-neutral-900 rounded-t-xl">
         <NormalizedMediaCover
           media={normalizedMedia}
           altText={`${displayName} cover`}
