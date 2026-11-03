@@ -173,3 +173,4 @@ if (typeof window !== "undefined") {
     playNotificationSound(e?.detail?.type || "event");
   });
 }
+

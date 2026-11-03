@@ -157,6 +157,7 @@ export const MapModals = memo(function MapModals({
   setEventForm,
   activeOwnEvent,
   deleteMiniEvent,
+  editingEventId,
   isExiting,
   showQuitModal,
   setShowQuitModal,
@@ -166,6 +167,8 @@ export const MapModals = memo(function MapModals({
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [quitChoice, setQuitChoice] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteChoice, setDeleteChoice] = useState(null);
 
   // Modal colors match map mode:
   // Light mode (isMapDark === false): modal is white with black borders/elements.
@@ -346,7 +349,7 @@ export const MapModals = memo(function MapModals({
                   isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
                 }`}
               >
-                Create Your Own Event
+                {editingEventId || activeOwnEvent ? "Edit Event" : "Create Your Own Event"}
               </h2>
               <button
                 type="button"
@@ -591,33 +594,66 @@ export const MapModals = memo(function MapModals({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
-                <button
-                  type="submit"
-                  className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
-                    isModalDark
-                      ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
-                      : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
-                  }`}
-                  disabled={busy}
-                >
-                  {busy ? "Creating..." : (activeOwnEvent ? "Update" : "Create")}
-                </button>
-                {activeOwnEvent && (
+              {(editingEventId || activeOwnEvent) ? (
+                <div className="flex items-center justify-between mt-auto pt-3 shrink-0 px-1">
+                  {/* Left: Red Trashcan Icon Button */}
                   <button
                     type="button"
-                    className={`w-full py-3 sm:py-3.5 border font-semibold text-xs tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={busy}
+                    title="Delete Event"
+                    aria-label="Delete Event"
+                    className="p-2 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer group flex items-center justify-center"
+                  >
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="w-7 h-7 sm:w-8 sm:h-8">
+                      <path d="M 3 6 H 21" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" />
+                      <path d="M 8 6 V 4 C 8 3.4 8.4 3 9 3 H 15 C 15.6 3 16 3.4 16 4 V 6" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M 19 6 L 18.1 19.3 C 18 20.3 17.2 21 16.2 21 H 7.8 C 6.8 21 6 20.3 5.9 19.3 L 5 6" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <line x1="10" y1="10.5" x2="10" y2="16.5" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" />
+                      <line x1="14" y1="10.5" x2="14" y2="16.5" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+
+                  {/* Right: Update Button using Right Sign Icon (Mirrored from Quit Map left sign) */}
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    title="Update Event"
+                    aria-label="Update Event"
+                    className="p-2 transition-transform hover:scale-110 hover:translate-x-1 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 cursor-pointer group flex items-center justify-center"
+                  >
+                    <svg width="28" height="28" viewBox="0 0 24 24" className="w-7 h-7 sm:w-8 sm:h-8">
+                      <path
+                        d="M 21 12 L 14.6 5.6 L 9.2 5.6 L 13.7 10.1 L 3 10.1 L 3 13.9 L 13.7 13.9 L 9.2 18.4 L 14.6 18.4 Z"
+                        fill={isModalDark ? "#ffffff" : "#000000"}
+                        stroke={isModalDark ? "#000000" : "#ffffff"}
+                        strokeWidth="1.2"
+                        strokeLinejoin="miter"
+                        style={{
+                          paintOrder: "stroke fill",
+                          filter: isModalDark
+                            ? "drop-shadow(0 1px 3px rgba(255,255,255,0.4))"
+                            : "drop-shadow(0 1px 3px rgba(0,0,0,0.5))",
+                        }}
+                      />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
+                  <button
+                    type="submit"
+                    className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
                       isModalDark
-                        ? "border-[#f85149]/40 bg-[#f85149]/10 text-[#f85149] hover:bg-[#f85149]/20"
-                        : "border-[#cf222e]/40 bg-[#cf222e]/10 text-[#cf222e] hover:bg-[#cf222e]/20"
+                        ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
+                        : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
                     }`}
-                    onClick={deleteMiniEvent}
                     disabled={busy}
                   >
-                    Cancel / Delete Event
+                    {busy ? "Creating..." : "Create"}
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </form>
           </motion.div>
         </div>
@@ -728,6 +764,114 @@ export const MapModals = memo(function MapModals({
           </motion.div>
         </div>
       )}
+
+      {/* Delete Event Confirmation Modal :: Inherits exact Quit Map style, backdrop blur & Yes/No behavior */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[2200] flex items-center justify-center p-6 select-none pointer-events-auto">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className={`absolute inset-0 backdrop-blur-md transition-colors duration-300 ${
+                isMapDark ? "bg-black/30" : "bg-black/[0.04]"
+              }`}
+              onClick={() => setShowDeleteConfirm(false)}
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{
+                scale: 1,
+                opacity: 1,
+                y: [0, -5, 0],
+              }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{
+                opacity: { duration: 0.25 },
+                scale: { duration: 0.25 },
+                y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+              }}
+              className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
+            >
+              <h3
+                className={`relative z-10 text-2xl sm:text-3xl md:text-4xl font-sans font-bold mb-8 sm:mb-10 tracking-tighter ${
+                  isMapDark ? "text-white" : "text-black"
+                }`}
+                style={{
+                  textShadow: isMapDark
+                    ? "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)"
+                    : "0 2px 14px rgba(255,255,255,0.95), 0 0 24px rgba(255,255,255,0.9)",
+                }}
+              >
+                Delete the Event?
+              </h3>
+
+              <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteChoice("yes");
+                    setTimeout(async () => {
+                      await deleteMiniEvent?.(editingEventId);
+                      setShowDeleteConfirm(false);
+                      setDeleteChoice(null);
+                    }, 200);
+                  }}
+                  className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2"
+                >
+                  <motion.span
+                    animate={deleteChoice === "yes" ? { scale: 1.25 } : {}}
+                    transition={{ duration: 0.2 }}
+                    className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${
+                      isMapDark
+                        ? "text-white/80 group-hover:text-white"
+                        : "text-black/80 group-hover:text-black"
+                    }`}
+                    style={{
+                      textShadow: isMapDark
+                        ? "0 2px 10px rgba(0,0,0,0.8)"
+                        : "0 1px 6px rgba(255,255,255,0.9)",
+                    }}
+                  >
+                    Yes
+                  </motion.span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteChoice("no");
+                    setTimeout(() => {
+                      setShowDeleteConfirm(false);
+                      setDeleteChoice(null);
+                    }, 150);
+                  }}
+                  className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2"
+                >
+                  <motion.span
+                    animate={deleteChoice === "no" ? { scale: 1.25 } : {}}
+                    transition={{ duration: 0.2 }}
+                    className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${
+                      isMapDark
+                        ? "text-white/80 group-hover:text-white"
+                        : "text-black/80 group-hover:text-black"
+                    }`}
+                    style={{
+                      textShadow: isMapDark
+                        ? "0 2px 10px rgba(0,0,0,0.8)"
+                        : "0 1px 6px rgba(255,255,255,0.9)",
+                    }}
+                  >
+                    No
+                  </motion.span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 });

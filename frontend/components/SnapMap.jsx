@@ -28,6 +28,8 @@ export default function SnapMap({
   focusUserId,
   focusTarget,
   isMapDark = false,
+  currentUser = null,
+  onEditEvent,
 }) {
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -36,6 +38,19 @@ export default function SnapMap({
   const tileLayerRef = useRef(null);
   const markerRefs = useRef({});
   const [isReady, setIsReady] = useState(false);
+
+  // Wire global event edit callback for Leaflet popup Pencil icon
+  useEffect(() => {
+    window.__kalceriaEditEvent = (id) => {
+      const target = (events || []).find((e) => String(e.id) === String(id));
+      if (target && onEditEvent) {
+        onEditEvent(target);
+      }
+    };
+    return () => {
+      delete window.__kalceriaEditEvent;
+    };
+  }, [events, onEditEvent]);
 
   // Invalidate map size on theme toggle
   useEffect(() => {
@@ -228,7 +243,7 @@ export default function SnapMap({
 
         marker.setIcon(createEventIcon(L, item, isMapDark));
 
-        const newPopupContent = eventPopup(item, isMapDark);
+        const newPopupContent = eventPopup(item, isMapDark, currentUser);
         if (marker._lastPopupContent !== newPopupContent) {
           marker.getPopup().setContent(newPopupContent);
           marker._lastPopupContent = newPopupContent;
@@ -237,12 +252,12 @@ export default function SnapMap({
         const marker = L.marker([item.lat, item.lng], {
           icon: createEventIcon(L, item, isMapDark),
           userData: { color: "#ff006e" },
-        }).bindPopup(eventPopup(item, isMapDark), {
+        }).bindPopup(eventPopup(item, isMapDark, currentUser), {
           className: "tactical-popup",
           offset: [0, -34],
           autoClose: true,
         });
-        marker._lastPopupContent = eventPopup(item, isMapDark);
+        marker._lastPopupContent = eventPopup(item, isMapDark, currentUser);
         markerRefs.current[markerId] = marker;
         eventsLayer.addLayer(marker);
       }
@@ -260,7 +275,7 @@ export default function SnapMap({
         delete markerRefs.current[id];
       }
     });
-  }, [users, events, isReady, isMapDark]);
+  }, [users, events, isReady, isMapDark, currentUser]);
 
   return (
     <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>

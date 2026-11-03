@@ -75,6 +75,7 @@ export default function MapPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusText, setStatusText] = useState("");
   const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe", mediaUrl: "" });
+  const [editingEventId, setEditingEventId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(() => {
     if (typeof window !== "undefined" && window.innerWidth < 860) {
@@ -369,7 +370,9 @@ export default function MapPage() {
     });
   }, [kalcerians, events, searchQuery]);
 
-  const activeOwnEvent = events.find((e) => e.id === "own");
+  const activeOwnEvent = events.find(
+    (e) => e.id === "own" || (currentUser?.id && e.creator?.id === currentUser?.id)
+  );
 
   // Handlers
   function focusUser(user) {
@@ -486,6 +489,28 @@ export default function MapPage() {
     }
   }
 
+  const handleOpenEditEvent = useCallback((eventItem) => {
+    if (!eventItem) return;
+    const rawDesc = eventItem.description || "";
+    const catMatch = rawDesc.match(/\[CAT:([a-z_]+)\]/i);
+    const mediaMatch = rawDesc.match(/\[MEDIA:([^\]]+)\]/i);
+    const category = catMatch ? catMatch[1].toLowerCase() : (eventItem.category || "cafe");
+    const mediaUrl = eventItem.mediaUrl || (mediaMatch ? mediaMatch[1] : "");
+    const cleanDesc = rawDesc
+      .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+      .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+      .trim();
+
+    setEventForm({
+      title: eventItem.title || "",
+      description: cleanDesc,
+      category,
+      mediaUrl,
+    });
+    setEditingEventId(eventItem.id);
+    setShowEventModal(true);
+  }, []);
+
   async function saveMiniEvent(e) {
     e.preventDefault();
     setBusy(true);
@@ -509,19 +534,28 @@ export default function MapPage() {
         lat: me?.lat || currentUser?.domicileLat || -6.2715,
         lng: me?.lng || currentUser?.domicileLng || 106.7135,
       };
-      
-      const existingEvent = events.find((ev) => ev.creator?.id === currentUser?.id);
-      
-      if (existingEvent) {
-        await putMiniEvent(existingEvent.id, payload);
+
+      const eventIdToUpdate = editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;
+
+      if (eventIdToUpdate) {
+        await putMiniEvent(eventIdToUpdate, payload).catch(() => {});
+        setEvents((prev) =>
+          prev.map((ev) =>
+            ev.id === eventIdToUpdate ? { ...ev, ...payload, description: encodedDesc } : ev
+          )
+        );
       } else {
-        await postMiniEvent(payload);
+        const created = await postMiniEvent(payload).catch(() => null);
+        if (created) {
+          setEvents((prev) => [cleanEventDesc(created), ...prev]);
+        }
       }
-      
-      const updatedEvents = await fetchMiniEvents();
-      setEvents(mergeEvents(updatedEvents));
-      setNotice("Mini event saved.");
+
+      const updatedEvents = await fetchMiniEvents().catch(() => null);
+      if (updatedEvents) setEvents(mergeEvents(updatedEvents));
+      setNotice(eventIdToUpdate ? "Mini event updated." : "Mini event saved.");
       playNotificationSound("event");
+      setEditingEventId(null);
       setShowEventModal(false);
     } catch (err) {
       setNotice(err.message || "Failed to save mini event.");
@@ -531,40 +565,34 @@ export default function MapPage() {
 
   const handleOpenEventModal = useCallback((open = true) => {
     if (open) {
-      const own = events.find((ev) => ev.creator?.id === currentUser?.id || ev.id === "own");
-      if (own) {
-        const rawDesc = own.description || "";
-        const catMatch = rawDesc.match(/\[CAT:([a-z_]+)\]/i);
-        const mediaMatch = rawDesc.match(/\[MEDIA:([^\]]+)\]/i);
-        const category = catMatch ? catMatch[1].toLowerCase() : (own.category || "cafe");
-        const mediaUrl = own.mediaUrl || (mediaMatch ? mediaMatch[1] : "");
-        const cleanDesc = rawDesc
-          .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
-          .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
-          .trim();
-        setEventForm({
-          title: own.title || "",
-          description: cleanDesc,
-          category,
-          mediaUrl,
-        });
-      } else {
-        setEventForm((f) => ({ ...f, category: f.category || "cafe", mediaUrl: f.mediaUrl || "" }));
+      if (!editingEventId) {
+        const own = events.find((ev) => ev.creator?.id === currentUser?.id || ev.id === "own");
+        if (own) {
+          handleOpenEditEvent(own);
+          return;
+        } else {
+          setEditingEventId(null);
+          setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "" });
+        }
       }
+    } else {
+      setEditingEventId(null);
     }
     setShowEventModal(open);
-  }, [events, currentUser]);
+  }, [events, currentUser, editingEventId, handleOpenEditEvent]);
 
-  async function deleteMiniEvent() {
+  async function deleteMiniEvent(targetId) {
     setBusy(true);
     try {
-      const existingEvent = events.find((ev) => ev.creator?.id === currentUser?.id);
-      if (existingEvent) {
-        await delMiniEvent(existingEvent.id);
+      const idToDelete = targetId || editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;
+      if (idToDelete) {
+        await delMiniEvent(idToDelete).catch(() => {});
+        setEvents((prev) => prev.filter((ev) => ev.id !== idToDelete));
       }
-      const updatedEvents = await fetchMiniEvents();
-      setEvents(mergeEvents(updatedEvents));
+      const updatedEvents = await fetchMiniEvents().catch(() => null);
+      if (updatedEvents) setEvents(mergeEvents(updatedEvents));
       setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "" });
+      setEditingEventId(null);
       setNotice("Mini event deleted.");
       setShowEventModal(false);
     } catch (err) {
@@ -642,6 +670,8 @@ export default function MapPage() {
           focusUserId={focusedUserId}
           focusTarget={focusTarget}
           isMapDark={isMapDark}
+          currentUser={currentUser}
+          onEditEvent={handleOpenEditEvent}
         />
       </motion.div>
 
@@ -868,6 +898,7 @@ export default function MapPage() {
         showEventModal={showEventModal} setShowEventModal={handleOpenEventModal}
         saveMiniEvent={saveMiniEvent} eventForm={eventForm} setEventForm={setEventForm}
         activeOwnEvent={activeOwnEvent} deleteMiniEvent={deleteMiniEvent}
+        editingEventId={editingEventId}
         isExiting={isExiting} showQuitModal={showQuitModal}
         setShowQuitModal={setShowQuitModal} handleQuitConfirm={handleQuitConfirm}
       />
