@@ -41,8 +41,8 @@ export default function SnapMap({
   useEffect(() => {
     if (tileLayerRef.current) {
       const tileUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png";
+        ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+        : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
       tileLayerRef.current.setUrl(tileUrl);
     }
     if (mapRef.current) {
@@ -119,26 +119,24 @@ export default function SnapMap({
         closePopupOnClick: true,
       });
 
-      // High-performance CartoDB tiles (Voyager for Light, Dark Matter for Dark)
-      // Fast Cloudflare-backed CDN with abcd domain sharding, zero API key requirement
+      // Ultra-reliable public basemap powered by Esri ArcGIS Online
+      // Free, zero API key requirement, zero watermarks, fast worldwide CDN
       const tileUrl = isMapDark
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
-        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png";
+        ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+        : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
 
       const tileLayer = L.tileLayer(tileUrl, {
-        subdomains: "abcd",
         maxZoom: 19,
-        attribution: '&copy; CARTO &copy; OpenStreetMap contributors',
+        attribution: "Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ",
       }).addTo(map);
 
-      // Automatic bulletproof fallback: if any tile fails to load, fallback to alternate mirror
+      // Multi-layer fallback in case of regional edge timeout
       tileLayer.on("tileerror", function (error) {
         if (error.tile && !error.tile._hasFallenBack) {
           error.tile._hasFallenBack = true;
           const coords = error.coords;
           if (coords) {
-            const shard = ["a", "b", "c"][Math.abs(coords.x + coords.y) % 3];
-            error.tile.src = `https://${shard}.tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
+            error.tile.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${coords.z}/${coords.y}/${coords.x}`;
           }
         }
       });

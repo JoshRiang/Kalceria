@@ -343,7 +343,7 @@ export default function KalcerianProfileCard({
             />
           </div>
 
-          {/* Close 'X' button for Mobile Family: tiny circle, placed at top-right of profile picture */}
+          {/* Close 'X' button for Mobile Family: snug and tight directly on profile picture rim */}
           {showMobileClose && (
             <button
               type="button"
@@ -352,7 +352,7 @@ export default function KalcerianProfileCard({
                 if (onClose) onClose();
               }}
               aria-label="Close profile card"
-              className={`absolute -top-1 -right-1 z-30 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-all active:scale-90 hover:scale-110 ${
+              className={`absolute top-1 right-1 z-30 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-all active:scale-90 hover:scale-110 ${
                 isMapDark
                   ? "bg-white border border-[#161b22] text-[#161b22] hover:bg-neutral-200"
                   : "bg-[#1f2328] border border-white text-white hover:bg-[#30363d]"
