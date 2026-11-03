@@ -42,7 +42,7 @@ export default function SnapMap({
     if (tileLayerRef.current) {
       const tileUrl = isMapDark
         ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-        : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+        : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
       tileLayerRef.current.setUrl(tileUrl);
     }
     if (mapRef.current) {
@@ -123,7 +123,7 @@ export default function SnapMap({
       // Free, zero API key requirement, zero watermarks, fast worldwide CDN
       const tileUrl = isMapDark
         ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-        : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+        : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 
       const tileLayer = L.tileLayer(tileUrl, {
         maxZoom: 19,
@@ -136,7 +136,8 @@ export default function SnapMap({
           error.tile._hasFallenBack = true;
           const coords = error.coords;
           if (coords) {
-            error.tile.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/${coords.z}/${coords.y}/${coords.x}`;
+            const fallbackService = isMapDark ? "Canvas/World_Dark_Gray_Base" : "Canvas/World_Light_Gray_Base";
+            error.tile.src = `https://services.arcgisonline.com/ArcGIS/rest/services/${fallbackService}/MapServer/tile/${coords.z}/${coords.y}/${coords.x}`;
           }
         }
       });
