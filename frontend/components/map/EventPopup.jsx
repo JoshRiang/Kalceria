@@ -331,7 +331,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
       </button>
     `;
   } else if (hasRequestedThisEvent) {
-    // Already requested: gray hand with red prohibited icon overlay
+    // Already requested: gray hand with red prohibited icon overlay (centered, proportioned with single diagonal red line)
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
@@ -344,9 +344,9 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         <div style="filter: grayscale(100%) opacity(0.45); display: flex; align-items: center; justify-content: center;">
           ${pureHandSvg}
         </div>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="position: absolute; inset: 0; pointer-events: none; overflow: visible; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));">
-          <circle cx="12" cy="12" r="8" stroke="#ef4444" stroke-width="2.2" />
-          <line x1="6.5" y1="6.5" x2="17.5" y2="17.5" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" />
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; overflow: visible;">
+          <circle cx="12" cy="12" r="8.5" stroke="#ef4444" stroke-width="2" />
+          <line x1="6" y1="6" x2="18" y2="18" stroke="#ef4444" stroke-width="2" stroke-linecap="round" />
         </svg>
       </button>
     `;
