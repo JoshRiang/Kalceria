@@ -3,7 +3,7 @@ import { getRequestToken, verifyAuthSession } from '../utils/authSession.js';
 // ─── GET /redirect/event/:eventId ─────────────────────────────────────────────
 export async function redirectEvent(req, res) {
   const { eventId } = req.params;
-  const configuredFrontend = process.env.FRONTEND_URL?.split(',')[0]?.trim();
+  const configuredFrontend = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://kalceria.id';
   if (!configuredFrontend) return res.status(503).json({ error: 'Frontend URL is not configured.' });
 
   let frontend;

@@ -97,8 +97,7 @@ export async function sendPasswordResetEmail(toEmail, token) {
   if (process.env.ENABLE_EMAIL_AUTH !== 'true') {
     return { skipped: true, reason: 'EMAIL_AUTH_DISABLED' };
   }
-  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim();
-  if (!frontendOrigin) throw new Error('Frontend URL is not configured.');
+  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://kalceria.id';
   const resetUrl = new URL('/reset-password', frontendOrigin);
   resetUrl.searchParams.set('token', token);
   return sendEmail({
@@ -122,7 +121,7 @@ export async function sendEventNotificationEmail(toEmail, eventDetail, eventId) 
   if (process.env.ENABLE_EMAIL_NOTIF !== 'true') {
     return { skipped: true, reason: 'EMAIL_NOTIF_DISABLED' };
   }
-  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://kalceria-frontend.vercel.app';
+  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://kalceria.id';
   const redirectUrl = `${frontendOrigin}/events/${encodeURIComponent(eventId)}`;
   const safeTitle = escapeHtml(eventDetail.title || 'Kalceria Event');
   const safeDescription = escapeHtml(eventDetail.description || '');
