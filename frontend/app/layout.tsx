@@ -68,6 +68,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${pixelFont.variable} ${rogFont.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preload" as="image" href="/logointofadein.webp" media="(min-width: 768px)" fetchPriority="high" />
+        <link rel="preload" as="image" href="/hp/logointro_hp.webp" media="(max-width: 767px)" fetchPriority="high" />
+      </head>
       <body className="min-h-full flex flex-col bg-[#050a14] text-[#ededed]">
         <script
           type="application/ld+json"

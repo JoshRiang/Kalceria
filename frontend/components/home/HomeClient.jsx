@@ -1,12 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import dynamic from "next/dynamic";
 import IntroPreloader from "@/components/IntroPreloader";
 import LandingPage from "@/components/LandingPage";
-
-const AuthPage = dynamic(() => import("@/components/AuthPage"), { ssr: false });
-const WelcomeTransition = dynamic(() => import("@/components/WelcomeTransition"), { ssr: false });
+import AuthPage from "@/components/AuthPage";
+import WelcomeTransition from "@/components/WelcomeTransition";
 
 export default function HomeClient() {
   const [phase, setPhase] = useState(() => {
@@ -14,6 +12,12 @@ export default function HomeClient() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("auth") === "true" || sessionStorage.getItem("triggerAuth") === "true") {
       return "auth";
+    }
+    const navEntry = window.performance?.getEntriesByType?.("navigation")?.[0];
+    const isReload = navEntry?.type === "reload";
+    if (isReload) {
+      sessionStorage.removeItem("introPlayed");
+      return "intro";
     }
     if (sessionStorage.getItem("introPlayed") === "true") {
       return "landing";

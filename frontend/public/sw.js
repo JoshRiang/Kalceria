@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kalceria-pwa-v2';
+const CACHE_NAME = 'kalceria-pwa-v3';
 const MAX_TILE_ENTRIES = 150;
 
 const PRECACHE_ASSETS = [
@@ -83,7 +83,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Static Sprites & WebP Brand Assets
+  // 2. Static Sprites & WebP Brand Assets (Network-First to eliminate stale cache)
   const isStaticSprite = (
     url.origin === self.location.origin &&
     (url.pathname.endsWith('.webp') || url.pathname.endsWith('.png') || url.pathname.endsWith('.otf')) &&
@@ -92,17 +92,15 @@ self.addEventListener('fetch', (event) => {
 
   if (isStaticSprite) {
     event.respondWith(
-      caches.open(CACHE_NAME).then(async (cache) => {
-        const cached = await cache.match(req);
-        const networkFetch = fetch(req).then((res) => {
+      fetch(req)
+        .then((res) => {
           if (res && res.status === 200) {
-            cache.put(req, res.clone());
+            const resClone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
           }
           return res;
-        }).catch(() => cached);
-
-        return cached || networkFetch;
-      })
+        })
+        .catch(() => caches.match(req))
     );
     return;
   }
