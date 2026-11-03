@@ -507,24 +507,15 @@ export async function isLocationFromVerifiedList(locationStr, selectionToken, la
   return isValidIndonesianLocation(clean);
 }
 
-export async function reverseGeocodeLocation(req, res) {
-  const lat = Number(req.query?.lat);
-  const lng = Number(req.query?.lng ?? req.query?.lon);
-
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return res.status(400).json({ error: 'Valid lat and lng coordinates are required.' });
-  }
-
-  if (!isWithinIndonesiaBounds(lat, lng)) {
-    return res.status(422).json({
-      error: 'Detected coordinates are outside the Indonesia deployment area.',
-    });
+export async function resolveIndonesianReverseGeo(lat, lng) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !isWithinIndonesiaBounds(lat, lng)) {
+    return null;
   }
 
   const cacheKey = `geo:rev:v3:${lat.toFixed(4)},${lng.toFixed(4)}`;
   const cached = await getCache(cacheKey);
   if (cached) {
-    return res.json(cached);
+    return cached;
   }
 
   // 1. Primary: Nominatim Reverse Geocode
@@ -565,7 +556,7 @@ export async function reverseGeocodeLocation(req, res) {
 
       await setCache(cacheKey, responseData, CACHE_TTL_SEC);
       await setCache(`geo:verified:${built.formatted.toLowerCase()}`, responseData, CACHE_TTL_SEC);
-      return res.json(responseData);
+      return responseData;
     }
   } catch {}
 
@@ -600,10 +591,32 @@ export async function reverseGeocodeLocation(req, res) {
         const responseData = { ...built, lng };
         await setCache(cacheKey, responseData, CACHE_TTL_SEC);
         await setCache(`geo:verified:${built.formatted.toLowerCase()}`, responseData, CACHE_TTL_SEC);
-        return res.json(responseData);
+        return responseData;
       }
     }
   } catch {}
+
+  return null;
+}
+
+export async function reverseGeocodeLocation(req, res) {
+  const lat = Number(req.query?.lat);
+  const lng = Number(req.query?.lng ?? req.query?.lon);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return res.status(400).json({ error: 'Valid lat and lng coordinates are required.' });
+  }
+
+  if (!isWithinIndonesiaBounds(lat, lng)) {
+    return res.status(422).json({
+      error: 'Detected coordinates are outside the Indonesia deployment area.',
+    });
+  }
+
+  const resolved = await resolveIndonesianReverseGeo(lat, lng);
+  if (resolved) {
+    return res.json(resolved);
+  }
 
   return res.status(503).json({
     error: 'Unable to automatically resolve street address right now. Please search and select your street from the list.',

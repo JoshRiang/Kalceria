@@ -15,7 +15,22 @@ function cleanDesc(value) {
   return String(value || "")
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+    .replace(/\[LOC:[^\]]+\]\s*/gi, "")
     .trim();
+}
+
+function extractLocation(item) {
+  if (item?.location && typeof item.location === "string" && item.location.trim()) {
+    return item.location.trim();
+  }
+  if (item?.locationName && typeof item.locationName === "string" && item.locationName.trim()) {
+    return item.locationName.trim();
+  }
+  const match = String(item?.description || "").match(/\[LOC:([^\]]+)\]/i);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  return null;
 }
 
 function extractMediaList(item) {
@@ -209,9 +224,9 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
       type="button"
       disabled
       title="Group Chat"
-      style="width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none; flex-shrink: 0;"
+      style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none; flex-shrink: 0;"
     >
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
         <path
           d="M18.5 8.5a6.5 6.5 0 0 1-.7 3 6.6 6.6 0 0 1-5.9 3.7 6.5 6.5 0 0 1-3-.7L5 16l1.5-4.5a6.5 6.5 0 0 1-.7-3 6.6 6.6 0 0 1 3.7-5.9 6.5 6.5 0 0 1 3-.7h.4a6.6 6.6 0 0 1 6.2 6.2v.4z"
           transform="translate(4.7, 2.0) scale(0.8)"
@@ -234,7 +249,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
 
   // Picture 2 Icons8 Upload Icon (for accepted collaborators)
   const pureUploadSvg = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
       <path
         d="M 5 13 V 17 C 5 18.1 5.9 19 7 19 H 17 C 18.1 19 19 18.1 19 17 V 13"
         stroke="${iconFg}"
@@ -264,7 +279,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
 
   // Pure Hand SVG: Exact Flaticon finger gesture (Picture 1), centered at (12, 12), all black with white border (light mode) and vice versa
   const pureHandSvg = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
       <path
         d="M 10.0 4.0 L 9.3 4.4 L 9.0 4.7 L 8.9 5.1 L 8.9 10.9 L 8.0 11.0 L 7.4 11.2 L 6.7 11.8 L 6.2 12.6 L 6.1 13.2 L 6.1 14.1 L 6.4 15.5 L 6.9 16.8 L 7.6 18.0 L 8.5 19.0 L 9.5 19.7 L 10.6 20.0 L 14.6 20.0 L 15.7 19.9 L 16.6 19.4 L 17.4 18.6 L 17.8 17.7 L 17.9 16.6 L 17.9 10.5 L 17.5 10.0 L 17.0 9.6 L 16.4 9.6 L 15.8 9.8 L 15.4 9.3 L 15.0 8.9 L 14.3 8.9 L 13.7 9.1 L 13.3 8.5 L 12.7 8.2 L 12.2 8.2 L 11.7 8.3 L 11.6 5.0 L 11.4 4.6 L 11.0 4.2 L 10.5 4.0 L 10.0 4.0 Z"
         fill="${iconFg}"
@@ -282,7 +297,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
   if (isOwner) {
     const hasRedDot = pendingRequestsCount > 0;
     const redDotHtml = hasRedDot
-      ? `<span style="position: absolute; top: -1px; right: -1px; width: 5px; height: 5px; background-color: #ef4444; border-radius: 50%; border: none !important; box-shadow: none !important; pointer-events: none;"></span>`
+      ? `<span style="position: absolute; top: -1px; right: -1px; width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%; border: none !important; box-shadow: none !important; pointer-events: none;"></span>`
       : "";
 
     requestOrEnvelopeIconHtml = `
@@ -290,11 +305,11 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaOpenRequests?.('${esc(item.id)}')"
         title="Collab Requests"
-        style="position: relative; width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: block;">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" style="display: block;">
           <rect x="2.5" y="4.5" width="19" height="15" rx="3" fill="${iconFg}" stroke="${iconStroke}" stroke-width="1.3" />
           <path d="M 3.5 6.5 L 12 13 L 20.5 6.5" fill="none" stroke="${iconStroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
@@ -308,7 +323,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaCollaboratorUpload?.('${esc(item.id)}')"
         title="Upload Media (Collaborator)"
-        style="width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.15)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -322,7 +337,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPromptCancelRequest?.('${esc(item.id)}', '${esc(item.title)}')"
         title="Remove Request from ${esc(item.title)}"
-        style="position: relative; width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -341,7 +356,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPromptCancelRequest?.('${esc(requestedEventId)}', 'active event')"
         title="Active request exists on another event (Click to cancel)"
-        style="position: relative; width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); flex-shrink: 0;"
+        style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.08)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -354,7 +369,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaRequestCollab?.('${esc(item.id)}')"
         title="Request Collab"
-        style="width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -363,18 +378,18 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     `;
   }
 
-  // 3. Pencil Icon (Edit Event - for owner only, matching Picture 1 SVG Repo, crisp 16x16)
+  // 3. Pencil Icon (Edit Event - for owner only, matching Picture 1 SVG Repo, crisp enlarged 21x21)
   const pencilIconHtml = isOwner
     ? `
       <button
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaEditEvent?.('${esc(item.id)}')"
         title="Edit Event"
-        style="width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
           <path
             d="M 3.5 20.5 L 4.8 15.8 L 8.2 19.2 Z"
             fill="${iconFg}"
@@ -405,15 +420,44 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
   const releaseTimeString = formatReleaseTime(item.createdAt);
   const safeId = String(item.id || "event").replace(/[^a-zA-Z0-9_-]/g, "_");
 
+  // Device-aware Navigation Link & Indonesian Location
+  const rawLoc = extractLocation(item) || "Bintaro Jaya, Tangerang Selatan";
+  const displayLoc = rawLoc.length > 36 ? rawLoc.slice(0, 33).trim() + "..." : rawLoc;
+  const isIOS = typeof navigator !== "undefined" && (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+  const mapNavUrl = item.lat != null && item.lng != null
+    ? (isIOS
+        ? `https://maps.apple.com/?q=${encodeURIComponent(rawLoc)}&ll=${item.lat},${item.lng}`
+        : `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`)
+    : (isIOS
+        ? `https://maps.apple.com/?q=${encodeURIComponent(rawLoc)}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawLoc)}`);
+
+  const linkColor = isMapDark ? "#38bdf8" : "#0284c7"; // Blue sky
+  const locationHtml = `
+    <div style="width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25;">
+      <a
+        href="${esc(mapNavUrl)}"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open in Maps: ${esc(rawLoc)}"
+        onclick="event.stopPropagation();"
+        style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; color: ${linkColor}; text-decoration: underline; text-underline-offset: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 100%; cursor: pointer;"
+      >${esc(displayLoc)}</a>
+    </div>
+  `;
+
   return `
     <div class="tactical-card event-card ${isMapDark ? 'event-card-dark' : 'event-card-light'}" style="position: relative; overflow: hidden; width: 280px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: linear-gradient(${bgOverlay}, ${bgOverlay}), url('${bgImage}') center/cover no-repeat !important; box-shadow: ${cardShadow} !important;">
       <!-- Upper Space: Title, Declarer & Action Icons (All 3 on one line!) -->
       <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; border: none !important;">
-        <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 170px; min-width: 0;">
+        <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 155px; min-width: 0; flex: 1;">
           <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${esc(item.title)}</strong>
           <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 700; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">By ${esc(creatorName)}</span>
         </div>
-        <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px; margin-left: 8px; flex-shrink: 0;">
+        <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 7px; margin-left: 6px; flex-shrink: 0;">
           ${doubleMessageIconHtml}
           ${requestOrEnvelopeIconHtml}
           ${pencilIconHtml}
@@ -432,36 +476,41 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         </div>
       </div>
 
-      <!-- Footer: 15% height with solid white (light) or solid black (dark) BG -->
-      <div class="popup-footer" style="position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: ${footerBg} !important; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; border: none !important;">
-        <!-- Left: Clock Icon + Live Uptime (00:00:00) -->
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" style="overflow: visible; flex-shrink: 0; display: block;">
-            <circle
-              cx="12"
-              cy="12"
-              r="9.5"
-              fill="${isMapDark ? '#ffffff' : '#000000'}"
-              stroke="${isMapDark ? '#000000' : '#ffffff'}"
-              stroke-width="1.8"
-            />
-            <path
-              d="M 12 6.5 L 12 12 L 15.5 15.5"
-              fill="none"
-              stroke="${isMapDark ? '#000000' : '#ffffff'}"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <span id="event-uptime-${safeId}" style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em;">
-            ${uptimeString}
-          </span>
-        </div>
+      <!-- Footer: solid white (light) or solid black (dark) BG, slightly elongated with location link -->
+      <div class="popup-footer" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 5px; padding: 8px 14px 9px 14px; background: ${footerBg} !important; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; border: none !important;">
+        <!-- Location Link: Arial non-bold, Blue sky color, redirect to Apple Maps (iOS) or Google Maps (Android/Desktop) -->
+        ${locationHtml}
 
-        <!-- Right: Release time (e.g. 17.41) -->
-        <div style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em;">
-          ${releaseTimeString}
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <!-- Left: Clock Icon + Live Uptime (00:00:00) -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" style="overflow: visible; flex-shrink: 0; display: block;">
+              <circle
+                cx="12"
+                cy="12"
+                r="9.5"
+                fill="${isMapDark ? '#ffffff' : '#000000'}"
+                stroke="${isMapDark ? '#000000' : '#ffffff'}"
+                stroke-width="1.8"
+              />
+              <path
+                d="M 12 6.5 L 12 12 L 15.5 15.5"
+                fill="none"
+                stroke="${isMapDark ? '#000000' : '#ffffff'}"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span id="event-uptime-${safeId}" style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em;">
+              ${uptimeString}
+            </span>
+          </div>
+
+          <!-- Right: Release time (e.g. 17.41) -->
+          <div style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em;">
+            ${releaseTimeString}
+          </div>
         </div>
       </div>
     </div>

@@ -22,7 +22,7 @@ const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then(
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
 import { hasUserSession } from "@/lib/session";
 import { playNotificationSound } from "@/lib/soundEngine";
-import {
+import api, {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents,
   postBroadcast, putBroadcast, postLocation, patchVisibility,
   postMiniEvent, putMiniEvent, delMiniEvent,
@@ -504,18 +504,56 @@ export default function MapPage() {
       const cleanDesc = (eventForm.description || "")
         .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
         .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+        .replace(/\[LOC:[^\]]+\]\s*/gi, "")
         .trim();
+
+      // Capture user's coordinates at the exact moment of event creation
+      let currentLat = me?.lat || currentUser?.domicileLat || -6.2715;
+      let currentLng = me?.lng || currentUser?.domicileLng || 106.7135;
+
+      if (typeof navigator !== "undefined" && navigator.geolocation) {
+        try {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 2000,
+              maximumAge: 60000,
+              enableHighAccuracy: false,
+            });
+          });
+          if (pos?.coords) {
+            currentLat = pos.coords.latitude;
+            currentLng = pos.coords.longitude;
+          }
+        } catch {}
+      }
+
+      // Reverse geocode to Indonesian location string using reverse geocode algorithm
+      let locationName = "";
+      try {
+        const revRes = await api.get('/location/reverse', {
+          params: { lat: currentLat, lng: currentLng },
+        });
+        if (revRes?.data?.formatted) {
+          locationName = revRes.data.formatted;
+        }
+      } catch {}
+
       let encodedDesc = `[CAT:${category}] ${cleanDesc}`.trim();
+      if (locationName) {
+        encodedDesc = `[LOC:${locationName}] ${encodedDesc}`.trim();
+      }
       if (mediaUrl) {
         encodedDesc = `[MEDIA:${mediaUrl}] ${encodedDesc}`.trim();
       }
+
       const payload = {
         title: eventForm.title,
         description: encodedDesc,
         category,
         mediaUrl,
-        lat: me?.lat || currentUser?.domicileLat || -6.2715,
-        lng: me?.lng || currentUser?.domicileLng || 106.7135,
+        location: locationName,
+        lat: currentLat,
+        lng: currentLng,
       };
 
       const eventIdToUpdate = editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;

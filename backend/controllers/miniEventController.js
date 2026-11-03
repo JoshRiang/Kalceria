@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cursorPagination.js';
+import { resolveIndonesianReverseGeo } from './geoController.js';
 
 const MINI_EVENT_TTL_MS = 7 * 60 * 60 * 1000;
 
@@ -16,14 +17,17 @@ function formatMiniEvent(ev) {
   const raw = ev.description || "";
   const catMatch = raw.match(/\[CAT:([a-z_]+)\]/i);
   const mediaMatch = raw.match(/\[MEDIA:([^\]]+)\]/i);
+  const locMatch = raw.match(/\[LOC:([^\]]+)\]/i);
   const cleanDesc = raw
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+    .replace(/\[LOC:[^\]]+\]\s*/gi, "")
     .trim();
   return {
     ...ev,
     category: catMatch ? catMatch[1].toLowerCase() : (ev.category || "cafe"),
     mediaUrl: mediaMatch ? mediaMatch[1] : (ev.mediaUrl || null),
+    location: locMatch ? locMatch[1].trim() : (ev.location || null),
     description: cleanDesc,
   };
 }
@@ -46,14 +50,29 @@ export async function createMiniEvent(req, res, next) {
     let description = cleanText(req.body.description);
     const category = cleanText(req.body.category) || "cafe";
     const mediaUrl = cleanText(req.body.mediaUrl);
+    let location = cleanText(req.body.location);
+    const lat = parseCoordinate(req.body.lat);
+    const lng = parseCoordinate(req.body.lng);
+
+    // Auto-resolve Indonesian reverse geocoded location if not provided
+    if (!location && !description.includes("[LOC:") && lat !== null && lng !== null) {
+      try {
+        const geoData = await resolveIndonesianReverseGeo(lat, lng);
+        if (geoData?.formatted) {
+          location = geoData.formatted;
+        }
+      } catch {}
+    }
+
+    if (location && !description.includes("[LOC:")) {
+      description = `[LOC:${location}] ${description}`;
+    }
     if (mediaUrl && !description.includes("[MEDIA:")) {
       description = `[MEDIA:${mediaUrl}] ${description}`;
     }
     if (category && !description.includes("[CAT:")) {
       description = `[CAT:${category}] ${description}`;
     }
-    const lat = parseCoordinate(req.body.lat);
-    const lng = parseCoordinate(req.body.lng);
     const error = validateMiniEvent({ title, description, lat, lng });
 
     if (error) return res.status(400).json({ error });
@@ -135,6 +154,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_cafe_1",
         title: "Morning Espresso Catchup",
         description: "Morning caffeine hit and route planning before heading to BSD loop.",
+        location: "Kopi Toko Djawa, Bintaro Sektor 9, Tangerang Selatan",
         lat: -6.2735,
         lng: 106.7110,
         isActive: true,
@@ -163,6 +183,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_cafe_2",
         title: "Sunset Coffee & Chills",
         description: "Iced Latte session at Sector 7 parkside cafe. All car enthusiasts welcome.",
+        location: "Bintaro Loop Parkside Cafe, Sektor 7, Tangerang Selatan",
         lat: -6.2810,
         lng: 106.7225,
         isActive: true,
@@ -176,6 +197,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_cafe_3",
         title: "V6 Roaster & Filter Brew",
         description: "Pour over tasting and casual Sunday talk with the crew.",
+        location: "Tanamera Coffee, Bintaro Jaya, Tangerang Selatan",
         lat: -6.2680,
         lng: 106.7085,
         isActive: true,
@@ -189,6 +211,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_spec_1",
         title: "Sunday Morning Fast Run",
         description: "Early morning spirited highway convoy to Karawaci circuit loop.",
+        location: "Pondok Ranji Fast Loop, Tangerang Selatan",
         lat: -6.2790,
         lng: 106.7160,
         isActive: true,
@@ -203,6 +226,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_spec_2",
         title: "Trackday Rollout Prep",
         description: "Alignment check and tire pressure setup before Sentul session.",
+        location: "Sentul Circuit Staging Point, Tangerang Selatan",
         lat: -6.2650,
         lng: 106.7190,
         isActive: true,
@@ -216,6 +240,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_spec_3",
         title: "Midnight Garage Reveal",
         description: "Secret widebody build unveiling with the core engineering circle.",
+        location: "Midnight Garage HQ, Pondok Pucung, Tangerang Selatan",
         lat: -6.2855,
         lng: 106.7060,
         isActive: true,
@@ -229,6 +254,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_eat_1",
         title: "Late Night Sate & Tongseng",
         description: "Post-cruise street food feast near Sector 7 strip.",
+        location: "Taman Jajan Sektor 7, Bintaro, Tangerang Selatan",
         lat: -6.2710,
         lng: 106.7145,
         isActive: true,
@@ -243,6 +269,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_eat_2",
         title: "Dimsum Brunch Gathering",
         description: "Warm dimsum feast and parking lot lineup at Bintaro Loop.",
+        location: "Plaza Bintaro Jaya, Pondok Aren, Tangerang Selatan",
         lat: -6.2760,
         lng: 106.7250,
         isActive: true,
@@ -256,6 +283,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_eat_3",
         title: "Smoked Brisket Dinner",
         description: "BBQ platter sharing and dyno talk with the turbos family.",
+        location: "Fresh Market Bintaro Sektor 7, Tangerang Selatan",
         lat: -6.2620,
         lng: 106.7120,
         isActive: true,
@@ -269,6 +297,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_disc_1",
         title: "ECU Tuning & Map Strategy",
         description: "In-depth technical breakdown of fuel trims, ignition timing, and boost curves.",
+        location: "Bintaro Autocenter, Sektor 9, Tangerang Selatan",
         lat: -6.2745,
         lng: 106.7180,
         isActive: true,
@@ -283,6 +312,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_disc_2",
         title: "Coilovers & Camber Talk",
         description: "Suspension geometry roundtable: roll centers and damper rebound settings.",
+        location: "Speedlab Tuning, Bintaro Sektor 7, Tangerang Selatan",
         lat: -6.2830,
         lng: 106.7115,
         isActive: true,
@@ -310,6 +340,7 @@ export async function getActiveMiniEvents(req, res, next) {
         id: "mini_disc_3",
         title: "Aero & Downforce Clinic",
         description: "Computational flow analysis discussion on rear wings and front splitters.",
+        location: "Aerotech Garage, Pondok Aren, Tangerang Selatan",
         lat: -6.2695,
         lng: 106.7210,
         isActive: true,
@@ -346,9 +377,24 @@ export async function updateMiniEvent(req, res, next) {
     const creatorId = req.user.userId;
     const { id } = req.params;
     const title = cleanText(req.body.title);
-    const description = cleanText(req.body.description);
+    let description = cleanText(req.body.description);
+    let location = cleanText(req.body.location);
     const lat = parseCoordinate(req.body.lat);
     const lng = parseCoordinate(req.body.lng);
+
+    if (!location && !description.includes("[LOC:") && lat !== null && lng !== null) {
+      try {
+        const geoData = await resolveIndonesianReverseGeo(lat, lng);
+        if (geoData?.formatted) {
+          location = geoData.formatted;
+        }
+      } catch {}
+    }
+
+    if (location && !description.includes("[LOC:")) {
+      description = `[LOC:${location}] ${description}`;
+    }
+
     const error = validateMiniEvent({ title, description, lat, lng });
 
     if (error) return res.status(400).json({ error });
