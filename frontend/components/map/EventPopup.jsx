@@ -332,7 +332,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     `;
   }
 
-  // 3. Pencil Icon (Edit Event - for owner only)
+  // 3. Pencil Icon (Edit Event - for owner only, matching Picture 1)
   const pencilIconHtml = isOwner
     ? `
       <button
@@ -343,16 +343,31 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="overflow: visible;">
+          {/* Triangle Tip at bottom-left */}
           <path
-            d="M 16.5 3.5 L 20.5 7.5 L 7.5 20.5 L 3.5 20.5 L 3.5 16.5 Z"
+            d="M 3 21 L 3.8 15.5 L 8.5 20.2 Z"
             fill="${iconFg}"
             stroke="${iconStroke}"
-            stroke-width="1.4"
+            stroke-width="1.2"
             stroke-linejoin="round"
           />
-          <path d="M 14.5 5.5 L 18.5 9.5" stroke="${iconStroke}" stroke-width="1.4" stroke-linecap="round" />
-          <path d="M 6.5 17.5 L 3.5 20.5" stroke="${iconStroke}" stroke-width="1.4" stroke-linecap="round" />
+          {/* Main Thick Body with gap */}
+          <path
+            d="M 6.2 13.1 L 13.1 6.2 L 17.8 10.9 L 10.9 17.8 Z"
+            fill="${iconFg}"
+            stroke="${iconStroke}"
+            stroke-width="1.2"
+            stroke-linejoin="round"
+          />
+          {/* Eraser / Cap at top-right with gap */}
+          <path
+            d="M 15.5 3.8 L 17.8 1.5 C 18.6 0.7 19.9 0.7 20.7 1.5 L 22.5 3.3 C 23.3 4.1 23.3 5.4 22.5 6.2 L 20.2 8.5 Z"
+            fill="${iconFg}"
+            stroke="${iconStroke}"
+            stroke-width="1.2"
+            stroke-linejoin="round"
+          />
         </svg>
       </button>
     `

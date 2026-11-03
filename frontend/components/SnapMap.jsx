@@ -334,6 +334,7 @@ export default function SnapMap({
           className: "tactical-popup",
           offset: [0, -34],
           autoClose: true,
+          closeButton: false,
         });
         marker._lastPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount);
         markerRefs.current[markerId] = marker;

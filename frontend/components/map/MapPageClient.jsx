@@ -92,6 +92,10 @@ export default function MapPage() {
       } catch {}
     }
     return {
+      mini_spec_3: [
+        { id: "req_adit_otniel", user: { id: "mock_adit", name: "Adit Bintaro", nickname: "Adit", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit", broadcast: "Dyno run booked for Saturday!" }, message: "Bro, count me in for the midnight widebody reveal! Bringing the GR Yaris.", createdAt: new Date(Date.now() - 1800000).toISOString() },
+        { id: "req_dinda_otniel", user: { id: "mock_dinda", name: "Dinda Laras", nickname: "Dinda", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda", broadcast: "Trackday tuning prep at FM" }, message: "Would love to collab on the aero build session tonight!", createdAt: new Date(Date.now() - 4200000).toISOString() }
+      ],
       mini_cafe_1: [
         { id: "req_adit", user: { id: "mock_adit", name: "Adit Bintaro", nickname: "Adit", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit", broadcast: "Dyno run booked for Saturday!" }, message: "Ready for highway convoy route!", createdAt: new Date(Date.now() - 3600000).toISOString() },
         { id: "req_bonita", user: { id: "mock_bonita", name: "Bonita Bon", nickname: "Bonita", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bonita", broadcast: "Coffee & car chat in Sector 7" }, message: "Joining morning espresso catchup with my Silvia S15.", createdAt: new Date(Date.now() - 7200000).toISOString() }
@@ -324,7 +328,10 @@ export default function MapPage() {
   }, [mapUsersData, blockedUserIds]);
 
   const visibleEvents = useMemo(() => {
-    return (events || []).filter((e) => !blockedUserIds.includes(e.creator?.id));
+    const now = Date.now();
+    return (events || [])
+      .filter((e) => !blockedUserIds.includes(e.creator?.id))
+      .filter((e) => !e.expiresAt || new Date(e.expiresAt).getTime() > now);
   }, [events, blockedUserIds]);
 
   // derived: kalcerians for the sidebar (merging all event creators so every dummy event has its kalcerian entry!)
@@ -955,7 +962,7 @@ export default function MapPage() {
         cancelRequestTarget={cancelRequestTarget} handleConfirmCancelRequest={handleConfirmCancelRequest}
         showRequestsModal={showRequestsModal} setShowRequestsModal={setShowRequestsModal}
         viewingRequestsEvent={events.find((e) => String(e.id) === String(viewingRequestsEventId))}
-        currentRequestsList={viewingRequestsEventId ? (eventRequestsMap[viewingRequestsEventId] || (viewingRequestsEventId === activeOwnEvent?.id ? eventRequestsMap["own"] : null) || eventRequestsMap["mini_cafe_1"] || []) : []}
+        currentRequestsList={viewingRequestsEventId ? (eventRequestsMap[viewingRequestsEventId] || (viewingRequestsEventId === activeOwnEvent?.id ? eventRequestsMap["own"] : null) || (viewingRequestsEventId === "mini_spec_3" ? eventRequestsMap["mini_spec_3"] : null) || eventRequestsMap["mini_cafe_1"] || []) : []}
         onAcceptCollabRequest={handleAcceptCollabRequest} onDeclineCollabRequest={handleDeclineCollabRequest}
         showDeleteAccountModal={showDeleteAccountModal} setShowDeleteAccountModal={setShowDeleteAccountModal}
         handleConfirmDeleteAccount={handleConfirmDeleteAccount}

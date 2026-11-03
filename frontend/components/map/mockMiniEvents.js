@@ -13,7 +13,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2735,
     lng: 106.7110,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_ahmad",
       name: "Ahmad Bintaro",
@@ -39,7 +39,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2810,
     lng: 106.7225,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_rei",
       name: "Rei Nathan",
@@ -57,7 +57,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2680,
     lng: 106.7085,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_josh",
       name: "Josh Riang",
@@ -77,7 +77,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2790,
     lng: 106.7160,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_alpha",
       name: "Kalcerian Alpha",
@@ -95,7 +95,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2650,
     lng: 106.7190,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_ghost",
       name: "Ghost Rider",
@@ -112,7 +112,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2855,
     lng: 106.7060,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_otniel",
       name: "Otniel Kevin",
@@ -132,7 +132,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2710,
     lng: 106.7145,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_coki",
       name: "Coki",
@@ -150,7 +150,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2760,
     lng: 106.7250,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_bonita",
       name: "Bonita Bon",
@@ -168,7 +168,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2620,
     lng: 106.7120,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_dinda",
       name: "Dinda Laras",
@@ -188,7 +188,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2745,
     lng: 106.7180,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_melati",
       name: "Melati Eka",
@@ -205,7 +205,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2830,
     lng: 106.7115,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_adit",
       name: "Adit Bintaro",
@@ -231,7 +231,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     lat: -6.2695,
     lng: 106.7210,
     isActive: true,
-    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
       id: "mock_fajar",
       name: "Fajar Drift",

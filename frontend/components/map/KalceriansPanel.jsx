@@ -141,19 +141,33 @@ function CategoryIcon({ category, isMapDark }) {
   }
 }
 
-// ─── 2. Broadcast Message Icon ───────────────────────────────────────────────────
+// ─── 2. Broadcast Megaphone / TOA Icon (Picture 4 Style) ──────────────────────────
 function BroadcastLineIcon({ isMapDark }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
   return (
     <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
+      {/* Megaphone Cone Body */}
       <path
-        d="M20 12c0 3.86-3.58 7-8 7a9.3 9.3 0 0 1-3.1-.53L4 20l1.35-3.6A6.67 6.67 0 0 1 4 12c0-3.86 3.58-7 8-7s8 3.14 8 7z"
+        d="M4.5 13.5V10.5C4.5 9.7 5.1 9 6 9H8L14.5 5.2C15.3 4.7 16.5 5.3 16.5 6.2V17.8C16.5 18.7 15.3 19.3 14.5 18.8L8 15H6C5.1 15 4.5 14.3 4.5 13.5Z"
         fill={fg}
         stroke={border}
         strokeWidth="1.2"
         strokeLinejoin="round"
       />
+      {/* Handle */}
+      <path
+        d="M8 15L8.5 18.5C8.6 19.3 9.3 19.8 10.1 19.6C10.8 19.4 11.3 18.8 11.2 18.1L10.7 15"
+        fill={fg}
+        stroke={border}
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* 3 Emission Rays */}
+      <line x1="18.5" y1="8" x2="21.5" y2="6" stroke={fg} strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="19.5" y1="12" x2="22.5" y2="12" stroke={fg} strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="18.5" y1="16" x2="21.5" y2="18" stroke={fg} strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }

@@ -1,7 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cursorPagination.js';
 
-const MINI_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
+const MINI_EVENT_TTL_MS = 7 * 60 * 60 * 1000;
 
 function cleanText(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -142,7 +142,7 @@ export async function getActiveMiniEvents(req, res, next) {
         mediaUrl: "/media/gifs/event_cafe_1.gif",
         mediaUrls: ["/media/gifs/event_cafe_1.gif", "/media/gifs/event_cafe_2.gif"],
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: {
           id: "mock_ahmad",
           name: "Ahmad Bintaro",
@@ -169,7 +169,7 @@ export async function getActiveMiniEvents(req, res, next) {
         category: "cafe",
         mediaUrl: "/media/gifs/event_cafe_2.gif",
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_rei", name: "Rei Nathan", nickname: "Rei", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rei" },
       },
       {
@@ -182,7 +182,7 @@ export async function getActiveMiniEvents(req, res, next) {
         category: "cafe",
         mediaUrl: "/media/gifs/event_cafe_3.gif",
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_josh", name: "Josh Riang", nickname: "Josh", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Josh" },
       },
       {
@@ -196,7 +196,7 @@ export async function getActiveMiniEvents(req, res, next) {
         mediaUrl: "/media/gifs/event_spec_1.gif",
         mediaUrls: ["/media/gifs/event_spec_1.gif", "/media/gifs/event_spec_2.gif", "/media/gifs/event_spec_3.gif"],
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_alpha", name: "Kalcerian Alpha", nickname: "Alpha", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alpha" },
       },
       {
@@ -209,7 +209,7 @@ export async function getActiveMiniEvents(req, res, next) {
         category: "special",
         mediaUrl: "/media/gifs/event_spec_2.gif",
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_ghost", name: "Ghost Rider", nickname: "Ghost", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ghost" },
       },
       {
@@ -222,7 +222,7 @@ export async function getActiveMiniEvents(req, res, next) {
         category: "special",
         mediaUrl: "/media/gifs/event_spec_3.gif",
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_otniel", name: "Otniel Kevin", nickname: "Otniel", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Otniel" },
       },
       {
@@ -236,7 +236,7 @@ export async function getActiveMiniEvents(req, res, next) {
         mediaUrl: "/media/gifs/event_eat_1.gif",
         mediaUrls: ["/media/gifs/event_eat_1.gif", "/media/gifs/event_eat_2.gif"],
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_coki", name: "Coki", nickname: "Coki", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Coki" },
       },
       {
@@ -249,7 +249,7 @@ export async function getActiveMiniEvents(req, res, next) {
         category: "eat",
         mediaUrl: "/media/gifs/event_eat_2.gif",
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_bonita", name: "Bonita Bon", nickname: "Bonita", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bonita" },
       },
       {
@@ -262,7 +262,7 @@ export async function getActiveMiniEvents(req, res, next) {
         category: "eat",
         mediaUrl: "/media/gifs/event_eat_3.gif",
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_dinda", name: "Dinda Laras", nickname: "Dinda", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda" },
       },
       {
@@ -276,7 +276,7 @@ export async function getActiveMiniEvents(req, res, next) {
         mediaUrl: "/media/gifs/event_disc_1.gif",
         mediaUrls: ["/media/gifs/event_disc_1.gif", "/media/gifs/event_disc_2.gif"],
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_melati", name: "Melati Eka", nickname: "Melati", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Melati" },
       },
       {
@@ -289,7 +289,7 @@ export async function getActiveMiniEvents(req, res, next) {
         category: "discuss",
         mediaUrl: "/media/gifs/event_disc_2.gif",
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: {
           id: "mock_adit",
           name: "Adit Bintaro",
@@ -316,7 +316,7 @@ export async function getActiveMiniEvents(req, res, next) {
         category: "discuss",
         mediaUrl: "/media/gifs/event_disc_3.gif",
         createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 86400000),
+        expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000),
         creator: { id: "mock_fajar", name: "Fajar Drift", nickname: "Fajar", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fajar" },
       },
     ];
