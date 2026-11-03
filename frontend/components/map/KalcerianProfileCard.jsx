@@ -33,6 +33,19 @@ const AESTHETIC_COVERS = [
   "/aboutus_bg1.webp",
 ];
 
+const BASE_PROFILE_COLORS = [
+  "#1b4332", // Forest Green
+  "#1e3a5f", // Deep Navy
+  "#2d3748", // Slate Charcoal
+  "#134e4a", // Deep Emerald
+  "#312e81", // Deep Indigo
+  "#3f3f46", // Modern Zinc
+  "#4c1d95", // Deep Violet
+  "#78350f", // Warm Amber Umber
+  "#14532d", // Rich Pine
+  "#334155", // Midnight Slate
+];
+
 function getFallbackCover(user) {
   const name = String(user?.name || user?.nickname || "").toLowerCase();
   if (name.includes("ahmad")) {
@@ -41,9 +54,10 @@ function getFallbackCover(user) {
   if (name.includes("adit")) {
     return "/media/gifs/event_spec_1.gif";
   }
-  const idStr = String(user?.id || user?.name || "kalcerian");
-  const num = Math.abs(idStr.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % AESTHETIC_COVERS.length;
-  return AESTHETIC_COVERS[num];
+  // User Requirement: Everyone else (including Otniel) has a random profile bg BASE COLOR (like green, etc.) with nothing added on that base color
+  const idStr = String(user?.id || user?.name || user?.nickname || "kalcerian");
+  const num = Math.abs(idStr.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % BASE_PROFILE_COLORS.length;
+  return BASE_PROFILE_COLORS[num];
 }
 
 function getAvatarUrl(user) {
