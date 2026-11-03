@@ -357,8 +357,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
           password: form.password,
         });
         establishSession(res.data);
-        const displayName = res.data?.user?.nickname || res.data?.user?.name || "User";
-        setSuccess(`Welcome Back, ${displayName}`);
+        setSuccess("Authentication successful.");
         setTimeout(() => onAuthSuccess?.(res.data), 800);
       } else {
         const registeredEmail = form.email.trim();
@@ -593,18 +592,6 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                     </div>
                   )}
 
-                  {/* Error & Success Alerts */}
-                  {error && mode !== "verify" && mode !== "choose-username" && (
-                    <div className="mb-6 p-3 bg-red-950/60 border border-red-500/40 rounded-lg flex items-center gap-3">
-                      <span className="text-red-400 font-mono text-xs">{error}</span>
-                    </div>
-                  )}
-                  {success && mode !== "choose-username" && (
-                    <div className="mb-6 p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center gap-3">
-                      <span className="text-emerald-400 font-mono text-xs">{success}</span>
-                    </div>
-                  )}
-
                   {/* Form Body */}
                   <form onSubmit={handleSubmit} noValidate className="flex flex-col relative">
                     <AnimatePresence mode="wait">
@@ -671,21 +658,77 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                       </motion.div>
                     </AnimatePresence>
 
+                    {/* Error / Success Display (Consolas font, no outer box) */}
+                    <AnimatePresence>
+                      {error && mode !== "verify" && mode !== "choose-username" && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden mb-3"
+                        >
+                          <div
+                            style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                            className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+                          >
+                            {error}
+                          </div>
+                        </motion.div>
+                      )}
+                      {success && mode !== "choose-username" && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden mb-3"
+                        >
+                          <div
+                            style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                            className="text-emerald-400 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+                          >
+                            {success}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
                     {/* Submit Button (for login & register modes only) */}
                     {(mode === "login" || mode === "register") && (
                       <button
                         type="submit"
                         disabled={loading || (mode === "register" && !PUBLIC_SIGNUP_ENABLED)}
-                        className="mt-2 w-full py-3 bg-white hover:bg-slate-200 text-black font-sans font-bold text-sm tracking-wider uppercase rounded-md transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        className="mt-2 w-full py-3.5 bg-white hover:bg-slate-200 text-black font-extrabold text-[13px] tracking-wider uppercase rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                       >
                         {loading
                           ? "Processing…"
+                          : mode === "register" && !PUBLIC_SIGNUP_ENABLED
+                          ? "Not Ready Yet"
                           : mode === "login"
                           ? "Sign In"
                           : "Register Account"}
                       </button>
                     )}
                   </form>
+
+                  {/* ── Footer ── */}
+                  {mode !== "choose-username" && (
+                    <div className="mt-8 text-center">
+                      <p className="font-mono text-xs text-slate-500">
+                        {mode === "verify"
+                          ? "Sudah verifikasi? "
+                          : mode === "login"
+                          ? "Don't have an account? "
+                          : "Already have an account? "}
+                        <button
+                          type="button"
+                          onClick={() => switchMode(mode === "verify" ? "login" : mode === "login" ? "register" : "login")}
+                          className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"
+                        >
+                          {mode === "verify" ? "Sign in" : mode === "login" ? "Register now" : "Sign in"}
+                        </button>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -707,6 +750,42 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
           setRawImageForCrop(null);
         }}
         onDone={handleCropComplete}
+      />
+
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(148, 163, 184, 0.25);
+          border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(148, 163, 184, 0.45);
+        }
+        .custom-scrollbar::-webkit-scrollbar-button {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #ffffff !important;
+          -webkit-box-shadow: 0 0 0px 1000px #0c1528 inset !important;
+          transition: background-color 5000s ease-in-out 0s !important;
+        }
+      `,
+        }}
       />
     </>
   );

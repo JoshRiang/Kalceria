@@ -169,6 +169,9 @@ export default function AuthField({
             disabled={disabled}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
+            onCopy={(e) => e.preventDefault()}
+            onCut={(e) => e.preventDefault()}
+            onPaste={(e) => e.preventDefault()}
             autoComplete={autoComplete || "current-password"}
             className="w-full bg-[#0c1528] px-3 py-2.5 font-sans text-[13px] text-white outline-none placeholder:text-slate-600 autofill-dark"
           />

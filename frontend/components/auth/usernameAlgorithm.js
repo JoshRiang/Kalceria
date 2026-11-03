@@ -73,3 +73,4 @@ export async function findFirstAvailableUsername(candidates, checkAvailabilityFn
   }
   return candidates[0] || "Kalcerian";
 }
+

@@ -106,7 +106,7 @@ export default function ChooseUsernameStep({
             </span>
           ) : isAvailable ? (
             <span className="font-sans text-xs font-semibold text-emerald-400 tracking-wide text-center">
-              Username available, check the grammar ya
+              Username is available
             </span>
           ) : (
             <span className="font-sans text-xs font-semibold text-amber-400 tracking-wide text-center">
@@ -153,3 +153,4 @@ export default function ChooseUsernameStep({
     </div>
   );
 }
+
