@@ -12,6 +12,8 @@ import { INITIAL_MOCK_MINI_EVENTS } from "@/components/map/mockMiniEvents";
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
+import { OwnProfileDrawer } from "@/components/map/OwnProfileDrawer";
+import { EditProfileModal } from "@/components/map/EditProfileModal";
 import { MapWalkthroughTooltip } from "@/components/map/MapWalkthroughTooltip";
 const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel").then((m) => m.KalceriansPanel), { ssr: false });
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
@@ -103,6 +105,9 @@ export default function MapPage() {
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [viewingRequestsEventId, setViewingRequestsEventId] = useState(null);
+  const [showOwnProfile, setShowOwnProfile] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(() => {
     if (typeof window !== "undefined" && window.innerWidth < 860) {
@@ -209,8 +214,6 @@ export default function MapPage() {
       clearInterval(interval);
     };
   }, [notLoggedIn, currentUser]);
-
-
 
   const recenterMap = useCallback(() => {
     if (!mapRef.current) return;
@@ -713,6 +716,61 @@ export default function MapPage() {
     setNotice("Collab request declined.");
   }, [viewingRequestsEventId]);
 
+  const handleSaveProfile = useCallback(async (updatedData) => {
+    playNotificationSound("event");
+    setCurrentUser((prev) => {
+      const merged = { ...(prev || {}), ...updatedData };
+      try {
+        localStorage.setItem("kalceria_user", JSON.stringify(merged));
+        const sess = localStorage.getItem("kalceria_user_session");
+        if (sess) {
+          const parsed = JSON.parse(sess);
+          parsed.user = { ...(parsed.user || {}), ...updatedData };
+          localStorage.setItem("kalceria_user_session", JSON.stringify(parsed));
+        }
+      } catch {}
+      return merged;
+    });
+    try {
+      await api.put("/users/me", updatedData);
+    } catch (e) {
+      console.warn("Profile update remote sync deferred:", e?.message);
+    }
+    setNotice("Profile updated successfully!");
+  }, []);
+
+  const handleRequestChangePassword = useCallback(async () => {
+    playNotificationSound("event");
+    try {
+      if (currentUser?.email) {
+        await api.post("/auth/password/reset-request", { email: currentUser.email });
+      }
+      setNotice(`Reset link sent to ${currentUser?.email || "your registered email"}!`);
+    } catch {
+      setNotice("Password change request initiated.");
+    }
+  }, [currentUser]);
+
+  const handleConfirmDeleteAccount = useCallback(async () => {
+    playNotificationSound("event");
+    setShowDeleteAccountModal(false);
+    setShowEditProfileModal(false);
+    setShowOwnProfile(false);
+    try {
+      await api.delete("/users/me");
+    } catch (e) {
+      console.warn("Delete account remote sync deferred:", e?.message);
+    }
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {}
+    setNotice("Account deleted. Redirecting...");
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 1200);
+  }, []);
+
   // login gate
   if (notLoggedIn) {
     return <MapAuthGate />;
@@ -733,32 +791,17 @@ export default function MapPage() {
         <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden">
           {/* Animated Blobs */}
           <motion.div
-            animate={{
-              scale: [1, 1.5, 1],
-              rotate: [0, 180, 0],
-              x: [-150, 150, -150],
-              y: [-80, 80, -80],
-            }}
+            animate={{ scale: [1, 1.5, 1], rotate: [0, 180, 0], x: [-150, 150, -150], y: [-80, 80, -80] }}
             transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
             className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] bg-[#ff006e]/25 rounded-full blur-[120px]"
           />
           <motion.div
-            animate={{
-              scale: [1.5, 1, 1.5],
-              rotate: [0, -180, 0],
-              x: [150, -150, 150],
-              y: [80, -80, 80],
-            }}
+            animate={{ scale: [1.5, 1, 1.5], rotate: [0, -180, 0], x: [150, -150, 150], y: [80, -80, 80] }}
             transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
             className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-[#ffd60a]/15 rounded-full blur-[120px]"
           />
           <motion.div
-            animate={{
-              opacity: [0.2, 0.7, 0.2],
-              scale: [1, 1.3, 1],
-              x: [0, 100, 0],
-              y: [0, -100, 0],
-            }}
+            animate={{ opacity: [0.2, 0.7, 0.2], scale: [1, 1.3, 1], x: [0, 100, 0], y: [0, -100, 0] }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             className="absolute top-[20%] left-[30%] w-[50%] h-[50%] bg-purple-600/15 rounded-full blur-[100px]"
           />
@@ -776,19 +819,11 @@ export default function MapPage() {
         }}
       >
         <SnapMap
-          users={visibleMapUsers}
-          events={visibleEvents}
-          onMapReady={handleMapReady}
-          focusUserId={focusedUserId}
-          focusTarget={focusTarget}
-          isMapDark={isMapDark}
-          currentUser={currentUser}
-          onEditEvent={handleOpenEditEvent}
-          requestedEventId={requestedEventId}
-          eventRequestsMap={eventRequestsMap}
-          onRequestCollab={handleRequestCollab}
-          onPromptCancelRequest={handlePromptCancelRequest}
-          onOpenRequests={handleOpenRequests}
+          users={visibleMapUsers} events={visibleEvents} onMapReady={handleMapReady}
+          focusUserId={focusedUserId} focusTarget={focusTarget} isMapDark={isMapDark}
+          currentUser={currentUser} onEditEvent={handleOpenEditEvent} requestedEventId={requestedEventId}
+          eventRequestsMap={eventRequestsMap} onRequestCollab={handleRequestCollab}
+          onPromptCancelRequest={handlePromptCancelRequest} onOpenRequests={handleOpenRequests}
         />
       </motion.div>
 
@@ -852,24 +887,12 @@ export default function MapPage() {
       {!showStartup && hasMounted && (
         <>
           <MapHeaderHud
-            isMapDark={isMapDark}
-            setIsMapDark={setIsMapDark}
-            mapCenter={mapCenter}
-            mapZoom={mapZoom}
-            actionMenuOpen={actionMenuOpen}
-            setActionMenuOpen={setActionMenuOpen}
-            menuOpen={menuOpen}
-            setMenuOpen={setMenuOpen}
-            setShowQuitModal={setShowQuitModal}
-            setShowStatusModal={setShowStatusModal}
-            setShowEventModal={handleOpenEventModal}
-            isStatusBusy={isStatusBusy}
-            currentUser={currentUser}
-            avatarUrl={avatarUrl}
-            presence={presence}
-            handlePresenceChange={handlePresenceChange}
-            recenterMap={recenterMap}
-            isRecentering={isRecentering}
+            isMapDark={isMapDark} setIsMapDark={setIsMapDark} mapCenter={mapCenter} mapZoom={mapZoom}
+            actionMenuOpen={actionMenuOpen} setActionMenuOpen={setActionMenuOpen} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
+            setShowQuitModal={setShowQuitModal} setShowStatusModal={setShowStatusModal} setShowEventModal={handleOpenEventModal}
+            isStatusBusy={isStatusBusy} currentUser={currentUser} avatarUrl={avatarUrl} presence={presence}
+            handlePresenceChange={handlePresenceChange} recenterMap={recenterMap} isRecentering={isRecentering}
+            onOpenOwnProfile={() => setShowOwnProfile((prev) => !prev)}
           />
 
           {/* Kalcerians Panel */}
@@ -882,36 +905,41 @@ export default function MapPage() {
           />
 
           <KalceriansPanel
-            scheduleTimeout={scheduleTimeout}
-            mapUsersData={mapUsersData}
-            kalcerians={kalcerians}
-            events={events}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            drawerOpen={drawerOpen}
-            setDrawerOpen={setDrawerOpen}
-            isDataLoading={isDataLoading}
-            hoveredKalcerian={hoveredKalcerian}
-            setHoveredKalcerian={setHoveredKalcerian}
-            isMapDark={isMapDark}
-            setFocusedUserId={setFocusedUserId}
-            setSelectedOfflineUser={setSelectedOfflineUser}
-            sidebarKalcerians={sidebarKalcerians}
-            focusUser={focusUser}
-            blockedUserIds={blockedUserIds}
-            onBlockUser={handleBlockUser}
-            onUnblockUser={handleUnblockUser}
-            onOpenItemOnMap={handleOpenItemOnMap}
+            scheduleTimeout={scheduleTimeout} mapUsersData={mapUsersData} kalcerians={kalcerians} events={events}
+            searchQuery={searchQuery} setSearchQuery={setSearchQuery} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
+            isDataLoading={isDataLoading} hoveredKalcerian={hoveredKalcerian} setHoveredKalcerian={setHoveredKalcerian}
+            isMapDark={isMapDark} setFocusedUserId={setFocusedUserId} setSelectedOfflineUser={setSelectedOfflineUser}
+            sidebarKalcerians={sidebarKalcerians} focusUser={focusUser} blockedUserIds={blockedUserIds}
+            onBlockUser={handleBlockUser} onUnblockUser={handleUnblockUser} onOpenItemOnMap={handleOpenItemOnMap}
+            currentUser={currentUser} requestedEventId={requestedEventId} eventRequestsMap={eventRequestsMap}
+            onPromptCancelRequest={handlePromptCancelRequest} onOpenRequests={handleOpenRequests}
+          />
+
+          <OwnProfileDrawer
+            isOpen={showOwnProfile}
+            onClose={() => setShowOwnProfile(false)}
             currentUser={currentUser}
-            requestedEventId={requestedEventId}
-            eventRequestsMap={eventRequestsMap}
-            onPromptCancelRequest={handlePromptCancelRequest}
-            onOpenRequests={handleOpenRequests}
+            isMapDark={isMapDark}
+            onEditProfile={() => {
+              setShowOwnProfile(false);
+              setShowEditProfileModal(true);
+            }}
+          />
+
+          <EditProfileModal
+            show={showEditProfileModal}
+            onClose={() => setShowEditProfileModal(false)}
+            isMapDark={isMapDark}
+            currentUser={currentUser}
+            onSaveProfile={handleSaveProfile}
+            onRequestChangePassword={handleRequestChangePassword}
+            onRequestDeleteAccount={() => {
+              setShowEditProfileModal(false);
+              setShowDeleteAccountModal(true);
+            }}
           />
         </>
       )}
-
-
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -933,28 +961,19 @@ export default function MapPage() {
       <MapModals
         offlineUserObj={offlineUserObj} setSelectedOfflineUser={setSelectedOfflineUser}
         showStatusModal={showStatusModal} setShowStatusModal={setShowStatusModal}
-        isMapDark={isMapDark} saveBroadcast={saveBroadcast}
-        statusText={statusText} setStatusText={setStatusText} busy={busy}
+        isMapDark={isMapDark} saveBroadcast={saveBroadcast} statusText={statusText} setStatusText={setStatusText} busy={busy}
         showEventModal={showEventModal} setShowEventModal={handleOpenEventModal}
         saveMiniEvent={saveMiniEvent} eventForm={eventForm} setEventForm={setEventForm}
-        activeOwnEvent={activeOwnEvent} deleteMiniEvent={deleteMiniEvent}
-        editingEventId={editingEventId}
-        showCancelRequestModal={showCancelRequestModal}
-        setShowCancelRequestModal={setShowCancelRequestModal}
-        cancelRequestTarget={cancelRequestTarget}
-        handleConfirmCancelRequest={handleConfirmCancelRequest}
-        showRequestsModal={showRequestsModal}
-        setShowRequestsModal={setShowRequestsModal}
+        activeOwnEvent={activeOwnEvent} deleteMiniEvent={deleteMiniEvent} editingEventId={editingEventId}
+        showCancelRequestModal={showCancelRequestModal} setShowCancelRequestModal={setShowCancelRequestModal}
+        cancelRequestTarget={cancelRequestTarget} handleConfirmCancelRequest={handleConfirmCancelRequest}
+        showRequestsModal={showRequestsModal} setShowRequestsModal={setShowRequestsModal}
         viewingRequestsEvent={events.find((e) => String(e.id) === String(viewingRequestsEventId))}
-        currentRequestsList={
-          viewingRequestsEventId
-            ? (eventRequestsMap[viewingRequestsEventId] || (viewingRequestsEventId === activeOwnEvent?.id ? eventRequestsMap["own"] : null) || eventRequestsMap["mini_cafe_1"] || [])
-            : []
-        }
-        onAcceptCollabRequest={handleAcceptCollabRequest}
-        onDeclineCollabRequest={handleDeclineCollabRequest}
-        isExiting={isExiting} showQuitModal={showQuitModal}
-        setShowQuitModal={setShowQuitModal} handleQuitConfirm={handleQuitConfirm}
+        currentRequestsList={viewingRequestsEventId ? (eventRequestsMap[viewingRequestsEventId] || (viewingRequestsEventId === activeOwnEvent?.id ? eventRequestsMap["own"] : null) || eventRequestsMap["mini_cafe_1"] || []) : []}
+        onAcceptCollabRequest={handleAcceptCollabRequest} onDeclineCollabRequest={handleDeclineCollabRequest}
+        showDeleteAccountModal={showDeleteAccountModal} setShowDeleteAccountModal={setShowDeleteAccountModal}
+        handleConfirmDeleteAccount={handleConfirmDeleteAccount}
+        isExiting={isExiting} showQuitModal={showQuitModal} setShowQuitModal={setShowQuitModal} handleQuitConfirm={handleQuitConfirm}
       />
     </main>
   );

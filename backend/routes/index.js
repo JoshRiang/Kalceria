@@ -1,7 +1,8 @@
 import express from "express";
 import {
   register, login, requestOtp, verifyOtp,
-  requestPasswordReset, resetPassword, checkUsername, verifyJitPassword, getMe
+  requestPasswordReset, resetPassword, checkUsername, verifyJitPassword, getMe,
+  updateMe, deleteMe, changePassword
 } from "../controllers/authController.js";
 import { updateLiveLocation, getNearbyUsers, setLiveLocationPreference } from "../controllers/locationController.js";
 import { searchIndonesianLocations, reverseGeocodeLocation } from "../controllers/geoController.js";
@@ -98,6 +99,9 @@ router.get("/auth/check-username/:username", usernameCheckRateLimit, checkUserna
 
 // ─── User Profile ────────────────────────────────────────────────────────────
 router.get("/users/me", requireAuth, getMe);
+router.put("/users/me", requireAuth, updateMe);
+router.delete("/users/me", requireAuth, deleteMe);
+router.post("/auth/password/change", requireAuth, changePassword);
 
 // ─── Events (Public) ─────────────────────────────────────────────────────────
 router.get("/events", listPublicEvents);

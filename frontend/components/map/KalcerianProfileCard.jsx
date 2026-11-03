@@ -230,6 +230,8 @@ export default function KalcerianProfileCard({
   showMobileClose = false,
   onClose,
   isMobileCompact = false,
+  isOwnProfile = false,
+  onEditProfile,
 }) {
   const [imgError, setImgError] = useState(false);
   const displayName = user?.displayName || user?.name || user?.nickname || "Kalcerian";
@@ -360,6 +362,29 @@ export default function KalcerianProfileCard({
             >
               <svg viewBox="0 0 24 24" className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.8">
                 <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
+
+          {/* Edit Profile 'Pencil' button: on the right side of the profile picture */}
+          {isOwnProfile && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onEditProfile) onEditProfile();
+              }}
+              aria-label="Edit Profile"
+              title="Edit Profile"
+              className={`absolute bottom-0.5 right-0.5 z-30 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer shadow-lg transition-transform hover:scale-115 active:scale-90 border-[1.5px] ${
+                isMapDark
+                  ? "bg-white text-black border-black"
+                  : "bg-black text-white border-white"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
           )}

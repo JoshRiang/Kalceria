@@ -149,6 +149,9 @@ export const MapModals = memo(function MapModals({
   showQuitModal,
   setShowQuitModal,
   handleQuitConfirm,
+  showDeleteAccountModal,
+  setShowDeleteAccountModal,
+  handleConfirmDeleteAccount,
 }) {
   const fileInputRef = useRef(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
@@ -157,6 +160,7 @@ export const MapModals = memo(function MapModals({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteChoice, setDeleteChoice] = useState(null);
   const [cancelChoice, setCancelChoice] = useState(null);
+  const [deleteAccountChoice, setDeleteAccountChoice] = useState(null);
 
   // Modal colors match map mode:
   // Light mode (isMapDark === false): modal is white with black borders/elements.
@@ -711,6 +715,30 @@ export const MapModals = memo(function MapModals({
             setShowCancelRequestModal(false);
             setCancelChoice(null);
           }, 150);
+        }}
+      />
+
+      {/* Delete Account Confirmation (Quit-the-map style) */}
+      <ConfirmationPromptModal
+        show={showDeleteAccountModal}
+        onClose={() => {
+          setDeleteAccountChoice("no");
+          setTimeout(() => {
+            setShowDeleteAccountModal?.(false);
+            setDeleteAccountChoice(null);
+          }, 150);
+        }}
+        title="Are you sure want to "
+        highlightText="Delete Account"
+        isMapDark={isMapDark}
+        choice={deleteAccountChoice}
+        onConfirm={() => {
+          setDeleteAccountChoice("yes");
+          window.__kalceriaPlaySound?.("event");
+          setTimeout(() => {
+            handleConfirmDeleteAccount?.();
+            setDeleteAccountChoice(null);
+          }, 200);
         }}
       />
 

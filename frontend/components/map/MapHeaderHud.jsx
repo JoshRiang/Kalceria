@@ -23,6 +23,7 @@ export const MapHeaderHud = memo(function MapHeaderHud({
   handlePresenceChange,
   recenterMap,
   isRecentering,
+  onOpenOwnProfile,
 }) {
   const [soundMuted, setSoundMuted] = useState(false);
 
@@ -464,44 +465,44 @@ export const MapHeaderHud = memo(function MapHeaderHud({
                 <path d="M 20 4.8 a 11 11 0 0 1 0 14.4" />
               </g>
             ) : (
-              /* Firm Red Cross (Muted State) */
-              <g style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.8))" }}>
+              /* Red Cross on the right side only (volume-x standard) */
+              <g style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.8))" }}>
                 {/* Under-stroke for extreme contrast */}
                 <line
-                  x1="3.5"
-                  y1="3.5"
-                  x2="20.5"
-                  y2="20.5"
+                  x1="15.5"
+                  y1="8.5"
+                  x2="21.5"
+                  y2="15.5"
                   stroke={isMapDark ? "#000000" : "#ffffff"}
-                  strokeWidth="4.5"
+                  strokeWidth="3.8"
                   strokeLinecap="round"
                 />
                 <line
-                  x1="20.5"
-                  y1="3.5"
-                  x2="3.5"
-                  y2="20.5"
+                  x1="21.5"
+                  y1="8.5"
+                  x2="15.5"
+                  y2="15.5"
                   stroke={isMapDark ? "#000000" : "#ffffff"}
-                  strokeWidth="4.5"
+                  strokeWidth="3.8"
                   strokeLinecap="round"
                 />
                 {/* Main Firm Red Cross */}
                 <line
-                  x1="3.5"
-                  y1="3.5"
-                  x2="20.5"
-                  y2="20.5"
+                  x1="15.5"
+                  y1="8.5"
+                  x2="21.5"
+                  y2="15.5"
                   stroke="#ef4444"
-                  strokeWidth="2.8"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                 />
                 <line
-                  x1="20.5"
-                  y1="3.5"
-                  x2="3.5"
-                  y2="20.5"
+                  x1="21.5"
+                  y1="8.5"
+                  x2="15.5"
+                  y2="15.5"
                   stroke="#ef4444"
-                  strokeWidth="2.8"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                 />
               </g>
@@ -509,8 +510,13 @@ export const MapHeaderHud = memo(function MapHeaderHud({
           </svg>
         </button>
 
-        {/* 5. Photo Profile - Strip Outer Box, Pure Circle Avatar with Online Dot (Radar visibility box removed) */}
-        <div className="relative flex items-center justify-center">
+        {/* 5. Photo Profile - Strip Outer Box, Pure Circle Avatar with Online Dot (Tap to open own profile) */}
+        <button
+          type="button"
+          onClick={() => onOpenOwnProfile?.()}
+          title="My Profile"
+          className="relative flex items-center justify-center pointer-events-auto cursor-pointer outline-none transition-transform hover:scale-105 active:scale-95 group"
+        >
           <div
             className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden relative select-none ${
               isMapDark
@@ -553,7 +559,7 @@ export const MapHeaderHud = memo(function MapHeaderHud({
                 : "bg-slate-500"
             }`}
           />
-        </div>
+        </button>
       </div>
     </motion.header>
   );

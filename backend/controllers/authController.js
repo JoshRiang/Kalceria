@@ -378,6 +378,87 @@ export async function getMe(req, res, next) {
   }
 }
 
+// update current user profile
+export async function updateMe(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { name, nickname, phone, socialPlatform, socialLink, profilePicture } = req.body || {};
+
+    const updateData = {};
+    if (typeof name === 'string' && name.trim()) updateData.name = name.trim().slice(0, 100);
+    if (typeof nickname === 'string') updateData.nickname = nickname.trim().slice(0, 50) || null;
+    if (typeof phone === 'string') updateData.phone = phone.trim().slice(0, 30);
+    if (socialPlatform !== undefined) updateData.socialPlatform = ['WA', 'IG', 'FB', 'NULL'].includes(socialPlatform) ? socialPlatform : 'NULL';
+    if (socialLink !== undefined) updateData.socialLink = typeof socialLink === 'string' ? socialLink.trim().slice(0, 200) : null;
+    if (profilePicture !== undefined) updateData.profilePicture = sanitizeProfilePicture(profilePicture);
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        profilePicture: true,
+        phone: true,
+        socialPlatform: true,
+        socialLink: true,
+        allowLiveLocation: true,
+      },
+    });
+
+    res.json({ message: 'Profile updated successfully.', user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// delete own account (Quit style with full cascading cleanup & session revocation)
+export async function deleteMe(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const token = getRequestToken(req);
+    if (token) await revokeAuthSession(token);
+    await revokeUserSessions(userId);
+    await prisma.user.delete({ where: { id: userId } });
+    clearAuthCookie(res);
+    res.clearCookie('csrfToken', csrfCookieOptions());
+    res.json({ message: 'Account deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// change password for logged in user
+export async function changePassword(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { currentPassword, newPassword } = req.body || {};
+
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || newPassword.length > 128 || !PASSWORD_REGEX.test(newPassword)) {
+      return res.status(400).json({ error: 'New password must have min 8 chars, uppercase, number, and special char.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const valid = await argon2.verify(user.passwordHash, currentPassword);
+    if (!valid) return res.status(401).json({ error: 'Incorrect current password.' });
+
+    const passwordHash = await argon2.hash(newPassword);
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    await revokeUserSessions(userId);
+
+    // Re-issue clean authenticated session
+    const sessionToken = await createAuthSession(user.id, user.role);
+    setAuthCookie(res, sessionToken);
+
+    res.json({ message: 'Password changed successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ─── Just-In-Time (JIT) Verification ─────────────────────────────────────────
 export async function verifyJitPassword(req, res, next) {
   try {
