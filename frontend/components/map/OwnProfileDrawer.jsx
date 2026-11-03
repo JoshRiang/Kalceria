@@ -12,6 +12,9 @@ export function OwnProfileDrawer({
 }) {
   if (!isOpen) return null;
 
+  const rawUsername = currentUser?.username || currentUser?.nickname || currentUser?.displayName || currentUser?.name || "user";
+  const cleanUsername = String(rawUsername).replace(/^@/, "");
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -41,10 +44,10 @@ export function OwnProfileDrawer({
               <span className={`w-10 h-1 rounded-full ${isMapDark ? "bg-white/20" : "bg-black/15"}`} />
             </div>
 
-            {/* Top Header: "My Profile" (Font identical to "Find other Kalcerians") */}
+            {/* Top Header: "@<username> Profile" (Font identical to "Find other Kalcerians") */}
             <div className="shrink-0 w-full pt-2 pb-1.5 flex justify-between items-center px-4 select-none outline-none">
               <h2 className={`font-sans font-bold text-base sm:text-lg tracking-tight select-none ${isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"}`}>
-                My Profile
+                @{cleanUsername} Profile
               </h2>
               <button
                 type="button"

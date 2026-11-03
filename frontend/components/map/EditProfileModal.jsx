@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { PhotoCropEditorModal } from "./modals/PhotoCropEditorModal";
 
 const BASE_PROFILE_COLORS = [
   "#1b4332", // Forest Green
@@ -39,8 +40,12 @@ export function EditProfileModal({
   const [profilePicture, setProfilePicture] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
+  const [cropSourceImage, setCropSourceImage] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [fileError, setFileError] = useState(null);
+
+  const rawUsername = currentUser?.username || currentUser?.nickname || currentUser?.displayName || currentUser?.name || "user";
+  const cleanUsername = String(rawUsername).replace(/^@/, "");
 
   const avatarInputRef = useRef(null);
   const bgInputRef = useRef(null);
@@ -84,7 +89,7 @@ export function EditProfileModal({
     if (!file) return;
     const ext = (file.name.split(".").pop() || "").toLowerCase();
     if (!["png", "jpg", "jpeg", "webp"].includes(ext)) {
-      setFileError("Only .png, .jpeg, and .webp image files are allowed for profile picture");
+      setFileError("Only .png, .jpeg, and .webp image files are allowed for profile picture (no video)");
       e.target.value = "";
       return;
     }
@@ -92,8 +97,8 @@ export function EditProfileModal({
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result;
-      setAvatarPreview(dataUrl);
-      setProfilePicture(dataUrl);
+      // Open WhatsApp-style Crop & Rotate editor (Picture 2)
+      setCropSourceImage(dataUrl);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -168,7 +173,7 @@ export function EditProfileModal({
           {/* Header - No dividing line underneath (vanished) */}
           <div className="shrink-0 flex justify-between items-center px-5 sm:px-6 pt-4 pb-2 border-none">
             <h2 className="font-sans font-bold text-base sm:text-lg tracking-tight">
-              Edit Profile
+              Edit @{cleanUsername} Profile
             </h2>
             <button
               type="button"
@@ -242,22 +247,24 @@ export function EditProfileModal({
                       />
                     </div>
 
-                    {/* Pencil Edit Icon on Avatar rim (restored 3 commits ago style) */}
+                    {/* Picture 1: 2-Arrow Circular Recycle Icon on Avatar rim (tight on right bottom) */}
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         avatarInputRef.current?.click();
                       }}
-                      aria-label="Change Avatar"
+                      aria-label="Change Profile Picture"
                       title="Change Profile Picture"
                       className={`absolute bottom-0 right-0 z-20 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-115 active:scale-90 border-[1.5px] ${
                         isModalDark ? "bg-white text-black border-black" : "bg-black text-white border-white"
                       }`}
                     >
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M 20 8 A 8.5 8.5 0 0 0 6 7 L 3 10" />
+                        <polyline points="3 5 3 10 8 10" />
+                        <path d="M 4 16 A 8.5 8.5 0 0 0 18 17 L 21 14" />
+                        <polyline points="21 19 21 14 16 14" />
                       </svg>
                     </button>
                     <input
@@ -531,6 +538,21 @@ export function EditProfileModal({
           </form>
         </motion.div>
       </div>
+
+      {/* Picture 2: WhatsApp-style Crop & Rotate Modal (semi-transparent blur, no outer box) */}
+      <PhotoCropEditorModal
+        show={Boolean(cropSourceImage)}
+        rawImage={cropSourceImage}
+        isMapDark={isModalDark}
+        onDone={(processedDataUrl) => {
+          setAvatarPreview(processedDataUrl);
+          setProfilePicture(processedDataUrl);
+          setCropSourceImage(null);
+        }}
+        onCancel={() => {
+          setCropSourceImage(null);
+        }}
+      />
     </AnimatePresence>
   );
 }
