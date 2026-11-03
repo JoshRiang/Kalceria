@@ -419,25 +419,11 @@ export default function MapPage() {
   function handleOpenItemOnMap(item, type = "user") {
     if (!item) return;
     setFocusTarget({
-      id: item.id,
+      id: item.id || item.name || item.nickname,
       type,
       openPopup: true,
       timestamp: Date.now(),
     });
-    let lat = item.lat;
-    let lng = item.lng;
-    if (!lat || !lng) {
-      const found =
-        mapUsersData.find((u) => u.id === item.id) ||
-        events.find((e) => e.id === item.id);
-      if (found) {
-        lat = found.lat;
-        lng = found.lng;
-      }
-    }
-    if (lat && lng && mapRef.current) {
-      mapRef.current.flyTo([lat, lng], 16);
-    }
   }
 
   // real broadcast save

@@ -97,20 +97,82 @@ export default function SnapMap({
 
     if (focusTarget) {
       const { id, type, openPopup = true } = focusTarget;
-      const markerId = type === "event" ? `event_${id}` : `user_${id}`;
-      const marker =
-        markerRefs.current[markerId] ||
-        markerRefs.current[`event_${id}`] ||
-        markerRefs.current[`user_${id}`];
+      let targetMarker = null;
 
-      if (marker) {
-        const latLng = marker.getLatLng();
-        mapRef.current.flyTo(latLng, 16, { animate: true, duration: 0.6 });
-        if (openPopup) {
-          const timeout = setTimeout(() => {
-            marker.openPopup();
-          }, 120);
-          return () => clearTimeout(timeout);
+      if (type === "event") {
+        targetMarker = markerRefs.current[`event_${id}`] || markerRefs.current[id];
+      } else {
+        targetMarker = markerRefs.current[`user_${id}`] || markerRefs.current[id];
+      }
+
+      if (!targetMarker) {
+        targetMarker = markerRefs.current[`user_${id}`] || markerRefs.current[`event_${id}`];
+      }
+
+      if (!targetMarker && markerRefs.current) {
+        const idLower = String(id).toLowerCase();
+        for (const key of Object.keys(markerRefs.current)) {
+          const m = markerRefs.current[key];
+          const ud = m?.options?.userData;
+          if (ud) {
+            const udId = String(ud.id || "").toLowerCase();
+            const udName = String(ud.name || "").toLowerCase();
+            const udNick = String(ud.nickname || "").toLowerCase();
+            const creatorId = String(ud.creator?.id || "").toLowerCase();
+            const creatorName = String(ud.creator?.name || ud.creator?.nickname || "").toLowerCase();
+
+            if (
+              udId === idLower ||
+              udName === idLower ||
+              udNick === idLower ||
+              creatorId === idLower ||
+              creatorName === idLower ||
+              (idLower.includes(udNick) && udNick.length > 2) ||
+              (udId.includes(idLower) && idLower.length > 2)
+            ) {
+              targetMarker = m;
+              break;
+            }
+          }
+        }
+      }
+
+      if (targetMarker && mapRef.current) {
+        const latLng = targetMarker.getLatLng();
+        const map = mapRef.current;
+        const currentCenter = map.getCenter();
+        const dist = currentCenter ? currentCenter.distanceTo(latLng) : 9999;
+
+        const openPopupSafe = () => {
+          try {
+            targetMarker.openPopup();
+          } catch (_) {}
+        };
+
+        if (dist < 20) {
+          if (openPopup) openPopupSafe();
+        } else {
+          let timer = null;
+          const onMoveEnd = () => {
+            map.off("moveend", onMoveEnd);
+            if (timer) clearTimeout(timer);
+            if (openPopup) {
+              setTimeout(openPopupSafe, 50);
+            }
+          };
+
+          map.once("moveend", onMoveEnd);
+          timer = setTimeout(() => {
+            map.off("moveend", onMoveEnd);
+            if (openPopup) openPopupSafe();
+          }, 650);
+
+          map.flyTo(latLng, 16, { animate: true, duration: 0.5 });
+
+          return () => {
+            map.off("moveend", onMoveEnd);
+            if (timer) clearTimeout(timer);
+          };
         }
       }
       return;
@@ -119,13 +181,12 @@ export default function SnapMap({
     if (focusUserId) {
       const markerId = `user_${focusUserId}`;
       const marker = markerRefs.current[markerId];
-      if (marker) {
-        const timeout = setTimeout(() => {
-          const latLng = marker.getLatLng();
-          mapRef.current.flyTo(latLng, 16);
+      if (marker && mapRef.current) {
+        const latLng = marker.getLatLng();
+        mapRef.current.flyTo(latLng, 16, { animate: true, duration: 0.5 });
+        mapRef.current.once("moveend", () => {
           marker.openPopup();
-        }, 50);
-        return () => clearTimeout(timeout);
+        });
       }
     }
   }, [focusUserId, focusTarget, isReady]);

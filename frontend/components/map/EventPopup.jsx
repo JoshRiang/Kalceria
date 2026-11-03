@@ -66,7 +66,7 @@ function renderSingleMedia(url) {
         loop 
         muted 
         playsinline 
-        style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95; display: block;"
+        style="width: 100%; height: 100%; object-fit: cover; display: block;"
       ></video>
     `;
   }
@@ -76,7 +76,7 @@ function renderSingleMedia(url) {
       src="${esc(url)}" 
       alt="Event Live Feed" 
       loading="lazy" 
-      style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95; display: block;" 
+      style="width: 100%; height: 100%; object-fit: cover; display: block;" 
     />
   `;
 }
@@ -138,7 +138,7 @@ function renderMediaCarousel(mediaList) {
         100% { width: 0%; opacity: 0.3; }
       }
     </style>
-    <div class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; background: #000;">
+    <div class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden;">
       ${slidesHtml}
       <div style="position: absolute; top: 8px; left: 10px; right: 10px; z-index: 10; display: flex; gap: 4px; pointer-events: none;">
         ${indicatorsHtml}
@@ -147,26 +147,21 @@ function renderMediaCarousel(mediaList) {
   `;
 }
 
-const EVENT_COLOR_PALETTES = [
-  { blob1: "rgba(37, 99, 235, 0.40)", blob2: "rgba(236, 72, 153, 0.32)" },
-  { blob1: "rgba(37, 99, 235, 0.38)", blob2: "rgba(255, 214, 10, 0.30)" },
-  { blob1: "rgba(16, 185, 129, 0.38)", blob2: "rgba(6, 182, 212, 0.32)" },
-  { blob1: "rgba(147, 51, 234, 0.40)", blob2: "rgba(244, 63, 94, 0.32)" },
-  { blob1: "rgba(245, 158, 11, 0.40)", blob2: "rgba(239, 68, 68, 0.30)" },
-  { blob1: "rgba(20, 184, 166, 0.40)", blob2: "rgba(59, 130, 246, 0.32)" },
-  { blob1: "rgba(249, 115, 22, 0.38)", blob2: "rgba(99, 102, 241, 0.32)" },
-  { blob1: "rgba(217, 70, 239, 0.40)", blob2: "rgba(124, 58, 237, 0.32)" },
-];
+function calculateUptime(createdAt) {
+  if (!createdAt) return "00:00:00";
+  const diffMs = Math.max(0, Date.now() - new Date(createdAt).getTime());
+  const totalSec = Math.floor(diffMs / 1000);
+  const h = String(Math.floor(totalSec / 3600)).padStart(2, "0");
+  const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
+  const s = String(totalSec % 60).padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
 
-function getEventPalette(item) {
-  const seed = String(item?.id || item?.title || item?.createdAt || "event");
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i);
-    hash |= 0;
-  }
-  const index = Math.abs(hash) % EVENT_COLOR_PALETTES.length;
-  return EVENT_COLOR_PALETTES[index];
+function formatReleaseTime(createdAt) {
+  const date = createdAt ? new Date(createdAt) : new Date();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const mins = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}.${mins}`;
 }
 
 export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null, pendingRequestsCount = 0) {
@@ -189,61 +184,75 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
   const hasRequestedThisEvent = Boolean(requestedEventId && String(requestedEventId) === String(item.id));
   const hasActiveRequestElsewhere = Boolean(requestedEventId && String(requestedEventId) !== String(item.id));
 
+  // BGCard subtle transparency wash for extreme text firmness
   const bgImage = isMapDark ? "/jpeg/BGCard_Dark.jpeg" : "/jpeg/BGCard_Light.jpeg";
-  const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.16)";
+  const bgOverlay = isMapDark ? "rgba(14, 18, 28, 0.85)" : "rgba(255, 255, 255, 0.86)";
+  const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.12)";
   const cardShadow = isMapDark
     ? "0 18px 46px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.2)"
     : "0 16px 40px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.1)";
 
-  // Strict User Requirement: In light mode, Black bold. In dark mode, White bold.
+  // Strict User Requirement: Light mode = Black bold, Dark mode = White bold
   const titleColor = isMapDark ? "#ffffff" : "#000000";
   const authorColor = isMapDark ? "#ffffff" : "#000000";
-  const descColor = isMapDark ? "rgba(255, 255, 255, 0.95)" : "#0f172a";
-  const expiresColor = isMapDark ? "rgba(255, 255, 255, 0.9)" : "#0f172a";
-  const expiresBg = isMapDark ? "rgba(0, 0, 0, 0.45)" : "rgba(255, 255, 255, 0.65)";
-  const expiresBorder = isMapDark ? "1px solid rgba(255, 255, 255, 0.18)" : "1px solid rgba(0, 0, 0, 0.15)";
-  const dividerBorder = isMapDark ? "1px solid rgba(255, 255, 255, 0.12)" : "1px solid rgba(0, 0, 0, 0.12)";
-  const textShadow = isMapDark ? "0 1px 3px rgba(0, 0, 0, 0.85)" : "0 1px 2px rgba(255, 255, 255, 0.85)";
+  const descColor = isMapDark ? "#ffffff" : "#0f172a";
+  const footerBg = isMapDark ? "#000000" : "#ffffff";
+  const footerTextColor = isMapDark ? "#ffffff" : "#000000";
 
-  // Icon theme tokens: Light mode = black fill with white border; Dark mode = white fill with black border
+  // Icon theme tokens: Light = black with white border; Dark = white with black border
   const iconFg = isMapDark ? "#ffffff" : "#000000";
   const iconStroke = isMapDark ? "#000000" : "#ffffff";
-  const handIconSrc = isMapDark ? "/icons/hand_request_dark.png" : "/icons/hand_request_light.png";
 
-  // Group chat icon: grey by default (cannot be tap)
+  // 1. Group Chat Icon: double speech bubbles, grey by default (disabled)
   const doubleMessageIconHtml = `
     <button
       type="button"
       disabled
       title="Group Chat"
-      style="background: transparent; border: none; padding: 0; cursor: not-allowed; display: flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none;"
+      style="width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none; flex-shrink: 0;"
     >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="overflow: visible;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
         <path
           d="M18.5 8.5a6.5 6.5 0 0 1-.7 3 6.6 6.6 0 0 1-5.9 3.7 6.5 6.5 0 0 1-3-.7L5 16l1.5-4.5a6.5 6.5 0 0 1-.7-3 6.6 6.6 0 0 1 3.7-5.9 6.5 6.5 0 0 1 3-.7h.4a6.6 6.6 0 0 1 6.2 6.2v.4z"
-          transform="translate(4, -3) scale(0.82)"
+          transform="translate(3.5, -2.5) scale(0.8)"
           fill="${iconFg}"
           stroke="${iconStroke}"
-          stroke-width="1.3"
+          stroke-width="1.4"
           stroke-linejoin="round"
         />
         <path
           d="M18.5 8.5a6.5 6.5 0 0 1-.7 3 6.6 6.6 0 0 1-5.9 3.7 6.5 6.5 0 0 1-3-.7L5 16l1.5-4.5a6.5 6.5 0 0 1-.7-3 6.6 6.6 0 0 1 3.7-5.9 6.5 6.5 0 0 1 3-.7h.4a6.6 6.6 0 0 1 6.2 6.2v.4z"
-          transform="translate(-1, 3) scale(0.82)"
+          transform="translate(-1, 3) scale(0.8)"
           fill="${iconFg}"
           stroke="${iconStroke}"
-          stroke-width="1.3"
+          stroke-width="1.4"
           stroke-linejoin="round"
         />
       </svg>
     </button>
   `;
 
+  // Pure Hand SVG: strictly the hand with no |_ wall or background box
+  const pureHandSvg = `
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
+      <path
+        d="M10 2.5a2 2 0 0 1 2 2v7.5h1.2a1.8 1.8 0 0 1 1.8 1.8v.5a1.8 1.8 0 0 1 1.8 1.8v.5a1.8 1.8 0 0 1 1.8 1.8c0 3-2 5.5-5.5 5.5h-3c-3 0-5-2-5.5-4.5l-.8-2.5a2 2 0 0 1 1.2-2.5l1-.3V4.5a2 2 0 0 1 2-2z"
+        fill="${iconFg}"
+        stroke="${iconStroke}"
+        stroke-width="1.6"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <line x1="14" y1="12" x2="14" y2="15" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" />
+      <line x1="16.5" y1="14" x2="16.5" y2="17" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" />
+    </svg>
+  `;
+
   let requestOrEnvelopeIconHtml = "";
   if (isOwner) {
     const hasRedDot = pendingRequestsCount > 0;
     const redDotHtml = hasRedDot
-      ? `<span style="position: absolute; top: -3px; right: -3px; width: 7.5px; height: 7.5px; background-color: #ef4444; border-radius: 50%; border: 1.5px solid ${isMapDark ? '#000000' : '#ffffff'}; box-shadow: 0 0 5px #ef4444;"></span>`
+      ? `<span style="position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; background-color: #ef4444; border-radius: 50%; border: 1.5px solid ${isMapDark ? '#000000' : '#ffffff'}; box-shadow: 0 0 5px #ef4444;"></span>`
       : "";
 
     requestOrEnvelopeIconHtml = `
@@ -251,23 +260,23 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaOpenRequests?.('${esc(item.id)}')"
         title="Collab Requests"
-        style="position: relative; background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
+        style="position: relative; width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
           <path
-            d="M 3 6.5 C 3 5.4 3.9 4.5 5 4.5 L 19 4.5 C 20.1 4.5 21 5.4 21 6.5 L 21 17.5 C 21 18.6 20.1 19.5 19 19.5 L 5 19.5 C 3.9 19.5 3 18.6 3 17.5 Z"
+            d="M 3 6 C 3 4.9 3.9 4 5 4 L 19 4 C 20.1 4 21 4.9 21 6 L 21 18 C 21 19.1 20.1 20 19 20 L 5 20 C 3.9 20 3 19.1 3 18 Z"
             fill="${iconFg}"
             stroke="${iconStroke}"
-            stroke-width="1.3"
+            stroke-width="1.4"
             stroke-linejoin="round"
           />
           <path
             d="M 3.5 6.5 L 12 13 L 20.5 6.5"
             fill="none"
             stroke="${iconStroke}"
-            stroke-width="1.4"
+            stroke-width="1.6"
             stroke-linecap="round"
             stroke-linejoin="round"
           />
@@ -276,78 +285,61 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
       </button>
     `;
   } else if (hasRequestedThisEvent) {
-    // Already requested: gray hand icon with overlapping red prohibited icon
+    // Already requested: gray hand with red prohibited icon overlay
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
         onclick="window.__kalceriaPromptCancelRequest?.('${esc(item.id)}', '${esc(item.title)}')"
         title="Remove Request from ${esc(item.title)}"
-        style="position: relative; background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
+        style="position: relative; width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
-        <img
-          src="${handIconSrc}"
-          alt="Requested"
-          width="22"
-          height="22"
-          style="width: 22px; height: 22px; object-fit: contain; display: block; filter: grayscale(100%) opacity(0.5);"
-        />
+        <div style="filter: grayscale(100%) opacity(0.45); display: flex; align-items: center; justify-content: center;">
+          ${pureHandSvg}
+        </div>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="position: absolute; inset: 0; pointer-events: none; overflow: visible; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));">
-          <circle cx="12" cy="12" r="8.5" stroke="#ef4444" stroke-width="2.2" />
-          <line x1="6" y1="6" x2="18" y2="18" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" />
+          <circle cx="12" cy="12" r="8" stroke="#ef4444" stroke-width="2.2" />
+          <line x1="6.5" y1="6.5" x2="17.5" y2="17.5" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" />
         </svg>
       </button>
     `;
   } else if (hasActiveRequestElsewhere) {
-    // Disabled/grayed out because active request already exists on another event
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
         onclick="window.__kalceriaPromptCancelRequest?.('${esc(requestedEventId)}', 'active event')"
         title="Active request exists on another event (Click to cancel)"
-        style="position: relative; background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; opacity: 0.45; filter: grayscale(100%);"
+        style="position: relative; width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.08)'"
         onmouseout="this.style.transform='scale(1)'"
       >
-        <img
-          src="${handIconSrc}"
-          alt="Request Disabled"
-          width="22"
-          height="22"
-          style="width: 22px; height: 22px; object-fit: contain; display: block;"
-        />
+        ${pureHandSvg}
       </button>
     `;
   } else {
-    // Normal requestable state
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaRequestCollab?.('${esc(item.id)}')"
         title="Request Collab"
-        style="background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
+        style="width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
-        <img
-          src="${handIconSrc}"
-          alt="Request"
-          width="22"
-          height="22"
-          style="width: 22px; height: 22px; object-fit: contain; display: block;"
-        />
+        ${pureHandSvg}
       </button>
     `;
   }
 
+  // 3. Pencil Icon (Edit Event - for owner only)
   const pencilIconHtml = isOwner
     ? `
       <button
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaEditEvent?.('${esc(item.id)}')"
         title="Edit Event"
-        style="background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
+        style="width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -356,52 +348,98 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
             d="M 16.5 3.5 L 20.5 7.5 L 7.5 20.5 L 3.5 20.5 L 3.5 16.5 Z"
             fill="${iconFg}"
             stroke="${iconStroke}"
-            stroke-width="1.3"
+            stroke-width="1.4"
             stroke-linejoin="round"
           />
-          <path d="M 14.5 5.5 L 18.5 9.5" stroke="${iconStroke}" stroke-width="1.3" stroke-linecap="round" />
-          <path d="M 6.5 17.5 L 3.5 20.5" stroke="${iconStroke}" stroke-width="1.3" stroke-linecap="round" />
+          <path d="M 14.5 5.5 L 18.5 9.5" stroke="${iconStroke}" stroke-width="1.4" stroke-linecap="round" />
+          <path d="M 6.5 17.5 L 3.5 20.5" stroke="${iconStroke}" stroke-width="1.4" stroke-linecap="round" />
         </svg>
       </button>
     `
     : "";
 
-  const tailBg = isMapDark
-    ? "linear-gradient(to bottom, rgba(40, 18, 15, 0.95), transparent)"
-    : "linear-gradient(to bottom, rgba(200, 240, 230, 0.95), transparent)";
+  const uptimeString = calculateUptime(item.createdAt);
+  const releaseTimeString = formatReleaseTime(item.createdAt);
+  const safeId = String(item.id || "event").replace(/[^a-zA-Z0-9_-]/g, "_");
 
   return `
-    <div class="tactical-card event-card ${isMapDark ? 'event-card-dark' : 'event-card-light'}" style="position: relative; overflow: hidden; width: 280px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background-image: url('${bgImage}') !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; box-shadow: ${cardShadow} !important;">
-      <!-- Upper Space: Title, Declarer & Action Icons -->
-      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: ${dividerBorder}; background-image: url('${bgImage}'); background-size: cover; background-position: top center; background-repeat: no-repeat;">
+    <div class="tactical-card event-card ${isMapDark ? 'event-card-dark' : 'event-card-light'}" style="position: relative; overflow: hidden; width: 280px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: linear-gradient(${bgOverlay}, ${bgOverlay}), url('${bgImage}') center/cover no-repeat !important; box-shadow: ${cardShadow} !important;">
+      <!-- Upper Space: Title, Declarer & Action Icons (All 3 on one line!) -->
+      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; border: none !important;">
         <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 170px; min-width: 0;">
-          <strong style="color: ${titleColor}; font-size: 14.5px; font-weight: 800; line-height: 1.25; word-break: break-word; text-shadow: ${textShadow}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${esc(item.title)}</strong>
-          <span style="color: ${authorColor}; font-size: 11px; margin-top: 3px; font-weight: 700; text-shadow: ${textShadow}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">By ${esc(creatorName)}</span>
+          <strong style="color: ${titleColor}; font-size: 14.5px; font-weight: 800; line-height: 1.25; word-break: break-word; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${esc(item.title)}</strong>
+          <span style="color: ${authorColor}; font-size: 11px; margin-top: 3px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">By ${esc(creatorName)}</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 7px; margin-left: 8px; flex-shrink: 0;">
+        <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px; margin-left: 8px; flex-shrink: 0;">
           ${doubleMessageIconHtml}
           ${requestOrEnvelopeIconHtml}
           ${pencilIconHtml}
         </div>
       </div>
 
-      <!-- Dynamic Rolling Media Carousel -->
-      <div class="popup-video" style="position: relative; z-index: 2; width: 100%; height: 120px; overflow: hidden; border-top: ${dividerBorder}; border-bottom: ${dividerBorder}; background: #000;">
+      <!-- Dynamic Rolling Media Carousel (No excess border/line on top/bottom) -->
+      <div class="popup-video" style="position: relative; z-index: 2; width: 100%; height: 120px; overflow: hidden; border: none !important; margin: 0; padding: 0;">
         ${renderMediaCarousel(mediaList)}
       </div>
 
-      <!-- Lower Space: Description & Action Wrap -->
-      <div class="popup-lower-space" style="position: relative; z-index: 2; background-image: url('${bgImage}'); background-size: cover; background-position: bottom center; background-repeat: no-repeat;">
-        <div class="popup-status active" style="padding: 12px 18px; background: ${isMapDark ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.22)'};">
-          <p style="font-style: italic; color: ${descColor}; margin: 0; font-size: 13px; line-height: 1.4; font-weight: 500; text-shadow: ${textShadow}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${esc(displayDesc)}</p>
+      <!-- Lower Space: Description (NOT italic, NO line above footer) -->
+      <div class="popup-lower-space" style="position: relative; z-index: 2; border: none !important;">
+        <div class="popup-status active" style="padding: 10px 14px 9px 14px; border: none !important;">
+          <p style="font-style: normal; color: ${descColor}; margin: 0; font-size: 12.5px; line-height: 1.45; font-weight: 500; font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${esc(displayDesc)}</p>
         </div>
-        <div class="popup-action-wrap" style="border-top: ${dividerBorder}; padding: 10px 14px; background: ${isMapDark ? 'rgba(0, 0, 0, 0.32)' : 'rgba(255, 255, 255, 0.32)'};">
-          <div class="popup-action disabled" style="color: ${expiresColor}; background: ${expiresBg}; border: ${expiresBorder}; border-radius: 10px; padding: 9px; font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-align: center; text-shadow: ${textShadow}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-            EXPIRES ${esc(new Date(item.expiresAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }))}
-          </div>
+      </div>
+
+      <!-- Footer: 15% height with solid white (light) or solid black (dark) BG -->
+      <div class="popup-footer" style="position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: ${footerBg} !important; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; border: none !important;">
+        <!-- Left: Clock Icon + Live Uptime (00:00:00) -->
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" style="overflow: visible; flex-shrink: 0; display: block;">
+            <circle
+              cx="12"
+              cy="12"
+              r="9.5"
+              fill="${isMapDark ? '#ffffff' : '#000000'}"
+              stroke="${isMapDark ? '#000000' : '#ffffff'}"
+              stroke-width="1.8"
+            />
+            <path
+              d="M 12 6.5 L 12 12 L 15.5 15.5"
+              fill="none"
+              stroke="${isMapDark ? '#000000' : '#ffffff'}"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span id="event-uptime-${safeId}" style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em;">
+            ${uptimeString}
+          </span>
+        </div>
+
+        <!-- Right: Release time (e.g. 17.41) -->
+        <div style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em;">
+          ${releaseTimeString}
         </div>
       </div>
     </div>
-    <div class="popup-tail" style="background: ${tailBg};"></div>
+    <script>
+      (function() {
+        var el = document.getElementById("event-uptime-${safeId}");
+        if (!el || el._timerActive) return;
+        el._timerActive = true;
+        var start = new Date("${item.createdAt || new Date().toISOString()}").getTime();
+        var timer = setInterval(function() {
+          if (!document.body.contains(el)) {
+            clearInterval(timer);
+            return;
+          }
+          var diff = Math.max(0, Math.floor((Date.now() - start) / 1000));
+          var h = String(Math.floor(diff / 3600)).padStart(2, "0");
+          var m = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
+          var s = String(diff % 60).padStart(2, "0");
+          el.textContent = h + ":" + m + ":" + s;
+        }, 1000);
+      })();
+    </script>
   `;
 }
