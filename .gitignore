@@ -58,3 +58,8 @@ scratch/
 *.py
 *.pyc
 __pycache__/
+
+# Scratch / Notes
+EXABYTE.txt
+*EXABYTE*
+
