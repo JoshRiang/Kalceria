@@ -10,7 +10,8 @@ export default function HomeClient() {
   const [phase, setPhase] = useState(() => {
     if (typeof window === "undefined") return "landing";
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("auth") === "true" || sessionStorage.getItem("triggerAuth") === "true") {
+    const hasResetToken = Boolean(urlParams.get("token") || urlParams.get("reset_token"));
+    if (urlParams.get("auth") === "true" || hasResetToken || sessionStorage.getItem("triggerAuth") === "true") {
       return "auth";
     }
     const navEntry = window.performance?.getEntriesByType?.("navigation")?.[0];
@@ -29,9 +30,10 @@ export default function HomeClient() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const isAuthParam = urlParams.get("auth") === "true";
+    const hasResetToken = Boolean(urlParams.get("token") || urlParams.get("reset_token"));
     const triggerAuth = sessionStorage.getItem("triggerAuth");
 
-    if (triggerAuth === "true" || isAuthParam) {
+    if (triggerAuth === "true" || isAuthParam || hasResetToken) {
       sessionStorage.removeItem("triggerAuth");
       setPhase("auth");
     }

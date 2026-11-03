@@ -325,13 +325,19 @@ export async function resetPassword(req, res, next) {
     );
     if (!email) return res.status(400).json({ error: 'Token invalid or expired.' });
 
-    const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, name: true, nickname: true, email: true, role: true },
+    });
     if (!user) return res.status(400).json({ error: 'Token invalid or expired.' });
     await revokeUserSessions(user.id);
     const passwordHash = await argon2.hash(newPassword);
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
 
-    res.json({ message: 'Password reset successful.' });
+    const sessionToken = await createAuthSession(user);
+    setAuthCookie(res, sessionToken);
+
+    res.json({ message: 'Password reset successful.', user });
   } catch (err) {
     next(err);
   }

@@ -159,12 +159,30 @@ export default function LandingPage({ onNavigateAuth }) {
   }, []);
 
   const handleLogout = async () => {
-    try { await api.post("/auth/logout"); } catch { /* Clear the local session marker even if the API is unavailable. */ }
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      /* Clear the local session marker even if the API is unavailable. */
+    }
     clearSession();
     localStorage.removeItem("user");
     setIsLoggedIn(false);
-    window.location.reload();
+    setShowLogoutConfirm(false);
+    sessionStorage.setItem("introPlayed", "true");
+    sessionStorage.setItem("landingSeen", "true");
   };
+
+  useEffect(() => {
+    const handlePageShow = (e) => {
+      if (e.persisted || !hasUserSession()) {
+        if (!hasUserSession()) {
+          setIsLoggedIn(false);
+        }
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {

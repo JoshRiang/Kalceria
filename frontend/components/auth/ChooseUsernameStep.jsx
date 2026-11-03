@@ -98,33 +98,25 @@ export default function ChooseUsernameStep({
       </p>
 
       <div className="w-full max-w-sm flex flex-col items-center">
-        {/* ── Status Text Above Box: Green if available, Orange if not ── */}
+        {/* ── Status Text Above Box: Pure White, No Glow ── */}
         <div className="min-h-[22px] flex items-center justify-center mb-2">
           {isChecking ? (
             <span className="font-mono text-xs text-slate-400 animate-pulse">
               Checking availability…
             </span>
           ) : isAvailable ? (
-            <span className="font-sans text-xs font-semibold text-emerald-400 tracking-wide text-center">
+            <span className="font-sans text-xs text-white tracking-wide text-center">
               Username is available
             </span>
           ) : (
-            <span className="font-sans text-xs font-semibold text-amber-400 tracking-wide text-center">
+            <span className="font-sans text-xs text-white/80 tracking-wide text-center">
               {errorMsg || "Username is not available"}
             </span>
           )}
         </div>
 
-        {/* ── Username Input Box ── */}
-        <div
-          className={`w-full flex items-center bg-[#0c1528] border rounded-lg px-4 py-3 transition-all ${
-            isAvailable && username.trim()
-              ? "border-emerald-400 ring-1 ring-emerald-400/40 shadow-[0_0_15px_rgba(52,211,153,0.25)]"
-              : !isAvailable && username.trim()
-              ? "border-amber-400 ring-1 ring-amber-400/30"
-              : "border-slate-700"
-          }`}
-        >
+        {/* ── Username Input Box: Subtle Slate Edge, No Green Glow, Normal Weight Font ── */}
+        <div className="w-full flex items-center bg-[#0c1528] border border-slate-700 focus-within:border-slate-500 rounded-lg px-4 py-3 transition-colors">
           <input
             type="text"
             value={username}
@@ -134,17 +126,17 @@ export default function ChooseUsernameStep({
             placeholder="e.g. Reyhan Batara"
             autoFocus
             maxLength={40}
-            className="w-full bg-transparent text-center font-sans text-lg sm:text-xl font-extrabold text-white outline-none placeholder:text-slate-600"
+            className="w-full bg-transparent text-center font-sans text-base sm:text-lg font-normal text-white outline-none placeholder:text-slate-600"
           />
         </div>
 
-        {/* ── Done Button: WhatsApp Photo Crop Modal Style & Behaviour ── */}
+        {/* ── Done Button: Same font style as Choose Username header, 40-50% smaller ── */}
         <div className="mt-8 flex justify-center w-full">
           <button
             type="button"
             onClick={handleDoneClick}
             disabled={!isAvailable || isChecking || isProcessing || !username.trim()}
-            className="text-emerald-400 hover:text-emerald-300 active:text-emerald-500 font-bold text-base sm:text-lg tracking-wider cursor-pointer transition-opacity bg-transparent border-none p-3 outline-none disabled:opacity-30 disabled:cursor-not-allowed uppercase"
+            className="font-sans font-extrabold text-sm sm:text-base tracking-wider text-white hover:text-slate-300 active:text-slate-400 uppercase cursor-pointer transition-colors bg-transparent border-none p-3 outline-none disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {isProcessing ? "Saving…" : "Done"}
           </button>

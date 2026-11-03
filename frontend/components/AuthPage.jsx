@@ -14,6 +14,8 @@ import LoginForm from "@/components/auth/LoginForm";
 import RegisterForm from "@/components/auth/RegisterForm";
 import VerifyOtpStep from "@/components/auth/VerifyOtpStep";
 import ChooseUsernameStep from "@/components/auth/ChooseUsernameStep";
+import ForgotPasswordStep from "@/components/auth/ForgotPasswordStep";
+import ChooseNewPasswordStep from "@/components/auth/ChooseNewPasswordStep";
 import AuthBufferOverlay from "@/components/auth/AuthBufferOverlay";
 import {
   generateUsernameCandidates,
@@ -89,6 +91,26 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   // Suggested username for Choose Username step
   const [suggestedUsername, setSuggestedUsername] = useState("");
   const activeSessionRef = useRef(null);
+
+  // Forgot Password / Reset Password states
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [resetToken, setResetToken] = useState("");
+
+  // Check URL token for magic link password reset
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get("token") || urlParams.get("reset_token");
+      if (token) {
+        setResetToken(token);
+        setIsBuffering(true);
+        setTimeout(() => {
+          setIsBuffering(false);
+          setMode("choose-new-password");
+        }, 800);
+      }
+    }
+  }, []);
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
@@ -301,6 +323,49 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     }
   }
 
+  // ── Forgot Password Magic Link Request ──
+  async function handleForgotPasswordSubmit(emailToReset) {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      await api.post("/auth/password/reset-request", { email: emailToReset });
+      setSuccess("Magic link telah dikirim ke email kamu.");
+    } catch (err) {
+      setError(err.response?.data?.error || "Gagal mengirim link reset password.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Reset Password Submission -> Buffer -> Welcome Back -> Landing ──
+  async function handleResetPasswordDone(newPassword) {
+    setIsBuffering(true);
+    setError("");
+    try {
+      const res = await api.post("/auth/password/reset", {
+        token: resetToken,
+        newPassword,
+      });
+      if (res.data?.user) {
+        establishSession(res.data.user);
+        activeSessionRef.current = res.data;
+      }
+      const displayName = res.data?.user?.nickname || res.data?.user?.name || "User";
+      setTimeout(() => {
+        setIsBuffering(false);
+        setMode("login");
+        setSuccess(`Welcome Back, ${displayName}`);
+        setTimeout(() => {
+          onAuthSuccess?.(res.data);
+        }, 1200);
+      }, 800);
+    } catch (err) {
+      setIsBuffering(false);
+      setError(err.response?.data?.error || "Gagal mengubah password. Link mungkin kedaluwarsa.");
+    }
+  }
+
   // ── Form Submit: Login or Register ──
   async function handleSubmit(e) {
     e.preventDefault();
@@ -392,7 +457,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
           setMode("verify");
           setForm({});
           setCroppedAvatar(null);
-          setSuccess("Kode OTP telah dikirim ke email kamu (berlaku 1 menit).");
+          setSuccess("Kode OTP telah dikirim ke email kamu.");
         } else {
           // Direct login if OTP disabled
           try {
@@ -481,258 +546,324 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
           <source src={isMobile ? mobileVideo : "/videologin_regris.mp4"} type="video/mp4" />
         </video>
 
-        {/* ── Dark overlay ── */}
-        <div className="absolute inset-0 bg-black/60 z-0" />
+        {/* ── Background overlay (blurred during choose-username and choose-new-password) ── */}
+        <div
+          className={`absolute inset-0 z-0 transition-all duration-500 ${
+            mode === "choose-username" || mode === "choose-new-password"
+              ? "backdrop-blur-xl bg-black/75"
+              : "bg-black/60"
+          }`}
+        />
 
         {/* ── Centering wrapper ── */}
         <div className="relative z-10 flex items-center justify-center min-h-screen p-4 md:p-8">
-          <motion.div
-            initial={{ opacity: 0, y: -60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative w-full max-w-lg"
-          >
-            {/* ── Floating Auth Card ── */}
+          {mode === "choose-username" || mode === "choose-new-password" ? (
+            /* Minimal centered view without any outer box, no logo, no magenta gold glow */
             <motion.div
-              animate={{ y: [-8, 8, -8] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="relative w-full shadow-2xl rounded-xl flex flex-col"
-              style={{ maxHeight: "88vh" }}
+              key={mode}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.3 }}
+              className="w-full max-w-sm flex flex-col items-center justify-center"
             >
-              {/* Dynamic Gold + Magenta Border Glow */}
-              <div
-                className="absolute -inset-[1px] rounded-xl z-0 overflow-hidden"
-                style={{ opacity: 0.7 }}
-              >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%]"
-                  style={{
-                    background:
-                      "conic-gradient(from 0deg, transparent 0%, rgba(218,165,32,0.8) 25%, transparent 50%, rgba(220,0,180,0.8) 75%, transparent 100%)",
-                    filter: "blur(4px)",
-                  }}
+              {mode === "choose-username" ? (
+                <ChooseUsernameStep
+                  initialUsername={suggestedUsername}
+                  onDone={handleUsernameDone}
+                  isProcessing={isBuffering}
                 />
-              </div>
+              ) : (
+                <ChooseNewPasswordStep
+                  onDone={handleResetPasswordDone}
+                  isProcessing={isBuffering}
+                  error={error}
+                />
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: -60 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="relative w-full max-w-lg"
+            >
+              {/* ── Floating Auth Card ── */}
+              <motion.div
+                animate={{ y: [-8, 8, -8] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                className="relative w-full shadow-2xl rounded-xl flex flex-col"
+                style={{ maxHeight: "88vh" }}
+              >
+                {/* Dynamic Gold + Magenta Border Glow */}
+                <div
+                  className="absolute -inset-[1px] rounded-xl z-0 overflow-hidden"
+                  style={{ opacity: 0.7 }}
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%]"
+                    style={{
+                      background:
+                        "conic-gradient(from 0deg, transparent 0%, rgba(218,165,32,0.8) 25%, transparent 50%, rgba(220,0,180,0.8) 75%, transparent 100%)",
+                      filter: "blur(4px)",
+                    }}
+                  />
+                </div>
 
-              {/* Inner Content Box */}
-              <div className="relative z-10 w-full bg-[#070d1a]/40 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden flex flex-col max-h-[88vh]">
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar px-8 py-10 md:px-10">
-                  {/* Logo & Back */}
-                  <div className="text-center mb-8 relative flex items-center justify-center">
-                    {onBack && mode !== "choose-username" && (
-                      <button
-                        onClick={onBack}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors flex items-center gap-1.5 z-10 cursor-pointer"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                    )}
-                    <Image
-                      src="/logologin.webp"
-                      alt="Kalceria"
-                      width={1874}
-                      height={560}
-                      unoptimized
-                      loading="eager"
-                      className="h-10 w-auto object-contain inline-block"
-                      draggable={false}
-                    />
-                  </div>
-
-                  {/* Mode toggle (hidden in verify and choose-username) */}
-                  {mode !== "verify" && mode !== "choose-username" && (
-                    <div className="flex mb-8 bg-[#040810]/80 rounded-lg border border-slate-800/60 p-1 relative">
-                      <motion.div
-                        className="absolute inset-y-1 bg-[#1e293b]/80 rounded-md shadow-sm"
-                        initial={false}
-                        animate={{
-                          left: mode === "login" ? "4px" : "calc(50% + 2px)",
-                          width: "calc(50% - 6px)",
-                        }}
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => switchMode("login")}
-                        className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
-                          mode === "login" ? "text-white" : "text-slate-500 hover:text-slate-300"
-                        }`}
-                      >
-                        Login
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => switchMode("register")}
-                        className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
-                          mode === "register" ? "text-white" : "text-slate-500 hover:text-slate-300"
-                        }`}
-                      >
-                        Register
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Section heading (hidden in verify and choose-username) */}
-                  {mode !== "verify" && mode !== "choose-username" && (
-                    <div className="mb-6">
-                      <h1 className="font-sans text-2xl font-extrabold text-white tracking-tight">
-                        {mode === "login" ? "Welcome Back" : "Create Account"}
-                      </h1>
-                      <p className="font-mono text-xs sm:text-sm text-slate-400 mt-1">
-                        {mode === "login"
-                          ? "Enter your credentials to access the portal."
-                          : !PUBLIC_SIGNUP_ENABLED
-                          ? "Registration is currently disabled."
-                          : "Complete all fields to register."}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Form Body */}
-                  <form onSubmit={handleSubmit} noValidate className="flex flex-col relative">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={mode}
-                        initial={{ opacity: 0, x: mode === "login" ? -10 : 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: mode === "login" ? 10 : -10 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {mode === "login" ? (
-                          <LoginForm
-                            form={form}
-                            setField={setField}
-                            loading={loading}
-                            isEmailValid={isEmailValid}
-                          />
-                        ) : mode === "register" ? (
-                          <RegisterForm
-                            form={form}
-                            setField={setField}
-                            PUBLIC_SIGNUP_ENABLED={PUBLIC_SIGNUP_ENABLED}
-                            nameValid={nameValid}
-                            isDobValid={isDobValid}
-                            isDobError={isDobError}
-                            dobMessage={yearCheck.message}
-                            cityValid={cityValid}
-                            isCityError={isCityError}
-                            isEmailValid={isEmailValid}
-                            isEmailError={isEmailError}
-                            passwordValid={passwordValid}
-                            isPasswordError={isPasswordError}
-                            isConfirmValid={isConfirmValid}
-                            isConfirmError={isConfirmError}
-                            confirmMessage={confirmMessage}
-                            croppedAvatar={croppedAvatar}
-                            setCroppedAvatar={setCroppedAvatar}
-                            photoError={photoError}
-                            setPhotoError={setPhotoError}
-                            handlePhotoSelect={handlePhotoSelect}
-                          />
-                        ) : mode === "verify" ? (
-                          <VerifyOtpStep
-                            otpEmail={otpEmail}
-                            otp={otp}
-                            setOtp={setOtp}
-                            handleOtpInput={handleOtpInput}
-                            handleOtpKeyDown={handleOtpKeyDown}
-                            handleOtpPaste={handleOtpPaste}
-                            handleVerifyOtp={handleVerifyOtp}
-                            handleResendOtp={handleResendOtp}
-                            loading={loading}
-                            resendCooldown={resendCooldown}
-                            isExpired={isOtpExpired}
-                            error={error}
-                          />
-                        ) : mode === "choose-username" ? (
-                          <ChooseUsernameStep
-                            initialUsername={suggestedUsername}
-                            onDone={handleUsernameDone}
-                            isProcessing={isBuffering}
-                          />
-                        ) : null}
-                      </motion.div>
-                    </AnimatePresence>
-
-                    {/* Error / Success Display (Consolas font, no outer box) */}
-                    <AnimatePresence>
-                      {error && mode !== "verify" && mode !== "choose-username" && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden mb-3"
-                        >
-                          <div
-                            style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-                            className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
-                          >
-                            {error}
-                          </div>
-                        </motion.div>
-                      )}
-                      {success && mode !== "choose-username" && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden mb-3"
-                        >
-                          <div
-                            style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-                            className="text-emerald-400 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
-                          >
-                            {success}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* Submit Button (for login & register modes only) */}
-                    {(mode === "login" || mode === "register") && (
-                      <button
-                        type="submit"
-                        disabled={loading || (mode === "register" && !PUBLIC_SIGNUP_ENABLED)}
-                        className="mt-2 w-full py-3.5 bg-white hover:bg-slate-200 text-black font-extrabold text-[13px] tracking-wider uppercase rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        {loading
-                          ? "Processing…"
-                          : mode === "register" && !PUBLIC_SIGNUP_ENABLED
-                          ? "Not Ready Yet"
-                          : mode === "login"
-                          ? "Sign In"
-                          : "Register Account"}
-                      </button>
-                    )}
-                  </form>
-
-                  {/* ── Footer ── */}
-                  {mode !== "choose-username" && (
-                    <div className="mt-8 text-center">
-                      <p className="font-mono text-xs text-slate-500">
-                        {mode === "verify"
-                          ? "Sudah verifikasi? "
-                          : mode === "login"
-                          ? "Don't have an account? "
-                          : "Already have an account? "}
+                {/* Inner Content Box */}
+                <div className="relative z-10 w-full bg-[#070d1a]/40 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden flex flex-col max-h-[88vh]">
+                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar px-8 py-10 md:px-10">
+                    {/* Logo & Back */}
+                    <div className="text-center mb-8 relative flex items-center justify-center">
+                      {(onBack || mode === "forgot-password") && (
                         <button
                           type="button"
-                          onClick={() => switchMode(mode === "verify" ? "login" : mode === "login" ? "register" : "login")}
-                          className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"
+                          onClick={mode === "forgot-password" ? () => switchMode("login") : onBack}
+                          className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors flex items-center gap-1.5 z-10 cursor-pointer"
                         >
-                          {mode === "verify" ? "Sign in" : mode === "login" ? "Register now" : "Sign in"}
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                          </svg>
                         </button>
-                      </p>
+                      )}
+                      <Image
+                        src="/logologin.webp"
+                        alt="Kalceria"
+                        width={1874}
+                        height={560}
+                        unoptimized
+                        loading="eager"
+                        className="h-10 w-auto object-contain inline-block"
+                        draggable={false}
+                      />
                     </div>
-                  )}
+
+                    {/* Mode toggle (hidden in verify and forgot-password) */}
+                    {mode !== "verify" && mode !== "forgot-password" && (
+                      <div className="flex mb-8 bg-[#040810]/80 rounded-lg border border-slate-800/60 p-1 relative">
+                        <motion.div
+                          className="absolute inset-y-1 bg-[#1e293b]/80 rounded-md shadow-sm"
+                          initial={false}
+                          animate={{
+                            left: mode === "login" ? "4px" : "calc(50% + 2px)",
+                            width: "calc(50% - 6px)",
+                          }}
+                          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => switchMode("login")}
+                          className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
+                            mode === "login" ? "text-white" : "text-slate-500 hover:text-slate-300"
+                          }`}
+                        >
+                          Login
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => switchMode("register")}
+                          className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
+                            mode === "register" ? "text-white" : "text-slate-500 hover:text-slate-300"
+                          }`}
+                        >
+                          Register
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Section heading (hidden in verify and forgot-password) */}
+                    {mode !== "verify" && mode !== "forgot-password" && (
+                      <div className="mb-6">
+                        <h1 className="font-sans text-2xl font-extrabold text-white tracking-tight">
+                          {mode === "login" ? "Welcome Back" : "Create Account"}
+                        </h1>
+                        <p className="font-mono text-xs sm:text-sm text-slate-400 mt-1">
+                          {mode === "login"
+                            ? "Enter your credentials to access the portal."
+                            : !PUBLIC_SIGNUP_ENABLED
+                            ? "Registration is currently disabled."
+                            : "Complete all fields to register."}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Form Body */}
+                    <form onSubmit={handleSubmit} noValidate className="flex flex-col relative">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={mode}
+                          initial={{ opacity: 0, x: mode === "login" ? -10 : 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: mode === "login" ? 10 : -10 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {mode === "login" ? (
+                            <LoginForm
+                              form={form}
+                              setField={setField}
+                              loading={loading}
+                              isEmailValid={isEmailValid}
+                            />
+                          ) : mode === "register" ? (
+                            <RegisterForm
+                              form={form}
+                              setField={setField}
+                              PUBLIC_SIGNUP_ENABLED={PUBLIC_SIGNUP_ENABLED}
+                              nameValid={nameValid}
+                              isDobValid={isDobValid}
+                              isDobError={isDobError}
+                              dobMessage={yearCheck.message}
+                              cityValid={cityValid}
+                              isCityError={isCityError}
+                              isEmailValid={isEmailValid}
+                              isEmailError={isEmailError}
+                              passwordValid={passwordValid}
+                              isPasswordError={isPasswordError}
+                              isConfirmValid={isConfirmValid}
+                              isConfirmError={isConfirmError}
+                              confirmMessage={confirmMessage}
+                              croppedAvatar={croppedAvatar}
+                              setCroppedAvatar={setCroppedAvatar}
+                              photoError={photoError}
+                              setPhotoError={setPhotoError}
+                              handlePhotoSelect={handlePhotoSelect}
+                            />
+                          ) : mode === "verify" ? (
+                            <VerifyOtpStep
+                              otpEmail={otpEmail}
+                              otp={otp}
+                              setOtp={setOtp}
+                              handleOtpInput={handleOtpInput}
+                              handleOtpKeyDown={handleOtpKeyDown}
+                              handleOtpPaste={handleOtpPaste}
+                              handleVerifyOtp={handleVerifyOtp}
+                              handleResendOtp={handleResendOtp}
+                              loading={loading}
+                              resendCooldown={resendCooldown}
+                              isExpired={isOtpExpired}
+                              error={error}
+                            />
+                          ) : mode === "forgot-password" ? (
+                            <ForgotPasswordStep
+                              email={forgotEmail}
+                              setEmail={setForgotEmail}
+                              onSubmit={handleForgotPasswordSubmit}
+                              onBackToLogin={() => {
+                                setError("");
+                                setSuccess("");
+                                setMode("login");
+                              }}
+                              loading={loading}
+                              error={error}
+                              success={success}
+                            />
+                          ) : null}
+                        </motion.div>
+                      </AnimatePresence>
+
+                      {/* Error / Success Display (Consolas font, no outer box) */}
+                      <AnimatePresence>
+                        {error && mode !== "verify" && mode !== "forgot-password" && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden mb-3"
+                          >
+                            <div
+                              style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                              className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+                            >
+                              {error}
+                            </div>
+                          </motion.div>
+                        )}
+                        {success && mode !== "forgot-password" && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden mb-3"
+                          >
+                            <div
+                              style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                              className="text-emerald-400 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+                            >
+                              {success}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Submit Button (for login & register modes only) */}
+                      {(mode === "login" || mode === "register") && (
+                        <button
+                          type="submit"
+                          disabled={loading || (mode === "register" && !PUBLIC_SIGNUP_ENABLED)}
+                          className="mt-2 w-full py-3.5 bg-white hover:bg-slate-200 text-black font-extrabold text-[13px] tracking-wider uppercase rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          {loading
+                            ? "Processing…"
+                            : mode === "register" && !PUBLIC_SIGNUP_ENABLED
+                            ? "Not Ready Yet"
+                            : mode === "login"
+                            ? "Sign In"
+                            : "Register Account"}
+                        </button>
+                      )}
+                    </form>
+
+                    {/* ── Footer ── */}
+                    {mode !== "verify" && mode !== "forgot-password" && (
+                      <div className="mt-8 text-center">
+                        <p className="font-mono text-xs text-slate-500">
+                          {mode === "login" ? "Don't have an account? " : "Already have an account? "}
+                          <button
+                            type="button"
+                            onClick={() => switchMode(mode === "login" ? "register" : "login")}
+                            className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"
+                          >
+                            {mode === "login" ? "Register now" : "Sign in"}
+                          </button>
+                        </p>
+                        {mode === "login" && (
+                          <p className="mt-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setError("");
+                                setSuccess("");
+                                setMode("forgot-password");
+                              }}
+                              className="font-sans font-bold text-xs text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"
+                            >
+                              Forgot Password
+                            </button>
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {mode === "verify" && (
+                      <div className="mt-8 text-center">
+                        <p className="font-mono text-xs text-slate-500">
+                          Sudah verifikasi?{" "}
+                          <button
+                            type="button"
+                            onClick={() => switchMode("login")}
+                            className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"
+                          >
+                            Sign in
+                          </button>
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
+          )}
         </div>
       </motion.div>
 

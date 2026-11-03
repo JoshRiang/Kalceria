@@ -19,9 +19,9 @@ export default function VerifyOtpStep({
 }) {
   return (
     <div className="flex flex-col items-center">
-      {/* ── Responsive Email_man.png in the middle ── */}
+      {/* ── Responsive Email_man.png in the middle (+15% larger) ── */}
       <div className="relative mb-5 flex items-center justify-center">
-        <div className="relative w-28 h-28 sm:w-36 sm:h-36 flex items-center justify-center">
+        <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center">
           <Image
             src="/Email_man.webp"
             alt="Email Verification"
@@ -65,28 +65,34 @@ export default function VerifyOtpStep({
         ))}
       </div>
 
-      {/* ── Timeout Error (Consolas / font-mono Red) ── */}
+      {/* ── Timeout Error (Pure Consolas Red, No Outer Box) ── */}
       {isExpired && (
-        <div className="mb-4 text-center font-mono text-xs text-red-400 tracking-tight bg-red-950/30 border border-red-500/30 rounded px-3 py-2 w-full">
-          Kode OTP telah kedaluwarsa (1 menit). Silakan minta kode baru.
+        <div
+          style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+          className="mb-4 text-center text-xs text-red-500 tracking-tight"
+        >
+          Kode OTP telah kedaluwarsa. Silakan minta kode baru.
         </div>
       )}
 
-      {/* ── General Error ── */}
+      {/* ── General Error (Pure Consolas Red, No Outer Box) ── */}
       {!isExpired && error && (
-        <div className="mb-4 text-center font-mono text-xs text-red-400 tracking-tight bg-red-950/30 border border-red-500/30 rounded px-3 py-2 w-full">
+        <div
+          style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+          className="mb-4 text-center text-xs text-red-500 tracking-tight"
+        >
           {error}
         </div>
       )}
 
-      {/* ── Verify Submit Button ── */}
+      {/* ── Verify Submit Button: "VERIFIKASI" (Generic, no OTP in text) ── */}
       <button
         type="button"
         onClick={handleVerifyOtp}
         disabled={loading || otp.join("").length < 6 || isExpired}
-        className="w-full py-3 bg-white hover:bg-slate-200 text-black font-sans font-bold text-sm tracking-wider uppercase rounded-md transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer mb-4"
+        className="w-full py-3.5 bg-white hover:bg-slate-200 text-black font-sans font-bold text-sm tracking-wider uppercase rounded-md transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer mb-4"
       >
-        {loading ? "Verifying…" : "Verifikasi OTP"}
+        {loading ? "Memproses…" : "VERIFIKASI"}
       </button>
 
       {/* ── Resend OTP Button with 60s (1 min) Countdown ── */}
