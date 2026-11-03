@@ -1,8 +1,9 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
+import { isSoundMuted, toggleSoundMuted } from "@/lib/soundEngine";
 
 export const MapHeaderHud = memo(function MapHeaderHud({
   isMapDark,
@@ -23,6 +24,17 @@ export const MapHeaderHud = memo(function MapHeaderHud({
   recenterMap,
   isRecentering,
 }) {
+  const [soundMuted, setSoundMuted] = useState(false);
+
+  useEffect(() => {
+    setSoundMuted(isSoundMuted());
+    const handleMuteChange = (e) => {
+      setSoundMuted(Boolean(e.detail?.muted));
+    };
+    window.addEventListener("kalceria:sound-mute-changed", handleMuteChange);
+    return () => window.removeEventListener("kalceria:sound-mute-changed", handleMuteChange);
+  }, []);
+
   return (
     <motion.header
       initial={{ y: -50, opacity: 0 }}
@@ -403,7 +415,101 @@ export const MapHeaderHud = memo(function MapHeaderHud({
           )}
         </button>
 
-        {/* 4. Photo Profile - Strip Outer Box, Pure Circle Avatar with Online Dot (Radar visibility box removed) */}
+        {/* 4. Sound Notification Toggle - 2D Matching Theme Style with Red Cross when muted */}
+        <button
+          type="button"
+          aria-label={soundMuted ? "Unmute Notifications" : "Mute Notifications"}
+          title={soundMuted ? "Sound Muted (Click to Unmute)" : "Sound Active (Click to Mute)"}
+          onClick={(e) => {
+            e.stopPropagation();
+            const next = toggleSoundMuted();
+            setSoundMuted(next);
+          }}
+          className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 cursor-pointer group relative"
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" className="w-6 h-6 sm:w-7 sm:h-7 overflow-visible">
+            {/* Speaker Cone and Body */}
+            <path
+              d="M 3 8.5 h 4 l 5.2 -4.5 v 16 l -5.2 -4.5 h -4 a 1 1 0 0 1 -1 -1 v -5 a 1 1 0 0 1 1 -1 z"
+              fill={isMapDark ? "#ffffff" : "#000000"}
+              stroke={isMapDark ? "#000000" : "#ffffff"}
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+              style={{
+                paintOrder: "stroke fill",
+                filter: isMapDark
+                  ? "drop-shadow(0 1px 3px rgba(0,0,0,0.7))"
+                  : "drop-shadow(0 1px 3px rgba(0,0,0,0.5))",
+              }}
+            />
+
+            {/* Emitting Sound Waves (shown when not muted) */}
+            {!soundMuted ? (
+              <g
+                stroke={isMapDark ? "#ffffff" : "#000000"}
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                fill="none"
+                style={{
+                  filter: isMapDark
+                    ? "drop-shadow(0 1px 3px rgba(0,0,0,0.7))"
+                    : "drop-shadow(0 1px 3px rgba(0,0,0,0.5))",
+                }}
+              >
+                {/* Wave 1: Inner Arc */}
+                <path d="M 15 9.2 a 4 4 0 0 1 0 5.6" />
+                {/* Wave 2: Middle Arc */}
+                <path d="M 17.5 7 a 7.5 7.5 0 0 1 0 10" />
+                {/* Wave 3: Outer Arc */}
+                <path d="M 20 4.8 a 11 11 0 0 1 0 14.4" />
+              </g>
+            ) : (
+              /* Firm Red Cross (Muted State) */
+              <g style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.8))" }}>
+                {/* Under-stroke for extreme contrast */}
+                <line
+                  x1="3.5"
+                  y1="3.5"
+                  x2="20.5"
+                  y2="20.5"
+                  stroke={isMapDark ? "#000000" : "#ffffff"}
+                  strokeWidth="4.5"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="20.5"
+                  y1="3.5"
+                  x2="3.5"
+                  y2="20.5"
+                  stroke={isMapDark ? "#000000" : "#ffffff"}
+                  strokeWidth="4.5"
+                  strokeLinecap="round"
+                />
+                {/* Main Firm Red Cross */}
+                <line
+                  x1="3.5"
+                  y1="3.5"
+                  x2="20.5"
+                  y2="20.5"
+                  stroke="#ef4444"
+                  strokeWidth="2.8"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="20.5"
+                  y1="3.5"
+                  x2="3.5"
+                  y2="20.5"
+                  stroke="#ef4444"
+                  strokeWidth="2.8"
+                  strokeLinecap="round"
+                />
+              </g>
+            )}
+          </svg>
+        </button>
+
+        {/* 5. Photo Profile - Strip Outer Box, Pure Circle Avatar with Online Dot (Radar visibility box removed) */}
         <div className="relative flex items-center justify-center">
           <div
             className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden relative select-none ${

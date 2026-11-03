@@ -17,6 +17,7 @@ const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel")
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
 import { hasUserSession } from "@/lib/session";
+import { playNotificationSound } from "@/lib/soundEngine";
 import {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents,
   postBroadcast, putBroadcast, postLocation, patchVisibility,
@@ -434,6 +435,7 @@ export default function MapPage() {
       const updatedMapUsers = await fetchMapUsers();
       if (updatedMapUsers) setMapUsersData(updatedMapUsers);
       setNotice("Broadcast updated.");
+      playNotificationSound("chat");
       setShowStatusModal(false);
     } catch (err) {
       setNotice(err.message || "Failed to update broadcast.");
@@ -519,6 +521,7 @@ export default function MapPage() {
       const updatedEvents = await fetchMiniEvents();
       setEvents(mergeEvents(updatedEvents));
       setNotice("Mini event saved.");
+      playNotificationSound("event");
       setShowEventModal(false);
     } catch (err) {
       setNotice(err.message || "Failed to save mini event.");

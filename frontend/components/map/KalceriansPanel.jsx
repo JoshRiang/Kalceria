@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
 import { getEventCategory } from "./EventIcon";
 import KalcerianProfileCard from "./KalcerianProfileCard";
+import { playNotificationSound } from "@/lib/soundEngine";
 
 const avatarUrl = (user) =>
   user?.profilePicture ||
@@ -552,6 +553,7 @@ export function KalceriansPanel({
                             onMouseLeave={() => setHoveredEventIconId(null)}
                             onClick={(e) => {
                               e.stopPropagation();
+                              playNotificationSound("event");
                               if (onOpenItemOnMap) {
                                 onOpenItemOnMap(userEvent, "event");
                               } else {
@@ -614,6 +616,7 @@ export function KalceriansPanel({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
+                            playNotificationSound("chat");
                           }}
                           className="w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
                           title={`Message ${user.name}`}
