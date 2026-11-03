@@ -525,6 +525,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             placeholder={PUBLIC_SIGNUP_ENABLED ? "John Doe" : "Not Ready Yet"}
                             val={form.name || ""}
                             onChange={setField}
+                            required={true}
                             isValid={nameValid}
                             disabled={!PUBLIC_SIGNUP_ENABLED}
                           />
@@ -584,6 +585,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                               placeholder={PUBLIC_SIGNUP_ENABLED ? "YYYY (e.g. 2004)" : "Not Ready Yet"}
                               val={form.dob || ""}
                               onChange={setField}
+                              required={true}
                               isValid={isDobValid}
                               hasError={isDobError}
                               validationMessage={yearCheck.message}
@@ -596,6 +598,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                               placeholder={PUBLIC_SIGNUP_ENABLED ? "e.g. Jakarta, Bandung" : "Not Ready Yet"}
                               val={form.domicile || ""}
                               onChange={setField}
+                              required={true}
                               list="indonesia-cities"
                               isValid={cityValid}
                               hasError={isCityError}
@@ -619,9 +622,10 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             placeholder={PUBLIC_SIGNUP_ENABLED ? "user@domain.com" : "Not Ready Yet"}
                             val={form.email || ""}
                             onChange={setField}
+                            required={true}
                             isValid={isEmailValid}
                             hasError={isEmailError}
-                            validationMessage={isEmailError ? "Enter a valid email" : ""}
+                            validationMessage={isEmailError ? "Enter a valid email" : isEmailValid ? "Valid" : ""}
                             disabled={!PUBLIC_SIGNUP_ENABLED}
                           />
 
@@ -633,6 +637,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             placeholder={PUBLIC_SIGNUP_ENABLED ? "81234567890" : "Not Ready Yet"}
                             val={form.phone || ""}
                             onChange={setField}
+                            required={true}
                             isValid={isPhoneValid}
                             hasError={isPhoneError}
                             validationMessage={phoneCheck.message}
@@ -647,6 +652,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             placeholder={PUBLIC_SIGNUP_ENABLED ? "••••••••" : "Not Ready Yet"}
                             val={form.password || ""}
                             onChange={setField}
+                            required={true}
                             isValid={passwordValid}
                             hasError={isPasswordError}
                             disabled={!PUBLIC_SIGNUP_ENABLED}

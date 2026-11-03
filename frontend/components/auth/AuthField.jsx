@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export default function AuthField({
   id,
@@ -11,6 +11,7 @@ export default function AuthField({
   val = "",
   onChange,
   disabled = false,
+  required = false,
   isValid = false,
   hasError = false,
   validationMessage = "",
@@ -20,6 +21,7 @@ export default function AuthField({
   autoComplete
 }) {
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
   const isSelect = type === "select";
   const isPhone = type === "tel";
 
@@ -39,15 +41,23 @@ export default function AuthField({
 
   // Phone input handler matching Need Our Help form behavior
   const phoneDigits = isPhone
-    ? String(val || "").replace(/^\+?62/, "").replace(/\D/g, "")
+    ? String(val || "").replace(/^\+?62/, "")
     : "";
 
   const handlePhoneInput = (e) => {
-    let digits = (e.target.value || "").replace(/\D/g, "");
+    let raw = e.target.value || "";
+    // Allow digits only
+    let digits = raw.replace(/\D/g, "");
     if (digits.startsWith("62")) {
       digits = digits.slice(2);
     }
-    digits = digits.replace(/^0+/, "");
+    // If user starts with 0 and enters subsequent digits, strip leading 0s (e.g. 0812 -> 812)
+    if (/^0+[1-9]/.test(digits)) {
+      digits = digits.replace(/^0+/, "");
+    } else if (/^0+$/.test(digits)) {
+      // Keystroke feedback if user just typed 0
+      digits = "0";
+    }
     digits = digits.slice(0, 12);
 
     const nextVal = digits ? `+62${digits}` : "";
@@ -56,9 +66,15 @@ export default function AuthField({
 
   return (
     <div className="flex flex-col mb-4">
-      {/* Label: NOT ALL CAPITAL */}
-      <div className="mb-1.5 flex items-center justify-between font-sans text-xs font-semibold text-slate-300 tracking-normal select-none">
-        <span>{label}</span>
+      {/* Label: NOT ALL CAPITAL with red asterisk for required fields */}
+      <label
+        htmlFor={id}
+        className="mb-1.5 flex items-center justify-between font-sans text-xs font-semibold text-slate-300 tracking-normal select-none cursor-pointer"
+      >
+        <span>
+          {label}
+          {required && <span className="text-red-500 ml-1 font-bold">*</span>}
+        </span>
         {validationMessage && (
           <span
             className={`text-[10px] font-medium transition-colors ${
@@ -68,7 +84,7 @@ export default function AuthField({
             {validationMessage}
           </span>
         )}
-      </div>
+      </label>
 
       {disabled && (type === "date" || type === "file") ? (
         <div
@@ -100,12 +116,23 @@ export default function AuthField({
           ))}
         </select>
       ) : isPhone ? (
-        /* Phone input with unified dark +62 prefix badge */
-        <div className={`flex items-center w-full border rounded-md overflow-hidden bg-[#0c1528] transition-all ${borderClass}`}>
-          <div className="flex items-center pl-3.5 pr-2.5 py-2.5 text-slate-300 font-sans font-bold text-[13px] select-none border-r border-slate-800 bg-[#0c1528] shrink-0">
+        /* Phone input with clickable +62 badge and wrapper */
+        <div
+          onClick={() => !disabled && inputRef.current?.focus()}
+          className={`flex items-center w-full border rounded-md overflow-hidden bg-[#0c1528] transition-all ${
+            disabled ? "cursor-not-allowed opacity-70" : "cursor-text"
+          } ${borderClass}`}
+        >
+          <div
+            onClick={() => !disabled && inputRef.current?.focus()}
+            className={`flex items-center pl-3.5 pr-2.5 py-2.5 text-slate-300 font-sans font-bold text-[13px] select-none border-r border-slate-800 bg-[#0c1528] shrink-0 ${
+              disabled ? "cursor-not-allowed" : "cursor-text"
+            }`}
+          >
             +62
           </div>
           <input
+            ref={inputRef}
             id={id}
             type="tel"
             inputMode="numeric"
