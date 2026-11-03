@@ -31,6 +31,7 @@ export default function SnapMap({
   currentUser = null,
   onEditEvent,
   requestedEventId = null,
+  eventRequestsMap = {},
   onRequestCollab,
   onPromptCancelRequest,
   onOpenRequests,
@@ -257,21 +258,23 @@ export default function SnapMap({
 
         marker.setIcon(createEventIcon(L, item, isMapDark));
 
-        const newPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId);
+        const pendingCount = (eventRequestsMap?.[item.id] || []).length;
+        const newPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount);
         if (marker._lastPopupContent !== newPopupContent) {
           marker.getPopup().setContent(newPopupContent);
           marker._lastPopupContent = newPopupContent;
         }
       } else {
+        const pendingCount = (eventRequestsMap?.[item.id] || []).length;
         const marker = L.marker([item.lat, item.lng], {
           icon: createEventIcon(L, item, isMapDark),
           userData: { color: "#ff006e" },
-        }).bindPopup(eventPopup(item, isMapDark, currentUser, requestedEventId), {
+        }).bindPopup(eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount), {
           className: "tactical-popup",
           offset: [0, -34],
           autoClose: true,
         });
-        marker._lastPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId);
+        marker._lastPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount);
         markerRefs.current[markerId] = marker;
         eventsLayer.addLayer(marker);
       }
@@ -289,7 +292,7 @@ export default function SnapMap({
         delete markerRefs.current[id];
       }
     });
-  }, [users, events, isReady, isMapDark, currentUser, requestedEventId]);
+  }, [users, events, isReady, isMapDark, currentUser, requestedEventId, eventRequestsMap]);
 
   return (
     <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>

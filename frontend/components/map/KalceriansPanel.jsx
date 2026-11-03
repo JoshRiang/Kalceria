@@ -226,6 +226,11 @@ export function KalceriansPanel({
   onBlockUser,
   onUnblockUser,
   onOpenItemOnMap,
+  currentUser = null,
+  requestedEventId = null,
+  eventRequestsMap = {},
+  onPromptCancelRequest,
+  onOpenRequests,
 }) {
   const [hoveredEventIconId, setHoveredEventIconId] = useState(null);
   const [confirmingAction, setConfirmingAction] = useState(null); // { userId, type: "block" | "unblock" }
@@ -391,6 +396,21 @@ export function KalceriansPanel({
                 e.creator?.nickname?.toLowerCase() === user.nickname?.toLowerCase() ||
                 e.creator?.name?.toLowerCase() === user.name?.toLowerCase()
             );
+            const isOwnEvent = Boolean(
+              userEvent && currentUser && (
+                (userEvent.creator?.id && String(userEvent.creator.id) === String(currentUser.id)) ||
+                (userEvent.creatorId && String(userEvent.creatorId) === String(currentUser.id)) ||
+                (userEvent.userId && String(userEvent.userId) === String(currentUser.id)) ||
+                (currentUser.nickname && (userEvent.creator?.nickname === currentUser.nickname || userEvent.creator?.name === currentUser.nickname)) ||
+                (currentUser.name && (userEvent.creator?.name === currentUser.name || userEvent.creator?.nickname === currentUser.name)) ||
+                userEvent.id === "own" ||
+                userEvent.isOwn
+              )
+            );
+            const eventPendingRequests = userEvent ? (eventRequestsMap[userEvent.id] || (isOwnEvent ? eventRequestsMap["own"] : null) || []) : [];
+            const hasPendingRequests = eventPendingRequests.length > 0;
+            const isRequestedByMe = Boolean(userEvent && requestedEventId && String(requestedEventId) === String(userEvent.id));
+            const isOtherEventDisabled = Boolean(userEvent && requestedEventId && String(requestedEventId) !== String(userEvent.id) && !isOwnEvent);
 
             return (
               <div
@@ -547,25 +567,75 @@ export function KalceriansPanel({
                       {/* Slot 1: Category Event Icon */}
                       {!isBlocked && userEvent ? (
                         <div className="relative flex items-center justify-center w-6 h-6">
-                          <button
-                            type="button"
-                            onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                            onMouseLeave={() => setHoveredEventIconId(null)}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              playNotificationSound("event");
-                              if (onOpenItemOnMap) {
-                                onOpenItemOnMap(userEvent, "event");
-                              } else {
-                                focusUser(userEvent);
-                              }
-                              if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
-                            }}
-                            className="w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                            title={userEvent.title}
-                          >
-                            <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                          </button>
+                          {isRequestedByMe ? (
+                            <button
+                              type="button"
+                              onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                              onMouseLeave={() => setHoveredEventIconId(null)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playNotificationSound("event");
+                                onPromptCancelRequest?.(userEvent.id, userEvent.title);
+                              }}
+                              className="relative w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
+                              title={`Cancel request: ${userEvent.title}`}
+                            >
+                              <div className="filter grayscale opacity-45 flex items-center justify-center">
+                                <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                              </div>
+                              <svg viewBox="0 0 24 24" className="absolute inset-0 w-6 h-6 pointer-events-none overflow-visible drop-shadow">
+                                <circle cx="12" cy="12" r="8.5" fill="none" stroke="#ef4444" strokeWidth="2.2" />
+                                <line x1="6" y1="6" x2="18" y2="18" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
+                              </svg>
+                            </button>
+                          ) : isOwnEvent && hasPendingRequests ? (
+                            <button
+                              type="button"
+                              onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                              onMouseLeave={() => setHoveredEventIconId(null)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playNotificationSound("event");
+                                onOpenRequests?.(userEvent.id);
+                              }}
+                              className="relative w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
+                              title={`${userEvent.title} (${eventPendingRequests.length} collab request${eventPendingRequests.length > 1 ? "s" : ""})`}
+                            >
+                              <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white dark:border-black shadow-[0_0_6px_#ef4444]" />
+                            </button>
+                          ) : isOtherEventDisabled ? (
+                            <button
+                              type="button"
+                              disabled
+                              onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                              onMouseLeave={() => setHoveredEventIconId(null)}
+                              className="w-6 h-6 flex items-center justify-center rounded opacity-40 grayscale cursor-not-allowed outline-none"
+                              title={`${userEvent.title} (Active request pending on another event)`}
+                            >
+                              <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                              onMouseLeave={() => setHoveredEventIconId(null)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playNotificationSound("event");
+                                if (onOpenItemOnMap) {
+                                  onOpenItemOnMap(userEvent, "event");
+                                } else {
+                                  focusUser(userEvent);
+                                }
+                                if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
+                              }}
+                              className="w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
+                              title={userEvent.title}
+                            >
+                              <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                            </button>
+                          )}
 
                           {/* Hover Tooltip Box - Positioned safely to the left inside row, never chopped */}
                           {hoveredEventIconId === userEvent.id && (
@@ -577,7 +647,13 @@ export function KalceriansPanel({
                               }`}
                               style={{ fontFamily: "Arial, sans-serif" }}
                             >
-                              {userEvent.title}
+                              {isRequestedByMe
+                                ? `Cancel Request: ${userEvent.title}`
+                                : isOwnEvent && hasPendingRequests
+                                ? `${userEvent.title} (${eventPendingRequests.length} Collab Request${eventPendingRequests.length > 1 ? "s" : ""})`
+                                : isOtherEventDisabled
+                                ? `${userEvent.title} (Request active elsewhere)`
+                                : userEvent.title}
                             </div>
                           )}
                         </div>

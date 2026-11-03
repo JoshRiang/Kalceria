@@ -143,6 +143,8 @@ export const MapModals = memo(function MapModals({
   setShowRequestsModal,
   viewingRequestsEvent,
   currentRequestsList = [],
+  onAcceptCollabRequest,
+  onDeclineCollabRequest,
   isExiting,
   showQuitModal,
   setShowQuitModal,
@@ -802,44 +804,36 @@ export const MapModals = memo(function MapModals({
 
                           {/* Requestor Info & Message */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <strong
-                                style={{
-                                  color: isModalDark ? "#ffffff" : "#000000",
-                                  fontWeight: 800,
-                                }}
-                                className="text-xs sm:text-sm font-sans truncate"
-                              >
-                                {req.user?.name || req.user?.nickname || "Kalcerian"}
-                              </strong>
-                              <span
-                                style={{
-                                  color: isModalDark ? "#ffffff" : "#000000",
-                                  fontWeight: 700,
-                                }}
-                                className="text-[10px] sm:text-[11px] shrink-0"
-                              >
-                                @{req.user?.nickname || "kalcerian"}
-                              </span>
-                            </div>
-
                             <p
                               style={{
                                 color: isModalDark ? "#ffffff" : "#000000",
-                                fontWeight: 700,
+                                fontWeight: 800,
                               }}
-                              className="text-xs sm:text-[13px] mt-1 font-sans leading-snug break-words"
+                              className="text-xs sm:text-[13px] font-sans leading-snug break-words"
                             >
-                              &quot;{req.message || req.user?.broadcast || "Wants to collaborate on this event!"}&quot;
+                              <strong>{req.user?.name || req.user?.nickname || "Kalcerian"}</strong> Request for Collab in <strong>{viewingRequestsEvent?.title || req.eventTitle || "Event"}</strong>
                             </p>
 
-                            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-black/10 dark:border-white/10">
+                            {req.message && req.message !== "Wants to collaborate on this event" && (
+                              <p
+                                style={{
+                                  color: isModalDark ? "#ffffff" : "#000000",
+                                  fontWeight: 700,
+                                  opacity: 0.88,
+                                }}
+                                className="text-[11px] sm:text-xs font-sans italic mt-1 break-words"
+                              >
+                                &quot;{req.message}&quot;
+                              </p>
+                            )}
+
+                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-black/15 dark:border-white/15">
                               <span
                                 style={{
                                   color: isModalDark ? "#ffffff" : "#000000",
                                   fontWeight: 700,
                                 }}
-                                className="text-[10px]"
+                                className="text-[10px] opacity-80 font-sans"
                               >
                                 {new Date(req.createdAt || Date.now()).toLocaleTimeString("id-ID", {
                                   hour: "2-digit",
@@ -847,15 +841,42 @@ export const MapModals = memo(function MapModals({
                                 })}
                               </span>
 
-                              <span
-                                style={{
-                                  color: isModalDark ? "#ffffff" : "#000000",
-                                  fontWeight: 800,
-                                }}
-                                className="text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full bg-black/10 dark:bg-white/10"
-                              >
-                                REQUESTED COLLAB
-                              </span>
+                              {/* Yes (Thumbs Up) and No (Thumbs Down) Buttons */}
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => onAcceptCollabRequest?.(req.id, viewingRequestsEvent?.id)}
+                                  title="Yes (Accept Collab)"
+                                  style={{
+                                    backgroundColor: isModalDark ? "#ffffff" : "#000000",
+                                    color: isModalDark ? "#000000" : "#ffffff",
+                                    borderColor: isModalDark ? "#000000" : "#ffffff",
+                                  }}
+                                  className="flex items-center justify-center gap-1 px-2.5 py-1 rounded-full border-[1.5px] transition-transform hover:scale-108 active:scale-95 cursor-pointer shadow-sm select-none"
+                                >
+                                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                                  </svg>
+                                  <span className="text-[11px] font-bold font-sans">Yes</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onDeclineCollabRequest?.(req.id, viewingRequestsEvent?.id)}
+                                  title="No (Decline Collab)"
+                                  style={{
+                                    backgroundColor: isModalDark ? "#ffffff" : "#000000",
+                                    color: isModalDark ? "#000000" : "#ffffff",
+                                    borderColor: isModalDark ? "#000000" : "#ffffff",
+                                  }}
+                                  className="flex items-center justify-center gap-1 px-2.5 py-1 rounded-full border-[1.5px] transition-transform hover:scale-108 active:scale-95 cursor-pointer shadow-sm select-none"
+                                >
+                                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                                    <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
+                                  </svg>
+                                  <span className="text-[11px] font-bold font-sans">No</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>

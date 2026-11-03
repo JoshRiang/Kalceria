@@ -687,6 +687,32 @@ export default function MapPage() {
     playNotificationSound("event");
   }, []);
 
+  const handleAcceptCollabRequest = useCallback((requestId, eventId) => {
+    playNotificationSound("event");
+    setEventRequestsMap((prev) => {
+      const targetId = eventId || viewingRequestsEventId;
+      if (!targetId || !prev[targetId]) return prev;
+      const updatedList = prev[targetId].filter((r) => r.id !== requestId);
+      const updated = { ...prev, [targetId]: updatedList };
+      try { localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    setNotice("Collab request accepted!");
+  }, [viewingRequestsEventId]);
+
+  const handleDeclineCollabRequest = useCallback((requestId, eventId) => {
+    playNotificationSound("event");
+    setEventRequestsMap((prev) => {
+      const targetId = eventId || viewingRequestsEventId;
+      if (!targetId || !prev[targetId]) return prev;
+      const updatedList = prev[targetId].filter((r) => r.id !== requestId);
+      const updated = { ...prev, [targetId]: updatedList };
+      try { localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    setNotice("Collab request declined.");
+  }, [viewingRequestsEventId]);
+
   // login gate
   if (notLoggedIn) {
     return <MapAuthGate />;
@@ -759,6 +785,7 @@ export default function MapPage() {
           currentUser={currentUser}
           onEditEvent={handleOpenEditEvent}
           requestedEventId={requestedEventId}
+          eventRequestsMap={eventRequestsMap}
           onRequestCollab={handleRequestCollab}
           onPromptCancelRequest={handlePromptCancelRequest}
           onOpenRequests={handleOpenRequests}
@@ -875,6 +902,11 @@ export default function MapPage() {
             onBlockUser={handleBlockUser}
             onUnblockUser={handleUnblockUser}
             onOpenItemOnMap={handleOpenItemOnMap}
+            currentUser={currentUser}
+            requestedEventId={requestedEventId}
+            eventRequestsMap={eventRequestsMap}
+            onPromptCancelRequest={handlePromptCancelRequest}
+            onOpenRequests={handleOpenRequests}
           />
         </>
       )}
@@ -916,9 +948,11 @@ export default function MapPage() {
         viewingRequestsEvent={events.find((e) => String(e.id) === String(viewingRequestsEventId))}
         currentRequestsList={
           viewingRequestsEventId
-            ? (eventRequestsMap[viewingRequestsEventId] || eventRequestsMap["mini_cafe_1"] || [])
+            ? (eventRequestsMap[viewingRequestsEventId] || (viewingRequestsEventId === activeOwnEvent?.id ? eventRequestsMap["own"] : null) || eventRequestsMap["mini_cafe_1"] || [])
             : []
         }
+        onAcceptCollabRequest={handleAcceptCollabRequest}
+        onDeclineCollabRequest={handleDeclineCollabRequest}
         isExiting={isExiting} showQuitModal={showQuitModal}
         setShowQuitModal={setShowQuitModal} handleQuitConfirm={handleQuitConfirm}
       />

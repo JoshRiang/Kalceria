@@ -169,7 +169,7 @@ function getEventPalette(item) {
   return EVENT_COLOR_PALETTES[index];
 }
 
-export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null) {
+export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null, pendingRequestsCount = 0) {
   const displayDesc = cleanDesc(item.description);
   const creatorName = item.creator?.nickname || item.creator?.name || "Kalcerian";
   const mediaList = extractMediaList(item);
@@ -210,14 +210,13 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
   const iconStroke = isMapDark ? "#000000" : "#ffffff";
   const handIconSrc = isMapDark ? "/icons/hand_request_dark.png" : "/icons/hand_request_light.png";
 
+  // Group chat icon: grey by default (cannot be tap)
   const doubleMessageIconHtml = `
     <button
       type="button"
-      onclick="window.__kalceriaPlaySound?.('chat')"
+      disabled
       title="Group Chat"
-      style="background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
-      onmouseover="this.style.transform='scale(1.12)'"
-      onmouseout="this.style.transform='scale(1)'"
+      style="background: transparent; border: none; padding: 0; cursor: not-allowed; display: flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none;"
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="overflow: visible;">
         <path
@@ -242,12 +241,17 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
 
   let requestOrEnvelopeIconHtml = "";
   if (isOwner) {
+    const hasRedDot = pendingRequestsCount > 0;
+    const redDotHtml = hasRedDot
+      ? `<span style="position: absolute; top: -3px; right: -3px; width: 7.5px; height: 7.5px; background-color: #ef4444; border-radius: 50%; border: 1.5px solid ${isMapDark ? '#000000' : '#ffffff'}; box-shadow: 0 0 5px #ef4444;"></span>`
+      : "";
+
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaOpenRequests?.('${esc(item.id)}')"
         title="Collab Requests"
-        style="background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
+        style="position: relative; background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -268,6 +272,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
             stroke-linejoin="round"
           />
         </svg>
+        ${redDotHtml}
       </button>
     `;
   } else if (hasRequestedThisEvent) {
