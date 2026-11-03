@@ -169,35 +169,55 @@ function getEventPalette(item) {
   return EVENT_COLOR_PALETTES[index];
 }
 
-export function eventPopup(item) {
+export function eventPopup(item, isMapDark = false) {
   const displayDesc = cleanDesc(item.description);
   const creatorName = item.creator?.nickname || item.creator?.name || "Kalcerian";
   const mediaList = extractMediaList(item);
-  const palette = getEventPalette(item);
+
+  const bgImage = isMapDark ? "/jpeg/BGCard_Dark.jpeg" : "/jpeg/BGCard_Light.jpeg";
+  const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.16)";
+  const cardShadow = isMapDark
+    ? "0 18px 46px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.2)"
+    : "0 16px 40px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.1)";
+
+  const titleColor = isMapDark ? "#ffffff" : "#0f172a";
+  const subtitleColor = isMapDark ? "rgba(255, 255, 255, 0.75)" : "rgba(30, 41, 59, 0.8)";
+  const descColor = isMapDark ? "rgba(255, 255, 255, 0.95)" : "#0f172a";
+  const expiresColor = isMapDark ? "rgba(255, 255, 255, 0.9)" : "#0f172a";
+  const expiresBg = isMapDark ? "rgba(0, 0, 0, 0.45)" : "rgba(255, 255, 255, 0.65)";
+  const expiresBorder = isMapDark ? "1px solid rgba(255, 255, 255, 0.18)" : "1px solid rgba(0, 0, 0, 0.15)";
+  const dividerBorder = isMapDark ? "1px solid rgba(255, 255, 255, 0.12)" : "1px solid rgba(0, 0, 0, 0.12)";
+  const textShadow = isMapDark ? "0 1px 3px rgba(0, 0, 0, 0.85)" : "0 1px 2px rgba(255, 255, 255, 0.85)";
+
+  const tailBg = isMapDark
+    ? "linear-gradient(to bottom, rgba(40, 18, 15, 0.95), transparent)"
+    : "linear-gradient(to bottom, rgba(200, 240, 230, 0.95), transparent)";
 
   return `
-    <div class="tactical-card event-card" style="position: relative; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 18px !important; background: rgba(10, 15, 30, 0.45) !important; backdrop-filter: blur(20px) saturate(180%) !important; -webkit-backdrop-filter: blur(20px) saturate(180%) !important; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5) !important;">
-      <!-- Dynamic Floating Glass Blobs (Random Color Pair per Event) -->
-      <div class="card-dynamic-blobs">
-        <div class="card-dynamic-blob-1" style="background: ${palette.blob1};"></div>
-        <div class="card-dynamic-blob-2" style="background: ${palette.blob2};"></div>
+    <div class="tactical-card event-card ${isMapDark ? 'event-card-dark' : 'event-card-light'}" style="position: relative; overflow: hidden; width: 280px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background-image: url('${bgImage}') !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; box-shadow: ${cardShadow} !important;">
+      <!-- Upper Space: Title & Declarer -->
+      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; padding: 14px 18px; border-bottom: ${dividerBorder}; background-image: url('${bgImage}'); background-size: cover; background-position: top center; background-repeat: no-repeat;">
+        <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.25; word-break: break-word; text-shadow: ${textShadow}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${esc(item.title)}</strong>
+        <small style="color: ${subtitleColor}; font-size: 11px; margin-top: 3px; font-weight: 500; text-shadow: ${textShadow}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${esc(creatorName)}</small>
       </div>
 
-      <!-- Pure White Title & Declarer (NO LOGO/ICON) -->
-      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; padding: 14px 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: rgba(0, 0, 0, 0.15);">
-        <strong style="color: #ffffff; font-size: 15px; font-weight: 700; line-height: 1.25; word-break: break-word;">${esc(item.title)}</strong>
-        <small style="color: rgba(255, 255, 255, 0.7); font-size: 11px; margin-top: 2px; font-weight: 400;">${esc(creatorName)}</small>
-      </div>
-
-      <!-- Dynamic Rolling Media Carousel (Zero LIVE FEED text) -->
-      <div class="popup-video" style="position: relative; z-index: 2; width: 100%; height: 120px; overflow: hidden; border-top: 1px solid rgba(255, 255, 255, 0.08); border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: #000;">
+      <!-- Dynamic Rolling Media Carousel -->
+      <div class="popup-video" style="position: relative; z-index: 2; width: 100%; height: 120px; overflow: hidden; border-top: ${dividerBorder}; border-bottom: ${dividerBorder}; background: #000;">
         ${renderMediaCarousel(mediaList)}
       </div>
 
-      <!-- Clean description with pure white font -->
-      <div class="popup-status active" style="position: relative; z-index: 2; padding: 12px 18px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03);"><p style="font-style: italic; color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 13px; line-height: 1.4;">${esc(displayDesc)}</p></div>
-      <div class="popup-action-wrap" style="position: relative; z-index: 2; border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 10px 14px;"><div class="popup-action disabled" style="color: rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 9px; font-weight: 700;">EXPIRES ${esc(new Date(item.expiresAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }))}</div></div>
+      <!-- Lower Space: Description & Action Wrap -->
+      <div class="popup-lower-space" style="position: relative; z-index: 2; background-image: url('${bgImage}'); background-size: cover; background-position: bottom center; background-repeat: no-repeat;">
+        <div class="popup-status active" style="padding: 12px 18px; background: ${isMapDark ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.22)'};">
+          <p style="font-style: italic; color: ${descColor}; margin: 0; font-size: 13px; line-height: 1.4; font-weight: 500; text-shadow: ${textShadow}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${esc(displayDesc)}</p>
+        </div>
+        <div class="popup-action-wrap" style="border-top: ${dividerBorder}; padding: 10px 14px; background: ${isMapDark ? 'rgba(0, 0, 0, 0.32)' : 'rgba(255, 255, 255, 0.32)'};">
+          <div class="popup-action disabled" style="color: ${expiresColor}; background: ${expiresBg}; border: ${expiresBorder}; border-radius: 10px; padding: 9px; font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-align: center; text-shadow: ${textShadow}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            EXPIRES ${esc(new Date(item.expiresAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }))}
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="popup-tail" style="background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);"></div>
+    <div class="popup-tail" style="background: ${tailBg};"></div>
   `;
 }

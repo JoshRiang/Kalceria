@@ -228,7 +228,7 @@ export default function SnapMap({
 
         marker.setIcon(createEventIcon(L, item, isMapDark));
 
-        const newPopupContent = eventPopup(item);
+        const newPopupContent = eventPopup(item, isMapDark);
         if (marker._lastPopupContent !== newPopupContent) {
           marker.getPopup().setContent(newPopupContent);
           marker._lastPopupContent = newPopupContent;
@@ -237,12 +237,12 @@ export default function SnapMap({
         const marker = L.marker([item.lat, item.lng], {
           icon: createEventIcon(L, item, isMapDark),
           userData: { color: "#ff006e" },
-        }).bindPopup(eventPopup(item), {
+        }).bindPopup(eventPopup(item, isMapDark), {
           className: "tactical-popup",
           offset: [0, -34],
           autoClose: true,
         });
-        marker._lastPopupContent = eventPopup(item);
+        marker._lastPopupContent = eventPopup(item, isMapDark);
         markerRefs.current[markerId] = marker;
         eventsLayer.addLayer(marker);
       }
