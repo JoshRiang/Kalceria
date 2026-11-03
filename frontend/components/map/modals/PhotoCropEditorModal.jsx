@@ -139,51 +139,49 @@ export function PhotoCropEditorModal({
           </div>
         </div>
 
-        {/* Bottom Bar: Cancel, Rotate Icon, Done */}
+        {/* Bottom Bar: Cancel, Rotate Icon, Done (All white, no outer box, no outer circle, no glowing) */}
         <div className="w-full max-w-md px-6 py-5 sm:py-6 flex items-center justify-between shrink-0 z-10 pb-8 sm:pb-6">
-          {/* Cancel Button (styled like Create button in mini event, but more little and tight) */}
+          {/* Cancel Text (White, No outer box, No glowing) */}
           <button
             type="button"
             onClick={onCancel}
             disabled={isProcessing}
-            className="px-4 sm:px-5 py-2 sm:py-2.5 border text-xs font-bold tracking-wider rounded-xl transition-all cursor-pointer border-white/40 bg-white/10 hover:bg-white/20 text-white active:scale-95 disabled:opacity-50"
+            className="text-white hover:text-white/80 font-bold text-sm tracking-wider cursor-pointer transition-opacity bg-transparent border-none p-2 outline-none disabled:opacity-50"
           >
             Cancel
           </button>
 
-          {/* Picture 2 WhatsApp Rotate Icon (Static scale animation on tap) */}
+          {/* Picture 2 WhatsApp Rotate Icon (No outer circle, clean 26x26 SVG) */}
           <button
             type="button"
             onClick={handleRotate}
             disabled={isProcessing}
             title="Rotate photo 90°"
             aria-label="Rotate photo"
-            className="w-11 h-11 rounded-full flex items-center justify-center text-white bg-white/15 hover:bg-white/25 border border-white/25 shadow-md transition-all active:scale-90 cursor-pointer"
+            className="p-2 flex items-center justify-center text-white hover:text-white/80 transition-all active:scale-85 active:-rotate-45 cursor-pointer bg-transparent border-none outline-none"
           >
-            {/* WhatsApp Crop Rotate SVG: tilted diamond with orbit arrow */}
             <svg
-              width="22"
-              height="22"
+              width="26"
+              height="26"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+              stroke="#ffffff"
+              strokeWidth="2.2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="w-5 h-5"
             >
-              <rect x="7" y="7" width="10" height="10" rx="1.5" transform="rotate(45 12 12)" strokeWidth="1.7" />
-              <path d="M 19.5 12 A 7.5 7.5 0 0 0 7 6.5 L 4.5 9" />
-              <polyline points="4.5 4.5 4.5 9 9 9" />
+              <path d="M 12 6.5 L 17.5 12 L 12 17.5 L 6.5 12 Z" />
+              <path d="M 19 12 A 8 8 0 0 0 8 4.8 L 5 7" />
+              <polyline points="4.5 3 5 7 9 7.5" />
             </svg>
           </button>
 
-          {/* Done Button (styled like Create button in mini event, but more little and tight) */}
+          {/* Done Text (White, No outer box, No glowing) */}
           <button
             type="button"
             onClick={handleDone}
             disabled={isProcessing}
-            className="px-5 sm:px-6 py-2 sm:py-2.5 border text-xs font-bold tracking-wider rounded-xl transition-all cursor-pointer border-white bg-white hover:bg-neutral-200 text-black shadow-[0_2px_12px_rgba(255,255,255,0.25)] active:scale-95 disabled:opacity-50"
+            className="text-white hover:text-white/80 font-bold text-sm tracking-wider cursor-pointer transition-opacity bg-transparent border-none p-2 outline-none disabled:opacity-50"
           >
             {isProcessing ? "Processing..." : "Done"}
           </button>

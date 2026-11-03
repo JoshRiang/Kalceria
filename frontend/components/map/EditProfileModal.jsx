@@ -193,7 +193,7 @@ export function EditProfileModal({
             <div className="relative rounded-xl overflow-hidden border border-black/10 dark:border-white/10 shadow-sm">
               {/* Cover Preview (Solid Base Color or Custom Image) */}
               <div
-                className="relative w-full h-24 sm:h-28 overflow-hidden"
+                className="relative w-full h-36 xs:h-40 sm:h-44 md:h-48 overflow-hidden"
                 style={{
                   backgroundColor: coverPreview && coverPreview.startsWith("#") ? coverPreview : defaultBaseColor,
                 }}
@@ -203,14 +203,14 @@ export function EditProfileModal({
                   <img src={coverPreview} alt="Cover preview" className="w-full h-full object-cover" />
                 )}
                 
-                {/* Edit Button (For Cover BG) */}
+                {/* Edit Button (No inner/outer box, clean bold text) */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     bgInputRef.current?.click();
                   }}
-                  className="absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 hover:bg-black/85 text-white backdrop-blur-sm border border-white/20 transition-transform active:scale-95 cursor-pointer z-10"
+                  className="absolute top-3 right-4 text-xs font-bold text-white hover:underline drop-shadow-md cursor-pointer z-10 bg-transparent border-none p-0 outline-none transition-opacity"
                 >
                   Edit
                 </button>
@@ -223,8 +223,8 @@ export function EditProfileModal({
                 />
               </div>
 
-              {/* Profile Avatar overlapping cover with Edit Pencil Icon beside it */}
-              <div className="relative z-30 px-4 pb-3 flex items-end justify-between -mt-8 sm:-mt-9">
+              {/* Profile Avatar overlapping cover with Picture 1 Recycle Icon (Unchopped, Generous Padding) */}
+              <div className="relative z-30 px-4 sm:px-5 pb-4 pt-1 flex items-end justify-between -mt-10 sm:-mt-12">
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <div
@@ -232,7 +232,7 @@ export function EditProfileModal({
                         e.stopPropagation();
                         avatarInputRef.current?.click();
                       }}
-                      className="w-16 h-16 sm:w-18 sm:h-18 rounded-full border-2 border-white dark:border-[#161b22] overflow-hidden bg-neutral-200 dark:bg-neutral-800 shadow-md cursor-pointer group"
+                      className="w-20 h-20 sm:w-22 sm:h-22 rounded-full border-3 border-white dark:border-[#161b22] overflow-hidden bg-neutral-200 dark:bg-neutral-800 shadow-xl cursor-pointer group"
                       title="Change Profile Picture"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -276,33 +276,20 @@ export function EditProfileModal({
                     />
                   </div>
 
-                  {/* Explicit Text Actions: Change Profile Picture / Remove Profile Picture */}
-                  <div className="flex flex-col items-start gap-1 pb-1">
+                  {/* Remove Profile Picture Action (No redundant Change font) */}
+                  {avatarPreview && (
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        avatarInputRef.current?.click();
+                        setAvatarPreview(null);
+                        setProfilePicture(null);
                       }}
-                      className="text-xs font-bold hover:underline cursor-pointer transition-colors"
-                      style={{ color: isModalDark ? "#f0f6fc" : "#1f2328" }}
+                      className="text-xs font-bold text-red-500 hover:text-red-400 hover:underline cursor-pointer pb-2"
                     >
-                      Change Profile Picture
+                      Remove Profile Picture
                     </button>
-                    {avatarPreview && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAvatarPreview(null);
-                          setProfilePicture(null);
-                        }}
-                        className="text-xs font-bold text-red-500 hover:text-red-400 hover:underline cursor-pointer"
-                      >
-                        Remove Profile Picture
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
               {fileError && (
