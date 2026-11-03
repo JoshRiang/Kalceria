@@ -282,11 +282,11 @@ export function EventFormModal({
                 <button
                   type="button"
                   onClick={() => setEventForm((f) => ({ ...f, mediaUrl: "" }))}
-                  className={`text-[10px] hover:underline cursor-pointer ${
+                  className={`text-[10px] font-bold hover:underline cursor-pointer ${
                     isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
                   }`}
                 >
-                  Clear
+                  Clear All
                 </button>
               )}
             </div>
@@ -345,75 +345,41 @@ export function EventFormModal({
               </p>
             )}
 
-            {/* IN OWNER SIDE ONLY: Event Media Carousel (Picture 4) with Picture 5 delete (X) badge */}
-            {(editingEventId || activeOwnEvent) && (
-              <div className={`mt-2.5 p-3 rounded-2xl border-2 border-dashed flex flex-col gap-2 ${
-                isModalDark ? "border-[#30363d] bg-[#0d1117]/60" : "border-[#d0d7de] bg-[#f6f8fa]/80"
-              }`}>
-                <div className="flex items-center justify-between">
-                  <span className="font-sans font-bold text-xs tracking-tight">
-                    Add more images carousel
-                  </span>
-                  {eventForm.mediaUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setEventForm((f) => ({ ...f, mediaUrl: "" }))}
-                      className={`text-[10px] font-bold hover:underline cursor-pointer ${
-                        isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
-                      }`}
-                    >
-                      Clear All
-                    </button>
-                  )}
+            {/* IN OWNER SIDE ONLY: Event Media Thumbnails (Picture 4) with Picture 5 delete (X) badge */}
+            {(editingEventId || activeOwnEvent) && (() => {
+              const urls = (eventForm.mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
+              if (urls.length === 0) return null;
+              return (
+                <div className={`mt-2 p-2.5 rounded-2xl border-2 border-dashed flex flex-col gap-1.5 ${
+                  isModalDark ? "border-[#30363d] bg-[#0d1117]/60" : "border-[#d0d7de] bg-[#f6f8fa]/80"
+                }`}>
+                  <div className="flex items-center gap-2.5 overflow-x-auto py-1 custom-scrollbar">
+                    {urls.map((url, idx) => {
+                      const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
+                      return (
+                        <div key={idx} className="relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm border border-black/10 dark:border-white/10 group">
+                          {isVideo ? (
+                            <video src={url} muted autoPlay loop playsInline className="w-full h-full object-cover" />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover" />
+                          )}
+                          {/* Picture 5: white circular button with X to remove media */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCarouselMedia(idx)}
+                            title="Remove this media"
+                            className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-
-                {(() => {
-                  const urls = (eventForm.mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
-                  if (urls.length === 0) return <p className="text-[11px] text-neutral-400 py-1">No media uploaded yet.</p>;
-                  return (
-                    <div className="flex items-center gap-2.5 overflow-x-auto py-1 custom-scrollbar">
-                      {urls.map((url, idx) => {
-                        const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
-                        return (
-                          <div key={idx} className="relative w-18 h-18 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden shadow-sm border border-black/10 dark:border-white/10 group">
-                            {isVideo ? (
-                              <video src={url} muted autoPlay loop playsInline className="w-full h-full object-cover" />
-                            ) : (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover" />
-                            )}
-                            {/* Picture 5: white circular button with X to remove media */}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveCarouselMedia(idx)}
-                              title="Remove this media"
-                              className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-
-                <div className="flex justify-center pt-0.5">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingMedia || busy}
-                    className={`px-4 py-1.5 rounded-full border text-xs font-bold tracking-tight transition-all cursor-pointer flex items-center gap-1.5 ${
-                      isModalDark
-                        ? "border-white/40 bg-white/10 hover:bg-white/20 text-white"
-                        : "border-black/30 bg-black/5 hover:bg-black/10 text-black"
-                    }`}
-                  >
-                    + Add more images
-                  </button>
-                </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Action Buttons */}
@@ -428,7 +394,7 @@ export function EventFormModal({
                 aria-label="Delete Event"
                 className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer group flex items-center justify-center"
               >
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="w-7 h-7 sm:w-8 sm:h-8">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="w-5 h-5">
                   <path
                     d="M 19 6 L 18.1 19.3 C 18 20.3 17.2 21 16.2 21 H 7.8 C 6.8 21 6 20.3 5.9 19.3 L 5 6 Z"
                     fill="#ef4444"
@@ -477,3 +443,4 @@ export function EventFormModal({
     </div>
   );
 }
+

@@ -83,8 +83,8 @@ export function EditProfileModal({
     const file = e.target.files?.[0];
     if (!file) return;
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
-      setFileError("Only .png, .jpeg, and .mp4 files are allowed");
+    if (!["png", "jpg", "jpeg", "webp"].includes(ext)) {
+      setFileError("Only .png, .jpeg, and .webp image files are allowed for profile picture");
       e.target.value = "";
       return;
     }
@@ -96,13 +96,14 @@ export function EditProfileModal({
       setProfilePicture(dataUrl);
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handleBgFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
+    if (!["png", "jpg", "jpeg", "mp4", "webp"].includes(ext)) {
       setFileError("Only .png, .jpeg, and .mp4 files are allowed");
       e.target.value = "";
       return;
@@ -115,6 +116,7 @@ export function EditProfileModal({
       setCoverImage(dataUrl);
     };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handleSubmit = async (e) => {
@@ -196,81 +198,104 @@ export function EditProfileModal({
                   <img src={coverPreview} alt="Cover preview" className="w-full h-full object-cover" />
                 )}
                 
-                {/* Edit Button (Changed from 'Edit Profile BG' to 'Edit') */}
+                {/* Edit Button (For Cover BG) */}
                 <button
                   type="button"
-                  onClick={() => bgInputRef.current?.click()}
-                  className="absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 hover:bg-black/85 text-white backdrop-blur-sm border border-white/20 transition-transform active:scale-95 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    bgInputRef.current?.click();
+                  }}
+                  className="absolute top-2.5 right-2.5 px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 hover:bg-black/85 text-white backdrop-blur-sm border border-white/20 transition-transform active:scale-95 cursor-pointer z-10"
                 >
                   Edit
                 </button>
                 <input
                   ref={bgInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/jpg,image/webp,video/mp4"
                   onChange={handleBgFileChange}
                   className="hidden"
                 />
               </div>
 
               {/* Profile Avatar overlapping cover with Edit Pencil Icon beside it */}
-              <div className="relative px-4 pb-3 flex items-end justify-between -mt-8 sm:-mt-9">
-                <div className="relative">
-                  <div
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="w-16 h-16 sm:w-18 sm:h-18 rounded-full border-2 border-white dark:border-[#161b22] overflow-hidden bg-neutral-200 dark:bg-neutral-800 shadow-md cursor-pointer group"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        avatarPreview ||
-                        currentUser?.profilePicture ||
-                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName || "user")}`
-                      }
-                      alt="Avatar"
-                      className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+              <div className="relative z-30 px-4 pb-3 flex items-end justify-between -mt-8 sm:-mt-9">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        avatarInputRef.current?.click();
+                      }}
+                      className="w-16 h-16 sm:w-18 sm:h-18 rounded-full border-2 border-white dark:border-[#161b22] overflow-hidden bg-neutral-200 dark:bg-neutral-800 shadow-md cursor-pointer group"
+                      title="Change Profile Picture"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={
+                          avatarPreview ||
+                          currentUser?.profilePicture ||
+                          `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName || "user")}`
+                        }
+                        alt="Avatar"
+                        className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                      />
+                    </div>
+
+                    {/* Pencil Edit Icon on Avatar rim (restored 3 commits ago style) */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        avatarInputRef.current?.click();
+                      }}
+                      aria-label="Change Avatar"
+                      title="Change Profile Picture"
+                      className={`absolute bottom-0 right-0 z-20 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-115 active:scale-90 border-[1.5px] ${
+                        isModalDark ? "bg-white text-black border-black" : "bg-black text-white border-white"
+                      }`}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      onChange={handleAvatarFileChange}
+                      className="hidden"
                     />
                   </div>
 
-                  {/* Picture 1 Pencil Edit Icon on Avatar rim */}
-                  <button
-                    type="button"
-                    onClick={() => avatarInputRef.current?.click()}
-                    aria-label="Change Avatar"
-                    title="Change Profile Picture"
-                    className={`absolute bottom-0 right-0 z-20 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-115 active:scale-90 border-[1.5px] ${
-                      isModalDark ? "bg-white text-black border-black" : "bg-black text-white border-white"
-                    }`}
-                  >
-                    <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor">
-                      <path d="M 3 21 L 3.8 15.5 L 8.5 20.2 Z" />
-                      <path d="M 6.2 13.1 L 13.1 6.2 L 17.8 10.9 L 10.9 17.8 Z" />
-                      <path d="M 15.5 3.8 L 17.8 1.5 C 18.6 0.7 19.9 0.7 20.7 1.5 L 22.5 3.3 C 23.3 4.1 23.3 5.4 22.5 6.2 L 20.2 8.5 Z" />
-                    </svg>
-                  </button>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarFileChange}
-                    className="hidden"
-                  />
-                </div>
-
-                {/* Avatar Actions */}
-                <div className="flex items-center gap-2">
-                  {avatarPreview && (
+                  {/* Explicit Text Actions: Change Profile Picture / Remove Profile Picture */}
+                  <div className="flex flex-col items-start gap-1 pb-1">
                     <button
                       type="button"
-                      onClick={() => {
-                        setAvatarPreview(null);
-                        setProfilePicture(null);
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        avatarInputRef.current?.click();
                       }}
-                      className="px-2 py-1 text-xs font-bold text-red-500 hover:text-red-400 hover:underline cursor-pointer"
+                      className="text-xs font-bold hover:underline cursor-pointer transition-colors"
+                      style={{ color: isModalDark ? "#f0f6fc" : "#1f2328" }}
                     >
-                      Remove Profile Picture
+                      Change Profile Picture
                     </button>
-                  )}
+                    {avatarPreview && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAvatarPreview(null);
+                          setProfilePicture(null);
+                        }}
+                        className="text-xs font-bold text-red-500 hover:text-red-400 hover:underline cursor-pointer"
+                      >
+                        Remove Profile Picture
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               {fileError && (
@@ -355,11 +380,12 @@ export function EditProfileModal({
                     type="button"
                     onClick={() => phoneInputRef.current?.focus()}
                     title="Add WhatsApp Number"
-                    className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-xs border transition-transform hover:scale-105 active:scale-95 cursor-pointer ${
-                      isModalDark ? "bg-white text-black border-black" : "bg-black text-white border-white"
-                    }`}
+                    className="w-5 h-5 flex items-center justify-center transition-transform hover:scale-110 active:scale-90 cursor-pointer"
                   >
-                    +
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                      <line x1="12" y1="4" x2="12" y2="20" stroke={iconFg} strokeWidth="2.4" strokeLinecap="round" />
+                      <line x1="4" y1="12" x2="20" y2="12" stroke={iconFg} strokeWidth="2.4" strokeLinecap="round" />
+                    </svg>
                   </button>
                 )}
               </div>
@@ -408,11 +434,12 @@ export function EditProfileModal({
                     type="button"
                     onClick={() => igInputRef.current?.focus()}
                     title="Add Instagram Link"
-                    className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-xs border transition-transform hover:scale-105 active:scale-95 cursor-pointer ${
-                      isModalDark ? "bg-white text-black border-black" : "bg-black text-white border-white"
-                    }`}
+                    className="w-5 h-5 flex items-center justify-center transition-transform hover:scale-110 active:scale-90 cursor-pointer"
                   >
-                    +
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                      <line x1="12" y1="4" x2="12" y2="20" stroke={iconFg} strokeWidth="2.4" strokeLinecap="round" />
+                      <line x1="4" y1="12" x2="20" y2="12" stroke={iconFg} strokeWidth="2.4" strokeLinecap="round" />
+                    </svg>
                   </button>
                 )}
               </div>
@@ -436,7 +463,7 @@ export function EditProfileModal({
 
             {/* 6. Danger Zone: Change Password & Delete Account (Red Arial Bold, No Underline, Left Picture 2 & 3 Icons) */}
             <div className="mt-1 pt-2.5 flex items-center justify-between border-t border-black/10 dark:border-white/10">
-              {/* Change Password (Picture 3 Reset Password Icon) */}
+              {/* Change Password (Pure Gembok / Padlock Icon) */}
               <button
                 type="button"
                 onClick={() => onRequestChangePassword?.()}
@@ -444,13 +471,28 @@ export function EditProfileModal({
                 className="font-bold text-xs text-red-500 hover:text-red-400 no-underline transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                  <path d="M 21 12 A 9 9 0 0 0 6 5.5 L 3.5 3" stroke={iconFg} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M 3.5 8.5 L 6.5 5.5 L 3 3" fill="none" stroke={iconFg} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M 3 12 A 9 9 0 0 0 18 18.5 L 20.5 21" stroke={iconFg} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M 20.5 15.5 L 17.5 18.5 L 21 21" fill="none" stroke={iconFg} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                  <rect x="7.5" y="11" width="9" height="7.5" rx="1.5" fill={iconFg} stroke={iconStroke} strokeWidth="1.6" />
-                  <path d="M 9.5 11 V 8.5 C 9.5 7.1 10.6 6 12 6 C 13.4 6 14.5 7.1 14.5 8.5 V 11" fill="none" stroke={iconFg} strokeWidth="1.8" />
-                  <circle cx="12" cy="14.5" r="1" fill={iconStroke} />
+                  {/* Shackle */}
+                  <path
+                    d="M 7 10 V 7 C 7 4.2 9.2 2 12 2 C 14.8 2 17 4.2 17 7 V 10"
+                    stroke={iconFg}
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {/* Body */}
+                  <rect
+                    x="4.5"
+                    y="10"
+                    width="15"
+                    height="12"
+                    rx="3"
+                    fill={iconFg}
+                    stroke={iconStroke}
+                    strokeWidth="1.2"
+                  />
+                  {/* Keyhole */}
+                  <circle cx="12" cy="14.8" r="1.3" fill={iconStroke} />
+                  <line x1="12" y1="16.1" x2="12" y2="18.5" stroke={iconStroke} strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
                 Change Password
               </button>

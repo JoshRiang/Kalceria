@@ -36,14 +36,16 @@ const AESTHETIC_COVERS = [
 const BASE_PROFILE_COLORS = [
   "#1b4332", // Forest Green
   "#1e3a5f", // Deep Navy
-  "#2d3748", // Slate Charcoal
-  "#134e4a", // Deep Emerald
-  "#312e81", // Deep Indigo
-  "#3f3f46", // Modern Zinc
-  "#4c1d95", // Deep Violet
-  "#78350f", // Warm Amber Umber
-  "#14532d", // Rich Pine
-  "#334155", // Midnight Slate
+  "#2d6a4f", // Vibrant Emerald Green
+  "#0284c7", // Sky Blue
+  "#0d9488", // Deep Teal
+  "#7c3aed", // Rich Violet
+  "#c2410c", // Terracotta Rust
+  "#d97706", // Warm Amber
+  "#b91c1c", // Deep Crimson
+  "#4338ca", // Royal Indigo
+  "#047857", // Lush Pine
+  "#db2777", // Vibrant Rose
 ];
 
 function getFallbackCover(user) {
@@ -146,7 +148,14 @@ function normalizeMediaConfig(rawUrl, rawType, { isAdit, isAhmad, fallbackCover 
   }
 
   // 3. Auto-detect media type if not explicitly set
-  const lowerUrl = String(url || "").toLowerCase();
+  const lowerUrl = String(url || "").trim().toLowerCase();
+  if (lowerUrl.startsWith("#") || lowerUrl.startsWith("rgb")) {
+    return {
+      url,
+      type: "color",
+      aspectRatio: "1 / 1",
+    };
+  }
   if (!type) {
     if (lowerUrl.endsWith(".mp4") || lowerUrl.endsWith(".webm") || lowerUrl.startsWith("data:video") || lowerUrl.includes("video")) {
       type = "video";
@@ -164,16 +173,24 @@ function normalizeMediaConfig(rawUrl, rawType, { isAdit, isAhmad, fallbackCover 
   };
 }
 
-function NormalizedMediaCover({ media, altText, onError }) {
+function NormalizedMediaCover({ media, altText, onError, fallbackColor }) {
   const [useFallback, setUseFallback] = useState(false);
+
+  if (media?.type === "color" || media?.url?.startsWith?.("#")) {
+    return (
+      <div
+        className="w-full h-full"
+        style={{ backgroundColor: media.url }}
+      />
+    );
+  }
 
   if (useFallback) {
     return (
-      <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border border-white/20 bg-white/10 flex items-center justify-center text-white/50 text-xs">
-          Kalceria
-        </div>
-      </div>
+      <div
+        className="w-full h-full"
+        style={{ backgroundColor: fallbackColor || "#1b4332" }}
+      />
     );
   }
 
@@ -336,6 +353,7 @@ export default function KalcerianProfileCard({
           media={normalizedMedia}
           altText={`${displayName} cover`}
           onError={() => setImgError(true)}
+          fallbackColor={fallbackCover}
         />
         {/* Subtle top/bottom vignette to enhance depth */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
@@ -396,13 +414,9 @@ export default function KalcerianProfileCard({
                   : "bg-black text-white border-white"
               }`}
             >
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
-                {/* Triangle Tip at bottom-left */}
-                <path d="M 3 21 L 3.8 15.5 L 8.5 20.2 Z" />
-                {/* Main Thick Body */}
-                <path d="M 6.2 13.1 L 13.1 6.2 L 17.8 10.9 L 10.9 17.8 Z" />
-                {/* Eraser / Cap at top-right */}
-                <path d="M 15.5 3.8 L 17.8 1.5 C 18.6 0.7 19.9 0.7 20.7 1.5 L 22.5 3.3 C 23.3 4.1 23.3 5.4 22.5 6.2 L 20.2 8.5 Z" />
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
             </button>
           )}

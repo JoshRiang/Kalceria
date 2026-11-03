@@ -209,9 +209,9 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
       type="button"
       disabled
       title="Group Chat"
-      style="width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none; flex-shrink: 0;"
+      style="width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none; flex-shrink: 0;"
     >
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
         <path
           d="M18.5 8.5a6.5 6.5 0 0 1-.7 3 6.6 6.6 0 0 1-5.9 3.7 6.5 6.5 0 0 1-3-.7L5 16l1.5-4.5a6.5 6.5 0 0 1-.7-3 6.6 6.6 0 0 1 3.7-5.9 6.5 6.5 0 0 1 3-.7h.4a6.6 6.6 0 0 1 6.2 6.2v.4z"
           transform="translate(4.7, 2.0) scale(0.8)"
@@ -234,7 +234,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
 
   // Picture 2 Icons8 Upload Icon (for accepted collaborators)
   const pureUploadSvg = `
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
       <path
         d="M 5 13 V 17 C 5 18.1 5.9 19 7 19 H 17 C 18.1 19 19 18.1 19 17 V 13"
         stroke="${iconFg}"
@@ -264,7 +264,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
 
   // Pure Hand SVG: Exact Flaticon finger gesture (Picture 1), centered at (12, 12), all black with white border (light mode) and vice versa
   const pureHandSvg = `
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
       <path
         d="M 10.0 4.0 L 9.3 4.4 L 9.0 4.7 L 8.9 5.1 L 8.9 10.9 L 8.0 11.0 L 7.4 11.2 L 6.7 11.8 L 6.2 12.6 L 6.1 13.2 L 6.1 14.1 L 6.4 15.5 L 6.9 16.8 L 7.6 18.0 L 8.5 19.0 L 9.5 19.7 L 10.6 20.0 L 14.6 20.0 L 15.7 19.9 L 16.6 19.4 L 17.4 18.6 L 17.8 17.7 L 17.9 16.6 L 17.9 10.5 L 17.5 10.0 L 17.0 9.6 L 16.4 9.6 L 15.8 9.8 L 15.4 9.3 L 15.0 8.9 L 14.3 8.9 L 13.7 9.1 L 13.3 8.5 L 12.7 8.2 L 12.2 8.2 L 11.7 8.3 L 11.6 5.0 L 11.4 4.6 L 11.0 4.2 L 10.5 4.0 L 10.0 4.0 Z"
         fill="${iconFg}"
@@ -282,7 +282,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
   if (isOwner) {
     const hasRedDot = pendingRequestsCount > 0;
     const redDotHtml = hasRedDot
-      ? `<span style="position: absolute; top: -1px; right: -1px; width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%; border: none !important; box-shadow: none !important; pointer-events: none;"></span>`
+      ? `<span style="position: absolute; top: -1px; right: -1px; width: 5px; height: 5px; background-color: #ef4444; border-radius: 50%; border: none !important; box-shadow: none !important; pointer-events: none;"></span>`
       : "";
 
     requestOrEnvelopeIconHtml = `
@@ -290,26 +290,13 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaOpenRequests?.('${esc(item.id)}')"
         title="Collab Requests"
-        style="position: relative; width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="position: relative; width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M 3 6 C 3 4.9 3.9 4 5 4 L 19 4 C 20.1 4 21 4.9 21 6 L 21 18 C 21 19.1 20.1 20 19 20 L 5 20 C 3.9 20 3 19.1 3 18 Z"
-            fill="${iconFg}"
-            stroke="${iconStroke}"
-            stroke-width="1.4"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M 3.5 6.5 L 12 13 L 20.5 6.5"
-            fill="none"
-            stroke="${iconStroke}"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: block;">
+          <rect x="2.5" y="4.5" width="19" height="15" rx="3" fill="${iconFg}" stroke="${iconStroke}" stroke-width="1.3" />
+          <path d="M 3.5 6.5 L 12 13 L 20.5 6.5" fill="none" stroke="${iconStroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
         ${redDotHtml}
       </button>
@@ -321,7 +308,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaCollaboratorUpload?.('${esc(item.id)}')"
         title="Upload Media (Collaborator)"
-        style="width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.15)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -335,7 +322,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPromptCancelRequest?.('${esc(item.id)}', '${esc(item.title)}')"
         title="Remove Request from ${esc(item.title)}"
-        style="position: relative; width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="position: relative; width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -354,7 +341,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPromptCancelRequest?.('${esc(requestedEventId)}', 'active event')"
         title="Active request exists on another event (Click to cancel)"
-        style="position: relative; width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); flex-shrink: 0;"
+        style="position: relative; width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.08)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -367,7 +354,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaRequestCollab?.('${esc(item.id)}')"
         title="Request Collab"
-        style="width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
@@ -376,37 +363,37 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     `;
   }
 
-  // 3. Pencil Icon (Edit Event - for owner only, matching Picture 1 SVG Repo, centered at (12,12))
+  // 3. Pencil Icon (Edit Event - for owner only, matching Picture 1 SVG Repo, crisp 16x16)
   const pencilIconHtml = isOwner
     ? `
       <button
         type="button"
         onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaEditEvent?.('${esc(item.id)}')"
         title="Edit Event"
-        style="width: 22px; height: 22px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+        style="width: 17px; height: 17px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
         onmouseout="this.style.transform='scale(1)'"
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="overflow: visible;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
           <path
-            d="M 3.8 20.2 L 4.4 15.6 L 8.4 19.6 Z"
+            d="M 3.5 20.5 L 4.8 15.8 L 8.2 19.2 Z"
             fill="${iconFg}"
             stroke="${iconStroke}"
-            stroke-width="1.2"
+            stroke-width="1.1"
             stroke-linejoin="round"
           />
           <path
-            d="M 6.5 13.6 L 12.3 7.7 L 16.3 11.7 L 10.4 17.5 Z"
+            d="M 6.4 14.2 L 14.2 6.4 L 17.6 9.8 L 9.8 17.6 Z"
             fill="${iconFg}"
             stroke="${iconStroke}"
-            stroke-width="1.2"
+            stroke-width="1.1"
             stroke-linejoin="round"
           />
           <path
-            d="M 14.3 5.7 L 16.3 3.8 C 17.0 3.1 18.0 3.1 18.7 3.8 L 20.2 5.3 C 20.9 6.0 20.9 7.0 20.2 7.7 L 18.3 9.7 Z"
+            d="M 15.6 5.0 L 17.2 3.4 C 17.8 2.8 18.8 2.8 19.4 3.4 L 20.6 4.6 C 21.2 5.2 21.2 6.2 20.6 6.8 L 19.0 8.4 Z"
             fill="${iconFg}"
             stroke="${iconStroke}"
-            stroke-width="1.2"
+            stroke-width="1.1"
             stroke-linejoin="round"
           />
         </svg>
