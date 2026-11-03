@@ -14,6 +14,7 @@ export default function AuthField({
   isValid = false,
   hasError = false,
   validationMessage = "",
+  maxLength,
   max,
   list,
   autoComplete
@@ -99,9 +100,9 @@ export default function AuthField({
           ))}
         </select>
       ) : isPhone ? (
-        /* Phone input with +62 prefix badge */
-        <div className={`flex items-center w-full border rounded-md overflow-hidden transition-all ${borderClass}`}>
-          <div className="flex items-center pl-3 pr-2.5 py-2.5 text-white font-sans font-bold text-xs select-none border-r border-slate-700 bg-white/[0.04] shrink-0">
+        /* Phone input with unified dark +62 prefix badge */
+        <div className={`flex items-center w-full border rounded-md overflow-hidden bg-[#0c1528] transition-all ${borderClass}`}>
+          <div className="flex items-center pl-3.5 pr-2.5 py-2.5 text-slate-300 font-sans font-bold text-[13px] select-none border-r border-slate-800 bg-[#0c1528] shrink-0">
             +62
           </div>
           <input
@@ -110,12 +111,13 @@ export default function AuthField({
             inputMode="numeric"
             placeholder={placeholder || "81234567890"}
             value={phoneDigits}
-            maxLength={20}
+            maxLength={15}
+            autoComplete="tel"
             onChange={handlePhoneInput}
             disabled={disabled}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            className="w-full bg-transparent px-3 py-2.5 font-sans text-[13px] text-white outline-none placeholder:text-slate-600"
+            className="w-full bg-[#0c1528] px-3 py-2.5 font-sans text-[13px] text-white outline-none placeholder:text-slate-600 autofill-dark"
           />
         </div>
       ) : (
@@ -126,16 +128,15 @@ export default function AuthField({
           value={type === "file" ? undefined : val}
           onChange={handleChange}
           disabled={disabled}
+          maxLength={maxLength}
           max={max}
           list={list}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           autoComplete={autoComplete || (type === "password" ? "current-password" : "off")}
-          className={`w-full border rounded-md px-3 py-2.5 font-sans text-[13px] text-white outline-none transition-all placeholder:text-slate-600 ${
-            type === "file"
-              ? "file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600 cursor-pointer"
-              : ""
-          } ${disabled ? "cursor-not-allowed opacity-70 placeholder:text-slate-600" : ""} ${borderClass}`}
+          className={`w-full border rounded-md px-3 py-2.5 font-sans text-[13px] text-white bg-[#0c1528] outline-none transition-all placeholder:text-slate-600 autofill-dark ${
+            disabled ? "cursor-not-allowed opacity-70 placeholder:text-slate-600" : ""
+          } ${borderClass}`}
         />
       )}
     </div>

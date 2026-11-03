@@ -13,21 +13,23 @@ import { validateCommsValue } from "@/components/service-request/FormControls";
 
 const PASSWORD_CHECK_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-// Client-side age validation: must be 18+ years old
-function checkAge18(dob) {
-  if (!dob) return { valid: false, empty: true, message: "" };
-  const bDate = new Date(dob);
-  if (isNaN(bDate.getTime())) return { valid: false, empty: false, message: "Invalid date" };
-  const today = new Date();
-  let age = today.getFullYear() - bDate.getFullYear();
-  const m = today.getMonth() - bDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < bDate.getDate())) {
-    age--;
+// Client-side born year validation (YEAR ONLY): must be 18+ years old
+function checkBornYear(yearVal) {
+  if (!yearVal) return { valid: false, empty: true, message: "" };
+  const str = String(yearVal).trim();
+  if (str.length < 4) return { valid: false, empty: false, message: "" };
+  const y = parseInt(str, 10);
+  const currentYear = new Date().getFullYear();
+  if (isNaN(y) || str.length !== 4) {
+    return { valid: false, empty: false, message: "Enter 4-digit year" };
   }
-  if (age < 18) {
-    return { valid: false, empty: false, message: "Must be 18+ years old" };
+  if (y > currentYear - 18) {
+    return { valid: false, empty: false, message: "Must be 18 or older" };
   }
-  return { valid: true, empty: false, message: `Age ${age}` };
+  if (y < 1920) {
+    return { valid: false, empty: false, message: "Enter valid year" };
+  }
+  return { valid: true, empty: false, message: "" };
 }
 
 // Ensure avatar base64 string does not exceed backend limits (max 180KB)
@@ -71,12 +73,6 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const [cropSourceImage, setCropSourceImage] = useState(null);
   const [croppedAvatar, setCroppedAvatar] = useState(null);
   const [photoError, setPhotoError] = useState("");
-
-  const maxDobString = (() => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - 18);
-    return d.toISOString().split("T")[0];
-  })();
 
   useEffect(() => {
     setMounted(true);
@@ -235,16 +231,16 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         return;
       }
 
-      // 1. Age validation: must be 18 or older
-      const dobCheck = checkAge18(form.dob);
-      if (!dobCheck.valid) {
+      // 1. Born Year validation: must be 18 or older
+      const yearCheck = checkBornYear(form.dob);
+      if (!yearCheck.valid) {
         setError("You must be 18 years or older to register.");
         return;
       }
 
-      // 2. City validation: must be an Indonesian city
+      // 2. City validation: must be in the Indonesian cities list
       if (!isIndonesianCity(form.domicile)) {
-        setError("Please enter a valid Indonesian city (e.g. Jakarta, Bandung, Surabaya).");
+        setError("City is not in the list.");
         return;
       }
 
@@ -257,7 +253,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
       // 4. Password validation: 4 strict criteria
       if (!PASSWORD_CHECK_REGEX.test(form.password)) {
-        setError("Password must be at least 8 characters with 1 uppercase, 1 number, and 1 special character.");
+        setError("Password must meet all 4 requirements below.");
         return;
       }
     }
@@ -276,10 +272,11 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         const registeredEmail = form.email.trim();
         const registeredPassword = form.password;
         const profilePicture = await optimizeAvatarForBackend(croppedAvatar);
+        const birthDateIso = `${String(form.dob).trim()}-01-01`;
 
         const regRes = await api.post("/auth/register", {
           name: form.name.trim(),
-          dob: form.dob,
+          dob: birthDateIso,
           email: registeredEmail,
           domicile: form.domicile?.trim() || undefined,
           gender: "OTHER", // Gender removed from form, defaulted safely
@@ -317,7 +314,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
       let msg = err.response?.data?.error || err.message || "An error occurred.";
       if (msg.includes("prisma")) {
         if (msg.includes("dob") || msg.includes("Invalid Date")) {
-          msg = "Format tanggal lahir tidak valid.";
+          msg = "Format tahun lahir tidak valid.";
         } else if (msg.includes("Unique constraint failed")) {
           msg = "Email atau nomor telepon sudah terdaftar.";
         } else {
@@ -333,9 +330,9 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   // ── Live validation flags for instant green borders ──
   const nameValid = Boolean(form.name && form.name.trim().length >= 2);
 
-  const dobCheck = checkAge18(form.dob);
-  const isDobValid = dobCheck.valid;
-  const isDobError = !dobCheck.valid && !dobCheck.empty;
+  const yearCheck = checkBornYear(form.dob);
+  const isDobValid = yearCheck.valid;
+  const isDobError = !yearCheck.valid && !yearCheck.empty;
 
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,12}$/;
   const isEmailValid = emailRegex.test(form.email || "");
@@ -532,43 +529,27 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             disabled={!PUBLIC_SIGNUP_ENABLED}
                           />
 
-                          {/* 2. Profile Photo (WhatsApp-style Crop Editor inherited from Map page) */}
+                          {/* 2. Profile Photo (Clean standard box, no circle, no "Photo ready") */}
                           <div className="flex flex-col mb-4">
                             <div className="mb-1.5 flex items-center justify-between font-sans text-xs font-semibold text-slate-300 select-none">
                               <span>Profile Photo</span>
-                              {croppedAvatar ? (
-                                <span className="text-[10px] font-medium text-emerald-400">Photo ready</span>
-                              ) : photoError ? (
+                              {photoError && (
                                 <span className="text-[10px] font-medium text-amber-400">{photoError}</span>
-                              ) : null}
+                              )}
                             </div>
                             <div
-                              className={`flex items-center gap-3 w-full border rounded-md p-2.5 transition-all bg-[#0c1528] ${
+                              className={`flex items-center justify-between w-full border rounded-md px-3 py-2 transition-all bg-[#0c1528] ${
                                 croppedAvatar
                                   ? "border-emerald-400 ring-1 ring-emerald-400/40 shadow-[0_0_12px_rgba(52,211,153,0.15)]"
                                   : "border-slate-800 hover:border-slate-700"
                               }`}
                             >
-                              {croppedAvatar ? (
-                                <div className="relative w-11 h-11 rounded-full overflow-hidden border-2 border-emerald-400 shrink-0 shadow-md">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={croppedAvatar} alt="Profile preview" className="w-full h-full object-cover" />
-                                </div>
-                              ) : (
-                                <div className="w-11 h-11 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center shrink-0 text-slate-400">
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="1.8"
-                                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                    />
-                                  </svg>
-                                </div>
-                              )}
-                              <div className="flex-1 flex items-center gap-2.5">
+                              <span className="text-[13px] font-sans truncate text-slate-400">
+                                {croppedAvatar ? "Photo chosen & cropped" : "No file chosen"}
+                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
                                 <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white font-sans text-xs font-bold py-1.5 px-3 rounded transition-colors inline-block select-none">
-                                  {croppedAvatar ? "Change Photo" : "Choose Photo"}
+                                  {croppedAvatar ? "Change File" : "Choose File"}
                                   <input
                                     type="file"
                                     accept="image/png,image/jpeg,image/webp,image/jpg"
@@ -577,39 +558,35 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                                     disabled={!PUBLIC_SIGNUP_ENABLED}
                                   />
                                 </label>
-                                {croppedAvatar ? (
+                                {croppedAvatar && (
                                   <button
                                     type="button"
                                     onClick={() => {
                                       setCroppedAvatar(null);
                                       setPhotoError("");
                                     }}
-                                    className="text-xs text-red-400 hover:text-red-300 transition-colors font-medium cursor-pointer"
+                                    className="text-xs text-red-400 hover:text-red-300 transition-colors font-medium cursor-pointer py-1 px-1.5"
                                   >
                                     Remove
                                   </button>
-                                ) : (
-                                  <span className="text-xs text-slate-500 font-sans truncate">
-                                    PNG, JPG, or WEBP
-                                  </span>
                                 )}
                               </div>
                             </div>
                           </div>
 
-                          {/* 3. Born In (18+ check) & City (Indonesian real city check) */}
+                          {/* 3. Born In (YEAR ONLY) & City */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                             <AuthField
                               id="dob"
                               label="Born In"
-                              type="date"
-                              max={maxDobString}
-                              placeholder={PUBLIC_SIGNUP_ENABLED ? "YYYY-MM-DD" : "Not Ready Yet"}
+                              type="text"
+                              maxLength={4}
+                              placeholder={PUBLIC_SIGNUP_ENABLED ? "YYYY (e.g. 2004)" : "Not Ready Yet"}
                               val={form.dob || ""}
                               onChange={setField}
                               isValid={isDobValid}
                               hasError={isDobError}
-                              validationMessage={dobCheck.message}
+                              validationMessage={yearCheck.message}
                               disabled={!PUBLIC_SIGNUP_ENABLED}
                             />
                             <AuthField
@@ -622,9 +599,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                               list="indonesia-cities"
                               isValid={cityValid}
                               hasError={isCityError}
-                              validationMessage={
-                                cityValid ? "Valid Indonesian city" : isCityError ? "Must be real ID city" : ""
-                              }
+                              validationMessage={isCityError ? "City is not in the list" : ""}
                               disabled={!PUBLIC_SIGNUP_ENABLED}
                             />
                           </div>
@@ -646,9 +621,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             onChange={setField}
                             isValid={isEmailValid}
                             hasError={isEmailError}
-                            validationMessage={
-                              isEmailValid ? "Valid email format" : isEmailError ? "Enter a valid email" : ""
-                            }
+                            validationMessage={isEmailError ? "Enter a valid email" : ""}
                             disabled={!PUBLIC_SIGNUP_ENABLED}
                           />
 
@@ -666,7 +639,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             disabled={!PUBLIC_SIGNUP_ENABLED}
                           />
 
-                          {/* 6. Password (Checklist removed, box edge turns green when valid) */}
+                          {/* 6. Password (Checklist restored, box edge turns green when valid) */}
                           <AuthField
                             id="password"
                             label="Password"
@@ -676,9 +649,36 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             onChange={setField}
                             isValid={passwordValid}
                             hasError={isPasswordError}
-                            validationMessage={passwordValid ? "Password strong" : ""}
                             disabled={!PUBLIC_SIGNUP_ENABLED}
                           />
+
+                          {/* Password Requirements Checklist (All 4 rules) */}
+                          <div className="mb-4 -mt-1 grid grid-cols-2 gap-2 text-xs font-sans tracking-wide">
+                            {[
+                              { label: "Min 8 Chars", met: (form.password || "").length >= 8 },
+                              { label: "1 Uppercase", met: /[A-Z]/.test(form.password || "") },
+                              { label: "1 Number", met: /[0-9]/.test(form.password || "") },
+                              { label: "1 Special Char", met: /[^A-Za-z0-9]/.test(form.password || "") },
+                            ].map((req, i) => (
+                              <div
+                                key={i}
+                                className={`flex items-center gap-2 transition-colors ${
+                                  req.met ? "text-green-300" : "text-slate-500"
+                                }`}
+                              >
+                                <div
+                                  className={`w-3.5 h-3.5 rounded-[3px] flex items-center justify-center border transition-colors ${
+                                    req.met
+                                      ? "bg-green-400/20 border-green-400/50"
+                                      : "border-slate-700 bg-[#0c1528]"
+                                  }`}
+                                >
+                                  {req.met && <span className="text-[10px] text-green-300 font-bold">✓</span>}
+                                </div>
+                                {req.label}
+                              </div>
+                            ))}
+                          </div>
                         </>
                       ) : (
                         /* ── OTP Verification UI ── */
@@ -841,6 +841,13 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: rgba(100, 116, 139, 0.5);
+        }
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #ffffff !important;
+          -webkit-box-shadow: 0 0 0px 1000px #0c1528 inset !important;
+          transition: background-color 5000s ease-in-out 0s !important;
         }
       `,
         }}
