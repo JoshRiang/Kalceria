@@ -12,6 +12,8 @@ import { INITIAL_MOCK_MINI_EVENTS, INITIAL_ACCEPTED_COLLABS, INITIAL_EVENT_REQUE
 import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
+import { AtmosphericBackground } from "@/components/map/AtmosphericBackground";
+import { useEventCollab } from "@/components/map/hooks/useEventCollab";
 import { OwnProfileDrawer } from "@/components/map/OwnProfileDrawer";
 import { EditProfileModal } from "@/components/map/EditProfileModal";
 import { MapWalkthroughTooltip } from "@/components/map/MapWalkthroughTooltip";
@@ -54,34 +56,19 @@ export default function MapPage() {
   const [statusText, setStatusText] = useState("");
   const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe", mediaUrl: "" });
   const [editingEventId, setEditingEventId] = useState(null);
-  const [requestedEventId, setRequestedEventId] = useState(() => {
-    if (typeof window !== "undefined") {
-      try { return localStorage.getItem("kalceria_requested_event_id") || null; } catch {}
-    }
-    return null;
-  });
-  const [acceptedCollabsMap, setAcceptedCollabsMap] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("kalceria_accepted_collabs");
-        if (stored) return JSON.parse(stored);
-      } catch {}
-    }
-    return INITIAL_ACCEPTED_COLLABS;
-  });
-  const [eventRequestsMap, setEventRequestsMap] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("kalceria_event_collab_requests");
-        if (stored) return JSON.parse(stored);
-      } catch {}
-    }
-    return INITIAL_EVENT_REQUESTS;
-  });
-  const [cancelRequestTarget, setCancelRequestTarget] = useState(null);
-  const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
-  const [showRequestsModal, setShowRequestsModal] = useState(false);
-  const [viewingRequestsEventId, setViewingRequestsEventId] = useState(null);
+  const {
+    requestedEventId, setRequestedEventId,
+    acceptedCollabsMap, setAcceptedCollabsMap,
+    eventRequestsMap, setEventRequestsMap,
+    cancelRequestTarget, setCancelRequestTarget,
+    showCancelRequestModal, setShowCancelRequestModal,
+    showRequestsModal, setShowRequestsModal,
+    viewingRequestsEventId, setViewingRequestsEventId,
+    handleRequestCollab, handlePromptCancelRequest,
+    handleConfirmCancelRequest, handleOpenRequests,
+    handleAcceptCollabRequest, handleCollaboratorUpload,
+    handleDeclineCollabRequest,
+  } = useEventCollab({ events, setEvents, currentUser, setNotice, avatarUrl });
   const [showOwnProfile, setShowOwnProfile] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -597,144 +584,6 @@ export default function MapPage() {
     setBusy(false);
   }
 
-  const handleRequestCollab = useCallback((eventId) => {
-    playNotificationSound("event");
-    setRequestedEventId(eventId);
-    try { localStorage.setItem("kalceria_requested_event_id", eventId); } catch {}
-    const ev = events.find((e) => String(e.id) === String(eventId));
-    setNotice(`Collab requested for ${ev?.title || "event"}!`);
-
-    if (currentUser) {
-      setEventRequestsMap((prev) => {
-        const existing = prev[eventId] || [];
-        if (existing.some((r) => r.user.id === currentUser.id)) return prev;
-        const newReq = {
-          id: `req_${Date.now()}`,
-          user: {
-            id: currentUser.id,
-            name: currentUser.name || currentUser.nickname || "You",
-            nickname: currentUser.nickname || currentUser.name || "You",
-            profilePicture: currentUser.profilePicture || avatarUrl(currentUser),
-            broadcast: currentUser.broadcast?.message || "Collab requested",
-          },
-          message: "Wants to collaborate on this event",
-          createdAt: new Date().toISOString(),
-        };
-        const updated = { ...prev, [eventId]: [newReq, ...existing] };
-        try { localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated)); } catch {}
-        return updated;
-      });
-    }
-  }, [events, currentUser]);
-
-  const handlePromptCancelRequest = useCallback((eventId, title) => {
-    const ev = events.find((e) => String(e.id) === String(eventId));
-    setCancelRequestTarget({ id: eventId, title: title || ev?.title || "Event" });
-    setShowCancelRequestModal(true);
-  }, [events]);
-
-  const handleConfirmCancelRequest = useCallback(() => {
-    const targetId = cancelRequestTarget?.id || requestedEventId;
-    setRequestedEventId(null);
-    try { localStorage.removeItem("kalceria_requested_event_id"); } catch {}
-    if (targetId && currentUser) {
-      setEventRequestsMap((prev) => {
-        const existing = prev[targetId] || [];
-        const updated = { ...prev, [targetId]: existing.filter((r) => r.user.id !== currentUser.id) };
-        try { localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated)); } catch {}
-        return updated;
-      });
-    }
-    setShowCancelRequestModal(false);
-    setCancelRequestTarget(null);
-    setNotice("Request removed.");
-  }, [cancelRequestTarget, requestedEventId, currentUser]);
-
-  const handleOpenRequests = useCallback((eventId) => {
-    setViewingRequestsEventId(eventId);
-    setShowRequestsModal(true);
-    playNotificationSound("event");
-  }, []);
-
-  const handleAcceptCollabRequest = useCallback((requestId, eventId) => {
-    playNotificationSound("event");
-    const targetId = eventId || viewingRequestsEventId;
-    setEventRequestsMap((prev) => {
-      if (!targetId || !prev[targetId]) return prev;
-      const targetReq = prev[targetId].find((r) => r.id === requestId);
-      if (targetReq?.user?.id) {
-        setAcceptedCollabsMap((collabs) => {
-          const list = collabs[targetId] || [];
-          if (!list.includes(targetReq.user.id)) {
-            const next = { ...collabs, [targetId]: [...list, targetReq.user.id] };
-            try { localStorage.setItem("kalceria_accepted_collabs", JSON.stringify(next)); } catch {}
-            return next;
-          }
-          return collabs;
-        });
-      }
-      const updatedList = prev[targetId].filter((r) => r.id !== requestId);
-      const updated = { ...prev, [targetId]: updatedList };
-      try { localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated)); } catch {}
-      return updated;
-    });
-    setNotice("Collab request accepted! User is now a collaborator.");
-  }, [viewingRequestsEventId]);
-
-  const handleCollaboratorUpload = useCallback((eventId) => {
-    playNotificationSound("event");
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4";
-    input.onchange = async (e) => {
-      const file = e.target?.files?.[0];
-      if (!file) return;
-      const ext = (file.name.split(".").pop() || "").toLowerCase();
-      if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
-        setNotice("Only .png, .jpeg, and .mp4 files are allowed");
-        return;
-      }
-      setNotice("Uploading media as collaborator...");
-      try {
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await fetch("/api/blob/upload", { method: "POST", body: fd });
-        const json = await res.json();
-        if (json.url) {
-          setEvents((prev) =>
-            prev.map((ev) => {
-              if (String(ev.id) === String(eventId)) {
-                const current = ev.mediaUrl ? ev.mediaUrl.split(",") : [];
-                return { ...ev, mediaUrl: [...current, json.url].join(",") };
-              }
-              return ev;
-            })
-          );
-          playNotificationSound("event");
-          setNotice("Media added to event by collaborator!");
-        } else {
-          setNotice(json.error || "Upload failed");
-        }
-      } catch (err) {
-        setNotice(err.message || "Upload error");
-      }
-    };
-    input.click();
-  }, []);
-
-  const handleDeclineCollabRequest = useCallback((requestId, eventId) => {
-    playNotificationSound("event");
-    setEventRequestsMap((prev) => {
-      const targetId = eventId || viewingRequestsEventId;
-      if (!targetId || !prev[targetId]) return prev;
-      const updatedList = prev[targetId].filter((r) => r.id !== requestId);
-      const updated = { ...prev, [targetId]: updatedList };
-      try { localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated)); } catch {}
-      return updated;
-    });
-    setNotice("Collab request declined.");
-  }, [viewingRequestsEventId]);
-
   const handleSaveProfile = useCallback(async (updatedData) => {
     playNotificationSound("event");
     setCurrentUser((prev) => {
@@ -806,26 +655,11 @@ export default function MapPage() {
       }}
     >
       {/* 🌌 Atmospheric Tactical Background (Behind Map) */}
-      {showStartup && (
-        <div className="fixed inset-0 z-[1] pointer-events-none overflow-hidden">
-          {/* Animated Blobs */}
-          <motion.div
-            animate={{ scale: [1, 1.5, 1], rotate: [0, 180, 0], x: [-150, 150, -150], y: [-80, 80, -80] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-            className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] bg-[#ff006e]/25 rounded-full blur-[120px]"
-          />
-          <motion.div
-            animate={{ scale: [1.5, 1, 1.5], rotate: [0, -180, 0], x: [150, -150, 150], y: [80, -80, 80] }}
-            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-            className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] bg-[#ffd60a]/15 rounded-full blur-[120px]"
-          />
-          <motion.div
-            animate={{ opacity: [0.2, 0.7, 0.2], scale: [1, 1.3, 1], x: [0, 100, 0], y: [0, -100, 0] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[20%] left-[30%] w-[50%] h-[50%] bg-purple-600/15 rounded-full blur-[100px]"
-          />
-        </div>
-      )}
+      <AtmosphericBackground
+        showStartup={showStartup}
+        isMapDark={isMapDark}
+        mapParticles={mapParticles}
+      />
 
       {/* SnapMap Component (Semi-Transparent for Glass Effect) */}
       <motion.div
@@ -847,42 +681,7 @@ export default function MapPage() {
         />
       </motion.div>
 
-      {/* Global Map Ambient Micro-Particles (60% sparse) */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-[30]">
-        {!showStartup && mapParticles.map((p) => {
-          const activeColor = isMapDark
-            ? (p.id % 2 === 0 ? "#ff006e" : "#ffd60a") // Dark Mode: Neon Red/Magenta & Bright Gold
-            : (p.id % 2 === 0 ? "#10b981" : "#3b82f6"); // Light Mode: Emerald Green & Dodger Blue
 
-          return (
-            <div
-              key={p.id}
-              className="absolute rounded-full blur-[0.5px] pointer-events-none"
-              style={{
-                left: p.left,
-                bottom: "-20px",
-                width: p.size,
-                height: p.size,
-                backgroundColor: activeColor,
-                boxShadow: `0 0 6px ${activeColor}, 0 0 12px ${activeColor}`,
-                animation: `floatUp ${p.duration}s linear ${p.delay}s infinite both`,
-                opacity: p.opacity,
-                transition: "background-color 1.5s ease-in-out, box-shadow 1.5s ease-in-out",
-              }}
-            />
-          );
-        })}
-      </div>
-
-      {/* Subtle Vignette Overlay */}
-      <div
-        className="fixed inset-0 z-[40] pointer-events-none"
-        aria-hidden="true"
-        style={{
-          background:
-            "radial-gradient(circle at center, transparent 0%, transparent 50%, rgba(10, 14, 39, 0.5) 100%)",
-        }}
-      />
 
       {/* 📡 Status Syncing Progress Bar */}
       <AnimatePresence>
