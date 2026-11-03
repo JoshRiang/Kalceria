@@ -18,12 +18,14 @@ export default function AuthField({
   maxLength,
   max,
   list,
-  autoComplete
+  autoComplete,
 }) {
   const [focused, setFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const inputRef = useRef(null);
   const isSelect = type === "select";
   const isPhone = type === "tel";
+  const isPassword = type === "password";
 
   // Dynamic border coloring based on validation state
   const borderClass = isValid
@@ -39,23 +41,18 @@ export default function AuthField({
     onChange(id, value);
   };
 
-  // Phone input handler matching Need Our Help form behavior
-  const phoneDigits = isPhone
-    ? String(val || "").replace(/^\+?62/, "")
-    : "";
+  // Phone input handler
+  const phoneDigits = isPhone ? String(val || "").replace(/^\+?62/, "") : "";
 
   const handlePhoneInput = (e) => {
     let raw = e.target.value || "";
-    // Allow digits only
     let digits = raw.replace(/\D/g, "");
     if (digits.startsWith("62")) {
       digits = digits.slice(2);
     }
-    // If user starts with 0 and enters subsequent digits, strip leading 0s (e.g. 0812 -> 812)
     if (/^0+[1-9]/.test(digits)) {
       digits = digits.replace(/^0+/, "");
     } else if (/^0+$/.test(digits)) {
-      // Keystroke feedback if user just typed 0
       digits = "0";
     }
     digits = digits.slice(0, 12);
@@ -64,9 +61,15 @@ export default function AuthField({
     onChange(id, nextVal);
   };
 
+  const computedInputType = isPassword
+    ? showPassword
+      ? "text"
+      : "password"
+    : type;
+
   return (
     <div className="flex flex-col mb-4">
-      {/* Label: NOT ALL CAPITAL with red asterisk for required fields */}
+      {/* Label: Normal casing with red asterisk for required fields */}
       <label
         htmlFor={id}
         className="mb-1.5 flex items-center justify-between font-sans text-xs font-semibold text-slate-300 tracking-normal select-none cursor-pointer"
@@ -78,7 +81,11 @@ export default function AuthField({
         {validationMessage && (
           <span
             className={`text-[10px] font-medium transition-colors ${
-              isValid ? "text-emerald-400" : hasError ? "text-amber-400" : "text-slate-400"
+              isValid
+                ? "text-emerald-400"
+                : hasError
+                ? "text-amber-400"
+                : "text-slate-400"
             }`}
           >
             {validationMessage}
@@ -147,6 +154,66 @@ export default function AuthField({
             className="w-full bg-[#0c1528] px-3 py-2.5 font-sans text-[13px] text-white outline-none placeholder:text-slate-600 autofill-dark"
           />
         </div>
+      ) : isPassword ? (
+        /* Password input with 2D Eye toggle referenced from Map Page */
+        <div
+          className={`flex items-center w-full border rounded-md overflow-hidden bg-[#0c1528] transition-all ${borderClass}`}
+        >
+          <input
+            ref={inputRef}
+            id={id}
+            type={computedInputType}
+            placeholder={placeholder}
+            value={val}
+            onChange={handleChange}
+            disabled={disabled}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            autoComplete={autoComplete || "current-password"}
+            className="w-full bg-[#0c1528] px-3 py-2.5 font-sans text-[13px] text-white outline-none placeholder:text-slate-600 autofill-dark"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            tabIndex={-1}
+            className="px-3 py-2 text-slate-400 hover:text-white transition-opacity select-none cursor-pointer flex items-center justify-center shrink-0 focus:outline-none"
+          >
+            {showPassword ? (
+              /* Eye Open (Matching MapHeaderHud) */
+              <svg width="20" height="20" viewBox="0 0 24 24" className="w-4 h-4">
+                <path
+                  d="M 2 12 C 5 5 19 5 22 12 C 19 19 5 19 2 12 Z"
+                  fill="#ffffff"
+                  stroke="#ffffff"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+                <circle cx="12" cy="12" r="5.2" fill="#000000" />
+                <circle cx="12" cy="12" r="3.2" fill="#ffffff" />
+                <circle cx="10.5" cy="10.5" r="1.15" fill="#000000" />
+              </svg>
+            ) : (
+              /* Eye Shut with lashes (Matching MapHeaderHud) */
+              <svg width="20" height="20" viewBox="0 0 24 24" className="w-4 h-4">
+                <path
+                  d="M 3 11.5 C 6.5 17 17.5 17 21 11.5"
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M 5.5 14.2 L 4 17.5 M 9.5 15.8 L 9 19.5 M 14.5 15.8 L 15 19.5 M 18.5 14.2 L 20 17.5"
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
       ) : (
         <input
           id={id}
@@ -160,7 +227,7 @@ export default function AuthField({
           list={list}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          autoComplete={autoComplete || (type === "password" ? "current-password" : "off")}
+          autoComplete={autoComplete || "off"}
           className={`w-full border rounded-md px-3 py-2.5 font-sans text-[13px] text-white bg-[#0c1528] outline-none transition-all placeholder:text-slate-600 autofill-dark ${
             disabled ? "cursor-not-allowed opacity-70 placeholder:text-slate-600" : ""
           } ${borderClass}`}

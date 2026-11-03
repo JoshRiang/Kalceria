@@ -87,7 +87,7 @@ export async function sendOtpEmail(toEmail, otp) {
         <p>Hai Kalcerian!</p>
         <p>Ini adalah kode verifikasi OTP akun kamu:</p>
         <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#4F46E5;padding:16px 0;">${escapeHtml(otp)}</div>
-        <p style="color:#666;font-size:13px;">Kode berlaku 15 menit. Harap jangan bagikan kode ini kepada siapapun demi keamanan akun kamu.</p>
+        <p style="color:#666;font-size:13px;">Kode berlaku 1 menit. Harap jangan bagikan kode ini kepada siapapun demi keamanan akun kamu.</p>
       </div>
     `,
   });

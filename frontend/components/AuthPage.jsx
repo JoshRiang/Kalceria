@@ -1,15 +1,24 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import api from "@/lib/api";
-import AuthField from "@/components/auth/AuthField";
 import { EMAIL_AUTH_ENABLED, PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
-import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 import { establishSession } from "@/lib/session";
 import { PhotoCropEditorModal } from "@/components/map/modals/PhotoCropEditorModal";
-import { INDONESIAN_CITIES, isIndonesianCity } from "@/lib/indonesianCities";
-import { validateCommsValue } from "@/components/service-request/FormControls";
+import { isIndonesianCity } from "@/lib/indonesianCities";
+
+// Modular Subcomponents
+import LoginForm from "@/components/auth/LoginForm";
+import RegisterForm from "@/components/auth/RegisterForm";
+import VerifyOtpStep from "@/components/auth/VerifyOtpStep";
+import ChooseUsernameStep from "@/components/auth/ChooseUsernameStep";
+import AuthBufferOverlay from "@/components/auth/AuthBufferOverlay";
+import {
+  generateUsernameCandidates,
+  findFirstAvailableUsername,
+} from "@/components/auth/usernameAlgorithm";
 
 const PASSWORD_CHECK_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -57,150 +66,242 @@ async function optimizeAvatarForBackend(dataUrl) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AuthPage({ onAuthSuccess, onBack }) {
-  const [mode, setMode] = useState("login"); // "login" | "register" | "verify"
+  // Modes: "login" | "register" | "verify" | "choose-username"
+  const [mode, setMode] = useState("login");
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [mounted, setMounted] = useState(false);
-  const [otpEmail, setOtpEmail] = useState(""); // email pending OTP verification
+
+  // Buffer Overlay (inherit from logging out buffer with no words)
+  const [isBuffering, setIsBuffering] = useState(false);
+
+  // OTP State
+  const [otpEmail, setOtpEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(60); // 1 minute max OTP
+  const [isOtpExpired, setIsOtpExpired] = useState(false);
+
+  // Registered credentials saved for auto-login after OTP
+  const registeredCredsRef = useRef({ email: "", password: "", name: "", dob: "" });
+
+  // Suggested username for Choose Username step
+  const [suggestedUsername, setSuggestedUsername] = useState("");
+  const activeSessionRef = useRef(null);
+
+  // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
   const [mobileVideo, setMobileVideo] = useState("/hp/vid_login_hp.mp4");
 
-  // Profile Photo Cropper states (inherited from Map page modal)
-  const [cropSourceImage, setCropSourceImage] = useState(null);
+  // Profile Photo state
+  const [rawImageForCrop, setRawImageForCrop] = useState(null);
+  const [showCropModal, setShowCropModal] = useState(false);
   const [croppedAvatar, setCroppedAvatar] = useState(null);
   const [photoError, setPhotoError] = useState("");
 
   useEffect(() => {
     setMounted(true);
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        const randNum = Math.floor(Math.random() * 6) + 1;
+        setMobileVideo(`/hp/vid_login_hp${randNum}.mp4`);
+      }
     };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-
-    const vids = ["/hp/vid_login_hp.mp4", "/hp/vid_login_hp2.mp4", "/hp/vid_login_hp3.mp4"];
-    const random = createRuntimeSeededRandom("auth-background-video-v1");
-    const randomVid = vids[Math.floor(random() * vids.length)];
-    setMobileVideo(randomVid);
-
-    return () => window.removeEventListener("resize", handleResize);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Resend cooldown timer
+  // OTP 60-second Countdown Timer
   useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resendCooldown]);
-
-  function setField(id, val) {
-    setForm((p) => ({ ...p, [id]: val }));
-    setError("");
-    setSuccess("");
-  }
-
-  function switchMode(m) {
-    setMode(m);
-    setForm({});
-    setError("");
-    setSuccess("");
-    setCroppedAvatar(null);
-    setCropSourceImage(null);
-    setPhotoError("");
-    if (m !== "verify") {
-      setOtp(["", "", "", "", "", ""]);
-      setOtpEmail("");
+    if (mode !== "verify") return;
+    if (resendCooldown <= 0) {
+      setIsOtpExpired(true);
+      return;
     }
-  }
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          setIsOtpExpired(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [mode, resendCooldown]);
 
-  // Handle Photo input selection & trigger WhatsApp-style crop modal
+  const setField = (key, val) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+    setError("");
+  };
+
+  const switchMode = (newMode) => {
+    setError("");
+    setSuccess("");
+    setMode(newMode);
+  };
+
+  // ── Profile Photo Selection ──
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "webp"].includes(ext)) {
-      setPhotoError("Only .png, .jpg, and .webp images are allowed.");
-      e.target.value = "";
+
+    if (!["image/jpeg", "image/png", "image/webp", "image/jpg"].includes(file.type)) {
+      setPhotoError("Only JPG, PNG or WEBP images allowed");
       return;
     }
+    if (file.size > 8 * 1024 * 1024) {
+      setPhotoError("File size exceeds 8MB limit");
+      return;
+    }
+
     setPhotoError("");
     const reader = new FileReader();
     reader.onload = (event) => {
-      const dataUrl = event.target?.result;
-      setCropSourceImage(dataUrl);
+      setRawImageForCrop(event.target.result);
+      setShowCropModal(true);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
   };
 
-  // OTP input handler — auto-focus next box
-  function handleOtpChange(index, value) {
-    if (!/^\d*$/.test(value)) return;
+  const handleCropComplete = (croppedDataUrl) => {
+    setCroppedAvatar(croppedDataUrl);
+    setShowCropModal(false);
+    setRawImageForCrop(null);
+  };
+
+  // ── OTP Handlers ──
+  const handleOtpInput = (index, value) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
     const next = [...otp];
-    next[index] = value.slice(-1);
+    next[index] = digit;
     setOtp(next);
     setError("");
-    if (value && index < 5) {
+    if (digit && index < 5) {
       document.getElementById(`otp-${index + 1}`)?.focus();
     }
-  }
+  };
 
-  function handleOtpKeyDown(index, e) {
+  const handleOtpKeyDown = (index, e) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       document.getElementById(`otp-${index - 1}`)?.focus();
     }
-  }
+  };
 
-  function handleOtpPaste(e) {
+  const handleOtpPaste = (e) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     if (!pasted) return;
     const next = [...otp];
-    for (let i = 0; i < 6; i++) next[i] = pasted[i] || "";
+    for (let i = 0; i < pasted.length; i++) {
+      next[i] = pasted[i];
+    }
     setOtp(next);
     const focusIdx = Math.min(pasted.length, 5);
     document.getElementById(`otp-${focusIdx}`)?.focus();
-  }
+  };
 
-  async function handleResendOtp() {
+  const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
     setLoading(true);
     setError("");
+    setSuccess("");
     try {
       await api.post("/auth/otp/request", { email: otpEmail });
-      setSuccess("OTP baru telah dikirim ke email kamu.");
       setResendCooldown(60);
+      setIsOtpExpired(false);
+      setOtp(["", "", "", "", "", ""]);
+      setSuccess("Kode OTP baru telah dikirim.");
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "Gagal mengirim ulang OTP.");
+      setError(err.response?.data?.error || err.message || "Failed to resend OTP.");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
+  // ── Verify OTP -> Screen Blur + Loading Buffer -> Choose Username ──
   async function handleVerifyOtp() {
     const code = otp.join("");
     if (code.length < 6) {
       setError("Masukkan 6 digit kode OTP.");
       return;
     }
-    setLoading(true);
     setError("");
     setSuccess("");
+
+    // Start background process with loading buffer & blur
+    setIsBuffering(true);
     try {
+      // 1. Verify OTP with backend
       await api.post("/auth/otp/verify", { email: otpEmail, otp: code });
-      setSuccess("Email terverifikasi! Silakan login.");
-      setTimeout(() => switchMode("login"), 1200);
+
+      // 2. Establish authenticated session via backend login
+      const creds = registeredCredsRef.current;
+      const loginRes = await api.post("/auth/login", {
+        email: creds.email,
+        password: creds.password,
+      });
+      establishSession(loginRes.data);
+      activeSessionRef.current = loginRes.data;
+
+      // 3. Run Username Suggestion Algorithm based on name + email
+      const candidates = generateUsernameCandidates(creds.name, creds.email, creds.dob);
+      const chosen = await findFirstAvailableUsername(candidates, async (cand) => {
+        const checkRes = await api.get(`/auth/check-username/${encodeURIComponent(cand)}`);
+        return !checkRes.data?.exists;
+      });
+
+      setSuggestedUsername(chosen);
+
+      // Brief transition before showing Choose Username modal
+      setTimeout(() => {
+        setIsBuffering(false);
+        setMode("choose-username");
+      }, 700);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "OTP salah atau expired.");
-    } finally {
-      setLoading(false);
+      setIsBuffering(false);
+      setError(err.response?.data?.error || err.message || "OTP salah atau kedaluwarsa.");
     }
   }
 
+  // ── Post-Username Submission -> Loading Buffer -> Welcome Back -> Landing ──
+  async function handleUsernameDone(chosenUsername) {
+    setIsBuffering(true);
+    try {
+      // 1. Save username to user profile
+      await api.put("/users/me", {
+        nickname: chosenUsername,
+        name: chosenUsername,
+      });
+
+      // Update stored session user object
+      if (activeSessionRef.current?.user) {
+        activeSessionRef.current.user.nickname = chosenUsername;
+        activeSessionRef.current.user.name = chosenUsername;
+        establishSession(activeSessionRef.current);
+      }
+
+      // 2. Redirect to Login Greeting: "Welcome Back, <username>"
+      setTimeout(() => {
+        setIsBuffering(false);
+        setMode("login");
+        setSuccess(`Welcome Back, ${chosenUsername}`);
+        setTimeout(() => {
+          onAuthSuccess?.(activeSessionRef.current);
+        }, 1200);
+      }, 800);
+    } catch (err) {
+      setIsBuffering(false);
+      setError(err.response?.data?.error || "Gagal menyimpan username. Coba lagi.");
+    }
+  }
+
+  // ── Form Submit: Login or Register ──
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -216,25 +317,16 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         setError("Please enter your email and password.");
         return;
       }
-    }
-
-    if (mode === "register") {
-      if (
-        !form.name?.trim() ||
-        !form.email?.trim() ||
-        !form.password ||
-        !form.dob ||
-        !form.phone?.trim() ||
-        !form.domicile?.trim()
-      ) {
-        setError("Please complete all required fields.");
+    } else if (mode === "register") {
+      if (!PUBLIC_SIGNUP_ENABLED) {
+        setError("Public registration is currently disabled.");
         return;
       }
 
-      // 1. Born Year validation: must be 18 or older
-      const yearCheck = checkBornYear(form.dob);
-      if (!yearCheck.valid) {
-        setError("You must be 18 years or older to register.");
+      // 1. Born year validation (18+ years old)
+      const yearResult = checkBornYear(form.dob);
+      if (!yearResult.valid) {
+        setError(yearResult.message || "You must be at least 18 years old to register.");
         return;
       }
 
@@ -244,16 +336,15 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         return;
       }
 
-      // 3. Phone validation: Indonesian operator & prefix check
-      const phoneCheck = validateCommsValue("tel", "phone", form.phone);
-      if (!phoneCheck.valid) {
-        setError(phoneCheck.message || "Please enter a valid Indonesian mobile number.");
+      // 3. Password validation: 4 strict criteria
+      if (!PASSWORD_CHECK_REGEX.test(form.password)) {
+        setError("Password must meet all 4 requirements below.");
         return;
       }
 
-      // 4. Password validation: 4 strict criteria
-      if (!PASSWORD_CHECK_REGEX.test(form.password)) {
-        setError("Password must meet all 4 requirements below.");
+      // 4. Confirm Password validation
+      if (form.password !== form.confirmPassword) {
+        setError("Passwords do not match.");
         return;
       }
     }
@@ -266,21 +357,30 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
           password: form.password,
         });
         establishSession(res.data);
-        setSuccess("Authentication successful.");
+        const displayName = res.data?.user?.nickname || res.data?.user?.name || "User";
+        setSuccess(`Welcome Back, ${displayName}`);
         setTimeout(() => onAuthSuccess?.(res.data), 800);
       } else {
         const registeredEmail = form.email.trim();
         const registeredPassword = form.password;
+        const registeredName = form.name.trim();
         const profilePicture = await optimizeAvatarForBackend(croppedAvatar);
         const birthDateIso = `${String(form.dob).trim()}-01-01`;
 
+        // Store credentials in ref for auto-login after OTP
+        registeredCredsRef.current = {
+          email: registeredEmail,
+          password: registeredPassword,
+          name: registeredName,
+          dob: String(form.dob).trim(),
+        };
+
         const regRes = await api.post("/auth/register", {
-          name: form.name.trim(),
+          name: registeredName,
           dob: birthDateIso,
           email: registeredEmail,
           domicile: form.domicile?.trim() || undefined,
-          gender: "OTHER", // Gender removed from form, defaulted safely
-          phone: form.phone.trim(),
+          gender: "OTHER",
           password: registeredPassword,
           profilePicture,
         });
@@ -288,13 +388,14 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         if (EMAIL_AUTH_ENABLED && regRes.data?.emailVerificationRequired) {
           setOtpEmail(registeredEmail);
           setOtp(["", "", "", "", "", ""]);
-          setResendCooldown(60);
+          setResendCooldown(60); // 1 minute max OTP
+          setIsOtpExpired(false);
           setMode("verify");
           setForm({});
           setCroppedAvatar(null);
-          setSuccess("Kode OTP telah dikirim ke email kamu.");
+          setSuccess("Kode OTP telah dikirim ke email kamu (berlaku 1 menit).");
         } else {
-          // Resend Email OTP is disabled — sign in immediately
+          // Direct login if OTP disabled
           try {
             const loginRes = await api.post("/auth/login", {
               email: registeredEmail,
@@ -316,7 +417,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         if (msg.includes("dob") || msg.includes("Invalid Date")) {
           msg = "Format tahun lahir tidak valid.";
         } else if (msg.includes("Unique constraint failed")) {
-          msg = "Email atau nomor telepon sudah terdaftar.";
+          msg = "Email sudah terdaftar.";
         } else {
           msg = "Terjadi kesalahan pada sistem registrasi. Coba lagi.";
         }
@@ -327,7 +428,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     }
   }
 
-  // ── Live validation flags for instant green borders ──
+  // ── Live validation flags ──
   const nameValid = Boolean(form.name && form.name.trim().length >= 2);
 
   const yearCheck = checkBornYear(form.dob);
@@ -341,521 +442,272 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const cityValid = isIndonesianCity(form.domicile);
   const isCityError = Boolean(form.domicile && form.domicile.trim().length >= 3 && !cityValid);
 
-  const phoneCheck = validateCommsValue("tel", "phone", form.phone || "");
-  const isPhoneValid = phoneCheck.valid;
-  const isPhoneError = Boolean(form.phone && form.phone.trim().length >= 3 && !phoneCheck.valid);
-
   const passwordValid = PASSWORD_CHECK_REGEX.test(form.password || "");
   const isPasswordError = Boolean(form.password && form.password.length > 0 && !passwordValid);
 
+  const isConfirmValid = Boolean(
+    form.confirmPassword &&
+      form.confirmPassword === form.password &&
+      passwordValid
+  );
+  const isConfirmError = Boolean(
+    form.confirmPassword &&
+      form.confirmPassword !== form.password
+  );
+  const confirmMessage = isConfirmError
+    ? "Passwords do not match"
+    : isConfirmValid
+    ? "Matches"
+    : "";
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: mounted ? 1 : 0 }}
-      transition={{ duration: 1.5, ease: "easeOut" }}
-      className="fixed inset-0 z-[100] overflow-hidden"
-    >
-      {/* ── Video Background ── */}
-      <video
-        key={isMobile ? mobileVideo : "/videologin_regris.mp4"}
-        autoPlay
-        loop
-        muted
-        playsInline
-        className={`absolute inset-0 w-full h-full object-cover -z-10 ${
-          isMobile ? "filter grayscale contrast-125 brightness-75" : ""
-        }`}
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: mounted ? 1 : 0 }}
+        transition={{ duration: 1.5, ease: "easeOut" }}
+        className="fixed inset-0 z-[100] overflow-hidden"
       >
-        <source src={isMobile ? mobileVideo : "/videologin_regris.mp4"} type="video/mp4" />
-      </video>
-
-      {/* ── Dark overlay ── */}
-      <div className="absolute inset-0 bg-black/60 z-0" />
-
-      {/* ── Centering wrapper ── */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4 md:p-8">
-        {/* ── Drop-in Entrance Animation ── */}
-        <motion.div
-          initial={{ opacity: 0, y: -60 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="relative w-full max-w-lg"
+        {/* ── Video Background ── */}
+        <video
+          key={isMobile ? mobileVideo : "/videologin_regris.mp4"}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className={`absolute inset-0 w-full h-full object-cover -z-10 ${
+            isMobile ? "filter grayscale contrast-125 brightness-75" : ""
+          }`}
         >
-          {/* ── Floating Auth Card ── */}
+          <source src={isMobile ? mobileVideo : "/videologin_regris.mp4"} type="video/mp4" />
+        </video>
+
+        {/* ── Dark overlay ── */}
+        <div className="absolute inset-0 bg-black/60 z-0" />
+
+        {/* ── Centering wrapper ── */}
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-4 md:p-8">
           <motion.div
-            animate={{ y: [-8, 8, -8] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="relative w-full shadow-2xl rounded-xl flex flex-col"
-            style={{ maxHeight: "88vh" }}
+            initial={{ opacity: 0, y: -60 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="relative w-full max-w-lg"
           >
-            {/* Dynamic Gold + Magenta Bleed/Border */}
-            <div
-              className="absolute -inset-[1px] rounded-xl z-0 overflow-hidden"
-              style={{ opacity: 0.7 }}
+            {/* ── Floating Auth Card ── */}
+            <motion.div
+              animate={{ y: [-8, 8, -8] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              className="relative w-full shadow-2xl rounded-xl flex flex-col"
+              style={{ maxHeight: "88vh" }}
             >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%]"
-                style={{
-                  background:
-                    "conic-gradient(from 0deg, transparent 0%, rgba(218,165,32,0.8) 25%, transparent 50%, rgba(220,0,180,0.8) 75%, transparent 100%)",
-                  filter: "blur(4px)",
-                }}
-              />
-            </div>
+              {/* Dynamic Gold + Magenta Border Glow */}
+              <div
+                className="absolute -inset-[1px] rounded-xl z-0 overflow-hidden"
+                style={{ opacity: 0.7 }}
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%]"
+                  style={{
+                    background:
+                      "conic-gradient(from 0deg, transparent 0%, rgba(218,165,32,0.8) 25%, transparent 50%, rgba(220,0,180,0.8) 75%, transparent 100%)",
+                    filter: "blur(4px)",
+                  }}
+                />
+              </div>
 
-            {/* Inner Content Box */}
-            <div className="relative z-10 w-full bg-[#070d1a]/40 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden flex flex-col max-h-[88vh]">
-              {/* Scrollable inner container */}
-              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar px-8 py-10 md:px-10">
-                {/* ── Logo & Back ── */}
-                <div className="text-center mb-8 relative flex items-center justify-center">
-                  {onBack && (
-                    <button
-                      onClick={onBack}
-                      className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors flex items-center gap-1.5 z-10 cursor-pointer"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                  )}
-                  <Image
-                    src="/logologin.webp"
-                    alt="Kalceria"
-                    width={1874}
-                    height={560}
-                    unoptimized
-                    loading="eager"
-                    decoding="auto"
-                    className="h-10 w-auto object-contain inline-block"
-                    draggable={false}
-                  />
-                </div>
-
-                {/* ── Mode toggle (hidden during OTP verify) ── */}
-                {mode !== "verify" && (
-                  <div className="flex mb-8 bg-[#040810]/80 rounded-lg border border-slate-800/60 p-1 relative">
-                    <motion.div
-                      className="absolute inset-y-1 bg-[#1e293b]/80 rounded-md shadow-sm"
-                      initial={false}
-                      animate={{
-                        left: mode === "login" ? "4px" : "calc(50% + 2px)",
-                        width: "calc(50% - 6px)",
-                      }}
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              {/* Inner Content Box */}
+              <div className="relative z-10 w-full bg-[#070d1a]/40 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden flex flex-col max-h-[88vh]">
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar px-8 py-10 md:px-10">
+                  {/* Logo & Back */}
+                  <div className="text-center mb-8 relative flex items-center justify-center">
+                    {onBack && mode !== "choose-username" && (
+                      <button
+                        onClick={onBack}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors flex items-center gap-1.5 z-10 cursor-pointer"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                    )}
+                    <Image
+                      src="/logologin.webp"
+                      alt="Kalceria"
+                      width={1874}
+                      height={560}
+                      unoptimized
+                      loading="eager"
+                      className="h-10 w-auto object-contain inline-block"
+                      draggable={false}
                     />
-
-                    <button
-                      type="button"
-                      onClick={() => switchMode("login")}
-                      className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
-                        mode === "login" ? "text-white" : "text-slate-500 hover:text-slate-300"
-                      }`}
-                    >
-                      Login
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => switchMode("register")}
-                      className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
-                        mode === "register" ? "text-white" : "text-slate-500 hover:text-slate-300"
-                      }`}
-                    >
-                      Register
-                    </button>
                   </div>
-                )}
 
-                {/* ── Section heading ── */}
-                <div className="mb-6">
-                  <h1 className="font-sans text-2xl font-extrabold text-white tracking-tight">
-                    {mode === "login" ? "Welcome Back" : mode === "register" ? "Create Account" : "Verify Email"}
-                  </h1>
-                  <p className="font-mono text-xs sm:text-sm text-slate-400 mt-1">
-                    {mode === "login"
-                      ? "Enter your credentials to access the portal."
-                      : mode === "register" && !PUBLIC_SIGNUP_ENABLED
-                      ? "Registration is currently disabled."
-                      : mode === "register"
-                      ? "Complete all fields to register."
-                      : `Masukkan 6 digit kode OTP yang dikirim ke ${otpEmail}`}
-                  </p>
-                </div>
-
-                {/* ── Form ── */}
-                <form onSubmit={handleSubmit} noValidate className="flex flex-col relative">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={mode}
-                      initial={{ opacity: 0, x: mode === "login" ? -10 : 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: mode === "login" ? 10 : -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {mode === "login" ? (
-                        <>
-                          <AuthField
-                            id="email"
-                            label="Email Address"
-                            type="email"
-                            placeholder="user@domain.com"
-                            val={form.email || ""}
-                            onChange={setField}
-                            isValid={isEmailValid}
-                          />
-                          <AuthField
-                            id="password"
-                            label="Password"
-                            type="password"
-                            placeholder="••••••••"
-                            val={form.password || ""}
-                            onChange={setField}
-                            isValid={Boolean(form.password && form.password.length >= 6)}
-                          />
-                        </>
-                      ) : mode === "register" ? (
-                        <>
-                          {/* 1. Full Name */}
-                          <AuthField
-                            id="name"
-                            label="Full Name"
-                            type="text"
-                            placeholder={PUBLIC_SIGNUP_ENABLED ? "John Doe" : "Not Ready Yet"}
-                            val={form.name || ""}
-                            onChange={setField}
-                            required={true}
-                            isValid={nameValid}
-                            disabled={!PUBLIC_SIGNUP_ENABLED}
-                          />
-
-                          {/* 2. Profile Photo (Clean standard box, no circle, no "Photo ready") */}
-                          <div className="flex flex-col mb-4">
-                            <div className="mb-1.5 flex items-center justify-between font-sans text-xs font-semibold text-slate-300 select-none">
-                              <span>Profile Photo</span>
-                              {photoError && (
-                                <span className="text-[10px] font-medium text-amber-400">{photoError}</span>
-                              )}
-                            </div>
-                            <div
-                              className={`flex items-center justify-between w-full border rounded-md px-3 py-2 transition-all bg-[#0c1528] ${
-                                croppedAvatar
-                                  ? "border-emerald-400 ring-1 ring-emerald-400/40 shadow-[0_0_12px_rgba(52,211,153,0.15)]"
-                                  : "border-slate-800 hover:border-slate-700"
-                              }`}
-                            >
-                              <span className="text-[13px] font-sans truncate text-slate-400">
-                                {croppedAvatar ? "Photo chosen & cropped" : "No file chosen"}
-                              </span>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white font-sans text-xs font-bold py-1.5 px-3 rounded transition-colors inline-block select-none">
-                                  {croppedAvatar ? "Change File" : "Choose File"}
-                                  <input
-                                    type="file"
-                                    accept="image/png,image/jpeg,image/webp,image/jpg"
-                                    onChange={handlePhotoSelect}
-                                    className="hidden"
-                                    disabled={!PUBLIC_SIGNUP_ENABLED}
-                                  />
-                                </label>
-                                {croppedAvatar && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setCroppedAvatar(null);
-                                      setPhotoError("");
-                                    }}
-                                    className="text-xs text-red-400 hover:text-red-300 transition-colors font-medium cursor-pointer py-1 px-1.5"
-                                  >
-                                    Remove
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 3. Born In (YEAR ONLY) & City */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                            <AuthField
-                              id="dob"
-                              label="Born In"
-                              type="text"
-                              maxLength={4}
-                              placeholder={PUBLIC_SIGNUP_ENABLED ? "YYYY (e.g. 2004)" : "Not Ready Yet"}
-                              val={form.dob || ""}
-                              onChange={setField}
-                              required={true}
-                              isValid={isDobValid}
-                              hasError={isDobError}
-                              validationMessage={yearCheck.message}
-                              disabled={!PUBLIC_SIGNUP_ENABLED}
-                            />
-                            <AuthField
-                              id="domicile"
-                              label="City"
-                              type="text"
-                              placeholder={PUBLIC_SIGNUP_ENABLED ? "e.g. Jakarta, Bandung" : "Not Ready Yet"}
-                              val={form.domicile || ""}
-                              onChange={setField}
-                              required={true}
-                              list="indonesia-cities"
-                              isValid={cityValid}
-                              hasError={isCityError}
-                              validationMessage={isCityError ? "City is not in the list" : ""}
-                              disabled={!PUBLIC_SIGNUP_ENABLED}
-                            />
-                          </div>
-
-                          {/* Real Indonesian cities autocomplete datalist */}
-                          <datalist id="indonesia-cities">
-                            {INDONESIAN_CITIES.map((c) => (
-                              <option key={c} value={c} />
-                            ))}
-                          </datalist>
-
-                          {/* 4. Email Address */}
-                          <AuthField
-                            id="email"
-                            label="Email Address"
-                            type="email"
-                            placeholder={PUBLIC_SIGNUP_ENABLED ? "user@domain.com" : "Not Ready Yet"}
-                            val={form.email || ""}
-                            onChange={setField}
-                            required={true}
-                            isValid={isEmailValid}
-                            hasError={isEmailError}
-                            validationMessage={isEmailError ? "Enter a valid email" : isEmailValid ? "Valid" : ""}
-                            disabled={!PUBLIC_SIGNUP_ENABLED}
-                          />
-
-                          {/* 5. Phone Number (Need Our Help template & validation) */}
-                          <AuthField
-                            id="phone"
-                            label="Phone Number"
-                            type="tel"
-                            placeholder={PUBLIC_SIGNUP_ENABLED ? "81234567890" : "Not Ready Yet"}
-                            val={form.phone || ""}
-                            onChange={setField}
-                            required={true}
-                            isValid={isPhoneValid}
-                            hasError={isPhoneError}
-                            validationMessage={phoneCheck.message}
-                            disabled={!PUBLIC_SIGNUP_ENABLED}
-                          />
-
-                          {/* 6. Password (Checklist restored, box edge turns green when valid) */}
-                          <AuthField
-                            id="password"
-                            label="Password"
-                            type="password"
-                            placeholder={PUBLIC_SIGNUP_ENABLED ? "••••••••" : "Not Ready Yet"}
-                            val={form.password || ""}
-                            onChange={setField}
-                            required={true}
-                            isValid={passwordValid}
-                            hasError={isPasswordError}
-                            disabled={!PUBLIC_SIGNUP_ENABLED}
-                          />
-
-                          {/* Password Requirements (All 4 rules - tiny boxes turn green when met, no checklist) */}
-                          <div className="mb-4 -mt-1 grid grid-cols-2 gap-2 text-xs font-sans tracking-wide">
-                            {[
-                              { label: "Min 8 Chars", met: (form.password || "").length >= 8 },
-                              { label: "1 Uppercase", met: /[A-Z]/.test(form.password || "") },
-                              { label: "1 Number", met: /[0-9]/.test(form.password || "") },
-                              { label: "1 Special Char", met: /[^A-Za-z0-9]/.test(form.password || "") },
-                            ].map((req, i) => (
-                              <div
-                                key={i}
-                                className={`flex items-center gap-2 transition-colors ${
-                                  req.met ? "text-green-300" : "text-slate-500"
-                                }`}
-                              >
-                                <div
-                                  className={`w-3.5 h-3.5 rounded-[3px] border transition-all duration-200 ${
-                                    req.met
-                                      ? "bg-emerald-400 border-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]"
-                                      : "border-slate-700 bg-[#0c1528]"
-                                  }`}
-                                />
-                                <span>{req.label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        /* ── OTP Verification UI ── */
-                        <>
-                          <div className="flex justify-center mb-6">
-                            <div className="w-20 h-20 flex items-center justify-center">
-                              <Image
-                                src="/register/email_logo.png"
-                                alt="Email Logo"
-                                width={467}
-                                height={347}
-                                unoptimized
-                                loading="eager"
-                                decoding="auto"
-                                className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(79,70,229,0.3)]"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex justify-center gap-2.5 mb-6" onPaste={handleOtpPaste}>
-                            {otp.map((digit, i) => (
-                              <input
-                                key={i}
-                                id={`otp-${i}`}
-                                type="text"
-                                inputMode="numeric"
-                                maxLength={1}
-                                value={digit}
-                                onChange={(e) => handleOtpChange(i, e.target.value)}
-                                onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                                autoFocus={i === 0}
-                                className={`
-                                  w-11 h-14 text-center text-xl font-bold text-white
-                                  bg-[#0c1528] border rounded-lg outline-none transition-all
-                                  focus:border-[#4F46E5] focus:shadow-[0_0_0_2px_rgba(79,70,229,0.2)]
-                                  ${digit ? "border-[#4F46E5]/50" : "border-slate-700"}
-                                `}
-                              />
-                            ))}
-                          </div>
-
-                          <div className="text-center mb-4">
-                            <button
-                              type="button"
-                              onClick={handleResendOtp}
-                              disabled={resendCooldown > 0 || loading}
-                              className={`font-mono text-xs transition-colors ${
-                                resendCooldown > 0
-                                  ? "text-slate-600 cursor-not-allowed"
-                                  : "text-[#4F46E5] hover:text-[#6366f1] cursor-pointer"
-                              }`}
-                            >
-                              {resendCooldown > 0 ? `Kirim ulang dalam ${resendCooldown}s` : "Kirim ulang kode OTP"}
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-
-                  {/* ── Error / Success Display ── */}
-                  <AnimatePresence>
-                    {error && (
+                  {/* Mode toggle (hidden in verify and choose-username) */}
+                  {mode !== "verify" && mode !== "choose-username" && (
+                    <div className="flex mb-8 bg-[#040810]/80 rounded-lg border border-slate-800/60 p-1 relative">
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden mb-3"
+                        className="absolute inset-y-1 bg-[#1e293b]/80 rounded-md shadow-sm"
+                        initial={false}
+                        animate={{
+                          left: mode === "login" ? "4px" : "calc(50% + 2px)",
+                          width: "calc(50% - 6px)",
+                        }}
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => switchMode("login")}
+                        className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
+                          mode === "login" ? "text-white" : "text-slate-500 hover:text-slate-300"
+                        }`}
                       >
-                        <div
-                          style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-                          className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
-                        >
-                          {error}
-                        </div>
-                      </motion.div>
-                    )}
-                    {success && (
+                        Login
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => switchMode("register")}
+                        className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
+                          mode === "register" ? "text-white" : "text-slate-500 hover:text-slate-300"
+                        }`}
+                      >
+                        Register
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Section heading (hidden in verify and choose-username) */}
+                  {mode !== "verify" && mode !== "choose-username" && (
+                    <div className="mb-6">
+                      <h1 className="font-sans text-2xl font-extrabold text-white tracking-tight">
+                        {mode === "login" ? "Welcome Back" : "Create Account"}
+                      </h1>
+                      <p className="font-mono text-xs sm:text-sm text-slate-400 mt-1">
+                        {mode === "login"
+                          ? "Enter your credentials to access the portal."
+                          : !PUBLIC_SIGNUP_ENABLED
+                          ? "Registration is currently disabled."
+                          : "Complete all fields to register."}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Error & Success Alerts */}
+                  {error && mode !== "verify" && mode !== "choose-username" && (
+                    <div className="mb-6 p-3 bg-red-950/60 border border-red-500/40 rounded-lg flex items-center gap-3">
+                      <span className="text-red-400 font-mono text-xs">{error}</span>
+                    </div>
+                  )}
+                  {success && mode !== "choose-username" && (
+                    <div className="mb-6 p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-lg flex items-center gap-3">
+                      <span className="text-emerald-400 font-mono text-xs">{success}</span>
+                    </div>
+                  )}
+
+                  {/* Form Body */}
+                  <form onSubmit={handleSubmit} noValidate className="flex flex-col relative">
+                    <AnimatePresence mode="wait">
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden mb-3"
+                        key={mode}
+                        initial={{ opacity: 0, x: mode === "login" ? -10 : 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: mode === "login" ? 10 : -10 }}
+                        transition={{ duration: 0.2 }}
                       >
-                        <div
-                          style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-                          className="text-emerald-400 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
-                        >
-                          {success}
-                        </div>
+                        {mode === "login" ? (
+                          <LoginForm
+                            form={form}
+                            setField={setField}
+                            loading={loading}
+                            isEmailValid={isEmailValid}
+                          />
+                        ) : mode === "register" ? (
+                          <RegisterForm
+                            form={form}
+                            setField={setField}
+                            PUBLIC_SIGNUP_ENABLED={PUBLIC_SIGNUP_ENABLED}
+                            nameValid={nameValid}
+                            isDobValid={isDobValid}
+                            isDobError={isDobError}
+                            dobMessage={yearCheck.message}
+                            cityValid={cityValid}
+                            isCityError={isCityError}
+                            isEmailValid={isEmailValid}
+                            isEmailError={isEmailError}
+                            passwordValid={passwordValid}
+                            isPasswordError={isPasswordError}
+                            isConfirmValid={isConfirmValid}
+                            isConfirmError={isConfirmError}
+                            confirmMessage={confirmMessage}
+                            croppedAvatar={croppedAvatar}
+                            setCroppedAvatar={setCroppedAvatar}
+                            photoError={photoError}
+                            setPhotoError={setPhotoError}
+                            handlePhotoSelect={handlePhotoSelect}
+                          />
+                        ) : mode === "verify" ? (
+                          <VerifyOtpStep
+                            otpEmail={otpEmail}
+                            otp={otp}
+                            setOtp={setOtp}
+                            handleOtpInput={handleOtpInput}
+                            handleOtpKeyDown={handleOtpKeyDown}
+                            handleOtpPaste={handleOtpPaste}
+                            handleVerifyOtp={handleVerifyOtp}
+                            handleResendOtp={handleResendOtp}
+                            loading={loading}
+                            resendCooldown={resendCooldown}
+                            isExpired={isOtpExpired}
+                            error={error}
+                          />
+                        ) : mode === "choose-username" ? (
+                          <ChooseUsernameStep
+                            initialUsername={suggestedUsername}
+                            onDone={handleUsernameDone}
+                            isProcessing={isBuffering}
+                          />
+                        ) : null}
                       </motion.div>
+                    </AnimatePresence>
+
+                    {/* Submit Button (for login & register modes only) */}
+                    {(mode === "login" || mode === "register") && (
+                      <button
+                        type="submit"
+                        disabled={loading || (mode === "register" && !PUBLIC_SIGNUP_ENABLED)}
+                        className="mt-2 w-full py-3 bg-white hover:bg-slate-200 text-black font-sans font-bold text-sm tracking-wider uppercase rounded-md transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        {loading
+                          ? "Processing…"
+                          : mode === "login"
+                          ? "Sign In"
+                          : "Register Account"}
+                      </button>
                     )}
-                  </AnimatePresence>
-
-                  {/* ── Submit Button ── */}
-                  <button
-                    type="submit"
-                    disabled={loading || (mode === "register" && !PUBLIC_SIGNUP_ENABLED)}
-                    className="mt-2 w-full bg-white text-black font-extrabold text-[13px] uppercase tracking-wider py-3.5 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {loading
-                      ? "Processing..."
-                      : mode === "register" && !PUBLIC_SIGNUP_ENABLED
-                      ? "Not Ready Yet"
-                      : mode === "login"
-                      ? "Sign In"
-                      : mode === "register"
-                      ? "Register Account"
-                      : "Verify OTP"}
-                  </button>
-                </form>
-
-                {/* ── Footer ── */}
-                <div className="mt-8 text-center">
-                  <p className="font-mono text-xs text-slate-500">
-                    {mode === "verify"
-                      ? "Sudah verifikasi? "
-                      : mode === "login"
-                      ? "Don't have an account? "
-                      : "Already have an account? "}
-                    <button
-                      onClick={() => switchMode(mode === "verify" ? "login" : mode === "login" ? "register" : "login")}
-                      className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"
-                    >
-                      {mode === "verify" ? "Sign in" : mode === "login" ? "Register now" : "Sign in"}
-                    </button>
-                  </p>
+                  </form>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
 
-      {/* Picture 3: WhatsApp-style Crop & Rotate Modal inherited from Map page */}
+      {/* ── Screen Blur + Loading Buffer Overlay (No Words) ── */}
+      <AnimatePresence>
+        {isBuffering && <AuthBufferOverlay />}
+      </AnimatePresence>
+
+      {/* ── WhatsApp-style Photo Cropper Modal ── */}
       <PhotoCropEditorModal
-        show={Boolean(cropSourceImage)}
-        rawImage={cropSourceImage}
-        onDone={(processedDataUrl) => {
-          setCroppedAvatar(processedDataUrl);
-          setCropSourceImage(null);
-        }}
+        isOpen={showCropModal}
+        imageSrc={rawImageForCrop}
         onCancel={() => {
-          setCropSourceImage(null);
+          setShowCropModal(false);
+          setRawImageForCrop(null);
         }}
+        onDone={handleCropComplete}
       />
-
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(100, 116, 139, 0.3);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(100, 116, 139, 0.5);
-        }
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus {
-          -webkit-text-fill-color: #ffffff !important;
-          -webkit-box-shadow: 0 0 0px 1000px #0c1528 inset !important;
-          transition: background-color 5000s ease-in-out 0s !important;
-        }
-      `,
-        }}
-      />
-    </motion.div>
+    </>
   );
 }
