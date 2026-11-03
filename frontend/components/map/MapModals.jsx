@@ -237,11 +237,7 @@ export const MapModals = memo(function MapModals({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div
-              className={`shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-b ${
-                isModalDark ? "border-[#30363d]" : "border-[#d0d7de]"
-              }`}
-            >
+            <div className="shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-none">
               <h2
                 className={`font-sans font-bold text-base sm:text-lg tracking-tight ${
                   isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
@@ -331,11 +327,7 @@ export const MapModals = memo(function MapModals({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div
-              className={`shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-b ${
-                isModalDark ? "border-[#30363d]" : "border-[#d0d7de]"
-              }`}
-            >
+            <div className="shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-none">
               <h2
                 className={`font-sans font-bold text-base sm:text-lg tracking-tight ${
                   isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
@@ -760,11 +752,7 @@ export const MapModals = memo(function MapModals({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div
-                className={`shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-b ${
-                  isModalDark ? "border-[#30363d]" : "border-[#d0d7de]"
-                }`}
-              >
+              <div className="shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-none">
                 <div className="flex flex-col">
                   <h2
                     className={`font-sans font-bold text-base sm:text-lg tracking-tight ${

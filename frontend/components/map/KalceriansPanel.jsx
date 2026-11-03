@@ -616,7 +616,7 @@ export function KalceriansPanel({
                               title={`${userEvent.title} (${eventPendingRequests.length} collab request${eventPendingRequests.length > 1 ? "s" : ""})`}
                             >
                               <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white dark:border-black shadow-[0_0_6px_#ef4444]" />
+                              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full border-none shadow-none ring-0 pointer-events-none" />
                             </button>
                           ) : isOtherEventDisabled ? (
                             <button
