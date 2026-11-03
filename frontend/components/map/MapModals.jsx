@@ -6,139 +6,116 @@ import { userPopup } from "@/components/map/UserPopup";
 import { uploadBlobMedia } from "@/lib/api";
 
 const EVENT_CATEGORIES_GRID = [
-  // Left top: Coffee Icon (Cafe Meeting)
   {
     id: "cafe",
     label: "Cafe Meeting",
     renderIcon: (isSelected, isModalDark) => (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-        <path
-          d="M10 2c-.8 1.5.8 2.6 0 4.2"
-          stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-        <path
-          d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5"
-          stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-        <path
-          d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z"
-          fill={isModalDark ? "#ffffff" : "#000000"}
-          stroke={isModalDark ? "#000000" : "#ffffff"}
-          strokeWidth="0.75"
-        />
-        <ellipse
-          cx="10.5"
-          cy="9.5"
-          rx="6"
-          ry="1.6"
-          fill={isModalDark ? "#000000" : "#ffffff"}
-          stroke={isModalDark ? "#ffffff" : "#000000"}
-          strokeWidth="0.6"
-        />
-        <path
-          d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8"
-          stroke={isModalDark ? "#000000" : "#ffffff"}
-          strokeWidth="1.3"
-          strokeLinecap="round"
-        />
-        <path
-          d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8"
-          stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <ellipse
-          cx="10.5"
-          cy="19.2"
-          rx="8.5"
-          ry="1.7"
-          fill={isModalDark ? "#ffffff" : "#000000"}
-          stroke={isModalDark ? "#000000" : "#ffffff"}
-          strokeWidth="0.6"
-        />
+        <path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")} strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")} strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="0.75" />
+        <ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill={isModalDark ? "#000000" : "#ffffff"} stroke={isModalDark ? "#ffffff" : "#000000"} strokeWidth="0.6" />
+        <path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="1.3" strokeLinecap="round" />
+        <path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")} strokeWidth="1.8" strokeLinecap="round" />
+        <ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="0.6" />
         <ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill={isModalDark ? "#000000" : "#ffffff"} />
       </svg>
     ),
   },
-  // Right top: Makanan Icon (Eat Together)
   {
     id: "eat",
     label: "Eat Together",
     renderIcon: (isSelected, isModalDark) => (
-      <svg
-        viewBox="0 0 24 24"
-        className="w-5 h-5"
-        fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
-      >
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}>
         <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z" />
       </svg>
     ),
   },
-  // Left bottom: Tanda Seru Icon (Something Special)
   {
     id: "special",
     label: "Something Special",
     renderIcon: (isSelected, isModalDark) => (
-      <svg
-        viewBox="0 0 24 24"
-        className="w-5 h-5"
-        fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
-      >
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}>
         <path d="M10.8 3h2.4l-.65 11h-1.1L10.8 3zM12 17.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5z" />
       </svg>
     ),
   },
-  // Right bottom: People Discuss Icon (Discuss More)
   {
     id: "discuss",
     label: "Discuss More",
     renderIcon: (isSelected, isModalDark) => (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-        <path
-          d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z"
-          fill={isModalDark ? "#ffffff" : "#000000"}
-          stroke={isModalDark ? "#000000" : "#ffffff"}
-          strokeWidth="0.8"
-        />
+        <path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="0.8" />
         <circle cx="10.5" cy="5.3" r="0.7" fill={isModalDark ? "#000000" : "#ffffff"} />
         <circle cx="12" cy="5.3" r="0.7" fill={isModalDark ? "#000000" : "#ffffff"} />
         <circle cx="13.5" cy="5.3" r="0.7" fill={isModalDark ? "#000000" : "#ffffff"} />
-        <circle
-          cx="7.5"
-          cy="13"
-          r="2.5"
-          fill={isModalDark ? "#ffffff" : "#000000"}
-          stroke={isModalDark ? "#000000" : "#ffffff"}
-          strokeWidth="1"
-        />
-        <path
-          d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8"
-          fill={isModalDark ? "#ffffff" : "#000000"}
-          stroke={isModalDark ? "#000000" : "#ffffff"}
-          strokeWidth="1"
-        />
-        <circle
-          cx="16.5"
-          cy="13"
-          r="2.5"
-          fill={isModalDark ? "#000000" : "#ffffff"}
-          stroke={isModalDark ? "#ffffff" : "#000000"}
-          strokeWidth="1.2"
-        />
-        <path
-          d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8"
-          fill={isModalDark ? "#000000" : "#ffffff"}
-          stroke={isModalDark ? "#ffffff" : "#000000"}
-          strokeWidth="1.2"
-        />
+        <circle cx="7.5" cy="13" r="2.5" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="1" />
+        <path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="1" />
+        <circle cx="16.5" cy="13" r="2.5" fill={isModalDark ? "#000000" : "#ffffff"} stroke={isModalDark ? "#ffffff" : "#000000"} strokeWidth="1.2" />
+        <path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={isModalDark ? "#000000" : "#ffffff"} stroke={isModalDark ? "#ffffff" : "#000000"} strokeWidth="1.2" />
       </svg>
     ),
   },
 ];
+
+const RANDOM_INNER_COLORS = [
+  { bg: "#3b82f6", lightBg: "rgba(59, 130, 246, 0.20)", darkBg: "rgba(37, 99, 235, 0.38)", border: "#2563eb" }, // Blue
+  { bg: "#10b981", lightBg: "rgba(16, 185, 129, 0.20)", darkBg: "rgba(5, 150, 105, 0.38)", border: "#059669" }, // Emerald
+  { bg: "#f59e0b", lightBg: "rgba(245, 158, 11, 0.22)", darkBg: "rgba(217, 119, 6, 0.38)", border: "#d97706" }, // Amber
+  { bg: "#8b5cf6", lightBg: "rgba(139, 92, 246, 0.20)", darkBg: "rgba(124, 58, 237, 0.38)", border: "#7c3aed" }, // Violet
+  { bg: "#ec4899", lightBg: "rgba(236, 72, 153, 0.20)", darkBg: "rgba(219, 39, 119, 0.38)", border: "#db2777" }, // Pink
+  { bg: "#06b6d4", lightBg: "rgba(6, 182, 212, 0.20)", darkBg: "rgba(8, 145, 178, 0.38)", border: "#0891b2" }, // Cyan
+  { bg: "#f97316", lightBg: "rgba(249, 115, 22, 0.22)", darkBg: "rgba(234, 88, 12, 0.38)", border: "#ea580c" }, // Orange
+  { bg: "#14b8a6", lightBg: "rgba(20, 184, 166, 0.20)", darkBg: "rgba(13, 148, 136, 0.38)", border: "#0d9488" }, // Teal
+];
+
+function ConfirmationPromptModal({ show, onClose, title, highlightText, isMapDark, choice, onConfirm }) {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 z-[2200] flex items-center justify-center p-6 select-none pointer-events-auto">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.25 }}
+        className={`absolute inset-0 backdrop-blur-md transition-colors duration-300 ${
+          isMapDark ? "bg-black/30" : "bg-black/[0.04]"
+        }`}
+        onClick={onClose}
+      />
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1, y: [0, -5, 0] }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ opacity: { duration: 0.25 }, scale: { duration: 0.25 }, y: { duration: 4, repeat: Infinity, ease: "easeInOut" } }}
+        className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
+      >
+        <h3
+          className={`relative z-10 text-2xl sm:text-3xl md:text-4xl font-sans font-bold mb-8 sm:mb-10 tracking-tighter ${
+            isMapDark ? "text-white" : "text-black"
+          }`}
+          style={{ textShadow: isMapDark ? "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)" : "0 2px 14px rgba(255,255,255,0.95), 0 0 24px rgba(255,255,255,0.9)" }}
+        >
+          {title}
+          {highlightText && <span className="text-[#ef4444] font-bold">{highlightText}</span>}
+          ?
+        </h3>
+        <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16">
+          <button type="button" onClick={onConfirm} className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2">
+            <motion.span animate={choice === "yes" ? { scale: 1.25 } : {}} transition={{ duration: 0.2 }} className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${isMapDark ? "text-white/80 group-hover:text-white" : "text-black/80 group-hover:text-black"}`} style={{ textShadow: isMapDark ? "0 2px 10px rgba(0,0,0,0.8)" : "0 1px 6px rgba(255,255,255,0.9)" }}>
+              Yes
+            </motion.span>
+          </button>
+          <button type="button" onClick={onClose} className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2">
+            <motion.span animate={choice === "no" ? { scale: 1.25 } : {}} transition={{ duration: 0.2 }} className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${isMapDark ? "text-white/80 group-hover:text-white" : "text-black/80 group-hover:text-black"}`} style={{ textShadow: isMapDark ? "0 2px 10px rgba(0,0,0,0.8)" : "0 1px 6px rgba(255,255,255,0.9)" }}>
+              No
+            </motion.span>
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 export const MapModals = memo(function MapModals({
   offlineUserObj,
@@ -158,6 +135,14 @@ export const MapModals = memo(function MapModals({
   activeOwnEvent,
   deleteMiniEvent,
   editingEventId,
+  showCancelRequestModal,
+  setShowCancelRequestModal,
+  cancelRequestTarget,
+  handleConfirmCancelRequest,
+  showRequestsModal,
+  setShowRequestsModal,
+  viewingRequestsEvent,
+  currentRequestsList = [],
   isExiting,
   showQuitModal,
   setShowQuitModal,
@@ -169,6 +154,7 @@ export const MapModals = memo(function MapModals({
   const [quitChoice, setQuitChoice] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteChoice, setDeleteChoice] = useState(null);
+  const [cancelChoice, setCancelChoice] = useState(null);
 
   // Modal colors match map mode:
   // Light mode (isMapDark === false): modal is white with black borders/elements.
@@ -672,201 +658,232 @@ export const MapModals = memo(function MapModals({
         )}
       </AnimatePresence>
 
-      {/* Quit Modal */}
-      {showQuitModal && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 select-none pointer-events-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className={`absolute inset-0 backdrop-blur-md transition-colors duration-300 ${
-              isMapDark ? "bg-black/30" : "bg-black/[0.04]"
-            }`}
-            onClick={handleQuitNoClick}
-          />
+      {/* 3 Backdrop-Blurred Confirmation Modals: Quit Map, Delete Event, Remove Request */}
+      <ConfirmationPromptModal
+        show={showQuitModal}
+        title="Quit the map?"
+        isMapDark={isModalDark}
+        choice={quitChoice}
+        onConfirm={handleQuitYesClick}
+        onClose={handleQuitNoClick}
+      />
 
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{
-              scale: 1,
-              opacity: 1,
-              y: [0, -5, 0],
-            }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{
-              opacity: { duration: 0.25 },
-              scale: { duration: 0.25 },
-              y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-            }}
-            className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
-          >
-            <h3
-              className={`relative z-10 text-2xl sm:text-3xl md:text-4xl font-sans font-bold mb-8 sm:mb-10 tracking-tighter ${
-                isMapDark ? "text-white" : "text-black"
-              }`}
-              style={{
-                textShadow: isMapDark
-                  ? "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)"
-                  : "0 2px 14px rgba(255,255,255,0.95), 0 0 24px rgba(255,255,255,0.9)",
-              }}
-            >
-              Quit the map?
-            </h3>
+      <ConfirmationPromptModal
+        show={showDeleteConfirm}
+        title="Delete the Event?"
+        isMapDark={isModalDark}
+        choice={deleteChoice}
+        onConfirm={() => {
+          setDeleteChoice("yes");
+          setTimeout(async () => {
+            await deleteMiniEvent?.(editingEventId);
+            setShowDeleteConfirm(false);
+            setDeleteChoice(null);
+          }, 200);
+        }}
+        onClose={() => {
+          setDeleteChoice("no");
+          setTimeout(() => {
+            setShowDeleteConfirm(false);
+            setDeleteChoice(null);
+          }, 150);
+        }}
+      />
 
-            <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16">
-              <button
-                type="button"
-                onClick={handleQuitYesClick}
-                className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2"
-              >
-                <motion.span
-                  animate={quitChoice === "yes" ? { scale: 1.25 } : {}}
-                  transition={{ duration: 0.2 }}
-                  className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${
-                    isMapDark
-                      ? "text-white/80 group-hover:text-white"
-                      : "text-black/80 group-hover:text-black"
-                  }`}
-                  style={{
-                    textShadow: isMapDark
-                      ? "0 2px 10px rgba(0,0,0,0.8)"
-                      : "0 1px 6px rgba(255,255,255,0.9)",
-                  }}
-                >
-                  Yes
-                </motion.span>
-              </button>
+      <ConfirmationPromptModal
+        show={showCancelRequestModal}
+        title="Remove the request from "
+        highlightText={cancelRequestTarget?.title || "this event"}
+        isMapDark={isModalDark}
+        choice={cancelChoice}
+        onConfirm={() => {
+          setCancelChoice("yes");
+          setTimeout(() => {
+            handleConfirmCancelRequest?.();
+            setCancelChoice(null);
+          }, 200);
+        }}
+        onClose={() => {
+          setCancelChoice("no");
+          setTimeout(() => {
+            setShowCancelRequestModal(false);
+            setCancelChoice(null);
+          }, 150);
+        }}
+      />
 
-              <button
-                type="button"
-                onClick={handleQuitNoClick}
-                className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2"
-              >
-                <motion.span
-                  animate={quitChoice === "no" ? { scale: 1.25 } : {}}
-                  transition={{ duration: 0.2 }}
-                  className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${
-                    isMapDark
-                      ? "text-white/80 group-hover:text-white"
-                      : "text-black/80 group-hover:text-black"
-                  }`}
-                  style={{
-                    textShadow: isMapDark
-                      ? "0 2px 10px rgba(0,0,0,0.8)"
-                      : "0 1px 6px rgba(255,255,255,0.9)",
-                  }}
-                >
-                  No
-                </motion.span>
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Delete Event Confirmation Modal :: Inherits exact Quit Map style, backdrop blur & Yes/No behavior */}
+      {/* Collaboration Requests Modal (from the Envelope icon) */}
       <AnimatePresence>
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 z-[2200] flex items-center justify-center p-6 select-none pointer-events-auto">
+        {showRequestsModal && (
+          <div
+            className="fixed inset-0 z-[2000] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm select-none"
+            onClick={() => setShowRequestsModal(false)}
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className={`absolute inset-0 backdrop-blur-md transition-colors duration-300 ${
-                isMapDark ? "bg-black/30" : "bg-black/[0.04]"
+              animate={{ y: [0, -3, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[26px] shadow-2xl overflow-hidden transition-colors duration-300 ${
+                isModalDark
+                  ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"
+                  : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
               }`}
-              onClick={() => setShowDeleteConfirm(false)}
-            />
-
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{
-                scale: 1,
-                opacity: 1,
-                y: [0, -5, 0],
-              }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{
-                opacity: { duration: 0.25 },
-                scale: { duration: 0.25 },
-                y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-              }}
-              className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
+              onClick={(e) => e.stopPropagation()}
             >
-              <h3
-                className={`relative z-10 text-2xl sm:text-3xl md:text-4xl font-sans font-bold mb-8 sm:mb-10 tracking-tighter ${
-                  isMapDark ? "text-white" : "text-black"
+              {/* Header */}
+              <div
+                className={`shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-b ${
+                  isModalDark ? "border-[#30363d]" : "border-[#d0d7de]"
                 }`}
-                style={{
-                  textShadow: isMapDark
-                    ? "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)"
-                    : "0 2px 14px rgba(255,255,255,0.95), 0 0 24px rgba(255,255,255,0.9)",
-                }}
               >
-                Delete the Event?
-              </h3>
-
-              <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16">
+                <div className="flex flex-col">
+                  <h2
+                    className={`font-sans font-bold text-base sm:text-lg tracking-tight ${
+                      isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                    }`}
+                  >
+                    Event Collab Requests
+                  </h2>
+                  {viewingRequestsEvent?.title && (
+                    <span
+                      className={`text-[11px] font-semibold mt-0.5 truncate max-w-[300px] ${
+                        isModalDark ? "text-white/60" : "text-black/60"
+                      }`}
+                    >
+                      {viewingRequestsEvent.title}
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setDeleteChoice("yes");
-                    setTimeout(async () => {
-                      await deleteMiniEvent?.(editingEventId);
-                      setShowDeleteConfirm(false);
-                      setDeleteChoice(null);
-                    }, 200);
-                  }}
-                  className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2"
+                  className={`text-2xl leading-none relative z-10 transition-colors p-1 cursor-pointer ${
+                    isModalDark
+                      ? "text-[#8b949e] hover:text-[#f0f6fc]"
+                      : "text-[#57606a] hover:text-[#1f2328]"
+                  }`}
+                  onClick={() => setShowRequestsModal(false)}
                 >
-                  <motion.span
-                    animate={deleteChoice === "yes" ? { scale: 1.25 } : {}}
-                    transition={{ duration: 0.2 }}
-                    className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${
-                      isMapDark
-                        ? "text-white/80 group-hover:text-white"
-                        : "text-black/80 group-hover:text-black"
-                    }`}
-                    style={{
-                      textShadow: isMapDark
-                        ? "0 2px 10px rgba(0,0,0,0.8)"
-                        : "0 1px 6px rgba(255,255,255,0.9)",
-                    }}
-                  >
-                    Yes
-                  </motion.span>
+                  ×
                 </button>
+              </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDeleteChoice("no");
-                    setTimeout(() => {
-                      setShowDeleteConfirm(false);
-                      setDeleteChoice(null);
-                    }, 150);
-                  }}
-                  className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-2"
-                >
-                  <motion.span
-                    animate={deleteChoice === "no" ? { scale: 1.25 } : {}}
-                    transition={{ duration: 0.2 }}
-                    className={`block font-sans text-xl sm:text-2xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${
-                      isMapDark
-                        ? "text-white/80 group-hover:text-white"
-                        : "text-black/80 group-hover:text-black"
-                    }`}
+              {/* Inner Box with Scrollbar & Random Colors (except black/white) */}
+              <div className="p-4 sm:p-5 flex-1 overflow-y-auto max-h-[380px] custom-scrollbar flex flex-col gap-3">
+                {currentRequestsList.length > 0 ? (
+                  currentRequestsList.map((req, idx) => {
+                    const colorScheme = RANDOM_INNER_COLORS[idx % RANDOM_INNER_COLORS.length];
+                    const cardBg = isModalDark ? colorScheme.darkBg : colorScheme.lightBg;
+                    return (
+                      <div
+                        key={req.id || idx}
+                        style={{
+                          background: cardBg,
+                          borderColor: colorScheme.border,
+                        }}
+                        className="relative rounded-2xl p-3.5 sm:p-4 border-[1.5px] transition-all flex flex-col gap-2 shadow-sm"
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Top-left Tiny Profile Icon */}
+                          <div className="relative shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={
+                                req.user?.profilePicture ||
+                                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+                                  req.user?.nickname || req.user?.name || "anon"
+                                )}`
+                              }
+                              alt={req.user?.nickname || "User"}
+                              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-[1.5px] ${
+                                isModalDark ? "border-white/40" : "border-black/30"
+                              }`}
+                            />
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 border border-white dark:border-black rounded-full" />
+                          </div>
+
+                          {/* Requestor Info & Message */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <strong
+                                style={{
+                                  color: isModalDark ? "#ffffff" : "#000000",
+                                  fontWeight: 800,
+                                }}
+                                className="text-xs sm:text-sm font-sans truncate"
+                              >
+                                {req.user?.name || req.user?.nickname || "Kalcerian"}
+                              </strong>
+                              <span
+                                style={{
+                                  color: isModalDark ? "#ffffff" : "#000000",
+                                  fontWeight: 700,
+                                }}
+                                className="text-[10px] sm:text-[11px] shrink-0"
+                              >
+                                @{req.user?.nickname || "kalcerian"}
+                              </span>
+                            </div>
+
+                            <p
+                              style={{
+                                color: isModalDark ? "#ffffff" : "#000000",
+                                fontWeight: 700,
+                              }}
+                              className="text-xs sm:text-[13px] mt-1 font-sans leading-snug break-words"
+                            >
+                              &quot;{req.message || req.user?.broadcast || "Wants to collaborate on this event!"}&quot;
+                            </p>
+
+                            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-black/10 dark:border-white/10">
+                              <span
+                                style={{
+                                  color: isModalDark ? "#ffffff" : "#000000",
+                                  fontWeight: 700,
+                                }}
+                                className="text-[10px]"
+                              >
+                                {new Date(req.createdAt || Date.now()).toLocaleTimeString("id-ID", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+
+                              <span
+                                style={{
+                                  color: isModalDark ? "#ffffff" : "#000000",
+                                  fontWeight: 800,
+                                }}
+                                className="text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full bg-black/10 dark:bg-white/10"
+                              >
+                                REQUESTED COLLAB
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div
                     style={{
-                      textShadow: isMapDark
-                        ? "0 2px 10px rgba(0,0,0,0.8)"
-                        : "0 1px 6px rgba(255,255,255,0.9)",
+                      background: isModalDark ? "rgba(59, 130, 246, 0.2)" : "rgba(59, 130, 246, 0.12)",
+                      borderColor: "#3b82f6",
                     }}
+                    className="rounded-2xl p-6 text-center border-[1.5px] flex flex-col items-center justify-center gap-2"
                   >
-                    No
-                  </motion.span>
-                </button>
+                    <strong
+                      style={{ color: isModalDark ? "#ffffff" : "#000000", fontWeight: 800 }}
+                      className="text-sm font-sans"
+                    >
+                      No Collab Requests Yet
+                    </strong>
+                    <p
+                      style={{ color: isModalDark ? "#ffffff" : "#000000", fontWeight: 700 }}
+                      className="text-xs font-sans max-w-[260px]"
+                    >
+                      When fellow Kalcerians tap the Request icon on your event card, they will appear here.
+                    </p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

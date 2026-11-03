@@ -76,6 +76,33 @@ export default function MapPage() {
   const [statusText, setStatusText] = useState("");
   const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe", mediaUrl: "" });
   const [editingEventId, setEditingEventId] = useState(null);
+  const [requestedEventId, setRequestedEventId] = useState(() => {
+    if (typeof window !== "undefined") {
+      try { return localStorage.getItem("kalceria_requested_event_id") || null; } catch {}
+    }
+    return null;
+  });
+  const [eventRequestsMap, setEventRequestsMap] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("kalceria_event_collab_requests");
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return {
+      mini_cafe_1: [
+        { id: "req_adit", user: { id: "mock_adit", name: "Adit Bintaro", nickname: "Adit", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit", broadcast: "Dyno run booked for Saturday!" }, message: "Ready for highway convoy route!", createdAt: new Date(Date.now() - 3600000).toISOString() },
+        { id: "req_bonita", user: { id: "mock_bonita", name: "Bonita Bon", nickname: "Bonita", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bonita", broadcast: "Coffee & car chat in Sector 7" }, message: "Joining morning espresso catchup with my Silvia S15.", createdAt: new Date(Date.now() - 7200000).toISOString() }
+      ],
+      own: [
+        { id: "req_dinda", user: { id: "mock_dinda", name: "Dinda Laras", nickname: "Dinda", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda", broadcast: "Trackday tuning prep at FM" }, message: "Count me in for this session! Let's roll together.", createdAt: new Date(Date.now() - 1800000).toISOString() }
+      ]
+    };
+  });
+  const [cancelRequestTarget, setCancelRequestTarget] = useState(null);
+  const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [viewingRequestsEventId, setViewingRequestsEventId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(() => {
     if (typeof window !== "undefined" && window.innerWidth < 860) {
@@ -601,6 +628,65 @@ export default function MapPage() {
     setBusy(false);
   }
 
+  const handleRequestCollab = useCallback((eventId) => {
+    playNotificationSound("event");
+    setRequestedEventId(eventId);
+    try { localStorage.setItem("kalceria_requested_event_id", eventId); } catch {}
+    const ev = events.find((e) => String(e.id) === String(eventId));
+    setNotice(`Collab requested for ${ev?.title || "event"}!`);
+
+    if (currentUser) {
+      setEventRequestsMap((prev) => {
+        const existing = prev[eventId] || [];
+        if (existing.some((r) => r.user.id === currentUser.id)) return prev;
+        const newReq = {
+          id: `req_${Date.now()}`,
+          user: {
+            id: currentUser.id,
+            name: currentUser.name || currentUser.nickname || "You",
+            nickname: currentUser.nickname || currentUser.name || "You",
+            profilePicture: currentUser.profilePicture || avatarUrl(currentUser),
+            broadcast: currentUser.broadcast?.message || "Collab requested",
+          },
+          message: "Wants to collaborate on this event",
+          createdAt: new Date().toISOString(),
+        };
+        const updated = { ...prev, [eventId]: [newReq, ...existing] };
+        try { localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+    }
+  }, [events, currentUser]);
+
+  const handlePromptCancelRequest = useCallback((eventId, title) => {
+    const ev = events.find((e) => String(e.id) === String(eventId));
+    setCancelRequestTarget({ id: eventId, title: title || ev?.title || "Event" });
+    setShowCancelRequestModal(true);
+  }, [events]);
+
+  const handleConfirmCancelRequest = useCallback(() => {
+    const targetId = cancelRequestTarget?.id || requestedEventId;
+    setRequestedEventId(null);
+    try { localStorage.removeItem("kalceria_requested_event_id"); } catch {}
+    if (targetId && currentUser) {
+      setEventRequestsMap((prev) => {
+        const existing = prev[targetId] || [];
+        const updated = { ...prev, [targetId]: existing.filter((r) => r.user.id !== currentUser.id) };
+        try { localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated)); } catch {}
+        return updated;
+      });
+    }
+    setShowCancelRequestModal(false);
+    setCancelRequestTarget(null);
+    setNotice("Request removed.");
+  }, [cancelRequestTarget, requestedEventId, currentUser]);
+
+  const handleOpenRequests = useCallback((eventId) => {
+    setViewingRequestsEventId(eventId);
+    setShowRequestsModal(true);
+    playNotificationSound("event");
+  }, []);
+
   // login gate
   if (notLoggedIn) {
     return <MapAuthGate />;
@@ -672,6 +758,10 @@ export default function MapPage() {
           isMapDark={isMapDark}
           currentUser={currentUser}
           onEditEvent={handleOpenEditEvent}
+          requestedEventId={requestedEventId}
+          onRequestCollab={handleRequestCollab}
+          onPromptCancelRequest={handlePromptCancelRequest}
+          onOpenRequests={handleOpenRequests}
         />
       </motion.div>
 
@@ -792,96 +882,14 @@ export default function MapPage() {
 
 
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(100, 116, 139, 0.3);
-          border-radius: 4px;
-        }
-
-        @keyframes float {
-          0% {
-            transform: translate(0, 0) scale(1);
-          }
-          25% {
-            transform: translate(15vw, 15vh) scale(1.2);
-          }
-          50% {
-            transform: translate(-10vw, 20vh) scale(0.9);
-          }
-          75% {
-            transform: translate(20vw, -15vh) scale(1.3);
-          }
-          100% {
-            transform: translate(-5vw, -10vh) scale(1.1);
-          }
-        }
-
-        @keyframes float-wide {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 0.2;
-          }
-          25% {
-            transform: translate(80vw, 20vh) scale(1.4);
-            opacity: 0.4;
-          }
-          50% {
-            transform: translate(40vw, 80vh) scale(0.8);
-            opacity: 0.2;
-          }
-          75% {
-            transform: translate(-20vw, 40vh) scale(1.2);
-            opacity: 0.3;
-          }
-          100% {
-            transform: translate(0, 0) scale(1);
-            opacity: 0.2;
-          }
-        }
-
-        @keyframes gradientMove {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-
-        @keyframes floatUp {
-          0% {
-            transform: translateY(10px);
-            opacity: 0;
-          }
-          10% {
-            opacity: 0.8;
-          }
-          90% {
-            opacity: 0.8;
-          }
-          100% {
-            transform: translateY(-115vh);
-            opacity: 0;
-          }
-        }
-
-        @keyframes floatUpBox {
-          0% {
-            transform: translateY(0) scale(0.6);
-            opacity: 0;
-          }
-          10% {
-            opacity: 0.8;
-          }
-          90% {
-            opacity: 0.8;
-          }
-          100% {
-            transform: translateY(-80vh) scale(1.1);
-            opacity: 0;
-          }
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 4px; }
+        @keyframes float { 0% { transform: translate(0, 0) scale(1); } 25% { transform: translate(15vw, 15vh) scale(1.2); } 50% { transform: translate(-10vw, 20vh) scale(0.9); } 75% { transform: translate(20vw, -15vh) scale(1.3); } 100% { transform: translate(-5vw, -10vh) scale(1.1); } }
+        @keyframes float-wide { 0% { transform: translate(0, 0) scale(1); opacity: 0.2; } 50% { transform: translate(40vw, 80vh) scale(0.8); opacity: 0.2; } 100% { transform: translate(0, 0) scale(1); opacity: 0.2; } }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        @keyframes floatUp { 0% { transform: translateY(10px); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } 100% { transform: translateY(-115vh); opacity: 0; } }
+        @keyframes floatUpBox { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } 100% { transform: translateY(-80vh) scale(1.1); opacity: 0; } }
       `}</style>
       {/* Startup Sequence Overlay :: FORZA HORIZON STYLE */}
       <StartupSequenceOverlay
@@ -899,6 +907,18 @@ export default function MapPage() {
         saveMiniEvent={saveMiniEvent} eventForm={eventForm} setEventForm={setEventForm}
         activeOwnEvent={activeOwnEvent} deleteMiniEvent={deleteMiniEvent}
         editingEventId={editingEventId}
+        showCancelRequestModal={showCancelRequestModal}
+        setShowCancelRequestModal={setShowCancelRequestModal}
+        cancelRequestTarget={cancelRequestTarget}
+        handleConfirmCancelRequest={handleConfirmCancelRequest}
+        showRequestsModal={showRequestsModal}
+        setShowRequestsModal={setShowRequestsModal}
+        viewingRequestsEvent={events.find((e) => String(e.id) === String(viewingRequestsEventId))}
+        currentRequestsList={
+          viewingRequestsEventId
+            ? (eventRequestsMap[viewingRequestsEventId] || eventRequestsMap["mini_cafe_1"] || [])
+            : []
+        }
         isExiting={isExiting} showQuitModal={showQuitModal}
         setShowQuitModal={setShowQuitModal} handleQuitConfirm={handleQuitConfirm}
       />

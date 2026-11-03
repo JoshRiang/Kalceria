@@ -30,6 +30,10 @@ export default function SnapMap({
   isMapDark = false,
   currentUser = null,
   onEditEvent,
+  requestedEventId = null,
+  onRequestCollab,
+  onPromptCancelRequest,
+  onOpenRequests,
 }) {
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -39,18 +43,28 @@ export default function SnapMap({
   const markerRefs = useRef({});
   const [isReady, setIsReady] = useState(false);
 
-  // Wire global event edit callback for Leaflet popup Pencil icon
+  // Wire global event popup callbacks (edit, collab request, cancel request, open requests)
   useEffect(() => {
     window.__kalceriaEditEvent = (id) => {
       const target = (events || []).find((e) => String(e.id) === String(id));
-      if (target && onEditEvent) {
-        onEditEvent(target);
-      }
+      if (target && onEditEvent) onEditEvent(target);
+    };
+    window.__kalceriaRequestCollab = (id) => {
+      onRequestCollab?.(id);
+    };
+    window.__kalceriaPromptCancelRequest = (id, title) => {
+      onPromptCancelRequest?.(id, title);
+    };
+    window.__kalceriaOpenRequests = (id) => {
+      onOpenRequests?.(id);
     };
     return () => {
       delete window.__kalceriaEditEvent;
+      delete window.__kalceriaRequestCollab;
+      delete window.__kalceriaPromptCancelRequest;
+      delete window.__kalceriaOpenRequests;
     };
-  }, [events, onEditEvent]);
+  }, [events, onEditEvent, onRequestCollab, onPromptCancelRequest, onOpenRequests]);
 
   // Invalidate map size on theme toggle
   useEffect(() => {
@@ -243,7 +257,7 @@ export default function SnapMap({
 
         marker.setIcon(createEventIcon(L, item, isMapDark));
 
-        const newPopupContent = eventPopup(item, isMapDark, currentUser);
+        const newPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId);
         if (marker._lastPopupContent !== newPopupContent) {
           marker.getPopup().setContent(newPopupContent);
           marker._lastPopupContent = newPopupContent;
@@ -252,12 +266,12 @@ export default function SnapMap({
         const marker = L.marker([item.lat, item.lng], {
           icon: createEventIcon(L, item, isMapDark),
           userData: { color: "#ff006e" },
-        }).bindPopup(eventPopup(item, isMapDark, currentUser), {
+        }).bindPopup(eventPopup(item, isMapDark, currentUser, requestedEventId), {
           className: "tactical-popup",
           offset: [0, -34],
           autoClose: true,
         });
-        marker._lastPopupContent = eventPopup(item, isMapDark, currentUser);
+        marker._lastPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId);
         markerRefs.current[markerId] = marker;
         eventsLayer.addLayer(marker);
       }
@@ -275,7 +289,7 @@ export default function SnapMap({
         delete markerRefs.current[id];
       }
     });
-  }, [users, events, isReady, isMapDark, currentUser]);
+  }, [users, events, isReady, isMapDark, currentUser, requestedEventId]);
 
   return (
     <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>

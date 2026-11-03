@@ -169,7 +169,7 @@ function getEventPalette(item) {
   return EVENT_COLOR_PALETTES[index];
 }
 
-export function eventPopup(item, isMapDark = false, currentUser = null) {
+export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null) {
   const displayDesc = cleanDesc(item.description);
   const creatorName = item.creator?.nickname || item.creator?.name || "Kalcerian";
   const mediaList = extractMediaList(item);
@@ -185,6 +185,9 @@ export function eventPopup(item, isMapDark = false, currentUser = null) {
       item.isOwn
     )
   );
+
+  const hasRequestedThisEvent = Boolean(requestedEventId && String(requestedEventId) === String(item.id));
+  const hasActiveRequestElsewhere = Boolean(requestedEventId && String(requestedEventId) !== String(item.id));
 
   const bgImage = isMapDark ? "/jpeg/BGCard_Dark.jpeg" : "/jpeg/BGCard_Light.jpeg";
   const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.16)";
@@ -237,11 +240,12 @@ export function eventPopup(item, isMapDark = false, currentUser = null) {
     </button>
   `;
 
-  const requestOrEnvelopeIconHtml = isOwner
-    ? `
+  let requestOrEnvelopeIconHtml = "";
+  if (isOwner) {
+    requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaPlaySound?.('event')"
+        onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaOpenRequests?.('${esc(item.id)}')"
         title="Collab Requests"
         style="background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
         onmouseover="this.style.transform='scale(1.12)'"
@@ -265,11 +269,57 @@ export function eventPopup(item, isMapDark = false, currentUser = null) {
           />
         </svg>
       </button>
-    `
-    : `
+    `;
+  } else if (hasRequestedThisEvent) {
+    // Already requested: gray hand icon with overlapping red prohibited icon
+    requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaPlaySound?.('event')"
+        onclick="window.__kalceriaPromptCancelRequest?.('${esc(item.id)}', '${esc(item.title)}')"
+        title="Remove Request from ${esc(item.title)}"
+        style="position: relative; background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
+        onmouseover="this.style.transform='scale(1.12)'"
+        onmouseout="this.style.transform='scale(1)'"
+      >
+        <img
+          src="${handIconSrc}"
+          alt="Requested"
+          width="22"
+          height="22"
+          style="width: 22px; height: 22px; object-fit: contain; display: block; filter: grayscale(100%) opacity(0.5);"
+        />
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="position: absolute; inset: 0; pointer-events: none; overflow: visible; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));">
+          <circle cx="12" cy="12" r="8.5" stroke="#ef4444" stroke-width="2.2" />
+          <line x1="6" y1="6" x2="18" y2="18" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" />
+        </svg>
+      </button>
+    `;
+  } else if (hasActiveRequestElsewhere) {
+    // Disabled/grayed out because active request already exists on another event
+    requestOrEnvelopeIconHtml = `
+      <button
+        type="button"
+        onclick="window.__kalceriaPromptCancelRequest?.('${esc(requestedEventId)}', 'active event')"
+        title="Active request exists on another event (Click to cancel)"
+        style="position: relative; background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; opacity: 0.45; filter: grayscale(100%);"
+        onmouseover="this.style.transform='scale(1.08)'"
+        onmouseout="this.style.transform='scale(1)'"
+      >
+        <img
+          src="${handIconSrc}"
+          alt="Request Disabled"
+          width="22"
+          height="22"
+          style="width: 22px; height: 22px; object-fit: contain; display: block;"
+        />
+      </button>
+    `;
+  } else {
+    // Normal requestable state
+    requestOrEnvelopeIconHtml = `
+      <button
+        type="button"
+        onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaRequestCollab?.('${esc(item.id)}')"
         title="Request Collab"
         style="background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease;"
         onmouseover="this.style.transform='scale(1.12)'"
@@ -284,6 +334,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null) {
         />
       </button>
     `;
+  }
 
   const pencilIconHtml = isOwner
     ? `
