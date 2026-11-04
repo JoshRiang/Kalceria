@@ -58,7 +58,7 @@ export function EditProfileModal({
       setDisplayName(name);
       const desc = currentUser.bio || currentUser.alasanMasuk || currentUser.reason || "";
       setProfileDescription(desc.slice(0, 50));
-      
+
       const rawPhone = currentUser.phone || currentUser.whatsapp || "";
       setPhone(rawPhone);
 
@@ -188,12 +188,12 @@ export function EditProfileModal({
           </div>
 
           {/* Form Body - Scrollable */}
-          <form onSubmit={handleSubmit} className="px-5 sm:px-6 pb-5 pt-1 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4 font-sans text-xs">
-            {/* 1. Cover BG & Profile Picture (Random Base Color, Clean & Uncramped) */}
-            <div className="relative rounded-xl overflow-hidden border border-black/10 dark:border-white/10 shadow-sm">
+          <form onSubmit={handleSubmit} className="px-5 sm:px-6 pb-5 pt-1 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3.5 font-sans text-xs">
+            {/* 1. Cover BG & Overlapping Half-Circle Profile Picture (Left Side, Z-Layered Above Cover BG) */}
+            <div className="relative shrink-0">
               {/* Cover Preview (Solid Base Color or Custom Image) */}
               <div
-                className="relative w-full h-36 xs:h-40 sm:h-44 md:h-48 overflow-hidden"
+                className="relative w-full h-32 xs:h-36 sm:h-40 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 shadow-sm"
                 style={{
                   backgroundColor: coverPreview && coverPreview.startsWith("#") ? coverPreview : defaultBaseColor,
                 }}
@@ -202,7 +202,7 @@ export function EditProfileModal({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={coverPreview} alt="Cover preview" className="w-full h-full object-cover" />
                 )}
-                
+
                 {/* Edit Button (No inner/outer box, clean bold text) */}
                 <button
                   type="button"
@@ -223,16 +223,20 @@ export function EditProfileModal({
                 />
               </div>
 
-              {/* Profile Avatar overlapping cover with Picture 1 Recycle Icon (Unchopped, Generous Padding) */}
-              <div className="relative z-30 px-4 sm:px-5 pb-4 pt-1 flex items-end justify-between -mt-10 sm:-mt-12">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
+              {/* Profile Avatar overlapping exact half-circle (50%) on left side above Edit BG */}
+              <div className="relative z-30 pl-4 sm:pl-5 pr-2 -mt-10 sm:-mt-11 flex items-end justify-between">
+                <div className="flex items-end gap-3">
+                  <div className="relative w-20 h-20 sm:w-[88px] sm:h-[88px] shrink-0">
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
                         avatarInputRef.current?.click();
                       }}
-                      className="w-20 h-20 sm:w-22 sm:h-22 rounded-full border-3 border-white dark:border-[#161b22] overflow-hidden bg-neutral-200 dark:bg-neutral-800 shadow-xl cursor-pointer group"
+                      className={`w-full h-full rounded-full border-[3px] overflow-hidden shadow-xl cursor-pointer group ${
+                        isModalDark
+                          ? "border-[#161b22] bg-neutral-800"
+                          : "border-white bg-neutral-200"
+                      }`}
                       title="Change Profile Picture"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -247,7 +251,7 @@ export function EditProfileModal({
                       />
                     </div>
 
-                    {/* Picture 1: 2-Arrow Circular Recycle Icon on Avatar rim (tight on right bottom) */}
+                    {/* Small Camera Icon at bottom-right of Profile Picture */}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -256,15 +260,21 @@ export function EditProfileModal({
                       }}
                       aria-label="Change Profile Picture"
                       title="Change Profile Picture"
-                      className={`absolute bottom-0 right-0 z-20 w-6 h-6 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-115 active:scale-90 border-[1.5px] ${
-                        isModalDark ? "bg-white text-black border-black" : "bg-black text-white border-white"
+                      className={`absolute bottom-0 right-0 z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-110 active:scale-95 border-[1.5px] ${
+                        isModalDark ? "bg-white text-black border-[#161b22]" : "bg-black text-white border-white"
                       }`}
                     >
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M 20 8 A 8.5 8.5 0 0 0 6 7 L 3 10" />
-                        <polyline points="3 5 3 10 8 10" />
-                        <path d="M 4 16 A 8.5 8.5 0 0 0 18 17 L 21 14" />
-                        <polyline points="21 19 21 14 16 14" />
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.1"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
                       </svg>
                     </button>
                     <input
@@ -285,7 +295,7 @@ export function EditProfileModal({
                         setAvatarPreview(null);
                         setProfilePicture(null);
                       }}
-                      className="text-xs font-bold text-red-500 hover:text-red-400 hover:underline cursor-pointer pb-2"
+                      className="text-xs font-bold text-red-500 hover:text-red-400 hover:underline cursor-pointer pb-1.5"
                     >
                       Remove Profile Picture
                     </button>
@@ -293,14 +303,14 @@ export function EditProfileModal({
                 </div>
               </div>
               {fileError && (
-                <p className="text-[#ef4444] text-xs font-semibold px-4 pb-2 animate-in fade-in">
+                <p className="text-[#ef4444] text-xs font-semibold px-1 pt-2 animate-in fade-in">
                   {fileError}
                 </p>
               )}
             </div>
 
             {/* 2. Display Name (Not all-caps, Arial bold grey) */}
-            <div className="flex flex-col gap-1.5">
+            <div className="shrink-0 flex flex-col gap-1.5">
               <label style={{ fontFamily: "Arial, sans-serif" }} className="font-bold text-[11.5px] text-gray-500 dark:text-neutral-400">
                 Display Name
               </label>
@@ -316,7 +326,7 @@ export function EditProfileModal({
             </div>
 
             {/* 3. Profile Description (Substituted for Alasan Masuk Kalceria, Arial bold grey, 0/50 limit) */}
-            <div className="flex flex-col gap-1.5">
+            <div className="shrink-0 flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <label style={{ fontFamily: "Arial, sans-serif" }} className="font-bold text-[11.5px] text-gray-500 dark:text-neutral-400">
                   Profile Description
@@ -336,7 +346,7 @@ export function EditProfileModal({
             </div>
 
             {/* 4. WhatsApp (Always visible input, 2D WA logo, + or trash button) */}
-            <div className="flex flex-col gap-1.5">
+            <div className="shrink-0 flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {/* 2D WhatsApp Logo (Black with minor white in light, vice versa in dark) */}
@@ -397,7 +407,7 @@ export function EditProfileModal({
             </div>
 
             {/* 5. Instagram (Always visible input, 2D IG logo, + or trash button) */}
-            <div className="flex flex-col gap-1.5">
+            <div className="shrink-0 flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {/* 2D Instagram Logo (Black with minor white in light, vice versa in dark) */}
@@ -456,7 +466,7 @@ export function EditProfileModal({
             </div>
 
             {/* 6. Danger Zone: Change Password & Delete Account (Red Arial Bold, No Underline, Left Picture 2 & 3 Icons) */}
-            <div className="mt-1 pt-2.5 flex items-center justify-between border-t border-black/10 dark:border-white/10">
+            <div className="shrink-0 mt-1 pt-2.5 flex items-center justify-between border-t border-black/10 dark:border-white/10">
               {/* Change Password (Pure Gembok / Padlock Icon) */}
               <button
                 type="button"
@@ -514,7 +524,7 @@ export function EditProfileModal({
             <button
               type="submit"
               disabled={isSaving}
-              className={`mt-1 w-full font-extrabold text-[13px] py-3 rounded-lg transition-transform active:scale-[0.99] cursor-pointer shadow-md disabled:opacity-50 ${
+              className={`shrink-0 mt-1 w-full font-extrabold text-[13px] py-3 rounded-lg transition-transform active:scale-[0.99] cursor-pointer shadow-md disabled:opacity-50 ${
                 isModalDark
                   ? "bg-white text-black hover:bg-neutral-200"
                   : "bg-black text-white hover:bg-neutral-800"

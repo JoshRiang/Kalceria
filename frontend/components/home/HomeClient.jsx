@@ -101,6 +101,17 @@ export default function HomeClient() {
               onAuthSuccess={(data) => {
                 sessionStorage.setItem("introPlayed", "true");
                 sessionStorage.setItem("landingSeen", "true");
+                const returnUrl = typeof window !== "undefined" ? localStorage.getItem("kalceria_auth_return") : null;
+                if (returnUrl === "/map") {
+                  try {
+                    localStorage.removeItem("kalceria_auth_return");
+                    localStorage.setItem("kalceria_skip_map_intro", "true");
+                    localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 5 * 60 * 1000));
+                    sessionStorage.setItem("kalceria_skip_map_intro", "true");
+                  } catch {}
+                  window.location.href = "/map?skip_intro=true";
+                  return;
+                }
                 const userObj = data?.user || data;
                 const cleanUser =
                   userObj?.nickname ||
@@ -138,9 +149,11 @@ export default function HomeClient() {
                 if (returnUrl === "/map") {
                   try {
                     localStorage.removeItem("kalceria_auth_return");
+                    localStorage.setItem("kalceria_skip_map_intro", "true");
+                    localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 5 * 60 * 1000));
                     sessionStorage.setItem("kalceria_skip_map_intro", "true");
                   } catch {}
-                  window.location.href = "/map";
+                  window.location.href = "/map?skip_intro=true";
                   return;
                 }
                 setPhase("landing");

@@ -139,6 +139,7 @@ export function KalceriansPanel({
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [deviceFamily, setDeviceFamily] = useState("desktop");
   const [activeChatUserId, setActiveChatUserId] = useState(null);
+  const [activeChatUserSnapshot, setActiveChatUserSnapshot] = useState(null);
   const [isClosingForChat, setIsClosingForChat] = useState(false);
   const listContainerRef = useRef(null);
   const chatTransitionTimerRef = useRef(null);
@@ -175,6 +176,7 @@ export function KalceriansPanel({
 
   const handleOpenChatWithTransition = (user) => {
     if (!user) return;
+    setActiveChatUserSnapshot(user);
     onPersonalChatOpen?.(user);
     setHoveredChatIconId(null);
     setHoveredKalcerian(null);
@@ -184,13 +186,14 @@ export function KalceriansPanel({
     setIsClosingForChat(true);
     // Step 2: Slide the Personal Chat column up from the bottom to the Kalcerians scroll bar height limit
     chatTransitionTimerRef.current = setTimeout(() => {
-      setActiveChatUserId(user.id);
-    }, 240);
+      setActiveChatUserId(user.id || user.nickname || user.name);
+    }, 220);
   };
 
   const handleClosePersonalChat = () => {
     if (chatTransitionTimerRef.current) clearTimeout(chatTransitionTimerRef.current);
     setActiveChatUserId(null);
+    setActiveChatUserSnapshot(null);
     chatTransitionTimerRef.current = setTimeout(() => {
       setIsClosingForChat(false);
       setDrawerOpen(true);
@@ -198,7 +201,9 @@ export function KalceriansPanel({
   };
 
   const activeChatUser = activeChatUserId
-    ? sidebarKalcerians.find((u) => String(u.id) === String(activeChatUserId)) || null
+    ? sidebarKalcerians.find(
+        (u) => String(u.id || u.nickname || u.name) === String(activeChatUserId)
+      ) || activeChatUserSnapshot
     : null;
 
   const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;

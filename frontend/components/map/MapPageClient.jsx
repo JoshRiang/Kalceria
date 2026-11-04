@@ -82,12 +82,17 @@ export default function MapPage() {
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const [isRecentering, setIsRecentering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMapEngineReady, setIsMapEngineReady] = useState(false);
   const [showStartup, setShowStartup] = useState(() => {
     if (typeof window !== "undefined") {
       try {
         if (!hasUserSession()) return false;
-        if (sessionStorage.getItem("kalceria_skip_map_intro") === "true") {
-          sessionStorage.removeItem("kalceria_skip_map_intro");
+        const params = new URLSearchParams(window.location.search);
+        const skipByUrl = params.get("skip_intro") === "true";
+        const skipBySession = sessionStorage.getItem("kalceria_skip_map_intro") === "true";
+        const skipByLocal = localStorage.getItem("kalceria_skip_map_intro") === "true";
+        const skipUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
+        if (skipByUrl || skipBySession || skipByLocal || skipUntil > Date.now()) {
           return false;
         }
         return true;
@@ -95,8 +100,44 @@ export default function MapPage() {
         return false;
       }
     }
-    return true;
+    return false;
   });
+  const handleStartupComplete = useCallback(() => {
+    setShowStartup(false);
+  }, []);
+
+  // Consume skip-intro flags safely after mount (delayed cleanup prevents React StrictMode double-mount from re-triggering intro)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const skipByUrl = params.get("skip_intro") === "true";
+      const skipBySession = sessionStorage.getItem("kalceria_skip_map_intro") === "true";
+      const skipByLocal = localStorage.getItem("kalceria_skip_map_intro") === "true";
+      const skipUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
+      if (skipByUrl || skipBySession || skipByLocal || skipUntil > Date.now()) {
+        setShowStartup(false);
+        if (skipByUrl && window.history.replaceState) {
+          params.delete("skip_intro");
+          const cleanSearch = params.toString();
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname + (cleanSearch ? `?${cleanSearch}` : "")
+          );
+        }
+        const timer = setTimeout(() => {
+          try {
+            sessionStorage.removeItem("kalceria_skip_map_intro");
+            localStorage.removeItem("kalceria_skip_map_intro");
+            localStorage.removeItem("kalceria_skip_map_intro_until");
+            localStorage.removeItem("kalceria_auth_return");
+          } catch {}
+        }, 2500);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+  }, []);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const hasMounted = useHasMounted();
   const [notLoggedIn, setNotLoggedIn] = useState(() => (typeof window !== "undefined" ? !hasUserSession() : false));
@@ -212,6 +253,7 @@ export default function MapPage() {
   const handleMapReady = useCallback((mapInstance) => {
     // eslint-disable-next-line react-hooks/immutability -- Leaflet calls this external ref callback; the live map must be available synchronously.
     mapRef.current = mapInstance;
+    setIsMapEngineReady(true);
 
     setMapCenter(mapInstance.getCenter());
     setMapZoom(mapInstance.getZoom());
@@ -708,6 +750,14 @@ export default function MapPage() {
   }, []);
 
   const handleRequestChangePassword = useCallback(async () => {
+    const markReturnToMapWithoutIntro = () => {
+      try {
+        localStorage.setItem("kalceria_auth_return", "/map");
+        localStorage.setItem("kalceria_skip_map_intro", "true");
+        localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
+        sessionStorage.setItem("kalceria_skip_map_intro", "true");
+      } catch {}
+    };
     try {
       let email = currentUser?.email;
       if (!email) {
@@ -717,7 +767,7 @@ export default function MapPage() {
           setCurrentUser(res.data.user);
         }
       }
-      localStorage.setItem("kalceria_auth_return", "/map");
+      markReturnToMapWithoutIntro();
       setShowEditProfileModal(false);
       setShowOwnProfile(false);
 
@@ -729,7 +779,7 @@ export default function MapPage() {
       }
       window.location.href = "/?auth=true&mode=forgot-password";
     } catch {
-      localStorage.setItem("kalceria_auth_return", "/map");
+      markReturnToMapWithoutIntro();
       setShowEditProfileModal(false);
       setShowOwnProfile(false);
       window.location.href = "/?auth=true&mode=forgot-password";
@@ -894,8 +944,10 @@ export default function MapPage() {
       {/* Startup Sequence Overlay :: FORZA HORIZON STYLE */}
       <StartupSequenceOverlay
         showStartup={showStartup}
+        authReady={Boolean(currentUser)}
+        mapEngineReady={isMapEngineReady}
         isReady={!isDataLoading && hasMounted && !notLoggedIn}
-        onComplete={() => setShowStartup(false)}
+        onComplete={handleStartupComplete}
       />
 
       <MapModals

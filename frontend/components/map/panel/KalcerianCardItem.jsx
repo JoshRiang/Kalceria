@@ -406,11 +406,14 @@ export function KalcerianCardItem({
                   type="button"
                   onMouseEnter={() => setHoveredChatIconId?.(user.id)}
                   onMouseLeave={() => setHoveredChatIconId?.(null)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     onPersonalChatOpen?.(user);
                   }}
-                  className="relative w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
+                  className="relative z-20 w-7 h-7 -m-0.5 flex items-center justify-center rounded-md transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
                   title={`Chat ${displayName}`}
                 >
                   <ChatButtonIcon isMapDark={isMapDark} />

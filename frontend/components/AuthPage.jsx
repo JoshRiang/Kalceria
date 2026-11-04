@@ -376,6 +376,17 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         newPassword,
       });
 
+      // Preserve Map Option B skip-intro flags across tabs when resetting password from Map
+      const isReturningToMap =
+        typeof window !== "undefined" && localStorage.getItem("kalceria_auth_return") === "/map";
+      if (isReturningToMap) {
+        try {
+          localStorage.setItem("kalceria_skip_map_intro", "true");
+          localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
+          sessionStorage.setItem("kalceria_skip_map_intro", "true");
+        } catch {}
+      }
+
       // Broadcast to other open tabs on this device (e.g. original forgot password tab)
       try {
         if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -385,6 +396,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
             email: res.data?.user?.email || forgotEmail,
             username: res.data?.username || res.data?.user?.nickname || res.data?.user?.name,
             user: res.data?.user,
+            returnToMap: isReturningToMap,
           });
           authChannel.close();
         }
@@ -411,6 +423,17 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   // ── Cross-Device / Cross-Tab Sync for Forgot Password Tab -> Login Page ──
   const handleCrossTabResetSuccess = (data) => {
     setIsBuffering(true);
+    if (
+      data?.returnToMap ||
+      (typeof window !== "undefined" && localStorage.getItem("kalceria_auth_return") === "/map")
+    ) {
+      try {
+        localStorage.setItem("kalceria_auth_return", "/map");
+        localStorage.setItem("kalceria_skip_map_intro", "true");
+        localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
+        sessionStorage.setItem("kalceria_skip_map_intro", "true");
+      } catch {}
+    }
     const userEmail = data?.email || data?.user?.email || forgotEmail || "";
     setTimeout(() => {
       setIsBuffering(false);

@@ -56,6 +56,16 @@ function ResetPasswordContent() {
 
 
 
+      const isReturningToMap =
+        typeof window !== "undefined" && localStorage.getItem("kalceria_auth_return") === "/map";
+      if (isReturningToMap) {
+        try {
+          localStorage.setItem("kalceria_skip_map_intro", "true");
+          localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
+          sessionStorage.setItem("kalceria_skip_map_intro", "true");
+        } catch {}
+      }
+
       // Broadcast to other open tabs on the same device
       try {
         if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -65,6 +75,7 @@ function ResetPasswordContent() {
             email: res.data?.user?.email,
             username: res.data?.username || res.data?.user?.nickname || res.data?.user?.name,
             user: res.data?.user,
+            returnToMap: isReturningToMap,
           });
           authChannel.close();
         }

@@ -15,11 +15,20 @@ const QUOTES = [
   "Calibrating neural markers..."
 ];
 
-export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
+export function StartupSequenceOverlay({
+  showStartup,
+  authReady = false,
+  mapEngineReady = false,
+  isReady = false,
+  onComplete,
+}) {
   const isMobile = useIsMobileViewport();
   const [isDark, setIsDark] = useState(false);
   const isDarkRef = useRef(false);
+  const authReadyRef = useRef(authReady);
+  const mapEngineReadyRef = useRef(mapEngineReady);
   const isReadyRef = useRef(isReady);
+  const onCompleteRef = useRef(onComplete);
   const [currentQuote, setCurrentQuote] = useState("Composing the map...");
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const tiltTargetRef = useRef({ x: 0, y: 0 });
@@ -28,18 +37,32 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
   const progressValRef = useRef(0);
   const completedRef = useRef(false);
 
-  // Keep isReadyRef synchronized without tearing down or resetting the progress loop
+  // Keep refs synchronized without EVER tearing down or resetting the progress loop on parent re-renders
+  useEffect(() => {
+    authReadyRef.current = authReady;
+  }, [authReady]);
+
+  useEffect(() => {
+    mapEngineReadyRef.current = mapEngineReady;
+  }, [mapEngineReady]);
+
   useEffect(() => {
     isReadyRef.current = isReady;
   }, [isReady]);
 
-  // 1. Precision Direct-DOM Hardware rAF Progress Engine (Zero React reconciliation overhead, zero stutter)
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  // 1. Precision Monotonic Phase-Synchronized Progress Engine (Zero React reconciliation overhead, zero reset)
   useEffect(() => {
     if (!showStartup) return;
 
     let rafId = null;
+    let completionTimer = null;
     let lastTime = performance.now();
     let readyStartTime = null;
+    let darkEnteredTime = null;
     let progressAtReady = 0;
     completedRef.current = false;
     progressValRef.current = 0;
@@ -54,70 +77,86 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
 
     const tick = (now) => {
       if (completedRef.current) return;
-      const dt = Math.min((now - lastTime) / 1000, 0.05); // clamp delta
+      const dt = Math.min(Math.max((now - lastTime) / 1000, 0.001), 0.05); // clamp delta
       lastTime = now;
 
       const current = progressValRef.current;
+      const hasAuth = authReadyRef.current;
+      const hasMapEngine = mapEngineReadyRef.current;
       const ready = isReadyRef.current;
 
-      let next;
+      let computedNext = current;
+
       if (ready) {
+        // Phase 4: Backend telemetry & map ready -> sweep monotonically to 100%
         if (readyStartTime === null) {
           readyStartTime = now;
           progressAtReady = current;
         }
 
         const elapsedSinceReady = (now - readyStartTime) / 1000;
-        // Total duration after ready signal is received: exactly 2.0 seconds (n + 2 detik)
-        // Ensures flying Kalcer man reaches the exact center of the screen gracefully
-        const t = Math.min(1, elapsedSinceReady / 2.0);
+        // Ensure smooth completion sweep (1.5s if already past 65%, or 2.0s if backend resolved very fast)
+        const finishDuration = progressAtReady >= 65 ? 1.5 : 2.0;
+        const t = Math.min(1, elapsedSinceReady / finishDuration);
         const eased = t * (2 - t);
-        next = Math.min(100, progressAtReady + (100 - progressAtReady) * eased);
+        computedNext = Math.min(100, progressAtReady + (100 - progressAtReady) * eased);
 
-        if (next < current + 12 * dt) {
-          next = Math.min(100, current + 12 * dt);
+        if (computedNext < current + 14 * dt) {
+          computedNext = Math.min(100, current + 14 * dt);
         }
       } else {
-        // Steady cinematic sweep from 0 to 85% (~1.4s), then gentle buffer crawl (never halts)
+        // Synchronized Backend Preparation Phases (Cold-Start Resilient)
+        // Phase 1 (0% -> 35%): Session & Auth Handshake
+        // Phase 2 (35% -> 65%): Map Engine & Dark-Mode Coki Entrance (crosses 50% smoothly)
+        // Phase 3 (65% -> 90%): Kalcerians & Mini-Events Telemetry Sync (holds at 88-90% during cold start)
         let speed;
-        if (current < 75) {
-          speed = 55; // steady smooth velocity
-        } else if (current < 88) {
-          speed = 18; // gentle buffer rate
+        if (current < 35) {
+          speed = 46;
+        } else if (current < 52) {
+          // Cross 50% smoothly so Coki flies to center and holds there
+          speed = hasAuth || hasMapEngine ? 38 : 26;
+        } else if (current < 68) {
+          speed = hasMapEngine || hasAuth ? 28 : 16;
+        } else if (current < 82) {
+          speed = 14;
         } else {
-          speed = 4;  // micro-rate while awaiting backend ready signal
+          // Asymptotic cold-start hold between 82% and 90% while backend wakes up
+          speed = Math.max(0.25, (90.2 - current) * 0.85);
         }
-        next = Math.min(94, current + speed * dt);
+        computedNext = Math.min(90.2, current + speed * dt);
       }
 
+      // STRICT MONOTONIC CLAMP: Progress can NEVER decrease or jump backward
+      const next = Math.min(100, Math.max(current, computedNext));
       progressValRef.current = next;
 
       // GPU-accelerated transform: scaleX eliminates expensive layout reflows (0 stutter)
       if (barFillRef.current) {
         barFillRef.current.style.transform = `scaleX(${Math.min(1, next / 100)})`;
       }
-      const roundInt = Math.round(next);
+      const roundInt = Math.floor(next + 0.0001);
       if (roundInt !== lastPercentInt && percentTextRef.current) {
         lastPercentInt = roundInt;
-        percentTextRef.current.textContent = String(roundInt);
+        percentTextRef.current.textContent = String(Math.min(100, roundInt));
       }
 
-      // Single state update threshold at 50% for smooth theme transition
+      // Single one-way threshold at 50% for dark theme & Coki entrance (never resets to false)
       if (next >= 50 && !isDarkRef.current) {
         isDarkRef.current = true;
+        darkEnteredTime = now;
         setIsDark(true);
       }
 
-      // Complete when ready, at least 2 seconds (+ 2 detik) have passed since ready, and progress >= 99.8%
-      if (ready && readyStartTime !== null && (now - readyStartTime) >= 2000 && next >= 99.8) {
+      // Complete when ready, Coki has reached center (at least 1.5s since 50% dark entrance), and progress >= 99.8%
+      const darkElapsed = darkEnteredTime !== null ? now - darkEnteredTime : 0;
+      if (ready && readyStartTime !== null && darkElapsed >= 1500 && next >= 99.8) {
         completedRef.current = true;
         if (barFillRef.current) barFillRef.current.style.transform = "scaleX(1)";
         if (percentTextRef.current) percentTextRef.current.textContent = "100";
-        // Snappy, precise hold: exactly 120ms to register 100%, then immediately dismiss
-        const timer = setTimeout(() => {
-          onComplete?.();
-        }, 120);
-        return () => clearTimeout(timer);
+        completionTimer = setTimeout(() => {
+          onCompleteRef.current?.();
+        }, 140);
+        return;
       }
 
       rafId = requestAnimationFrame(tick);
@@ -127,8 +166,9 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
     return () => {
       completedRef.current = true;
       if (rafId) cancelAnimationFrame(rafId);
+      if (completionTimer) clearTimeout(completionTimer);
     };
-  }, [showStartup, onComplete]);
+  }, [showStartup]);
 
   // 2. High-performance Throttled 3D Tilt Tracking (Guarded for Mouse/Pointer, disabled on touch/iPad)
   useEffect(() => {
