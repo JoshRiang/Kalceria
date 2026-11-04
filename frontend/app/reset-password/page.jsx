@@ -17,15 +17,21 @@ function ResetPasswordContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
   const [welcomeUser, setWelcomeUser] = useState(null);
-  const [videoSrc, setVideoSrc] = useState("/bg_login.mp4");
+  const [videoSrc, setVideoSrc] = useState("/videologin_regris.mp4");
 
   useEffect(() => {
     // Warm up CSRF token silently so submission doesn't incur extra roundtrip
     api.get("/auth/csrf").catch(() => {});
-    if (typeof window !== "undefined" && window.innerWidth <= 768) {
-      setVideoSrc("/hp/vid_login_hp.mp4");
+    if (typeof window !== "undefined") {
+      if (window.innerWidth <= 768) {
+        setVideoSrc("/hp/vid_login_hp.mp4");
+      }
+      // Redirect seamlessly to the original home page auth modal (?token=...)
+      if (token) {
+        window.location.replace(`/?token=${encodeURIComponent(token)}`);
+      }
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (!token) {

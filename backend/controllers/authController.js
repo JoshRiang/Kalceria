@@ -408,7 +408,7 @@ export async function requestPasswordReset(req, res, next) {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    await redis.set(`reset:${token}`, email, 'EX', 3600); // 1 hour
+    await redis.set(`reset:${token}`, email, 'EX', 60); // 1 minute expiration (60 seconds)
 
     let clientOrigin;
     const originHeader = typeof req.get === 'function'
@@ -428,7 +428,7 @@ export async function requestPasswordReset(req, res, next) {
 
     try {
       await sendPasswordResetEmail(email, token, clientOrigin);
-      await redis.set(`reset_status:${email}`, JSON.stringify({ status: 'waiting' }), 'EX', 3600);
+      await redis.set(`reset_status:${email}`, JSON.stringify({ status: 'waiting' }), 'EX', 60);
     } catch (error) {
       await redis.del(`reset:${token}`);
       console.error('[ResetPassword] Email delivery failed:', error.message);

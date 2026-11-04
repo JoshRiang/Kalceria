@@ -198,6 +198,8 @@ test('Vertical Slice: Full Registration Flow (Anti-Torn Register + Choose Userna
       const val = await redis.get(k);
       if (val === testEmail) {
         resetToken = k.replace('reset:', '');
+        const ttl = await redis.ttl(k);
+        assert.ok(ttl > 0 && ttl <= 60, `Reset token TTL must be <= 60s (was ${ttl}s)`);
         break;
       }
     }
