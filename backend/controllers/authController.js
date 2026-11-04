@@ -623,6 +623,7 @@ export async function getMe(req, res, next) {
         id: true,
         name: true,
         nickname: true,
+        email: true,
         profilePicture: true,
         allowLiveLocation: true,
         domicileLat: true,

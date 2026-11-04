@@ -164,7 +164,7 @@ function DominoChevrons({ active, isMobile }) {
 }
 
 // ─── WelcomeTransition Main ──────────────────────────────────────────────────
-export default function WelcomeTransition({ username, onComplete }) {
+export default function WelcomeTransition({ username, onComplete, isNewUser = false }) {
   const [welcomeText, setWelcomeText] = useState("");
   const [userText, setUserText] = useState("");
   const [showGears, setShowGears] = useState(false);
@@ -187,10 +187,10 @@ export default function WelcomeTransition({ username, onComplete }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Sequential typing state machine: "Welcome Back," first -> pause -> then username on newline
+  // Sequential typing state machine: "Welcome," (for new registration) or "Welcome Back," (for login) -> pause -> then username on newline
   useEffect(() => {
     let isMounted = true;
-    const fullWelcome = "Welcome Back,";
+    const fullWelcome = isNewUser ? "Welcome," : "Welcome Back,";
     const fullUser = cleanUsername;
 
     let ivWelcome = null;

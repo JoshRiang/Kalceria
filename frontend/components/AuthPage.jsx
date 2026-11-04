@@ -333,15 +333,16 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         activeSessionRef.current = res.data;
       }
 
-      // Redirect to Login Greeting: "Welcome Back, <username>"
+      // Transition directly to Welcome greeting without flashing login page
       setTimeout(() => {
         setIsBuffering(false);
-        setMode("login");
-        setSuccess(`Welcome Back, ${chosenUsername}`);
-        setTimeout(() => {
-          onAuthSuccess?.(res.data);
-        }, 1200);
-      }, 800);
+        onAuthSuccess?.({
+          ...res.data,
+          isRegister: true,
+          isNewUser: true,
+          username: chosenUsername,
+        });
+      }, 600);
     } catch (err) {
       setIsBuffering(false);
       setError(err.response?.data?.error || "Gagal menyimpan username. Coba lagi.");

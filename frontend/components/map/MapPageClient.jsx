@@ -647,22 +647,30 @@ export default function MapPage() {
   const handleRequestChangePassword = useCallback(async () => {
     playNotificationSound("event");
     try {
-      if (currentUser?.email) {
-        localStorage.setItem("kalceria_auth_return", "/map");
-        setShowEditProfileModal(false);
-        setShowOwnProfile(false);
+      let email = currentUser?.email;
+      if (!email) {
+        const res = await api.get("/users/me").catch(() => null);
+        email = res?.data?.user?.email;
+        if (res?.data?.user) {
+          setCurrentUser(res.data.user);
+        }
+      }
+      localStorage.setItem("kalceria_auth_return", "/map");
+      setShowEditProfileModal(false);
+      setShowOwnProfile(false);
+
+      if (email) {
         // Call reset-request to trigger magic link email dispatch
-        await api.post("/auth/password/reset-request", { email: currentUser.email }).catch(() => {});
-        window.location.href = `/?auth=true&mode=forgot-password&sent=true&email=${encodeURIComponent(currentUser.email)}`;
+        await api.post("/auth/password/reset-request", { email }).catch(() => {});
+        window.location.href = `/?auth=true&mode=forgot-password&sent=true&email=${encodeURIComponent(email)}`;
         return;
       }
-      setNotice("User email not found.");
+      window.location.href = "/?auth=true&mode=forgot-password";
     } catch {
-      if (currentUser?.email) {
-        window.location.href = `/?auth=true&mode=forgot-password&sent=true&email=${encodeURIComponent(currentUser.email)}`;
-      } else {
-        setNotice("Password change request initiated.");
-      }
+      localStorage.setItem("kalceria_auth_return", "/map");
+      setShowEditProfileModal(false);
+      setShowOwnProfile(false);
+      window.location.href = "/?auth=true&mode=forgot-password";
     }
   }, [currentUser]);
 

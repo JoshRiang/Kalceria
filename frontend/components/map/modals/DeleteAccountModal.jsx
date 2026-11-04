@@ -27,14 +27,16 @@ export function DeleteAccountModal({
       try {
         localStorage.clear();
         sessionStorage.clear();
+        sessionStorage.setItem("introPlayed", "true");
+        sessionStorage.setItem("landingSeen", "true");
       } catch {}
 
       // Keep buffer visible briefly so user sees DELETING buffer synchronized with operation
       setTimeout(() => {
         setIsExiting(true);
         setTimeout(() => {
-          window.location.href = "/";
-        }, 600);
+          window.location.href = "/?skip_intro=true";
+        }, 650);
       }, 1200);
     }, 220);
   };

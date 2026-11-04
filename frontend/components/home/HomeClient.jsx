@@ -14,6 +14,11 @@ export default function HomeClient() {
     if (urlParams.get("auth") === "true" || hasResetToken || urlParams.get("mode") === "forgot-password" || sessionStorage.getItem("triggerAuth") === "true") {
       return "auth";
     }
+    if (urlParams.get("skip_intro") === "true") {
+      sessionStorage.setItem("introPlayed", "true");
+      sessionStorage.setItem("landingSeen", "true");
+      return "landing";
+    }
     const navEntry = window.performance?.getEntriesByType?.("navigation")?.[0];
     const isReload = navEntry?.type === "reload";
     if (isReload) {
@@ -26,6 +31,7 @@ export default function HomeClient() {
     return "intro";
   });
   const [username, setUsername] = useState("User");
+  const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -37,6 +43,16 @@ export default function HomeClient() {
     if (triggerAuth === "true" || isAuthParam || hasResetToken || isForgotMode) {
       sessionStorage.removeItem("triggerAuth");
       setPhase("auth");
+    } else if (urlParams.get("skip_intro") === "true") {
+      sessionStorage.setItem("introPlayed", "true");
+      sessionStorage.setItem("landingSeen", "true");
+      setPhase("landing");
+      if (typeof window !== "undefined") {
+        if (window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   }, []);
 
@@ -91,6 +107,7 @@ export default function HomeClient() {
                   data?.username ||
                   (userObj?.email ? userObj.email.split("@")[0] : "Kalcerian");
                 setUsername(cleanUser);
+                setIsNewUser(Boolean(data?.isRegister || data?.isNewUser));
                 setPhase("welcome");
               }}
               onBack={() => setPhase("landing")}
@@ -109,6 +126,7 @@ export default function HomeClient() {
           >
             <WelcomeTransition
               username={username}
+              isNewUser={isNewUser}
               onComplete={() => {
                 sessionStorage.setItem("introPlayed", "true");
                 sessionStorage.setItem("landingSeen", "true");
