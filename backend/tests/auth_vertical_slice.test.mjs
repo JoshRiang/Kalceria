@@ -205,8 +205,31 @@ test('Vertical Slice: Full Registration Flow (Anti-Torn Register + Choose Userna
     }
     assert.ok(resetToken, 'Must find matching reset token for testEmail');
 
+    // Test Non-existent Email: verify generic success and NO token creation
+    let nonExistentRes = null;
+    await requestPasswordReset(
+      { body: { email: 'nonexistent_account_xyz@kalceria.id' } },
+      { json: (d) => { nonExistentRes = d; }, status: () => ({ json: (d) => { nonExistentRes = d; } }) },
+      (err) => { if (err) throw err; }
+    );
+    assert.equal(nonExistentRes?.message, 'Verifikasi Link sudah terkirim ke email kamu.');
+
     // 7. Test Magic Link Flow: Reset Password Confirm
     console.log('[Test] Testing Magic Link Reset Confirm...');
+
+    // 7a. Test Rejection when new password is same as existing password
+    let samePasswordError = null;
+    let samePasswordStatus = 200;
+    const mockResSame = {
+      status: (code) => { samePasswordStatus = code; return mockResSame; },
+      json: (d) => { samePasswordError = d; },
+      cookie: () => {},
+    };
+    await resetPassword({ body: { token: resetToken, newPassword: testPassword } }, mockResSame, (err) => { if (err) throw err; });
+    assert.equal(samePasswordStatus, 400);
+    assert.ok(samePasswordError?.error?.includes('tidak boleh sama'), 'Must reject identical password');
+    console.log('[Test] Identical password correctly rejected with 400:', samePasswordError?.error);
+
     const newPassword = 'NewSecretPassword1!';
     let resetConfirmData = null;
     const mockReqResetConfirm = {

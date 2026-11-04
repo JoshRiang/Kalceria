@@ -404,7 +404,8 @@ export async function requestPasswordReset(req, res, next) {
     }
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return res.status(404).json({ error: 'Email tidak terdaftar dalam sistem Kalceria.' });
+      // Purge/silently drop if account does not exist. Do not send email, return generic success
+      return res.json({ message: 'Verifikasi Link sudah terkirim ke email kamu.' });
     }
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -462,9 +463,19 @@ export async function resetPassword(req, res, next) {
 
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, name: true, nickname: true, email: true, role: true },
+      select: { id: true, name: true, nickname: true, email: true, role: true, passwordHash: true },
     });
     if (!user) return res.status(400).json({ error: 'Token invalid or expired.' });
+
+    // Enforce: New password cannot be the same as the previous password
+    if (user.passwordHash) {
+      const isSamePassword = await argon2.verify(user.passwordHash, newPassword).catch(() => false);
+      if (isSamePassword) {
+        // Restore reset token in Redis so user can input a different password without requesting email again
+        await redis.set(`reset:${token}`, email, 'EX', 60);
+        return res.status(400).json({ error: 'Password baru tidak boleh sama dengan password sebelumnya.' });
+      }
+    }
     await revokeUserSessions(user.id);
     const passwordHash = await argon2.hash(newPassword);
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
@@ -642,6 +653,10 @@ export async function changePassword(req, res, next) {
 
     const valid = await argon2.verify(user.passwordHash, currentPassword);
     if (!valid) return res.status(401).json({ error: 'Incorrect current password.' });
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ error: 'Password baru tidak boleh sama dengan password sebelumnya.' });
+    }
 
     const passwordHash = await argon2.hash(newPassword);
     await prisma.user.update({ where: { id: userId }, data: { passwordHash } });

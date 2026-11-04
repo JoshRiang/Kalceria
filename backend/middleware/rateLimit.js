@@ -23,7 +23,7 @@ export function rateLimit({ name, max, windowSeconds, key = (req) => req.ip || '
 
       if (count > max) {
         res.setHeader('Retry-After', String(Math.max(1, ttl)));
-        return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        return res.status(429).json({ error: 'Terlalu banyak permintaan. Silakan coba beberapa saat lagi.' });
       }
 
       return next();

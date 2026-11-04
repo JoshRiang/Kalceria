@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 // ─── Typewriter Component (Slower & Smoother) ──────────────────────────────
-function Typewriter({ text, speed = 120, delay = 0, dir = "ltr" }) {
+function Typewriter({ text, speed = 120, delay = 0, dir = "ltr", onComplete }) {
   const [displayed, setDisplayed] = useState("");
 
   useEffect(() => {
@@ -19,12 +19,13 @@ function Typewriter({ text, speed = 120, delay = 0, dir = "ltr" }) {
           i++;
         } else {
           clearInterval(interval);
+          onComplete?.();
         }
       }, speed);
       return () => clearInterval(interval);
     }, delay);
     return () => clearTimeout(timeout);
-  }, [text, speed, delay, dir]);
+  }, [text, speed, delay, dir, onComplete]);
 
   return <span>{displayed}</span>;
 }
@@ -186,6 +187,7 @@ function DominoChevrons({ active, isMobile }) {
 
 // ─── WelcomeTransition Main ──────────────────────────────────────────────────
 export default function WelcomeTransition({ username, onComplete }) {
+  const [welcomeDone, setWelcomeDone] = useState(false);
   const [showGears, setShowGears] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -207,14 +209,11 @@ export default function WelcomeTransition({ username, onComplete }) {
   }, []);
 
   useEffect(() => {
-    const tGears = setTimeout(() => setShowGears(true), 2500);
-    
     // Start exit animation slightly before calling onComplete
     const tExit = setTimeout(() => setIsExiting(true), 6500);
     const tEnd = setTimeout(() => onComplete(), 7500);
     
     return () => { 
-      clearTimeout(tGears); 
       clearTimeout(tExit);
       clearTimeout(tEnd); 
     };
@@ -235,13 +234,26 @@ export default function WelcomeTransition({ username, onComplete }) {
       <DominoChevrons active={showGears && !isExiting} isMobile={isMobile} />
       
       <div className="relative z-20 flex flex-col items-center w-full px-4">
-        {/* Main Text Container - Stacked & Responsive: Next-line wrapping, never overflows screen */}
+        {/* Main Text Container - Sequential & Stacked: "Welcome Back," first, then username */}
         <div className="h-auto py-2 flex flex-col items-center justify-center font-sans font-black tracking-tighter w-full max-w-5xl text-center leading-tight">
           <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF4D00] via-[#FFD700] to-[#FFCC00] drop-shadow-[0_0_20px_rgba(255,140,0,0.3)]">
-            <Typewriter text="Welcome Back," delay={800} speed={130} />
+            <Typewriter
+              text="Welcome Back,"
+              delay={600}
+              speed={100}
+              onComplete={() => setWelcomeDone(true)}
+            />
           </h1>
-          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)] break-words break-all max-w-[90vw] mt-1.5 sm:mt-2.5 px-2">
-             <Typewriter text={cleanUsername} delay={800} speed={130} dir="ltr" />
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)] break-words break-all max-w-[90vw] mt-1.5 sm:mt-2.5 px-2 min-h-[1.2em]">
+            {welcomeDone && (
+              <Typewriter
+                text={cleanUsername}
+                delay={200}
+                speed={100}
+                dir="ltr"
+                onComplete={() => setShowGears(true)}
+              />
+            )}
           </h1>
         </div>
         
