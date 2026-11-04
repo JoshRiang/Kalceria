@@ -7,7 +7,7 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     id: "mini_cafe_1",
     title: "Morning Espresso Catchup",
     description: "Morning caffeine hit and route planning before heading to BSD loop.",
-    location: "Kopi Toko Djawa, Bintaro Sektor 9, Tangerang Selatan",
+    location: "Kopi Manyar, Bintaro Sektor 9, Tangerang Selatan",
     category: "cafe",
     mediaUrl: "/media/gifs/event_cafe_1.mp4",
     mediaUrls: ["/media/gifs/event_cafe_1.mp4", "/media/gifs/event_cafe_2.mp4"],
@@ -16,10 +16,10 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     isActive: true,
     expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
-      id: "mock_ahmad",
-      name: "Ahmad Bintaro",
-      nickname: "Ahmad",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad",
+      id: "mock_rei",
+      name: "Rei Nathan",
+      nickname: "Rei",
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rei",
       broadcast: { message: "Riding around Sector 9!", createdAt: new Date().toISOString() },
       coverType: "video",
       coverImage: "/media/gifs/event_cafe_1.mp4",
@@ -83,10 +83,10 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     isActive: true,
     expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
-      id: "mock_alpha",
-      name: "Kalcerian Alpha",
-      nickname: "Alpha",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alpha",
+      id: "mock_otniel",
+      name: "Otniel Kevin",
+      nickname: "Otniel",
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Otniel",
       broadcast: { message: "Highway run starts in 30 mins!", createdAt: new Date().toISOString() }
     }
   },
@@ -102,10 +102,10 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     isActive: true,
     expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
-      id: "mock_ghost",
-      name: "Ghost Rider",
-      nickname: "Ghost",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ghost"
+      id: "mock_coki",
+      name: "Coki",
+      nickname: "Coki",
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Coki"
     }
   },
   {
@@ -160,10 +160,10 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     isActive: true,
     expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
-      id: "mock_bonita",
-      name: "Bonita Bon",
-      nickname: "Bonita",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bonita",
+      id: "mock_josh",
+      name: "Josh Riang",
+      nickname: "Josh",
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Josh",
       broadcast: { message: "Dimsum spot is full, parking outside", createdAt: new Date().toISOString() }
     }
   },
@@ -179,10 +179,10 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     isActive: true,
     expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
-      id: "mock_dinda",
-      name: "Dinda Laras",
-      nickname: "Dinda",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda"
+      id: "mock_coki",
+      name: "Coki",
+      nickname: "Coki",
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Coki"
     }
   },
 
@@ -200,10 +200,10 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     isActive: true,
     expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
-      id: "mock_melati",
-      name: "Melati Eka",
-      nickname: "Melati",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Melati"
+      id: "mock_rei",
+      name: "Rei Nathan",
+      nickname: "Rei",
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rei"
     }
   },
   {
@@ -218,16 +218,16 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     isActive: true,
     expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
-      id: "mock_adit",
-      name: "Adit Bintaro",
-      nickname: "Adit",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit",
+      id: "mock_otniel",
+      name: "Otniel Kevin",
+      nickname: "Otniel",
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Otniel",
       broadcast: { message: "Dyno run booked for Saturday!", createdAt: new Date().toISOString() },
       coverType: "gif",
       coverImage: "/media/gifs/event_cafe_1.gif",
       socialPlatform: "IG",
-      socialLink: "aditbintaro",
-      instagram: "aditbintaro",
+      socialLink: "otnielkevin",
+      instagram: "otnielkevin",
       whatsapp: "+6281234567890",
       phone: "+6281234567890",
       reason: "Chasing suspension balance, track day prep, and car enthusiast community."
@@ -245,31 +245,17 @@ export const INITIAL_MOCK_MINI_EVENTS = [
     isActive: true,
     expiresAt: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString(),
     creator: {
-      id: "mock_fajar",
-      name: "Fajar Drift",
-      nickname: "Fajar",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fajar"
+      id: "mock_josh",
+      name: "Josh Riang",
+      nickname: "Josh",
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Josh"
     }
   }
 ];
 
-export const INITIAL_ACCEPTED_COLLABS = {
-  mini_spec_2: ["mock_otniel", "own"]
-};
+export const INITIAL_ACCEPTED_COLLABS = {};
 
-export const INITIAL_EVENT_REQUESTS = {
-  mini_spec_3: [
-    { id: "req_adit_otniel", user: { id: "mock_adit", name: "Adit Bintaro", nickname: "Adit", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit", broadcast: "Dyno run booked for Saturday!" }, message: "Bro, count me in for the midnight widebody reveal! Bringing the GR Yaris.", createdAt: new Date(Date.now() - 1800000).toISOString() },
-    { id: "req_dinda_otniel", user: { id: "mock_dinda", name: "Dinda Laras", nickname: "Dinda", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda", broadcast: "Trackday tuning prep at FM" }, message: "Would love to collab on the aero build session tonight!", createdAt: new Date(Date.now() - 4200000).toISOString() }
-  ],
-  mini_cafe_1: [
-    { id: "req_adit", user: { id: "mock_adit", name: "Adit Bintaro", nickname: "Adit", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Adit", broadcast: "Dyno run booked for Saturday!" }, message: "Ready for highway convoy route!", createdAt: new Date(Date.now() - 3600000).toISOString() },
-    { id: "req_bonita", user: { id: "mock_bonita", name: "Bonita Bon", nickname: "Bonita", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bonita", broadcast: "Coffee & car chat in Sector 7" }, message: "Joining morning espresso catchup with my Silvia S15.", createdAt: new Date(Date.now() - 7200000).toISOString() }
-  ],
-  own: [
-    { id: "req_dinda", user: { id: "mock_dinda", name: "Dinda Laras", nickname: "Dinda", profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dinda", broadcast: "Trackday tuning prep at FM" }, message: "Count me in for this session! Let's roll together.", createdAt: new Date(Date.now() - 1800000).toISOString() }
-  ]
-};
+export const INITIAL_EVENT_REQUESTS = {};
 
 import { toSmartTitleCase } from "@/lib/titleCase";
 

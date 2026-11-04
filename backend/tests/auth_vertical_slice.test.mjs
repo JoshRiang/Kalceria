@@ -63,13 +63,15 @@ test('Vertical Slice: Full Registration Flow (Anti-Torn Register + Choose Userna
     const userBeforeOtp = await prisma.user.findUnique({ where: { email: testEmail } });
     assert.equal(userBeforeOtp, null, 'User must NOT be committed to PostgreSQL before OTP & username');
 
-    // 2. Verify OTP (using whitelisted 060540)
+    // 2. Verify OTP (using actual generated OTP from Redis)
     console.log('[Test] Calling verifyOtp...');
+    const storedOtp = await redis.get(`otp:${testEmail}`);
+    assert.ok(storedOtp, 'OTP must exist in Redis after registration request');
     let verifyResData = null;
     const mockReqVerify = {
       body: {
         email: testEmail,
-        otp: '060540',
+        otp: storedOtp,
       },
     };
     const mockResVerify = {

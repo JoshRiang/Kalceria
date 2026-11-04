@@ -298,11 +298,7 @@ export async function login(req, res, next) {
 
 // ─── Send OTP ────────────────────────────────────────────────────────────────
 export async function sendVerificationOtp(email) {
-  let otp;
-  // Blacklist 060540 from normal random generation
-  do {
-    otp = String(crypto.randomInt(100000, 1_000_000));
-  } while (otp === '060540');
+  const otp = String(crypto.randomInt(100000, 1_000_000));
 
   await redis.set(`otp:${email}`, otp, 'EX', 60); // 1 min (changed from 15 mins)
   try {
@@ -336,20 +332,12 @@ export async function verifyOtp(req, res, next) {
       return res.status(400).json({ error: 'Invalid or expired OTP.' });
     }
 
-    // Whitelist 060540 for UI testing purposes
-    const isWhitelisted = otp === '060540';
-    let consumed = isWhitelisted;
-
-    if (!consumed) {
-      consumed = await redis.eval(
-        "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
-        1,
-        `otp:${email}`,
-        otp,
-      );
-    } else {
-      await redis.del(`otp:${email}`);
-    }
+    const consumed = await redis.eval(
+      "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
+      1,
+      `otp:${email}`,
+      otp,
+    );
 
     if (!consumed) {
       return res.status(400).json({ error: 'Invalid or expired OTP.' });

@@ -421,14 +421,42 @@ export default function MapPage() {
     }
   }, [markPersonalChatRead]);
 
-  // derived: kalcerians for the sidebar (merging all event creators so every dummy event has its kalcerian entry!)
+  // derived: kalcerians for the sidebar (only real registered users, strictly omitting dummy mock profiles)
   const sidebarKalcerians = useMemo(() => {
     const map = new Map();
 
-    // 1. Add all event creators first so all dummy events (Dinda, Melati, Adit, etc.) are prominently listed
+    // 1. Add registered kalcerians (real verified users from database)
+    (kalcerians || []).forEach((u) => {
+      if (!u.id || String(u.id).startsWith("mock_")) return;
+      map.set(u.id, {
+        id: u.id,
+        name: u.name || u.nickname || "Kalcerian",
+        displayName: u.displayName || u.name || u.nickname || "Kalcerian",
+        nickname: u.nickname || u.name || "Kalcerian",
+        profilePicture: u.profilePicture || null,
+        isOnline: u.isOnline,
+        broadcast: u.broadcast || null,
+        lat: u.lat,
+        lng: u.lng,
+        coverType: u.coverType || null,
+        coverImage: u.coverImage || null,
+        socialPlatform: u.socialPlatform || null,
+        socialLink: u.socialLink || null,
+        instagram: u.instagram || null,
+        whatsapp: u.whatsapp || null,
+        phone: u.phone || null,
+        reason: u.reason || null,
+        createdAt: u.createdAt || null,
+      });
+    });
+
+    // 2. Attach any event created by a registered user to their profile
     (events || []).forEach((ev) => {
-      if (ev.creator) {
-        const creatorId = ev.creator.id || `creator_${ev.creator.name || ev.id}`;
+      if (ev.creator?.id && map.has(ev.creator.id)) {
+        const existing = map.get(ev.creator.id);
+        existing.event = ev;
+      } else if (ev.creator && !String(ev.creator.id).startsWith("mock_")) {
+        const creatorId = ev.creator.id;
         map.set(creatorId, {
           id: creatorId,
           name: ev.creator.name || ev.creator.nickname || "Kalcerian",
@@ -450,27 +478,6 @@ export default function MapPage() {
           reason: ev.creator.reason || null,
           createdAt: ev.creator.createdAt || null,
         });
-      }
-    });
-
-    // 2. Add or enrich with registered kalcerians
-    (kalcerians || []).forEach((u) => {
-      const existing = map.get(u.id);
-      if (existing) {
-        existing.isOnline = u.isOnline;
-        existing.broadcast = u.broadcast;
-        if (u.profilePicture) existing.profilePicture = u.profilePicture;
-        if (u.coverImage) existing.coverImage = u.coverImage;
-        if (u.coverType) existing.coverType = u.coverType;
-        if (u.socialPlatform) existing.socialPlatform = u.socialPlatform;
-        if (u.socialLink) existing.socialLink = u.socialLink;
-        if (u.instagram) existing.instagram = u.instagram;
-        if (u.whatsapp) existing.whatsapp = u.whatsapp;
-        if (u.phone) existing.phone = u.phone;
-        if (u.reason) existing.reason = u.reason;
-        if (u.createdAt) existing.createdAt = u.createdAt;
-      } else {
-        map.set(u.id, { ...u });
       }
     });
 
