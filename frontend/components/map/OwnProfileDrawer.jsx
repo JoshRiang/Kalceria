@@ -45,7 +45,9 @@ export function OwnProfileDrawer({
             </div>
 
             {/* Top Header: "@<username> Profile" (Font identical to "Find other Kalcerians") */}
-            <div className="shrink-0 w-full pt-2 pb-1.5 flex justify-between items-center px-4 select-none outline-none">
+            <div className={`shrink-0 w-full pt-2 pb-2 flex justify-between items-center px-4 select-none outline-none border-b ${
+              isMapDark ? "border-[#30363d]/80" : "border-[#e5e7eb]"
+            }`}>
               <h2 className={`font-sans font-bold text-base sm:text-lg tracking-tight select-none ${isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"}`}>
                 @{cleanUsername} Profile
               </h2>
@@ -63,8 +65,8 @@ export function OwnProfileDrawer({
               </button>
             </div>
 
-            {/* Scrollable Card Body */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2.5 sm:p-3">
+            {/* Scrollable Card Body - Trim excess padding & double border so cover starts flush with zero gap */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
               <KalcerianProfileCard
                 user={currentUser}
                 isMapDark={isMapDark}
@@ -72,6 +74,7 @@ export function OwnProfileDrawer({
                 onEditProfile={onEditProfile}
                 showMobileClose={false}
                 onClose={onClose}
+                inline={true}
               />
             </div>
           </motion.aside>

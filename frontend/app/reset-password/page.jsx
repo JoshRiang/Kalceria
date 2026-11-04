@@ -75,8 +75,7 @@ function ResetPasswordContent() {
       const chosenName =
         res.data?.user?.nickname ||
         res.data?.username ||
-        res.data?.user?.name ||
-        "Kalcerian";
+        (res.data?.user?.email ? res.data.user.email.split("@")[0] : "Kalcerian");
 
       setTimeout(() => {
         setIsProcessing(false);

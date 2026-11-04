@@ -379,8 +379,8 @@ export function KalcerianCardItem({
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className={`overflow-hidden border-t ${
-              isMapDark ? "border-[#38404a]" : "border-[#d1d5db]"
-            }`}
+              isMapDark ? "border-[#38404a] bg-[#161b22]" : "border-[#d1d5db] bg-white"
+            } -mt-[1px]`}
           >
             <KalcerianProfileCard
               user={user}

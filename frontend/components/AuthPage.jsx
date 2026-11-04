@@ -358,7 +358,10 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         }
       } catch {}
 
-      const displayName = res.data?.user?.nickname || res.data?.user?.name || "User";
+      const displayName =
+        res.data?.user?.nickname ||
+        res.data?.username ||
+        (res.data?.user?.email ? res.data.user.email.split("@")[0] : "Kalcerian");
       setTimeout(() => {
         setIsBuffering(false);
         if (typeof window !== "undefined" && window.history.replaceState) {

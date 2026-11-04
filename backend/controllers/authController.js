@@ -212,7 +212,7 @@ export async function login(req, res, next) {
 
     res.json({
       userId: user.id,
-      username: user.nickname || user.name,
+      username: user.nickname || (user.email ? user.email.split('@')[0] : 'User'),
       role: user.role,
       csrfToken,
     });
@@ -490,11 +490,11 @@ export async function resetPassword(req, res, next) {
         id: user.id,
         name: user.name,
         nickname: user.nickname,
-        username: user.nickname || user.name,
+        username: user.nickname || (user.email ? user.email.split('@')[0] : 'User'),
         email: user.email,
         role: user.role,
       },
-      username: user.nickname || user.name,
+      username: user.nickname || (user.email ? user.email.split('@')[0] : 'User'),
     });
   } catch (err) {
     next(err);

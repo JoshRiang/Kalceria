@@ -84,7 +84,12 @@ export default function HomeClient() {
               onAuthSuccess={(data) => {
                 sessionStorage.setItem("introPlayed", "true");
                 sessionStorage.setItem("landingSeen", "true");
-                setUsername(data?.username || data?.user?.nickname || data?.user?.name || "Commander");
+                const userObj = data?.user || data;
+                const cleanUser =
+                  userObj?.nickname ||
+                  data?.username ||
+                  (userObj?.email ? userObj.email.split("@")[0] : "Kalcerian");
+                setUsername(cleanUser);
                 setPhase("welcome");
               }}
               onBack={() => setPhase("landing")}
