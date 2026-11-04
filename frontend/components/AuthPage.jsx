@@ -68,8 +68,18 @@ async function optimizeAvatarForBackend(dataUrl) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AuthPage({ onAuthSuccess, onBack }) {
-  // Modes: "login" | "register" | "verify" | "choose-username"
-  const [mode, setMode] = useState("login");
+  // Modes: "login" | "register" | "verify" | "choose-username" | "choose-new-password" | "forgot-password"
+  const [mode, setMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get("token") || urlParams.get("reset_token");
+      if (token) return "choose-new-password";
+      const urlMode = urlParams.get("mode");
+      if (urlMode === "forgot-password") return "forgot-password";
+      if (urlParams.get("reset_success") === "true") return "login";
+    }
+    return "login";
+  });
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -93,8 +103,20 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const activeSessionRef = useRef(null);
 
   // Forgot Password / Reset Password states
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [resetToken, setResetToken] = useState("");
+  const [forgotEmail, setForgotEmail] = useState(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get("email") || "";
+    }
+    return "";
+  });
+  const [resetToken, setResetToken] = useState(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get("token") || urlParams.get("reset_token") || "";
+    }
+    return "";
+  });
 
   // Check URL token for magic link password reset OR forgot-password initial state from map
   useEffect(() => {
@@ -107,13 +129,9 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
       if (token) {
         setResetToken(token);
-        setIsBuffering(true);
-        setTimeout(() => {
-          setIsBuffering(false);
-          setMode("choose-new-password");
-        }, 800);
-      } else if (urlMode === "forgot-password" && isSent && paramEmail) {
-        setForgotEmail(paramEmail);
+        setMode("choose-new-password");
+      } else if (urlMode === "forgot-password" && isSent) {
+        if (paramEmail) setForgotEmail(paramEmail);
         setMode("forgot-password");
         setSuccess("Verifikasi Link sudah terkirim ke email kamu.");
         setResendCooldown(60);

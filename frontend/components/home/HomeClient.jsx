@@ -11,7 +11,7 @@ export default function HomeClient() {
     if (typeof window === "undefined") return "landing";
     const urlParams = new URLSearchParams(window.location.search);
     const hasResetToken = Boolean(urlParams.get("token") || urlParams.get("reset_token"));
-    if (urlParams.get("auth") === "true" || hasResetToken || sessionStorage.getItem("triggerAuth") === "true") {
+    if (urlParams.get("auth") === "true" || hasResetToken || urlParams.get("mode") === "forgot-password" || sessionStorage.getItem("triggerAuth") === "true") {
       return "auth";
     }
     const navEntry = window.performance?.getEntriesByType?.("navigation")?.[0];

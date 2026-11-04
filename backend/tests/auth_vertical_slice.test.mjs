@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import '../api/env.js';
 import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
@@ -256,7 +257,40 @@ test('Vertical Slice: Full Registration Flow (Anti-Torn Register + Choose Userna
     assert.equal(resetConfirmData?.message, 'Password reset successful.');
     assert.equal(resetConfirmData?.username, testUsername, 'Reset confirm must return user nickname as username');
 
-    // 7b. Verify Cross-Device / Cross-Tab reset status returns completed
+    // 7b. Verify Password Catalog Retention (rejects password from earlier cycle in the last 5 history)
+    console.log('[Test] Testing Password Catalog Retention (Last 5 Passwords)...');
+    const token2 = crypto.randomBytes(32).toString('hex');
+    await redis.set(`reset:${token2}`, testEmail, 'EX', 60);
+
+    let histRejectStatus = 200;
+    let histRejectError = null;
+    const mockResHist = {
+      status: (code) => { histRejectStatus = code; return mockResHist; },
+      json: (d) => { histRejectError = d; },
+      cookie: () => {},
+      clearCookie: () => {},
+    };
+
+    // Attempting to reset back to 'Password123!' (which was the password prior to newPassword)
+    await resetPassword({ body: { token: token2, newPassword: testPassword } }, mockResHist, (err) => { if (err) throw err; });
+    assert.equal(histRejectStatus, 400, 'Must reject password found in catalog history');
+    assert.ok(histRejectError?.error?.includes('tidak boleh sama'), 'Must return generic password repetition error');
+    console.log('[Test] Older password from history catalog correctly rejected with 400:', histRejectError?.error);
+
+    // Resetting to a third brand-new password must succeed
+    const thirdPassword = 'ThirdBrandNewPass99!';
+    let thirdResetData = null;
+    const mockResThird = {
+      json: (d) => { thirdResetData = d; },
+      cookie: () => {},
+      clearCookie: () => {},
+      status: () => mockResThird,
+    };
+    await resetPassword({ body: { token: token2, newPassword: thirdPassword } }, mockResThird, (err) => { if (err) throw err; });
+    assert.equal(thirdResetData?.message, 'Password reset successful.');
+    console.log('[Test] Third distinct password reset successful.');
+
+    // 7c. Verify Cross-Device / Cross-Tab reset status returns completed
     let statusData = null;
     await getResetPasswordStatus({ query: { email: testEmail } }, {
       json: (d) => { statusData = d; }
@@ -265,13 +299,13 @@ test('Vertical Slice: Full Registration Flow (Anti-Torn Register + Choose Userna
     assert.equal(statusData?.status, 'completed');
     assert.equal(statusData?.username, testUsername);
 
-    // 8. Verify login works with new password
-    console.log('[Test] Testing Login with new password...');
+    // 8. Verify login works with the newest password
+    console.log('[Test] Testing Login with newest password...');
     let loginResData = null;
     const mockReqLogin = {
       body: {
         email: testEmail,
-        password: newPassword,
+        password: thirdPassword,
       },
     };
     const mockResLogin = {

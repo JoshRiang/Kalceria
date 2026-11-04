@@ -441,6 +441,57 @@ export async function requestPasswordReset(req, res, next) {
   }
 }
 
+// ─── Password History Retention Helpers (Last 5 Passwords Catalog) ───────────
+export async function isPasswordInHistory(user, candidatePassword) {
+  if (!user || typeof candidatePassword !== 'string') return false;
+
+  // 1. Check current password
+  if (user.passwordHash) {
+    const isCurrent = await argon2.verify(user.passwordHash, candidatePassword).catch(() => false);
+    if (isCurrent) return true;
+  }
+
+  // 2. Check catalog history of past passwords (up to 5)
+  let history = [];
+  if (Array.isArray(user.passwordHistory)) {
+    history = user.passwordHistory;
+  } else if (typeof user.passwordHistory === 'string') {
+    try {
+      history = JSON.parse(user.passwordHistory);
+    } catch {}
+  }
+
+  if (Array.isArray(history)) {
+    for (const oldHash of history) {
+      if (typeof oldHash === 'string' && oldHash.length > 0) {
+        const match = await argon2.verify(oldHash, candidatePassword).catch(() => false);
+        if (match) return true;
+      }
+    }
+  }
+  return false;
+}
+
+export function getUpdatedPasswordHistory(user) {
+  let history = [];
+  if (Array.isArray(user.passwordHistory)) {
+    history = [...user.passwordHistory];
+  } else if (typeof user.passwordHistory === 'string') {
+    try {
+      history = JSON.parse(user.passwordHistory);
+    } catch {}
+  }
+  if (!Array.isArray(history)) history = [];
+
+  // Prepend current passwordHash if present and not already first in history
+  if (user.passwordHash && history[0] !== user.passwordHash) {
+    history.unshift(user.passwordHash);
+  }
+
+  // Retain strictly the last 5 passwords cycle
+  return history.slice(0, 5);
+}
+
 // ─── Password Reset Confirm ──────────────────────────────────────────────────
 export async function resetPassword(req, res, next) {
   try {
@@ -463,22 +514,28 @@ export async function resetPassword(req, res, next) {
 
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, name: true, nickname: true, email: true, role: true, passwordHash: true },
+      select: { id: true, name: true, nickname: true, email: true, role: true, passwordHash: true, passwordHistory: true },
     });
     if (!user) return res.status(400).json({ error: 'Token invalid or expired.' });
 
-    // Enforce: New password cannot be the same as the previous password
-    if (user.passwordHash) {
-      const isSamePassword = await argon2.verify(user.passwordHash, newPassword).catch(() => false);
-      if (isSamePassword) {
-        // Restore reset token in Redis so user can input a different password without requesting email again
-        await redis.set(`reset:${token}`, email, 'EX', 60);
-        return res.status(400).json({ error: 'Password baru tidak boleh sama dengan password sebelumnya.' });
-      }
+    // Enforce: New password cannot be any of the last 5 passwords in the catalog
+    const isUsedBefore = await isPasswordInHistory(user, newPassword);
+    if (isUsedBefore) {
+      // Restore reset token in Redis so user can input a different password without requesting email again
+      await redis.set(`reset:${token}`, email, 'EX', 60);
+      return res.status(400).json({ error: 'Password baru tidak boleh sama dengan password sebelumnya.' });
     }
+
     await revokeUserSessions(user.id);
+    const updatedHistory = getUpdatedPasswordHistory(user);
     const passwordHash = await argon2.hash(newPassword);
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordHistory: updatedHistory,
+      },
+    });
 
     clearAuthCookie(res);
 
@@ -696,18 +753,29 @@ export async function changePassword(req, res, next) {
       return res.status(400).json({ error: 'New password must have min 8 chars, uppercase, number, and special char.' });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, passwordHash: true, passwordHistory: true },
+    });
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
-    const valid = await argon2.verify(user.passwordHash, currentPassword);
+    const valid = await argon2.verify(user.passwordHash, currentPassword).catch(() => false);
     if (!valid) return res.status(401).json({ error: 'Incorrect current password.' });
 
-    if (currentPassword === newPassword) {
+    const isUsedBefore = await isPasswordInHistory(user, newPassword);
+    if (isUsedBefore) {
       return res.status(400).json({ error: 'Password baru tidak boleh sama dengan password sebelumnya.' });
     }
 
+    const updatedHistory = getUpdatedPasswordHistory(user);
     const passwordHash = await argon2.hash(newPassword);
-    await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        passwordHistory: updatedHistory,
+      },
+    });
     await revokeUserSessions(userId);
 
     // Re-issue clean authenticated session
