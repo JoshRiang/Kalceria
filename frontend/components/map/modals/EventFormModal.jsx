@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { uploadBlobMedia } from "@/lib/api";
+import { validateAndNormalizeMediaUrlClient } from "@/lib/urlSecurity";
 
 export const EVENT_CATEGORIES_GRID = [
   {
@@ -300,7 +301,18 @@ export function EventFormModal({
                     : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da]"
                 }`}
                 value={eventForm.mediaUrl || ""}
-                onChange={(e) => setEventForm((f) => ({ ...f, mediaUrl: e.target.value }))}
+                onChange={(e) => { setEventForm((f) => ({ ...f, mediaUrl: e.target.value })); setUploadError(""); }}
+                onBlur={() => {
+                  const raw = (eventForm.mediaUrl || "").trim();
+                  if (raw) {
+                    const check = validateAndNormalizeMediaUrlClient(raw);
+                    if (!check.valid) {
+                      setUploadError(check.error || "Format URL media tidak valid.");
+                    } else if (check.normalized && check.normalized !== eventForm.mediaUrl) {
+                      setEventForm((f) => ({ ...f, mediaUrl: check.normalized }));
+                    }
+                  }
+                }}
                 placeholder="Paste Video / GIF URL or choose file"
               />
               <input

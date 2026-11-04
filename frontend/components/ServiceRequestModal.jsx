@@ -499,8 +499,8 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
             />
           </div>
           
-          {/* Top Progress Bar */}
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-white/5 overflow-hidden z-20">
+          {/* Top Progress Bar: High-priority z-index (z-50) so it is NEVER covered on scroll in Part 2 or 3 */}
+          <div className="absolute top-0 left-0 right-0 h-[4px] bg-white/10 overflow-hidden z-50 pointer-events-none shadow-[0_0_12px_rgba(255,0,255,0.7)]">
             <motion.div 
               initial={{ width: "0%" }}
               animate={{ width: `${((step + 1) / 3) * 100}%` }}
@@ -517,7 +517,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
           `}</style>
 
           {/* Scrollable Modal Body strictly clipped within rounded corners */}
-          <div ref={modalScrollRef} className="w-full flex-1 overflow-y-auto custom-scrollbar flex flex-col relative z-20">
+          <div ref={modalScrollRef} className="w-full flex-1 overflow-y-auto custom-scrollbar flex flex-col relative z-20 pt-1">
             {/* Unified Header with Close Button */}
             <div className="p-6 sm:p-8 pb-3 flex justify-between items-center relative z-20">
             {step === 1 ? (

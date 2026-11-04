@@ -483,8 +483,12 @@ export function getUpdatedPasswordHistory(user) {
   }
   if (!Array.isArray(history)) history = [];
 
-  // Prepend current passwordHash if present and not already first in history
-  if (user.passwordHash && history[0] !== user.passwordHash) {
+  // Clean, filter, and deduplicate
+  history = history.filter((h) => typeof h === 'string' && h.trim().length > 0);
+
+  // Prepend current passwordHash if present and remove duplicate occurrences
+  if (user.passwordHash && typeof user.passwordHash === 'string') {
+    history = history.filter((h) => h !== user.passwordHash);
     history.unshift(user.passwordHash);
   }
 

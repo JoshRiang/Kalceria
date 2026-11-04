@@ -9,6 +9,7 @@ export default function ChooseNewPasswordStep({
   onDone,
   isProcessing = false,
   error = "",
+  onErrorClear,
 }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -20,6 +21,7 @@ export default function ChooseNewPasswordStep({
 
   const handleDoneClick = () => {
     setLocalError("");
+    if (onErrorClear) onErrorClear();
     if (!passwordValid) {
       setLocalError("Password must meet all 4 requirements below.");
       return;
@@ -52,6 +54,7 @@ export default function ChooseNewPasswordStep({
           onChange={(_, val) => {
             setPassword(val);
             setLocalError("");
+            if (onErrorClear) onErrorClear();
           }}
           required={true}
           isValid={passwordValid}
@@ -96,6 +99,7 @@ export default function ChooseNewPasswordStep({
           onChange={(_, val) => {
             setConfirmPassword(val);
             setLocalError("");
+            if (onErrorClear) onErrorClear();
           }}
           required={true}
           isValid={passwordsMatch}

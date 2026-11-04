@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import api, { uploadBlobMedia } from "@/lib/api";
 import { establishSession, hasUserSession } from "@/lib/session";
+import { validateAndNormalizeMediaUrlClient } from "@/lib/urlSecurity";
 
 const CLIP = { clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" };
 
@@ -192,8 +193,18 @@ export function IdeaCommentModal({ onClose }) {
       } else {
         payload.username = "Anonymous";
       }
+      let cleanMedia = null;
       if (mediaUrl.trim()) {
-        payload.mediaUrl = mediaUrl.trim();
+        const check = validateAndNormalizeMediaUrlClient(mediaUrl.trim());
+        if (!check.valid) {
+          setMediaError(check.error || "Format URL media tidak valid.");
+          setIsSubmitting(false);
+          return;
+        }
+        cleanMedia = check.normalized;
+      }
+      if (cleanMedia) {
+        payload.mediaUrl = cleanMedia;
       }
 
       const submitPromise = api.post(
@@ -514,6 +525,16 @@ export function IdeaCommentModal({ onClose }) {
                 className="flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 focus:border-slate-400 font-sans"
                 value={mediaUrl}
                 onChange={(e) => { setMediaUrl(e.target.value); setMediaError(""); }}
+                onBlur={() => {
+                  if (mediaUrl.trim()) {
+                    const check = validateAndNormalizeMediaUrlClient(mediaUrl.trim());
+                    if (!check.valid) {
+                      setMediaError(check.error || "Format URL media tidak valid.");
+                    } else if (check.normalized && check.normalized !== mediaUrl) {
+                      setMediaUrl(check.normalized);
+                    }
+                  }
+                }}
                 placeholder="Paste media URL or upload file"
               />
               <input

@@ -630,6 +630,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                   onDone={handleResetPasswordDone}
                   isProcessing={isBuffering}
                   error={error}
+                  onErrorClear={() => setError("")}
                 />
               )}
             </motion.div>

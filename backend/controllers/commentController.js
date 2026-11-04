@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { setCommentCooldown } from '../middleware/commentDefense.js';
+import { sanitizeAndNormalizeMediaUrl } from '../utils/urlSecurity.js';
 
 export async function createComment(req, res, next) {
   try {
@@ -59,10 +60,16 @@ export async function createComment(req, res, next) {
         ? dbUser?.nickname || dbUser?.name || 'User'
         : 'Guest';
 
-    const cleanMediaUrl =
-      typeof req.body?.mediaUrl === 'string' && req.body.mediaUrl.trim().length > 0
-        ? req.body.mediaUrl.trim()
-        : null;
+    let cleanMediaUrl = null;
+    if (typeof req.body?.mediaUrl === 'string' && req.body.mediaUrl.trim().length > 0) {
+      const sanitized = sanitizeAndNormalizeMediaUrl(req.body.mediaUrl);
+      if (!sanitized.valid) {
+        return res.status(400).json({
+          error: sanitized.error || 'URL media tidak valid atau melanggar kebijakan keamanan.',
+        });
+      }
+      cleanMediaUrl = sanitized.normalized;
+    }
 
     const comment = await prisma.comment.create({
       data: {
