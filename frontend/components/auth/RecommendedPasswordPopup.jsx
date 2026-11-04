@@ -123,7 +123,7 @@ export default function RecommendedPasswordPopup({
           wordBreak: "break-word",
         }}
       >
-        Use strong password {recommendedPassword} for your account security.
+        Use your password for your security.
       </div>
 
       {/* Sub-footer: Yes <space between> Choose your own (Arial Bold White, No Glow, +25% subtitle size) */}

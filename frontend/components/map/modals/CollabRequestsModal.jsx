@@ -35,21 +35,35 @@ export function CollabRequestsModal({
           {/* Subtle click-catcher backdrop WITHOUT blur to preserve background sharpness */}
           <div className="absolute inset-0 bg-black/15" />
 
-          {/* Pop-out Box: compact square-ish width with inner box shifted left and dedicated X vertical column on right */}
+          {/* Pop-out Box: compact square-ish width with inner box shifted down from top line X */}
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative z-10 w-full max-w-[315px] xs:max-w-[335px] sm:max-w-[350px] max-h-[85vh] flex flex-row items-stretch rounded-[22px] shadow-2xl overflow-hidden ${
+            className={`relative z-10 w-full max-w-[315px] xs:max-w-[335px] sm:max-w-[350px] max-h-[85vh] flex flex-col items-stretch rounded-[22px] shadow-2xl overflow-hidden ${
               isModalDark
                 ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"
                 : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Left Column: Sub Request Box List (shifted left so X vertical column stays completely clear) */}
-            <div className="pl-3.5 pr-0.5 py-3.5 xs:pl-4 xs:py-4 flex-1 min-w-0 overflow-y-auto max-h-[360px] custom-scrollbar flex flex-col gap-3">
+            {/* Top-Right Close (X) Button positioned cleanly with balanced corner padding */}
+            <button
+              type="button"
+              className={`absolute top-2 right-2.5 xs:top-2.5 xs:right-3 z-30 w-7 h-7 flex items-center justify-center text-2xl leading-none transition-colors rounded-full cursor-pointer ${
+                isModalDark
+                  ? "text-[#8b949e] hover:text-[#f0f6fc]"
+                  : "text-[#57606a] hover:text-[#1f2328]"
+              }`}
+              onClick={onClose}
+              title="Close"
+            >
+              ×
+            </button>
+
+            {/* Sub Request Box List: shifted down with pt-8 / xs:pt-8.5 so inner box starts below X line with balanced spacing */}
+            <div className="pt-8 xs:pt-8.5 pb-3.5 px-3.5 xs:px-4 xs:pb-4 flex-1 min-w-0 overflow-y-auto max-h-[380px] custom-scrollbar flex flex-col gap-3">
               {currentRequestsList.length > 0 ? (
                 currentRequestsList.map((req, idx) => {
                   const colorScheme = SUB_BOX_COLORS[idx % SUB_BOX_COLORS.length];
@@ -173,22 +187,6 @@ export function CollabRequestsModal({
                   </p>
                 </div>
               )}
-            </div>
-
-            {/* Right Dedicated Vertical Column for Close (X) Button - keeps vertical space below X completely clear */}
-            <div className="shrink-0 w-8 xs:w-9 pt-2.5 pr-1.5 flex flex-col items-center justify-start">
-              <button
-                type="button"
-                className={`w-7 h-7 flex items-center justify-center text-2xl leading-none transition-colors rounded-full cursor-pointer ${
-                  isModalDark
-                    ? "text-[#8b949e] hover:text-[#f0f6fc]"
-                    : "text-[#57606a] hover:text-[#1f2328]"
-                }`}
-                onClick={onClose}
-                title="Close"
-              >
-                ×
-              </button>
             </div>
           </motion.div>
         </div>

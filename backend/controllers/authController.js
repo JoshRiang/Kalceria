@@ -644,9 +644,7 @@ export async function resetPassword(req, res, next) {
     await redis.del(`reset_from_map:${token}`).catch(() => {});
     await redis.del(`reset_from_map_email:${email}`).catch(() => {});
 
-    // Issue fresh authenticated session so user can fade directly back into Live Map without extra login or loading screen
-    const sessionToken = await createAuthSession(user);
-    setAuthCookie(res, sessionToken);
+    clearAuthCookie(res);
 
     await redis.set(
       `reset_status:${email}`,
@@ -655,7 +653,6 @@ export async function resetPassword(req, res, next) {
         username: user.nickname || user.name,
         email: user.email,
         fromMap,
-        sessionToken,
         user: {
           id: user.id,
           name: user.name,
@@ -697,13 +694,6 @@ export async function getResetPasswordStatus(req, res) {
     if (!data) return res.json({ status: 'none' });
     try {
       const parsed = JSON.parse(data);
-      if (parsed?.status === 'completed' && parsed?.sessionToken && typeof res.cookie === 'function') {
-        setAuthCookie(res, parsed.sessionToken);
-      }
-      if (parsed && typeof parsed === 'object') {
-        const { sessionToken: _omit, ...safePayload } = parsed;
-        return res.json(safePayload);
-      }
       return res.json(parsed);
     } catch {
       return res.json({ status: data });

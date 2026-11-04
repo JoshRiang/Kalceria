@@ -16,12 +16,11 @@ export default function ChooseNewPasswordStep({
   onErrorClear,
   resetToken = "",
 }) {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [initialPassword] = useState(() => generateClientStrongPassword());
+  const [password, setPassword] = useState(initialPassword);
+  const [confirmPassword, setConfirmPassword] = useState(initialPassword);
   const [localError, setLocalError] = useState("");
-  const [recommendedPassword, setRecommendedPassword] = useState(() =>
-    generateClientStrongPassword()
-  );
+  const [recommendedPassword, setRecommendedPassword] = useState(initialPassword);
   const [showRecommendation, setShowRecommendation] = useState(true);
   const [recommendationDismissed, setRecommendationDismissed] = useState(false);
 
@@ -30,20 +29,24 @@ export default function ChooseNewPasswordStep({
     fetchRecommendedPassword({ token: resetToken }).then((pwd) => {
       if (active && pwd) {
         setRecommendedPassword(pwd);
+        // Automatically sync initial auto-fill if user hasn't typed their own yet
+        setPassword((prev) => (prev === initialPassword ? pwd : prev));
+        setConfirmPassword((prev) => (prev === initialPassword ? pwd : prev));
       }
     });
     return () => {
       active = false;
     };
-  }, [resetToken]);
+  }, [resetToken, initialPassword]);
 
   const passwordValid = PASSWORD_CHECK_REGEX.test(password);
   const passwordsMatch = Boolean(password && confirmPassword && password === confirmPassword);
   const isConfirmError = Boolean(confirmPassword && password !== confirmPassword);
 
   const handleAcceptRecommendedPassword = (pwd) => {
-    setPassword(pwd);
-    setConfirmPassword(pwd);
+    const chosen = pwd || recommendedPassword;
+    setPassword(chosen);
+    setConfirmPassword(chosen);
     setLocalError("");
     if (onErrorClear) onErrorClear();
     setShowRecommendation(false);
@@ -51,6 +54,11 @@ export default function ChooseNewPasswordStep({
   };
 
   const handleDismissRecommendedPassword = () => {
+    // When user chooses "Choose your own", clear auto-filled fields and focus input
+    setPassword("");
+    setConfirmPassword("");
+    setLocalError("");
+    if (onErrorClear) onErrorClear();
     setShowRecommendation(false);
     setRecommendationDismissed(true);
   };

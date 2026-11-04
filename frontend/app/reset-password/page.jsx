@@ -56,21 +56,17 @@ function ResetPasswordContent() {
 
 
 
-      if (res.data?.user) {
-        establishSession(res.data.user);
-      } else {
-        establishSession(res.data);
-      }
+      const userEmail = res.data?.user?.email || "";
+      const isFromMap = Boolean(res.data?.fromMap || searchParams.get("from") === "map");
 
-      try {
-        localStorage.setItem("kalceria_skip_map_intro", "true");
-        localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
-        sessionStorage.setItem("kalceria_skip_map_intro", "true");
-        sessionStorage.setItem("mapIntroSeen", "true");
-        sessionStorage.removeItem("playMapIntro");
-        sessionStorage.setItem("introPlayed", "true");
-        sessionStorage.setItem("landingSeen", "true");
-      } catch {}
+      if (isFromMap) {
+        try {
+          localStorage.setItem("kalceria_auth_return", "/map");
+          localStorage.setItem("kalceria_skip_map_intro", "true");
+          localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
+          sessionStorage.setItem("kalceria_skip_map_intro", "true");
+        } catch {}
+      }
 
       // Broadcast to other open tabs on the same device
       try {
@@ -78,10 +74,9 @@ function ResetPasswordContent() {
           const authChannel = new BroadcastChannel("kalceria_auth_channel");
           authChannel.postMessage({
             type: "RESET_PASSWORD_COMPLETE",
-            email: res.data?.user?.email,
+            email: userEmail,
             username: res.data?.username || res.data?.user?.nickname || res.data?.user?.name,
-            user: res.data?.user,
-            returnToMap: true,
+            fromMap: isFromMap,
           });
           authChannel.close();
         }
@@ -89,7 +84,7 @@ function ResetPasswordContent() {
 
       setTimeout(() => {
         setIsProcessing(false);
-        window.location.replace("/map?skip_intro=true");
+        window.location.replace(`/?auth=true&mode=login&reset_success=true&email=${encodeURIComponent(userEmail)}${isFromMap ? "&from=map" : ""}`);
       }, 450);
     } catch (err) {
       setIsProcessing(false);

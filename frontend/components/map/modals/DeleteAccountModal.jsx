@@ -161,28 +161,37 @@ export function DeleteAccountModal({
             transition={{ duration: 0.5 }}
             className="fixed inset-0 z-[3000] bg-black/85 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center select-none"
           >
-            {/* BIG Responsive Arc Spinner matching Logging Out buffer */}
-            <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 mb-6 sm:mb-8">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="45"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="4"
-                    strokeDasharray="70 200"
-                    strokeLinecap="round"
-                    className="opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.6)]"
-                  />
-                </svg>
+            {/* Reduced by 35% (scale 0.65) matching user requirement */}
+            <div
+              style={{
+                transform: "scale(0.65)",
+                transformOrigin: "center center",
+              }}
+              className="flex flex-col items-center justify-center"
+            >
+              {/* Responsive Arc Spinner matching Logging Out buffer */}
+              <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 mb-6 sm:mb-8">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="4"
+                      strokeDasharray="70 200"
+                      strokeLinecap="round"
+                      className="opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.6)]"
+                    />
+                  </svg>
+                </div>
               </div>
+              {/* Responsive Typography: DELETING */}
+              <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg sm:text-2xl md:text-3xl opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+                DELETING
+              </p>
             </div>
-            {/* Responsive Typography: DELETING */}
-            <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg sm:text-2xl md:text-3xl opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
-              DELETING
-            </p>
           </motion.div>
         )}
       </AnimatePresence>
