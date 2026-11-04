@@ -410,8 +410,24 @@ export async function requestPasswordReset(req, res, next) {
     const token = crypto.randomBytes(32).toString('hex');
     await redis.set(`reset:${token}`, email, 'EX', 3600); // 1 hour
 
+    let clientOrigin;
+    const originHeader = typeof req.get === 'function'
+      ? (req.get('origin') || req.get('referer'))
+      : (req.headers?.origin || req.headers?.referer);
+    if (originHeader) {
+      try {
+        const u = new URL(originHeader);
+        if (u.hostname === 'kalceria.id' || u.hostname === 'www.kalceria.id') {
+          clientOrigin = `${u.protocol}//${u.host}`;
+        }
+      } catch {}
+    }
+    if (!clientOrigin) {
+      clientOrigin = 'https://kalceria.id';
+    }
+
     try {
-      await sendPasswordResetEmail(email, token);
+      await sendPasswordResetEmail(email, token, clientOrigin);
     } catch (error) {
       await redis.del(`reset:${token}`);
       console.error('[ResetPassword] Email delivery failed:', error.message);

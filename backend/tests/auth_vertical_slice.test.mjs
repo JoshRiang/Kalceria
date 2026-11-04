@@ -189,11 +189,18 @@ test('Vertical Slice: Full Registration Flow (Anti-Torn Register + Choose Userna
     console.log('[Test] Reset link requested:', resetReqResData);
     assert.ok(resetReqResData?.message, 'Reset request must return success message');
 
-    // Find the generated reset token in Redis
+    // Find the generated reset token in Redis for this test email
     const resetKeys = await redis.keys('reset:*');
     assert.ok(resetKeys.length > 0, 'Reset token must be stored in Redis');
-    const tokenKey = resetKeys.find((k) => k.startsWith('reset:'));
-    const resetToken = tokenKey.replace('reset:', '');
+    let resetToken = null;
+    for (const k of resetKeys) {
+      const val = await redis.get(k);
+      if (val === testEmail) {
+        resetToken = k.replace('reset:', '');
+        break;
+      }
+    }
+    assert.ok(resetToken, 'Must find matching reset token for testEmail');
 
     // 7. Test Magic Link Flow: Reset Password Confirm
     console.log('[Test] Testing Magic Link Reset Confirm...');

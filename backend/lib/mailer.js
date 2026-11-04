@@ -93,11 +93,22 @@ export async function sendOtpEmail(toEmail, otp) {
   });
 }
 
-export async function sendPasswordResetEmail(toEmail, token) {
+export async function sendPasswordResetEmail(toEmail, token, explicitOrigin) {
   if (process.env.ENABLE_EMAIL_AUTH !== 'true') {
     return { skipped: true, reason: 'EMAIL_AUTH_DISABLED' };
   }
-  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+  let frontendOrigin = explicitOrigin;
+  if (!frontendOrigin) {
+    const configured = process.env.FRONTEND_URL?.split(',')[0]?.trim();
+    if (configured && !configured.includes('vercel.app')) {
+      frontendOrigin = configured;
+    } else {
+      frontendOrigin = 'https://kalceria.id';
+    }
+  }
+  if (!frontendOrigin.startsWith('http')) {
+    frontendOrigin = `https://${frontendOrigin}`;
+  }
   const resetUrl = new URL('/reset-password', frontendOrigin);
   resetUrl.searchParams.set('token', token);
   return sendEmail({

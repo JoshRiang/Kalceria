@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
  * Screen blur + loading buffer with NO words.
  * Inherits the exact SVG arc spinner dimensions and behavior from the Logging Out sequence.
  */
-export default function AuthBufferOverlay() {
+export default function AuthBufferOverlay({ isBuffering = true } = {}) {
+  if (!isBuffering) return null;
   return (
     <motion.div
       initial={{ opacity: 0 }}

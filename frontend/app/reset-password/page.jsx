@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { establishSession } from "@/lib/session";
 import ChooseNewPasswordStep from "@/components/auth/ChooseNewPasswordStep";
@@ -16,6 +17,15 @@ function ResetPasswordContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
   const [welcomeUser, setWelcomeUser] = useState(null);
+  const [videoSrc, setVideoSrc] = useState("/bg_login.mp4");
+
+  useEffect(() => {
+    // Warm up CSRF token silently so submission doesn't incur extra roundtrip
+    api.get("/auth/csrf").catch(() => {});
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      setVideoSrc("/hp/vid_login_hp.mp4");
+    }
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -77,20 +87,23 @@ function ResetPasswordContent() {
     <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center bg-[#010204]">
       {/* ── Background Video with Dark Backdrop & Blur ── */}
       <video
+        key={videoSrc}
         autoPlay
         loop
         muted
         playsInline
         className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none scale-105"
       >
-        <source src="/bg_login.mp4" type="video/mp4" />
+        <source src={videoSrc} type="video/mp4" />
       </video>
 
       {/* Blurred Video Overlay */}
       <div className="absolute inset-0 bg-black/75 backdrop-blur-xl pointer-events-none z-0" />
 
       {/* Buffer Overlay while saving password */}
-      <AuthBufferOverlay isBuffering={isProcessing} />
+      <AnimatePresence>
+        {isProcessing && <AuthBufferOverlay isBuffering={isProcessing} />}
+      </AnimatePresence>
 
       {/* ── Center Content: Borderless Minimal Modal ── */}
       <div className="relative z-10 w-full max-w-sm px-4">
