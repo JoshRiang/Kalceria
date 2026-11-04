@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { KalcerianCardItem } from "./panel/KalcerianCardItem";
+import {
+  isEventOwner,
+  isEventCollaborator,
+  getEventPendingRequests,
+} from "./hooks/useMapChatAndNotifications";
 
 const avatarUrl = (user) =>
   user?.profilePicture ||
@@ -114,6 +119,11 @@ export function KalceriansPanel({
   currentUser = null,
   requestedEventId = null,
   eventRequestsMap = {},
+  acceptedCollabsMap = {},
+  eventGroupChatMap = {},
+  personalChatMap = {},
+  recentlyMessagedUserIds = {},
+  onPersonalChatOpen,
   onPromptCancelRequest,
   onOpenRequests,
 }) {
@@ -121,6 +131,7 @@ export function KalceriansPanel({
   const [confirmingAction, setConfirmingAction] = useState(null); // { userId, type: "block" | "unblock" }
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [deviceFamily, setDeviceFamily] = useState("desktop");
+  const listContainerRef = useRef(null);
 
   useEffect(() => {
     function handleResize() {
@@ -133,6 +144,17 @@ export function KalceriansPanel({
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Whenever an incoming personal chat message arrives, smoothly scroll list to top so the rolling card is visible
+  useEffect(() => {
+    const handleScrollTop = () => {
+      if (listContainerRef.current) {
+        listContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+    window.addEventListener("kalceria:personal-chat-sorted-top", handleScrollTop);
+    return () => window.removeEventListener("kalceria:personal-chat-sorted-top", handleScrollTop);
   }, []);
 
   const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;
@@ -233,7 +255,10 @@ export function KalceriansPanel({
       </div>
 
       {/* 4. Content List: Unified Kalcerians list */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-2.5 pt-2 pb-3.5 modern-kalcerian-scrollbar overscroll-contain">
+      <div
+        ref={listContainerRef}
+        className="flex-1 flex flex-col min-h-0 overflow-y-auto px-2.5 pt-2 pb-3.5 modern-kalcerian-scrollbar overscroll-contain"
+      >
         {isDataLoading ? (
           <div className="flex flex-col">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -281,21 +306,15 @@ export function KalceriansPanel({
                 e.creator?.nickname?.toLowerCase() === user.nickname?.toLowerCase() ||
                 e.creator?.name?.toLowerCase() === user.name?.toLowerCase()
             );
-            const isOwnEvent = Boolean(
-              userEvent && currentUser && (
-                (userEvent.creator?.id && String(userEvent.creator.id) === String(currentUser.id)) ||
-                (userEvent.creatorId && String(userEvent.creatorId) === String(currentUser.id)) ||
-                (userEvent.userId && String(userEvent.userId) === String(currentUser.id)) ||
-                (currentUser.nickname && (userEvent.creator?.nickname === currentUser.nickname || userEvent.creator?.name === currentUser.nickname)) ||
-                (currentUser.name && (userEvent.creator?.name === currentUser.name || userEvent.creator?.nickname === currentUser.name)) ||
-                userEvent.id === "own" ||
-                userEvent.isOwn
-              )
-            );
-            const eventPendingRequests = userEvent ? (eventRequestsMap[userEvent.id] || (isOwnEvent ? eventRequestsMap["own"] : null) || []) : [];
-            const hasPendingRequests = eventPendingRequests.length > 0;
+            const isOwnEvent = Boolean(userEvent && isEventOwner(userEvent, currentUser));
+            const isCollaboratorEvent = Boolean(userEvent && isEventCollaborator(userEvent, currentUser, acceptedCollabsMap));
+            const eventPendingRequests = userEvent && isOwnEvent ? getEventPendingRequests(userEvent, currentUser, eventRequestsMap) : [];
+            const unreadGroupChatCount = userEvent && (isOwnEvent || isCollaboratorEvent) ? (eventGroupChatMap?.[userEvent.id]?.unreadCount || 0) : 0;
+            const hasPendingRequests = eventPendingRequests.length > 0 || unreadGroupChatCount > 0;
             const isRequestedByMe = Boolean(userEvent && requestedEventId && String(requestedEventId) === String(userEvent.id));
             const isOtherEventDisabled = Boolean(userEvent && requestedEventId && String(requestedEventId) !== String(userEvent.id) && !isOwnEvent);
+            const unreadPersonalChatCount = personalChatMap?.[user.id]?.unreadCount || 0;
+            const isRecentlyMessaged = Boolean(recentlyMessagedUserIds?.[user.id]);
 
             return (
               <KalcerianCardItem
@@ -311,6 +330,10 @@ export function KalceriansPanel({
                 isOwnEvent={isOwnEvent}
                 hasPendingRequests={hasPendingRequests}
                 eventPendingRequests={eventPendingRequests}
+                unreadGroupChatCount={unreadGroupChatCount}
+                unreadPersonalChatCount={unreadPersonalChatCount}
+                isRecentlyMessaged={isRecentlyMessaged}
+                onPersonalChatOpen={onPersonalChatOpen}
                 isOtherEventDisabled={isOtherEventDisabled}
                 displayName={displayName}
                 cleanUsername={cleanUsername}

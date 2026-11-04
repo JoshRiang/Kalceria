@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { playNotificationSound } from "@/lib/soundEngine";
 import {
   INITIAL_ACCEPTED_COLLABS,
   INITIAL_EVENT_REQUESTS,
@@ -44,7 +43,6 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
 
   const handleRequestCollab = useCallback(
     (eventId) => {
-      playNotificationSound("event");
       setRequestedEventId(eventId);
       try {
         localStorage.setItem("kalceria_requested_event_id", eventId);
@@ -112,16 +110,16 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
   const handleOpenRequests = useCallback((eventId) => {
     setViewingRequestsEventId(eventId);
     setShowRequestsModal(true);
-    playNotificationSound("event");
   }, []);
 
   const handleAcceptCollabRequest = useCallback(
     (requestId, eventId) => {
-      playNotificationSound("event");
       const targetId = eventId || viewingRequestsEventId;
       setEventRequestsMap((prev) => {
-        if (!targetId || !prev[targetId]) return prev;
-        const targetReq = prev[targetId].find((r) => r.id === requestId);
+        if (!targetId) return prev;
+        const bucketKey = Array.isArray(prev[targetId]) ? targetId : (Array.isArray(prev["own"]) ? "own" : null);
+        if (!bucketKey || !prev[bucketKey]) return prev;
+        const targetReq = prev[bucketKey].find((r) => r.id === requestId);
         if (targetReq?.user?.id) {
           setAcceptedCollabsMap((collabs) => {
             const list = collabs[targetId] || [];
@@ -135,8 +133,8 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
             return collabs;
           });
         }
-        const updatedList = prev[targetId].filter((r) => r.id !== requestId);
-        const updated = { ...prev, [targetId]: updatedList };
+        const updatedList = prev[bucketKey].filter((r) => r.id !== requestId);
+        const updated = { ...prev, [bucketKey]: updatedList, [targetId]: updatedList };
         try {
           localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated));
         } catch {}
@@ -149,7 +147,6 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
 
   const handleCollaboratorUpload = useCallback(
     (eventId) => {
-      playNotificationSound("event");
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4";
@@ -177,7 +174,6 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
                 return ev;
               })
             );
-            playNotificationSound("event");
             setNotice("Media added to event by collaborator!");
           } else {
             setNotice(json.error || "Upload failed");
@@ -193,12 +189,13 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
 
   const handleDeclineCollabRequest = useCallback(
     (requestId, eventId) => {
-      playNotificationSound("event");
       setEventRequestsMap((prev) => {
         const targetId = eventId || viewingRequestsEventId;
-        if (!targetId || !prev[targetId]) return prev;
-        const updatedList = prev[targetId].filter((r) => r.id !== requestId);
-        const updated = { ...prev, [targetId]: updatedList };
+        if (!targetId) return prev;
+        const bucketKey = Array.isArray(prev[targetId]) ? targetId : (Array.isArray(prev["own"]) ? "own" : null);
+        if (!bucketKey || !prev[bucketKey]) return prev;
+        const updatedList = prev[bucketKey].filter((r) => r.id !== requestId);
+        const updated = { ...prev, [bucketKey]: updatedList, [targetId]: updatedList };
         try {
           localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated));
         } catch {}

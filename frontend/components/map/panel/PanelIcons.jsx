@@ -1,47 +1,67 @@
 "use client";
 
-// ─── 1. Category Event Icons (2D crisp black/white normalized by mode) ───────────
-export function CategoryIcon({ category, isMapDark }) {
+// ─── 1. Category Event Icons (2D crisp black/white normalized by mode with outer border) ───────────
+export function CategoryIcon({ category, isMapDark, className = "w-[18px] h-[18px] shrink-0 overflow-visible" }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
+  const filterStyle = isMapDark
+    ? "drop-shadow(0 1px 2px rgba(0,0,0,0.7))"
+    : "drop-shadow(0 1px 2px rgba(0,0,0,0.3))";
 
   switch (category) {
     case "eat":
       return (
-        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill={fg} stroke={border} strokeWidth="0.8">
-          <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z" />
+        <svg viewBox="0 0 24 24" className={className} fill="none" style={{ filter: filterStyle }}>
+          <path
+            d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z"
+            fill={fg}
+            stroke={border}
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+            style={{ paintOrder: "stroke fill" }}
+          />
         </svg>
       );
     case "special":
       return (
-        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill={fg} stroke={border} strokeWidth="0.8">
-          <path d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z" />
+        <svg viewBox="0 0 24 24" className={className} fill="none" style={{ filter: filterStyle }}>
+          <path
+            d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z"
+            fill={fg}
+            stroke={border}
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+            style={{ paintOrder: "stroke fill" }}
+          />
         </svg>
       );
     case "discuss":
       return (
-        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
-          <path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill={fg} stroke={border} strokeWidth="0.8" />
+        <svg viewBox="0 0 24 24" className={className} fill="none" style={{ filter: filterStyle }}>
+          <path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill={fg} stroke={border} strokeWidth="1.1" style={{ paintOrder: "stroke fill" }} />
           <circle cx="10.5" cy="5.3" r="0.7" fill={border} />
           <circle cx="12" cy="5.3" r="0.7" fill={border} />
           <circle cx="13.5" cy="5.3" r="0.7" fill={border} />
-          <circle cx="7.5" cy="13" r="2.5" fill={fg} stroke={border} strokeWidth="0.8" />
-          <path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={fg} stroke={border} strokeWidth="0.8" />
-          <circle cx="16.5" cy="13" r="2.5" fill={border} stroke={fg} strokeWidth="1" />
-          <path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={border} stroke={fg} strokeWidth="1" />
+          <circle cx="7.5" cy="13" r="2.5" fill={fg} stroke={border} strokeWidth="1.1" style={{ paintOrder: "stroke fill" }} />
+          <path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={fg} stroke={border} strokeWidth="1.1" style={{ paintOrder: "stroke fill" }} />
+          <circle cx="16.5" cy="13" r="2.5" fill={border} stroke={fg} strokeWidth="1.1" />
+          <path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={border} stroke={fg} strokeWidth="1.1" />
         </svg>
       );
     case "cafe":
     default:
       return (
-        <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
+        <svg viewBox="0 0 24 24" className={className} fill="none" style={{ filter: filterStyle }}>
+          <path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke={border} strokeWidth="2.4" strokeLinecap="round" />
           <path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke={fg} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke={border} strokeWidth="2.4" strokeLinecap="round" />
           <path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke={fg} strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill={fg} stroke={border} strokeWidth="0.8" />
+          <path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill={fg} stroke={border} strokeWidth="1.1" style={{ paintOrder: "stroke fill" }} />
           <ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill={border} stroke={fg} strokeWidth="0.6" />
           <path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke={border} strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke={border} strokeWidth="2.6" strokeLinecap="round" />
           <path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke={fg} strokeWidth="1.6" strokeLinecap="round" />
-          <ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill={fg} stroke={border} strokeWidth="0.8" />
+          <ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill={fg} stroke={border} strokeWidth="1.1" style={{ paintOrder: "stroke fill" }} />
           <ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill={border} />
         </svg>
       );

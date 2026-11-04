@@ -179,7 +179,7 @@ function formatReleaseTime(createdAt) {
   return `${hours}.${mins}`;
 }
 
-export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null, pendingRequestsCount = 0, isCollaborator = false) {
+export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null, pendingRequestsCount = 0, isCollaborator = false, unreadGroupChatCount = 0) {
   const displayDesc = cleanDesc(item.description);
   const creatorName = item.creator?.nickname || item.creator?.name || "Kalcerian";
   const mediaList = extractMediaList(item);
@@ -219,12 +219,17 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
   const iconStroke = isMapDark ? "#000000" : "#ffffff";
 
   // 1. Group Chat Icon: double speech bubbles, perfectly centered at (12, 12), grey by default
+  const hasGroupChatRedDot = (isOwner || isCollaborator) && unreadGroupChatCount > 0;
+  const groupChatRedDotHtml = hasGroupChatRedDot
+    ? `<span style="position: absolute; top: -1px; right: -1px; width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%; border: none !important; box-shadow: none !important; pointer-events: none;"></span>`
+    : "";
+
   const doubleMessageIconHtml = `
     <button
       type="button"
       disabled
       title="Group Chat"
-      style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none; flex-shrink: 0;"
+      style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none; flex-shrink: 0;"
     >
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
         <path
@@ -244,6 +249,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
           stroke-linejoin="round"
         />
       </svg>
+      ${groupChatRedDotHtml}
     </button>
   `;
 
@@ -303,7 +309,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaOpenRequests?.('${esc(item.id)}')"
+        onclick="window.__kalceriaOpenRequests?.('${esc(item.id)}')"
         title="Collab Requests"
         style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
@@ -321,7 +327,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaCollaboratorUpload?.('${esc(item.id)}')"
+        onclick="window.__kalceriaCollaboratorUpload?.('${esc(item.id)}')"
         title="Upload Media (Collaborator)"
         style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.15)'"
@@ -367,7 +373,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaRequestCollab?.('${esc(item.id)}')"
+        onclick="window.__kalceriaRequestCollab?.('${esc(item.id)}')"
         title="Request Collab"
         style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"
@@ -383,7 +389,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     ? `
       <button
         type="button"
-        onclick="window.__kalceriaPlaySound?.('event'); window.__kalceriaEditEvent?.('${esc(item.id)}')"
+        onclick="window.__kalceriaEditEvent?.('${esc(item.id)}')"
         title="Edit Event"
         style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
         onmouseover="this.style.transform='scale(1.12)'"

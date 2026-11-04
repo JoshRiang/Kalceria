@@ -20,7 +20,7 @@ const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel")
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
 import { hasUserSession } from "@/lib/session";
-import { playNotificationSound } from "@/lib/soundEngine";
+import { useMapChatAndNotifications } from "@/components/map/hooks/useMapChatAndNotifications";
 import api, {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents,
   postBroadcast, putBroadcast, postLocation, patchVisibility,
@@ -85,6 +85,10 @@ export default function MapPage() {
     if (typeof window !== "undefined") {
       try {
         if (!hasUserSession()) return false;
+        if (sessionStorage.getItem("kalceria_skip_map_intro") === "true") {
+          sessionStorage.removeItem("kalceria_skip_map_intro");
+          return false;
+        }
         return true;
       } catch {
         return false;
@@ -293,6 +297,62 @@ export default function MapPage() {
       .filter((e) => !e.expiresAt || new Date(e.expiresAt).getTime() > now);
   }, [events, blockedUserIds]);
 
+  // Handlers
+  const focusUser = useCallback((user) => {
+    if (!mapRef.current || !user) return;
+    let target = user;
+    // if coming from sidebar kalcerians, lat/lng might be missing. Look up in mapUsersData
+    if (!target.lat || !target.lng) {
+      target = mapUsersData.find((u) => u.id === user.id) || target;
+    }
+    if (!target.lat || !target.lng) return;
+    mapRef.current.flyTo([target.lat, target.lng], 16);
+  }, [mapUsersData]);
+
+  const handleOpenItemOnMap = useCallback((item, type = "user") => {
+    if (!item) return;
+    setFocusTarget({
+      id: item.id || item.name || item.nickname,
+      type,
+      openPopup: true,
+      timestamp: Date.now(),
+    });
+  }, []);
+
+  const {
+    personalChatMap,
+    recentlyMessagedUserIds,
+    markPersonalChatRead,
+    eventGroupChatMap,
+    topDynamicEvent,
+    hasTopDynamicEventNotif,
+    handleTopDynamicEventClick,
+  } = useMapChatAndNotifications({
+    events: visibleEvents,
+    kalcerians,
+    currentUser,
+    blockedUserIds,
+    eventRequestsMap,
+    setEventRequestsMap,
+    acceptedCollabsMap,
+    requestedEventId,
+    focusUser,
+    handleOpenItemOnMap,
+    handleOpenRequests,
+  });
+
+  const handlePersonalChatOpen = useCallback((user) => {
+    if (!user) return;
+    markPersonalChatRead(user.id);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("kalceria:open-personal-chat", {
+          detail: { userId: user.id, user },
+        })
+      );
+    }
+  }, [markPersonalChatRead]);
+
   // derived: kalcerians for the sidebar (merging all event creators so every dummy event has its kalcerian entry!)
   const sidebarKalcerians = useMemo(() => {
     const map = new Map();
@@ -356,41 +416,23 @@ export default function MapPage() {
           (u.event && u.event.title.toLowerCase().includes(q)),
       );
     }
-    // sort: event creators & online first, then alphabetical
+    // sort: newest incoming personal chat message first (rolls card to top), then event creators & online first, then alphabetical
     return list.sort((a, b) => {
+      const aChatTime = Number(personalChatMap?.[a.id]?.lastMessageAt) || 0;
+      const bChatTime = Number(personalChatMap?.[b.id]?.lastMessageAt) || 0;
+      if (aChatTime !== bChatTime) return bChatTime - aChatTime;
+
       if (a.event && !b.event) return -1;
       if (!a.event && b.event) return 1;
       if (a.isOnline && !b.isOnline) return -1;
       if (!a.isOnline && b.isOnline) return 1;
       return a.name.localeCompare(b.name);
     });
-  }, [kalcerians, events, searchQuery]);
+  }, [kalcerians, events, searchQuery, personalChatMap]);
 
   const activeOwnEvent = events.find(
     (e) => e.id === "own" || (currentUser?.id && e.creator?.id === currentUser?.id)
   );
-
-  // Handlers
-  function focusUser(user) {
-    if (!mapRef.current) return;
-    let target = user;
-    // if coming from sidebar kalcerians, lat/lng might be missing. Look up in mapUsersData
-    if (!target.lat || !target.lng) {
-      target = mapUsersData.find((u) => u.id === user.id) || target;
-    }
-    if (!target.lat || !target.lng) return;
-    mapRef.current.flyTo([target.lat, target.lng], 16);
-  }
-
-  function handleOpenItemOnMap(item, type = "user") {
-    if (!item) return;
-    setFocusTarget({
-      id: item.id || item.name || item.nickname,
-      type,
-      openPopup: true,
-      timestamp: Date.now(),
-    });
-  }
 
   // real broadcast save
   async function saveBroadcast(e) {
@@ -420,7 +462,6 @@ export default function MapPage() {
       const updatedMapUsers = await fetchMapUsers();
       if (updatedMapUsers) setMapUsersData(updatedMapUsers);
       setNotice("Broadcast updated.");
-      playNotificationSound("chat");
       setShowStatusModal(false);
     } catch (err) {
       setNotice(err.message || "Failed to update broadcast.");
@@ -574,7 +615,6 @@ export default function MapPage() {
       const updatedEvents = await fetchMiniEvents().catch(() => null);
       if (updatedEvents) setEvents(mergeEvents(updatedEvents));
       setNotice(eventIdToUpdate ? "Mini event updated." : "Mini event saved.");
-      playNotificationSound("event");
       setEditingEventId(null);
       setShowEventModal(false);
     } catch (err) {
@@ -622,7 +662,6 @@ export default function MapPage() {
   }
 
   const handleSaveProfile = useCallback(async (updatedData) => {
-    playNotificationSound("event");
     setCurrentUser((prev) => {
       const merged = { ...(prev || {}), ...updatedData };
       try {
@@ -645,7 +684,6 @@ export default function MapPage() {
   }, []);
 
   const handleRequestChangePassword = useCallback(async () => {
-    playNotificationSound("event");
     try {
       let email = currentUser?.email;
       if (!email) {
@@ -675,7 +713,6 @@ export default function MapPage() {
   }, [currentUser]);
 
   const handleConfirmDeleteAccount = useCallback(async () => {
-    playNotificationSound("event");
     setShowDeleteAccountModal(false);
     setShowEditProfileModal(false);
     setShowOwnProfile(false);
@@ -730,7 +767,9 @@ export default function MapPage() {
           users={visibleMapUsers} events={visibleEvents} onMapReady={handleMapReady}
           focusUserId={focusedUserId} focusTarget={focusTarget} isMapDark={isMapDark}
           currentUser={currentUser} onEditEvent={handleOpenEditEvent} requestedEventId={requestedEventId}
-          eventRequestsMap={eventRequestsMap} acceptedCollabsMap={acceptedCollabsMap} onRequestCollab={handleRequestCollab}
+          eventRequestsMap={eventRequestsMap} acceptedCollabsMap={acceptedCollabsMap}
+          eventGroupChatMap={eventGroupChatMap}
+          onRequestCollab={handleRequestCollab}
           onPromptCancelRequest={handlePromptCancelRequest} onOpenRequests={handleOpenRequests}
           onCollaboratorUpload={handleCollaboratorUpload}
         />
@@ -766,6 +805,9 @@ export default function MapPage() {
             isStatusBusy={isStatusBusy} currentUser={currentUser} avatarUrl={avatarUrl} presence={presence}
             handlePresenceChange={handlePresenceChange} recenterMap={recenterMap} isRecentering={isRecentering}
             onOpenOwnProfile={() => setShowOwnProfile((prev) => !prev)}
+            topDynamicEvent={topDynamicEvent}
+            hasTopDynamicEventNotif={hasTopDynamicEventNotif}
+            onTopDynamicEventClick={handleTopDynamicEventClick}
           />
 
           {/* Kalcerians Panel */}
@@ -785,6 +827,9 @@ export default function MapPage() {
             sidebarKalcerians={sidebarKalcerians} focusUser={focusUser} blockedUserIds={blockedUserIds}
             onBlockUser={handleBlockUser} onUnblockUser={handleUnblockUser} onOpenItemOnMap={handleOpenItemOnMap}
             currentUser={currentUser} requestedEventId={requestedEventId} eventRequestsMap={eventRequestsMap}
+            acceptedCollabsMap={acceptedCollabsMap} eventGroupChatMap={eventGroupChatMap}
+            personalChatMap={personalChatMap} recentlyMessagedUserIds={recentlyMessagedUserIds}
+            onPersonalChatOpen={handlePersonalChatOpen}
             onPromptCancelRequest={handlePromptCancelRequest} onOpenRequests={handleOpenRequests}
           />
 

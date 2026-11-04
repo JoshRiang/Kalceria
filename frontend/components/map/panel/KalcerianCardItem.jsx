@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
 import { getEventCategory } from "../EventIcon";
 import KalcerianProfileCard from "../KalcerianProfileCard";
-import { playNotificationSound } from "@/lib/soundEngine";
 import {
   CategoryIcon,
   BroadcastLineIcon,
@@ -26,6 +25,10 @@ export function KalcerianCardItem({
   isOwnEvent,
   hasPendingRequests,
   eventPendingRequests,
+  unreadGroupChatCount = 0,
+  unreadPersonalChatCount = 0,
+  isRecentlyMessaged = false,
+  onPersonalChatOpen,
   isOtherEventDisabled,
   displayName,
   cleanUsername,
@@ -53,9 +56,11 @@ export function KalcerianCardItem({
   cleanDesc,
 }) {
   return (
-    <div
+    <motion.div
+      layout="position"
+      transition={{ type: "spring", stiffness: 360, damping: 32, mass: 0.9 }}
       key={user.id}
-      className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-all duration-200 ${
+      className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-colors duration-200 ${
         isExpanded ? "overflow-hidden" : "overflow-visible"
       } ${
         isBlocked
@@ -89,9 +94,15 @@ export function KalcerianCardItem({
           setExpandedUserId((prev) => (prev === user.id ? null : user.id));
         }}
       >
-        {/* Dynamic Color Shift Blobs across hover & click/active on non-blocked cards */}
+        {/* Dynamic Color Shift Blobs across hover, click/active, or when rolling to top on incoming personal chat */}
         {!isBlocked && (
-          <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-xl">
+          <div
+            className={`absolute inset-0 z-0 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-xl ${
+              isRecentlyMessaged
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100 group-active:opacity-100"
+            }`}
+          >
             <div className="absolute top-[15%] -left-[15%] w-[120px] h-[120px] bg-red-500/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[3000ms]" />
             <div className="absolute bottom-[15%] -right-[15%] w-[120px] h-[120px] bg-[#ffd60a]/25 rounded-full blur-[20px] mix-blend-screen animate-pulse duration-[4000ms] delay-100" />
             <div className="absolute -top-[35%] left-[25%] w-[130px] h-[100px] bg-[#ff006e]/20 rounded-full blur-[22px] mix-blend-screen animate-pulse duration-[2500ms] delay-200" />
@@ -210,7 +221,6 @@ export function KalcerianCardItem({
                     onMouseLeave={() => setHoveredEventIconId(null)}
                     onClick={(e) => {
                       e.stopPropagation();
-                      playNotificationSound("event");
                       onPromptCancelRequest?.(userEvent.id, userEvent.title);
                     }}
                     className="relative w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
@@ -224,18 +234,26 @@ export function KalcerianCardItem({
                       <line x1="6" y1="6" x2="18" y2="18" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
                     </svg>
                   </button>
-                ) : isOwnEvent && hasPendingRequests ? (
+                ) : hasPendingRequests ? (
                   <button
                     type="button"
                     onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
                     onMouseLeave={() => setHoveredEventIconId(null)}
                     onClick={(e) => {
                       e.stopPropagation();
-                      playNotificationSound("event");
-                      onOpenRequests?.(userEvent.id);
+                      if (onOpenItemOnMap) {
+                        onOpenItemOnMap(userEvent, "event");
+                      } else {
+                        focusUser(userEvent);
+                      }
+                      if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
                     }}
                     className="relative w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                    title={`${userEvent.title} (${eventPendingRequests.length} collab request${eventPendingRequests.length > 1 ? "s" : ""})`}
+                    title={
+                      eventPendingRequests.length > 0
+                        ? `${userEvent.title} (${eventPendingRequests.length} collab request${eventPendingRequests.length > 1 ? "s" : ""})`
+                        : `${userEvent.title} (${unreadGroupChatCount} new group message${unreadGroupChatCount > 1 ? "s" : ""})`
+                    }
                   >
                     <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
                     <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full border-none shadow-none ring-0 pointer-events-none" />
@@ -258,7 +276,6 @@ export function KalcerianCardItem({
                     onMouseLeave={() => setHoveredEventIconId(null)}
                     onClick={(e) => {
                       e.stopPropagation();
-                      playNotificationSound("event");
                       if (onOpenItemOnMap) {
                         onOpenItemOnMap(userEvent, "event");
                       } else {
@@ -285,8 +302,10 @@ export function KalcerianCardItem({
                   >
                     {isRequestedByMe
                       ? `Cancel Request: ${userEvent.title}`
-                      : isOwnEvent && hasPendingRequests
-                      ? `${userEvent.title} (${eventPendingRequests.length} Collab Request${eventPendingRequests.length > 1 ? "s" : ""})`
+                      : hasPendingRequests
+                      ? eventPendingRequests.length > 0
+                        ? `${userEvent.title} (${eventPendingRequests.length} Collab Request${eventPendingRequests.length > 1 ? "s" : ""})`
+                        : `${userEvent.title} (${unreadGroupChatCount} Group Message${unreadGroupChatCount > 1 ? "s" : ""})`
                       : isOtherEventDisabled
                       ? `${userEvent.title} (Request active elsewhere)`
                       : userEvent.title}
@@ -328,12 +347,15 @@ export function KalcerianCardItem({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  playNotificationSound("chat");
+                  onPersonalChatOpen?.(user);
                 }}
-                className="w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
+                className="relative w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
                 title={`Message ${user.name}`}
               >
                 <ChatButtonIcon isMapDark={isMapDark} />
+                {unreadPersonalChatCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full border-none shadow-none ring-0 pointer-events-none" />
+                )}
               </button>
             ) : (
               <div className="w-6 h-6" />
@@ -497,6 +519,6 @@ export function KalcerianCardItem({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -138,6 +138,7 @@ export default function HomeClient() {
                 if (returnUrl === "/map") {
                   try {
                     localStorage.removeItem("kalceria_auth_return");
+                    sessionStorage.setItem("kalceria_skip_map_intro", "true");
                   } catch {}
                   window.location.href = "/map";
                   return;

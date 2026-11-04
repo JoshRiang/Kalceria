@@ -26,8 +26,15 @@ export const EVENT_CATEGORIES_GRID = [
     id: "eat",
     label: "Eat Together",
     renderIcon: (isSelected, isModalDark) => (
-      <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}>
-        <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z" />
+      <svg viewBox="0 0 24 24" className="w-5 h-5 overflow-visible" fill="none">
+        <path
+          d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z"
+          fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
+          stroke={isModalDark ? "#000000" : "#ffffff"}
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+          style={{ paintOrder: "stroke fill" }}
+        />
       </svg>
     ),
   },
@@ -35,8 +42,15 @@ export const EVENT_CATEGORIES_GRID = [
     id: "special",
     label: "Something Special",
     renderIcon: (isSelected, isModalDark) => (
-      <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}>
-        <path d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z" />
+      <svg viewBox="0 0 24 24" className="w-5 h-5 overflow-visible" fill="none">
+        <path
+          d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z"
+          fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
+          stroke={isModalDark ? "#000000" : "#ffffff"}
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+          style={{ paintOrder: "stroke fill" }}
+        />
       </svg>
     ),
   },

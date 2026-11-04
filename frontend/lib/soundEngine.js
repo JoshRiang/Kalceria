@@ -158,10 +158,30 @@ function playAudioFileFallback(url) {
 }
 
 // ─── Central Notification Dispatcher ───
-export function playNotificationSound(type = "event") {
-  if (type === "chat" || type === "chat_message" || type === "message") {
+// Strict policy: Sound on Live Map ONLY activates for:
+// 1. Personal Chat ("chat", "personal_chat", "chat_message", "message")
+// 2. Event Group Chat ("group_chat", "event_chat", "group_chat_event" — only when user is creator or collaborator)
+// 3. Envelope / Collab Request ("envelope", "collab_request", "event_envelope")
+const ALLOWED_CHAT_TYPES = new Set(["chat", "personal_chat", "chat_message", "message"]);
+const ALLOWED_GROUP_CHAT_TYPES = new Set(["group_chat", "event_chat", "group_chat_event"]);
+const ALLOWED_ENVELOPE_TYPES = new Set(["envelope", "collab_request", "event_envelope"]);
+
+export function playNotificationSound(type = "envelope", options = {}) {
+  const normalized = String(type || "").toLowerCase().trim();
+
+  if (ALLOWED_CHAT_TYPES.has(normalized)) {
     playChatMessageSound();
-  } else {
+    return;
+  }
+
+  if (ALLOWED_GROUP_CHAT_TYPES.has(normalized)) {
+    // Only play if user is a member/collaborator/owner of the event
+    if (options && options.isMember === false) return;
+    playChatMessageSound();
+    return;
+  }
+
+  if (ALLOWED_ENVELOPE_TYPES.has(normalized)) {
     playEventCollabSound();
   }
 }
@@ -170,7 +190,7 @@ export function playNotificationSound(type = "event") {
 if (typeof window !== "undefined") {
   window.__kalceriaPlaySound = playNotificationSound;
   window.addEventListener("kalceria:notification", (e) => {
-    playNotificationSound(e?.detail?.type || "event");
+    playNotificationSound(e?.detail?.type || "envelope", e?.detail || {});
   });
 }
 

@@ -5,6 +5,11 @@ import { createUserIcon, escapeMapHtml, getSafeMapAvatarUrl, getSafeMapColor } f
 import { createEventIcon } from "./map/EventIcon";
 import { userPopup } from "./map/UserPopup";
 import { eventPopup } from "./map/EventPopup";
+import {
+  isEventOwner,
+  isEventCollaborator,
+  getEventPendingRequests,
+} from "./map/hooks/useMapChatAndNotifications";
 
 import "leaflet/dist/leaflet.css";
 import "./map/snapmap.css";
@@ -33,6 +38,7 @@ export default function SnapMap({
   requestedEventId = null,
   eventRequestsMap = {},
   acceptedCollabsMap = {},
+  eventGroupChatMap = {},
   onRequestCollab,
   onPromptCancelRequest,
   onOpenRequests,
@@ -315,6 +321,13 @@ export default function SnapMap({
       const markerId = `event_${item.id}`;
       currentEventIds.add(markerId);
 
+      const isOwner = isEventOwner(item, currentUser);
+      const isCollaborator = isEventCollaborator(item, currentUser, acceptedCollabsMap);
+      const pendingReqs = isOwner ? getEventPendingRequests(item, currentUser, eventRequestsMap) : [];
+      const pendingCount = pendingReqs.length;
+      const unreadGroupChatCount = (isOwner || isCollaborator) ? (eventGroupChatMap?.[item.id]?.unreadCount || 0) : 0;
+      const hasEventNotif = pendingCount > 0 || unreadGroupChatCount > 0;
+
       if (markerRefs.current[markerId]) {
         const marker = markerRefs.current[markerId];
 
@@ -323,29 +336,33 @@ export default function SnapMap({
           marker.setLatLng([item.lat, item.lng]);
         }
 
-        marker.setIcon(createEventIcon(L, item, isMapDark));
+        marker.setIcon(createEventIcon(L, item, isMapDark, hasEventNotif));
 
-        const pendingCount = (eventRequestsMap?.[item.id] || []).length;
-        const isCollaborator = Boolean(
-          (acceptedCollabsMap?.[item.id] && currentUser?.id && acceptedCollabsMap[item.id].includes(currentUser.id)) ||
-          item.isCollaborator ||
-          (item.collaboratorIds && currentUser?.id && item.collaboratorIds.includes(currentUser.id))
+        const newPopupContent = eventPopup(
+          item,
+          isMapDark,
+          currentUser,
+          requestedEventId,
+          pendingCount,
+          isCollaborator,
+          unreadGroupChatCount
         );
-        const newPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount, isCollaborator);
         if (marker._lastPopupContent !== newPopupContent) {
           marker.getPopup().setContent(newPopupContent);
           marker._lastPopupContent = newPopupContent;
         }
       } else {
-        const pendingCount = (eventRequestsMap?.[item.id] || []).length;
-        const isCollaborator = Boolean(
-          (acceptedCollabsMap?.[item.id] && currentUser?.id && acceptedCollabsMap[item.id].includes(currentUser.id)) ||
-          item.isCollaborator ||
-          (item.collaboratorIds && currentUser?.id && item.collaboratorIds.includes(currentUser.id))
+        const newPopupContent = eventPopup(
+          item,
+          isMapDark,
+          currentUser,
+          requestedEventId,
+          pendingCount,
+          isCollaborator,
+          unreadGroupChatCount
         );
-        const newPopupContent = eventPopup(item, isMapDark, currentUser, requestedEventId, pendingCount, isCollaborator);
         const marker = L.marker([item.lat, item.lng], {
-          icon: createEventIcon(L, item, isMapDark),
+          icon: createEventIcon(L, item, isMapDark, hasEventNotif),
           userData: { color: "#ff006e" },
         }).bindPopup(newPopupContent, {
           className: "tactical-popup",
@@ -371,7 +388,7 @@ export default function SnapMap({
         delete markerRefs.current[id];
       }
     });
-  }, [users, events, isReady, isMapDark, currentUser, requestedEventId, eventRequestsMap]);
+  }, [users, events, isReady, isMapDark, currentUser, requestedEventId, eventRequestsMap, acceptedCollabsMap, eventGroupChatMap]);
 
   return (
     <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>

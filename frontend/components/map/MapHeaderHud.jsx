@@ -1,9 +1,11 @@
 "use client";
 
 import { memo, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
 import { isSoundMuted, toggleSoundMuted } from "@/lib/soundEngine";
+import { getEventCategory } from "./EventIcon";
+import { CategoryIcon } from "./panel/PanelIcons";
 
 export const MapHeaderHud = memo(function MapHeaderHud({
   isMapDark,
@@ -24,6 +26,9 @@ export const MapHeaderHud = memo(function MapHeaderHud({
   recenterMap,
   isRecentering,
   onOpenOwnProfile,
+  topDynamicEvent = null,
+  hasTopDynamicEventNotif = false,
+  onTopDynamicEventClick,
 }) {
   const [soundMuted, setSoundMuted] = useState(false);
 
@@ -71,8 +76,44 @@ export const MapHeaderHud = memo(function MapHeaderHud({
         </svg>
       </button>
 
-      {/* Top-Right One-Line Controls: Recenter, Eye, Create Mini Event (+), Moon/Sun, Profile Photo */}
+      {/* Top-Right One-Line Controls: Dynamic Event Icon (if active), Recenter, Eye, Create Mini Event (+), Moon/Sun, Sound, Profile Photo */}
       <div className="relative flex items-center gap-2.5 sm:gap-3.5 md:gap-4 pointer-events-auto">
+        {/* 0. Dynamic Event Icon (Appears next to Recenter Pin when user creates or registers/collaborates in a mini event) */}
+        <AnimatePresence>
+          {topDynamicEvent && (
+            <motion.button
+              key={`top-dynamic-event-${topDynamicEvent.id || "own"}`}
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.7 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActionMenuOpen(false);
+                setMenuOpen(false);
+                onTopDynamicEventClick?.();
+              }}
+              aria-label={`Open ${topDynamicEvent.title || "Active Event"}`}
+              title={
+                hasTopDynamicEventNotif
+                  ? `${topDynamicEvent.title || "Event"} (New notification)`
+                  : topDynamicEvent.title || "My Active Event"
+              }
+              className="relative p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 cursor-pointer group flex items-center justify-center"
+            >
+              <CategoryIcon
+                category={getEventCategory(topDynamicEvent)}
+                isMapDark={isMapDark}
+                className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 overflow-visible"
+              />
+              {hasTopDynamicEventNotif && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-[#ef4444] rounded-full border-none shadow-none ring-0 pointer-events-none" />
+              )}
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         {/* 1. Recenter Button (Map Pin Picture 4 style) - 2D, No Outer Box */}
         <button
           type="button"

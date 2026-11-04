@@ -7,27 +7,44 @@ export const EVENT_CATEGORIES = {
   cafe: {
     id: "cafe",
     label: "Cafe Meeting",
-    svg: `<svg viewBox="0 0 24 24" style="width: 100%; height: 100%;" fill="none"><path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill="#000000" stroke="#ffffff" stroke-width="0.75"/><ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill="#ffffff" stroke="#000000" stroke-width="0.6"/><path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round"/><path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill="#000000" stroke="#ffffff" stroke-width="0.6"/><ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill="#ffffff"/></svg>`
+    svg: `<svg viewBox="0 0 24 24" style="width: 100%; height: 100%; overflow: visible;" fill="none"><path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill="#000000" stroke="#ffffff" stroke-width="0.9"/><ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill="#ffffff" stroke="#000000" stroke-width="0.6"/><path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round"/><path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill="#000000" stroke="#ffffff" stroke-width="0.8"/><ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill="#ffffff"/></svg>`
   },
-  // Something Special: Solid Bold Exclamation Mark (Full black or full white)
+  // Something Special: Solid Bold Exclamation Mark with theme-adaptive outer border
   special: {
     id: "special",
     label: "Something Special",
-    svg: `<svg viewBox="0 0 24 24" fill="currentColor" style="width: 100%; height: 100%;"><path d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z"/></svg>`
+    svg: `<svg viewBox="0 0 24 24" fill="currentColor" style="width: 100%; height: 100%; overflow: visible;"><path d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z"/></svg>`
   },
-  // Eat Together: Solid Fork and Knife (Full black or full white)
+  // Eat Together: Solid Fork and Knife with theme-adaptive outer border
   eat: {
     id: "eat",
     label: "Eat Together",
-    svg: `<svg viewBox="0 0 24 24" fill="currentColor" style="width: 100%; height: 100%;"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z"/></svg>`
+    svg: `<svg viewBox="0 0 24 24" fill="currentColor" style="width: 100%; height: 100%; overflow: visible;"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z"/></svg>`
   },
   // Discuss More: Combination of Black and White figures + speech bubble (cannot be pure on just one color)
   discuss: {
     id: "discuss",
     label: "Discuss More",
-    svg: `<svg viewBox="0 0 24 24" style="width: 100%; height: 100%;" fill="none"><path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill="#000000" stroke="#ffffff" stroke-width="0.8"/><circle cx="10.5" cy="5.3" r="0.7" fill="#ffffff"/><circle cx="12" cy="5.3" r="0.7" fill="#ffffff"/><circle cx="13.5" cy="5.3" r="0.7" fill="#ffffff"/><circle cx="7.5" cy="13" r="2.5" fill="#000000" stroke="#ffffff" stroke-width="1"/><path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill="#000000" stroke="#ffffff" stroke-width="1"/><circle cx="16.5" cy="13" r="2.5" fill="#ffffff" stroke="#000000" stroke-width="1.2"/><path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill="#ffffff" stroke="#000000" stroke-width="1.2"/></svg>`
+    svg: `<svg viewBox="0 0 24 24" style="width: 100%; height: 100%; overflow: visible;" fill="none"><path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill="#000000" stroke="#ffffff" stroke-width="0.9"/><circle cx="10.5" cy="5.3" r="0.7" fill="#ffffff"/><circle cx="12" cy="5.3" r="0.7" fill="#ffffff"/><circle cx="13.5" cy="5.3" r="0.7" fill="#ffffff"/><circle cx="7.5" cy="13" r="2.5" fill="#000000" stroke="#ffffff" stroke-width="1"/><path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill="#000000" stroke="#ffffff" stroke-width="1"/><circle cx="16.5" cy="13" r="2.5" fill="#ffffff" stroke="#000000" stroke-width="1.2"/><path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill="#ffffff" stroke="#000000" stroke-width="1.2"/></svg>`
   }
 };
+
+export function getCategorySvgHtml(categoryId, isMapDark = false) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  const border = isMapDark ? "#000000" : "#ffffff";
+
+  switch (categoryId) {
+    case "eat":
+      return `<svg viewBox="0 0 24 24" style="width: 100%; height: 100%; overflow: visible;" fill="none"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z" fill="${fg}" stroke="${border}" stroke-width="1.6" stroke-linejoin="round" style="paint-order: stroke fill;"/></svg>`;
+    case "special":
+      return `<svg viewBox="0 0 24 24" style="width: 100%; height: 100%; overflow: visible;" fill="none"><path d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z" fill="${fg}" stroke="${border}" stroke-width="1.6" stroke-linejoin="round" style="paint-order: stroke fill;"/></svg>`;
+    case "discuss":
+      return `<svg viewBox="0 0 24 24" style="width: 100%; height: 100%; overflow: visible;" fill="none"><path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill="${fg}" stroke="${border}" stroke-width="1.1" style="paint-order: stroke fill;"/><circle cx="10.5" cy="5.3" r="0.7" fill="${border}"/><circle cx="12" cy="5.3" r="0.7" fill="${border}"/><circle cx="13.5" cy="5.3" r="0.7" fill="${border}"/><circle cx="7.5" cy="13" r="2.5" fill="${fg}" stroke="${border}" stroke-width="1.1" style="paint-order: stroke fill;"/><path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill="${fg}" stroke="${border}" stroke-width="1.1" style="paint-order: stroke fill;"/><circle cx="16.5" cy="13" r="2.5" fill="${border}" stroke="${fg}" stroke-width="1.2"/><path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill="${border}" stroke="${fg}" stroke-width="1.2"/></svg>`;
+    case "cafe":
+    default:
+      return `<svg viewBox="0 0 24 24" style="width: 100%; height: 100%; overflow: visible;" fill="none"><path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke="${border}" stroke-width="2.6" stroke-linecap="round"/><path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke="${fg}" stroke-width="1.4" stroke-linecap="round"/><path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke="${border}" stroke-width="2.6" stroke-linecap="round"/><path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke="${fg}" stroke-width="1.4" stroke-linecap="round"/><path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill="${fg}" stroke="${border}" stroke-width="1.2" style="paint-order: stroke fill;"/><ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill="${border}" stroke="${fg}" stroke-width="0.6"/><path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke="${border}" stroke-width="1.3" stroke-linecap="round"/><path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke="${border}" stroke-width="3" stroke-linecap="round"/><path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke="${fg}" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill="${fg}" stroke="${border}" stroke-width="1.2" style="paint-order: stroke fill;"/><ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill="${border}"/></svg>`;
+  }
+}
 
 export function getEventCategory(event) {
   if (event?.category && EVENT_CATEGORIES[event.category]) return event.category;
@@ -41,16 +58,16 @@ export function getEventCategory(event) {
   return "cafe";
 }
 
-export function getEventIconHtml(event, isMapDark = false) {
+export function getEventIconHtml(event, isMapDark = false, hasNotification = false) {
   const categoryId = getEventCategory(event);
-  const cat = EVENT_CATEGORIES[categoryId] || EVENT_CATEGORIES.cafe;
-  
-  // Icon color: white when dark mode, black when light mode (for solid icons like special and eat)
+  const svgHtml = getCategorySvgHtml(categoryId, isMapDark);
+
+  // Icon color: white when dark mode, black when light mode
   const iconColor = isMapDark ? "#ffffff" : "#000000";
   // Non-glowing crisp drop-shadow (no fuzzy white or neon halo)
   const dropShadow = isMapDark
     ? "drop-shadow(0 2px 4px rgba(0,0,0,0.85))"
-    : "drop-shadow(0 1.5px 3px rgba(0,0,0,0.25))";
+    : "drop-shadow(0 1.5px 3px rgba(0,0,0,0.28))";
 
   // Profile picture of the user who declared the event
   const creatorUser = event?.creator || { name: event?.name || "Kalcerian" };
@@ -58,11 +75,17 @@ export function getEventIconHtml(event, isMapDark = false) {
   const safeCreator = escapeMapHtml(creatorUser.name || creatorUser.nickname || "Kalcerian");
   const avatarBorder = isMapDark ? "#000000" : "#ffffff";
 
+  // Red notification dot ("TANDA 2") on map marker when event has envelope or group chat notification
+  const redDotHtml = hasNotification
+    ? `<span style="position: absolute; top: -2px; right: -2px; width: 7.5px; height: 7.5px; background-color: #ef4444; border-radius: 50%; border: none !important; box-shadow: none !important; pointer-events: none; z-index: 8;"></span>`
+    : "";
+
   return `
     <div class="clean-event-node" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
       <!-- Generic category event icon without encapsulation pin -->
-      <div style="width: 32px; height: 32px; color: ${iconColor}; filter: ${dropShadow}; display: flex; align-items: center; justify-content: center; transition: color 0.3s ease;">
-        ${cat.svg}
+      <div style="position: relative; width: 32px; height: 32px; color: ${iconColor}; filter: ${dropShadow}; display: flex; align-items: center; justify-content: center; transition: color 0.3s ease;">
+        ${svgHtml}
+        ${redDotHtml}
       </div>
 
       <!-- Right bottom: round profile picture of user who declared it -->
@@ -73,10 +96,10 @@ export function getEventIconHtml(event, isMapDark = false) {
   `;
 }
 
-export function createEventIcon(L, event, isMapDark = false) {
+export function createEventIcon(L, event, isMapDark = false, hasNotification = false) {
   return L.divIcon({
     className: "custom-clean-event-icon",
-    html: getEventIconHtml(event, isMapDark),
+    html: getEventIconHtml(event, isMapDark, hasNotification),
     iconSize: [44, 44],
     iconAnchor: [22, 22],
   });
