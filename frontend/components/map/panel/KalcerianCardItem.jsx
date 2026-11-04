@@ -378,13 +378,16 @@ export function KalcerianCardItem({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden border-t border-[#30363d]/40 dark:border-[#30363d]/70"
+            className={`overflow-hidden border-t ${
+              isMapDark ? "border-[#38404a]" : "border-[#d1d5db]"
+            }`}
           >
             <KalcerianProfileCard
               user={user}
               isMapDark={isMapDark}
               showMobileClose={deviceFamily === "hp" || deviceFamily === "tab"}
               onClose={() => setExpandedUserId(null)}
+              inline={true}
             />
           </motion.div>
         )}

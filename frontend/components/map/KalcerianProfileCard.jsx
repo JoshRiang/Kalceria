@@ -263,6 +263,7 @@ export default function KalcerianProfileCard({
   isMobileCompact = false,
   isOwnProfile = false,
   onEditProfile,
+  inline = false,
 }) {
   const [imgError, setImgError] = useState(false);
   const displayName = user?.displayName || user?.name || user?.nickname || "Kalcerian";
@@ -339,16 +340,24 @@ export default function KalcerianProfileCard({
   return (
     <div
       className={`relative w-full overflow-hidden transition-colors select-none ${
-        isMobileCompact ? "max-w-[310px] mx-auto rounded-2xl shadow-2xl" : "rounded-b-xl"
+        inline
+          ? "rounded-none rounded-b-xl border-0 shadow-none"
+          : isMobileCompact
+          ? "max-w-[310px] mx-auto rounded-2xl shadow-2xl border"
+          : "rounded-2xl border shadow-sm"
       } ${
-        isMapDark
-          ? "bg-[#161b22] text-[#f0f6fc] border border-[#30363d]/80"
-          : "bg-white text-[#1f2328] border border-[#d0d7de]/80"
+        inline
+          ? isMapDark
+            ? "bg-[#161b22] text-[#f0f6fc]"
+            : "bg-white text-[#1f2328]"
+          : isMapDark
+          ? "bg-[#161b22] text-[#f0f6fc] border-[#30363d]/80"
+          : "bg-white text-[#1f2328] border-[#d0d7de]/80"
       }`}
       style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}
     >
       {/* 1. Square 1:1 Cover Banner Background (Normalized Video, GIF, and Photo pipeline) */}
-      <div className="relative w-full aspect-square max-h-[250px] sm:max-h-[270px] mx-auto overflow-hidden bg-neutral-900 rounded-t-xl">
+      <div className="relative w-full aspect-square max-h-[250px] sm:max-h-[270px] mx-auto overflow-hidden bg-neutral-900">
         <NormalizedMediaCover
           media={normalizedMedia}
           altText={`${displayName} cover`}
