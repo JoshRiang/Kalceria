@@ -1,7 +1,7 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function JourneySlider({
   images = [],
@@ -187,19 +187,93 @@ export function JourneySlider({
   );
 }
 
-export function JourneyDescriptionBox({ description, className }) {
+export function JourneyDescriptionBox({
+  description,
+  isFlipped = false,
+  className,
+  delay = 350,
+  speed = 22,
+}) {
   const hasMaxWidth = className && className.includes("max-w-");
-  const defaultClasses = `relative w-full px-2 py-0.5 flex items-center justify-center ${hasMaxWidth ? "" : "max-w-[360px] md:max-w-[480px]"}`;
+  const defaultClasses = `relative w-full px-2 py-0.5 flex items-center justify-center min-h-[58px] sm:min-h-[66px] ${
+    hasMaxWidth ? "" : "max-w-[360px] md:max-w-[480px]"
+  }`;
+
+  // Parse segments for keyword highlighting (Mist, Dream Shift Labs, Universitas Indonesia Motorsport)
+  const keywords = ['Mist', 'Dream Shift Labs', 'Universitas Indonesia Motorsport'];
+  const parsedSegments = useMemo(() => {
+    const parts = String(description || '').split(/(Universitas Indonesia Motorsport|Dream Shift Labs|Mist)/g);
+    let currentIndex = 0;
+    return parts.filter(Boolean).map((part) => {
+      const isKeyword = keywords.includes(part);
+      const start = currentIndex;
+      const end = currentIndex + part.length;
+      currentIndex = end;
+      return { part, isKeyword, start, end };
+    });
+  }, [description]);
+
+  const totalLength = useMemo(() => {
+    return parsedSegments.reduce((sum, s) => sum + s.part.length, 0);
+  }, [parsedSegments]);
+
+  const [charCount, setCharCount] = useState(0);
+
+  useEffect(() => {
+    if (!isFlipped) {
+      setCharCount(0);
+      return;
+    }
+
+    let rafId;
+    let startTs = null;
+    const timer = setTimeout(() => {
+      const step = (ts) => {
+        if (startTs === null) startTs = ts;
+        const next = Math.min(totalLength, Math.floor((ts - startTs) / speed) + 1);
+        setCharCount(next);
+        if (next < totalLength) {
+          rafId = requestAnimationFrame(step);
+        }
+      };
+      rafId = requestAnimationFrame(step);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [isFlipped, totalLength, delay, speed]);
 
   return (
     <div className={`${defaultClasses} ${className || ""}`}>
-      <p className="relative z-10 w-full text-[15px] sm:text-base md:text-[17px] xl:text-[18px] font-serif not-italic text-white text-center leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
-        {String(description || '').split(/(Universitas Indonesia Motorsport|Dream Shift Labs|Mist)/g).map((part, index) => (
-          ['Mist', 'Dream Shift Labs', 'Universitas Indonesia Motorsport'].includes(part)
-            ? <span key={`${part}-${index}`} className="underline font-bold italic">{part}</span>
-            : part
-        ))}
-      </p>
+      <AnimatePresence>
+        {isFlipped && (
+          <motion.p
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4, transition: { duration: 0.25 } }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="relative z-10 w-full text-[15px] sm:text-base md:text-[17px] xl:text-[18px] font-serif not-italic text-white text-center leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]"
+          >
+            {parsedSegments.map(({ part, isKeyword, start, end }, idx) => {
+              if (charCount <= start) return null;
+              const visibleSlice = part.slice(0, Math.min(part.length, charCount - start));
+              if (isKeyword) {
+                return (
+                  <span key={idx} className="underline font-bold italic">
+                    {visibleSlice}
+                  </span>
+                );
+              }
+              return <span key={idx}>{visibleSlice}</span>;
+            })}
+            {charCount > 0 && charCount < totalLength && (
+              <span className="inline-block w-1 h-3.5 sm:h-4 ml-0.5 bg-white/80 animate-pulse align-middle" />
+            )}
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -226,7 +300,7 @@ export default function JourneyRightHalf({
         isFlipped={isFlipped}
         onToggleFlip={onToggleFlip}
       />
-      <JourneyDescriptionBox description={description} />
+      <JourneyDescriptionBox description={description} isFlipped={isFlipped} />
     </div>
   );
 }

@@ -170,7 +170,7 @@ export default function JourneyPageClient() {
                 />
                 <JourneyDescriptionBox 
                   description="Mist is a legendary entity in the underground automotive scene, bringing unparalleled style and performance." 
-                  delay={1000} 
+                  isFlipped={isFlipped1}
                   className={isMobile ? "max-w-[340px]" : "max-w-[480px]"} 
                 />
               </div>
@@ -220,7 +220,7 @@ export default function JourneyPageClient() {
               />
               <JourneyDescriptionBox 
                 description="We partner with Universitas Indonesia Motorsport to deliver high-octane experiences and unparalleled performance." 
-                delay={1200} 
+                isFlipped={isFlipped2}
                 className={isMobile ? "max-w-[340px]" : "max-w-[480px]"} 
               />
             </div>
@@ -258,7 +258,7 @@ export default function JourneyPageClient() {
                 />
                 <JourneyDescriptionBox 
                   description="Dream Shift Labs pioneers the digital frontier of automotive culture, crafting immersive experiences that transcend reality." 
-                  delay={1400} 
+                  isFlipped={isFlipped3}
                   className={isMobile ? "max-w-[340px]" : "max-w-[480px]"}
                 />
               </div>
@@ -273,7 +273,7 @@ export default function JourneyPageClient() {
               isFlipped={isFlipped3}
               onToggleFlip={setIsFlipped3}
               description="Dream Shift Labs pioneers the digital frontier of automotive culture, crafting immersive experiences that transcend reality." 
-              delay={1400} 
+              className="absolute right-0 xl:right-[5%] top-[7vh] w-1/2"
             />
           )}
         </section>
