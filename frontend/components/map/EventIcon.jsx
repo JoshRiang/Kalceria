@@ -9,11 +9,11 @@ export const EVENT_CATEGORIES = {
     label: "Cafe Meeting",
     svg: `<svg viewBox="0 0 24 24" style="width: 100%; height: 100%;" fill="none"><path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill="#000000" stroke="#ffffff" stroke-width="0.75"/><ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill="#ffffff" stroke="#000000" stroke-width="0.6"/><path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke="#ffffff" stroke-width="1.3" stroke-linecap="round"/><path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill="#000000" stroke="#ffffff" stroke-width="0.6"/><ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill="#ffffff"/></svg>`
   },
-  // Something Special: Solid Exclamation Mark from Picture 1 (Full black or full white)
+  // Something Special: Solid Bold Exclamation Mark (Full black or full white)
   special: {
     id: "special",
     label: "Something Special",
-    svg: `<svg viewBox="0 0 24 24" fill="currentColor" style="width: 100%; height: 100%;"><path d="M10.8 3h2.4l-.65 11h-1.1L10.8 3zM12 17.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5z"/></svg>`
+    svg: `<svg viewBox="0 0 24 24" fill="currentColor" style="width: 100%; height: 100%;"><path d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z"/></svg>`
   },
   // Eat Together: Solid Fork and Knife (Full black or full white)
   eat: {

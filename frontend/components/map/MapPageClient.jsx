@@ -16,7 +16,6 @@ import { AtmosphericBackground } from "@/components/map/AtmosphericBackground";
 import { useEventCollab } from "@/components/map/hooks/useEventCollab";
 import { OwnProfileDrawer } from "@/components/map/OwnProfileDrawer";
 import { EditProfileModal } from "@/components/map/EditProfileModal";
-import { MapWalkthroughTooltip } from "@/components/map/MapWalkthroughTooltip";
 const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel").then((m) => m.KalceriansPanel), { ssr: false });
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
@@ -739,7 +738,6 @@ export default function MapPage() {
         )}
       </AnimatePresence>
 
-      <MapWalkthroughTooltip show={!showStartup && hasMounted} />
 
       {!showStartup && hasMounted && (
         <>

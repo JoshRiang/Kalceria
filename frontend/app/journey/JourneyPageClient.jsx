@@ -11,6 +11,11 @@ export default function JourneyPageClient() {
   const [displayedText, setDisplayedText] = useState("");
   const fullText = "KALCERIA'S JOURNEY";
 
+  // Flip states for the 3 partner segments above "WAITING FOR YOU"
+  const [isFlipped1, setIsFlipped1] = useState(false);
+  const [isFlipped2, setIsFlipped2] = useState(false);
+  const [isFlipped3, setIsFlipped3] = useState(false);
+
   const isMobile = useIsMobileViewport();
   const isMobileOrTablet = useIsMobileOrTabletViewport();
 
@@ -135,7 +140,22 @@ export default function JourneyPageClient() {
         style={{ pointerEvents: isIntroActive ? 'none' : 'auto' }}
       >
         {/* Section 1 - Mist */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_1_hp_arcade.webp')] bg-cover bg-center xl:bg-[url('/bgj_1_arcade.webp')] xl:bg-cover xl:bg-center flex items-center justify-center overflow-hidden ${isMobileOrTablet ? "flex-col justify-center pt-0" : "pt-[7vh]"}`}>
+        <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isMobileOrTablet ? "flex-col justify-center pt-0" : "pt-[7vh]"}`}>
+          {/* Background Layer with Graceful Blur / Unblur */}
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-all duration-700 ease-in-out pointer-events-none"
+            style={{
+              backgroundImage: isMobileOrTablet ? "url('/hp/bgj_1_hp_arcade.webp')" : "url('/bgj_1_arcade.webp')",
+              filter: isFlipped1 ? "blur(18px) brightness(0.82)" : "blur(0px) brightness(1)",
+              transform: isFlipped1 ? "scale(1.05)" : "scale(1)",
+              willChange: "filter, transform",
+            }}
+          />
+          <div
+            className="absolute inset-0 bg-black/35 transition-opacity duration-700 pointer-events-none"
+            style={{ opacity: isFlipped1 ? 1 : 0 }}
+          />
+
           <div className="container mx-auto px-6 md:px-12 flex flex-col items-center justify-center relative z-20">
             {/* Center Stack for Mobile and iPad / Tablet Family */}
             {isMobileOrTablet && (
@@ -144,6 +164,8 @@ export default function JourneyPageClient() {
                   logo="/se1.webp" 
                   logoAlt="Mist" 
                   images={['/mist_1.webp', '/mist_1.webp']} 
+                  isFlipped={isFlipped1}
+                  onToggleFlip={setIsFlipped1}
                   className={isMobile ? "max-w-[280px]" : "max-w-[360px]"} 
                 />
                 <JourneyDescriptionBox 
@@ -160,6 +182,8 @@ export default function JourneyPageClient() {
               logo="/se1.webp"
               logoAlt="Mist"
               images={['/mist_1.webp', '/mist_1.webp']} 
+              isFlipped={isFlipped1}
+              onToggleFlip={setIsFlipped1}
               description="Mist is a legendary entity in the underground automotive scene, bringing unparalleled style and performance." 
               delay={1000} 
               className="absolute right-0 xl:right-[5%] top-[7vh] w-1/2"
@@ -168,13 +192,30 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 2 - UI Racing Team */}
-        <section className="relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_2_hp.webp')] bg-cover bg-center xl:bg-[url('/bgj_2.webp')] xl:bg-cover xl:bg-center flex flex-col items-center justify-center overflow-hidden">
+        <section className="relative w-full h-screen flex flex-col items-center justify-center overflow-hidden">
+          {/* Background Layer with Graceful Blur / Unblur */}
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-all duration-700 ease-in-out pointer-events-none"
+            style={{
+              backgroundImage: isMobileOrTablet ? "url('/hp/bgj_2_hp.webp')" : "url('/bgj_2.webp')",
+              filter: isFlipped2 ? "blur(18px) brightness(0.82)" : "blur(0px) brightness(1)",
+              transform: isFlipped2 ? "scale(1.05)" : "scale(1)",
+              willChange: "filter, transform",
+            }}
+          />
+          <div
+            className="absolute inset-0 bg-black/35 transition-opacity duration-700 pointer-events-none"
+            style={{ opacity: isFlipped2 ? 1 : 0 }}
+          />
+
           <div className="container mx-auto px-6 md:px-12 relative z-20 flex flex-col items-center">
             <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4 z-30">
               <JourneySlider 
                 logo="/se2.webp" 
                 logoAlt="UI Racing Team" 
                 images={['/uims_1.webp', '/uims_2.webp']} 
+                isFlipped={isFlipped2}
+                onToggleFlip={setIsFlipped2}
                 className={isMobile ? "max-w-[280px]" : "max-w-[360px]"}
               />
               <JourneyDescriptionBox 
@@ -187,7 +228,22 @@ export default function JourneyPageClient() {
         </section>
 
         {/* Section 3 - Dream Shift Labs */}
-        <section className={`relative w-full h-screen bg-no-repeat bg-[url('/hp/bgj_3_hp_arcade.webp')] bg-cover bg-center xl:bg-[url('/bgj_3.webp')] xl:bg-cover xl:bg-center flex items-center justify-center overflow-hidden ${isMobileOrTablet ? "flex-col justify-center pt-0" : "pt-[7vh]"}`}>
+        <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isMobileOrTablet ? "flex-col justify-center pt-0" : "pt-[7vh]"}`}>
+          {/* Background Layer with Graceful Blur / Unblur */}
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-all duration-700 ease-in-out pointer-events-none"
+            style={{
+              backgroundImage: isMobileOrTablet ? "url('/hp/bgj_3_hp_arcade.webp')" : "url('/bgj_3.webp')",
+              filter: isFlipped3 ? "blur(18px) brightness(0.82)" : "blur(0px) brightness(1)",
+              transform: isFlipped3 ? "scale(1.05)" : "scale(1)",
+              willChange: "filter, transform",
+            }}
+          />
+          <div
+            className="absolute inset-0 bg-black/35 transition-opacity duration-700 pointer-events-none"
+            style={{ opacity: isFlipped3 ? 1 : 0 }}
+          />
+
           <div className="container mx-auto px-6 md:px-12 flex flex-col items-center justify-center relative z-20">
             {/* Center Stack for Mobile and iPad / Tablet Family */}
             {isMobileOrTablet && (
@@ -196,6 +252,8 @@ export default function JourneyPageClient() {
                   logo="/dsl.webp" 
                   logoAlt="Dream Shift Labs" 
                   images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} 
+                  isFlipped={isFlipped3}
+                  onToggleFlip={setIsFlipped3}
                   className={isMobile ? "max-w-[280px]" : "max-w-[360px]"} 
                 />
                 <JourneyDescriptionBox 
@@ -212,6 +270,8 @@ export default function JourneyPageClient() {
               logo="/dsl.webp"
               logoAlt="Dream Shift Labs"
               images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} 
+              isFlipped={isFlipped3}
+              onToggleFlip={setIsFlipped3}
               description="Dream Shift Labs pioneers the digital frontier of automotive culture, crafting immersive experiences that transcend reality." 
               delay={1400} 
             />

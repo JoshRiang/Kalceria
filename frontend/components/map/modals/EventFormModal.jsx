@@ -35,7 +35,7 @@ export const EVENT_CATEGORIES_GRID = [
     label: "Something Special",
     renderIcon: (isSelected, isModalDark) => (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}>
-        <path d="M10.8 3h2.4l-.65 11h-1.1L10.8 3zM12 17.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5z" />
+        <path d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z" />
       </svg>
     ),
   },

@@ -15,7 +15,7 @@ export function CategoryIcon({ category, isMapDark }) {
     case "special":
       return (
         <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill={fg} stroke={border} strokeWidth="0.8">
-          <path d="M10.8 3h2.4l-.65 11h-1.1L10.8 3zM12 17.5a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5z" />
+          <path d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z" />
         </svg>
       );
     case "discuss":

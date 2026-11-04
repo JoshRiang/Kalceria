@@ -39,6 +39,8 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
 
     let rafId = null;
     let lastTime = performance.now();
+    let readyStartTime = null;
+    let progressAtReady = 0;
     completedRef.current = false;
     progressValRef.current = 0;
     isDarkRef.current = false;
@@ -58,23 +60,36 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
       const current = progressValRef.current;
       const ready = isReadyRef.current;
 
-      // Silky-smooth constant and responsive velocity without stutter
-      let speed;
+      let next;
       if (ready) {
-        // Fast, authoritative sweep to 100% (~200ms)
-        speed = Math.max(90, (100 - current) * 7.5);
-      } else {
-        // Steady cinematic sweep from 0 to 92% (~1.2s), then gentle buffer crawl (never halts)
-        if (current < 85) {
-          speed = 68; // constant smooth velocity (no decay stutter)
-        } else if (current < 94) {
-          speed = 20; // gentle buffer rate
-        } else {
-          speed = 6;  // micro-rate while awaiting backend ready signal
+        if (readyStartTime === null) {
+          readyStartTime = now;
+          progressAtReady = current;
         }
+
+        const elapsedSinceReady = (now - readyStartTime) / 1000;
+        // Total duration after ready signal is received: exactly 2.0 seconds (n + 2 detik)
+        // Ensures flying Kalcer man reaches the exact center of the screen gracefully
+        const t = Math.min(1, elapsedSinceReady / 2.0);
+        const eased = t * (2 - t);
+        next = Math.min(100, progressAtReady + (100 - progressAtReady) * eased);
+
+        if (next < current + 12 * dt) {
+          next = Math.min(100, current + 12 * dt);
+        }
+      } else {
+        // Steady cinematic sweep from 0 to 85% (~1.4s), then gentle buffer crawl (never halts)
+        let speed;
+        if (current < 75) {
+          speed = 55; // steady smooth velocity
+        } else if (current < 88) {
+          speed = 18; // gentle buffer rate
+        } else {
+          speed = 4;  // micro-rate while awaiting backend ready signal
+        }
+        next = Math.min(94, current + speed * dt);
       }
 
-      const next = Math.min(100, current + speed * dt);
       progressValRef.current = next;
 
       // GPU-accelerated transform: scaleX eliminates expensive layout reflows (0 stutter)
@@ -93,14 +108,15 @@ export function StartupSequenceOverlay({ showStartup, isReady, onComplete }) {
         setIsDark(true);
       }
 
-      if (next >= 99.8 && ready) {
+      // Complete when ready, at least 2 seconds (+ 2 detik) have passed since ready, and progress >= 99.8%
+      if (ready && readyStartTime !== null && (now - readyStartTime) >= 2000 && next >= 99.8) {
         completedRef.current = true;
         if (barFillRef.current) barFillRef.current.style.transform = "scaleX(1)";
         if (percentTextRef.current) percentTextRef.current.textContent = "100";
-        // Snappy, precise hold: exactly 100ms to register 100%, then immediately dismiss
+        // Snappy, precise hold: exactly 120ms to register 100%, then immediately dismiss
         const timer = setTimeout(() => {
           onComplete?.();
-        }, 100);
+        }, 120);
         return () => clearTimeout(timer);
       }
 
