@@ -52,6 +52,20 @@ function ResetPasswordContent() {
         establishSession(res.data.user);
       }
 
+      // Broadcast to other open tabs on the same device
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const authChannel = new BroadcastChannel("kalceria_auth_channel");
+          authChannel.postMessage({
+            type: "RESET_PASSWORD_COMPLETE",
+            email: res.data?.user?.email,
+            username: res.data?.username || res.data?.user?.nickname || res.data?.user?.name,
+            user: res.data?.user,
+          });
+          authChannel.close();
+        }
+      } catch {}
+
       const chosenName =
         res.data?.user?.nickname ||
         res.data?.username ||
@@ -77,7 +91,9 @@ function ResetPasswordContent() {
         username={welcomeUser}
         onComplete={() => {
           sessionStorage.setItem("introPlayed", "true");
-          router.push("/");
+          sessionStorage.setItem("landingSeen", "true");
+          sessionStorage.removeItem("triggerAuth");
+          window.location.href = "/";
         }}
       />
     );

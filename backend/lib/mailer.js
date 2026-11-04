@@ -83,6 +83,9 @@ export async function sendOtpEmail(toEmail, otp) {
     text: `Hai Kalcerian! Ini adalah kode verifikasi mu: ${otp}. Harap jangan bagikan kode ini.`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #eee;border-radius:8px;background:#ffffff;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <img src="https://kalceria.id/logo-avatar.png" alt="Kalceria" width="64" height="64" style="border-radius:12px;background:#000000;display:inline-block;" />
+        </div>
         <h2 style="color:#1a1a1a;">Verifikasi Akun Kalceria</h2>
         <p>Hai Kalcerian!</p>
         <p>Ini adalah kode verifikasi OTP akun kamu:</p>
@@ -118,6 +121,9 @@ export async function sendPasswordResetEmail(toEmail, token, explicitOrigin) {
     text: `Hai Kalcerian! Klik link berikut untuk mereset password akun kamu: ${resetUrl.href} (Link berlaku 1 jam). Harap jangan bagikan link ini kepada siapapun demi keamanan akun kamu.`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #eee;border-radius:8px;background:#ffffff;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <img src="https://kalceria.id/logo-avatar.png" alt="Kalceria" width="64" height="64" style="border-radius:12px;background:#000000;display:inline-block;" />
+        </div>
         <h2 style="color:#1a1a1a;margin-top:0;">Reset Password Kalceria</h2>
         <p>Hai Kalcerian!</p>
         <p>Kami menerima permintaan untuk mereset kata sandi akun Kalceria kamu. Klik tombol di bawah untuk membuat password baru:</p>

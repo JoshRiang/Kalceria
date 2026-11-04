@@ -11,6 +11,7 @@ import {
   login,
   requestPasswordReset,
   resetPassword,
+  getResetPasswordStatus,
 } from '../controllers/authController.js';
 import { createComment } from '../controllers/commentController.js';
 import { getMinigameStatus } from '../controllers/minigameController.js';
@@ -227,6 +228,15 @@ test('Vertical Slice: Full Registration Flow (Anti-Torn Register + Choose Userna
     console.log('[Test] Password reset confirmed:', resetConfirmData);
     assert.equal(resetConfirmData?.message, 'Password reset successful.');
     assert.equal(resetConfirmData?.username, testUsername, 'Reset confirm must return user nickname as username');
+
+    // 7b. Verify Cross-Device / Cross-Tab reset status returns completed
+    let statusData = null;
+    await getResetPasswordStatus({ query: { email: testEmail } }, {
+      json: (d) => { statusData = d; }
+    });
+    console.log('[Test] Password reset status for email:', statusData);
+    assert.equal(statusData?.status, 'completed');
+    assert.equal(statusData?.username, testUsername);
 
     // 8. Verify login works with new password
     console.log('[Test] Testing Login with new password...');

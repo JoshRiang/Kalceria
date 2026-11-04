@@ -428,6 +428,7 @@ export async function requestPasswordReset(req, res, next) {
 
     try {
       await sendPasswordResetEmail(email, token, clientOrigin);
+      await redis.set(`reset_status:${email}`, JSON.stringify({ status: 'waiting' }), 'EX', 3600);
     } catch (error) {
       await redis.del(`reset:${token}`);
       console.error('[ResetPassword] Email delivery failed:', error.message);
@@ -471,6 +472,18 @@ export async function resetPassword(req, res, next) {
     const sessionToken = await createAuthSession(user);
     setAuthCookie(res, sessionToken);
 
+    await redis.set(
+      `reset_status:${email}`,
+      JSON.stringify({
+        status: 'completed',
+        username: user.nickname || user.name,
+        email: user.email,
+        timestamp: Date.now(),
+      }),
+      'EX',
+      300,
+    );
+
     res.json({
       message: 'Password reset successful.',
       user: {
@@ -485,6 +498,24 @@ export async function resetPassword(req, res, next) {
     });
   } catch (err) {
     next(err);
+  }
+}
+
+// ─── Password Reset Status (Cross-Device / Cross-Tab Sync) ───────────────────
+export async function getResetPasswordStatus(req, res) {
+  try {
+    const email = typeof req.query?.email === 'string' ? req.query.email.trim().toLowerCase() : '';
+    if (!email) return res.json({ status: 'none' });
+    const data = await redis.get(`reset_status:${email}`);
+    if (!data) return res.json({ status: 'none' });
+    try {
+      const parsed = JSON.parse(data);
+      return res.json(parsed);
+    } catch {
+      return res.json({ status: data });
+    }
+  } catch {
+    return res.json({ status: 'none' });
   }
 }
 

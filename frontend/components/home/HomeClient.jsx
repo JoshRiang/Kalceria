@@ -84,7 +84,7 @@ export default function HomeClient() {
               onAuthSuccess={(data) => {
                 sessionStorage.setItem("introPlayed", "true");
                 sessionStorage.setItem("landingSeen", "true");
-                setUsername(data?.username || data?.user?.username || "Commander");
+                setUsername(data?.username || data?.user?.nickname || data?.user?.name || "Commander");
                 setPhase("welcome");
               }}
               onBack={() => setPhase("landing")}
@@ -106,6 +106,10 @@ export default function HomeClient() {
               onComplete={() => {
                 sessionStorage.setItem("introPlayed", "true");
                 sessionStorage.setItem("landingSeen", "true");
+                sessionStorage.removeItem("triggerAuth");
+                if (typeof window !== "undefined" && window.history.replaceState) {
+                  window.history.replaceState({}, document.title, window.location.pathname);
+                }
                 setPhase("landing");
               }}
             />

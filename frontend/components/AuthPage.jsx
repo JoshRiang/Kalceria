@@ -343,20 +343,46 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         establishSession(res.data.user);
         activeSessionRef.current = res.data;
       }
+
+      // Broadcast to other open tabs on this device (e.g. original forgot password tab)
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const authChannel = new BroadcastChannel("kalceria_auth_channel");
+          authChannel.postMessage({
+            type: "RESET_PASSWORD_COMPLETE",
+            email: res.data?.user?.email,
+            username: res.data?.username || res.data?.user?.nickname || res.data?.user?.name,
+            user: res.data?.user,
+          });
+          authChannel.close();
+        }
+      } catch {}
+
       const displayName = res.data?.user?.nickname || res.data?.user?.name || "User";
       setTimeout(() => {
         setIsBuffering(false);
-        setMode("login");
-        setSuccess(`Welcome Back, ${displayName}`);
-        setTimeout(() => {
-          onAuthSuccess?.(res.data);
-        }, 1200);
+        if (typeof window !== "undefined" && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        onAuthSuccess?.(res.data);
       }, 800);
     } catch (err) {
       setIsBuffering(false);
       setError(err.response?.data?.error || "Gagal mengubah password. Link mungkin kedaluwarsa.");
     }
   }
+
+  // ── Cross-Device / Cross-Tab Sync for Forgot Password Tab ──
+  const handleCrossTabResetSuccess = (data) => {
+    setIsBuffering(true);
+    setTimeout(() => {
+      setIsBuffering(false);
+      if (typeof window !== "undefined" && window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      onAuthSuccess?.(data);
+    }, 800);
+  };
 
   // ── Form Submit: Login or Register ──
   async function handleSubmit(e) {
@@ -811,6 +837,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             email={forgotEmail}
                             setEmail={setForgotEmail}
                             onSubmit={handleForgotPasswordSubmit}
+                            onSuccessComplete={handleCrossTabResetSuccess}
                             onBackToLogin={() => {
                               setError("");
                               setSuccess("");

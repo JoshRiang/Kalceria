@@ -2,18 +2,59 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import api from "@/lib/api";
 
 export default function ForgotPasswordStep({
   email,
   setEmail,
   onSubmit,
   onBackToLogin,
+  onSuccessComplete,
   loading,
   error,
   success,
 }) {
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  // ── Cross-Device & Cross-Tab Synchronization ──
+  // If the user completes the password reset from their phone or another tab,
+  // this active tab detects it and immediately transitions to Welcome Back -> Landing Page.
+  useEffect(() => {
+    if (!success || !email || !isEmailValid) return;
+
+    let channel;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        channel = new BroadcastChannel("kalceria_auth_channel");
+        channel.onmessage = (event) => {
+          if (event.data?.type === "RESET_PASSWORD_COMPLETE") {
+            onSuccessComplete?.(event.data);
+          }
+        };
+      }
+    } catch {}
+
+    let isCancelled = false;
+    const pollInterval = setInterval(async () => {
+      if (isCancelled) return;
+      try {
+        const res = await api.get(
+          `/auth/password/reset-status?email=${encodeURIComponent(email.trim().toLowerCase())}`
+        );
+        if (res.data?.status === "completed") {
+          clearInterval(pollInterval);
+          onSuccessComplete?.(res.data);
+        }
+      } catch {}
+    }, 2500);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(pollInterval);
+      if (channel) channel.close();
+    };
+  }, [success, email, isEmailValid, onSuccessComplete]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;

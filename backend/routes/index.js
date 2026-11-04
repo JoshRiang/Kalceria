@@ -1,7 +1,9 @@
 import express from "express";
+import fs from "node:fs";
+import path from "node:path";
 import {
   register, login, requestOtp, verifyOtp, completeRegistration,
-  requestPasswordReset, resetPassword, checkUsername, verifyJitPassword, getMe,
+  requestPasswordReset, resetPassword, getResetPasswordStatus, checkUsername, verifyJitPassword, getMe,
   updateMe, deleteMe, changePassword
 } from "../controllers/authController.js";
 import { updateLiveLocation, getNearbyUsers, setLiveLocationPreference } from "../controllers/locationController.js";
@@ -96,7 +98,23 @@ router.post("/auth/otp/request", otpRequestIpRateLimit, otpRequestEmailRateLimit
 router.post("/auth/otp/verify", otpVerifyRateLimit, requireEmailAuth, verifyOtp);
 router.post("/auth/password/reset-request", passwordResetRateLimit, requireEmailAuth, requestPasswordReset);
 router.post("/auth/password/reset", passwordResetConfirmRateLimit, requireEmailAuth, resetPassword);
+router.get("/auth/password/reset-status", getResetPasswordStatus);
 router.get("/auth/check-username/:username", usernameCheckRateLimit, checkUsername);
+
+// ─── Brand Assets ─────────────────────────────────────────────────────────────
+router.get("/avatar", (_req, res) => {
+  const filePath = path.resolve("backend/assets/logo-avatar.png");
+  if (fs.existsSync(filePath)) {
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    return res.sendFile(filePath);
+  }
+  return res.redirect("https://kalceria.id/logo-avatar.png");
+});
+
+router.get("/logo", (_req, res) => {
+  res.redirect(301, "/api/avatar");
+});
 
 // ─── User Profile ────────────────────────────────────────────────────────────
 router.get("/users/me", requireAuth, getMe);
