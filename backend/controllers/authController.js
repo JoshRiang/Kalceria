@@ -417,7 +417,7 @@ export async function requestPasswordReset(req, res, next) {
       console.error('[ResetPassword] Email delivery failed:', error.message);
       return res.status(500).json({ error: 'Gagal mengirim email reset password. Coba beberapa saat lagi.' });
     }
-    res.json({ message: 'Link reset password telah dikirim ke email kamu.' });
+    res.json({ message: 'Verifikasi Link sudah terkirim ke email kamu.' });
   } catch (err) {
     next(err);
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 export default function ForgotPasswordStep({
@@ -12,15 +13,34 @@ export default function ForgotPasswordStep({
   success,
 }) {
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
     if (!isEmailValid || loading) return;
+    setResendCooldown(60);
+    onSubmit(email.trim());
+  };
+
+  const handleResend = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (!isEmailValid || loading || resendCooldown > 0) return;
+    setResendCooldown(60);
     onSubmit(email.trim());
   };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center select-none">
       {/* ── Responsive Forgot_man.webp in the middle (Same size as Email_man) ── */}
       <div className="relative mb-5 flex items-center justify-center">
         <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center">
@@ -92,18 +112,39 @@ export default function ForgotPasswordStep({
         {/* Send Magic Link Button */}
         <button
           type="submit"
-          disabled={loading || !isEmailValid}
-          className="w-full py-3.5 bg-white hover:bg-slate-200 text-black font-sans font-bold text-sm tracking-wider uppercase rounded-md transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer mb-4 flex items-center justify-center gap-2"
+          disabled={loading || !isEmailValid || (Boolean(success) && resendCooldown > 0)}
+          className="w-full py-3.5 bg-white hover:bg-slate-200 text-black font-sans font-bold text-sm tracking-wider uppercase rounded-md transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer mb-3 flex items-center justify-center gap-2"
         >
           {loading ? (
             <div className="flex items-center justify-center gap-2.5">
               <div className="w-4 h-4 border-2 border-black/25 border-t-black rounded-full animate-spin" />
-              <span>Mengirim Link…</span>
+              <span>Mengirim link...</span>
             </div>
+          ) : success ? (
+            "Kirim Ulang Link"
           ) : (
             "Kirim Link"
           )}
         </button>
+
+        {/* Coba Ulang / Kirim Ulang Option */}
+        {success && (
+          <div className="flex flex-col items-center mb-3">
+            <p className="font-mono text-xs text-slate-400 mb-1">
+              Belum menerima link reset password?
+            </p>
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={loading || resendCooldown > 0 || !isEmailValid}
+              className="font-sans font-bold text-xs text-white hover:text-slate-300 underline underline-offset-4 transition-colors cursor-pointer disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
+            >
+              {resendCooldown > 0
+                ? `Coba kirim ulang (${resendCooldown}s)`
+                : "Coba kirim ulang link"}
+            </button>
+          </div>
+        )}
       </form>
 
       {/* Back to Sign In Link */}
@@ -122,4 +163,3 @@ export default function ForgotPasswordStep({
     </div>
   );
 }
-

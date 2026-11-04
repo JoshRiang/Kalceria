@@ -321,8 +321,8 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     setError("");
     setSuccess("");
     try {
-      await api.post("/auth/password/reset-request", { email: emailToReset });
-      setSuccess("Link reset password telah dikirim ke email kamu. Silakan periksa inbox Gmail kamu.");
+      const res = await api.post("/auth/password/reset-request", { email: emailToReset });
+      setSuccess(res.data?.message || "Verifikasi Link sudah terkirim ke email kamu.");
     } catch (err) {
       setError(err.response?.data?.error || "Gagal mengirim link reset password.");
     } finally {
@@ -360,14 +360,11 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
   // ── Form Submit: Login or Register ──
   async function handleSubmit(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (mode !== "login" && mode !== "register") return;
     setError("");
     setSuccess("");
-
-    if (mode === "verify") {
-      handleVerifyOtp();
-      return;
-    }
 
     if (mode === "login") {
       if (!form.email?.trim() || !form.password) {
@@ -682,115 +679,86 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                     )}
 
                     {/* Form Body */}
-                    <form onSubmit={handleSubmit} noValidate className="flex flex-col relative">
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key={mode}
-                          initial={{ opacity: 0, x: mode === "login" ? -10 : 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: mode === "login" ? 10 : -10 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          {mode === "login" ? (
-                            <LoginForm
-                              form={form}
-                              setField={setField}
-                              loading={loading}
-                              isEmailValid={isEmailValid}
-                            />
-                          ) : mode === "register" ? (
-                            <RegisterForm
-                              form={form}
-                              setField={setField}
-                              PUBLIC_SIGNUP_ENABLED={PUBLIC_SIGNUP_ENABLED}
-                              nameValid={nameValid}
-                              isDobValid={isDobValid}
-                              isDobError={isDobError}
-                              dobMessage={yearCheck.message}
-                              cityValid={cityValid}
-                              isCityError={isCityError}
-                              isEmailValid={isEmailValid}
-                              isEmailError={isEmailError}
-                              passwordValid={passwordValid}
-                              isPasswordError={isPasswordError}
-                              isConfirmValid={isConfirmValid}
-                              isConfirmError={isConfirmError}
-                              confirmMessage={confirmMessage}
-                              croppedAvatar={croppedAvatar}
-                              setCroppedAvatar={setCroppedAvatar}
-                              photoError={photoError}
-                              setPhotoError={setPhotoError}
-                              handlePhotoSelect={handlePhotoSelect}
-                            />
-                          ) : mode === "verify" ? (
-                            <VerifyOtpStep
-                              otpEmail={otpEmail}
-                              otp={otp}
-                              setOtp={setOtp}
-                              handleOtpInput={handleOtpInput}
-                              handleOtpKeyDown={handleOtpKeyDown}
-                              handleOtpPaste={handleOtpPaste}
-                              handleVerifyOtp={handleVerifyOtp}
-                              handleResendOtp={handleResendOtp}
-                              loading={loading}
-                              resendCooldown={resendCooldown}
-                              isExpired={isOtpExpired}
-                              error={error}
-                            />
-                          ) : mode === "forgot-password" ? (
-                            <ForgotPasswordStep
-                              email={forgotEmail}
-                              setEmail={setForgotEmail}
-                              onSubmit={handleForgotPasswordSubmit}
-                              onBackToLogin={() => {
-                                setError("");
-                                setSuccess("");
-                                setMode("login");
-                              }}
-                              loading={loading}
-                              error={error}
-                              success={success}
-                            />
-                          ) : null}
-                        </motion.div>
-                      </AnimatePresence>
-
-                      {/* Error / Success Display (Consolas font, no outer box) */}
-                      <AnimatePresence>
-                        {error && mode !== "verify" && mode !== "forgot-password" && (
+                    {mode === "login" || mode === "register" ? (
+                      <form onSubmit={handleSubmit} noValidate className="flex flex-col relative">
+                        <AnimatePresence mode="wait">
                           <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="overflow-hidden mb-3"
+                            key={mode}
+                            initial={{ opacity: 0, x: mode === "login" ? -10 : 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: mode === "login" ? 10 : -10 }}
+                            transition={{ duration: 0.2 }}
                           >
-                            <div
-                              style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-                              className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
-                            >
-                              {error}
-                            </div>
+                            {mode === "login" ? (
+                              <LoginForm
+                                form={form}
+                                setField={setField}
+                                loading={loading}
+                                isEmailValid={isEmailValid}
+                              />
+                            ) : (
+                              <RegisterForm
+                                form={form}
+                                setField={setField}
+                                PUBLIC_SIGNUP_ENABLED={PUBLIC_SIGNUP_ENABLED}
+                                nameValid={nameValid}
+                                isDobValid={isDobValid}
+                                isDobError={isDobError}
+                                dobMessage={yearCheck.message}
+                                cityValid={cityValid}
+                                isCityError={isCityError}
+                                isEmailValid={isEmailValid}
+                                isEmailError={isEmailError}
+                                passwordValid={passwordValid}
+                                isPasswordError={isPasswordError}
+                                isConfirmValid={isConfirmValid}
+                                isConfirmError={isConfirmError}
+                                confirmMessage={confirmMessage}
+                                croppedAvatar={croppedAvatar}
+                                setCroppedAvatar={setCroppedAvatar}
+                                photoError={photoError}
+                                setPhotoError={setPhotoError}
+                                handlePhotoSelect={handlePhotoSelect}
+                              />
+                            )}
                           </motion.div>
-                        )}
-                        {success && mode !== "forgot-password" && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="overflow-hidden mb-3"
-                          >
-                            <div
-                              style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-                              className="text-emerald-400 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
-                            >
-                              {success}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                        </AnimatePresence>
 
-                      {/* Submit Button (for login & register modes only) */}
-                      {(mode === "login" || mode === "register") && (
+                        {/* Error / Success Display (Consolas font, no outer box) */}
+                        <AnimatePresence>
+                          {error && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden mb-3"
+                            >
+                              <div
+                                style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                                className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+                              >
+                                {error}
+                              </div>
+                            </motion.div>
+                          )}
+                          {success && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden mb-3"
+                            >
+                              <div
+                                style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                                className="text-emerald-400 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
+                              >
+                                {success}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Submit Button */}
                         <button
                           type="submit"
                           disabled={loading || (mode === "register" && !PUBLIC_SIGNUP_ENABLED)}
@@ -804,8 +772,57 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             ? "Sign In"
                             : "Register Account"}
                         </button>
-                      )}
-                    </form>
+                      </form>
+                    ) : mode === "verify" ? (
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key="verify"
+                          initial={{ opacity: 0, scale: 0.96 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.96 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <VerifyOtpStep
+                            otpEmail={otpEmail}
+                            otp={otp}
+                            setOtp={setOtp}
+                            handleOtpInput={handleOtpInput}
+                            handleOtpKeyDown={handleOtpKeyDown}
+                            handleOtpPaste={handleOtpPaste}
+                            handleVerifyOtp={handleVerifyOtp}
+                            handleResendOtp={handleResendOtp}
+                            loading={loading}
+                            resendCooldown={resendCooldown}
+                            isExpired={isOtpExpired}
+                            error={error}
+                          />
+                        </motion.div>
+                      </AnimatePresence>
+                    ) : mode === "forgot-password" ? (
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key="forgot-password"
+                          initial={{ opacity: 0, scale: 0.96 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.96 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ForgotPasswordStep
+                            email={forgotEmail}
+                            setEmail={setForgotEmail}
+                            onSubmit={handleForgotPasswordSubmit}
+                            onBackToLogin={() => {
+                              setError("");
+                              setSuccess("");
+                              setMode("login");
+                            }}
+                            loading={loading}
+                            error={error}
+                            success={success}
+                          />
+                        </motion.div>
+                      </AnimatePresence>
+                    ) : null}
 
                     {/* ── Footer ── */}
                     {mode !== "verify" && mode !== "forgot-password" && (
