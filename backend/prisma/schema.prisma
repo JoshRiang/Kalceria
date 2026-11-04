@@ -290,6 +290,7 @@ model Comment {
   content   String
   category  String?     @default("Other")
   type      CommentType
+  mediaUrl  String?
   isPinned  Boolean     @default(false)
   createdAt DateTime    @default(now())
 

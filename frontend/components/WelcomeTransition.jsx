@@ -2,33 +2,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-// ─── Typewriter Component (Slower & Smoother) ──────────────────────────────
-function Typewriter({ text, speed = 120, delay = 0, dir = "ltr" }) {
-  const [displayed, setDisplayed] = useState("");
-
-  useEffect(() => {
-    let timeout = setTimeout(() => {
-      let i = 0;
-      const interval = setInterval(() => {
-        if (i <= text.length) {
-          if (dir === "ltr") {
-            setDisplayed(text.slice(0, i));
-          } else {
-            setDisplayed(text.slice(text.length - i));
-          }
-          i++;
-        } else {
-          clearInterval(interval);
-        }
-      }, speed);
-      return () => clearInterval(interval);
-    }, delay);
-    return () => clearTimeout(timeout);
-  }, [text, speed, delay, dir]);
-
-  return <span>{displayed}</span>;
-}
-
 // ─── RedirectText Component ─────────────────────────────────────────────────
 function RedirectText() {
   const [text, setText] = useState("");
@@ -61,14 +34,17 @@ function RedirectText() {
   }, [showDots]);
 
   return (
-    <div className="flex relative w-fit mx-auto" style={{ 
-      color: "rgba(255,255,255,0.7)", 
-      fontFamily: "'Inter', sans-serif",
-      fontSize: "9px", 
-      letterSpacing: "0.8em",
-      textTransform: "uppercase",
-      fontWeight: 300,
-    }}>
+    <div
+      className="flex relative w-fit mx-auto select-none"
+      style={{ 
+        color: "rgba(255,255,255,0.7)", 
+        fontFamily: "'Inter', sans-serif",
+        fontSize: "9px", 
+        letterSpacing: "0.8em",
+        textTransform: "uppercase",
+        fontWeight: 300,
+      }}
+    >
       <span>{text}</span>
       <span style={{ position: "absolute", left: "100%", whiteSpace: "pre" }}>
         {showDots ? dots : ""}
@@ -189,6 +165,8 @@ function DominoChevrons({ active, isMobile }) {
 
 // ─── WelcomeTransition Main ──────────────────────────────────────────────────
 export default function WelcomeTransition({ username, onComplete }) {
+  const [welcomeText, setWelcomeText] = useState("");
+  const [userText, setUserText] = useState("");
   const [showGears, setShowGears] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -209,19 +187,66 @@ export default function WelcomeTransition({ username, onComplete }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Sequential typing state machine: "Welcome Back," first -> pause -> then username on newline
   useEffect(() => {
-    const tGears = setTimeout(() => setShowGears(true), 2500);
-    
-    // Start exit animation slightly before calling onComplete
-    const tExit = setTimeout(() => setIsExiting(true), 6500);
-    const tEnd = setTimeout(() => onComplete(), 7500);
-    
-    return () => { 
-      clearTimeout(tGears); 
-      clearTimeout(tExit);
-      clearTimeout(tEnd); 
+    let isMounted = true;
+    const fullWelcome = "Welcome Back,";
+    const fullUser = cleanUsername;
+
+    let ivWelcome = null;
+    let ivUser = null;
+    let tExit = null;
+    let tEnd = null;
+
+    // Step 1: Initial delay before typing begins
+    const tStart = setTimeout(() => {
+      if (!isMounted) return;
+      let i = 0;
+      ivWelcome = setInterval(() => {
+        if (!isMounted) return;
+        if (i <= fullWelcome.length) {
+          setWelcomeText(fullWelcome.slice(0, i));
+          i++;
+        } else {
+          clearInterval(ivWelcome);
+          // Step 2: Sequential pause, then start typing username on the new line below
+          setTimeout(() => {
+            if (!isMounted) return;
+            let j = 0;
+            ivUser = setInterval(() => {
+              if (!isMounted) return;
+              if (j <= fullUser.length) {
+                setUserText(fullUser.slice(0, j));
+                j++;
+              } else {
+                clearInterval(ivUser);
+                // Step 3: Sequential reveal of Domino chevrons and REDIRECTING
+                setShowGears(true);
+              }
+            }, 100);
+          }, 240);
+        }
+      }, 100);
+    }, 600);
+
+    // Smooth exit sequence
+    tExit = setTimeout(() => {
+      if (isMounted) setIsExiting(true);
+    }, 6500);
+
+    tEnd = setTimeout(() => {
+      if (isMounted && typeof onComplete === "function") onComplete();
+    }, 7500);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(tStart);
+      if (ivWelcome) clearInterval(ivWelcome);
+      if (ivUser) clearInterval(ivUser);
+      if (tExit) clearTimeout(tExit);
+      if (tEnd) clearTimeout(tEnd);
     };
-  }, [onComplete]);
+  }, [cleanUsername, onComplete]);
 
   return (
     <motion.div 
@@ -232,24 +257,24 @@ export default function WelcomeTransition({ username, onComplete }) {
         scale: isExiting ? 1.1 : 1
       }}
       transition={{ duration: 1.2, ease: "easeInOut" }}
-      className="fixed inset-0 bg-[#010204] z-[9999] overflow-hidden flex flex-col items-center justify-center"
+      className="fixed inset-0 bg-[#010204] z-[9999] overflow-hidden flex flex-col items-center justify-center select-none"
     >
       {!isMobile && <BackgroundBlobs />}
       <DominoChevrons active={showGears && !isExiting} isMobile={isMobile} />
       
-      <div className="relative z-20 flex flex-col items-center w-full">
-        {/* Main Text Container - Tight Vertical Area without sparse gap */}
-        <div className="h-auto min-h-[50px] sm:min-h-[70px] md:min-h-[90px] py-1 flex flex-row items-center justify-center gap-x-2 sm:gap-x-4 font-sans font-black tracking-tighter w-full px-2 sm:px-4 whitespace-nowrap overflow-hidden">
-          <h1 className="text-[34px] xs:text-[42px] md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF4D00] via-[#FFD700] to-[#FFCC00] drop-shadow-[0_0_20px_rgba(255,140,0,0.3)]">
-            <Typewriter text="Welcome Back," delay={800} speed={130} />
+      <div className="relative z-20 flex flex-col items-center w-full px-4 text-center">
+        {/* Main Text Container - Sequential & Stacked: "Welcome Back," on top line, username below */}
+        <div className="flex flex-col items-center justify-center font-sans font-black tracking-tighter w-full max-w-4xl text-center leading-tight">
+          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#FF4D00] via-[#FFD700] to-[#FFCC00] drop-shadow-[0_0_20px_rgba(255,140,0,0.3)] min-h-[1.25em] flex items-center justify-center">
+            {welcomeText}
           </h1>
-          <h1 className="text-[34px] xs:text-[42px] md:text-5xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)]">
-             <Typewriter text={cleanUsername} delay={800} speed={130} dir="ltr" />
+          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-[#D946EF] to-[#EC4899] drop-shadow-[0_0_20px_rgba(217,70,239,0.3)] break-words break-all max-w-[92vw] min-h-[1.25em] mt-1.5 sm:mt-2.5 px-2 flex items-center justify-center">
+            {userText}
           </h1>
         </div>
         
-        {/* Redirect Status - Tight, modern spacing */}
-        <div className="flex flex-col items-center mt-1 sm:mt-2 h-7 justify-center">
+        {/* Redirect Status - Responsive Top Spacing so it NEVER overlaps on any device family */}
+        <div className="flex flex-col items-center mt-5 sm:mt-8 h-8 justify-center w-full">
           {showGears && <RedirectText />}
         </div>
       </div>

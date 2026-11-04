@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import api from "@/lib/api";
+import api, { uploadBlobMedia } from "@/lib/api";
 import { establishSession, hasUserSession } from "@/lib/session";
+
+const CLIP = { clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" };
 
 const COMMENT_TYPES = [
   { id: "ADVICE", label: "Advice" },
@@ -38,6 +40,12 @@ export function IdeaCommentModal({ onClose }) {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Media Attachment States (Inherited from EventFormModal)
+  const fileInputRef = useRef(null);
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [mediaError, setMediaError] = useState("");
 
   // Pre-fill active signed-in user's name if authenticated
   useEffect(() => {
@@ -82,6 +90,56 @@ export function IdeaCommentModal({ onClose }) {
 
     setError("Please sign in to post as an Authenticated User.");
     setIdentity("Anonymous");
+  };
+
+  // Surface-level file verification (Max 10MB, strictly PNG / JPEG / MP4)
+  const handleMediaUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMediaError("");
+
+    // 1. Size check: strictly <= 10MB rejected on surface
+    if (file.size > 10 * 1024 * 1024) {
+      setMediaError("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    // 2. MIME & Extension check: strictly PNG, JPEG, MP4
+    const filename = file.name || "";
+    const ext = (filename.split(".").pop() || "").toLowerCase();
+    const validExts = ["png", "jpg", "jpeg", "mp4"];
+    const declaredMime = (file.type || "").toLowerCase();
+    const validMimes = ["image/png", "image/jpeg", "image/pjpeg", "video/mp4"];
+
+    if (!validExts.includes(ext) || (declaredMime && !validMimes.includes(declaredMime))) {
+      setMediaError("Security enforcement: Hanya file .png, .jpeg, dan .mp4 yang diizinkan.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setIsUploadingMedia(true);
+    try {
+      const res = await uploadBlobMedia(file);
+      if (res.url) {
+        setMediaUrl((prev) => {
+          const current = (prev || "").trim();
+          return current ? `${current}, ${res.url}` : res.url;
+        });
+      }
+    } catch (err) {
+      setMediaError(err.message || "Failed to upload media");
+    } finally {
+      setIsUploadingMedia(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveMedia = (indexToRemove) => {
+    setMediaUrl((prev) => {
+      const urls = (prev || "").split(",").map((s) => s.trim()).filter(Boolean);
+      return urls.filter((_, idx) => idx !== indexToRemove).join(", ");
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -134,6 +192,9 @@ export function IdeaCommentModal({ onClose }) {
       } else {
         payload.username = "Anonymous";
       }
+      if (mediaUrl.trim()) {
+        payload.mediaUrl = mediaUrl.trim();
+      }
 
       const submitPromise = api.post(
         "/comments",
@@ -152,7 +213,7 @@ export function IdeaCommentModal({ onClose }) {
     }
   };
 
-  const isFormValid = content.trim().length > 0 && !isSubmitting;
+  const isFormValid = content.trim().length > 0 && !isSubmitting && !isUploadingMedia;
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-3 sm:p-4">
@@ -202,7 +263,7 @@ export function IdeaCommentModal({ onClose }) {
         )}
       </AnimatePresence>
 
-      {/* Single-Part Modal Form — Styled Like Mini Event Form on Map Page */}
+      {/* Single-Part Modal Form — Styled Like Mini Event Form on Map Page with Chamfered CLIP Edge */}
       <AnimatePresence>
         {!isSubmitting && (
           <motion.div
@@ -211,7 +272,8 @@ export function IdeaCommentModal({ onClose }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 12, transition: { duration: 0.25, ease: "easeOut" } }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden backdrop-blur-2xl bg-[#0a0f1a]/85 border border-white/[0.18] z-[1001]"
+            className="relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col shadow-2xl overflow-hidden backdrop-blur-2xl bg-[#0a0f1a]/85 border border-white/[0.18] z-[1001]"
+            style={CLIP}
             onClick={(e) => e.stopPropagation()}
           >
         <style jsx>{`
@@ -235,7 +297,7 @@ export function IdeaCommentModal({ onClose }) {
         `}</style>
 
         {/* Dynamic Distributed Blobs: 75% Black, 25% Navy Blue */}
-        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden" style={CLIP}>
           {/* 75% Dominant Dynamic Black Blob */}
           <motion.div
             animate={{
@@ -258,8 +320,8 @@ export function IdeaCommentModal({ onClose }) {
           />
         </div>
 
-        {/* Header — Title matching Create Mini Event font */}
-        <div className="shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-b border-white/[0.08]">
+        {/* Header — Title matching Create Mini Event font, NO divider line below */}
+        <div className="shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-none">
           <h2 className="font-sans font-bold text-base sm:text-lg tracking-tight text-white">
             Speak for us
           </h2>
@@ -415,6 +477,117 @@ export function IdeaCommentModal({ onClose }) {
               placeholder={feedbackType === "IDEA" ? "Describe your idea in detail (minimum 20 characters)..." : "Write your advice or feedback here (minimum 20 characters)..."}
               required
             />
+          </div>
+
+          {/* Add photos or videos segment (Inherited from edit event form in map page) */}
+          <div className="flex flex-col gap-1.5 sm:gap-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] sm:text-xs font-semibold tracking-wider text-slate-400 font-sans flex items-center gap-1.5">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-3.5 h-3.5"
+                >
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+                Add photos or videos {mediaUrl && mediaUrl.includes(",") ? `(${mediaUrl.split(",").filter((s) => s.trim()).length} files)` : ""}
+              </label>
+              {mediaUrl && (
+                <button
+                  type="button"
+                  onClick={() => setMediaUrl("")}
+                  className="text-[10px] font-bold text-red-400 hover:underline cursor-pointer"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 focus:border-slate-400 font-sans"
+                value={mediaUrl}
+                onChange={(e) => { setMediaUrl(e.target.value); setMediaError(""); }}
+                placeholder="Paste media URL or upload file"
+              />
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4"
+                className="hidden"
+                onChange={handleMediaUpload}
+              />
+              <button
+                type="button"
+                disabled={isUploadingMedia || isSubmitting}
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-2 border rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/30 disabled:opacity-40"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-3.5 h-3.5"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                {isUploadingMedia ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+
+            {/* Surface Error Box in Consolas Red, No Outer Box */}
+            {mediaError && (
+              <div 
+                style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                className="text-red-500 text-[13px] sm:text-[14px] font-normal tracking-tight py-0.5 select-none"
+              >
+                {mediaError}
+              </div>
+            )}
+
+            {/* Media Thumbnails with remove (×) button */}
+            {(() => {
+              const urls = (mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
+              if (urls.length === 0) return null;
+              return (
+                <div className="mt-1 p-2 rounded-xl border border-white/10 bg-white/[0.02] flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 overflow-x-auto py-1 comment-scrollbar">
+                    {urls.map((url, idx) => {
+                      const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
+                      return (
+                        <div key={idx} className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-lg overflow-hidden shadow-sm border border-white/10 group">
+                          {isVideo ? (
+                            <video src={url} muted autoPlay loop playsInline className="w-full h-full object-cover" />
+                          ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMedia(idx)}
+                            title="Remove this media"
+                            className="absolute top-1 right-1 z-20 w-4 h-4 rounded-full bg-white text-black shadow-md flex items-center justify-center text-[10px] font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Submit Action Button: Arial, Not bold, Not all capital */}

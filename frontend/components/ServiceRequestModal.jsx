@@ -8,6 +8,8 @@ import api from "@/lib/api";
 import { hasUserSession } from "@/lib/session";
 import { useHasMounted } from "@/hooks/useHasMounted";
 
+const CLIP = { clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" };
+
 const SERVICE_TYPES = [
   { id: "EO", label: "Event Organizer", desc: "Full EO service for your automotive event" },
   { id: "SHOOTING", label: "Car Shoot", desc: "Professional photography & videography" },
@@ -416,7 +418,10 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Animated Conic Glow Overlay */}
-        <div className="absolute -inset-[2px] rounded-[32px] z-0 overflow-hidden opacity-30 pointer-events-none">
+        <div 
+          className="absolute -inset-[2px] z-0 overflow-hidden opacity-30 pointer-events-none"
+          style={CLIP}
+        >
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -429,10 +434,13 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
         </div>
 
         {/* Main Card Container: Semi-transparent (~20% translucency) for authentic glassmorphism */}
-        <div className="relative z-10 w-full max-h-[92vh] overflow-hidden bg-black/80 backdrop-blur-2xl border border-white/15 rounded-[30px] flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.85)]">
+        <div 
+          className="relative z-10 w-full max-h-[92vh] overflow-hidden bg-black/80 backdrop-blur-2xl border border-white/15 flex flex-col shadow-[0_60px_120px_rgba(0,0,0,0.85)]"
+          style={CLIP}
+        >
           
           {/* Dynamic Ambient Blobs: 60% Black, 25% Pink, 15% Yellow */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[30px]">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none" style={CLIP}>
             {/* 60% Dominant Dynamic Black Blobs */}
             <motion.div
               animate={{ 
@@ -620,7 +628,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                   <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full items-center">
                     <div className="flex flex-col xl:flex-row gap-6 items-center xl:items-start justify-center w-full">
                       {/* Column 1: Intel Hub */}
-                      <div className="w-full max-w-[384px] bg-black/50 backdrop-blur-xl border border-white/15 rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                      <div className="w-full max-w-[384px] bg-black/50 backdrop-blur-xl border border-white/15 p-6 md:p-8 shadow-2xl relative overflow-hidden" style={CLIP}>
                         <div className="relative z-10 space-y-1">
                           <Field id="serviceName" label="Request Title" type="text" placeholder="Project name/ID" val={form.serviceName} onChange={setField} required />
                           <Field id="contactPerson" label="Operator Name" type="text" placeholder="Full name" val={form.contactPerson} onChange={setField} required />

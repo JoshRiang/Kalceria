@@ -136,6 +136,21 @@ export function CommentsPanel({ lowPowerMode }) {
                 <p className="font-sans text-[12px] text-black/80 leading-relaxed font-medium group-hover:text-black transition-colors duration-300">
                   {c.content}
                 </p>
+                {c.mediaUrl && (
+                  <div className="mt-2.5 flex items-center gap-2 overflow-x-auto py-1">
+                    {c.mediaUrl.split(",").map((s) => s.trim()).filter(Boolean).map((url, idx) => {
+                      const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
+                      return isVideo ? (
+                        <video key={idx} src={url} controls className="w-16 h-16 rounded-xl object-cover border border-black/10" />
+                      ) : (
+                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="Attachment" className="w-16 h-16 rounded-xl object-cover border border-black/10 hover:opacity-80 transition-opacity" />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <p className="font-sans text-[10px] text-black/40 mt-4 uppercase tracking-widest">

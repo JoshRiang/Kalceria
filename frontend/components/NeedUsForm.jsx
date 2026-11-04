@@ -5,7 +5,7 @@ import Image from "next/image";
 import api from "@/lib/api";
 import { hasUserSession } from "@/lib/session";
 
-const CLIP = { clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" };
+const CLIP = { clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" };
 const INPUT = "w-full bg-white/5 border border-white/10 rounded px-3 py-2.5 font-sans text-sm text-white outline-none transition-all placeholder:text-slate-700 focus:border-white/30";
 const LABEL = "font-sans text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5 block";
 

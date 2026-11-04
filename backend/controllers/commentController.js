@@ -59,6 +59,11 @@ export async function createComment(req, res, next) {
         ? dbUser?.nickname || dbUser?.name || 'User'
         : 'Guest';
 
+    const cleanMediaUrl =
+      typeof req.body?.mediaUrl === 'string' && req.body.mediaUrl.trim().length > 0
+        ? req.body.mediaUrl.trim()
+        : null;
+
     const comment = await prisma.comment.create({
       data: {
         content: cleanContent,
@@ -66,6 +71,7 @@ export async function createComment(req, res, next) {
         type,
         username: finalUsername,
         userId: identity === 'Anonymous' ? null : authUserId,
+        mediaUrl: cleanMediaUrl,
       },
     });
 
