@@ -15,6 +15,82 @@ import {
 
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
 
+const NATURAL_PASS_PREFIXES = [
+  'Kalcer', 'Turbo', 'Vortex', 'Nitro', 'Apex', 'Veloz', 'Drift', 'Spark',
+  'Horizon', 'Bintaro', 'Targa', 'Carbon', 'Aether', 'Cyber', 'monza', 'Supra',
+  'Phantom', 'Zenith', 'Cobalt', 'Vector', 'Chrono', 'Stratos', 'Torque', 'Rev',
+];
+
+const NATURAL_PASS_CORES = [
+  'Shift', 'Pulse', 'Drive', 'Forge', 'Surge', 'Blade', 'Storm', 'Track',
+  'Boost', 'Crest', 'Glide', 'Prime', 'Spark', 'Nexus', 'gt', 'vspec',
+  'Redline', 'Stage', 'Aero', 'Tuner', 'Sprint', 'Racer', 'Matrix', 'Nova',
+];
+
+const NATURAL_PASS_SYMBOLS = ['!', '@', '#', '$', '%', '&', '*', '?', '+', '='];
+
+export function generateNaturalStrongPassword() {
+  const rawPrefix = NATURAL_PASS_PREFIXES[crypto.randomInt(0, NATURAL_PASS_PREFIXES.length)];
+  const rawCore = NATURAL_PASS_CORES[crypto.randomInt(0, NATURAL_PASS_CORES.length)];
+  const prefix = rawPrefix.charAt(0).toUpperCase() + rawPrefix.slice(1).toLowerCase();
+  const core = rawCore.charAt(0).toUpperCase() + rawCore.slice(1).toLowerCase();
+  const sym1 = NATURAL_PASS_SYMBOLS[crypto.randomInt(0, NATURAL_PASS_SYMBOLS.length)];
+  const sym2 = NATURAL_PASS_SYMBOLS[crypto.randomInt(0, NATURAL_PASS_SYMBOLS.length)];
+  const digits = String(crypto.randomInt(104, 998));
+
+  const pattern = crypto.randomInt(0, 3);
+  let candidate;
+  if (pattern === 0) {
+    candidate = `${prefix}${core}${sym1}${digits}`;
+  } else if (pattern === 1) {
+    candidate = `${prefix}${sym1}${core}${digits}${sym2}`;
+  } else {
+    candidate = `${prefix}${digits}${sym1}${core}`;
+  }
+
+  if (!PASSWORD_REGEX.test(candidate)) {
+    candidate = `${prefix}${core}#${digits}!`;
+  }
+  return candidate;
+}
+
+export async function recommendStrongPassword(req, res) {
+  try {
+    res.setHeader('Cache-Control', 'private, no-store');
+    const rawToken = typeof req.query?.token === 'string' ? req.query.token.trim() : '';
+    const rawEmail = typeof req.query?.email === 'string' ? req.query.email.trim().toLowerCase() : '';
+
+    let user = null;
+    if (rawToken && /^[a-f0-9]{64}$/i.test(rawToken)) {
+      const tokenEmail = await redis.get(`reset:${rawToken}`).catch(() => null);
+      if (tokenEmail) {
+        user = await prisma.user.findUnique({
+          where: { email: tokenEmail },
+          select: { id: true, passwordHash: true, passwordHistory: true },
+        }).catch(() => null);
+      }
+    } else if (rawEmail && rawEmail.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+      user = await prisma.user.findUnique({
+        where: { email: rawEmail },
+        select: { id: true, passwordHash: true, passwordHistory: true },
+      }).catch(() => null);
+    }
+
+    let password = generateNaturalStrongPassword();
+    if (user) {
+      for (let i = 0; i < 4; i++) {
+        const used = await isPasswordInHistory(user, password);
+        if (!used) break;
+        password = generateNaturalStrongPassword();
+      }
+    }
+
+    return res.json({ password });
+  } catch {
+    return res.json({ password: generateNaturalStrongPassword() });
+  }
+}
+
 const CITY_COORDS = {
   jakarta: [-6.2088, 106.8456],
   bintaro: [-6.2715, 106.7135],
@@ -409,7 +485,12 @@ export async function requestPasswordReset(req, res, next) {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
+    const fromMap = Boolean(req.body?.fromMap || req.body?.returnTo === '/map');
     await redis.set(`reset:${token}`, email, 'EX', 60); // 1 minute expiration (60 seconds)
+    if (fromMap) {
+      await redis.set(`reset_from_map:${token}`, '1', 'EX', 300).catch(() => {});
+      await redis.set(`reset_from_map_email:${email}`, '1', 'EX', 600).catch(() => {});
+    }
 
     let clientOrigin;
     const originHeader = typeof req.get === 'function'
@@ -428,8 +509,8 @@ export async function requestPasswordReset(req, res, next) {
     }
 
     try {
-      await sendPasswordResetEmail(email, token, clientOrigin);
-      await redis.set(`reset_status:${email}`, JSON.stringify({ status: 'waiting' }), 'EX', 60);
+      await sendPasswordResetEmail(email, token, clientOrigin, fromMap);
+      await redis.set(`reset_status:${email}`, JSON.stringify({ status: 'waiting', fromMap }), 'EX', 60);
     } catch (error) {
       await redis.del(`reset:${token}`);
       console.error('[ResetPassword] Email delivery failed:', error.message);
@@ -541,7 +622,15 @@ export async function resetPassword(req, res, next) {
       },
     });
 
-    clearAuthCookie(res);
+    const fromMapTokenFlag = await redis.get(`reset_from_map:${token}`).catch(() => null);
+    const fromMapEmailFlag = await redis.get(`reset_from_map_email:${email}`).catch(() => null);
+    const fromMap = Boolean(req.body?.fromMap || fromMapTokenFlag === '1' || fromMapEmailFlag === '1');
+    await redis.del(`reset_from_map:${token}`).catch(() => {});
+    await redis.del(`reset_from_map_email:${email}`).catch(() => {});
+
+    // Issue fresh authenticated session so user can fade directly back into Live Map without extra login or loading screen
+    const sessionToken = await createAuthSession(user);
+    setAuthCookie(res, sessionToken);
 
     await redis.set(
       `reset_status:${email}`,
@@ -549,6 +638,16 @@ export async function resetPassword(req, res, next) {
         status: 'completed',
         username: user.nickname || user.name,
         email: user.email,
+        fromMap,
+        sessionToken,
+        user: {
+          id: user.id,
+          name: user.name,
+          nickname: user.nickname,
+          username: user.nickname || (user.email ? user.email.split('@')[0] : 'User'),
+          email: user.email,
+          role: user.role,
+        },
         timestamp: Date.now(),
       }),
       'EX',
@@ -557,6 +656,7 @@ export async function resetPassword(req, res, next) {
 
     res.json({
       message: 'Password reset successful.',
+      fromMap,
       user: {
         id: user.id,
         name: user.name,
@@ -581,6 +681,13 @@ export async function getResetPasswordStatus(req, res) {
     if (!data) return res.json({ status: 'none' });
     try {
       const parsed = JSON.parse(data);
+      if (parsed?.status === 'completed' && parsed?.sessionToken && typeof res.cookie === 'function') {
+        setAuthCookie(res, parsed.sessionToken);
+      }
+      if (parsed && typeof parsed === 'object') {
+        const { sessionToken: _omit, ...safePayload } = parsed;
+        return res.json(safePayload);
+      }
       return res.json(parsed);
     } catch {
       return res.json({ status: data });

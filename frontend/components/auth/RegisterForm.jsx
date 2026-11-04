@@ -1,7 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import AuthField from "@/components/auth/AuthField";
 import { INDONESIAN_CITIES } from "@/lib/indonesianCities";
+import {
+  generateClientStrongPassword,
+  fetchRecommendedPassword,
+} from "@/components/auth/passwordAlgorithm";
 
 export default function RegisterForm({
   form,
@@ -28,6 +33,43 @@ export default function RegisterForm({
   setPhotoError,
   handlePhotoSelect,
 }) {
+  const [recommendedPassword, setRecommendedPassword] = useState(() =>
+    generateClientStrongPassword()
+  );
+  const [showRecommendation, setShowRecommendation] = useState(false);
+  const [recommendationDismissed, setRecommendationDismissed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetchRecommendedPassword({ email: form.email || "" }).then((pwd) => {
+      if (active && pwd) {
+        setRecommendedPassword(pwd);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [form.email]);
+
+  const handlePasswordChange = (id, value) => {
+    setField(id, value);
+    if (!value) {
+      setRecommendationDismissed(false);
+    }
+  };
+
+  const handleAcceptRecommendedPassword = (pwd) => {
+    setField("password", pwd);
+    setField("confirmPassword", pwd);
+    setShowRecommendation(false);
+    setRecommendationDismissed(true);
+  };
+
+  const handleDismissRecommendedPassword = () => {
+    setShowRecommendation(false);
+    setRecommendationDismissed(true);
+  };
+
   return (
     <>
       {/* 1. Full Name * */}
@@ -142,19 +184,33 @@ export default function RegisterForm({
         disabled={!PUBLIC_SIGNUP_ENABLED}
       />
 
-      {/* 5. Password * (With 2D Eye toggle) */}
+      {/* 5. Password * (With 2D Eye toggle & Natural Strong Password Recommendation) */}
       <AuthField
         id="password"
         label="Password"
         type="password"
         placeholder={PUBLIC_SIGNUP_ENABLED ? "••••••••" : "Not Ready Yet"}
         val={form.password || ""}
-        onChange={setField}
+        onChange={handlePasswordChange}
         required={true}
         isValid={passwordValid}
         hasError={isPasswordError}
         disabled={!PUBLIC_SIGNUP_ENABLED}
         autoComplete="new-password"
+        recommendedPassword={recommendedPassword}
+        showPasswordRecommendation={
+          showRecommendation && !recommendationDismissed && PUBLIC_SIGNUP_ENABLED
+        }
+        onPasswordFocus={() => {
+          if (!recommendationDismissed) {
+            setShowRecommendation(true);
+          }
+        }}
+        onPasswordBlur={() => {
+          setShowRecommendation(false);
+        }}
+        onAcceptRecommendation={handleAcceptRecommendedPassword}
+        onDismissRecommendation={handleDismissRecommendedPassword}
       />
 
       {/* Password Requirements (4 tiny boxes turn green when met, NO checkmark icon) */}

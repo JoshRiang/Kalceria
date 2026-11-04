@@ -77,6 +77,11 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             onClick={() => {
               sessionStorage.setItem("landingScrollTarget", "section-map");
               sessionStorage.setItem("landingScrollY", window.scrollY);
+              const skipUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
+              if (localStorage.getItem("kalceria_skip_map_intro") === "true" || skipUntil > Date.now()) {
+                window.location.href = "/map?skip_intro=true";
+                return;
+              }
               sessionStorage.removeItem("mapIntroSeen");
               sessionStorage.setItem("playMapIntro", "true");
               window.location.href = "/map";
@@ -106,6 +111,11 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               onClick={() => {
                 sessionStorage.setItem("landingScrollTarget", "section-map");
                 sessionStorage.setItem("landingScrollY", window.scrollY);
+                const skipUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
+                if (localStorage.getItem("kalceria_skip_map_intro") === "true" || skipUntil > Date.now()) {
+                  window.location.href = "/map?skip_intro=true";
+                  return;
+                }
                 sessionStorage.removeItem("mapIntroSeen");
                 sessionStorage.setItem("playMapIntro", "true");
                 window.location.href = "/map";

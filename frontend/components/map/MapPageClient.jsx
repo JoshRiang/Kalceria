@@ -83,42 +83,48 @@ export default function MapPage() {
   const [isRecentering, setIsRecentering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMapEngineReady, setIsMapEngineReady] = useState(false);
-  const [showStartup, setShowStartup] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        if (!hasUserSession()) return false;
-        const params = new URLSearchParams(window.location.search);
-        const skipByUrl = params.get("skip_intro") === "true";
-        const skipBySession = sessionStorage.getItem("kalceria_skip_map_intro") === "true";
-        const skipByLocal = localStorage.getItem("kalceria_skip_map_intro") === "true";
-        const skipUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
-        if (skipByUrl || skipBySession || skipByLocal || skipUntil > Date.now()) {
-          return false;
-        }
+  const checkShouldSkipStartup = useCallback(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      if (!hasUserSession()) return true;
+      const params = new URLSearchParams(window.location.search);
+      const skipByUrl =
+        params.get("skip_intro") === "true" ||
+        params.get("from") === "password_reset" ||
+        params.get("from") === "map";
+      const skipBySession = sessionStorage.getItem("kalceria_skip_map_intro") === "true";
+      const skipByLocal = localStorage.getItem("kalceria_skip_map_intro") === "true";
+      const skipUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
+      if (skipByUrl || skipBySession || skipByLocal || skipUntil > Date.now()) {
         return true;
-      } catch {
-        return false;
       }
+      return false;
+    } catch {
+      return true;
     }
-    return true;
+  }, []);
+
+  const [showStartup, setShowStartup] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !checkShouldSkipStartup();
   });
   const handleStartupComplete = useCallback(() => {
     setShowStartup(false);
   }, []);
 
-  // Consume skip-intro flags safely after mount (delayed cleanup prevents React StrictMode double-mount from re-triggering intro)
+  // Consume skip-intro flags safely after mount (keep skip_until window alive across tabs so password change never triggers intro)
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const params = new URLSearchParams(window.location.search);
-      const skipByUrl = params.get("skip_intro") === "true";
-      const skipBySession = sessionStorage.getItem("kalceria_skip_map_intro") === "true";
-      const skipByLocal = localStorage.getItem("kalceria_skip_map_intro") === "true";
-      const skipUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
-      if (skipByUrl || skipBySession || skipByLocal || skipUntil > Date.now()) {
+      if (checkShouldSkipStartup()) {
         setShowStartup(false);
-        if (skipByUrl && window.history.replaceState) {
+        const params = new URLSearchParams(window.location.search);
+        if (
+          (params.get("skip_intro") === "true" || params.get("from") === "password_reset") &&
+          window.history.replaceState
+        ) {
           params.delete("skip_intro");
+          params.delete("from");
           const cleanSearch = params.toString();
           window.history.replaceState(
             {},
@@ -126,18 +132,23 @@ export default function MapPage() {
             window.location.pathname + (cleanSearch ? `?${cleanSearch}` : "")
           );
         }
+        // Keep a 90s grace window in localStorage so any secondary tab or immediate navigation after password change stays on Live Map
+        const currentUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
+        const graceUntil = Math.min(currentUntil || Date.now() + 90000, Date.now() + 90000);
+        localStorage.setItem("kalceria_skip_map_intro_until", String(graceUntil));
+        localStorage.removeItem("kalceria_auth_return");
         const timer = setTimeout(() => {
           try {
             sessionStorage.removeItem("kalceria_skip_map_intro");
             localStorage.removeItem("kalceria_skip_map_intro");
-            localStorage.removeItem("kalceria_skip_map_intro_until");
-            localStorage.removeItem("kalceria_auth_return");
           } catch {}
-        }, 2500);
+        }, 90000);
         return () => clearTimeout(timer);
+      } else {
+        setShowStartup(true);
       }
     } catch {}
-  }, []);
+  }, [checkShouldSkipStartup]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const hasMounted = useHasMounted();
   const [notLoggedIn, setNotLoggedIn] = useState(() => (typeof window !== "undefined" ? !hasUserSession() : false));
@@ -815,17 +826,17 @@ export default function MapPage() {
       setShowOwnProfile(false);
 
       if (email) {
-        // Call reset-request to trigger magic link email dispatch
-        await api.post("/auth/password/reset-request", { email }).catch(() => {});
-        window.location.href = `/?auth=true&mode=forgot-password&sent=true&email=${encodeURIComponent(email)}`;
+        // Call reset-request to trigger magic link email dispatch (with fromMap flag for server-side & cross-tab persistence)
+        await api.post("/auth/password/reset-request", { email, fromMap: true, returnTo: "/map" }).catch(() => {});
+        window.location.href = `/?auth=true&mode=forgot-password&sent=true&from=map&email=${encodeURIComponent(email)}`;
         return;
       }
-      window.location.href = "/?auth=true&mode=forgot-password";
+      window.location.href = "/?auth=true&mode=forgot-password&from=map";
     } catch {
       markReturnToMapWithoutIntro();
       setShowEditProfileModal(false);
       setShowOwnProfile(false);
-      window.location.href = "/?auth=true&mode=forgot-password";
+      window.location.href = "/?auth=true&mode=forgot-password&from=map";
     }
   }, [currentUser]);
 
@@ -986,7 +997,7 @@ export default function MapPage() {
       `}</style>
       {/* Startup Sequence Overlay :: FORZA HORIZON STYLE */}
       <StartupSequenceOverlay
-        showStartup={showStartup}
+        showStartup={hasMounted && showStartup && !checkShouldSkipStartup()}
         authReady={Boolean(currentUser)}
         mapEngineReady={isMapEngineReady}
         isReady={!isDataLoading && hasMounted && !notLoggedIn}

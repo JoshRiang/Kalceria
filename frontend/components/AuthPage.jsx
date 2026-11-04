@@ -127,6 +127,16 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
       const isSent = urlParams.get("sent") === "true";
       const paramEmail = urlParams.get("email");
 
+      const isFromMap = urlParams.get("from") === "map";
+      if (isFromMap) {
+        try {
+          localStorage.setItem("kalceria_auth_return", "/map");
+          localStorage.setItem("kalceria_skip_map_intro", "true");
+          localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
+          sessionStorage.setItem("kalceria_skip_map_intro", "true");
+        } catch {}
+      }
+
       if (token) {
         setResetToken(token);
         setMode("choose-new-password");
@@ -136,11 +146,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         setSuccess("Verifikasi Link sudah terkirim ke email kamu.");
         setResendCooldown(60);
       } else if (urlParams.get("reset_success") === "true") {
-        setMode("login");
-        if (paramEmail) {
-          setForm((prev) => ({ ...prev, email: paramEmail }));
-        }
-        setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
+        window.location.replace("/map?skip_intro=true");
       }
     }
   }, []);
@@ -366,26 +372,39 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     }
   }
 
-  // ── Reset Password Submission -> Buffer -> Login Page with new credentials ──
+  // ── Reset Password Submission -> Buffer -> Fade Directly to Live Map (No Intro Loading Screen) ──
   async function handleResetPasswordDone(newPassword) {
     setIsBuffering(true);
     setError("");
     try {
+      const urlParams =
+        typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const fromMapParam =
+        urlParams?.get("from") === "map" ||
+        (typeof window !== "undefined" && localStorage.getItem("kalceria_auth_return") === "/map");
+
       const res = await api.post("/auth/password/reset", {
         token: resetToken,
         newPassword,
+        fromMap: fromMapParam,
       });
 
-      // Preserve Map Option B skip-intro flags across tabs when resetting password from Map
-      const isReturningToMap =
-        typeof window !== "undefined" && localStorage.getItem("kalceria_auth_return") === "/map";
-      if (isReturningToMap) {
-        try {
-          localStorage.setItem("kalceria_skip_map_intro", "true");
-          localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
-          sessionStorage.setItem("kalceria_skip_map_intro", "true");
-        } catch {}
+      if (res.data?.user) {
+        establishSession(res.data.user);
+      } else {
+        establishSession(res.data);
       }
+
+      // Always mark skip-map-intro so Live Map opens directly without StartupSequenceOverlay
+      try {
+        localStorage.setItem("kalceria_skip_map_intro", "true");
+        localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
+        sessionStorage.setItem("kalceria_skip_map_intro", "true");
+        sessionStorage.setItem("mapIntroSeen", "true");
+        sessionStorage.removeItem("playMapIntro");
+        sessionStorage.setItem("introPlayed", "true");
+        sessionStorage.setItem("landingSeen", "true");
+      } catch {}
 
       // Broadcast to other open tabs on this device (e.g. original forgot password tab)
       try {
@@ -396,55 +415,41 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
             email: res.data?.user?.email || forgotEmail,
             username: res.data?.username || res.data?.user?.nickname || res.data?.user?.name,
             user: res.data?.user,
-            returnToMap: isReturningToMap,
+            returnToMap: true,
           });
           authChannel.close();
         }
       } catch {}
 
-      const userEmail = res.data?.user?.email || forgotEmail || "";
       setTimeout(() => {
-        setIsBuffering(false);
-        if (typeof window !== "undefined" && window.history.replaceState) {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        // Seamlessly route to Login mode so user logs in with their newly chosen password
-        setMode("login");
-        setForm((prev) => ({ ...prev, email: userEmail, password: "" }));
-        setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
-        setError("");
-      }, 800);
+        window.location.replace("/map?skip_intro=true");
+      }, 450);
     } catch (err) {
       setIsBuffering(false);
       setError(err.response?.data?.error || "Gagal mengubah password. Link mungkin kedaluwarsa.");
     }
   }
 
-  // ── Cross-Device / Cross-Tab Sync for Forgot Password Tab -> Login Page ──
+  // ── Cross-Device / Cross-Tab Sync for Forgot Password Tab -> Fade Directly to Live Map ──
   const handleCrossTabResetSuccess = (data) => {
     setIsBuffering(true);
-    if (
-      data?.returnToMap ||
-      (typeof window !== "undefined" && localStorage.getItem("kalceria_auth_return") === "/map")
-    ) {
-      try {
-        localStorage.setItem("kalceria_auth_return", "/map");
-        localStorage.setItem("kalceria_skip_map_intro", "true");
-        localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
-        sessionStorage.setItem("kalceria_skip_map_intro", "true");
-      } catch {}
+    if (data?.user) {
+      establishSession(data.user);
+    } else {
+      establishSession(data);
     }
-    const userEmail = data?.email || data?.user?.email || forgotEmail || "";
+    try {
+      localStorage.setItem("kalceria_skip_map_intro", "true");
+      localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
+      sessionStorage.setItem("kalceria_skip_map_intro", "true");
+      sessionStorage.setItem("mapIntroSeen", "true");
+      sessionStorage.removeItem("playMapIntro");
+      sessionStorage.setItem("introPlayed", "true");
+      sessionStorage.setItem("landingSeen", "true");
+    } catch {}
     setTimeout(() => {
-      setIsBuffering(false);
-      if (typeof window !== "undefined" && window.history.replaceState) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-      setMode("login");
-      setForm((prev) => ({ ...prev, email: userEmail, password: "" }));
-      setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
-      setError("");
-    }, 800);
+      window.location.replace("/map?skip_intro=true");
+    }, 450);
   };
 
   // ── Form Submit: Login or Register ──
@@ -657,6 +662,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                   isProcessing={isBuffering}
                   error={error}
                   onErrorClear={() => setError("")}
+                  resetToken={resetToken}
                 />
               )}
             </motion.div>

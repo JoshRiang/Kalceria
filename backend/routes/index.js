@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   register, login, requestOtp, verifyOtp, completeRegistration,
-  requestPasswordReset, resetPassword, getResetPasswordStatus, checkUsername, verifyJitPassword, getMe,
+  requestPasswordReset, resetPassword, getResetPasswordStatus, recommendStrongPassword, checkUsername, verifyJitPassword, getMe,
   updateMe, deleteMe, changePassword
 } from "../controllers/authController.js";
 import { updateLiveLocation, getNearbyUsers, setLiveLocationPreference } from "../controllers/locationController.js";
@@ -110,6 +110,7 @@ router.post("/auth/otp/verify", otpVerifyRateLimit, requireEmailAuth, verifyOtp)
 router.post("/auth/password/reset-request", passwordResetRateLimit, requireEmailAuth, requestPasswordReset);
 router.post("/auth/password/reset", passwordResetConfirmRateLimit, requireEmailAuth, resetPassword);
 router.get("/auth/password/reset-status", getResetPasswordStatus);
+router.get("/auth/password/recommend", recommendStrongPassword);
 router.get("/auth/check-username/:username", usernameCheckRateLimit, checkUsername);
 
 // ─── Brand Assets ─────────────────────────────────────────────────────────────

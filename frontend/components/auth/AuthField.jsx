@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import RecommendedPasswordPopup from "@/components/auth/RecommendedPasswordPopup";
 
 export default function AuthField({
   id,
@@ -19,10 +20,17 @@ export default function AuthField({
   max,
   list,
   autoComplete,
+  recommendedPassword = "",
+  showPasswordRecommendation = false,
+  onAcceptRecommendation,
+  onDismissRecommendation,
+  onPasswordFocus,
+  onPasswordBlur,
 }) {
   const [focused, setFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const inputRef = useRef(null);
+  const passwordBoxRef = useRef(null);
   const isSelect = type === "select";
   const isPhone = type === "tel";
   const isPassword = type === "password";
@@ -157,6 +165,7 @@ export default function AuthField({
       ) : isPassword ? (
         /* Password input with 2D Eye toggle referenced from Map Page */
         <div
+          ref={passwordBoxRef}
           className={`flex items-center w-full border rounded-md overflow-hidden bg-[#0c1528] transition-all ${borderClass}`}
         >
           <input
@@ -167,8 +176,14 @@ export default function AuthField({
             value={val}
             onChange={handleChange}
             disabled={disabled}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onFocus={() => {
+              setFocused(true);
+              onPasswordFocus?.();
+            }}
+            onBlur={() => {
+              setFocused(false);
+              onPasswordBlur?.();
+            }}
             onCopy={(e) => e.preventDefault()}
             onCut={(e) => e.preventDefault()}
             onPaste={(e) => e.preventDefault()}
@@ -216,6 +231,18 @@ export default function AuthField({
               </svg>
             )}
           </button>
+          <RecommendedPasswordPopup
+            open={Boolean(showPasswordRecommendation && recommendedPassword && !disabled)}
+            anchorRef={passwordBoxRef}
+            recommendedPassword={recommendedPassword}
+            onAccept={(pwd) => {
+              onAcceptRecommendation?.(pwd);
+            }}
+            onDismiss={() => {
+              onDismissRecommendation?.();
+              inputRef.current?.focus();
+            }}
+          />
         </div>
       ) : (
         <input

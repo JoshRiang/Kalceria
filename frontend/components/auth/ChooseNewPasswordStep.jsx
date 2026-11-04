@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AuthField from "@/components/auth/AuthField";
+import {
+  generateClientStrongPassword,
+  fetchRecommendedPassword,
+} from "@/components/auth/passwordAlgorithm";
 
 const PASSWORD_CHECK_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -10,14 +14,46 @@ export default function ChooseNewPasswordStep({
   isProcessing = false,
   error = "",
   onErrorClear,
+  resetToken = "",
 }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
+  const [recommendedPassword, setRecommendedPassword] = useState(() =>
+    generateClientStrongPassword()
+  );
+  const [showRecommendation, setShowRecommendation] = useState(true);
+  const [recommendationDismissed, setRecommendationDismissed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetchRecommendedPassword({ token: resetToken }).then((pwd) => {
+      if (active && pwd) {
+        setRecommendedPassword(pwd);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [resetToken]);
 
   const passwordValid = PASSWORD_CHECK_REGEX.test(password);
   const passwordsMatch = Boolean(password && confirmPassword && password === confirmPassword);
   const isConfirmError = Boolean(confirmPassword && password !== confirmPassword);
+
+  const handleAcceptRecommendedPassword = (pwd) => {
+    setPassword(pwd);
+    setConfirmPassword(pwd);
+    setLocalError("");
+    if (onErrorClear) onErrorClear();
+    setShowRecommendation(false);
+    setRecommendationDismissed(true);
+  };
+
+  const handleDismissRecommendedPassword = () => {
+    setShowRecommendation(false);
+    setRecommendationDismissed(true);
+  };
 
   const handleDoneClick = () => {
     setLocalError("");
@@ -44,7 +80,7 @@ export default function ChooseNewPasswordStep({
       </p>
 
       <div className="w-full flex flex-col">
-        {/* 1. Password input with 2D Eye toggle */}
+        {/* 1. Password input with 2D Eye toggle & Natural Strong Password Recommendation */}
         <AuthField
           id="new-password"
           label="New Password"
@@ -55,12 +91,26 @@ export default function ChooseNewPasswordStep({
             setPassword(val);
             setLocalError("");
             if (onErrorClear) onErrorClear();
+            if (!val) {
+              setRecommendationDismissed(false);
+            }
           }}
           required={true}
           isValid={passwordValid}
           hasError={Boolean(password && !passwordValid)}
           disabled={isProcessing}
           autoComplete="new-password"
+          recommendedPassword={recommendedPassword}
+          showPasswordRecommendation={
+            showRecommendation && !recommendationDismissed && !isProcessing
+          }
+          onPasswordFocus={() => {
+            if (!recommendationDismissed) {
+              setShowRecommendation(true);
+            }
+          }}
+          onAcceptRecommendation={handleAcceptRecommendedPassword}
+          onDismissRecommendation={handleDismissRecommendedPassword}
         />
 
         {/* Password Requirements (4 tiny boxes turn green when met, NO checkmark icon) */}

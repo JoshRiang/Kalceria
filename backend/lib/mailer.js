@@ -96,7 +96,7 @@ export async function sendOtpEmail(toEmail, otp) {
   });
 }
 
-export async function sendPasswordResetEmail(toEmail, token, explicitOrigin) {
+export async function sendPasswordResetEmail(toEmail, token, explicitOrigin, fromMap = false) {
   if (process.env.ENABLE_EMAIL_AUTH !== 'true') {
     return { skipped: true, reason: 'EMAIL_AUTH_DISABLED' };
   }
@@ -114,6 +114,9 @@ export async function sendPasswordResetEmail(toEmail, token, explicitOrigin) {
   }
   const resetUrl = new URL('/', frontendOrigin);
   resetUrl.searchParams.set('token', token);
+  if (fromMap) {
+    resetUrl.searchParams.set('from', 'map');
+  }
   return sendEmail({
     to: toEmail,
     channel: 'auth',

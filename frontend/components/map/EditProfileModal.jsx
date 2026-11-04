@@ -7,18 +7,20 @@ import { PhotoCropEditorModal } from "./modals/PhotoCropEditorModal";
 const BASE_PROFILE_COLORS = [
   "#1b4332", // Forest Green
   "#1e3a5f", // Deep Navy
-  "#2d3748", // Slate Charcoal
-  "#134e4a", // Deep Emerald
-  "#312e81", // Deep Indigo
-  "#3f3f46", // Modern Zinc
-  "#4c1d95", // Deep Violet
-  "#78350f", // Warm Amber Umber
-  "#14532d", // Rich Pine
-  "#334155", // Midnight Slate
+  "#2d6a4f", // Vibrant Emerald Green
+  "#0284c7", // Sky Blue
+  "#0d9488", // Deep Teal
+  "#7c3aed", // Rich Violet
+  "#c2410c", // Terracotta Rust
+  "#d97706", // Warm Amber
+  "#b91c1c", // Deep Crimson
+  "#4338ca", // Royal Indigo
+  "#047857", // Lush Pine
+  "#db2777", // Vibrant Rose
 ];
 
-function getDeterministicBaseColor(nameOrId) {
-  const str = String(nameOrId || "kalcerian");
+function getDeterministicBaseColor(user) {
+  const str = String(user?.id || user?.name || user?.nickname || "kalcerian");
   const num = Math.abs(str.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % BASE_PROFILE_COLORS.length;
   return BASE_PROFILE_COLORS[num];
 }
@@ -78,7 +80,7 @@ export function EditProfileModal({
   if (!show) return null;
 
   const isModalDark = Boolean(isMapDark);
-  const defaultBaseColor = getDeterministicBaseColor(currentUser?.id || displayName || "kalcerian");
+  const defaultBaseColor = getDeterministicBaseColor(currentUser);
 
   // Icon theme tokens: Light = black with minor white border; Dark = white with minor black border
   const iconFg = isModalDark ? "#ffffff" : "#000000";
@@ -289,7 +291,7 @@ export function EditProfileModal({
                         avatarPreview ||
                         currentUser?.profilePicture ||
                         `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
-                          displayName || cleanUsername || "user"
+                          currentUser?.nickname || currentUser?.name || cleanUsername || "anon"
                         )}`
                       }
                       alt="Avatar"
