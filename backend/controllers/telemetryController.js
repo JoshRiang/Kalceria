@@ -1,6 +1,7 @@
 import { redis } from '../lib/redis.js';
 import prisma from '../lib/prisma.js';
 import { maskLocationToDistrict } from '../utils/privacyMask.js';
+import { ensurePersistentUserProfilesBatch } from '../utils/profileDefaults.js';
 
 const DISTRICT_OFFSET = 0.012;
 
@@ -89,7 +90,7 @@ export async function getMapUsers(req, res, next) {
     const positions = await redis.geopos("active_users", ...userIds);
 
     const now = new Date();
-    const enriched = users.map((u, index) => {
+    const rawEnriched = users.map((u, index) => {
       const pos = positions[index];
       let district = null;
       let lat = null;
@@ -107,6 +108,7 @@ export async function getMapUsers(req, res, next) {
       return { ...u, district, lat, lng, broadcast };
     });
 
+    const enriched = await ensurePersistentUserProfilesBatch(rawEnriched);
     const mockMapUsers = [
       {
         id: "mock_1",
@@ -180,7 +182,7 @@ export async function getAllKalcerians(req, res, next) {
     });
 
     const now = new Date();
-    const result = users.map((u) => {
+    const rawResult = users.map((u) => {
       const isOnline = u.allowLiveLocation && onlineSet.has(u.id);
       const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
       return {
@@ -196,6 +198,7 @@ export async function getAllKalcerians(req, res, next) {
       };
     });
 
+    const result = await ensurePersistentUserProfilesBatch(rawResult);
     const mockKalcerians = [
       {
         id: "mock_adit",

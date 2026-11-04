@@ -1,5 +1,6 @@
 // UserPopup.jsx
 // Discord-style layout popup & minimalist 2D broadcast message box for Leaflet markers
+import { resolvePersistentAvatarUrl } from "@/lib/profileIdentity";
 
 function esc(value) {
   return String(value || "")
@@ -11,9 +12,11 @@ function esc(value) {
 }
 
 function avatarUrl(user) {
-  const fallback = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.name || "anon")}`;
-  const candidate = user?.profilePicture;
-  if (typeof candidate !== "string" || candidate.length > 2048 || candidate.startsWith("//") || candidate.includes("\\")) return fallback;
+  const candidate = resolvePersistentAvatarUrl(user);
+  const fallback = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.id || user?.name || "anon")}`;
+  if (typeof candidate !== "string" || candidate.startsWith("//") || candidate.includes("\\")) return fallback;
+  if (/^data:image\/(?:webp|png|jpeg|jpg|gif);base64,[A-Za-z0-9+/=\s]+$/.test(candidate)) return candidate;
+  if (candidate.length > 2048) return fallback;
   if (candidate.startsWith("/")) return candidate;
   try { return new URL(candidate).protocol === "https:" ? candidate : fallback; } catch { return fallback; }
 }

@@ -3,26 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PhotoCropEditorModal } from "./modals/PhotoCropEditorModal";
-
-const BASE_PROFILE_COLORS = [
-  "#1b4332", // Forest Green
-  "#1e3a5f", // Deep Navy
-  "#2d6a4f", // Vibrant Emerald Green
-  "#0284c7", // Sky Blue
-  "#0d9488", // Deep Teal
-  "#7c3aed", // Rich Violet
-  "#c2410c", // Terracotta Rust
-  "#d97706", // Warm Amber
-  "#b91c1c", // Deep Crimson
-  "#4338ca", // Royal Indigo
-  "#047857", // Lush Pine
-  "#db2777", // Vibrant Rose
-];
+import {
+  resolvePersistentAvatarUrl,
+  resolvePersistentCover,
+  persistProfileIdentityCache,
+} from "@/lib/profileIdentity";
 
 function getDeterministicBaseColor(user) {
-  const str = String(user?.id || user?.name || user?.nickname || "kalcerian");
-  const num = Math.abs(str.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % BASE_PROFILE_COLORS.length;
-  return BASE_PROFILE_COLORS[num];
+  return resolvePersistentCover(user);
 }
 
 export function EditProfileModal({
@@ -67,11 +55,11 @@ export function EditProfileModal({
       const rawIg = currentUser.instagram || (currentUser.socialPlatform === "IG" ? currentUser.socialLink : "") || "";
       setInstagram(rawIg ? String(rawIg).replace(/^@/, "") : "");
 
-      const existingCover = currentUser.coverImage || currentUser.coverUrl || currentUser.cover || "";
+      const existingCover = resolvePersistentCover(currentUser);
       setCoverImage(existingCover);
       setCoverPreview(existingCover);
 
-      const existingAvatar = currentUser.profilePicture || "";
+      const existingAvatar = resolvePersistentAvatarUrl(currentUser);
       setProfilePicture(existingAvatar);
       setAvatarPreview(existingAvatar);
     }
@@ -132,19 +120,26 @@ export function EditProfileModal({
     try {
       const cleanPhone = phone.trim();
       const cleanIg = instagram.trim().replace(/^@/, "");
+      const finalCover = coverImage || defaultBaseColor;
+      const finalAvatar = profilePicture || resolvePersistentAvatarUrl(currentUser);
+      persistProfileIdentityCache(currentUser, {
+        profilePicture: finalAvatar,
+        coverImage: finalCover,
+      });
       const updatedData = {
         name: displayName.trim(),
         displayName: displayName.trim(),
         alasanMasuk: profileDescription.trim(),
         bio: profileDescription.trim(),
+        reason: profileDescription.trim(),
         phone: cleanPhone,
         whatsapp: cleanPhone,
         instagram: cleanIg,
         socialPlatform: cleanIg ? "IG" : cleanPhone ? "WA" : "NULL",
         socialLink: cleanIg ? cleanIg : cleanPhone ? cleanPhone : null,
-        coverImage: coverImage || defaultBaseColor,
-        coverUrl: coverImage || defaultBaseColor,
-        profilePicture: profilePicture || null,
+        coverImage: finalCover,
+        coverUrl: finalCover,
+        profilePicture: finalAvatar,
       };
       await onSaveProfile?.(updatedData);
       onClose();
@@ -190,7 +185,7 @@ export function EditProfileModal({
           </div>
 
           {/* Form Body - Scrollable */}
-          <form onSubmit={handleSubmit} className="px-5 sm:px-6 pb-5 pt-1 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3.5 font-sans text-xs">
+          <form onSubmit={handleSubmit} className="px-5 sm:px-6 pb-6 pt-1 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 font-sans text-xs">
             {/* 1. Cover BG & Overlapping Half-Circle Profile Picture (Left Side, Z-Layered Above Cover BG) */}
             <div
               className="relative shrink-0"
@@ -207,24 +202,38 @@ export function EditProfileModal({
                 style={{
                   position: "relative",
                   width: "100%",
-                  height: "140px",
+                  height: "132px",
                   borderRadius: "14px",
                   overflow: "hidden",
                   zIndex: 10,
                   backgroundColor:
                     coverPreview && coverPreview.startsWith("#")
                       ? coverPreview
-                      : defaultBaseColor,
+                      : defaultBaseColor && defaultBaseColor.startsWith("#")
+                      ? defaultBaseColor
+                      : "#1b4332",
                 }}
               >
                 {coverPreview && !coverPreview.startsWith("#") && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={coverPreview}
-                    alt="Cover preview"
-                    className="w-full h-full object-cover"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
+                  coverPreview.endsWith(".mp4") || coverPreview.endsWith(".webm") || coverPreview.startsWith("data:video") ? (
+                    <video
+                      src={coverPreview}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={coverPreview}
+                      alt="Cover preview"
+                      className="w-full h-full object-cover"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  )
                 )}
 
                 {/* Edit Button (No inner/outer box, clean bold text) */}
@@ -287,13 +296,7 @@ export function EditProfileModal({
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={
-                        avatarPreview ||
-                        currentUser?.profilePicture ||
-                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
-                          currentUser?.nickname || currentUser?.name || cleanUsername || "anon"
-                        )}`
-                      }
+                      src={avatarPreview || resolvePersistentAvatarUrl(currentUser)}
                       alt="Avatar"
                       style={{
                         width: "100%",
@@ -356,14 +359,17 @@ export function EditProfileModal({
                   />
                 </div>
 
-                {/* Remove Profile Picture Action (No redundant Change font) */}
-                {avatarPreview && (
+                {/* Remove Profile Picture Action (Only shown when user uploaded a custom photo) */}
+                {avatarPreview && !String(avatarPreview).includes("api.dicebear.com") && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setAvatarPreview(null);
-                      setProfilePicture(null);
+                      const defaultDicebear = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+                        currentUser?.nickname || currentUser?.username || currentUser?.id || cleanUsername || "anon"
+                      )}`;
+                      setAvatarPreview(defaultDicebear);
+                      setProfilePicture(defaultDicebear);
                     }}
                     className="text-xs font-bold text-red-500 hover:text-red-400 hover:underline cursor-pointer pb-1.5"
                   >

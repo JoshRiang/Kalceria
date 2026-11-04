@@ -12,6 +12,13 @@ import {
   revokeUserSessions,
   setAuthCookie,
 } from '../utils/authSession.js';
+import {
+  ensurePersistentUserProfile,
+  getDeterministicAvatarUrl,
+  getDeterministicCoverColor,
+  sanitizeCoverMediaUrl,
+  sanitizeProfilePictureUrl,
+} from '../utils/profileDefaults.js';
 
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
 
@@ -128,15 +135,7 @@ function resolveDomicileCoords(domicile, domicileLat, domicileLng) {
 }
 
 function sanitizeProfilePicture(value) {
-  if (value === undefined || value === null || value === '') return null;
-  if (typeof value !== 'string' || value.length > 200_000) return null;
-  if (/^data:image\/(?:webp|png|jpeg|jpg);base64,[A-Za-z0-9+/=]+$/.test(value)) {
-    return value;
-  }
-  if (/^https:\/\/[^\s"'<>]+$/.test(value)) {
-    return value;
-  }
-  return null;
+  return sanitizeProfilePictureUrl(value);
 }
 
 // Verified against when no account matches, so unknown and known accounts take
@@ -414,6 +413,9 @@ export async function completeRegistration(req, res, next) {
 
     if (pendingJson) {
       const data = JSON.parse(pendingJson);
+      const initialAvatar =
+        data.profilePicture ||
+        getDeterministicAvatarUrl({ nickname: cleanUsername, name: data.name });
       // Atomically commit the user record to PostgreSQL now that username is finalized
       user = await prisma.user.create({
         data: {
@@ -424,26 +426,40 @@ export async function completeRegistration(req, res, next) {
           gender: data.gender || 'OTHER',
           phone: data.phone || '-',
           passwordHash: data.passwordHash,
-          profilePicture: data.profilePicture || null,
+          profilePicture: initialAvatar,
           domicileLat: data.domicileLat,
           domicileLng: data.domicileLng,
           isEmailVerified: true,
         },
       });
 
-      // Cleanup pending Redis states
-      await redis.del(`pending:register:${normalizedEmail}`);
-      await redis.del(`pending:verified:${normalizedEmail}`);
-      await redis.del(`otp:${normalizedEmail}`);
+      // Cleanup pending Redis states & initialize persistent profile metadata
+      await Promise.allSettled([
+        redis.del(`pending:register:${normalizedEmail}`),
+        redis.del(`pending:verified:${normalizedEmail}`),
+        redis.del(`otp:${normalizedEmail}`),
+        redis.del('cache:all_kalcerians'),
+        redis.del('cache:map_users_enriched'),
+        ensurePersistentUserProfile(user),
+      ]);
     } else if (existingUser) {
+      const initialAvatar =
+        existingUser.profilePicture ||
+        getDeterministicAvatarUrl({ id: existingUser.id, nickname: cleanUsername, name: existingUser.name });
       user = await prisma.user.update({
         where: { id: existingUser.id },
         data: {
           nickname: cleanUsername,
+          profilePicture: initialAvatar,
           isEmailVerified: true,
         },
       });
-      await redis.del(`pending:verified:${normalizedEmail}`);
+      await Promise.allSettled([
+        redis.del(`pending:verified:${normalizedEmail}`),
+        redis.del('cache:all_kalcerians'),
+        redis.del('cache:map_users_enriched'),
+        ensurePersistentUserProfile(user),
+      ]);
     } else {
       return res.status(400).json({ error: 'Registration session expired. Please register again.' });
     }
@@ -731,14 +747,16 @@ export async function getMe(req, res, next) {
         name: true,
         nickname: true,
         email: true,
+        phone: true,
         profilePicture: true,
         allowLiveLocation: true,
         domicileLat: true,
         domicileLng: true,
         socialPlatform: true,
         socialLink: true,
+        createdAt: true,
         broadcast: {
-          select: { id: true, message: true, expiresAt: true },
+          select: { id: true, message: true, expiresAt: true, createdAt: true },
         },
       },
     });
@@ -748,8 +766,9 @@ export async function getMe(req, res, next) {
     // only return broadcast if not expired
     const now = new Date();
     const broadcast = user.broadcast && user.broadcast.expiresAt > now ? user.broadcast : null;
+    const enrichedUser = await ensurePersistentUserProfile({ ...user, broadcast });
 
-    res.json({ user: { ...user, broadcast } });
+    res.json({ user: enrichedUser });
   } catch (err) {
     next(err);
   }
@@ -759,15 +778,56 @@ export async function getMe(req, res, next) {
 export async function updateMe(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { name, nickname, phone, socialPlatform, socialLink, profilePicture } = req.body || {};
+    const {
+      name,
+      displayName,
+      nickname,
+      phone,
+      whatsapp,
+      instagram,
+      bio,
+      alasanMasuk,
+      reason,
+      coverImage,
+      coverUrl,
+      socialPlatform,
+      socialLink,
+      profilePicture,
+    } = req.body || {};
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, nickname: true, profilePicture: true },
+    });
+    if (!existingUser) return res.status(404).json({ error: 'User not found.' });
 
     const updateData = {};
-    if (typeof name === 'string' && name.trim()) updateData.name = name.trim().slice(0, 100);
+    const resolvedName = typeof name === 'string' && name.trim()
+      ? name.trim()
+      : typeof displayName === 'string' && displayName.trim()
+        ? displayName.trim()
+        : null;
+    if (resolvedName) updateData.name = resolvedName.slice(0, 100);
     if (typeof nickname === 'string') updateData.nickname = nickname.trim().slice(0, 50) || null;
-    if (typeof phone === 'string') updateData.phone = phone.trim().slice(0, 30);
-    if (socialPlatform !== undefined) updateData.socialPlatform = ['WA', 'IG', 'FB', 'NULL'].includes(socialPlatform) ? socialPlatform : 'NULL';
-    if (socialLink !== undefined) updateData.socialLink = typeof socialLink === 'string' ? socialLink.trim().slice(0, 200) : null;
-    if (profilePicture !== undefined) updateData.profilePicture = sanitizeProfilePicture(profilePicture);
+
+    const rawPhone = typeof phone === 'string' ? phone : typeof whatsapp === 'string' ? whatsapp : undefined;
+    if (rawPhone !== undefined) {
+      updateData.phone = rawPhone.trim().slice(0, 30) || '-';
+    }
+
+    if (socialPlatform !== undefined) {
+      updateData.socialPlatform = ['WA', 'IG', 'FB', 'NULL'].includes(socialPlatform) ? socialPlatform : 'NULL';
+    }
+    if (socialLink !== undefined) {
+      updateData.socialLink = typeof socialLink === 'string' ? socialLink.trim().slice(0, 200) : null;
+    }
+
+    if (profilePicture !== undefined) {
+      const sanitizedPic = sanitizeProfilePicture(profilePicture);
+      // If user explicitly cleared custom avatar (null/empty), fall back to their deterministic persistent avatar
+      updateData.profilePicture =
+        sanitizedPic || getDeterministicAvatarUrl(existingUser);
+    }
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -776,15 +836,64 @@ export async function updateMe(req, res, next) {
         id: true,
         name: true,
         nickname: true,
+        email: true,
         profilePicture: true,
         phone: true,
         socialPlatform: true,
         socialLink: true,
         allowLiveLocation: true,
+        domicileLat: true,
+        domicileLng: true,
+        createdAt: true,
       },
     });
 
-    res.json({ message: 'Profile updated successfully.', user });
+    // Update persistent profile metadata in Redis (coverImage, bio, social handles, profilePicture)
+    const metaKey = `user:profile_meta:${userId}`;
+    let meta = {};
+    try {
+      const existingMeta = await redis.get(metaKey);
+      if (existingMeta) meta = JSON.parse(existingMeta);
+    } catch {}
+
+    meta.profilePicture = user.profilePicture;
+
+    const rawCover = coverImage !== undefined ? coverImage : coverUrl;
+    if (rawCover !== undefined) {
+      const sanitizedCover = sanitizeCoverMediaUrl(rawCover);
+      const finalCover = sanitizedCover || getDeterministicCoverColor(user);
+      meta.coverImage = finalCover;
+      meta.coverUrl = finalCover;
+    } else if (!meta.coverImage) {
+      const defaultCover = getDeterministicCoverColor(user);
+      meta.coverImage = defaultCover;
+      meta.coverUrl = defaultCover;
+    }
+
+    const rawBio = bio !== undefined ? bio : alasanMasuk !== undefined ? alasanMasuk : reason;
+    if (rawBio !== undefined && typeof rawBio === 'string') {
+      meta.bio = rawBio.trim().slice(0, 120);
+      meta.alasanMasuk = meta.bio;
+      meta.reason = meta.bio;
+    }
+
+    if (rawPhone !== undefined) {
+      meta.phone = rawPhone.trim().slice(0, 30);
+      meta.whatsapp = meta.phone;
+    }
+    if (instagram !== undefined && typeof instagram === 'string') {
+      meta.instagram = instagram.trim().replace(/^@/, '').slice(0, 60);
+    }
+
+    await Promise.allSettled([
+      redis.set(metaKey, JSON.stringify(meta)),
+      redis.del('cache:all_kalcerians'),
+      redis.del('cache:map_users_enriched'),
+    ]);
+
+    const enrichedUser = await ensurePersistentUserProfile(user);
+
+    res.json({ message: 'Profile updated successfully.', user: enrichedUser });
   } catch (err) {
     next(err);
   }
@@ -825,6 +934,9 @@ export async function deleteMe(req, res, next) {
       redis.del(`comment_cooldown:${userId}`),
       redis.del(`minigame_attempt:${userId}`),
       redis.del(`reset_status:${user.email}`),
+      redis.del(`user:profile_meta:${userId}`),
+      redis.del('cache:all_kalcerians'),
+      redis.del('cache:map_users_enriched'),
     ]);
 
     // Transactional deletion of all dependent records in the search tree

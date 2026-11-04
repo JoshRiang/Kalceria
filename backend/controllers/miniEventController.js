@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cursorPagination.js';
 import { resolveIndonesianReverseGeo } from './geoController.js';
+import { ensurePersistentUserProfile } from '../utils/profileDefaults.js';
 
 const MINI_EVENT_TTL_MS = 7 * 60 * 60 * 1000;
 
@@ -159,6 +160,10 @@ export async function createMiniEvent(req, res, next) {
         },
       },
     });
+
+    if (event.creator) {
+      event.creator = await ensurePersistentUserProfile(event.creator);
+    }
 
     res.status(201).json({ event });
   } catch (err) {
@@ -403,7 +408,14 @@ export async function getActiveMiniEvents(req, res, next) {
     ];
 
     const hasMore = events.length > limit;
-    const pageEvents = events.slice(0, limit);
+    const pageEvents = await Promise.all(
+      events.slice(0, limit).map(async (ev) => {
+        if (ev.creator) {
+          ev.creator = await ensurePersistentUserProfile(ev.creator);
+        }
+        return ev;
+      })
+    );
     const lastEvent = pageEvents.at(-1);
     const nextCursor = hasMore && lastEvent
       ? encodePageCursor({ id: lastEvent.id, at: lastEvent.createdAt })
@@ -470,6 +482,10 @@ export async function updateMiniEvent(req, res, next) {
         },
       },
     });
+
+    if (event.creator) {
+      event.creator = await ensurePersistentUserProfile(event.creator);
+    }
 
     res.json({ event });
   } catch (err) {

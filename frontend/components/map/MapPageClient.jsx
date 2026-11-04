@@ -20,6 +20,11 @@ const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel")
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
 import { hasUserSession } from "@/lib/session";
+import {
+  resolvePersistentAvatarUrl,
+  resolvePersistentCover,
+  persistProfileIdentityCache,
+} from "@/lib/profileIdentity";
 import { toSmartTitleCase } from "@/lib/titleCase";
 import { useMapChatAndNotifications } from "@/components/map/hooks/useMapChatAndNotifications";
 import api, {
@@ -35,9 +40,7 @@ const SnapMap = dynamic(() => import("@/components/SnapMap"), {
 });
 
 // Helpers
-const avatarUrl = (user) =>
-  user?.profilePicture ||
-  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.name || "anon")}`;
+const avatarUrl = (user) => resolvePersistentAvatarUrl(user);
 
 
 
@@ -199,7 +202,13 @@ export default function MapPage() {
     setNotLoggedIn(false);
     fetchMe()
       .then((user) => {
-        setCurrentUser(user);
+        const enrichedUser = {
+          ...user,
+          profilePicture: resolvePersistentAvatarUrl(user),
+          coverImage: resolvePersistentCover(user),
+          coverUrl: resolvePersistentCover(user),
+        };
+        setCurrentUser(enrichedUser);
         setPresence(user.allowLiveLocation ? "online" : "invisible");
         if (user.broadcast?.message) setStatusText(user.broadcast.message);
       })
@@ -763,6 +772,10 @@ export default function MapPage() {
   }
 
   const handleSaveProfile = useCallback(async (updatedData) => {
+    persistProfileIdentityCache(currentUser, {
+      profilePicture: updatedData.profilePicture,
+      coverImage: updatedData.coverImage,
+    });
     setCurrentUser((prev) => {
       const merged = { ...(prev || {}), ...updatedData };
       try {
@@ -776,7 +789,21 @@ export default function MapPage() {
       } catch {}
       return merged;
     });
-    if (updatedData.displayName || updatedData.name || updatedData.profilePicture) {
+    setKalcerians((prev) =>
+      prev.map((u) =>
+        currentUser?.id && String(u.id) === String(currentUser.id)
+          ? { ...u, ...updatedData }
+          : u
+      )
+    );
+    setMapUsersData((prev) =>
+      prev.map((u) =>
+        currentUser?.id && String(u.id) === String(currentUser.id)
+          ? { ...u, ...updatedData }
+          : u
+      )
+    );
+    if (updatedData.displayName || updatedData.name || updatedData.profilePicture || updatedData.coverImage) {
       setEvents((prev) =>
         prev.map((ev) => {
           const isMine =
@@ -790,18 +817,22 @@ export default function MapPage() {
               name: updatedData.displayName || updatedData.name || ev.creator?.name,
               displayName: updatedData.displayName || updatedData.name || ev.creator?.displayName,
               profilePicture: updatedData.profilePicture ?? ev.creator?.profilePicture,
+              coverImage: updatedData.coverImage ?? ev.creator?.coverImage,
             },
           };
         })
       );
     }
     try {
-      await api.put("/users/me", updatedData);
+      const res = await api.put("/users/me", updatedData);
+      if (res?.data?.user) {
+        setCurrentUser((prev) => ({ ...(prev || {}), ...res.data.user }));
+      }
     } catch (e) {
       console.warn("Profile update remote sync deferred:", e?.message);
     }
     setNotice("Profile updated successfully!");
-  }, [currentUser?.id]);
+  }, [currentUser]);
 
   const handleRequestChangePassword = useCallback(async () => {
     const markReturnToMapWithoutIntro = () => {

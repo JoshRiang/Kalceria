@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { resolvePersistentAvatarUrl, resolvePersistentCover } from "@/lib/profileIdentity";
 
 function formatJoinedDate(createdAt) {
   if (!createdAt) return "Joined in October 2025";
@@ -48,7 +49,8 @@ const BASE_PROFILE_COLORS = [
   "#db2777", // Vibrant Rose
 ];
 
-function getFallbackCover(user) {
+function getFallbackCover(user) { return resolvePersistentCover(user); }
+function getLegacyFallbackCover(user) {
   const name = String(user?.name || user?.nickname || "").toLowerCase();
   if (name.includes("ahmad")) {
     return "/media/gifs/event_spec_1.mp4";
@@ -62,7 +64,8 @@ function getFallbackCover(user) {
   return BASE_PROFILE_COLORS[num];
 }
 
-function getAvatarUrl(user) {
+function getAvatarUrl(user) { return resolvePersistentAvatarUrl(user); }
+function getLegacyAvatarUrl(user) {
   return (
     user?.profilePicture ||
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(

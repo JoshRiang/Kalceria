@@ -9,10 +9,9 @@ import {
   isEventCollaborator,
   getEventPendingRequests,
 } from "./hooks/useMapChatAndNotifications";
+import { resolvePersistentAvatarUrl } from "@/lib/profileIdentity";
 
-const avatarUrl = (user) =>
-  user?.profilePicture ||
-  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.name || "anon")}`;
+const avatarUrl = (user) => resolvePersistentAvatarUrl(user);
 
 const FIND_TITLE_LETTERS = "Find other Kalcerians".split("");
 
