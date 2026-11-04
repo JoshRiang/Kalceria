@@ -203,6 +203,13 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const switchMode = (newMode) => {
     setError("");
     setSuccess("");
+    if (newMode === "register") {
+      setForm((prev) => ({
+        ...prev,
+        password: "",
+        confirmPassword: "",
+      }));
+    }
     setMode(newMode);
   };
 

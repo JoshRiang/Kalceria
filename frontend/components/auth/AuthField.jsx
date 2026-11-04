@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import RecommendedPasswordPopup from "@/components/auth/RecommendedPasswordPopup";
 
 export default function AuthField({
@@ -34,6 +34,13 @@ export default function AuthField({
   const isSelect = type === "select";
   const isPhone = type === "tel";
   const isPassword = type === "password";
+
+  // Keep password strictly hidden with eye closed when recommended password popup is active
+  useEffect(() => {
+    if (showPasswordRecommendation) {
+      setShowPassword(false);
+    }
+  }, [showPasswordRecommendation]);
 
   // Dynamic border coloring based on validation state
   const borderClass = isValid

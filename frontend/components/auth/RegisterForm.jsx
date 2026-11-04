@@ -33,39 +33,57 @@ export default function RegisterForm({
   setPhotoError,
   handlePhotoSelect,
 }) {
-  const [recommendedPassword, setRecommendedPassword] = useState(() =>
-    generateClientStrongPassword()
-  );
-  const [showRecommendation, setShowRecommendation] = useState(false);
+  const [initialPassword] = useState(() => generateClientStrongPassword());
+  const [recommendedPassword, setRecommendedPassword] = useState(initialPassword);
+  const [showRecommendation, setShowRecommendation] = useState(true);
   const [recommendationDismissed, setRecommendationDismissed] = useState(false);
+
+  // Auto-fill the first password input box on mount and show recommendation popup
+  useEffect(() => {
+    if (PUBLIC_SIGNUP_ENABLED && !recommendationDismissed && !form.password) {
+      setField("password", initialPassword);
+      setShowRecommendation(true);
+    }
+  }, [PUBLIC_SIGNUP_ENABLED, initialPassword, recommendationDismissed, form.password, setField]);
 
   useEffect(() => {
     let active = true;
     fetchRecommendedPassword({ email: form.email || "" }).then((pwd) => {
       if (active && pwd) {
         setRecommendedPassword(pwd);
+        // Automatically sync initial auto-fill if user hasn't typed their own yet
+        if (!recommendationDismissed && (!form.password || form.password === initialPassword)) {
+          setField("password", pwd);
+        }
       }
     });
     return () => {
       active = false;
     };
-  }, [form.email]);
+  }, [form.email, initialPassword, recommendationDismissed, form.password, setField]);
 
   const handlePasswordChange = (id, value) => {
     setField(id, value);
     if (!value) {
       setRecommendationDismissed(false);
+    } else if (value !== recommendedPassword) {
+      // User typed their own password manually
+      setRecommendationDismissed(true);
+      setShowRecommendation(false);
     }
   };
 
   const handleAcceptRecommendedPassword = (pwd) => {
-    setField("password", pwd);
-    setField("confirmPassword", pwd);
+    const chosen = pwd || recommendedPassword;
+    setField("password", chosen);
+    setField("confirmPassword", chosen);
     setShowRecommendation(false);
     setRecommendationDismissed(true);
   };
 
   const handleDismissRecommendedPassword = () => {
+    setField("password", "");
+    setField("confirmPassword", "");
     setShowRecommendation(false);
     setRecommendationDismissed(true);
   };

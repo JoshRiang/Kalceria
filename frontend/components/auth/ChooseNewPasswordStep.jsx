@@ -18,7 +18,7 @@ export default function ChooseNewPasswordStep({
 }) {
   const [initialPassword] = useState(() => generateClientStrongPassword());
   const [password, setPassword] = useState(initialPassword);
-  const [confirmPassword, setConfirmPassword] = useState(initialPassword);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
   const [recommendedPassword, setRecommendedPassword] = useState(initialPassword);
   const [showRecommendation, setShowRecommendation] = useState(true);
@@ -31,7 +31,6 @@ export default function ChooseNewPasswordStep({
         setRecommendedPassword(pwd);
         // Automatically sync initial auto-fill if user hasn't typed their own yet
         setPassword((prev) => (prev === initialPassword ? pwd : prev));
-        setConfirmPassword((prev) => (prev === initialPassword ? pwd : prev));
       }
     });
     return () => {
@@ -101,6 +100,9 @@ export default function ChooseNewPasswordStep({
             if (onErrorClear) onErrorClear();
             if (!val) {
               setRecommendationDismissed(false);
+            } else if (val !== recommendedPassword) {
+              setRecommendationDismissed(true);
+              setShowRecommendation(false);
             }
           }}
           required={true}
@@ -116,6 +118,9 @@ export default function ChooseNewPasswordStep({
             if (!recommendationDismissed) {
               setShowRecommendation(true);
             }
+          }}
+          onPasswordBlur={() => {
+            setShowRecommendation(false);
           }}
           onAcceptRecommendation={handleAcceptRecommendedPassword}
           onDismissRecommendation={handleDismissRecommendedPassword}
