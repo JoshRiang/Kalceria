@@ -123,6 +123,19 @@ export const fetchPublicEvents = () => fetchAllPages('/events', 'events', 50);
 export const fetchBlockedUsers = () => api.get('/map/blocked').then(r => r.data?.blockedUsers || []).catch(() => []);
 export const blockKalcerian = (targetId) => api.post(`/map/block/${targetId}`).then(r => r.data);
 export const unblockKalcerian = (targetId) => api.delete(`/map/block/${targetId}`).then(r => r.data);
+export const fetchFavouriteUsers = () => api.get('/map/favourites').then(r => r.data?.favouriteUsers || []).catch(() => []);
+export const favouriteKalcerian = (targetId) => api.post(`/map/favourite/${targetId}`).then(r => r.data);
+export const unfavouriteKalcerian = (targetId) => api.delete(`/map/favourite/${targetId}`).then(r => r.data);
+export const fetchMutedUsers = () => api.get('/map/muted').then(r => r.data?.mutedUsers || []).catch(() => []);
+export const muteKalcerian = (targetId) => api.post(`/map/mute/${targetId}`).then(r => r.data);
+export const unmuteKalcerian = (targetId) => api.delete(`/map/mute/${targetId}`).then(r => r.data);
+export const fetchPersonalChatMessages = (targetId, params = {}) =>
+  api.get(`/map/chat/${targetId}`, { params }).then(r => r.data?.messages || []).catch(() => []);
+export const fetchPersonalChatPage = (targetId, params = {}) =>
+  api.get(`/map/chat/${targetId}`, { params }).then(r => r.data || { messages: [], nextCursor: null }).catch(() => ({ messages: [], nextCursor: null }));
+export const postPersonalChatMessage = (targetId, envelope) => api.post(`/map/chat/${targetId}`, envelope).then(r => r.data);
+export const deletePersonalChatMessages = (targetId, payload) => api.delete(`/map/chat/${targetId}`, { data: payload }).then(r => r.data);
+export const postCallSignal = (targetId, payload) => api.post(`/map/call/${targetId}/signal`, payload).then(r => r.data);
 export const postBroadcast = (message) => api.post('/broadcast', { message });
 export const putBroadcast = (message) => api.put('/broadcast', { message });
 export const delBroadcast = () => api.delete('/broadcast');
@@ -132,7 +145,12 @@ export const postMiniEvent = (data) => api.post('/mini-events', data);
 export const putMiniEvent = (id, data) => api.put(`/mini-events/${id}`, data);
 export const delMiniEvent = (id) => api.delete(`/mini-events/${id}`);
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+
 export const uploadBlobMedia = async (file) => {
+  if (file && file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+  }
   const formData = new FormData();
   formData.append("file", file);
   const res = await fetch("/api/blob/upload", {

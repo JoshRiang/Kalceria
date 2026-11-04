@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { toSmartTitleCase } from "@/lib/titleCase";
 
 // Subtle yet pekat/solid fill colors (not semi-hollow)
 export const SUB_BOX_COLORS = [
@@ -28,49 +29,36 @@ export function CollabRequestsModal({
     <AnimatePresence>
       {show && (
         <div
-          className="fixed inset-0 z-[2000] flex items-center justify-center p-3 xs:p-4 select-none"
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-2.5 xs:p-4 select-none"
           onClick={onClose}
         >
           {/* Subtle click-catcher backdrop WITHOUT blur to preserve background sharpness */}
           <div className="absolute inset-0 bg-black/15" />
 
-          {/* Pop-out Box with graceful fade-in scale sequence and NO floating animation */}
+          {/* Pop-out Box: elongated width with inner box shifted left and dedicated X vertical column on right */}
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative z-10 w-full max-w-[420px] max-h-[85vh] flex flex-col rounded-[22px] shadow-2xl overflow-hidden ${
+            className={`relative z-10 w-full max-w-[460px] sm:max-w-[485px] max-h-[85vh] flex flex-row items-stretch rounded-[22px] shadow-2xl overflow-hidden ${
               isModalDark
                 ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"
                 : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Minimal Header: Subtitle and Title removed, only clean X close button */}
-            <div className="shrink-0 flex justify-end items-center px-4 pt-3 pb-1">
-              <button
-                type="button"
-                className={`text-2xl leading-none transition-colors p-1 cursor-pointer ${
-                  isModalDark
-                    ? "text-[#8b949e] hover:text-[#f0f6fc]"
-                    : "text-[#57606a] hover:text-[#1f2328]"
-                }`}
-                onClick={onClose}
-                title="Close"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Sub Request Box List */}
-            <div className="px-4 pb-4 sm:px-5 sm:pb-5 flex-1 overflow-y-auto max-h-[380px] custom-scrollbar flex flex-col gap-3">
+            {/* Left Column: Sub Request Box List (shifted left so X vertical column stays completely clear) */}
+            <div className="pl-3.5 pr-1 py-3.5 xs:pl-4 xs:py-4 sm:pl-5 sm:py-5 flex-1 min-w-0 overflow-y-auto max-h-[380px] custom-scrollbar flex flex-col gap-3">
               {currentRequestsList.length > 0 ? (
                 currentRequestsList.map((req, idx) => {
                   const colorScheme = SUB_BOX_COLORS[idx % SUB_BOX_COLORS.length];
                   const cardBg = isModalDark ? colorScheme.darkBg : colorScheme.lightBg;
                   const cardBorderColor = isModalDark ? "#ffffff" : "#000000";
                   const textColor = isModalDark ? "#ffffff" : "#000000";
+                  const formattedEventTitle = toSmartTitleCase(
+                    viewingRequestsEvent?.title || req.eventTitle || "this event"
+                  );
 
                   return (
                     <div
@@ -79,7 +67,7 @@ export function CollabRequestsModal({
                         background: cardBg,
                         borderColor: cardBorderColor,
                       }}
-                      className="relative rounded-2xl p-3.5 sm:p-4 border-[1.5px] transition-all flex flex-col gap-2.5 shadow-sm"
+                      className="relative rounded-2xl p-3 xs:p-3.5 sm:p-4 border-[1.5px] transition-all flex flex-col gap-2.5 shadow-sm"
                     >
                       <div className="flex items-center gap-3">
                         {/* Tiny Profile Icon */}
@@ -111,7 +99,7 @@ export function CollabRequestsModal({
                             </span>
                             <span className="font-normal"> request collab for </span>
                             <span className="font-bold italic">
-                              {viewingRequestsEvent?.title || req.eventTitle || "this event"}
+                              {formattedEventTitle}
                             </span>
                           </p>
                         </div>
@@ -166,10 +154,10 @@ export function CollabRequestsModal({
               ) : (
                 <div
                   style={{
-                    background: isModalDark ? "#1e3a8a" : "#bfdbfe",
+                    background: isModalDark ? "#000000" : "#ffffff",
                     borderColor: isModalDark ? "#ffffff" : "#000000",
                   }}
-                  className="rounded-2xl p-6 text-center border-[1.5px] flex flex-col items-center justify-center gap-2"
+                  className="rounded-2xl p-5 xs:p-6 text-center border-[1.5px] flex flex-col items-center justify-center gap-2"
                 >
                   <strong
                     style={{ color: isModalDark ? "#ffffff" : "#000000", fontWeight: 800 }}
@@ -178,13 +166,29 @@ export function CollabRequestsModal({
                     No Collab Requests Yet
                   </strong>
                   <p
-                    style={{ color: isModalDark ? "#ffffff" : "#000000", fontWeight: 700 }}
-                    className="text-xs font-sans max-w-[260px]"
+                    style={{ color: isModalDark ? "#ffffff" : "#000000" }}
+                    className="text-xs font-sans font-normal max-w-[270px] leading-relaxed"
                   >
-                    When fellow Kalcerians tap the Request icon on your event card, they will appear here.
+                    When <strong className="font-bold">fellow Kalcerians</strong> tap the Request icon on your event card, they will appear here.
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* Right Dedicated Vertical Column for Close (X) Button - keeps vertical space below X completely clear */}
+            <div className="shrink-0 w-9 xs:w-10 sm:w-11 pt-2.5 xs:pt-3 pr-1.5 xs:pr-2 flex flex-col items-center justify-start">
+              <button
+                type="button"
+                className={`w-7 h-7 flex items-center justify-center text-2xl leading-none transition-colors rounded-full cursor-pointer ${
+                  isModalDark
+                    ? "text-[#8b949e] hover:text-[#f0f6fc]"
+                    : "text-[#57606a] hover:text-[#1f2328]"
+                }`}
+                onClick={onClose}
+                title="Close"
+              >
+                ×
+              </button>
             </div>
           </motion.div>
         </div>

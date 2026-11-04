@@ -28,6 +28,8 @@ export function KalcerianCardItem({
   unreadGroupChatCount = 0,
   unreadPersonalChatCount = 0,
   isRecentlyMessaged = false,
+  isFavourite = false,
+  isMuted = false,
   onPersonalChatOpen,
   isOtherEventDisabled,
   displayName,
@@ -40,6 +42,8 @@ export function KalcerianCardItem({
   setHoveredKalcerian,
   hoveredEventIconId,
   setHoveredEventIconId,
+  hoveredChatIconId,
+  setHoveredChatIconId,
   focusUser,
   setFocusedUserId,
   scheduleTimeout,
@@ -152,13 +156,67 @@ export function KalcerianCardItem({
               )}
             </div>
 
-            {/* Online status indicator dot (hidden while expanded to emphasize thin X) */}
+            {/* Bottom-right Avatar Badges: Favourite (Smooth Tiny Red Love) & Mute (Tiny Speaker + 1 Cross) Stacked Horizontally with Half-Body Overlap, or Online Dot */}
             {!isExpanded && (
-              <span
-                className={`absolute bottom-0 right-0 w-3 h-3 border-2 rounded-full ${
-                  isMapDark ? "border-[#161b22]" : "border-white"
-                } ${isBlocked ? "bg-[#8b949e]/50" : user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
-              />
+              !isBlocked && (isFavourite || isMuted) ? (
+                <div className="absolute -bottom-0.5 -right-1 z-20 flex items-center pointer-events-none">
+                  {isFavourite && (
+                    <span
+                      className={`relative z-10 w-[14px] h-[14px] rounded-full flex items-center justify-center shadow-xs ${
+                        isMapDark
+                          ? "bg-[#161b22] ring-1 ring-[#161b22]"
+                          : "bg-white ring-1 ring-white"
+                      }`}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]" fill="#ef4444">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                      </svg>
+                    </span>
+                  )}
+                  {isMuted && (
+                    <span
+                      className={`relative z-20 w-[14px] h-[14px] rounded-full flex items-center justify-center shadow-xs ${
+                        isFavourite ? "-ml-[6px]" : ""
+                      } ${
+                        isMapDark
+                          ? "bg-[#161b22] ring-1 ring-[#161b22]"
+                          : "bg-white ring-1 ring-white"
+                      }`}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-[11px] h-[11px] overflow-visible">
+                        <path
+                          d="M 3 8.5 h 4 l 5.2 -4.5 v 16 l -5.2 -4.5 h -4 a 1 1 0 0 1 -1 -1 v -5 a 1 1 0 0 1 1 -1 z"
+                          fill={isMapDark ? "#ffffff" : "#000000"}
+                        />
+                        <line
+                          x1="15.5"
+                          y1="8.5"
+                          x2="21.5"
+                          y2="15.5"
+                          stroke="#ef4444"
+                          strokeWidth="3.2"
+                          strokeLinecap="round"
+                        />
+                        <line
+                          x1="21.5"
+                          y1="8.5"
+                          x2="15.5"
+                          y2="15.5"
+                          stroke="#ef4444"
+                          strokeWidth="3.2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span
+                  className={`absolute bottom-0 right-0 w-3 h-3 border-2 rounded-full ${
+                    isMapDark ? "border-[#161b22]" : "border-white"
+                  } ${isBlocked ? "bg-[#8b949e]/50" : user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
+                />
+              )
             )}
           </div>
         </div>
@@ -343,20 +401,38 @@ export function KalcerianCardItem({
           <div className="grid grid-cols-2 gap-1.5 items-center justify-items-center w-[54px] mt-1.5">
             {/* Slot 1: Chat Button */}
             {!isBlocked ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPersonalChatOpen?.(user);
-                }}
-                className="relative w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                title={`Message ${user.name}`}
-              >
-                <ChatButtonIcon isMapDark={isMapDark} />
-                {unreadPersonalChatCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full border-none shadow-none ring-0 pointer-events-none" />
+              <div className="relative flex items-center justify-center w-6 h-6">
+                <button
+                  type="button"
+                  onMouseEnter={() => setHoveredChatIconId?.(user.id)}
+                  onMouseLeave={() => setHoveredChatIconId?.(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPersonalChatOpen?.(user);
+                  }}
+                  className="relative w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
+                  title={`Chat ${displayName}`}
+                >
+                  <ChatButtonIcon isMapDark={isMapDark} />
+                  {unreadPersonalChatCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full border-none shadow-none ring-0 pointer-events-none" />
+                  )}
+                </button>
+
+                {/* Hover Tooltip Box: "Chat <Display Name>" */}
+                {hoveredChatIconId === user.id && (
+                  <div
+                    className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-md shadow-2xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
+                      isMapDark
+                        ? "bg-black border border-white text-white shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+                        : "bg-white border border-black text-black shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+                    }`}
+                    style={{ fontFamily: "Arial, sans-serif" }}
+                  >
+                    Chat {displayName}
+                  </div>
                 )}
-              </button>
+              </div>
             ) : (
               <div className="w-6 h-6" />
             )}

@@ -2,9 +2,19 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { playNotificationSound } from "@/lib/soundEngine";
+import {
+  fetchFavouriteUsers,
+  favouriteKalcerian,
+  unfavouriteKalcerian,
+  fetchMutedUsers,
+  muteKalcerian,
+  unmuteKalcerian,
+} from "@/lib/api";
 
 const PERSONAL_CHAT_STORAGE_KEY = "kalceria_personal_chat_meta_v1";
 const EVENT_GROUP_CHAT_STORAGE_KEY = "kalceria_event_group_chat_meta_v1";
+const FAVOURITES_STORAGE_KEY = "kalceria_favourite_users_v1";
+const MUTED_STORAGE_KEY = "kalceria_muted_users_v1";
 
 export function isEventOwner(eventItem, currentUser) {
   if (!eventItem || !currentUser) return false;
@@ -93,6 +103,94 @@ export function useMapChatAndNotifications({
   const [recentlyMessagedUserIds, setRecentlyMessagedUserIds] = useState({});
   const highlightTimersRef = useRef({});
 
+  // Favourites (Love badge + Priority slot) synced with localStorage & backend
+  const [favouriteUserIds, setFavouriteUserIds] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(FAVOURITES_STORAGE_KEY);
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return [];
+  });
+
+  // Muted Notifications (Muted Speaker badge + Silences personal chat chime) synced with localStorage & backend
+  const [mutedUserIds, setMutedUserIds] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(MUTED_STORAGE_KEY);
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    fetchFavouriteUsers()
+      .then((ids) => {
+        if (Array.isArray(ids) && ids.length) {
+          setFavouriteUserIds((prev) => {
+            const next = Array.from(new Set([...prev, ...ids]));
+            try {
+              localStorage.setItem(FAVOURITES_STORAGE_KEY, JSON.stringify(next));
+            } catch {}
+            return next;
+          });
+        }
+      })
+      .catch(() => {});
+
+    fetchMutedUsers()
+      .then((ids) => {
+        if (Array.isArray(ids) && ids.length) {
+          setMutedUserIds((prev) => {
+            const next = Array.from(new Set([...prev, ...ids]));
+            try {
+              localStorage.setItem(MUTED_STORAGE_KEY, JSON.stringify(next));
+            } catch {}
+            return next;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleFavouriteUser = useCallback((targetId) => {
+    if (!targetId) return;
+    const strId = String(targetId);
+    setFavouriteUserIds((prev) => {
+      const exists = prev.includes(strId);
+      const next = exists ? prev.filter((id) => id !== strId) : [...prev, strId];
+      try {
+        localStorage.setItem(FAVOURITES_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      if (exists) {
+        unfavouriteKalcerian(strId).catch(() => {});
+      } else {
+        favouriteKalcerian(strId).catch(() => {});
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleMuteUser = useCallback((targetId) => {
+    if (!targetId) return;
+    const strId = String(targetId);
+    setMutedUserIds((prev) => {
+      const exists = prev.includes(strId);
+      const next = exists ? prev.filter((id) => id !== strId) : [...prev, strId];
+      try {
+        localStorage.setItem(MUTED_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      if (exists) {
+        unmuteKalcerian(strId).catch(() => {});
+      } else {
+        muteKalcerian(strId).catch(() => {});
+      }
+      return next;
+    });
+  }, []);
+
   // 2. Event Group Chat Metadata: { [eventId]: { lastMessageAt, unreadCount, lastMessageText, senderName } }
   const [eventGroupChatMap, setEventGroupChatMap] = useState(() => {
     if (typeof window !== "undefined") {
@@ -136,7 +234,7 @@ export function useMapChatAndNotifications({
     [events, kalcerians]
   );
 
-  // Incoming Personal Chat Handler -> plays sound, updates timestamp so card rolls to top, highlights card
+  // Incoming Personal Chat Handler -> plays sound (unless user is muted), updates timestamp so card rolls to top, highlights card
   const receivePersonalChatMessage = useCallback(
     (payload = {}) => {
       const rawSender = payload.senderId || payload.userId || payload.nickname || payload.sender;
@@ -150,8 +248,10 @@ export function useMapChatAndNotifications({
       const ts = Number(payload.timestamp) || Date.now();
       const messageText = String(payload.message || payload.text || "").trim();
 
-      // Play personal chat notification chime
-      playNotificationSound("personal_chat");
+      // Play personal chat notification chime ONLY if this sender is NOT muted
+      if (!mutedUserIds.includes(String(resolvedUserId))) {
+        playNotificationSound("personal_chat");
+      }
 
       setPersonalChatMap((prev) => {
         const existing = prev[resolvedUserId] || { unreadCount: 0, lastMessageAt: 0 };
@@ -190,8 +290,28 @@ export function useMapChatAndNotifications({
         );
       }
     },
-    [resolveKalcerianId, blockedUserIds, currentUser]
+    [resolveKalcerianId, blockedUserIds, currentUser, mutedUserIds]
   );
+
+  const recordOutgoingPersonalMessage = useCallback((userId, messageText = "", ts = Date.now()) => {
+    if (!userId) return;
+    setPersonalChatMap((prev) => {
+      const existing = prev[userId] || { unreadCount: 0, lastMessageAt: 0 };
+      const next = {
+        ...prev,
+        [userId]: {
+          ...existing,
+          lastMessageAt: Math.max(ts, existing.lastMessageAt || 0),
+          unreadCount: 0,
+          lastMessageText: messageText || existing.lastMessageText || "",
+        },
+      };
+      try {
+        sessionStorage.setItem(PERSONAL_CHAT_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   const markPersonalChatRead = useCallback((userId) => {
     if (!userId) return;
@@ -481,6 +601,11 @@ export function useMapChatAndNotifications({
     recentlyMessagedUserIds,
     receivePersonalChatMessage,
     markPersonalChatRead,
+    recordOutgoingPersonalMessage,
+    favouriteUserIds,
+    mutedUserIds,
+    toggleFavouriteUser,
+    toggleMuteUser,
     eventGroupChatMap,
     receiveEventGroupChatMessage,
     markEventGroupChatRead,

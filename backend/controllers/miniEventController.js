@@ -4,6 +4,55 @@ import { resolveIndonesianReverseGeo } from './geoController.js';
 
 const MINI_EVENT_TTL_MS = 7 * 60 * 60 * 1000;
 
+const MINOR_TITLE_WORDS = new Set([
+  "dan", "atau", "serta", "tetapi", "tapi", "namun", "melainkan", "padahal", "sedangkan",
+  "yang", "untuk", "bagi", "guna", "buat", "demi", "agar", "supaya", "biar",
+  "karena", "sebab", "lantaran", "sehingga", "maka",
+  "jika", "kalau", "jikalau", "apabila", "bila", "bilamana", "seandainya", "asalkan", "asal",
+  "meski", "meskipun", "walau", "walaupun", "kendati", "kendatipun", "biarpun", "sekalipun", "sungguhpun",
+  "ketika", "saat", "waktu", "tatkala", "sementara", "sambil", "seraya",
+  "sebelum", "sesudah", "setelah", "sejak", "selama", "hingga", "sampai",
+  "seperti", "bagai", "bagaikan", "ibarat", "laksana", "bak", "alih-alih",
+  "di", "ke", "dari", "pada", "kepada", "daripada", "oleh", "dengan", "tanpa",
+  "tentang", "mengenai", "terhadap", "antara", "dalam", "atas", "bawah",
+  "menuju", "menurut", "sekitar", "sekeliling", "melalui", "lewat",
+  "pun", "per", "via", "vs", "ala",
+  "a", "an", "the", "and", "but", "or", "nor", "for", "yet", "so",
+  "as", "at", "by", "in", "of", "on", "to", "up", "off", "out",
+  "vs.", "v", "v.", "from", "into", "onto", "upon", "with", "within", "without",
+  "over", "under", "between", "among", "through", "during", "before", "after", "since", "until", "till",
+  "about", "against", "around", "behind", "beside", "besides", "beyond", "despite", "down", "except",
+  "inside", "near", "outside", "past", "toward", "towards", "underneath", "unlike",
+  "than", "that", "when", "while", "if", "though", "although",
+]);
+
+function toSmartTitleCase(value) {
+  const cleaned = typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+  if (!cleaned) return "";
+  return cleaned
+    .split(" ")
+    .map((word, idx) => {
+      const match = word.match(/^([^a-zA-Z0-9]*)([a-zA-Z0-9][a-zA-Z0-9'-]*?)([^a-zA-Z0-9]*)$/);
+      if (!match) return word;
+      const [, prefix, core, suffix] = match;
+      const lower = core.toLowerCase();
+      if (idx > 0 && MINOR_TITLE_WORDS.has(lower)) {
+        return `${prefix}${lower}${suffix}`;
+      }
+      if (
+        core.length >= 2 &&
+        core.length <= 5 &&
+        core === core.toUpperCase() &&
+        /[A-Z]/.test(core) &&
+        !MINOR_TITLE_WORDS.has(lower)
+      ) {
+        return `${prefix}${core}${suffix}`;
+      }
+      return `${prefix}${lower.charAt(0).toUpperCase()}${lower.slice(1)}${suffix}`;
+    })
+    .join(" ");
+}
+
 function cleanText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -25,6 +74,7 @@ function formatMiniEvent(ev) {
     .trim();
   return {
     ...ev,
+    title: ev.title ? toSmartTitleCase(ev.title) : ev.title,
     category: catMatch ? catMatch[1].toLowerCase() : (ev.category || "cafe"),
     mediaUrl: mediaMatch ? mediaMatch[1] : (ev.mediaUrl || null),
     location: locMatch ? locMatch[1].trim() : (ev.location || null),
@@ -46,7 +96,7 @@ function validateMiniEvent({ title, description, lat, lng }) {
 export async function createMiniEvent(req, res, next) {
   try {
     const creatorId = req.user.userId;
-    const title = cleanText(req.body.title);
+    const title = toSmartTitleCase(cleanText(req.body.title));
     let description = cleanText(req.body.description);
     const category = cleanText(req.body.category) || "cafe";
     const mediaUrl = cleanText(req.body.mediaUrl);
@@ -376,7 +426,7 @@ export async function updateMiniEvent(req, res, next) {
   try {
     const creatorId = req.user.userId;
     const { id } = req.params;
-    const title = cleanText(req.body.title);
+    const title = toSmartTitleCase(cleanText(req.body.title));
     let description = cleanText(req.body.description);
     let location = cleanText(req.body.location);
     const lat = parseCoordinate(req.body.lat);

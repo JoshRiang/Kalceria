@@ -1,6 +1,7 @@
 // EventPopup.jsx
 // Stateless utility for generating event popup HTML for Leaflet
 import { getEventCategory } from "./EventIcon";
+import { toSmartTitleCase } from "@/lib/titleCase";
 
 function esc(value) {
   return String(value || "")
@@ -422,9 +423,12 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     `
     : "";
 
-  const uptimeString = calculateUptime(item.createdAt);
-  const releaseTimeString = formatReleaseTime(item.createdAt);
+  const parsedCreatedMs = item.createdAt ? new Date(item.createdAt).getTime() : NaN;
+  const createdAtMs = Number.isFinite(parsedCreatedMs) ? parsedCreatedMs : Date.now();
+  const uptimeString = calculateUptime(createdAtMs);
+  const releaseTimeString = formatReleaseTime(createdAtMs);
   const safeId = String(item.id || "event").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const displayTitle = toSmartTitleCase(item.title || "");
 
   // Device-aware Navigation Link & Indonesian Location
   const rawLoc = extractLocation(item) || "Bintaro Jaya, Tangerang Selatan";
@@ -460,7 +464,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
       <!-- Upper Space: Title, Declarer & Action Icons (All 3 on one line!) -->
       <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; border: none !important;">
         <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 155px; min-width: 0; flex: 1;">
-          <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${esc(item.title)}</strong>
+          <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${esc(displayTitle)}</strong>
           <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 700; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">By ${esc(creatorName)}</span>
         </div>
         <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 7px; margin-left: 6px; flex-shrink: 0;">
@@ -508,9 +512,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
                 stroke-linejoin="round"
               />
             </svg>
-            <span id="event-uptime-${safeId}" style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em;">
-              ${uptimeString}
-            </span>
+            <span id="event-uptime-${safeId}" data-event-uptime="${createdAtMs}" style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em; font-variant-numeric: tabular-nums;">${uptimeString}</span>
           </div>
 
           <!-- Right: Release time (e.g. 17.41) -->
@@ -520,24 +522,5 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         </div>
       </div>
     </div>
-    <script>
-      (function() {
-        var el = document.getElementById("event-uptime-${safeId}");
-        if (!el || el._timerActive) return;
-        el._timerActive = true;
-        var start = new Date("${item.createdAt || new Date().toISOString()}").getTime();
-        var timer = setInterval(function() {
-          if (!document.body.contains(el)) {
-            clearInterval(timer);
-            return;
-          }
-          var diff = Math.max(0, Math.floor((Date.now() - start) / 1000));
-          var h = String(Math.floor(diff / 3600)).padStart(2, "0");
-          var m = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
-          var s = String(diff % 60).padStart(2, "0");
-          el.textContent = h + ":" + m + ":" + s;
-        }, 1000);
-      })();
-    </script>
   `;
 }

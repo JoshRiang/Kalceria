@@ -271,6 +271,24 @@ export const INITIAL_EVENT_REQUESTS = {
   ]
 };
 
+import { toSmartTitleCase } from "@/lib/titleCase";
+
+const MOCK_BOOT_TIME = Date.now();
+const MOCK_OFFSETS_MS = {
+  mini_cafe_1: 14 * 60 * 1000 + 22 * 1000,
+  mini_cafe_2: 28 * 60 * 1000 + 11 * 1000,
+  mini_cafe_3: 41 * 60 * 1000 + 5 * 1000,
+  mini_spec_1: 19 * 60 * 1000 + 44 * 1000,
+  mini_spec_2: 33 * 60 * 1000 + 18 * 1000,
+  mini_spec_3: 52 * 60 * 1000 + 9 * 1000,
+  mini_eat_1: 16 * 60 * 1000 + 36 * 1000,
+  mini_eat_2: 24 * 60 * 1000 + 50 * 1000,
+  mini_eat_3: 37 * 60 * 1000 + 12 * 1000,
+  mini_disc_1: 21 * 60 * 1000 + 30 * 1000,
+  mini_disc_2: 46 * 60 * 1000 + 15 * 1000,
+  mini_disc_3: 58 * 60 * 1000 + 40 * 1000,
+};
+
 export const cleanEventDesc = (item) => {
   if (!item) return item;
   const raw = item.description || "";
@@ -282,8 +300,14 @@ export const cleanEventDesc = (item) => {
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
     .replace(/\[LOC:[^\]]+\]\s*/gi, "")
     .trim();
+  const isMock = item.id && Object.prototype.hasOwnProperty.call(MOCK_OFFSETS_MS, item.id);
+  const stableCreatedAt = isMock
+    ? new Date(MOCK_BOOT_TIME - MOCK_OFFSETS_MS[item.id]).toISOString()
+    : (item.createdAt || new Date(MOCK_BOOT_TIME).toISOString());
   return {
     ...item,
+    createdAt: stableCreatedAt,
+    title: item.title ? toSmartTitleCase(item.title) : item.title,
     category: catMatch ? catMatch[1].toLowerCase() : (item.category || "cafe"),
     mediaUrl: mediaMatch ? mediaMatch[1] : (item.mediaUrl || null),
     location: locMatch ? locMatch[1].trim() : (item.location || null),

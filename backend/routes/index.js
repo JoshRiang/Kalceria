@@ -11,7 +11,18 @@ import { searchIndonesianLocations, reverseGeocodeLocation } from "../controller
 import { getMedia, createMedia } from "../controllers/mediaController.js";
 import { createMiniEvent, getActiveMiniEvents, updateMiniEvent, deleteMiniEvent } from "../controllers/miniEventController.js";
 import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from "../controllers/serviceController.js";
-import { saveTelemetry, getMapUsers, getAllKalcerians, getBlockedUsers, blockUser, unblockUser } from "../controllers/telemetryController.js";
+import {
+  saveTelemetry, getMapUsers, getAllKalcerians,
+  getBlockedUsers, blockUser, unblockUser,
+  getFavouriteUsers, favouriteUser, unfavouriteUser,
+  getMutedUsers, muteUser, unmuteUser,
+} from "../controllers/telemetryController.js";
+import {
+  getPersonalChatMessages,
+  sendPersonalChatMessage,
+  deletePersonalChatMessages,
+  sendCallSignal,
+} from "../controllers/personalChatController.js";
 import { getMinigameStatus, recordMinigameScore } from "../controllers/minigameController.js";
 import { getMyBroadcast, createBroadcast, updateBroadcast, deleteBroadcast } from "../controllers/broadcastController.js";
 import { redirectEvent } from "../controllers/redirectController.js";
@@ -161,10 +172,22 @@ router.post("/minigame/score", requireAuth, recordMinigameScore);
 router.post("/map/telemetry", requireAuth, saveTelemetry);
 router.get("/map/users", requireAuth, getMapUsers);
 router.get("/map/kalcerians", requireAuth, getAllKalcerians);
-// ─── Blocked Users ────────────────────────────────────────────────────────────
+// ─── Blocked, Favourited & Muted Users ───────────────────────────────────────
 router.get("/map/blocked", requireAuth, getBlockedUsers);
 router.post("/map/block/:targetId", requireAuth, blockUser);
 router.delete("/map/block/:targetId", requireAuth, unblockUser);
+router.get("/map/favourites", requireAuth, getFavouriteUsers);
+router.post("/map/favourite/:targetId", requireAuth, favouriteUser);
+router.delete("/map/favourite/:targetId", requireAuth, unfavouriteUser);
+router.get("/map/muted", requireAuth, getMutedUsers);
+router.post("/map/mute/:targetId", requireAuth, muteUser);
+router.delete("/map/mute/:targetId", requireAuth, unmuteUser);
+
+// ─── Personal Chat & Call Signaling (E2EE) ────────────────────────────────────
+router.get("/map/chat/:targetId", requireAuth, getPersonalChatMessages);
+router.post("/map/chat/:targetId", requireAuth, sendPersonalChatMessage);
+router.delete("/map/chat/:targetId", requireAuth, deletePersonalChatMessages);
+router.post("/map/call/:targetId/signal", requireAuth, sendCallSignal);
 
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────

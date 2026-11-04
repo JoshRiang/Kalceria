@@ -153,6 +153,10 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
       input.onchange = async (e) => {
         const file = e.target?.files?.[0];
         if (!file) return;
+        if (file.size > 10 * 1024 * 1024) {
+          setNotice("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+          return;
+        }
         const ext = (file.name.split(".").pop() || "").toLowerCase();
         if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
           setNotice("Only .png, .jpeg, and .mp4 files are allowed");

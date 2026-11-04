@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { KalcerianCardItem } from "./panel/KalcerianCardItem";
+import { PersonalChatPanel } from "./chat/PersonalChatPanel";
 import {
   isEventOwner,
   isEventCollaborator,
@@ -123,15 +124,24 @@ export function KalceriansPanel({
   eventGroupChatMap = {},
   personalChatMap = {},
   recentlyMessagedUserIds = {},
+  favouriteUserIds = [],
+  mutedUserIds = [],
+  onToggleFavourite,
+  onToggleMute,
+  onOutgoingMessageUpdate,
   onPersonalChatOpen,
   onPromptCancelRequest,
   onOpenRequests,
 }) {
   const [hoveredEventIconId, setHoveredEventIconId] = useState(null);
+  const [hoveredChatIconId, setHoveredChatIconId] = useState(null);
   const [confirmingAction, setConfirmingAction] = useState(null); // { userId, type: "block" | "unblock" }
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [deviceFamily, setDeviceFamily] = useState("desktop");
+  const [activeChatUserId, setActiveChatUserId] = useState(null);
+  const [isClosingForChat, setIsClosingForChat] = useState(false);
   const listContainerRef = useRef(null);
+  const chatTransitionTimerRef = useRef(null);
 
   useEffect(() => {
     function handleResize() {
@@ -146,6 +156,12 @@ export function KalceriansPanel({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (chatTransitionTimerRef.current) clearTimeout(chatTransitionTimerRef.current);
+    };
+  }, []);
+
   // Whenever an incoming personal chat message arrives, smoothly scroll list to top so the rolling card is visible
   useEffect(() => {
     const handleScrollTop = () => {
@@ -156,6 +172,34 @@ export function KalceriansPanel({
     window.addEventListener("kalceria:personal-chat-sorted-top", handleScrollTop);
     return () => window.removeEventListener("kalceria:personal-chat-sorted-top", handleScrollTop);
   }, []);
+
+  const handleOpenChatWithTransition = (user) => {
+    if (!user) return;
+    onPersonalChatOpen?.(user);
+    setHoveredChatIconId(null);
+    setHoveredKalcerian(null);
+
+    if (chatTransitionTimerRef.current) clearTimeout(chatTransitionTimerRef.current);
+    // Step 1: Close the entire Kalcerians scroll bar downward
+    setIsClosingForChat(true);
+    // Step 2: Slide the Personal Chat column up from the bottom to the Kalcerians scroll bar height limit
+    chatTransitionTimerRef.current = setTimeout(() => {
+      setActiveChatUserId(user.id);
+    }, 240);
+  };
+
+  const handleClosePersonalChat = () => {
+    if (chatTransitionTimerRef.current) clearTimeout(chatTransitionTimerRef.current);
+    setActiveChatUserId(null);
+    chatTransitionTimerRef.current = setTimeout(() => {
+      setIsClosingForChat(false);
+      setDrawerOpen(true);
+    }, 220);
+  };
+
+  const activeChatUser = activeChatUserId
+    ? sidebarKalcerians.find((u) => String(u.id) === String(activeChatUserId)) || null
+    : null;
 
   const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;
 
@@ -168,13 +212,36 @@ export function KalceriansPanel({
   }
 
   return (
-    <motion.aside
-      initial={{ y: 80, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-      className={`absolute z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col transition-transform duration-300 ease-out overflow-hidden font-sans select-none backdrop-blur-[28px] max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[46vh] max-[860px]:max-h-[385px] max-[860px]:min-h-[340px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
-        drawerOpen ? "translate-y-0" : "translate-y-[calc(100%-66px)]"
-      } ${
+    <>
+      <AnimatePresence>
+        {activeChatUser && (
+          <PersonalChatPanel
+            key={`chat-panel-${activeChatUser.id}`}
+            activeChatUser={activeChatUser}
+            currentUser={currentUser}
+            isMapDark={isMapDark}
+            avatarUrl={avatarUrl}
+            isFavourite={favouriteUserIds.includes(String(activeChatUser.id))}
+            isMuted={mutedUserIds.includes(String(activeChatUser.id))}
+            onToggleFavourite={onToggleFavourite}
+            onToggleMute={onToggleMute}
+            onCloseChat={handleClosePersonalChat}
+            onOutgoingMessageUpdate={onOutgoingMessageUpdate}
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.aside
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+        className={`absolute z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col transition-transform duration-300 ease-out overflow-hidden font-sans select-none backdrop-blur-[28px] max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[46vh] max-[860px]:max-h-[385px] max-[860px]:min-h-[340px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
+          isClosingForChat || activeChatUser
+            ? "translate-y-[112%] pointer-events-none"
+            : drawerOpen
+            ? "translate-y-0"
+            : "translate-y-[calc(100%-66px)]"
+        } ${
         isMapDark
           ? "bg-[#161b22]/85 border border-[#30363d]/90 text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.15),inset_-1px_-1.5px_2px_rgba(0,0,0,0.7),0_14px_36px_rgba(0,0,0,0.8)]"
           : "bg-white/80 border border-[#c4cbd4] text-[#1f2328] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.95),inset_-1px_-1.5px_2px_rgba(160,174,192,0.35),0_12px_36px_rgba(0,0,0,0.12)]"
@@ -315,6 +382,8 @@ export function KalceriansPanel({
             const isOtherEventDisabled = Boolean(userEvent && requestedEventId && String(requestedEventId) !== String(userEvent.id) && !isOwnEvent);
             const unreadPersonalChatCount = personalChatMap?.[user.id]?.unreadCount || 0;
             const isRecentlyMessaged = Boolean(recentlyMessagedUserIds?.[user.id]);
+            const isFavourite = favouriteUserIds.includes(String(user.id));
+            const isMuted = mutedUserIds.includes(String(user.id));
 
             return (
               <KalcerianCardItem
@@ -333,7 +402,9 @@ export function KalceriansPanel({
                 unreadGroupChatCount={unreadGroupChatCount}
                 unreadPersonalChatCount={unreadPersonalChatCount}
                 isRecentlyMessaged={isRecentlyMessaged}
-                onPersonalChatOpen={onPersonalChatOpen}
+                isFavourite={isFavourite}
+                isMuted={isMuted}
+                onPersonalChatOpen={handleOpenChatWithTransition}
                 isOtherEventDisabled={isOtherEventDisabled}
                 displayName={displayName}
                 cleanUsername={cleanUsername}
@@ -345,6 +416,8 @@ export function KalceriansPanel({
                 setHoveredKalcerian={setHoveredKalcerian}
                 hoveredEventIconId={hoveredEventIconId}
                 setHoveredEventIconId={setHoveredEventIconId}
+                hoveredChatIconId={hoveredChatIconId}
+                setHoveredChatIconId={setHoveredChatIconId}
                 focusUser={focusUser}
                 setFocusedUserId={setFocusedUserId}
                 scheduleTimeout={scheduleTimeout}
@@ -373,5 +446,6 @@ export function KalceriansPanel({
         )}
       </div>
     </motion.aside>
+    </>
   );
 }

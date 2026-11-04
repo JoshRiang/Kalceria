@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { uploadBlobMedia } from "@/lib/api";
 import { validateAndNormalizeMediaUrlClient } from "@/lib/urlSecurity";
+import { toSmartTitleCase } from "@/lib/titleCase";
 
 export const EVENT_CATEGORIES_GRID = [
   {
@@ -93,6 +94,11 @@ export function EventFormModal({
   const handleMediaUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
     const ext = (file.name.split(".").pop() || "").toLowerCase();
     if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
       setUploadError("Only .png, .jpeg, and .mp4 files are allowed");
@@ -242,7 +248,16 @@ export function EventFormModal({
               }`}
               value={eventForm.title}
               onChange={(e) =>
-                setEventForm((f) => ({ ...f, title: e.target.value }))
+                setEventForm((f) => ({
+                  ...f,
+                  title: toSmartTitleCase(e.target.value, { preserveSpaces: true }),
+                }))
+              }
+              onBlur={() =>
+                setEventForm((f) => ({
+                  ...f,
+                  title: toSmartTitleCase(f.title || "", { preserveSpaces: false }),
+                }))
               }
               placeholder="Nongs FM Sini"
             />
@@ -364,9 +379,12 @@ export function EventFormModal({
             </div>
 
             {uploadError && (
-              <p className={`text-xs font-semibold mt-1 animate-in fade-in ${
-                isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
-              }`}>
+              <p
+                style={{ fontFamily: "Consolas, monospace" }}
+                className={`text-xs font-normal mt-1 animate-in fade-in leading-relaxed ${
+                  isModalDark ? "text-[#ff4d4f]" : "text-[#cf222e]"
+                }`}
+              >
                 {uploadError}
               </p>
             )}
@@ -469,4 +487,3 @@ export function EventFormModal({
     </div>
   );
 }
-

@@ -20,6 +20,7 @@ const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel")
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
 import { hasUserSession } from "@/lib/session";
+import { toSmartTitleCase } from "@/lib/titleCase";
 import { useMapChatAndNotifications } from "@/components/map/hooks/useMapChatAndNotifications";
 import api, {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents,
@@ -323,6 +324,11 @@ export default function MapPage() {
     personalChatMap,
     recentlyMessagedUserIds,
     markPersonalChatRead,
+    recordOutgoingPersonalMessage,
+    favouriteUserIds,
+    mutedUserIds,
+    toggleFavouriteUser,
+    toggleMuteUser,
     eventGroupChatMap,
     topDynamicEvent,
     hasTopDynamicEventNotif,
@@ -416,8 +422,25 @@ export default function MapPage() {
           (u.event && u.event.title.toLowerCase().includes(q)),
       );
     }
-    // sort: newest incoming personal chat message first (rolls card to top), then event creators & online first, then alphabetical
+    // sort:
+    // 1. Unread incoming personal chat notifications (positions 1..n, sorted by newest message timestamp)
+    // 2. Favourites next (position n + 1 onwards, or top if n === 0)
+    // 3. Recent personal chat history
+    // 4. Event creators & online first, then alphabetical
     return list.sort((a, b) => {
+      const aHasNotif = Boolean((personalChatMap?.[a.id]?.unreadCount || 0) > 0);
+      const bHasNotif = Boolean((personalChatMap?.[b.id]?.unreadCount || 0) > 0);
+      if (aHasNotif !== bHasNotif) return aHasNotif ? -1 : 1;
+      if (aHasNotif && bHasNotif) {
+        const aTime = Number(personalChatMap?.[a.id]?.lastMessageAt) || 0;
+        const bTime = Number(personalChatMap?.[b.id]?.lastMessageAt) || 0;
+        if (aTime !== bTime) return bTime - aTime;
+      }
+
+      const aFav = favouriteUserIds.includes(String(a.id));
+      const bFav = favouriteUserIds.includes(String(b.id));
+      if (aFav !== bFav) return aFav ? -1 : 1;
+
       const aChatTime = Number(personalChatMap?.[a.id]?.lastMessageAt) || 0;
       const bChatTime = Number(personalChatMap?.[b.id]?.lastMessageAt) || 0;
       if (aChatTime !== bChatTime) return bChatTime - aChatTime;
@@ -428,7 +451,7 @@ export default function MapPage() {
       if (!a.isOnline && b.isOnline) return 1;
       return a.name.localeCompare(b.name);
     });
-  }, [kalcerians, events, searchQuery, personalChatMap]);
+  }, [kalcerians, events, searchQuery, personalChatMap, favouriteUserIds]);
 
   const activeOwnEvent = events.find(
     (e) => e.id === "own" || (currentUser?.id && e.creator?.id === currentUser?.id)
@@ -586,8 +609,9 @@ export default function MapPage() {
         encodedDesc = `[MEDIA:${mediaUrl}] ${encodedDesc}`.trim();
       }
 
+      const formattedTitle = toSmartTitleCase(eventForm.title || "");
       const payload = {
-        title: eventForm.title,
+        title: formattedTitle,
         description: encodedDesc,
         category,
         mediaUrl,
@@ -829,6 +853,9 @@ export default function MapPage() {
             currentUser={currentUser} requestedEventId={requestedEventId} eventRequestsMap={eventRequestsMap}
             acceptedCollabsMap={acceptedCollabsMap} eventGroupChatMap={eventGroupChatMap}
             personalChatMap={personalChatMap} recentlyMessagedUserIds={recentlyMessagedUserIds}
+            favouriteUserIds={favouriteUserIds} mutedUserIds={mutedUserIds}
+            onToggleFavourite={toggleFavouriteUser} onToggleMute={toggleMuteUser}
+            onOutgoingMessageUpdate={recordOutgoingPersonalMessage}
             onPersonalChatOpen={handlePersonalChatOpen}
             onPromptCancelRequest={handlePromptCancelRequest} onOpenRequests={handleOpenRequests}
           />

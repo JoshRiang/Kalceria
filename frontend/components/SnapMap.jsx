@@ -18,6 +18,32 @@ import "./map/map-card.css";
 // Constants & Helpers
 const DEFAULT_CENTER = [-6.2735, 106.7150];
 
+function stripDynamicUptime(html) {
+  return String(html || "").replace(
+    /(data-event-uptime="[^"]+"[^>]*>)\d{2}:\d{2}:\d{2}(<\/span>)/g,
+    "$100:00:00$2"
+  );
+}
+
+function tickAllEventUptimeElements() {
+  if (typeof document === "undefined") return;
+  const nodes = document.querySelectorAll("[data-event-uptime]");
+  if (!nodes || nodes.length === 0) return;
+  const now = Date.now();
+  nodes.forEach((el) => {
+    const startMs = Number(el.getAttribute("data-event-uptime"));
+    if (!Number.isFinite(startMs) || startMs <= 0) return;
+    const diffSec = Math.max(0, Math.floor((now - startMs) / 1000));
+    const h = String(Math.floor(diffSec / 3600)).padStart(2, "0");
+    const m = String(Math.floor((diffSec % 3600) / 60)).padStart(2, "0");
+    const s = String(diffSec % 60).padStart(2, "0");
+    const nextText = `${h}:${m}:${s}`;
+    if (el.textContent !== nextText) {
+      el.textContent = nextText;
+    }
+  });
+}
+
 async function loadLeaflet() {
   if (typeof window === "undefined") return null;
   const Leaflet = await import("leaflet");
@@ -51,6 +77,13 @@ export default function SnapMap({
   const tileLayerRef = useRef(null);
   const markerRefs = useRef({});
   const [isReady, setIsReady] = useState(false);
+
+  // Live 1-second ticker for all open event popups (data-event-uptime)
+  useEffect(() => {
+    tickAllEventUptimeElements();
+    const intervalId = setInterval(tickAllEventUptimeElements, 1000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Wire global event popup callbacks (edit, collab request, cancel request, open requests)
   useEffect(() => {
@@ -158,6 +191,7 @@ export default function SnapMap({
         const openPopupSafe = () => {
           try {
             targetMarker.openPopup();
+            tickAllEventUptimeElements();
           } catch (_) {}
         };
 
@@ -214,6 +248,10 @@ export default function SnapMap({
         center: DEFAULT_CENTER,
         zoom: 14,
         closePopupOnClick: true,
+      });
+
+      map.on("popupopen", () => {
+        tickAllEventUptimeElements();
       });
 
       // Standard OpenStreetMap tiles - matching Picture 3 and late October commits
@@ -347,9 +385,12 @@ export default function SnapMap({
           isCollaborator,
           unreadGroupChatCount
         );
-        if (marker._lastPopupContent !== newPopupContent) {
+        const newSig = stripDynamicUptime(newPopupContent);
+        if (marker._lastPopupSig !== newSig) {
           marker.getPopup().setContent(newPopupContent);
           marker._lastPopupContent = newPopupContent;
+          marker._lastPopupSig = newSig;
+          tickAllEventUptimeElements();
         }
       } else {
         const newPopupContent = eventPopup(
@@ -371,6 +412,7 @@ export default function SnapMap({
           closeButton: false,
         });
         marker._lastPopupContent = newPopupContent;
+        marker._lastPopupSig = stripDynamicUptime(newPopupContent);
         markerRefs.current[markerId] = marker;
         eventsLayer.addLayer(marker);
       }
@@ -396,7 +438,6 @@ export default function SnapMap({
         ref={mapNodeRef}
         className="w-full h-full bg-transparent"
       />
-
     </div>
   );
 }
