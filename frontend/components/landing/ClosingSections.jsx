@@ -411,6 +411,8 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
 
            {/* 4. See The Journey Button - Exact Get to Know More Style & Behaviour */}
             <Link href="/journey" onClick={() => {
+              sessionStorage.setItem("introPlayed", "true");
+              sessionStorage.setItem("landingSeen", "true");
               sessionStorage.setItem("landingScrollTarget", "section-journey");
               sessionStorage.setItem("landingScrollY", window.scrollY);
             }} className="z-30 inline-block focus:outline-none">

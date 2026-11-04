@@ -19,7 +19,25 @@ export default function HomeClient() {
       sessionStorage.setItem("landingSeen", "true");
       return "landing";
     }
+    const hasScrollTarget = typeof window !== "undefined" && Boolean(sessionStorage.getItem("landingScrollTarget"));
+    const hasSeenLanding = typeof window !== "undefined" && sessionStorage.getItem("landingSeen") === "true";
+    const hasPlayedIntro = typeof window !== "undefined" && sessionStorage.getItem("introPlayed") === "true";
+
+    // If returning from another section/page (e.g. Journey, Map, Minigame) or back-navigation, skip intro
+    if (hasScrollTarget || hasSeenLanding || hasPlayedIntro) {
+      sessionStorage.setItem("introPlayed", "true");
+      sessionStorage.setItem("landingSeen", "true");
+      return "landing";
+    }
+
     const navEntry = window.performance?.getEntriesByType?.("navigation")?.[0];
+    const isBackForward = navEntry?.type === "back_forward";
+    if (isBackForward) {
+      sessionStorage.setItem("introPlayed", "true");
+      sessionStorage.setItem("landingSeen", "true");
+      return "landing";
+    }
+
     const isReload = navEntry?.type === "reload";
     if (isReload) {
       sessionStorage.removeItem("introPlayed");
@@ -54,6 +72,24 @@ export default function HomeClient() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     }
+
+    const handlePageShow = (e) => {
+      if (
+        e.persisted ||
+        sessionStorage.getItem("landingScrollTarget") ||
+        sessionStorage.getItem("landingSeen") === "true" ||
+        sessionStorage.getItem("introPlayed") === "true"
+      ) {
+        setPhase("landing");
+      }
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("popstate", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("popstate", handlePageShow);
+    };
   }, []);
 
   const handleIntroComplete = () => {
