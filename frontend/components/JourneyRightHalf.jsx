@@ -12,6 +12,7 @@ export function JourneySlider({
   isFlipped: controlledFlipped,
   onToggleFlip,
   className,
+  brandName,
 }) {
   const [internalFlipped, setInternalFlipped] = useState(false);
   const isFlipped = typeof controlledFlipped === "boolean" ? controlledFlipped : internalFlipped;
@@ -26,6 +27,14 @@ export function JourneySlider({
   const [activeIndex, setActiveIndex] = useState(0);
   const count = images?.length || 1;
   const isDsl = Boolean(logo && (logo.includes('dsl') || logoAlt?.toLowerCase().includes('dsl')));
+
+  const resolvedBrandName =
+    brandName ||
+    (isDsl
+      ? "DSL"
+      : String(logoAlt || "").toLowerCase().includes("ui") || String(logo || "").includes("se2")
+      ? "UIMS"
+      : "Mist");
 
   // Auto-advance photos when card is flipped face-up
   useEffect(() => {
@@ -104,9 +113,9 @@ export function JourneySlider({
           }}
           className={`rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] ${
             isDsl ? "bg-black border border-white/20" : "bg-white border border-slate-100"
-          } flex flex-col items-center justify-center p-6 transition-transform duration-300 group-hover:scale-[1.02]`}
+          } flex flex-col items-center justify-between p-5 sm:p-6 transition-transform duration-300 group-hover:scale-[1.02]`}
         >
-          <div className="relative w-full h-[65%] flex items-center justify-center p-2">
+          <div className="relative w-full flex-1 flex items-center justify-center p-2 min-h-0">
             <Image
               src={logo}
               alt={logoAlt || "Partner"}
@@ -119,8 +128,22 @@ export function JourneySlider({
               } group-hover:scale-105 transition-transform duration-300`}
             />
           </div>
+
+          {/* Collaboration Line: Arial bold, not all capital, mid-justified with line wrap */}
+          <div className="w-full flex items-center justify-center px-3 my-1">
+            <p
+              className={`text-xs sm:text-[13px] font-bold text-center leading-snug max-w-[88%] break-words select-none ${
+                isDsl ? "text-white" : "text-black"
+              }`}
+              style={{ fontFamily: "Arial, sans-serif" }}
+            >
+              Our collaboration with{" "}
+              <span className="italic font-bold underline">{resolvedBrandName}</span>
+            </p>
+          </div>
+
           <span
-            className={`text-xs sm:text-sm font-black uppercase tracking-tight mt-2 ${
+            className={`text-xs sm:text-sm font-black uppercase tracking-tight mt-1 mb-1 ${
               isDsl ? "text-white" : "text-black"
             }`}
             style={{ fontFamily: "'Arial Black', 'Helvetica Neue', sans-serif" }}
@@ -140,7 +163,7 @@ export function JourneySlider({
           }}
           className="rounded-[2rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.7)] bg-black/80 border border-white/25 flex flex-col items-center justify-center"
         >
-          {/* Transparent Segmented Story Progress Lines at Top Edge (Picture 3) */}
+          {/* Transparent Segmented Story Progress Lines at Top Edge (Picture 2: No glow, flat white) */}
           <div className="absolute top-3.5 sm:top-4 left-4 right-4 z-30 flex items-center gap-1.5 pointer-events-none">
             {images.map((_, i) => (
               <div
@@ -148,7 +171,7 @@ export function JourneySlider({
                 className="h-[3px] flex-1 rounded-full backdrop-blur-sm transition-all duration-300"
                 style={{
                   backgroundColor: i === activeIndex ? "#ffffff" : "rgba(255, 255, 255, 0.35)",
-                  boxShadow: i === activeIndex ? "0 0 8px rgba(255, 255, 255, 0.9)" : "none",
+                  boxShadow: "none",
                 }}
               />
             ))}
@@ -175,9 +198,12 @@ export function JourneySlider({
             ))}
           </div>
 
-          {/* Subtle Bottom Flip Hint */}
-          <div className="absolute bottom-2.5 sm:bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-            <span className="text-[10px] tracking-wider uppercase font-mono text-white/70 bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/10">
+          {/* Bottom Flip Hint - Discard outer box, Arial bold, not all capital, no glow (Picture 1) */}
+          <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none w-full text-center px-2">
+            <span
+              className="text-xs sm:text-[13px] font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] select-none tracking-normal"
+              style={{ fontFamily: "Arial, sans-serif" }}
+            >
               Tap card to flip back
             </span>
           </div>
@@ -288,6 +314,7 @@ export default function JourneyRightHalf({
   isFlipped,
   onToggleFlip,
   className,
+  brandName,
 }) {
   return (
     <div className={`hidden xl:flex flex-col items-center justify-center gap-4 xl:gap-5 z-30 ${className || "absolute right-0 top-1/2 -translate-y-1/2 w-1/2"}`}>
@@ -299,6 +326,7 @@ export default function JourneyRightHalf({
         logoHeight={logoHeight}
         isFlipped={isFlipped}
         onToggleFlip={onToggleFlip}
+        brandName={brandName}
       />
       <JourneyDescriptionBox description={description} isFlipped={isFlipped} />
     </div>

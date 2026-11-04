@@ -163,6 +163,7 @@ export default function JourneyPageClient() {
                 <JourneySlider 
                   logo="/se1.webp" 
                   logoAlt="Mist" 
+                  brandName="Mist"
                   images={['/mist_1.webp', '/mist_1.webp']} 
                   isFlipped={isFlipped1}
                   onToggleFlip={setIsFlipped1}
@@ -181,6 +182,7 @@ export default function JourneyPageClient() {
             <JourneyRightHalf 
               logo="/se1.webp"
               logoAlt="Mist"
+              brandName="Mist"
               images={['/mist_1.webp', '/mist_1.webp']} 
               isFlipped={isFlipped1}
               onToggleFlip={setIsFlipped1}
@@ -213,10 +215,11 @@ export default function JourneyPageClient() {
               <JourneySlider 
                 logo="/se2.webp" 
                 logoAlt="UI Racing Team" 
+                brandName="UIMS"
                 images={['/uims_1.webp', '/uims_2.webp']} 
                 isFlipped={isFlipped2}
                 onToggleFlip={setIsFlipped2}
-                className={isMobile ? "max-w-[280px]" : "max-w-[360px]"}
+                className={isMobile ? "max-w-[280px]" : "max-w-[360px]"} 
               />
               <JourneyDescriptionBox 
                 description="We partner with Universitas Indonesia Motorsport to deliver high-octane experiences and unparalleled performance." 
@@ -251,6 +254,7 @@ export default function JourneyPageClient() {
                 <JourneySlider 
                   logo="/dsl.webp" 
                   logoAlt="Dream Shift Labs" 
+                  brandName="DSL"
                   images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} 
                   isFlipped={isFlipped3}
                   onToggleFlip={setIsFlipped3}
@@ -269,6 +273,7 @@ export default function JourneyPageClient() {
             <JourneyRightHalf 
               logo="/dsl.webp"
               logoAlt="Dream Shift Labs"
+              brandName="DSL"
               images={['/dsl_1.webp', '/dsl_2.webp', '/dsl_3.webp', '/dsl_4.webp', '/dsl_5.webp']} 
               isFlipped={isFlipped3}
               onToggleFlip={setIsFlipped3}
