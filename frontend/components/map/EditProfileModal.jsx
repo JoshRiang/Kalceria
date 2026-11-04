@@ -190,17 +190,39 @@ export function EditProfileModal({
           {/* Form Body - Scrollable */}
           <form onSubmit={handleSubmit} className="px-5 sm:px-6 pb-5 pt-1 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3.5 font-sans text-xs">
             {/* 1. Cover BG & Overlapping Half-Circle Profile Picture (Left Side, Z-Layered Above Cover BG) */}
-            <div className="relative shrink-0">
+            <div
+              className="relative shrink-0"
+              style={{
+                position: "relative",
+                width: "100%",
+                paddingBottom: "42px",
+                flexShrink: 0,
+              }}
+            >
               {/* Cover Preview (Solid Base Color or Custom Image) */}
               <div
-                className="relative w-full h-32 xs:h-36 sm:h-40 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 shadow-sm"
+                className="relative w-full rounded-xl overflow-hidden border border-black/10 dark:border-white/10 shadow-sm"
                 style={{
-                  backgroundColor: coverPreview && coverPreview.startsWith("#") ? coverPreview : defaultBaseColor,
+                  position: "relative",
+                  width: "100%",
+                  height: "140px",
+                  borderRadius: "14px",
+                  overflow: "hidden",
+                  zIndex: 10,
+                  backgroundColor:
+                    coverPreview && coverPreview.startsWith("#")
+                      ? coverPreview
+                      : defaultBaseColor,
                 }}
               >
                 {coverPreview && !coverPreview.startsWith("#") && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={coverPreview} alt="Cover preview" className="w-full h-full object-cover" />
+                  <img
+                    src={coverPreview}
+                    alt="Cover preview"
+                    className="w-full h-full object-cover"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
                 )}
 
                 {/* Edit Button (No inner/outer box, clean bold text) */}
@@ -210,7 +232,7 @@ export function EditProfileModal({
                     e.stopPropagation();
                     bgInputRef.current?.click();
                   }}
-                  className="absolute top-3 right-4 text-xs font-bold text-white hover:underline drop-shadow-md cursor-pointer z-10 bg-transparent border-none p-0 outline-none transition-opacity"
+                  className="absolute top-3 right-4 text-xs font-bold text-white hover:underline drop-shadow-md cursor-pointer z-20 bg-transparent border-none p-0 outline-none transition-opacity"
                 >
                   Edit
                 </button>
@@ -223,91 +245,136 @@ export function EditProfileModal({
                 />
               </div>
 
-              {/* Profile Avatar overlapping exact half-circle (50%) on left side above Edit BG */}
-              <div className="relative z-30 pl-4 sm:pl-5 pr-2 -mt-10 sm:-mt-11 flex items-end justify-between">
-                <div className="flex items-end gap-3">
-                  <div className="relative w-20 h-20 sm:w-[88px] sm:h-[88px] shrink-0">
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        avatarInputRef.current?.click();
+              {/* Profile Avatar overlapping exact half-circle (50% = 42px above, 42px below) on left side above Edit BG */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: "16px",
+                  bottom: "0px",
+                  zIndex: 35,
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    position: "relative",
+                    width: "84px",
+                    height: "84px",
+                    flexShrink: 0,
+                  }}
+                >
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      avatarInputRef.current?.click();
+                    }}
+                    style={{
+                      width: "84px",
+                      height: "84px",
+                      borderRadius: "9999px",
+                      overflow: "hidden",
+                      border: isModalDark ? "3px solid #161b22" : "3px solid #ffffff",
+                      backgroundColor: isModalDark ? "#262626" : "#e5e7eb",
+                      boxShadow: "0 8px 20px rgba(0, 0, 0, 0.28)",
+                      cursor: "pointer",
+                    }}
+                    className="group"
+                    title="Change Profile Picture"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={
+                        avatarPreview ||
+                        currentUser?.profilePicture ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+                          displayName || cleanUsername || "user"
+                        )}`
+                      }
+                      alt="Avatar"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
                       }}
-                      className={`w-full h-full rounded-full border-[3px] overflow-hidden shadow-xl cursor-pointer group ${
-                        isModalDark
-                          ? "border-[#161b22] bg-neutral-800"
-                          : "border-white bg-neutral-200"
-                      }`}
-                      title="Change Profile Picture"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={
-                          avatarPreview ||
-                          currentUser?.profilePicture ||
-                          `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(displayName || "user")}`
-                        }
-                        alt="Avatar"
-                        className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
-                      />
-                    </div>
-
-                    {/* Small Camera Icon at bottom-right of Profile Picture */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        avatarInputRef.current?.click();
-                      }}
-                      aria-label="Change Profile Picture"
-                      title="Change Profile Picture"
-                      className={`absolute bottom-0 right-0 z-20 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-110 active:scale-95 border-[1.5px] ${
-                        isModalDark ? "bg-white text-black border-[#161b22]" : "bg-black text-white border-white"
-                      }`}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.1"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                        <circle cx="12" cy="13" r="4" />
-                      </svg>
-                    </button>
-                    <input
-                      ref={avatarInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      onChange={handleAvatarFileChange}
-                      className="hidden"
+                      className="group-hover:opacity-90 transition-opacity"
                     />
                   </div>
 
-                  {/* Remove Profile Picture Action (No redundant Change font) */}
-                  {avatarPreview && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAvatarPreview(null);
-                        setProfilePicture(null);
-                      }}
-                      className="text-xs font-bold text-red-500 hover:text-red-400 hover:underline cursor-pointer pb-1.5"
+                  {/* Small Camera Icon at bottom-right of Profile Picture */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      avatarInputRef.current?.click();
+                    }}
+                    aria-label="Change Profile Picture"
+                    title="Change Profile Picture"
+                    style={{
+                      position: "absolute",
+                      bottom: "0px",
+                      right: "0px",
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "9999px",
+                      zIndex: 45,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: isModalDark ? "#ffffff" : "#000000",
+                      color: isModalDark ? "#000000" : "#ffffff",
+                      border: isModalDark ? "2px solid #161b22" : "2px solid #ffffff",
+                      boxShadow: "0 3px 10px rgba(0,0,0,0.35)",
+                      cursor: "pointer",
+                    }}
+                    className="transition-transform hover:scale-110 active:scale-95"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      Remove Profile Picture
-                    </button>
-                  )}
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </button>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleAvatarFileChange}
+                    className="hidden"
+                  />
                 </div>
+
+                {/* Remove Profile Picture Action (No redundant Change font) */}
+                {avatarPreview && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAvatarPreview(null);
+                      setProfilePicture(null);
+                    }}
+                    className="text-xs font-bold text-red-500 hover:text-red-400 hover:underline cursor-pointer pb-1.5"
+                  >
+                    Remove Profile Picture
+                  </button>
+                )}
               </div>
-              {fileError && (
-                <p className="text-[#ef4444] text-xs font-semibold px-1 pt-2 animate-in fade-in">
-                  {fileError}
-                </p>
-              )}
             </div>
+            {fileError && (
+              <p className="text-[#ef4444] text-xs font-semibold px-1 pt-0.5 animate-in fade-in">
+                {fileError}
+              </p>
+            )}
 
             {/* 2. Display Name (Not all-caps, Arial bold grey) */}
             <div className="shrink-0 flex flex-col gap-1.5">

@@ -15,6 +15,18 @@ const QUOTES = [
   "Calibrating neural markers..."
 ];
 
+// Module-level monotonic state so React StrictMode double-effects or hydration remounts
+// can NEVER reset progress from 60% or 80% back to 0% mid-sequence.
+let activeStartupProgress = 0;
+let activeStartupIsDark = false;
+let activeStartupDarkTimestamp = null;
+
+function resetActiveStartupSession() {
+  activeStartupProgress = 0;
+  activeStartupIsDark = false;
+  activeStartupDarkTimestamp = null;
+}
+
 export function StartupSequenceOverlay({
   showStartup,
   authReady = false,
@@ -23,18 +35,19 @@ export function StartupSequenceOverlay({
   onComplete,
 }) {
   const isMobile = useIsMobileViewport();
-  const [isDark, setIsDark] = useState(false);
-  const isDarkRef = useRef(false);
+  const [isDark, setIsDark] = useState(() => activeStartupIsDark);
+  const isDarkRef = useRef(activeStartupIsDark);
   const authReadyRef = useRef(authReady);
   const mapEngineReadyRef = useRef(mapEngineReady);
   const isReadyRef = useRef(isReady);
   const onCompleteRef = useRef(onComplete);
   const [currentQuote, setCurrentQuote] = useState("Composing the map...");
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const tiltTargetRef = useRef({ x: 0, y: 0 });
+  const tiltCurrentRef = useRef({ x: 0, y: 0 });
+  const tiltWrapperRef = useRef(null);
   const barFillRef = useRef(null);
   const percentTextRef = useRef(null);
-  const progressValRef = useRef(0);
+  const progressValRef = useRef(activeStartupProgress);
   const completedRef = useRef(false);
 
   // Keep refs synchronized without EVER tearing down or resetting the progress loop on parent re-renders
@@ -54,30 +67,43 @@ export function StartupSequenceOverlay({
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  // 1. Precision Monotonic Phase-Synchronized Progress Engine (Zero React reconciliation overhead, zero reset)
+  // 1. Precision Monotonic Staged Progress Engine (0 -> 30 -> 60 -> 88 -> 100, Zero Jitter, Zero Reset)
   useEffect(() => {
-    if (!showStartup) return;
+    if (!showStartup) {
+      resetActiveStartupSession();
+      progressValRef.current = 0;
+      isDarkRef.current = false;
+      return;
+    }
 
     let rafId = null;
     let completionTimer = null;
     let lastTime = performance.now();
-    let readyStartTime = null;
-    let darkEnteredTime = null;
-    let progressAtReady = 0;
+    let finalSweepStartTime = null;
+    let progressAtFinalSweep = 0;
     completedRef.current = false;
-    progressValRef.current = 0;
-    isDarkRef.current = false;
-    setIsDark(false);
 
-    let lastPercentInt = -1;
-    if (barFillRef.current) {
-      barFillRef.current.style.transform = "scaleX(0)";
+    // Resume from activeStartupProgress so StrictMode/hydration never drops 60% -> 0%
+    progressValRef.current = activeStartupProgress;
+    isDarkRef.current = activeStartupIsDark;
+    if (activeStartupIsDark) {
+      setIsDark(true);
     }
-    if (percentTextRef.current) percentTextRef.current.textContent = "0";
+
+    const initialRatio = Math.min(1, Math.max(0, progressValRef.current / 100));
+    const initialInt = Math.min(100, Math.floor(progressValRef.current + 0.0001));
+    let lastPercentInt = initialInt;
+
+    if (barFillRef.current) {
+      barFillRef.current.style.transform = `scaleX(${initialRatio})`;
+    }
+    if (percentTextRef.current) {
+      percentTextRef.current.textContent = String(initialInt);
+    }
 
     const tick = (now) => {
       if (completedRef.current) return;
-      const dt = Math.min(Math.max((now - lastTime) / 1000, 0.001), 0.05); // clamp delta
+      const dt = Math.min(Math.max((now - lastTime) / 1000, 0.001), 0.05);
       lastTime = now;
 
       const current = progressValRef.current;
@@ -87,75 +113,80 @@ export function StartupSequenceOverlay({
 
       let computedNext = current;
 
-      if (ready) {
-        // Phase 4: Backend telemetry & map ready -> sweep monotonically to 100%
-        if (readyStartTime === null) {
-          readyStartTime = now;
-          progressAtReady = current;
+      // Only enter Stage 4 (final sweep to 100%) after we have progressed through Stages 1-2 (>= 68%)
+      // AND backend/map are ready. This guarantees authentic staged progression (0 -> 30 -> 60 -> 88 -> 100).
+      if (ready && current >= 68) {
+        if (finalSweepStartTime === null) {
+          finalSweepStartTime = now;
+          progressAtFinalSweep = current;
         }
-
-        const elapsedSinceReady = (now - readyStartTime) / 1000;
-        // Ensure smooth completion sweep (1.5s if already past 65%, or 2.0s if backend resolved very fast)
-        const finishDuration = progressAtReady >= 65 ? 1.5 : 2.0;
-        const t = Math.min(1, elapsedSinceReady / finishDuration);
-        const eased = t * (2 - t);
-        computedNext = Math.min(100, progressAtReady + (100 - progressAtReady) * eased);
-
-        if (computedNext < current + 14 * dt) {
-          computedNext = Math.min(100, current + 14 * dt);
+        const elapsed = (now - finalSweepStartTime) / 1000;
+        const sweepDuration = 0.95;
+        const t = Math.min(1, elapsed / sweepDuration);
+        const eased = 1 - Math.pow(1 - t, 2.2);
+        computedNext = Math.min(100, progressAtFinalSweep + (100 - progressAtFinalSweep) * eased);
+        if (computedNext < current + 18 * dt) {
+          computedNext = Math.min(100, current + 18 * dt);
         }
       } else {
-        // Synchronized Backend Preparation Phases (Cold-Start Resilient)
-        // Phase 1 (0% -> 35%): Session & Auth Handshake
-        // Phase 2 (35% -> 65%): Map Engine & Dark-Mode Coki Entrance (crosses 50% smoothly)
-        // Phase 3 (65% -> 90%): Kalcerians & Mini-Events Telemetry Sync (holds at 88-90% during cold start)
+        // Authentic Staged Progression:
+        // Stage 1: 0% -> 30% (Session & Auth Handshake)
+        // Stage 2: 30% -> 60% (Map Tiles & Coki Hero Entrance at 50%)
+        // Stage 3: 60% -> 88% (Live Telemetry & Kalcerians Sync; holds at ~88% during cold start)
         let speed;
-        if (current < 35) {
-          speed = 46;
-        } else if (current < 52) {
-          // Cross 50% smoothly so Coki flies to center and holds there
-          speed = hasAuth || hasMapEngine ? 38 : 26;
-        } else if (current < 68) {
-          speed = hasMapEngine || hasAuth ? 28 : 16;
-        } else if (current < 82) {
-          speed = 14;
+        if (current < 27) {
+          speed = 42; // Brisk climb 0 -> 27%
+        } else if (current < 32) {
+          speed = 15; // Brief, authentic stage inflection around 30%
+        } else if (current < 56) {
+          speed = hasAuth || hasMapEngine ? 36 : 28; // Smoothly cross 50% (Coki entrance) toward 60%
+        } else if (current < 62) {
+          speed = 14; // Brief, authentic stage inflection around 60%
+        } else if (current < 84) {
+          speed = ready ? 32 : (hasMapEngine || hasAuth ? 20 : 14); // Climb 60% -> 84%
         } else {
-          // Asymptotic cold-start hold between 82% and 90% while backend wakes up
-          speed = Math.max(0.25, (90.2 - current) * 0.85);
+          // Cold-start hold ceiling around 88-90% while waiting for backend telemetry
+          speed = Math.max(0.2, (89.5 - current) * 0.75);
         }
-        computedNext = Math.min(90.2, current + speed * dt);
+        const stageCeiling = ready ? 95 : 89.5;
+        computedNext = Math.min(stageCeiling, current + speed * dt);
       }
 
       // STRICT MONOTONIC CLAMP: Progress can NEVER decrease or jump backward
       const next = Math.min(100, Math.max(current, computedNext));
       progressValRef.current = next;
+      activeStartupProgress = next;
 
-      // GPU-accelerated transform: scaleX eliminates expensive layout reflows (0 stutter)
       if (barFillRef.current) {
         barFillRef.current.style.transform = `scaleX(${Math.min(1, next / 100)})`;
       }
-      const roundInt = Math.floor(next + 0.0001);
+      const roundInt = Math.min(100, Math.floor(next + 0.0001));
       if (roundInt !== lastPercentInt && percentTextRef.current) {
         lastPercentInt = roundInt;
-        percentTextRef.current.textContent = String(Math.min(100, roundInt));
+        percentTextRef.current.textContent = String(roundInt);
       }
 
       // Single one-way threshold at 50% for dark theme & Coki entrance (never resets to false)
       if (next >= 50 && !isDarkRef.current) {
         isDarkRef.current = true;
-        darkEnteredTime = now;
+        activeStartupIsDark = true;
+        if (activeStartupDarkTimestamp === null) {
+          activeStartupDarkTimestamp = now;
+        }
         setIsDark(true);
       }
 
-      // Complete when ready, Coki has reached center (at least 1.5s since 50% dark entrance), and progress >= 99.8%
-      const darkElapsed = darkEnteredTime !== null ? now - darkEnteredTime : 0;
-      if (ready && readyStartTime !== null && darkElapsed >= 1500 && next >= 99.8) {
+      const darkElapsed =
+        activeStartupDarkTimestamp !== null ? now - activeStartupDarkTimestamp : 0;
+
+      if (ready && darkElapsed >= 1350 && next >= 99.8) {
         completedRef.current = true;
         if (barFillRef.current) barFillRef.current.style.transform = "scaleX(1)";
         if (percentTextRef.current) percentTextRef.current.textContent = "100";
         completionTimer = setTimeout(() => {
+          resetActiveStartupSession();
           onCompleteRef.current?.();
-        }, 140);
+        }, 120);
         return;
       }
 
@@ -164,17 +195,14 @@ export function StartupSequenceOverlay({
 
     rafId = requestAnimationFrame(tick);
     return () => {
-      completedRef.current = true;
       if (rafId) cancelAnimationFrame(rafId);
       if (completionTimer) clearTimeout(completionTimer);
     };
   }, [showStartup]);
 
-  // 2. High-performance Throttled 3D Tilt Tracking (Guarded for Mouse/Pointer, disabled on touch/iPad)
+  // 2. High-performance Direct-DOM 3D Tilt Tracking (Zero React state re-renders, disabled on touch/iPad)
   useEffect(() => {
     if (!showStartup) return;
-    // Guard against touch devices (iPad / tablets / mobile) where hover is not supported.
-    // Synthetic touch events on iPad flip tilt and distort 3D perspective.
     if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(hover: none)").matches) {
       return;
     }
@@ -183,18 +211,22 @@ export function StartupSequenceOverlay({
     const handleMouseMove = (e) => {
       const { innerWidth, innerHeight } = window;
       tiltTargetRef.current = {
-        x: (e.clientX / innerWidth - 0.5) * 22,
-        y: (e.clientY / innerHeight - 0.5) * -22,
+        x: (e.clientX / innerWidth - 0.5) * 20,
+        y: (e.clientY / innerHeight - 0.5) * -20,
       };
     };
 
     const updateTilt = () => {
-      setTilt((prev) => {
-        const dx = tiltTargetRef.current.x - prev.x;
-        const dy = tiltTargetRef.current.y - prev.y;
-        if (Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05) return prev;
-        return { x: prev.x + dx * 0.15, y: prev.y + dy * 0.15 };
-      });
+      const cur = tiltCurrentRef.current;
+      const dx = tiltTargetRef.current.x - cur.x;
+      const dy = tiltTargetRef.current.y - cur.y;
+      if (Math.abs(dx) >= 0.04 || Math.abs(dy) >= 0.04) {
+        cur.x += dx * 0.14;
+        cur.y += dy * 0.14;
+        if (tiltWrapperRef.current) {
+          tiltWrapperRef.current.style.transform = `rotateX(${cur.y.toFixed(2)}deg) rotateY(${cur.x.toFixed(2)}deg)`;
+        }
+      }
       tiltRaf = requestAnimationFrame(updateTilt);
     };
 
@@ -418,10 +450,10 @@ export function StartupSequenceOverlay({
 
                   {/* The 3D Perspective Wrapper Container */}
                   <div
+                    ref={tiltWrapperRef}
                     style={{
                       perspective: "1000px",
                       transformStyle: "preserve-3d",
-                      transform: `rotateX(${tilt.y}deg) rotateY(${tilt.x}deg)`,
                       transition: "transform 0.08s ease-out",
                       width: "100%",
                       height: "100%",
@@ -499,7 +531,16 @@ export function StartupSequenceOverlay({
                       !isDark ? "text-slate-800" : "text-white"
                     }`}
                   >
-                    <span ref={percentTextRef}>0</span>
+                    <span
+                      ref={(node) => {
+                        percentTextRef.current = node;
+                        if (node && !node.textContent) {
+                          node.textContent = String(
+                            Math.min(100, Math.floor(progressValRef.current + 0.0001))
+                          );
+                        }
+                      }}
+                    />
                     <span className="text-[14px] sm:text-[20px] ml-1 opacity-40">%</span>
                   </span>
                 </div>
@@ -514,14 +555,19 @@ export function StartupSequenceOverlay({
                 }`}
               >
                 <div
-                  ref={barFillRef}
+                  ref={(node) => {
+                    barFillRef.current = node;
+                    if (node) {
+                      const ratio = Math.min(1, Math.max(0, progressValRef.current / 100));
+                      node.style.transform = `scaleX(${ratio})`;
+                    }
+                  }}
                   className={`absolute top-0 left-0 h-full w-full transition-none ${
                     !isDark
                       ? "bg-slate-600"
                       : "bg-gradient-to-r from-[#ff6f00] via-[#ffd60a] to-[#ffc300] shadow-[0_0_25px_#ffd60a]"
                   }`}
                   style={{
-                    transform: "scaleX(0)",
                     transformOrigin: "left",
                     willChange: "transform",
                   }}

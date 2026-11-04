@@ -180,9 +180,15 @@ function formatReleaseTime(createdAt) {
   return `${hours}.${mins}`;
 }
 
+function formatCreatorDisplayName(rawName, maxChars = 10) {
+  const cleaned = String(rawName || "Kalcerian").trim();
+  if (!cleaned) return "Kalcerian";
+  if (cleaned.length <= maxChars) return cleaned;
+  return `${cleaned.slice(0, 9).trimEnd()}...`;
+}
+
 export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null, pendingRequestsCount = 0, isCollaborator = false, unreadGroupChatCount = 0) {
   const displayDesc = cleanDesc(item.description);
-  const creatorName = item.creator?.nickname || item.creator?.name || "Kalcerian";
   const mediaList = extractMediaList(item);
 
   const isOwner = Boolean(
@@ -196,6 +202,15 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
       item.isOwn
     )
   );
+
+  // Prioritize creator's Display Name (displayName / name) over username (nickname)
+  const rawCreatorDisplayName =
+    (isOwner && (currentUser?.displayName || currentUser?.name)) ||
+    item.creator?.displayName ||
+    item.creator?.name ||
+    item.creator?.nickname ||
+    "Kalcerian";
+  const creatorDisplayName = formatCreatorDisplayName(rawCreatorDisplayName, 10);
 
   const hasRequestedThisEvent = Boolean(requestedEventId && String(requestedEventId) === String(item.id));
   const hasActiveRequestElsewhere = Boolean(requestedEventId && String(requestedEventId) !== String(item.id));
@@ -465,7 +480,7 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
       <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; border: none !important;">
         <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 155px; min-width: 0; flex: 1;">
           <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${esc(displayTitle)}</strong>
-          <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 700; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">By ${esc(creatorName)}</span>
+          <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 400; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">by <strong style="font-weight: 700;">${esc(creatorDisplayName)}</strong></span>
         </div>
         <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 7px; margin-left: 6px; flex-shrink: 0;">
           ${doubleMessageIconHtml}

@@ -182,22 +182,24 @@ export function KalceriansPanel({
     setHoveredKalcerian(null);
 
     if (chatTransitionTimerRef.current) clearTimeout(chatTransitionTimerRef.current);
-    // Step 1: Close the entire Kalcerians scroll bar downward
+    // Step 1: Close the entire "Find other Kalcerians" scroll bar downward out of view
     setIsClosingForChat(true);
-    // Step 2: Slide the Personal Chat column up from the bottom to the Kalcerians scroll bar height limit
+    // Step 2: Once Kalcerians scroll bar slides down, Personal Chat panel slides up from the bottom
     chatTransitionTimerRef.current = setTimeout(() => {
       setActiveChatUserId(user.id || user.nickname || user.name);
-    }, 220);
+    }, 240);
   };
 
   const handleClosePersonalChat = () => {
     if (chatTransitionTimerRef.current) clearTimeout(chatTransitionTimerRef.current);
+    // Step 1: Slide Personal Chat panel down
     setActiveChatUserId(null);
     setActiveChatUserSnapshot(null);
+    // Step 2: Bring "Find other Kalcerians" scroll bar back up
     chatTransitionTimerRef.current = setTimeout(() => {
       setIsClosingForChat(false);
       setDrawerOpen(true);
-    }, 220);
+    }, 240);
   };
 
   const activeChatUser = activeChatUserId
@@ -205,6 +207,8 @@ export function KalceriansPanel({
         (u) => String(u.id || u.nickname || u.name) === String(activeChatUserId)
       ) || activeChatUserSnapshot
     : null;
+
+  const isKalceriansHiddenForChat = Boolean(isClosingForChat || activeChatUser);
 
   const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;
 
@@ -238,20 +242,29 @@ export function KalceriansPanel({
 
       <motion.aside
         initial={{ y: 80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-        className={`absolute z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col transition-transform duration-300 ease-out overflow-hidden font-sans select-none backdrop-blur-[28px] max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[46vh] max-[860px]:max-h-[385px] max-[860px]:min-h-[340px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
-          isClosingForChat || activeChatUser
-            ? "translate-y-[112%] pointer-events-none"
+        animate={{
+          y: isKalceriansHiddenForChat
+            ? "115%"
             : drawerOpen
-            ? "translate-y-0"
-            : "translate-y-[calc(100%-66px)]"
-        } ${
-        isMapDark
-          ? "bg-[#161b22]/85 border border-[#30363d]/90 text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.15),inset_-1px_-1.5px_2px_rgba(0,0,0,0.7),0_14px_36px_rgba(0,0,0,0.8)]"
-          : "bg-white/80 border border-[#c4cbd4] text-[#1f2328] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.95),inset_-1px_-1.5px_2px_rgba(160,174,192,0.35),0_12px_36px_rgba(0,0,0,0.12)]"
-      }`}
-    >
+            ? "0%"
+            : "calc(100% - 66px)",
+          opacity: isKalceriansHiddenForChat ? 0 : 1,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 300,
+          damping: 30,
+          mass: 0.9,
+        }}
+        style={{
+          pointerEvents: isKalceriansHiddenForChat ? "none" : "auto",
+        }}
+        className={`fixed z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col overflow-hidden font-sans select-none backdrop-blur-[28px] max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[46vh] max-[860px]:max-h-[385px] max-[860px]:min-h-[340px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
+          isMapDark
+            ? "bg-[#161b22]/85 border border-[#30363d]/90 text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.15),inset_-1px_-1.5px_2px_rgba(0,0,0,0.7),0_14px_36px_rgba(0,0,0,0.8)]"
+            : "bg-white/80 border border-[#c4cbd4] text-[#1f2328] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.95),inset_-1px_-1.5px_2px_rgba(160,174,192,0.35),0_12px_36px_rgba(0,0,0,0.12)]"
+        }`}
+      >
       {/* 1. Top Scroll Bar / Pull Handle */}
       <button
         type="button"

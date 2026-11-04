@@ -76,16 +76,16 @@ export function PersonalChatPanel({
   return (
     <motion.aside
       key={`personal-chat-${targetId}`}
-      initial={{ y: "105%", opacity: 0.9 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: "105%", opacity: 0.9 }}
+      initial={{ y: "110%", opacity: 1 }}
+      animate={{ y: "0%", opacity: 1 }}
+      exit={{ y: "110%", opacity: 0.95 }}
       transition={{
         type: "spring",
-        stiffness: 310,
+        stiffness: 290,
         damping: 30,
         mass: 0.9,
       }}
-      className={`absolute z-[1005] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col overflow-hidden font-sans select-none max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[54vh] max-[860px]:max-h-[440px] max-[860px]:min-h-[360px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
+      className={`fixed z-[1005] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col overflow-hidden font-sans select-none max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[54vh] max-[860px]:max-h-[440px] max-[860px]:min-h-[360px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
         isMapDark
           ? "bg-[#111b21] border border-white/25 text-[#f0f6fc] shadow-[0_14px_38px_rgba(0,0,0,0.85)]"
           : "bg-[#ffffff] border border-[#000000] text-[#000000] shadow-[0_14px_38px_rgba(0,0,0,0.18)]"

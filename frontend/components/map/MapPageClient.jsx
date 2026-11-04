@@ -100,7 +100,7 @@ export default function MapPage() {
         return false;
       }
     }
-    return false;
+    return true;
   });
   const handleStartupComplete = useCallback(() => {
     setShowStartup(false);
@@ -668,13 +668,37 @@ export default function MapPage() {
         await putMiniEvent(eventIdToUpdate, payload).catch(() => {});
         setEvents((prev) =>
           prev.map((ev) =>
-            ev.id === eventIdToUpdate ? { ...ev, ...payload, description: encodedDesc } : ev
+            ev.id === eventIdToUpdate
+              ? {
+                  ...ev,
+                  ...payload,
+                  description: encodedDesc,
+                  creator: {
+                    ...(ev.creator || {}),
+                    id: currentUser?.id || ev.creator?.id,
+                    name: currentUser?.displayName || currentUser?.name || ev.creator?.name,
+                    displayName: currentUser?.displayName || currentUser?.name || ev.creator?.displayName,
+                    nickname: currentUser?.nickname || ev.creator?.nickname,
+                  },
+                }
+              : ev
           )
         );
       } else {
-        const created = await postMiniEvent(payload).catch(() => null);
-        if (created) {
-          setEvents((prev) => [cleanEventDesc(created), ...prev]);
+        const createdRes = await postMiniEvent(payload).catch(() => null);
+        const createdEvent = createdRes?.data?.event || createdRes?.data || createdRes;
+        if (createdEvent && typeof createdEvent === "object") {
+          const enriched = {
+            ...createdEvent,
+            creator: {
+              ...(createdEvent.creator || {}),
+              id: currentUser?.id || createdEvent.creator?.id,
+              name: currentUser?.displayName || currentUser?.name || createdEvent.creator?.name,
+              displayName: currentUser?.displayName || currentUser?.name || createdEvent.creator?.displayName,
+              nickname: currentUser?.nickname || createdEvent.creator?.nickname,
+            },
+          };
+          setEvents((prev) => [cleanEventDesc(enriched), ...prev]);
         }
       }
 
@@ -741,13 +765,32 @@ export default function MapPage() {
       } catch {}
       return merged;
     });
+    if (updatedData.displayName || updatedData.name || updatedData.profilePicture) {
+      setEvents((prev) =>
+        prev.map((ev) => {
+          const isMine =
+            ev.id === "own" ||
+            (currentUser?.id && String(ev.creator?.id) === String(currentUser.id));
+          if (!isMine) return ev;
+          return {
+            ...ev,
+            creator: {
+              ...(ev.creator || {}),
+              name: updatedData.displayName || updatedData.name || ev.creator?.name,
+              displayName: updatedData.displayName || updatedData.name || ev.creator?.displayName,
+              profilePicture: updatedData.profilePicture ?? ev.creator?.profilePicture,
+            },
+          };
+        })
+      );
+    }
     try {
       await api.put("/users/me", updatedData);
     } catch (e) {
       console.warn("Profile update remote sync deferred:", e?.message);
     }
     setNotice("Profile updated successfully!");
-  }, []);
+  }, [currentUser?.id]);
 
   const handleRequestChangePassword = useCallback(async () => {
     const markReturnToMapWithoutIntro = () => {
@@ -814,7 +857,7 @@ export default function MapPage() {
 
   return (
     <main 
-      className={`relative min-h-screen bg-[#0a0e27] overflow-hidden text-white font-sans selection:bg-[#ffd60a] selection:text-black transition-all ${isMapDark ? "dark-theme" : "light-theme"}`}
+      className={`relative h-screen max-h-screen w-full bg-[#0a0e27] overflow-hidden text-white font-sans selection:bg-[#ffd60a] selection:text-black transition-all ${isMapDark ? "dark-theme" : "light-theme"}`}
       style={{
         filter: isExiting ? "blur(30px)" : "none",
         transition: "filter 1.2s ease-in-out"

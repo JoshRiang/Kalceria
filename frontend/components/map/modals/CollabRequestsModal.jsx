@@ -35,13 +35,13 @@ export function CollabRequestsModal({
           {/* Subtle click-catcher backdrop WITHOUT blur to preserve background sharpness */}
           <div className="absolute inset-0 bg-black/15" />
 
-          {/* Pop-out Box: elongated width with inner box shifted left and dedicated X vertical column on right */}
+          {/* Pop-out Box: compact square-ish width with inner box shifted left and dedicated X vertical column on right */}
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: -6 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative z-10 w-full max-w-[460px] sm:max-w-[485px] max-h-[85vh] flex flex-row items-stretch rounded-[22px] shadow-2xl overflow-hidden ${
+            className={`relative z-10 w-full max-w-[315px] xs:max-w-[335px] sm:max-w-[350px] max-h-[85vh] flex flex-row items-stretch rounded-[22px] shadow-2xl overflow-hidden ${
               isModalDark
                 ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"
                 : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
@@ -49,7 +49,7 @@ export function CollabRequestsModal({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Left Column: Sub Request Box List (shifted left so X vertical column stays completely clear) */}
-            <div className="pl-3.5 pr-1 py-3.5 xs:pl-4 xs:py-4 sm:pl-5 sm:py-5 flex-1 min-w-0 overflow-y-auto max-h-[380px] custom-scrollbar flex flex-col gap-3">
+            <div className="pl-3.5 pr-0.5 py-3.5 xs:pl-4 xs:py-4 flex-1 min-w-0 overflow-y-auto max-h-[360px] custom-scrollbar flex flex-col gap-3">
               {currentRequestsList.length > 0 ? (
                 currentRequestsList.map((req, idx) => {
                   const colorScheme = SUB_BOX_COLORS[idx % SUB_BOX_COLORS.length];
@@ -157,7 +157,7 @@ export function CollabRequestsModal({
                     background: isModalDark ? "#000000" : "#ffffff",
                     borderColor: isModalDark ? "#ffffff" : "#000000",
                   }}
-                  className="rounded-2xl p-5 xs:p-6 text-center border-[1.5px] flex flex-col items-center justify-center gap-2"
+                  className="rounded-2xl p-4 xs:p-5 min-h-[168px] text-center border-[1.5px] flex flex-col items-center justify-center gap-2"
                 >
                   <strong
                     style={{ color: isModalDark ? "#ffffff" : "#000000", fontWeight: 800 }}
@@ -167,7 +167,7 @@ export function CollabRequestsModal({
                   </strong>
                   <p
                     style={{ color: isModalDark ? "#ffffff" : "#000000" }}
-                    className="text-xs font-sans font-normal max-w-[270px] leading-relaxed"
+                    className="text-xs font-sans font-normal max-w-[225px] leading-relaxed"
                   >
                     When <strong className="font-bold">fellow Kalcerians</strong> tap the Request icon on your event card, they will appear here.
                   </p>
@@ -176,7 +176,7 @@ export function CollabRequestsModal({
             </div>
 
             {/* Right Dedicated Vertical Column for Close (X) Button - keeps vertical space below X completely clear */}
-            <div className="shrink-0 w-9 xs:w-10 sm:w-11 pt-2.5 xs:pt-3 pr-1.5 xs:pr-2 flex flex-col items-center justify-start">
+            <div className="shrink-0 w-8 xs:w-9 pt-2.5 pr-1.5 flex flex-col items-center justify-start">
               <button
                 type="button"
                 className={`w-7 h-7 flex items-center justify-center text-2xl leading-none transition-colors rounded-full cursor-pointer ${

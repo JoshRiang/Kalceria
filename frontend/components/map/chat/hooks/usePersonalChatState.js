@@ -231,9 +231,18 @@ export function usePersonalChatState({
     }
   }, [nextCursor, isLoadingOlder, targetId, myId]);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll message thread container to bottom when messages change (never scroll outer page/main!)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesEndRef.current;
+    if (!container) return;
+    const raf = requestAnimationFrame(() => {
+      try {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+      } catch {
+        container.scrollTop = container.scrollHeight;
+      }
+    });
+    return () => cancelAnimationFrame(raf);
   }, [messages.length, isPeerTyping]);
 
   // Close 3-dots dropdown when clicking outside

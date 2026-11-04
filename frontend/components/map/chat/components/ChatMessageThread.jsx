@@ -34,7 +34,10 @@ export function ChatMessageThread({
       />
 
       {/* Scrollable Message Thread */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-3 py-2.5 flex flex-col gap-1.5 modern-kalcerian-scrollbar overscroll-contain">
+      <div
+        ref={messagesEndRef}
+        className="relative z-10 flex-1 overflow-y-auto px-3 py-2.5 flex flex-col gap-1.5 modern-kalcerian-scrollbar overscroll-contain"
+      >
         {/* E2EE Security Pill */}
         <div className="flex justify-center my-1">
           <div
@@ -100,8 +103,6 @@ export function ChatMessageThread({
             />
           );
         })}
-
-        <div ref={messagesEndRef} />
       </div>
     </div>
   );
