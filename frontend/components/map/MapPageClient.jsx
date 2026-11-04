@@ -648,11 +648,21 @@ export default function MapPage() {
     playNotificationSound("event");
     try {
       if (currentUser?.email) {
-        await api.post("/auth/password/reset-request", { email: currentUser.email });
+        localStorage.setItem("kalceria_auth_return", "/map");
+        setShowEditProfileModal(false);
+        setShowOwnProfile(false);
+        // Call reset-request to trigger magic link email dispatch
+        await api.post("/auth/password/reset-request", { email: currentUser.email }).catch(() => {});
+        window.location.href = `/?auth=true&mode=forgot-password&sent=true&email=${encodeURIComponent(currentUser.email)}`;
+        return;
       }
-      setNotice(`Reset link sent to ${currentUser?.email || "your registered email"}!`);
+      setNotice("User email not found.");
     } catch {
-      setNotice("Password change request initiated.");
+      if (currentUser?.email) {
+        window.location.href = `/?auth=true&mode=forgot-password&sent=true&email=${encodeURIComponent(currentUser.email)}`;
+      } else {
+        setNotice("Password change request initiated.");
+      }
     }
   }, [currentUser]);
 

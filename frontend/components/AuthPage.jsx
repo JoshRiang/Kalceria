@@ -96,11 +96,15 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetToken, setResetToken] = useState("");
 
-  // Check URL token for magic link password reset
+  // Check URL token for magic link password reset OR forgot-password initial state from map
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get("token") || urlParams.get("reset_token");
+      const urlMode = urlParams.get("mode");
+      const isSent = urlParams.get("sent") === "true";
+      const paramEmail = urlParams.get("email");
+
       if (token) {
         setResetToken(token);
         setIsBuffering(true);
@@ -108,6 +112,17 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
           setIsBuffering(false);
           setMode("choose-new-password");
         }, 800);
+      } else if (urlMode === "forgot-password" && isSent && paramEmail) {
+        setForgotEmail(paramEmail);
+        setMode("forgot-password");
+        setSuccess("Verifikasi Link sudah terkirim ke email kamu.");
+        setResendCooldown(60);
+      } else if (urlParams.get("reset_success") === "true") {
+        setMode("login");
+        if (paramEmail) {
+          setForm((prev) => ({ ...prev, email: paramEmail }));
+        }
+        setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
       }
     }
   }, []);
@@ -330,7 +345,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     }
   }
 
-  // ── Reset Password Submission -> Buffer -> Welcome Back -> Landing ──
+  // ── Reset Password Submission -> Buffer -> Login Page with new credentials ──
   async function handleResetPasswordDone(newPassword) {
     setIsBuffering(true);
     setError("");
@@ -339,10 +354,6 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         token: resetToken,
         newPassword,
       });
-      if (res.data?.user) {
-        establishSession(res.data.user);
-        activeSessionRef.current = res.data;
-      }
 
       // Broadcast to other open tabs on this device (e.g. original forgot password tab)
       try {
@@ -350,7 +361,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
           const authChannel = new BroadcastChannel("kalceria_auth_channel");
           authChannel.postMessage({
             type: "RESET_PASSWORD_COMPLETE",
-            email: res.data?.user?.email,
+            email: res.data?.user?.email || forgotEmail,
             username: res.data?.username || res.data?.user?.nickname || res.data?.user?.name,
             user: res.data?.user,
           });
@@ -358,16 +369,17 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         }
       } catch {}
 
-      const displayName =
-        res.data?.user?.nickname ||
-        res.data?.username ||
-        (res.data?.user?.email ? res.data.user.email.split("@")[0] : "Kalcerian");
+      const userEmail = res.data?.user?.email || forgotEmail || "";
       setTimeout(() => {
         setIsBuffering(false);
         if (typeof window !== "undefined" && window.history.replaceState) {
           window.history.replaceState({}, document.title, window.location.pathname);
         }
-        onAuthSuccess?.(res.data);
+        // Seamlessly route to Login mode so user logs in with their newly chosen password
+        setMode("login");
+        setForm((prev) => ({ ...prev, email: userEmail, password: "" }));
+        setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
+        setError("");
       }, 800);
     } catch (err) {
       setIsBuffering(false);
@@ -375,15 +387,19 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     }
   }
 
-  // ── Cross-Device / Cross-Tab Sync for Forgot Password Tab ──
+  // ── Cross-Device / Cross-Tab Sync for Forgot Password Tab -> Login Page ──
   const handleCrossTabResetSuccess = (data) => {
     setIsBuffering(true);
+    const userEmail = data?.email || data?.user?.email || forgotEmail || "";
     setTimeout(() => {
       setIsBuffering(false);
       if (typeof window !== "undefined" && window.history.replaceState) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
-      onAuthSuccess?.(data);
+      setMode("login");
+      setForm((prev) => ({ ...prev, email: userEmail, password: "" }));
+      setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
+      setError("");
     }, 800);
   };
 

@@ -480,8 +480,7 @@ export async function resetPassword(req, res, next) {
     const passwordHash = await argon2.hash(newPassword);
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
 
-    const sessionToken = await createAuthSession(user);
-    setAuthCookie(res, sessionToken);
+    clearAuthCookie(res);
 
     await redis.set(
       `reset_status:${email}`,
@@ -625,14 +624,63 @@ export async function updateMe(req, res, next) {
 // delete own account (Quit style with full cascading cleanup & session revocation)
 export async function deleteMe(req, res, next) {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized.' });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true },
+    });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    if (user.role === 'ADMIN') {
+      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+      if (adminCount <= 1) {
+        return res.status(400).json({ error: 'The last admin account cannot be deleted.' });
+      }
+    }
+
     const token = getRequestToken(req);
     if (token) await revokeAuthSession(token);
     await revokeUserSessions(userId);
-    await prisma.user.delete({ where: { id: userId } });
+
+    // Clean up Redis telemetry and caches for this user
+    await Promise.allSettled([
+      redis.zrem('active_users', userId),
+      redis.del(`live:user:${userId}`),
+      redis.del(`live:cooldown:${userId}`),
+      redis.del(`blocked:${userId}`),
+      redis.del(`comment_cooldown:${userId}`),
+      redis.del(`minigame_attempt:${userId}`),
+      redis.del(`reset_status:${user.email}`),
+    ]);
+
+    // Transactional deletion of all dependent records in the search tree
+    await prisma.$transaction(async (tx) => {
+      await Promise.all([
+        tx.userBroadcast.deleteMany({ where: { userId } }),
+        tx.eventRegistration.deleteMany({ where: { userId } }),
+        tx.miniEvent.deleteMany({ where: { creatorId: userId } }),
+        tx.booking.deleteMany({ where: { userId } }),
+        tx.comment.deleteMany({ where: { userId } }),
+      ]);
+      const userBookings = await tx.serviceBooking.findMany({
+        where: { requestorId: userId },
+        select: { id: true },
+      });
+      if (userBookings.length > 0) {
+        const bookingIds = userBookings.map((b) => b.id);
+        await tx.serviceBookingSlot.deleteMany({
+          where: { serviceBookingId: { in: bookingIds } },
+        });
+      }
+      await tx.serviceBooking.deleteMany({ where: { requestorId: userId } });
+      await tx.user.delete({ where: { id: userId } });
+    }, { maxWait: 10000, timeout: 25000 });
+
     clearAuthCookie(res);
     res.clearCookie('csrfToken', csrfCookieOptions());
-    res.json({ message: 'Account deleted successfully.' });
+    return res.json({ message: 'Account deleted successfully.' });
   } catch (err) {
     next(err);
   }

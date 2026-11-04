@@ -31,9 +31,10 @@ export default function HomeClient() {
     const urlParams = new URLSearchParams(window.location.search);
     const isAuthParam = urlParams.get("auth") === "true";
     const hasResetToken = Boolean(urlParams.get("token") || urlParams.get("reset_token"));
+    const isForgotMode = urlParams.get("mode") === "forgot-password";
     const triggerAuth = sessionStorage.getItem("triggerAuth");
 
-    if (triggerAuth === "true" || isAuthParam || hasResetToken) {
+    if (triggerAuth === "true" || isAuthParam || hasResetToken || isForgotMode) {
       sessionStorage.removeItem("triggerAuth");
       setPhase("auth");
     }
@@ -115,7 +116,18 @@ export default function HomeClient() {
                 if (typeof window !== "undefined" && window.history.replaceState) {
                   window.history.replaceState({}, document.title, window.location.pathname);
                 }
+                const returnUrl = typeof window !== "undefined" ? localStorage.getItem("kalceria_auth_return") : null;
+                if (returnUrl === "/map") {
+                  try {
+                    localStorage.removeItem("kalceria_auth_return");
+                  } catch {}
+                  window.location.href = "/map";
+                  return;
+                }
                 setPhase("landing");
+                if (typeof window !== "undefined") {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
               }}
             />
           </motion.div>

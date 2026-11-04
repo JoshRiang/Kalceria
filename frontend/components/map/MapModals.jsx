@@ -7,6 +7,7 @@ import { ConfirmationPromptModal } from "./modals/ConfirmationPromptModal";
 import { StatusModal } from "./modals/StatusModal";
 import { EventFormModal } from "./modals/EventFormModal";
 import { CollabRequestsModal } from "./modals/CollabRequestsModal";
+import { DeleteAccountModal } from "./modals/DeleteAccountModal";
 
 export const MapModals = memo(function MapModals({
   offlineUserObj,
@@ -176,26 +177,11 @@ export const MapModals = memo(function MapModals({
         }}
       />
 
-      <ConfirmationPromptModal
+      {/* 4. Dedicated Delete Account Confirmation Modal with 'DELETING' buffer */}
+      <DeleteAccountModal
         show={showDeleteAccountModal}
-        title="Are you sure want to "
-        highlightText="Delete Account"
+        onClose={() => setShowDeleteAccountModal?.(false)}
         isMapDark={isMapDark}
-        choice={deleteAccountChoice}
-        onConfirm={() => {
-          setDeleteAccountChoice("yes");
-          setTimeout(() => {
-            handleConfirmDeleteAccount?.();
-            setDeleteAccountChoice(null);
-          }, 200);
-        }}
-        onClose={() => {
-          setDeleteAccountChoice("no");
-          setTimeout(() => {
-            setShowDeleteAccountModal?.(false);
-            setDeleteAccountChoice(null);
-          }, 160);
-        }}
       />
 
       {/* 4. Collaboration Requests Modal (from the Envelope icon) */}

@@ -67,12 +67,14 @@ export function setAuthCookie(res, token) {
 }
 
 export function clearAuthCookie(res) {
-  res.clearCookie(AUTH_COOKIE_NAME, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production' || process.env.VERCEL === '1',
-    sameSite: process.env.AUTH_COOKIE_SAME_SITE || 'lax',
-    path: '/',
-  });
+  if (typeof res?.clearCookie === 'function') {
+    res.clearCookie(AUTH_COOKIE_NAME, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' || process.env.VERCEL === '1',
+      sameSite: process.env.AUTH_COOKIE_SAME_SITE || 'lax',
+      path: '/',
+    });
+  }
 }
 
 export async function revokeAuthSession(token) {

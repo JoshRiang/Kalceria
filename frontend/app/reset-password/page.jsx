@@ -54,9 +54,7 @@ function ResetPasswordContent() {
         newPassword,
       });
 
-      if (res.data?.user) {
-        establishSession(res.data.user);
-      }
+
 
       // Broadcast to other open tabs on the same device
       try {
@@ -72,14 +70,10 @@ function ResetPasswordContent() {
         }
       } catch {}
 
-      const chosenName =
-        res.data?.user?.nickname ||
-        res.data?.username ||
-        (res.data?.user?.email ? res.data.user.email.split("@")[0] : "Kalcerian");
-
       setTimeout(() => {
         setIsProcessing(false);
-        setWelcomeUser(chosenName);
+        const email = res.data?.user?.email || "";
+        window.location.replace(`/?auth=true&reset_success=true&email=${encodeURIComponent(email)}`);
       }, 700);
     } catch (err) {
       setIsProcessing(false);

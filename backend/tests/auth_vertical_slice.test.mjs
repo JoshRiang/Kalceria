@@ -12,6 +12,7 @@ import {
   requestPasswordReset,
   resetPassword,
   getResetPasswordStatus,
+  deleteMe,
 } from '../controllers/authController.js';
 import { createComment } from '../controllers/commentController.js';
 import { getMinigameStatus } from '../controllers/minigameController.js';
@@ -243,6 +244,7 @@ test('Vertical Slice: Full Registration Flow (Anti-Torn Register + Choose Userna
         resetConfirmData = data;
       },
       cookie: () => {},
+      clearCookie: () => {},
       status: () => mockResResetConfirm,
     };
 
@@ -287,9 +289,54 @@ test('Vertical Slice: Full Registration Flow (Anti-Torn Register + Choose Userna
     console.log('[Test] Login successful:', loginResData);
     assert.equal(loginResData?.username, testUsername, 'Login must return user nickname as username');
 
-    // Cleanup: Delete the created test user and comments
-    await prisma.comment.deleteMany({ where: { userId: dbUser.id } });
-    await prisma.user.delete({ where: { id: dbUser.id } });
+    // 9. Test Delete Account (deleteMe) with cascading relation tree cleanup
+    console.log('[Test] Testing Delete Account (deleteMe)...');
+    let deleteMeData = null;
+    const mockReqDelete = {
+      user: { userId: dbUser.id },
+      headers: {},
+      cookies: {},
+    };
+    const mockResDelete = {
+      json: (data) => {
+        deleteMeData = data;
+      },
+      clearCookie: () => {},
+      cookie: () => {},
+    };
+    await deleteMe(mockReqDelete, mockResDelete, (err) => {
+      if (err) throw err;
+    });
+    assert.equal(deleteMeData?.message, 'Account deleted successfully.');
+    console.log('[Test] Account successfully deleted via deleteMe:', deleteMeData);
+
+    // Verify user is gone from Postgres
+    const checkDeletedUser = await prisma.user.findUnique({ where: { id: dbUser.id } });
+    assert.equal(checkDeletedUser, null, 'User must be purged from database');
+
+    // Verify email can register again immediately
+    const reRegisterRes = {
+      status: (code) => {
+        assert.equal(code, 201, 'Re-registration after delete must return 201');
+        return reRegisterRes;
+      },
+      json: (d) => {
+        assert.ok(d?.emailVerificationRequired, 'Re-registration must succeed with OTP requirement');
+      },
+      cookie: () => {},
+    };
+    await register({
+      body: {
+        email: testEmail,
+        password: 'AnotherPassword99!',
+        name: 'Revived User',
+        dob: '2000-01-01',
+      },
+    }, reRegisterRes, (err) => { if (err) throw err; });
+    console.log('[Test] Re-registration with same email verified successfully!');
+
+    // Cleanup the re-registered email
+    await prisma.user.deleteMany({ where: { email: testEmail } }).catch(() => {});
     console.log('[Test] Cleaned up test user successfully.');
   } catch (err) {
     console.error('[Test Failed!]', err);
