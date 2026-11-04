@@ -91,11 +91,11 @@ export default function HomeClient() {
         {phase === "auth" && (
           <motion.div
             key="auth"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.6, ease: "easeInOut" }}
-            className="w-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="w-full min-h-screen"
           >
             <AuthPage
               onAuthSuccess={(data) => {

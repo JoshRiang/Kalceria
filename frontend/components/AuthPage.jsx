@@ -333,16 +333,18 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         activeSessionRef.current = res.data;
       }
 
-      // Transition directly to Welcome greeting without flashing login page
+      // Transition directly to Welcome greeting while buffer stays rock-solid in dead center
       setTimeout(() => {
-        setIsBuffering(false);
         onAuthSuccess?.({
           ...res.data,
           isRegister: true,
           isNewUser: true,
           username: chosenUsername,
         });
-      }, 600);
+        setTimeout(() => {
+          setIsBuffering(false);
+        }, 350);
+      }, 700);
     } catch (err) {
       setIsBuffering(false);
       setError(err.response?.data?.error || "Gagal menyimpan username. Coba lagi.");
