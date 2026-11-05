@@ -6,9 +6,9 @@ import ContentImage from "@/components/ui/ContentImage";
 import { formatCallDuration } from "../hooks/usePersonalCallState";
 
 // Static distributed mini Coki faces with fixed random tilt angles (constant across all calls)
+// Notice: The top center area (Name, Calling/Ringing status, and Call Timer) is naturally kept completely clean and trimmed
 const STATIC_COKI_VOICE_BG = [
   { top: "7%", left: "12%", rotate: -14 },
-  { top: "8%", left: "50%", rotate: 16 },
   { top: "7%", left: "84%", rotate: -8 },
   { top: "25%", left: "28%", rotate: 22 },
   { top: "27%", left: "72%", rotate: -18 },
@@ -85,8 +85,16 @@ export function CallMediaStage({
           />
         </div>
       ) : (
-        /* Voice Call: Pure White Background patterned with static mini Coki faces */
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-white">
+        /* Voice Call: Pure White Background patterned with static mini Coki faces, naturally trimmed around the top header */
+        <div
+          className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-white"
+          style={{
+            WebkitMaskImage:
+              "radial-gradient(ellipse 170px 90px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
+            maskImage:
+              "radial-gradient(ellipse 170px 90px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
+          }}
+        >
           {STATIC_COKI_VOICE_BG.map((pos, idx) => (
             <div
               key={`coki-bg-${idx}`}
