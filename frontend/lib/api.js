@@ -136,6 +136,8 @@ export const fetchPersonalChatPage = (targetId, params = {}) =>
 export const postPersonalChatMessage = (targetId, envelope) => api.post(`/map/chat/${targetId}`, envelope).then(r => r.data);
 export const deletePersonalChatMessages = (targetId, payload) => api.delete(`/map/chat/${targetId}`, { data: payload }).then(r => r.data);
 export const postCallSignal = (targetId, payload) => api.post(`/map/call/${targetId}/signal`, payload).then(r => r.data);
+export const fetchCallSignals = (params = {}) => api.get('/map/call/signals', { params }).then(r => r.data || { ok: false, signals: [] }).catch(() => ({ ok: false, signals: [] }));
+export const clearCallSignals = () => api.delete('/map/call/signals').then(r => r.data || { ok: false }).catch(() => ({ ok: false }));
 export const postBroadcast = (message) => api.post('/broadcast', { message });
 export const putBroadcast = (message) => api.put('/broadcast', { message });
 export const delBroadcast = () => api.delete('/broadcast');

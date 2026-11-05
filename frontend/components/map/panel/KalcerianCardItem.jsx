@@ -267,131 +267,153 @@ export function KalcerianCardItem({
 
         {/* RIGHT: Synchronized 2x2 Grid Flank */}
         <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch py-0.5 pointer-events-auto">
-          {/* Top Row: Category Event Icon + Broadcast Message Icon */}
-          <div className="grid grid-cols-2 gap-1.5 items-center justify-items-center w-[54px]">
-            {/* Slot 1: Category Event Icon */}
-            {!isBlocked && userEvent ? (
-              <div className="relative flex items-center justify-center w-6 h-6">
-                {isRequestedByMe ? (
-                  <button
-                    type="button"
-                    onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                    onMouseLeave={() => setHoveredEventIconId(null)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onPromptCancelRequest?.(userEvent.id, userEvent.title);
-                    }}
-                    className="relative w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                    title={`Cancel request: ${userEvent.title}`}
-                  >
-                    <div className="filter grayscale opacity-45 flex items-center justify-center">
-                      <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                    </div>
-                    <svg viewBox="0 0 24 24" className="absolute inset-0 w-6 h-6 pointer-events-none overflow-visible drop-shadow">
-                      <circle cx="12" cy="12" r="8.5" fill="none" stroke="#ef4444" strokeWidth="2.2" />
-                      <line x1="6" y1="6" x2="18" y2="18" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                ) : hasPendingRequests ? (
-                  <button
-                    type="button"
-                    onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                    onMouseLeave={() => setHoveredEventIconId(null)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onOpenItemOnMap) {
-                        onOpenItemOnMap(userEvent, "event");
-                      } else {
-                        focusUser(userEvent);
-                      }
-                      if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
-                    }}
-                    className="relative w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                    title={
-                      eventPendingRequests.length > 0
-                        ? `${userEvent.title} (${eventPendingRequests.length} collab request${eventPendingRequests.length > 1 ? "s" : ""})`
-                        : `${userEvent.title} (${unreadGroupChatCount} new group message${unreadGroupChatCount > 1 ? "s" : ""})`
-                    }
-                  >
-                    <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full border-none shadow-none ring-0 pointer-events-none" />
-                  </button>
-                ) : isOtherEventDisabled ? (
-                  <button
-                    type="button"
-                    disabled
-                    onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                    onMouseLeave={() => setHoveredEventIconId(null)}
-                    className="w-6 h-6 flex items-center justify-center rounded opacity-40 grayscale cursor-not-allowed outline-none"
-                    title={`${userEvent.title} (Active request pending on another event)`}
-                  >
-                    <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                    onMouseLeave={() => setHoveredEventIconId(null)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onOpenItemOnMap) {
-                        onOpenItemOnMap(userEvent, "event");
-                      } else {
-                        focusUser(userEvent);
-                      }
-                      if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
-                    }}
-                    className="w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                    title={userEvent.title}
-                  >
-                    <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                  </button>
-                )}
-
-                {/* Hover Tooltip Box */}
-                {hoveredEventIconId === userEvent.id && (
+          {/* Top Row: Dynamic Category Event & Broadcast Badges (Stacked with circle texture) */}
+          <div className="flex items-center justify-end w-[54px] h-6">
+            {!isBlocked && (userEvent || activeBroadcastMsg) ? (
+              <div className="flex items-center justify-end">
+                {/* Dynamic Slot 1: Category Event Icon */}
+                {userEvent && (
                   <div
-                    className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-md shadow-2xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
+                    className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 ${
                       isMapDark
-                        ? "bg-black border border-white text-white shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
-                        : "bg-white border border-black text-black shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+                        ? "bg-[#161b22] border border-white/25 shadow-[inset_0_1px_2px_rgba(255,255,255,0.15),0_1px_4px_rgba(0,0,0,0.7)]"
+                        : "bg-[#ffffff] border border-black/25 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08),0_1px_4px_rgba(0,0,0,0.12)]"
                     }`}
-                    style={{ fontFamily: "Arial, sans-serif" }}
                   >
-                    {isRequestedByMe
-                      ? `Cancel Request: ${userEvent.title}`
-                      : hasPendingRequests
-                      ? eventPendingRequests.length > 0
-                        ? `${userEvent.title} (${eventPendingRequests.length} Collab Request${eventPendingRequests.length > 1 ? "s" : ""})`
-                        : `${userEvent.title} (${unreadGroupChatCount} Group Message${unreadGroupChatCount > 1 ? "s" : ""})`
-                      : isOtherEventDisabled
-                      ? `${userEvent.title} (Request active elsewhere)`
-                      : userEvent.title}
+                    {isRequestedByMe ? (
+                      <button
+                        type="button"
+                        onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                        onMouseLeave={() => setHoveredEventIconId(null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPromptCancelRequest?.(userEvent.id, userEvent.title);
+                        }}
+                        className="w-full h-full flex items-center justify-center rounded-full outline-none cursor-pointer"
+                        title={`Cancel request: ${userEvent.title}`}
+                      >
+                        <div className="filter grayscale opacity-45 flex items-center justify-center scale-90">
+                          <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                        </div>
+                        <svg viewBox="0 0 24 24" className="absolute inset-0 w-6 h-6 pointer-events-none overflow-visible drop-shadow">
+                          <circle cx="12" cy="12" r="8.5" fill="none" stroke="#ef4444" strokeWidth="2.2" />
+                          <line x1="6" y1="6" x2="18" y2="18" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    ) : hasPendingRequests ? (
+                      <button
+                        type="button"
+                        onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                        onMouseLeave={() => setHoveredEventIconId(null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onOpenItemOnMap) {
+                            onOpenItemOnMap(userEvent, "event");
+                          } else {
+                            focusUser(userEvent);
+                          }
+                          if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
+                        }}
+                        className="w-full h-full flex items-center justify-center rounded-full outline-none cursor-pointer"
+                        title={
+                          eventPendingRequests.length > 0
+                            ? `${userEvent.title} (${eventPendingRequests.length} collab request${eventPendingRequests.length > 1 ? "s" : ""})`
+                            : `${userEvent.title} (${unreadGroupChatCount} new group message${unreadGroupChatCount > 1 ? "s" : ""})`
+                        }
+                      >
+                        <div className="scale-90 flex items-center justify-center">
+                          <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                        </div>
+                        <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-[#ef4444] rounded-full pointer-events-none" />
+                      </button>
+                    ) : isOtherEventDisabled ? (
+                      <button
+                        type="button"
+                        disabled
+                        onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                        onMouseLeave={() => setHoveredEventIconId(null)}
+                        className="w-full h-full flex items-center justify-center rounded-full opacity-40 grayscale cursor-not-allowed outline-none"
+                        title={`${userEvent.title} (Active request pending on another event)`}
+                      >
+                        <div className="scale-90 flex items-center justify-center">
+                          <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                        </div>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
+                        onMouseLeave={() => setHoveredEventIconId(null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onOpenItemOnMap) {
+                            onOpenItemOnMap(userEvent, "event");
+                          } else {
+                            focusUser(userEvent);
+                          }
+                          if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
+                        }}
+                        className="w-full h-full flex items-center justify-center rounded-full outline-none cursor-pointer"
+                        title={userEvent.title}
+                      >
+                        <div className="scale-90 flex items-center justify-center">
+                          <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
+                        </div>
+                      </button>
+                    )}
+
+                    {/* Hover Tooltip Box */}
+                    {hoveredEventIconId === userEvent.id && (
+                      <div
+                        className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-md shadow-2xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
+                          isMapDark
+                            ? "bg-black border border-white text-white shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+                            : "bg-white border border-black text-black shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+                        }`}
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                      >
+                        {isRequestedByMe
+                          ? `Cancel Request: ${userEvent.title}`
+                          : hasPendingRequests
+                          ? eventPendingRequests.length > 0
+                            ? `${userEvent.title} (${eventPendingRequests.length} Collab Request${eventPendingRequests.length > 1 ? "s" : ""})`
+                            : `${userEvent.title} (${unreadGroupChatCount} Group Message${unreadGroupChatCount > 1 ? "s" : ""})`
+                          : isOtherEventDisabled
+                          ? `${userEvent.title} (Request active elsewhere)`
+                          : userEvent.title}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="w-6 h-6" />
-            )}
 
-            {/* Slot 2: Broadcast Message Icon */}
-            {!isBlocked && activeBroadcastMsg ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onOpenItemOnMap) {
-                    onOpenItemOnMap(user, "user");
-                  } else {
-                    focusUser(user);
-                  }
-                  if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
-                }}
-                className="w-6 h-6 flex items-center justify-center rounded transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                title="Open broadcast on map"
-              >
-                <BroadcastLineIcon isMapDark={isMapDark} />
-              </button>
+                {/* Dynamic Slot 2: Broadcast Message Icon (Stacked horizontally on top with textured circle) */}
+                {activeBroadcastMsg && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onOpenItemOnMap) {
+                        onOpenItemOnMap(user, "user");
+                      } else {
+                        focusUser(user);
+                      }
+                      if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
+                    }}
+                    className={`relative z-20 w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 outline-none cursor-pointer ${
+                      userEvent ? "-ml-2.5" : ""
+                    } ${
+                      isMapDark
+                        ? "bg-[#161b22] border border-white/25 shadow-[inset_0_1px_2px_rgba(255,255,255,0.15),0_1px_4px_rgba(0,0,0,0.7)]"
+                        : "bg-[#ffffff] border border-black/25 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08),0_1px_4px_rgba(0,0,0,0.12)]"
+                    }`}
+                    title="Open broadcast on map"
+                  >
+                    <div className="scale-85 flex items-center justify-center">
+                      <BroadcastLineIcon isMapDark={isMapDark} />
+                    </div>
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="w-6 h-6" />
             )}

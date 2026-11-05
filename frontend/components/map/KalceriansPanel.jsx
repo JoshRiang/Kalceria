@@ -4,6 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { KalcerianCardItem } from "./panel/KalcerianCardItem";
 import { PersonalChatPanel } from "./chat/PersonalChatPanel";
+import { IncomingCallModal } from "./chat/components/IncomingCallModal";
+import { fetchCallSignals, postCallSignal } from "@/lib/api";
+import { startIncomingRingtone, stopCallRingtone } from "@/lib/soundEngine";
+import { generateCryptoNonce } from "@/lib/chatCrypto";
 import {
   isEventOwner,
   isEventCollaborator,
@@ -140,8 +144,105 @@ export function KalceriansPanel({
   const [activeChatUserId, setActiveChatUserId] = useState(null);
   const [activeChatUserSnapshot, setActiveChatUserSnapshot] = useState(null);
   const [isClosingForChat, setIsClosingForChat] = useState(false);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [incomingCallInitialState, setIncomingCallInitialState] = useState(null);
   const listContainerRef = useRef(null);
   const chatTransitionTimerRef = useRef(null);
+  const incomingCallRef = useRef(null);
+  incomingCallRef.current = incomingCall;
+
+  // Poll for incoming call signals across devices (event-driven, offline-capable)
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    let active = true;
+    const interval = setInterval(async () => {
+      if (!active) return;
+      try {
+        const res = await fetchCallSignals();
+        const signals = res?.signals || [];
+
+        for (const sig of signals) {
+          if (sig.signalType === "offer") {
+            // New incoming call offer from another user
+            if (!incomingCallRef.current || incomingCallRef.current.callId !== sig.callId) {
+              const caller =
+                sidebarKalcerians.find(
+                  (u) => String(u.id || u.nickname) === String(sig.fromUserId)
+                ) ||
+                (mapUsersData || []).find(
+                  (u) => String(u.id || u.nickname) === String(sig.fromUserId)
+                ) || {
+                  id: sig.fromUserId,
+                  name: "Kalcerian",
+                  displayName: "Kalcerian",
+                };
+
+              setIncomingCall({
+                callId: sig.callId,
+                fromUserId: sig.fromUserId,
+                callerUser: caller,
+                callMode: sig.callMode,
+                offerSdp: sig.encryptedPayload,
+              });
+
+              startIncomingRingtone();
+
+              if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+                new Notification(`Panggilan Masuk dari ${caller.displayName || caller.name}`, {
+                  body: `Panggilan ${sig.callMode === "video" ? "Video" : "Suara"} masuk di Kalceria Map`,
+                  icon: "/ForChat/Coki_Speak.png",
+                  tag: `call-${sig.callId}`,
+                  renotify: true,
+                });
+              }
+            }
+          } else if (sig.signalType === "hangup") {
+            if (incomingCallRef.current && incomingCallRef.current.callId === sig.callId) {
+              stopCallRingtone();
+              setIncomingCall(null);
+            }
+          }
+        }
+      } catch {}
+    }, 2400);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      stopCallRingtone();
+    };
+  }, [currentUser, sidebarKalcerians, mapUsersData]);
+
+  const handleAcceptIncomingCall = (call) => {
+    stopCallRingtone();
+    const callData = call || incomingCall;
+    if (!callData) return;
+
+    const caller = callData.callerUser;
+    setIncomingCallInitialState({
+      mode: callData.callMode,
+      user: caller,
+      isIncoming: true,
+      offerSdp: callData.offerSdp,
+      callId: callData.callId,
+    });
+    setIncomingCall(null);
+    handleOpenChatWithTransition(caller);
+  };
+
+  const handleDeclineIncomingCall = () => {
+    stopCallRingtone();
+    if (incomingCall?.fromUserId) {
+      postCallSignal(incomingCall.fromUserId, {
+        callId: incomingCall.callId,
+        callMode: incomingCall.callMode,
+        signalType: "hangup",
+        nonce: generateCryptoNonce(),
+      }).catch(() => {});
+    }
+    setIncomingCall(null);
+  };
 
   useEffect(() => {
     function handleResize() {
@@ -231,13 +332,25 @@ export function KalceriansPanel({
             avatarUrl={avatarUrl}
             isFavourite={favouriteUserIds.includes(String(activeChatUser.id))}
             isMuted={mutedUserIds.includes(String(activeChatUser.id))}
+            initialCallState={incomingCallInitialState}
             onToggleFavourite={onToggleFavourite}
             onToggleMute={onToggleMute}
-            onCloseChat={handleClosePersonalChat}
+            onCloseChat={() => {
+              setIncomingCallInitialState(null);
+              handleClosePersonalChat();
+            }}
             onOutgoingMessageUpdate={onOutgoingMessageUpdate}
           />
         )}
       </AnimatePresence>
+
+      {/* Global Incoming Call Alert Across Devices */}
+      <IncomingCallModal
+        incomingCall={incomingCall}
+        isMapDark={isMapDark}
+        onAccept={handleAcceptIncomingCall}
+        onDecline={handleDeclineIncomingCall}
+      />
 
       <motion.aside
         initial={{ y: 80, opacity: 0 }}

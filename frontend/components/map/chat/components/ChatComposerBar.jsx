@@ -1,25 +1,26 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { QUICK_EMOJIS } from "../hooks/usePersonalChatState";
 
 export function ChatComposerBar({
   isMapDark,
   inputText,
   setInputText,
+  placeholderText,
   mediaError,
   setMediaError,
   showEmojiBar,
   setShowEmojiBar,
   selectMode,
-  fileInputRef,
   isUploadingMedia,
   isRecordingVoice,
-  setIsRecordingVoice,
   recordingSeconds,
-  handleSendText,
-  handleFileUpload,
+  liveWaveform = [],
+  onOpenCameraModal,
+  handleStartVoiceNote,
+  handleCancelVoiceNote,
   handleFinishVoiceNote,
+  handleSendText,
 }) {
   const iconColor = isMapDark ? "#ffffff" : "#000000";
 
@@ -37,63 +38,44 @@ export function ChatComposerBar({
         </div>
       )}
 
-      {/* Quick Emoji Picker Bar */}
-      <AnimatePresence>
-        {showEmojiBar && !selectMode && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className={`px-2.5 py-1.5 flex items-center justify-between border-t overflow-hidden shrink-0 ${
-              isMapDark ? "bg-[#202c33] border-white/10" : "bg-white border-black"
-            }`}
-          >
-            {QUICK_EMOJIS.map((em) => (
-              <button
-                key={em}
-                type="button"
-                onClick={() => setInputText((prev) => prev + em)}
-                className="text-base hover:scale-125 transition-transform cursor-pointer"
-              >
-                {em}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* WhatsApp Web Input Pill */}
+      {/* Input Form Pill */}
       <form
         onSubmit={handleSendText}
         className={`px-2.5 py-2 border-t shrink-0 flex items-center gap-1.5 ${
           isMapDark ? "bg-[#202c33] border-white/15" : "bg-white border-black"
         }`}
       >
-        {/* Hidden File Input (PNG, JPEG, MP4 up to 10MB) */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept=".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4"
-          className="hidden"
-          onChange={handleFileUpload}
-        />
-
         {isRecordingVoice ? (
-          /* Active Voice Note Recording Bar */
+          /* Active Voice Note Recording Bar with Real-Time Audio Waveform */
           <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-full border border-red-500/60 bg-red-500/10">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-ping" />
-              <span className="text-xs font-mono font-semibold text-[#ef4444]">
-                Recording 0:{String(recordingSeconds).padStart(2, "0")}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-ping shrink-0" />
+              <span className="text-xs font-mono font-semibold text-[#ef4444] shrink-0">
+                0:{String(recordingSeconds).padStart(2, "0")}
               </span>
+
+              {/* Dynamic waveform bars sampled from microphone in real time */}
+              <div className="flex items-center gap-0.5 h-6 overflow-hidden max-w-[140px] px-1 select-none">
+                {(liveWaveform && liveWaveform.length > 0
+                  ? liveWaveform.slice(-24)
+                  : [8, 8, 8, 8, 8]
+                ).map((val, idx) => (
+                  <span
+                    key={idx}
+                    style={{ height: `${Math.max(3.5, (val / 100) * 22)}px` }}
+                    className="w-1 bg-[#ef4444] rounded-full transition-all duration-75 shrink-0"
+                  />
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => setIsRecordingVoice(false)}
+                onClick={handleCancelVoiceNote}
                 className="text-xs font-semibold opacity-75 hover:opacity-100 cursor-pointer"
               >
-                Cancel
+                Batal
               </button>
               <button
                 type="button"
@@ -102,7 +84,7 @@ export function ChatComposerBar({
                   isMapDark ? "bg-white text-black" : "bg-black text-white"
                 }`}
               >
-                Send
+                Kirim
               </button>
             </div>
           </div>
@@ -114,12 +96,12 @@ export function ChatComposerBar({
                 : "bg-white border-black text-black"
             }`}
           >
-            {/* 1. File / Attachment Icon (Paperclip) */}
+            {/* 1. Camera Icon (Replaces Add File, same black/white border styling) */}
             <button
               type="button"
               disabled={isUploadingMedia}
-              onClick={() => fileInputRef.current?.click()}
-              title="Attach photo or video (.png, .jpeg, .mp4 max 10MB)"
+              onClick={onOpenCameraModal}
+              title="Ambil foto atau rekam video (maks 1 menit)"
               className="p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer shrink-0 disabled:opacity-40"
             >
               <svg
@@ -131,7 +113,8 @@ export function ChatComposerBar({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
               </svg>
             </button>
 
@@ -166,7 +149,11 @@ export function ChatComposerBar({
                 setInputText(e.target.value);
                 if (mediaError) setMediaError("");
               }}
-              placeholder={isUploadingMedia ? "Uploading media..." : "Type a message"}
+              placeholder={
+                isUploadingMedia
+                  ? "Mengunggah media..."
+                  : placeholderText || "Ketik pesan..."
+              }
               className={`flex-1 bg-transparent text-xs outline-none min-w-0 ${
                 isMapDark
                   ? "text-white placeholder:text-white/50"
@@ -174,11 +161,11 @@ export function ChatComposerBar({
               }`}
             />
 
-            {/* 4. Right Icon: Send Arrow (when text present) OR Voice Note Microphone (Filled Black in Light Mode, Filled White in Dark Mode) */}
+            {/* 4. Send Arrow OR Voice Note Microphone */}
             {inputText.trim().length > 0 ? (
               <button
                 type="submit"
-                title="Send message"
+                title="Kirim pesan"
                 className="p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer shrink-0"
               >
                 <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill={iconColor}>
@@ -188,8 +175,8 @@ export function ChatComposerBar({
             ) : (
               <button
                 type="button"
-                onClick={() => setIsRecordingVoice(true)}
-                title="Record voice note"
+                onClick={handleStartVoiceNote}
+                title="Rekam Voice Note (Mikrofon)"
                 className="p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer shrink-0"
               >
                 <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill={iconColor}>
@@ -203,4 +190,3 @@ export function ChatComposerBar({
     </>
   );
 }
-

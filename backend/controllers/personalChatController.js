@@ -50,6 +50,7 @@ function packEnvelope(env) {
   };
   if (env.mediaUrl) compact.m = env.mediaUrl;
   if (env.voiceDuration) compact.d = env.voiceDuration;
+  if (Array.isArray(env.voiceWaveform) && env.voiceWaveform.length > 0) compact.w = env.voiceWaveform;
   return JSON.stringify(compact);
 }
 
@@ -75,6 +76,7 @@ function unpackEnvelope(raw) {
         msgType: parsed.t || 'text',
         mediaUrl: parsed.m || null,
         voiceDuration: parsed.d || null,
+        voiceWaveform: parsed.w || null,
         ts: Number(parsed.u) || Date.now(),
         status: 'delivered',
       };
@@ -183,6 +185,11 @@ export async function sendPersonalChatMessage(req, res, next) {
     }
     await redis.set(nonceKey, '1', 'EX', NONCE_TTL_SECONDS).catch(() => {});
 
+    // Video media duration validation: maximum 60 seconds (1 minute)
+    if (body.videoDuration && typeof body.videoDuration === 'number' && body.videoDuration > 60) {
+      return res.status(400).json({ error: 'Durasi video melebihi batas 1 menit (maksimal 60 detik).' });
+    }
+
     const envelope = {
       id: typeof body.id === 'string' && /^[a-zA-Z0-9_-]{6,64}$/.test(body.id)
         ? body.id
@@ -197,6 +204,9 @@ export async function sendPersonalChatMessage(req, res, next) {
       msgType,
       mediaUrl: typeof body.mediaUrl === 'string' ? body.mediaUrl.slice(0, 1024) : null,
       voiceDuration: typeof body.voiceDuration === 'number' ? Math.min(300, Math.max(1, body.voiceDuration)) : null,
+      voiceWaveform: Array.isArray(body.voiceWaveform)
+        ? body.voiceWaveform.slice(0, 60).map((v) => Math.min(100, Math.max(0, Math.round(Number(v) || 0))))
+        : null,
       ts: Date.now(),
       status: 'delivered',
     };
@@ -359,6 +369,66 @@ export async function sendCallSignal(req, res, next) {
     }
 
     res.json({ ok: true, packet });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getCallSignals(req, res, next) {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const signalKey = `chat:call:${userId}`;
+    const targetLockKey = `call:lock:${userId}`;
+
+    const [rawSignals, activeLockRaw] = await Promise.all([
+      redis.lrange(signalKey, 0, -1).catch(() => []),
+      redis.get(targetLockKey).catch(() => null),
+    ]);
+
+    const signals = (Array.isArray(rawSignals) ? rawSignals : [])
+      .map((item) => {
+        try {
+          return typeof item === 'string' ? JSON.parse(item) : item;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    let activeLock = null;
+    if (activeLockRaw) {
+      try {
+        activeLock = JSON.parse(activeLockRaw);
+      } catch {}
+    }
+
+    if (req.query?.clear === 'true' && signals.length > 0) {
+      await redis.del(signalKey).catch(() => {});
+    }
+
+    res.json({
+      ok: true,
+      signals,
+      activeLock,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function clearCallSignals(req, res, next) {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const signalKey = `chat:call:${userId}`;
+    await redis.del(signalKey).catch(() => {});
+    res.json({ ok: true, cleared: true });
   } catch (err) {
     next(err);
   }

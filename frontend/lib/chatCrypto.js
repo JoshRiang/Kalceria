@@ -96,6 +96,7 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
     msgType: payloadObj.msgType || "text",
     mediaUrl: payloadObj.mediaUrl || null,
     voiceDuration: payloadObj.voiceDuration || null,
+    voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
     senderId: String(userA || "me"),
     ts,
   });
@@ -124,6 +125,7 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
         msgType: payloadObj.msgType || "text",
         mediaUrl: payloadObj.mediaUrl || null,
         voiceDuration: payloadObj.voiceDuration || null,
+        voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
         ts,
       };
     } catch {}
@@ -142,6 +144,7 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
     msgType: payloadObj.msgType || "text",
     mediaUrl: payloadObj.mediaUrl || null,
     voiceDuration: payloadObj.voiceDuration || null,
+    voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
     ts,
   };
 }
@@ -179,6 +182,7 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
         msgType: decoded.msgType || envelope.msgType || "text",
         mediaUrl: decoded.mediaUrl || envelope.mediaUrl || null,
         voiceDuration: decoded.voiceDuration || envelope.voiceDuration || null,
+        voiceWaveform: decoded.voiceWaveform || envelope.voiceWaveform || null,
         verifiedE2EE: true,
       };
     } catch {}
@@ -193,6 +197,7 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
       msgType: decoded.msgType || envelope.msgType || "text",
       mediaUrl: decoded.mediaUrl || envelope.mediaUrl || null,
       voiceDuration: decoded.voiceDuration || envelope.voiceDuration || null,
+      voiceWaveform: decoded.voiceWaveform || envelope.voiceWaveform || null,
       verifiedE2EE: true,
     };
   } catch {

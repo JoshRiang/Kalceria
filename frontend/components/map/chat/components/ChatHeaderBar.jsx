@@ -21,6 +21,7 @@ export function ChatHeaderBar({
   setMessageSearchQuery,
   setShowContactInfo,
   setCallState,
+  handleTriggerCall,
   onToggleFavourite,
   onToggleMute,
   onCloseChat,
@@ -110,7 +111,7 @@ export function ChatHeaderBar({
                     : "text-black/65"
                 }`}
               >
-                {isPeerTyping ? "typing..." : "click here for contact info"}
+                {isPeerTyping ? "typing..." : `@${cleanUsername}`}
               </p>
             </div>
           </div>
@@ -121,7 +122,10 @@ export function ChatHeaderBar({
           {/* Video Call Icon (Filled Black in Light Mode, Filled White in Dark Mode) */}
           <button
             type="button"
-            onClick={() => setCallState({ mode: "video", user: activeChatUser })}
+            onClick={() => {
+              if (handleTriggerCall) handleTriggerCall("video");
+              else setCallState({ mode: "video", user: activeChatUser });
+            }}
             title={`Video call ${displayName}`}
             className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
           >
@@ -133,7 +137,10 @@ export function ChatHeaderBar({
           {/* Voice Call Icon (Filled Black in Light Mode, Filled White in Dark Mode) */}
           <button
             type="button"
-            onClick={() => setCallState({ mode: "voice", user: activeChatUser })}
+            onClick={() => {
+              if (handleTriggerCall) handleTriggerCall("voice");
+              else setCallState({ mode: "voice", user: activeChatUser });
+            }}
             title={`Voice call ${displayName}`}
             className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
           >
@@ -235,9 +242,26 @@ export function ChatHeaderBar({
                       isMapDark ? "hover:bg-white/10" : "hover:bg-black/5"
                     }`}
                   >
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="#ef4444">
-                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                    </svg>
+                    {isFavourite ? (
+                      /* Remove from Favourites: Single clean cross */
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-4 h-4 shrink-0"
+                        fill="none"
+                        stroke={iconColor}
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    ) : (
+                      /* Add to Favourites: Heart in black (light mode) / white (dark mode) */
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill={iconColor}>
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                      </svg>
+                    )}
                     <span>{isFavourite ? "Remove from Favourites" : "Add to Favourites"}</span>
                   </button>
 
@@ -252,30 +276,46 @@ export function ChatHeaderBar({
                       isMapDark ? "hover:bg-white/10" : "hover:bg-black/5"
                     }`}
                   >
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 overflow-visible">
-                      <path
-                        d="M 3 8.5 h 4 l 5.2 -4.5 v 16 l -5.2 -4.5 h -4 a 1 1 0 0 1 -1 -1 v -5 a 1 1 0 0 1 1 -1 z"
-                        fill={iconColor}
-                      />
-                      <line
-                        x1="15.5"
-                        y1="8.5"
-                        x2="21.5"
-                        y2="15.5"
-                        stroke="#ef4444"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      />
-                      <line
-                        x1="21.5"
-                        y1="8.5"
-                        x2="15.5"
-                        y2="15.5"
-                        stroke="#ef4444"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      />
-                    </svg>
+                    {isMuted ? (
+                      /* Unmute notifications: Speaker with emitting sound wave arcs matching top-right Map HUD */
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 overflow-visible">
+                        <path
+                          d="M 3 8.5 h 4 l 5.2 -4.5 v 16 l -5.2 -4.5 h -4 a 1 1 0 0 1 -1 -1 v -5 a 1 1 0 0 1 1 -1 z"
+                          fill={iconColor}
+                        />
+                        <g stroke={iconColor} strokeWidth="1.8" strokeLinecap="round" fill="none">
+                          <path d="M 15 9.2 a 4 4 0 0 1 0 5.6" />
+                          <path d="M 17.5 7 a 7.5 7.5 0 0 1 0 10" />
+                          <path d="M 20 4.8 a 11 11 0 0 1 0 14.4" />
+                        </g>
+                      </svg>
+                    ) : (
+                      /* Mute notifications: Speaker with black/white X */
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 overflow-visible">
+                        <path
+                          d="M 3 8.5 h 4 l 5.2 -4.5 v 16 l -5.2 -4.5 h -4 a 1 1 0 0 1 -1 -1 v -5 a 1 1 0 0 1 1 -1 z"
+                          fill={iconColor}
+                        />
+                        <line
+                          x1="15.5"
+                          y1="8.5"
+                          x2="21.5"
+                          y2="15.5"
+                          stroke={iconColor}
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                        />
+                        <line
+                          x1="21.5"
+                          y1="8.5"
+                          x2="15.5"
+                          y2="15.5"
+                          stroke={iconColor}
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    )}
                     <span>{isMuted ? "Unmute notifications" : "Mute notifications"}</span>
                   </button>
                 </motion.div>

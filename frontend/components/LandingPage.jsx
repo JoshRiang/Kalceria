@@ -807,7 +807,7 @@ export default function LandingPage({ onNavigateAuth }) {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center my-auto"
+          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center my-auto pb-20 xs:pb-24 sm:pb-28 md:pb-16 lg:pb-0"
         >
           {/* Title Area with Mobile & Half-Desktop Cokineed Face ABOVE "NEED OUR HELP?" */}
           <div className="relative flex flex-col items-center justify-center mb-8 sm:mb-10 md:mb-12 w-full">
@@ -863,9 +863,9 @@ export default function LandingPage({ onNavigateAuth }) {
           </motion.button>
         </motion.div>
 
-        {/* Mobile: Enlarged camera hands at the bottom middle */}
+        {/* Mobile & Half-Desktop / Tab Family: Bounded responsive camera hands at bottom middle */}
         {isMobile && (
-          <div className="absolute bottom-0 left-0 w-full h-56 pointer-events-none z-30 overflow-visible flex justify-center items-end">
+          <div className="absolute bottom-0 left-0 w-full pointer-events-none z-30 overflow-hidden flex justify-center items-end">
             <Image
               src="/hp/camera_hp.webp"
               alt="Camera HP"
@@ -874,7 +874,7 @@ export default function LandingPage({ onNavigateAuth }) {
               unoptimized
               loading="lazy"
               decoding="async"
-              className="w-[280px] xs:w-[320px] sm:w-[360px] h-auto object-contain select-none translate-y-[2px]"
+              className="w-[190px] xs:w-[220px] sm:w-[250px] max-w-[65vw] max-h-[17vh] xs:max-h-[19vh] sm:max-h-[21vh] h-auto object-contain select-none translate-y-[2px]"
               draggable={false}
             />
           </div>
@@ -891,7 +891,7 @@ export default function LandingPage({ onNavigateAuth }) {
               unoptimized
               loading="lazy"
               decoding="async"
-              className="w-[500px] sm:w-[580px] md:w-[680px] lg:w-[780px] xl:w-[880px] 2xl:w-[940px] max-h-[38vh] sm:max-h-[42vh] md:max-h-[45vh] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
+              className="w-[500px] sm:w-[580px] md:w-[680px] lg:w-[780px] xl:w-[880px] 2xl:w-[940px] max-h-[30vh] sm:max-h-[35vh] md:max-h-[40vh] lg:max-h-[45vh] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
               draggable={false}
             />
           </div>

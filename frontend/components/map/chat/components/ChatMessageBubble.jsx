@@ -1,6 +1,22 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { formatMessageTime } from "../hooks/usePersonalChatState";
+
+function getFallbackWaveform(id, duration = 4) {
+  // Deterministic natural voice pattern for messages without recorded waveform
+  const count = Math.min(30, Math.max(16, duration * 4));
+  const bars = [];
+  let seed = 0;
+  for (let i = 0; i < (id || "").length; i++) {
+    seed += id.charCodeAt(i);
+  }
+  for (let i = 0; i < count; i++) {
+    const val = 12 + Math.abs(Math.sin((i + seed) * 0.45) * 65) + ((i % 3) * 8);
+    bars.push(Math.min(100, Math.round(val)));
+  }
+  return bars;
+}
 
 export function ChatMessageBubble({
   item,
@@ -18,6 +34,94 @@ export function ChatMessageBubble({
     item.mediaUrl &&
     (/\.(mp4|webm|ogg)($|\?)/i.test(item.mediaUrl) ||
       /^data:video/i.test(item.mediaUrl));
+
+  const isVoice = item.msgType === "voice";
+  const isPlaying = playingVoiceId === item.id;
+
+  const [playbackProgress, setPlaybackProgress] = useState(0); // 0 to 1
+  const [currentPlaybackSec, setCurrentPlaybackSec] = useState(0);
+  const audioRef = useRef(null);
+
+  const rawWaveform = Array.isArray(item.voiceWaveform) && item.voiceWaveform.length > 0
+    ? item.voiceWaveform
+    : isVoice
+    ? getFallbackWaveform(item.id, item.voiceDuration || 4)
+    : [];
+
+  // Downsample or slice waveform to fit comfortably in bubble (24 bars)
+  const displayWaveform = (() => {
+    if (!rawWaveform.length) return [];
+    if (rawWaveform.length <= 26) return rawWaveform;
+    const step = rawWaveform.length / 24;
+    const sampled = [];
+    for (let i = 0; i < 24; i++) {
+      const idx = Math.floor(i * step);
+      sampled.push(rawWaveform[idx] || 10);
+    }
+    return sampled;
+  })();
+
+  // Audio Playback Controller
+  useEffect(() => {
+    if (!isVoice || !item.mediaUrl) return;
+
+    if (isPlaying) {
+      if (!audioRef.current) {
+        const audio = new Audio(item.mediaUrl);
+        audioRef.current = audio;
+
+        audio.ontimeupdate = () => {
+          if (audio.duration && Number.isFinite(audio.duration)) {
+            const ratio = audio.currentTime / audio.duration;
+            setPlaybackProgress(Math.min(1, Math.max(0, ratio)));
+            setCurrentPlaybackSec(Math.floor(audio.currentTime));
+          }
+        };
+
+        audio.onended = () => {
+          setPlayingVoiceId(null);
+          setPlaybackProgress(0);
+          setCurrentPlaybackSec(0);
+        };
+
+        audio.onerror = () => {
+          setPlayingVoiceId(null);
+          setPlaybackProgress(0);
+        };
+      }
+
+      audioRef.current.play().catch(() => {
+        setPlayingVoiceId(null);
+      });
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPlaying, isVoice, item.mediaUrl, setPlayingVoiceId]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleSeek = (e, barIndex, totalBars) => {
+    e.stopPropagation();
+    if (!audioRef.current || !audioRef.current.duration) return;
+    const ratio = (barIndex + 1) / totalBars;
+    audioRef.current.currentTime = ratio * audioRef.current.duration;
+    setPlaybackProgress(ratio);
+    if (!isPlaying) {
+      setPlayingVoiceId(item.id);
+    }
+  };
+
+  const totalDuration = item.voiceDuration || 4;
 
   return (
     <div
@@ -50,41 +154,42 @@ export function ChatMessageBubble({
             : "bg-[#f4f4f5] border-black text-black rounded-tl-xs"
         }`}
       >
-        {/* Media Attachment Preview */}
-        {item.mediaUrl && (
-          <div className="mb-1.5 rounded-lg overflow-hidden border border-current/15 max-h-[180px]">
+        {/* Media Attachment Preview (Photo or Video <= 1 min) */}
+        {item.mediaUrl && !isVoice && (
+          <div className="mb-1.5 rounded-lg overflow-hidden border border-current/15 max-h-[190px]">
             {isVideoMedia ? (
               <video
                 src={item.mediaUrl}
                 controls
                 playsInline
-                className="w-full max-h-[180px] object-cover"
+                className="w-full max-h-[190px] object-cover"
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={item.mediaUrl}
                 alt="Chat attachment"
-                className="w-full max-h-[180px] object-cover"
+                className="w-full max-h-[190px] object-cover"
               />
             )}
           </div>
         )}
 
-        {/* Voice Note Bubble */}
-        {item.msgType === "voice" ? (
-          <div className="flex items-center gap-2 min-w-[165px] py-0.5">
+        {/* Real-time Sampled Voice Note Bubble (Instagram / WhatsApp style) */}
+        {isVoice ? (
+          <div className="flex items-center gap-2 min-w-[195px] py-1 select-none">
+            {/* Play / Pause Button */}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setPlayingVoiceId((prev) => (prev === item.id ? null : item.id));
               }}
-              className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 cursor-pointer ${
+              className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-transform active:scale-90 ${
                 isMapDark ? "bg-white text-black" : "bg-black text-white"
               }`}
             >
-              {playingVoiceId === item.id ? (
+              {isPlaying ? (
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
                   <rect x="6" y="5" width="4" height="14" />
                   <rect x="14" y="5" width="4" height="14" />
@@ -95,23 +200,41 @@ export function ChatMessageBubble({
                 </svg>
               )}
             </button>
-            <div className="flex-1 flex items-center gap-0.5 h-4">
-              {[4, 10, 7, 13, 6, 12, 8, 5, 11, 7, 9, 5].map((h, i) => (
-                <span
-                  key={i}
-                  style={{ height: `${h}px` }}
-                  className={`w-1 rounded-full ${
-                    playingVoiceId === item.id
-                      ? "bg-emerald-400 animate-pulse"
-                      : isMapDark
-                      ? "bg-white/70"
-                      : "bg-black/75"
-                  }`}
-                />
-              ))}
+
+            {/* Dynamic Waveform Bars (sample points raising from baseline) */}
+            <div className="flex-1 flex items-center gap-0.5 h-6 cursor-pointer py-1">
+              {displayWaveform.map((val, i) => {
+                const barRatio = (i + 1) / displayWaveform.length;
+                const isPlayed = isPlaying && barRatio <= playbackProgress;
+                // Height between 4px (baseline) and 20px (loud)
+                const heightPx = Math.max(4, Math.round((val / 100) * 20));
+
+                return (
+                  <span
+                    key={i}
+                    onClick={(e) => handleSeek(e, i, displayWaveform.length)}
+                    style={{ height: `${heightPx}px` }}
+                    className={`w-1 rounded-full transition-colors duration-100 ${
+                      isPlayed
+                        ? "bg-emerald-400"
+                        : isPlaying
+                        ? isMapDark
+                          ? "bg-white/40"
+                          : "bg-black/35"
+                        : isMapDark
+                        ? "bg-white/75"
+                        : "bg-black/75"
+                    }`}
+                  />
+                );
+              })}
             </div>
-            <span className="text-[10px] font-mono opacity-80">
-              0:{String(item.voiceDuration || 4).padStart(2, "0")}
+
+            {/* Duration Display */}
+            <span className="text-[10px] font-mono opacity-85 shrink-0 pl-1">
+              {isPlaying
+                ? `0:${String(currentPlaybackSec).padStart(2, "0")}`
+                : `0:${String(totalDuration).padStart(2, "0")}`}
             </span>
           </div>
         ) : (
@@ -143,4 +266,3 @@ export function ChatMessageBubble({
     </div>
   );
 }
-

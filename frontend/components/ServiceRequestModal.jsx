@@ -741,14 +741,14 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                       <button 
                         type="button" 
                         onClick={() => { setError(""); setStep(0); }} 
-                        className="flex-1 py-3.5 sm:py-6 bg-white/10 text-white font-sans font-bold uppercase text-[10px] sm:text-[12px] tracking-[0.15em] sm:tracking-[0.25em] rounded-[20px] sm:rounded-[25px] hover:bg-white/20 transition-all border border-white/20 cursor-pointer"
+                        className={`${buttonStyle} flex-1 py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] bg-white/10 text-white hover:bg-white/20 transition-all border border-white/20 cursor-pointer`}
                       >
-                        ← BACK
+                        BACK
                       </button>
                       <button 
                         type="submit" 
                         disabled={loading} 
-                        className={`${buttonStyle} flex-[2] sm:flex-[2.5] py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] ${isFormValid ? "bg-white text-black opacity-100 shadow-[0_0_50px_rgba(255,255,255,0.4)] cursor-pointer" : "bg-white/10 text-white/60 hover:bg-white/20 cursor-pointer"}`}
+                        className={`${buttonStyle} flex-1 py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] ${isFormValid ? "bg-white text-black opacity-100 shadow-[0_0_50px_rgba(255,255,255,0.4)] cursor-pointer" : "bg-white/10 text-white/60 hover:bg-white/20 cursor-pointer"}`}
                       >
                         {loading ? "SENDING..." : "NEXT"}
                       </button>

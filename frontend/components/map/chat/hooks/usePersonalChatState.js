@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { encryptChatPayload, decryptChatEnvelope } from "@/lib/chatCrypto";
 import { isAhmadDummyUser } from "./usePersonalCallState";
+import { useVoiceRecorder } from "./useVoiceRecorder";
+import { checkHardwarePermission } from "@/lib/mediaHardware";
 import {
   fetchPersonalChatPage,
   postPersonalChatMessage,
@@ -24,20 +26,63 @@ export function formatMessageTime(ts) {
     .toLowerCase();
 }
 
-export function getDateLabel(ts) {
+export const GAUL_JAKSEL_STARTERS = [
+  "Nongs mana kita hari ini?",
+  "Kuy cabut kuy",
+  "Weh gw mau curhat nih...",
+  "Gas pol jangan kasih kendor!",
+  "Lagi di mana lu bro?",
+  "Ngopi santuy dulu gak sih?",
+  "Info sunmori besok dong!",
+  "Sumpah ini seru parah sih...",
+  "Lu udah otw belom nih?",
+  "Mampir bengkel bentar kuy!",
+  "Mau ikutan rolling bareng gak?",
+  "Goks parah vibes-nya!",
+  "Ada yang lagi nongkrong di sini?",
+  "Gaskeun lah tanpa ragu!",
+  "Share lok sekarang juga dong",
+  "Jangan lupa kabar-kabari ya",
+  "Jujurly gw lagi butuh asupan kopi",
+  "Cekidot spot baru ini deh",
+  "Which is better nongkrong di mana?",
+  "Basically kita butuh healing bentar",
+  "Literally serame itu di situ?",
+  "Sabi kali join anak-anak nanti malem",
+  "Kopdar dadakan sabi nih",
+  "Sound check knalpot dulu bos",
+  "Meetup di check point biasa ya!",
+];
+
+export function getChatTimeLabel(ts) {
   const msgDate = new Date(Number(ts) || Date.now());
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
   const msgStart = new Date(msgDate.getFullYear(), msgDate.getMonth(), msgDate.getDate()).getTime();
 
-  if (msgStart >= todayStart) return "Today";
-  if (msgStart >= yesterdayStart) return "Yesterday";
-  return msgDate.toLocaleDateString("en-GB", {
+  const hours = msgDate.getHours();
+  const minutes = String(msgDate.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "pm" : "am";
+  const displayHours = hours % 12 || 12;
+  const timeStr = `${displayHours}.${minutes} ${ampm}`;
+
+  if (msgStart >= todayStart) {
+    return `Today ${timeStr}`;
+  }
+  if (msgStart >= yesterdayStart) {
+    return `Yesterday ${timeStr}`;
+  }
+  const dateStr = msgDate.toLocaleDateString("en-GB", {
     day: "numeric",
-    month: "short",
+    month: "long",
     year: "numeric",
   });
+  return `${dateStr} ${timeStr}`;
+}
+
+export function getDateLabel(ts) {
+  return getChatTimeLabel(ts);
 }
 
 function getInitialSeedMessages(targetUser, currentUserId) {
@@ -102,6 +147,7 @@ export function usePersonalChatState({
   activeChatUser,
   currentUser,
   onOutgoingMessageUpdate,
+  initialCallState = null,
 }) {
   const myId = String(currentUser?.id || "me");
   const targetId = String(activeChatUser?.id || "");
@@ -110,6 +156,11 @@ export function usePersonalChatState({
     activeChatUser?.name ||
     activeChatUser?.nickname ||
     "Kalcerian";
+
+  const [starterPlaceholder] = useState(() => {
+    const idx = Math.floor(Math.random() * GAUL_JAKSEL_STARTERS.length);
+    return GAUL_JAKSEL_STARTERS[idx];
+  });
 
   const [messages, setMessages] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
@@ -123,19 +174,54 @@ export function usePersonalChatState({
   const [showContactInfo, setShowContactInfo] = useState(false);
   const [showEmojiBar, setShowEmojiBar] = useState(false);
 
+  // Camera Capture Modal State
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+
+  // Hardware Permission Gate Modal State ({ isOpen, type: "mic" | "camera", onGrant, onCancel, errorMessage })
+  const [permissionModal, setPermissionModal] = useState({
+    isOpen: false,
+    type: "mic",
+    onGrant: null,
+    onCancel: null,
+    errorMessage: null,
+  });
+
   // Media Attachment State (Max 10MB, strictly PNG / JPEG / MP4)
   const fileInputRef = useRef(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [mediaError, setMediaError] = useState("");
 
-  // Voice Note Recording State
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  // Voice Note Recording Hook (Safe AudioContext + AnalyserNode + MediaRecorder)
+  const handlePermissionNeeded = useCallback((type) => {
+    setPermissionModal({
+      isOpen: true,
+      type,
+      onGrant: async () => {
+        setPermissionModal((prev) => ({ ...prev, isOpen: false }));
+        if (type === "mic") {
+          await voiceRecorder.startRecording();
+        }
+      },
+      onCancel: () => setPermissionModal((prev) => ({ ...prev, isOpen: false })),
+      errorMessage: null,
+    });
+  }, []);
+
+  const voiceRecorder = useVoiceRecorder({
+    onPermissionNeeded: handlePermissionNeeded,
+  });
+
   const [playingVoiceId, setPlayingVoiceId] = useState(null);
 
   // Active Voice / Video Call State (inside the sidebar panel!)
-  const [callState, setCallState] = useState(null);
+  const [callState, setCallState] = useState(initialCallState);
   const [isPeerTyping, setIsPeerTyping] = useState(false);
+
+  useEffect(() => {
+    if (initialCallState) {
+      setCallState(initialCallState);
+    }
+  }, [initialCallState]);
 
   const messagesEndRef = useRef(null);
   const menuContainerRef = useRef(null);
@@ -161,7 +247,7 @@ export function usePersonalChatState({
             localMsgs = decryptedLocal.filter(Boolean);
           }
         }
-      } catch {}
+      } catch { }
 
       if (!localMsgs.length) {
         localMsgs = getInitialSeedMessages(activeChatUser, myId);
@@ -192,7 +278,7 @@ export function usePersonalChatState({
             return Array.from(mergedMap.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
           });
         }
-      } catch {}
+      } catch { }
     }
 
     loadMessages();
@@ -226,7 +312,7 @@ export function usePersonalChatState({
           });
         }
       }
-    } catch {} finally {
+    } catch { } finally {
       setIsLoadingOlder(false);
     }
   }, [nextCursor, isLoadingOlder, targetId, myId]);
@@ -287,16 +373,23 @@ export function usePersonalChatState({
           })
         );
         localStorage.setItem(storageKey, JSON.stringify(encryptedList));
-      } catch {}
+      } catch { }
     },
     [myId, targetId, storageKey]
   );
 
   const appendAndEncryptMessage = useCallback(
-    async ({ text = "", msgType = "text", mediaUrl = null, voiceDuration = null }) => {
+    async ({
+      text = "",
+      msgType = "text",
+      mediaUrl = null,
+      voiceDuration = null,
+      voiceWaveform = null,
+      videoDuration = null,
+    }) => {
       const ts = Date.now();
       const envelope = await encryptChatPayload(
-        { text, msgType, mediaUrl, voiceDuration },
+        { text, msgType, mediaUrl, voiceDuration, voiceWaveform },
         myId,
         targetId
       );
@@ -309,6 +402,7 @@ export function usePersonalChatState({
         msgType,
         mediaUrl,
         voiceDuration,
+        voiceWaveform,
         ts,
         status: "read",
         verifiedE2EE: true,
@@ -322,11 +416,15 @@ export function usePersonalChatState({
 
       onOutgoingMessageUpdate?.(
         targetId,
-        text || (msgType === "voice" ? "🎤 Voice note" : "📎 Media"),
+        text || (msgType === "voice" ? "🎤 Voice note" : "📷 Media"),
         ts
       );
 
-      postPersonalChatMessage(targetId, envelope).catch(() => {});
+      postPersonalChatMessage(targetId, {
+        ...envelope,
+        voiceWaveform,
+        videoDuration,
+      }).catch(() => { });
 
       // If chatting with dummy user Ahmad Bintaro, simulate realistic E2EE reply
       if (isAhmadDummyUser(activeChatUser)) {
@@ -424,15 +522,103 @@ export function usePersonalChatState({
     }
   };
 
+  const handleStartVoiceNote = async () => {
+    const perm = await checkHardwarePermission("microphone");
+    if (perm === "prompt" || perm === "unknown") {
+      setPermissionModal({
+        isOpen: true,
+        type: "mic",
+        onGrant: async () => {
+          setPermissionModal((p) => ({ ...p, isOpen: false }));
+          await voiceRecorder.startRecording();
+        },
+        onCancel: () => setPermissionModal((p) => ({ ...p, isOpen: false })),
+        errorMessage: null,
+      });
+      return;
+    }
+    const started = await voiceRecorder.startRecording();
+    if (!started && voiceRecorder.recorderError) {
+      setMediaError(voiceRecorder.recorderError);
+    }
+  };
+
+  const handleCancelVoiceNote = () => {
+    voiceRecorder.cancelRecording();
+  };
+
   const handleFinishVoiceNote = async () => {
-    const dur = Math.max(1, recordingSeconds);
-    setIsRecordingVoice(false);
-    setRecordingSeconds(0);
+    const result = await voiceRecorder.stopRecording();
+    if (!result) return;
+    const { blob, url, duration, waveform } = result;
+
+    let finalMediaUrl = url;
+    try {
+      if (blob) {
+        const uploadRes = await uploadBlobMedia(blob);
+        if (uploadRes?.url) {
+          finalMediaUrl = uploadRes.url;
+        }
+      }
+    } catch { }
+
     await appendAndEncryptMessage({
       text: "Voice message",
       msgType: "voice",
-      voiceDuration: dur,
+      mediaUrl: finalMediaUrl,
+      voiceDuration: duration,
+      voiceWaveform: waveform,
     });
+  };
+
+  const handleSendCapturedMedia = async ({ blob, url, type, duration }) => {
+    if (type === "video" && duration && duration > 60) {
+      setMediaError("Durasi video melebihi batas 1 menit (maksimal 60 detik).");
+      return;
+    }
+
+    setIsUploadingMedia(true);
+    let finalUrl = url;
+    try {
+      if (blob) {
+        const uploadRes = await uploadBlobMedia(blob);
+        if (uploadRes?.url) finalUrl = uploadRes.url;
+      }
+    } catch {
+      finalUrl = url;
+    } finally {
+      setIsUploadingMedia(false);
+    }
+
+    await appendAndEncryptMessage({
+      text: inputText.trim(),
+      msgType: "media",
+      mediaUrl: finalUrl,
+      videoDuration: duration,
+    });
+    setInputText("");
+  };
+
+  const handleTriggerCall = async (mode = "voice") => {
+    const neededType = mode === "video" ? "camera" : "mic";
+    const permName = mode === "video" ? "camera" : "microphone";
+    const perm = await checkHardwarePermission(permName);
+
+    if (perm === "prompt" || perm === "unknown") {
+      setPermissionModal({
+        isOpen: true,
+        type: neededType,
+        onGrant: () => {
+          setPermissionModal((p) => ({ ...p, isOpen: false }));
+          setCallState({ mode, user: activeChatUser });
+        },
+        onCancel: () => setPermissionModal((p) => ({ ...p, isOpen: false })),
+        errorMessage: null,
+      });
+      return;
+    }
+
+    setCallState({ mode, user: activeChatUser });
   };
 
   const handleToggleSelectMsg = (msgId) => {
@@ -449,7 +635,7 @@ export function usePersonalChatState({
       persistEncryptedLocal(next);
       return next;
     });
-    deletePersonalChatMessages(targetId, { messageIds: selectedMsgIds }).catch(() => {});
+    deletePersonalChatMessages(targetId, { messageIds: selectedMsgIds }).catch(() => { });
     setSelectedMsgIds([]);
     setSelectMode(false);
   };
@@ -460,7 +646,7 @@ export function usePersonalChatState({
       .map((m) => m.text)
       .join("\n");
     if (selectedTexts && typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(selectedTexts).catch(() => {});
+      navigator.clipboard.writeText(selectedTexts).catch(() => { });
     }
     setSelectedMsgIds([]);
     setSelectMode(false);
@@ -473,12 +659,14 @@ export function usePersonalChatState({
       : messages;
 
     const items = [];
-    let lastDateLabel = null;
+    let lastDayKey = null;
     filtered.forEach((m) => {
-      const label = getDateLabel(m.ts);
-      if (label !== lastDateLabel) {
-        items.push({ type: "date_divider", id: `date_${label}_${m.id}`, label });
-        lastDateLabel = label;
+      const msgDate = new Date(Number(m.ts) || Date.now());
+      const dayKey = `${msgDate.getFullYear()}-${msgDate.getMonth()}-${msgDate.getDate()}`;
+      if (dayKey !== lastDayKey) {
+        const label = getChatTimeLabel(m.ts);
+        items.push({ type: "date_divider", id: `date_${dayKey}_${m.id}`, label });
+        lastDayKey = dayKey;
       }
       items.push({ type: "message", ...m });
     });
@@ -486,6 +674,7 @@ export function usePersonalChatState({
   }, [messages, messageSearchQuery]);
 
   return {
+    starterPlaceholder,
     myId,
     targetId,
     displayName,
@@ -513,9 +702,13 @@ export function usePersonalChatState({
     isUploadingMedia,
     mediaError,
     setMediaError,
-    isRecordingVoice,
-    setIsRecordingVoice,
-    recordingSeconds,
+    isCameraModalOpen,
+    setIsCameraModalOpen,
+    permissionModal,
+    setPermissionModal,
+    isRecordingVoice: voiceRecorder.isRecording,
+    recordingSeconds: voiceRecorder.duration,
+    liveWaveform: voiceRecorder.liveWaveform,
     playingVoiceId,
     setPlayingVoiceId,
     callState,
@@ -525,7 +718,11 @@ export function usePersonalChatState({
     menuContainerRef,
     handleSendText,
     handleFileUpload,
+    handleStartVoiceNote,
+    handleCancelVoiceNote,
     handleFinishVoiceNote,
+    handleSendCapturedMedia,
+    handleTriggerCall,
     handleToggleSelectMsg,
     handleDeleteSelectedMessages,
     handleCopySelectedMessages,

@@ -14,6 +14,7 @@ export function PersonalCallView({
   avatarUrl,
   onSwitchMode,
   onEndCall,
+  onPermissionNeeded,
 }) {
   const {
     targetUser,
@@ -33,7 +34,12 @@ export function PersonalCallView({
     localVideoRef,
     remoteVideoRef,
     handleHangup,
-  } = usePersonalCallState({ callState, currentUser, onEndCall });
+  } = usePersonalCallState({
+    callState,
+    currentUser,
+    onEndCall,
+    onPermissionNeeded,
+  });
 
   if (!targetUser) return null;
 
@@ -82,4 +88,3 @@ export function PersonalCallView({
     </motion.div>
   );
 }
-

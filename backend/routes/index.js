@@ -22,6 +22,8 @@ import {
   sendPersonalChatMessage,
   deletePersonalChatMessages,
   sendCallSignal,
+  getCallSignals,
+  clearCallSignals,
 } from "../controllers/personalChatController.js";
 import { getMinigameStatus, recordMinigameScore } from "../controllers/minigameController.js";
 import { getMyBroadcast, createBroadcast, updateBroadcast, deleteBroadcast } from "../controllers/broadcastController.js";
@@ -188,6 +190,8 @@ router.delete("/map/mute/:targetId", requireAuth, unmuteUser);
 router.get("/map/chat/:targetId", requireAuth, getPersonalChatMessages);
 router.post("/map/chat/:targetId", requireAuth, sendPersonalChatMessage);
 router.delete("/map/chat/:targetId", requireAuth, deletePersonalChatMessages);
+router.get("/map/call/signals", requireAuth, getCallSignals);
+router.delete("/map/call/signals", requireAuth, clearCallSignals);
 router.post("/map/call/:targetId/signal", requireAuth, sendCallSignal);
 
 
