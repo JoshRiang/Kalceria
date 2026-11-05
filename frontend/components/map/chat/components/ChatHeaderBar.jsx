@@ -28,6 +28,12 @@ export function ChatHeaderBar({
   menuContainerRef,
 }) {
   const iconColor = isMapDark ? "#ffffff" : "#000000";
+  const cleanUsername = (
+    activeChatUser?.nickname ||
+    activeChatUser?.name ||
+    activeChatUser?.username ||
+    "kalcerian"
+  ).replace(/^@+/, "");
 
   return (
     <>

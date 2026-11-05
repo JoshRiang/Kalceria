@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
         { key: 'X-Content-Type-Options', value: 'nosniff' },
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+        { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self)' },
         { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
         { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ...(process.env.NODE_ENV === 'production'

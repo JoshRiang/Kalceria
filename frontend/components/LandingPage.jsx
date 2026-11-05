@@ -855,7 +855,7 @@ export default function LandingPage({ onNavigateAuth }) {
             onClick={handleApplyRequest}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="relative px-10 xs:px-12 sm:px-16 py-4 xs:py-5 sm:py-6 font-sans font-black uppercase tracking-tighter text-base sm:text-lg md:text-xl text-black bg-white group cursor-pointer shadow-[0_0_35px_rgba(255,255,255,0.3)] focus-polygon focus-visible:outline-none z-10"
+            className="relative px-10 xs:px-12 sm:px-16 py-4 xs:py-5 sm:py-6 font-sans font-black uppercase tracking-tighter text-base sm:text-lg md:text-xl text-black bg-white group cursor-pointer shadow-[0_0_35px_rgba(255,255,255,0.3)] focus-polygon focus-visible:outline-none z-20"
             style={{ clipPath: "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)" }}
           >
             <span className="relative z-10">APPLY A REQUEST</span>
@@ -865,7 +865,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
         {/* Mobile & Half-Desktop / Tab Family: Bounded responsive camera hands at bottom middle */}
         {isMobile && (
-          <div className="absolute bottom-0 left-0 w-full pointer-events-none z-30 overflow-hidden flex justify-center items-end">
+          <div className="absolute bottom-0 left-0 w-full pointer-events-none z-10 overflow-hidden flex justify-center items-end">
             <Image
               src="/hp/camera_hp.webp"
               alt="Camera HP"
@@ -874,7 +874,7 @@ export default function LandingPage({ onNavigateAuth }) {
               unoptimized
               loading="lazy"
               decoding="async"
-              className="w-[190px] xs:w-[220px] sm:w-[250px] max-w-[65vw] max-h-[17vh] xs:max-h-[19vh] sm:max-h-[21vh] h-auto object-contain select-none translate-y-[2px]"
+              className="w-[180px] xs:w-[200px] sm:w-[230px] max-w-[60vw] max-h-[13vh] xs:max-h-[15vh] sm:max-h-[17vh] h-auto object-contain select-none translate-y-[2px]"
               draggable={false}
             />
           </div>
