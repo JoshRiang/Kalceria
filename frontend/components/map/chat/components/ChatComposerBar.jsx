@@ -41,59 +41,87 @@ export function ChatComposerBar({
       {/* Input Form Pill */}
       <form
         onSubmit={handleSendText}
-        className={`px-2.5 py-2 border-t shrink-0 flex items-center gap-1.5 ${
-          isMapDark ? "bg-[#202c33] border-white/15" : "bg-white border-black"
+        className={`px-2.5 py-2 shrink-0 flex items-center gap-1.5 ${
+          isMapDark ? "bg-[#202c33]" : "bg-white"
         }`}
       >
         {isRecordingVoice ? (
-          /* Active Voice Note Recording Bar with Real-Time Audio Waveform */
-          <div className="flex-1 flex items-center justify-between px-3 py-1.5 rounded-full border border-red-500/60 bg-red-500/10">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-ping shrink-0" />
-              <span className="text-xs font-mono font-semibold text-[#ef4444] shrink-0">
+          /* Active Voice Note Recording Bar: No outer box, slim vertical lines, black X cancel, black triangle send */
+          <div className="flex-1 flex items-center justify-between px-2 py-1 select-none min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              {/* Recording Time: Arial, matching chat time mark font size & color */}
+              <span
+                style={{ fontFamily: "Arial, sans-serif" }}
+                className={`text-[9.5px] sm:text-[10px] font-bold tracking-tight shrink-0 ${
+                  isMapDark ? "text-white/70" : "text-black/70"
+                }`}
+              >
                 0:{String(recordingSeconds).padStart(2, "0")}
               </span>
 
-              {/* Dynamic waveform bars sampled from microphone in real time */}
-              <div className="flex items-center gap-0.5 h-6 overflow-hidden max-w-[140px] px-1 select-none">
+              {/* Dynamic waveform vertical lines (slimmer lines like sent voice note) */}
+              <div className="flex items-center gap-[2.5px] h-6 overflow-hidden flex-1 px-1">
                 {(liveWaveform && liveWaveform.length > 0
-                  ? liveWaveform.slice(-24)
-                  : [8, 8, 8, 8, 8]
+                  ? liveWaveform.slice(-28)
+                  : [6, 6, 6, 6, 6]
                 ).map((val, idx) => (
                   <span
                     key={idx}
-                    style={{ height: `${Math.max(3.5, (val / 100) * 22)}px` }}
-                    className="w-1 bg-[#ef4444] rounded-full transition-all duration-75 shrink-0"
+                    style={{ height: `${Math.max(3, Math.min(22, (val / 100) * 22))}px` }}
+                    className={`w-[1.5px] rounded-full transition-all duration-75 shrink-0 ${
+                      isMapDark ? "bg-white/80" : "bg-black/80"
+                    }`}
                   />
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Action Buttons: Cancel is black 'X', Send is black triangle icon */}
+            <div className="flex items-center gap-2 shrink-0 pl-1.5">
+              {/* Batal: black X icon */}
               <button
                 type="button"
                 onClick={handleCancelVoiceNote}
-                className="text-xs font-semibold opacity-75 hover:opacity-100 cursor-pointer"
+                title="Batal"
+                className={`p-1.5 rounded-full transition-transform hover:scale-110 active:scale-90 cursor-pointer ${
+                  isMapDark ? "text-white hover:bg-white/10" : "text-black hover:bg-black/5"
+                }`}
               >
-                Batal
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
               </button>
+
+              {/* Kirim: black triangle send icon */}
               <button
                 type="button"
                 onClick={handleFinishVoiceNote}
-                className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer ${
-                  isMapDark ? "bg-white text-black" : "bg-black text-white"
+                title="Kirim pesan suara"
+                className={`p-1.5 rounded-full transition-transform hover:scale-110 active:scale-90 cursor-pointer ${
+                  isMapDark ? "text-white hover:bg-white/10" : "text-black hover:bg-black/5"
                 }`}
               >
-                Kirim
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
               </button>
             </div>
           </div>
         ) : (
           <div
-            className={`flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border ${
+            className={`flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
               isMapDark
-                ? "bg-[#2a3942] border-white/15 text-white"
-                : "bg-white border-black text-black"
+                ? "bg-[#202c33] shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.5),inset_0_0_1px_rgba(255,255,255,0.08)] text-white"
+                : "bg-[#f0f2f5] shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.12),inset_0_0_1px_rgba(0,0,0,0.12)] text-black"
             }`}
           >
             {/* 1. Camera Icon (Replaces Add File, same black/white border styling) */}

@@ -57,10 +57,10 @@ export function ChatHeaderBar({
 
       {/* 2. WhatsApp Web Style Header Bar */}
       <div
-        className={`relative z-20 px-2.5 py-2 flex items-center justify-between gap-1.5 border-b shrink-0 ${
+        className={`relative z-20 px-2.5 py-2 flex items-center justify-between gap-1.5 shrink-0 ${
           isMapDark
-            ? "bg-[#202c33] border-white/15 text-white"
-            : "bg-white border-black text-black"
+            ? "bg-[#202c33] text-white"
+            : "bg-white text-black"
         }`}
       >
         {/* Left: Back Button + Avatar + Display Name & Contact Info Subtitle */}

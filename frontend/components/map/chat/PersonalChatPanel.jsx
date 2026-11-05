@@ -134,39 +134,39 @@ export function PersonalChatPanel({
           )}
         </AnimatePresence>
 
-        <ChatHeaderBar
-          activeChatUser={activeChatUser}
-          targetId={targetId}
-          displayName={displayName}
-          isMapDark={isMapDark}
-          avatarUrl={avatarUrl}
-          isFavourite={isFavourite}
-          isMuted={isMuted}
-          isPeerTyping={isPeerTyping}
-          menuOpen={menuOpen}
-          setMenuOpen={setMenuOpen}
-          selectMode={selectMode}
-          setSelectMode={setSelectMode}
-          setSelectedMsgIds={setSelectedMsgIds}
-          setSearchOpen={setSearchOpen}
-          setMessageSearchQuery={setMessageSearchQuery}
-          setShowContactInfo={setShowContactInfo}
-          setCallState={setCallState}
-          handleTriggerCall={handleTriggerCall}
-          onToggleFavourite={onToggleFavourite}
-          onToggleMute={onToggleMute}
-          onCloseChat={onCloseChat}
-          menuContainerRef={menuContainerRef}
-        />
-
-        {/* Main Chat Thread and Composer: Gracefully blurs while the Profile Card is parked */}
+        {/* Full Chat Content: Smoothly blurs (including Header Bar & Thread) when viewing Profile */}
         <div
-          className={`flex flex-col flex-1 h-full min-h-0 overflow-hidden transition-all duration-300 ${
+          className={`flex flex-col flex-1 h-full min-h-0 overflow-hidden transition-all duration-300 ease-out ${
             showContactInfo
-              ? "filter blur-[6px] opacity-40 pointer-events-none select-none"
-              : "filter blur-0 opacity-100"
+              ? "filter blur-[8px] opacity-35 pointer-events-none select-none scale-[0.98]"
+              : "filter blur-0 opacity-100 scale-100"
           }`}
         >
+          <ChatHeaderBar
+            activeChatUser={activeChatUser}
+            targetId={targetId}
+            displayName={displayName}
+            isMapDark={isMapDark}
+            avatarUrl={avatarUrl}
+            isFavourite={isFavourite}
+            isMuted={isMuted}
+            isPeerTyping={isPeerTyping}
+            menuOpen={menuOpen}
+            setMenuOpen={setMenuOpen}
+            selectMode={selectMode}
+            setSelectMode={setSelectMode}
+            setSelectedMsgIds={setSelectedMsgIds}
+            setSearchOpen={setSearchOpen}
+            setMessageSearchQuery={setMessageSearchQuery}
+            setShowContactInfo={setShowContactInfo}
+            setCallState={setCallState}
+            handleTriggerCall={handleTriggerCall}
+            onToggleFavourite={onToggleFavourite}
+            onToggleMute={onToggleMute}
+            onCloseChat={onCloseChat}
+            menuContainerRef={menuContainerRef}
+          />
+
           <ChatSearchBar
             searchOpen={searchOpen}
             messageSearchQuery={messageSearchQuery}
@@ -222,10 +222,22 @@ export function PersonalChatPanel({
           )}
         </div>
 
-        {/* Parked Profile Card: Slides in smoothly and PARKS at equal height & position of chat box */}
+        {/* Parked Profile Card: Smooth backdrop blur overlay + slides in and parks over chat */}
         <AnimatePresence>
           {showContactInfo && (
             <motion.div
+              key="profile-backdrop-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              className="absolute inset-0 z-35 backdrop-blur-md bg-black/45 pointer-events-auto"
+              onClick={() => setShowContactInfo(false)}
+            />
+          )}
+          {showContactInfo && (
+            <motion.div
+              key="profile-card-modal"
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: "0%", opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}

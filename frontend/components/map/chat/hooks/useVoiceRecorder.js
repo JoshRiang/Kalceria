@@ -81,39 +81,33 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
 
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.45;
+      analyser.fftSize = 128;
+      analyser.smoothingTimeConstant = 0.1;
       source.connect(analyser);
       analyserRef.current = analyser;
 
-      // 2. Real-time Vocal Energy Sampling Loop (every 65ms)
+      // 2. Real-time Vocal Energy Sampling Loop (ultra-low latency & minimal processing)
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       animFrameRef.current = setInterval(() => {
         if (!analyserRef.current) return;
         analyserRef.current.getByteFrequencyData(dataArray);
 
-        // Vocal speech band (bins 2 through 45, ~100Hz - ~3800Hz)
-        let sum = 0;
-        let count = 0;
-        for (let i = 2; i < 45; i++) {
-          sum += dataArray[i];
-          count++;
+        // Instantaneous peak energy across active speech frequencies
+        let peak = 0;
+        for (let i = 1; i < dataArray.length; i++) {
+          if (dataArray[i] > peak) peak = dataArray[i];
         }
-        const avg = count > 0 ? sum / count : 0;
 
-        // When ambient/quiet (< 14), baseline is 8%
-        // When user speaks, bar physically raises from baseline line proportionally up to 100%
-        let normalized = 8;
-        if (avg >= 14) {
-          normalized = Math.min(100, Math.round(8 + ((avg - 14) / 110) * 92));
-        }
+        // Direct proportional mapping with minimal processing:
+        // Baseline 6% on quiet, raising instantly to 100% when voice detected
+        const normalized = Math.min(100, Math.max(6, Math.round((peak / 255) * 100)));
 
         waveformAccumulatorRef.current.push(normalized);
         setLiveWaveform((prev) => {
           const next = [...prev, normalized];
           return next.slice(-32); // keep latest 32 bars visible in UI
         });
-      }, 65);
+      }, 40);
 
       // 3. MediaRecorder Audio Compression
       const preferredMimes = [
