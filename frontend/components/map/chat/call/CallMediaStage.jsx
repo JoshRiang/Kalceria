@@ -87,45 +87,10 @@ export function CallMediaStage({
         </div>
       )}
 
-      {/* TOP BAR: E2EE Badge & Call Header */}
-      <div className="relative z-10 pt-3.5 px-4 flex flex-col items-center text-center">
-        <button
-          type="button"
-          onClick={() => setShowSafetyTooltip((p) => !p)}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium tracking-tight border transition-colors cursor-pointer ${
-            mode === "video" && status === "connected"
-              ? "bg-black/50 text-white border-white/25"
-              : isMapDark
-              ? "bg-white/10 text-white/85 border-white/15 hover:bg-white/15"
-              : "bg-black/5 text-black/80 border-black/15 hover:bg-black/10"
-          }`}
-          title="Click to verify End-to-End Encryption safety code"
-        >
-          <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current shrink-0">
-            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
-          </svg>
-          <span>End-to-end encrypted</span>
-        </button>
-
-        <AnimatePresence>
-          {showSafetyTooltip && safetyCode && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              className={`mt-1.5 px-3 py-1.5 rounded-lg text-[10px] font-mono border shadow-lg ${
-                isMapDark
-                  ? "bg-[#161b22] border-white/20 text-white"
-                  : "bg-white border-black text-black"
-              }`}
-            >
-              Safety Code: {safetyCode}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
+      {/* TOP BAR: Call Header */}
+      <div className="relative z-10 pt-5 px-4 flex flex-col items-center text-center">
         <h3
-          className={`mt-3 font-sans font-bold text-base sm:text-lg tracking-tight truncate max-w-[260px] ${
+          className={`font-sans font-bold text-base sm:text-lg tracking-tight truncate max-w-[260px] ${
             mode === "video" && status === "connected"
               ? "text-white drop-shadow"
               : isMapDark
@@ -216,11 +181,11 @@ export function CallMediaStage({
           </div>
         )}
 
-        {/* Picture-in-Picture (PiP) Self Camera Preview for Video Call */}
+        {/* Picture-in-Picture (PiP) Self Camera Preview for Video Call (Borderless & Fontless) */}
         {mode === "video" && (
           <div
-            className={`absolute bottom-3 right-3 w-[88px] h-[122px] rounded-xl overflow-hidden border-2 shadow-xl flex items-center justify-center ${
-              isMapDark ? "border-white bg-[#161b22]" : "border-black bg-white"
+            className={`absolute bottom-3 right-3 w-[84px] h-[116px] rounded-xl overflow-hidden shadow-2xl flex items-center justify-center ${
+              isMapDark ? "bg-[#161b22]" : "bg-white"
             }`}
           >
             {hasLocalStream && !isCamOff ? (
@@ -232,19 +197,16 @@ export function CallMediaStage({
                 className="w-full h-full object-cover scale-x-[-1]"
               />
             ) : (
-              <div className="flex flex-col items-center justify-center p-2 text-center">
-                <div className="w-10 h-10 rounded-full overflow-hidden border border-current/20 mb-1">
+              <div className="flex items-center justify-center p-2 text-center">
+                <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm">
                   <ContentImage
                     src={avatarUrl(currentUser || { name: "Me" })}
-                    alt="You"
+                    alt="Self"
                     width={48}
                     height={48}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <span className="text-[9px] font-medium opacity-75">
-                  {isCamOff ? "Camera Off" : "You"}
-                </span>
               </div>
             )}
           </div>
