@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useIsMobileViewport, useIsMobileOrTabletViewport } from '@/hooks/useIsMobileViewport';
@@ -49,34 +48,6 @@ export default function JourneyPageClient() {
 
   return (
     <main className="relative w-full bg-black min-h-screen overflow-x-hidden">
-      {/* Floating Back Button */}
-      <Link
-        href="/#section-journey"
-        onClick={() => {
-          try {
-            sessionStorage.setItem("introPlayed", "true");
-            sessionStorage.setItem("landingSeen", "true");
-            sessionStorage.setItem("landingScrollTarget", "section-journey");
-          } catch {}
-        }}
-        aria-label="Back to Kalceria"
-        className="fixed top-5 left-5 z-[1001] flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 hover:border-white/40 text-white text-xs font-sans font-bold tracking-wider uppercase transition-all backdrop-blur-md cursor-pointer group shadow-lg"
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="transition-transform group-hover:-translate-x-0.5"
-        >
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        <span>Back</span>
-      </Link>
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes slider-sequence-5 {
           0%, 15% { transform: translateX(0%); }

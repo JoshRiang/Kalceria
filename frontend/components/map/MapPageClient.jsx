@@ -87,23 +87,18 @@ export default function MapPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMapEngineReady, setIsMapEngineReady] = useState(false);
   const checkShouldSkipStartup = useCallback(() => {
-    if (typeof window === "undefined") return true;
+    if (typeof window === "undefined") return false;
     try {
-      if (!hasUserSession()) return true;
+      // Fade in gracefully directly to map page is ONLY for change password via map page
       const params = new URLSearchParams(window.location.search);
-      const skipByUrl =
-        params.get("skip_intro") === "true" ||
-        params.get("from") === "password_reset" ||
-        params.get("from") === "map";
-      const skipBySession = sessionStorage.getItem("kalceria_skip_map_intro") === "true";
-      const skipByLocal = localStorage.getItem("kalceria_skip_map_intro") === "true";
-      const skipUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
-      if (skipByUrl || skipBySession || skipByLocal || skipUntil > Date.now()) {
-        return true;
-      }
-      return false;
+      const isPasswordResetReturn =
+        (params.get("from") === "password_reset" || params.get("skip_intro") === "true") &&
+        (sessionStorage.getItem("kalceria_password_reset_from_map") === "true" ||
+         localStorage.getItem("kalceria_password_reset_from_map") === "true");
+
+      return Boolean(isPasswordResetReturn);
     } catch {
-      return true;
+      return false;
     }
   }, []);
 
@@ -115,7 +110,7 @@ export default function MapPage() {
     setShowStartup(false);
   }, []);
 
-  // Consume skip-intro flags safely after mount (keep skip_until window alive across tabs so password change never triggers intro)
+  // Consume password-reset-from-map flag immediately on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -135,21 +130,16 @@ export default function MapPage() {
             window.location.pathname + (cleanSearch ? `?${cleanSearch}` : "")
           );
         }
-        // Keep a 90s grace window in localStorage so any secondary tab or immediate navigation after password change stays on Live Map
-        const currentUntil = Number(localStorage.getItem("kalceria_skip_map_intro_until") || 0);
-        const graceUntil = Math.min(currentUntil || Date.now() + 90000, Date.now() + 90000);
-        localStorage.setItem("kalceria_skip_map_intro_until", String(graceUntil));
-        localStorage.removeItem("kalceria_auth_return");
-        const timer = setTimeout(() => {
-          try {
-            sessionStorage.removeItem("kalceria_skip_map_intro");
-            localStorage.removeItem("kalceria_skip_map_intro");
-          } catch {}
-        }, 90000);
-        return () => clearTimeout(timer);
       } else {
         setShowStartup(true);
       }
+      // Immediately clear the one-time bypass and any lingering legacy skip flags
+      sessionStorage.removeItem("kalceria_password_reset_from_map");
+      localStorage.removeItem("kalceria_password_reset_from_map");
+      sessionStorage.removeItem("kalceria_skip_map_intro");
+      localStorage.removeItem("kalceria_skip_map_intro");
+      localStorage.removeItem("kalceria_skip_map_intro_until");
+      localStorage.removeItem("kalceria_auth_return");
     } catch {}
   }, [checkShouldSkipStartup]);
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -845,9 +835,8 @@ export default function MapPage() {
     const markReturnToMapWithoutIntro = () => {
       try {
         localStorage.setItem("kalceria_auth_return", "/map");
-        localStorage.setItem("kalceria_skip_map_intro", "true");
-        localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
-        sessionStorage.setItem("kalceria_skip_map_intro", "true");
+        localStorage.setItem("kalceria_password_reset_from_map", "true");
+        sessionStorage.setItem("kalceria_password_reset_from_map", "true");
       } catch {}
     };
     try {

@@ -171,16 +171,21 @@ export default function HomeClient() {
                   window.history.replaceState({}, document.title, window.location.pathname);
                 }
                 const returnUrl = typeof window !== "undefined" ? localStorage.getItem("kalceria_auth_return") : null;
-                if (returnUrl === "/map") {
+                const isFromMapReset = typeof window !== "undefined" && (
+                  sessionStorage.getItem("kalceria_password_reset_from_map") === "true" ||
+                  localStorage.getItem("kalceria_password_reset_from_map") === "true"
+                );
+                if (returnUrl === "/map" && isFromMapReset) {
                   try {
                     localStorage.removeItem("kalceria_auth_return");
-                    localStorage.setItem("kalceria_skip_map_intro", "true");
-                    localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 5 * 60 * 1000));
-                    sessionStorage.setItem("kalceria_skip_map_intro", "true");
+                    sessionStorage.setItem("kalceria_password_reset_from_map", "true");
                   } catch {}
-                  window.location.href = "/map?skip_intro=true";
+                  window.location.href = "/map?from=password_reset";
                   return;
                 }
+                try {
+                  localStorage.removeItem("kalceria_auth_return");
+                } catch {}
                 setPhase("landing");
                 if (typeof window !== "undefined") {
                   window.scrollTo({ top: 0, behavior: "smooth" });

@@ -62,9 +62,8 @@ function ResetPasswordContent() {
       if (isFromMap) {
         try {
           localStorage.setItem("kalceria_auth_return", "/map");
-          localStorage.setItem("kalceria_skip_map_intro", "true");
-          localStorage.setItem("kalceria_skip_map_intro_until", String(Date.now() + 30 * 60 * 1000));
-          sessionStorage.setItem("kalceria_skip_map_intro", "true");
+          localStorage.setItem("kalceria_password_reset_from_map", "true");
+          sessionStorage.setItem("kalceria_password_reset_from_map", "true");
         } catch {}
       }
 
