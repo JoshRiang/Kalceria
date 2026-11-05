@@ -280,6 +280,8 @@ export function EventFormModal({
               isVerified={isLocationVerified}
               setIsVerified={setIsLocationVerified}
               required={false}
+              isModalDark={isModalDark}
+              label="Deployment Area"
             />
           </div>
 

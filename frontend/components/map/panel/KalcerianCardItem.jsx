@@ -168,7 +168,7 @@ export function KalcerianCardItem({
                           : "bg-white ring-1 ring-white"
                       }`}
                     >
-                      <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]" fill="#000000">
+                      <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]" fill="#ef4444">
                         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                       </svg>
                     </span>
@@ -186,14 +186,14 @@ export function KalcerianCardItem({
                       <svg viewBox="0 0 24 24" className="w-[11px] h-[11px] overflow-visible">
                         <path
                           d="M 3 8.5 h 4 l 5.2 -4.5 v 16 l -5.2 -4.5 h -4 a 1 1 0 0 1 -1 -1 v -5 a 1 1 0 0 1 1 -1 z"
-                          fill={isMapDark ? "#ffffff" : "#000000"}
+                          fill="#ef4444"
                         />
                         <line
                           x1="15.5"
                           y1="8.5"
                           x2="21.5"
                           y2="15.5"
-                          stroke="#000000"
+                          stroke="#ef4444"
                           strokeWidth="3.2"
                           strokeLinecap="round"
                         />
@@ -202,7 +202,7 @@ export function KalcerianCardItem({
                           y1="8.5"
                           x2="15.5"
                           y2="15.5"
-                          stroke="#000000"
+                          stroke="#ef4444"
                           strokeWidth="3.2"
                           strokeLinecap="round"
                         />
@@ -295,9 +295,8 @@ export function KalcerianCardItem({
                         <div className="filter grayscale opacity-45 flex items-center justify-center scale-90">
                           <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
                         </div>
-                        <svg viewBox="0 0 24 24" className="absolute inset-0 w-6 h-6 pointer-events-none overflow-visible drop-shadow">
-                          <circle cx="12" cy="12" r="8.5" fill="none" stroke="#ef4444" strokeWidth="2.2" />
-                          <line x1="6" y1="6" x2="18" y2="18" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
+                        <svg viewBox="0 0 24 24" className="absolute inset-0 w-6 h-6 pointer-events-none overflow-visible">
+                          <line x1="4.5" y1="4.5" x2="19.5" y2="19.5" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" />
                         </svg>
                       </button>
                     ) : hasPendingRequests ? (

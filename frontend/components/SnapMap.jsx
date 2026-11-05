@@ -76,7 +76,62 @@ export default function SnapMap({
   const eventsLayerRef = useRef(null);
   const tileLayerRef = useRef(null);
   const markerRefs = useRef({});
+  const idleTimerRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
+
+  // Smooth idle auto-collapse timer for multi-open event popups
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+    idleTimerRef.current = setTimeout(() => {
+      const activeEventPopups = document.querySelectorAll(".event-tactical-popup");
+      if (!activeEventPopups.length) return;
+      activeEventPopups.forEach((el) => {
+        el.classList.add("popup-shrinking");
+      });
+      setTimeout(() => {
+        if (!markerRefs.current) return;
+        Object.keys(markerRefs.current).forEach((key) => {
+          if (key.startsWith("event_")) {
+            const m = markerRefs.current[key];
+            if (m?.isPopupOpen && m.isPopupOpen()) {
+              m.closePopup();
+            }
+          }
+        });
+        activeEventPopups.forEach((el) => {
+          el.classList.remove("popup-shrinking");
+        });
+      }, 380);
+    }, 12000);
+  }, []);
+
+  // Listen for user interaction to reset idle auto-collapse timer
+  useEffect(() => {
+    const handleActivity = () => {
+      const openPopups = document.querySelectorAll(".event-tactical-popup");
+      if (openPopups.length > 0) {
+        resetIdleTimer();
+      }
+    };
+
+    window.addEventListener("mousemove", handleActivity, { passive: true });
+    window.addEventListener("pointerdown", handleActivity, { passive: true });
+    window.addEventListener("touchstart", handleActivity, { passive: true });
+    window.addEventListener("keydown", handleActivity, { passive: true });
+    window.addEventListener("wheel", handleActivity, { passive: true });
+
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("pointerdown", handleActivity);
+      window.removeEventListener("touchstart", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("wheel", handleActivity);
+    };
+  }, [resetIdleTimer]);
 
   // Live 1-second ticker for all open event popups (data-event-uptime)
   useEffect(() => {
@@ -247,11 +302,12 @@ export default function SnapMap({
         attributionControl: false,
         center: DEFAULT_CENTER,
         zoom: 14,
-        closePopupOnClick: true,
+        closePopupOnClick: false,
       });
 
-      map.on("popupopen", () => {
+      map.on("popupopen", (e) => {
         tickAllEventUptimeElements();
+        resetIdleTimer();
       });
 
       // Standard OpenStreetMap tiles - matching Picture 3 and late October commits
@@ -386,6 +442,10 @@ export default function SnapMap({
           unreadGroupChatCount
         );
         const newSig = stripDynamicUptime(newPopupContent);
+        if (marker.getPopup()) {
+          marker.getPopup().options.autoClose = false;
+          marker.getPopup().options.closeOnClick = false;
+        }
         if (marker._lastPopupSig !== newSig) {
           marker.getPopup().setContent(newPopupContent);
           marker._lastPopupContent = newPopupContent;
@@ -406,9 +466,10 @@ export default function SnapMap({
           icon: createEventIcon(L, item, isMapDark, hasEventNotif),
           userData: { color: "#ff006e" },
         }).bindPopup(newPopupContent, {
-          className: "tactical-popup",
+          className: "tactical-popup event-tactical-popup",
           offset: [0, -34],
-          autoClose: true,
+          autoClose: false,
+          closeOnClick: false,
           closeButton: false,
         });
         marker._lastPopupContent = newPopupContent;

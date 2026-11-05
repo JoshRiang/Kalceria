@@ -192,14 +192,16 @@ export function usePersonalChatState({
   const [mediaError, setMediaError] = useState("");
 
   // Voice Note Recording Hook (Safe AudioContext + AnalyserNode + MediaRecorder)
+  const voiceRecorderRef = useRef(null);
+
   const handlePermissionNeeded = useCallback((type) => {
     setPermissionModal({
       isOpen: true,
       type,
       onGrant: async () => {
         setPermissionModal((prev) => ({ ...prev, isOpen: false }));
-        if (type === "mic") {
-          await voiceRecorder.startRecording();
+        if (type === "mic" && voiceRecorderRef.current) {
+          await voiceRecorderRef.current.startRecording();
         }
       },
       onCancel: () => setPermissionModal((prev) => ({ ...prev, isOpen: false })),
@@ -210,6 +212,7 @@ export function usePersonalChatState({
   const voiceRecorder = useVoiceRecorder({
     onPermissionNeeded: handlePermissionNeeded,
   });
+  voiceRecorderRef.current = voiceRecorder;
 
   const [playingVoiceId, setPlayingVoiceId] = useState(null);
 

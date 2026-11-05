@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Component } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { KalcerianCardItem } from "./panel/KalcerianCardItem";
 import { PersonalChatPanel } from "./chat/PersonalChatPanel";
@@ -14,6 +14,59 @@ import {
   getEventPendingRequests,
 } from "./hooks/useMapChatAndNotifications";
 import { resolvePersistentAvatarUrl } from "@/lib/profileIdentity";
+
+class ChatErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("PersonalChat error caught by boundary:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div
+          className={`fixed z-[1005] left-4 bottom-4 w-[340px] sm:w-[360px] p-4 rounded-2xl flex flex-col gap-3 shadow-2xl border ${
+            this.props.isMapDark
+              ? "bg-[#111b21] border-white/20 text-white"
+              : "bg-white border-black text-black"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-sm">Personal Chat</span>
+            <button
+              type="button"
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                this.props.onCloseChat?.();
+              }}
+              className="text-xs px-2.5 py-1 rounded-md bg-[#ef4444] text-white font-medium cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+          <p className="text-xs opacity-75">
+            Unable to load conversation. Please try reloading the chat.
+          </p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className={`w-full py-2 rounded-lg text-xs font-semibold cursor-pointer ${
+              this.props.isMapDark ? "bg-white text-black" : "bg-black text-white"
+            }`}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const avatarUrl = (user) => resolvePersistentAvatarUrl(user);
 
@@ -331,23 +384,32 @@ export function KalceriansPanel({
     <>
       <AnimatePresence>
         {activeChatUser && (
-          <PersonalChatPanel
-            key={`chat-panel-${activeChatUser.id}`}
-            activeChatUser={activeChatUser}
-            currentUser={currentUser}
+          <ChatErrorBoundary
+            key={`chat-boundary-${activeChatUser.id}`}
             isMapDark={isMapDark}
-            avatarUrl={avatarUrl}
-            isFavourite={favouriteUserIds.includes(String(activeChatUser.id))}
-            isMuted={mutedUserIds.includes(String(activeChatUser.id))}
-            initialCallState={incomingCallInitialState}
-            onToggleFavourite={onToggleFavourite}
-            onToggleMute={onToggleMute}
             onCloseChat={() => {
               setIncomingCallInitialState(null);
               handleClosePersonalChat();
             }}
-            onOutgoingMessageUpdate={onOutgoingMessageUpdate}
-          />
+          >
+            <PersonalChatPanel
+              key={`chat-panel-${activeChatUser.id}`}
+              activeChatUser={activeChatUser}
+              currentUser={currentUser}
+              isMapDark={isMapDark}
+              avatarUrl={avatarUrl}
+              isFavourite={favouriteUserIds.includes(String(activeChatUser.id))}
+              isMuted={mutedUserIds.includes(String(activeChatUser.id))}
+              initialCallState={incomingCallInitialState}
+              onToggleFavourite={onToggleFavourite}
+              onToggleMute={onToggleMute}
+              onCloseChat={() => {
+                setIncomingCallInitialState(null);
+                handleClosePersonalChat();
+              }}
+              onOutgoingMessageUpdate={onOutgoingMessageUpdate}
+            />
+          </ChatErrorBoundary>
         )}
       </AnimatePresence>
 

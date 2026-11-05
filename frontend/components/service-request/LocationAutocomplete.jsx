@@ -9,7 +9,9 @@ export function LocationAutocomplete({
   setIsVerified, 
   required = true,
   onDetectStart,
-  onDetectEnd 
+  onDetectEnd,
+  isModalDark,
+  label = "Deployment Area",
 }) {
   const [query, setQuery] = useState(value || "");
   const [suggestions, setSuggestions] = useState([]);
@@ -128,8 +130,14 @@ export function LocationAutocomplete({
   return (
     <div ref={containerRef} className="flex flex-col mb-4 relative z-30">
       <div className="flex items-center justify-between mb-1.5">
-        <label className="font-sans text-xs font-bold text-white tracking-wide">
-          Deployment Area
+        <label
+          className={`font-sans tracking-wide ${
+            isModalDark !== undefined
+              ? `text-[11px] sm:text-xs font-semibold ${isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"}`
+              : "text-xs font-bold text-white"
+          }`}
+        >
+          {label}
         </label>
 
         {/* GPS Detect Button: Borderless, No Emoji, Scales slightly on hover/active */}
@@ -137,7 +145,13 @@ export function LocationAutocomplete({
           type="button"
           onClick={handleDetectCurrentLocation}
           disabled={isDetecting}
-          className="text-xs font-sans font-medium text-white/70 hover:text-white bg-transparent border-none p-0 cursor-pointer transition-transform duration-200 hover:scale-105 active:scale-95 focus:outline-none select-none"
+          className={`text-xs font-sans font-medium bg-transparent border-none p-0 cursor-pointer transition-transform duration-200 hover:scale-105 active:scale-95 focus:outline-none select-none ${
+            isModalDark !== undefined
+              ? isModalDark
+                ? "text-[#8b949e] hover:text-[#58a6ff]"
+                : "text-[#57606a] hover:text-[#0969da]"
+              : "text-white/70 hover:text-white"
+          }`}
           title="Detect Current Indonesian Location via GPS"
         >
           {isDetecting ? (
@@ -158,13 +172,25 @@ export function LocationAutocomplete({
           onFocus={() => {
             if (suggestions.length > 0) setIsOpen(true);
           }}
-          className={`w-full bg-black/60 border rounded-xl px-4 py-3 font-sans text-xs sm:text-sm text-white font-medium outline-none transition-all duration-300 placeholder:text-white/30 pr-10 ${
-            isVerified
-              ? "border-emerald-500/50 focus:border-emerald-400 ring-1 ring-emerald-500/30"
-              : query.trim().length > 0
-              ? "border-[#c2850c] focus:border-[#d99b1a]"
-              : "border-white/20 focus:border-white focus:ring-1 focus:ring-white/50"
-          }`}
+          className={
+            isModalDark !== undefined
+              ? `w-full border rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm font-sans font-medium outline-none transition-all pr-10 ${
+                  isModalDark
+                    ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
+                    : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
+                } ${
+                  isVerified
+                    ? "border-emerald-500/50 focus:border-emerald-400 ring-1 ring-emerald-500/30"
+                    : ""
+                }`
+              : `w-full bg-black/60 border rounded-xl px-4 py-3 font-sans text-xs sm:text-sm text-white font-medium outline-none transition-all duration-300 placeholder:text-white/30 pr-10 ${
+                  isVerified
+                    ? "border-emerald-500/50 focus:border-emerald-400 ring-1 ring-emerald-500/30"
+                    : query.trim().length > 0
+                    ? "border-[#c2850c] focus:border-[#d99b1a]"
+                    : "border-white/20 focus:border-white focus:ring-1 focus:ring-white/50"
+                }`
+          }
           required={required}
           autoComplete="off"
         />
@@ -191,8 +217,20 @@ export function LocationAutocomplete({
 
       {/* Autocomplete Dropdown Menu */}
       {isOpen && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-neutral-300 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-[9999] custom-scrollbar divide-y divide-neutral-200">
-          <div className="px-3.5 py-2 font-sans font-bold text-xs text-neutral-800 border-b border-neutral-200 bg-white">
+        <div
+          className={`absolute top-full left-0 right-0 mt-1.5 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-[9999] custom-scrollbar border divide-y ${
+            isModalDark !== undefined && isModalDark
+              ? "bg-[#0d1117] border-[#30363d] divide-[#30363d] text-white"
+              : "bg-white border-neutral-300 divide-neutral-200 text-black"
+          }`}
+        >
+          <div
+            className={`px-3.5 py-2 font-sans font-bold text-xs border-b ${
+              isModalDark !== undefined && isModalDark
+                ? "bg-[#161b22] border-[#30363d] text-white"
+                : "bg-white border-neutral-200 text-neutral-800"
+            }`}
+          >
             Verified List
           </div>
           {suggestions.map((item) => (
@@ -200,18 +238,22 @@ export function LocationAutocomplete({
               key={item.id}
               type="button"
               onClick={() => handleSelectSuggestion(item)}
-              className="w-full text-left px-3.5 py-2.5 bg-white hover:bg-neutral-100 transition-colors flex items-start cursor-pointer group"
+              className={`w-full text-left px-3.5 py-2.5 transition-colors flex items-start cursor-pointer group ${
+                isModalDark !== undefined && isModalDark
+                  ? "bg-[#0d1117] hover:bg-[#161b22] text-white"
+                  : "bg-white hover:bg-neutral-100 text-black"
+              }`}
             >
               <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-black font-sans font-normal text-xs sm:text-sm truncate">
+                <span className={`font-sans font-normal text-xs sm:text-sm truncate ${isModalDark !== undefined && isModalDark ? "text-white" : "text-black"}`}>
                   {item.headline || item.road || item.formatted}
                 </span>
                 {item.subtitle ? (
-                  <span className="text-black/70 font-sans font-normal text-[10px] sm:text-[11px] truncate mt-0.5">
+                  <span className={`font-sans font-normal text-[10px] sm:text-[11px] truncate mt-0.5 ${isModalDark !== undefined && isModalDark ? "text-white/70" : "text-black/70"}`}>
                     {item.subtitle}
                   </span>
                 ) : (
-                  <span className="text-black/70 font-sans font-normal text-[10px] sm:text-[11px] truncate mt-0.5">
+                  <span className={`font-sans font-normal text-[10px] sm:text-[11px] truncate mt-0.5 ${isModalDark !== undefined && isModalDark ? "text-white/70" : "text-black/70"}`}>
                     {[item.city, item.province].filter(Boolean).join(", ")}
                   </span>
                 )}

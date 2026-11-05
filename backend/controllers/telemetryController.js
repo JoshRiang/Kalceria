@@ -109,36 +109,8 @@ export async function getMapUsers(req, res, next) {
     });
 
     const enriched = await ensurePersistentUserProfilesBatch(rawEnriched);
-    const mockMapUsers = [
-      {
-        id: "mock_1",
-        name: "Ahmad Bintaro",
-        nickname: "Ahmad",
-        profilePicture: null,
-        socialPlatform: "IG",
-        socialLink: "ahmadbintaro",
-        district: "Bintaro",
-        lat: -6.2730,
-        lng: 106.7140,
-        broadcast: { message: "Riding around Sector 9!", createdAt: new Date(), expiresAt: new Date(now.getTime() + 86400000) }
-      },
-      {
-        id: "mock_2",
-        name: "Kalcerian Alpha",
-        nickname: "Alpha",
-        profilePicture: null,
-        socialPlatform: "WA",
-        socialLink: null,
-        district: "Pondok Indah",
-        lat: -6.2800,
-        lng: 106.7200,
-        broadcast: null
-      }
-    ];
-
-    const response = { users: [...enriched, ...mockMapUsers] };
+    const response = { users: enriched };
     await redis.set(globalCacheKey, JSON.stringify(response), "EX", 5);
-
 
     res.json(response);
   } catch (err) {
