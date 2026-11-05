@@ -58,25 +58,53 @@ export async function acquireCameraStream(customVideoConstraints = {}, includeAu
     throw new Error("HARDWARE_NOT_SUPPORTED");
   }
 
-  const constraints = {
+  const baseAudio = includeAudio
+    ? {
+        echoCancellation: true,
+        noiseSuppression: true,
+      }
+    : false;
+
+  const constraintsWithFacing = {
     video: {
       facingMode: "user",
       width: { ideal: 640 },
       height: { ideal: 480 },
       ...customVideoConstraints,
     },
-    audio: includeAudio
-      ? {
-          echoCancellation: true,
-          noiseSuppression: true,
-        }
-      : false,
+    audio: baseAudio,
   };
 
   try {
-    return await navigator.mediaDevices.getUserMedia(constraints);
+    return await navigator.mediaDevices.getUserMedia(constraintsWithFacing);
   } catch (err) {
-    throw translateMediaHardwareError(err, "camera");
+    // Desktop / Laptop Fallback: many USB or integrated webcams fail on facingMode: "user".
+    // Try relaxed video constraints without facingMode.
+    try {
+      const relaxedConstraints = {
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          ...customVideoConstraints,
+        },
+        audio: baseAudio,
+      };
+      // delete facingMode if present to prevent driver rejection
+      if (relaxedConstraints.video && typeof relaxedConstraints.video === "object") {
+        delete relaxedConstraints.video.facingMode;
+      }
+      return await navigator.mediaDevices.getUserMedia(relaxedConstraints);
+    } catch (fallbackErr) {
+      // Final attempt: plain video: true, audio: true
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: baseAudio,
+        });
+      } catch (finalErr) {
+        throw translateMediaHardwareError(finalErr, "camera");
+      }
+    }
   }
 }
 

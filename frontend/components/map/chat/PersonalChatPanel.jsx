@@ -65,6 +65,7 @@ export function PersonalChatPanel({
     setPlayingVoiceId,
     callState,
     setCallState,
+    handleCallFinished,
     isPeerTyping,
     messagesEndRef,
     menuContainerRef,
@@ -116,7 +117,7 @@ export function PersonalChatPanel({
               onSwitchMode={(nextMode) =>
                 setCallState((prev) => (prev ? { ...prev, mode: nextMode } : null))
               }
-              onEndCall={() => setCallState(null)}
+              onEndCall={(summary) => handleCallFinished(summary)}
               onPermissionNeeded={(type) =>
                 setPermissionModal({
                   isOpen: true,
@@ -246,17 +247,17 @@ export function PersonalChatPanel({
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Emoji Picker Popover (Desktop anchored to right side of chat box, Mobile above composer) */}
-        <EmojiPickerPopover
-          isOpen={showEmojiBar}
-          onClose={() => setShowEmojiBar(false)}
-          onSelectEmoji={(char) => {
-            setInputText((prev) => (prev || "") + char);
-          }}
-          isMapDark={isMapDark}
-        />
       </motion.aside>
+
+      {/* Emoji Picker Popover: Placed outside overflow-hidden aside to prevent desktop clipping */}
+      <EmojiPickerPopover
+        isOpen={showEmojiBar}
+        onClose={() => setShowEmojiBar(false)}
+        onSelectEmoji={(char) => {
+          setInputText((prev) => (prev || "") + char);
+        }}
+        isMapDark={isMapDark}
+      />
 
       {/* Camera Capture Modal (Hardware Viewfinder & Photo/Video Max 1 Min) */}
       <CameraCaptureModal

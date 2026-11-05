@@ -136,10 +136,17 @@ export function usePersonalCallState({
           stream = await acquireMicrophoneStream();
         }
       } catch (hardwareErr) {
+        stopCallRingtone();
         if (cancelled) return;
         if (hardwareErr.code === "PERMISSION_DENIED" && onPermissionNeeded) {
           onPermissionNeeded(mode === "video" ? "camera" : "mic");
+          return;
         }
+        // Device not found, busy, or denied: immediately cancel call & abort stuck state
+        setStatus("ended");
+        teardownCall();
+        onEndCall?.({ mode, seconds: 0 });
+        return;
       }
 
       if (cancelled) {
@@ -255,8 +262,11 @@ export function usePersonalCallState({
             if (sig.signalType === "hangup") {
               stopCallRingtone();
               setStatus("ended");
-              teardownCall();
-              onEndCall?.();
+              const callDuration = seconds;
+              setTimeout(() => {
+                teardownCall();
+                onEndCall?.({ mode, seconds: callDuration });
+              }, 700);
               return;
             }
 
@@ -316,7 +326,19 @@ export function usePersonalCallState({
     }
   }, [isCamOff]);
 
+  // Reactive binding: ensure local video element plays stream as soon as video element mounts
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current && mode === "video" && !isCamOff) {
+      if (localVideoRef.current.srcObject !== localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+        localVideoRef.current.play?.().catch(() => {});
+      }
+    }
+  }, [hasLocalStream, isCamOff, mode]);
+
   const handleHangup = useCallback(() => {
+    stopCallRingtone();
+    setStatus("ended");
     if (targetUser?.id) {
       postCallSignal(targetUser.id, {
         callId: activeCallIdRef.current,
@@ -325,9 +347,12 @@ export function usePersonalCallState({
         nonce: generateCryptoNonce(),
       }).catch(() => {});
     }
-    teardownCall();
-    onEndCall?.();
-  }, [targetUser, mode, teardownCall, onEndCall]);
+    const finalSeconds = seconds;
+    setTimeout(() => {
+      teardownCall();
+      onEndCall?.({ mode, seconds: finalSeconds });
+    }, 750);
+  }, [targetUser, mode, seconds, teardownCall, onEndCall]);
 
   return {
     targetUser,

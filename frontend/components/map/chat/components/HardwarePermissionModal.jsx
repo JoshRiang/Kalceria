@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { stopCallRingtone } from "@/lib/soundEngine";
 
 export function HardwarePermissionModal({
   isOpen,
@@ -11,11 +13,30 @@ export function HardwarePermissionModal({
   onCancel,
   errorMessage = null,
 }) {
+  const [choice, setChoice] = useState(null); // "batal" | "izinkan"
+
   if (!isOpen) return null;
 
   const isCam = type === "camera" || type === "camera_mic";
   const imageSrc = isCam ? "/ForChat/Josh_AllowCamera.png" : "/ForChat/Josh_AllowMic.png";
   const hardwareWord = isCam ? "Camera" : "Microphone";
+
+  const handleBatalClick = () => {
+    setChoice("batal");
+    stopCallRingtone();
+    setTimeout(() => {
+      setChoice(null);
+      onCancel?.();
+    }, 160);
+  };
+
+  const handleGrantClick = () => {
+    setChoice("izinkan");
+    setTimeout(() => {
+      setChoice(null);
+      onGrant?.();
+    }, 180);
+  };
 
   return (
     <AnimatePresence>
@@ -29,7 +50,7 @@ export function HardwarePermissionModal({
           className={`absolute inset-0 backdrop-blur-md transition-colors duration-300 ${
             isMapDark ? "bg-black/55" : "bg-black/35"
           }`}
-          onClick={onCancel}
+          onClick={handleBatalClick}
         />
 
         {/* Middle Center Floating Container */}
@@ -40,7 +61,7 @@ export function HardwarePermissionModal({
           transition={{ duration: 0.25, ease: "easeOut" }}
           className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none max-w-[420px] w-full"
         >
-          {/* Josh Mascot Floating Static Animation ("very tipis tipis") */}
+          {/* Josh Mascot Floating Static Animation */}
           <motion.div
             animate={{ y: [0, -4, 0] }}
             transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
@@ -58,7 +79,7 @@ export function HardwarePermissionModal({
 
           {/* Title: Same font of 'Quit the map' but smaller 18%, not all-caps, not bold except the red hardware name */}
           <h3
-            className={`font-sans tracking-tight text-xl sm:text-2xl md:text-3xl font-normal mb-6 text-center ${
+            className={`font-sans tracking-tight text-xl sm:text-2xl md:text-3xl font-normal mb-8 text-center ${
               isMapDark ? "text-white" : "text-black"
             }`}
             style={{
@@ -71,25 +92,36 @@ export function HardwarePermissionModal({
             <span className="font-bold text-[#ef4444]">{hardwareWord}</span>
           </h3>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-center gap-6 sm:gap-10">
+          {/* Action Buttons: Exact Behavior, Font, and Style matching No/Yes on Quit the map */}
+          <div className="relative z-10 flex items-center justify-center gap-6 sm:gap-10">
+            {/* Batal: Warna Hitam */}
             <button
               type="button"
-              onClick={onCancel}
-              className={`px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold tracking-wide border transition-all cursor-pointer ${
-                isMapDark
-                  ? "border-white/30 text-white hover:bg-white/10"
-                  : "border-black/40 text-black hover:bg-black/5"
-              }`}
+              onClick={handleBatalClick}
+              className="group relative cursor-pointer outline-none rounded-full px-7 py-2.5 bg-black text-white hover:bg-black/85 shadow-lg border border-black/30 transition-all"
             >
-              Batal
+              <motion.span
+                animate={choice === "batal" ? { scale: 1.25 } : {}}
+                transition={{ duration: 0.18 }}
+                className="block font-sans text-base sm:text-lg font-normal transition-all duration-200 group-hover:scale-110 active:scale-95"
+              >
+                Batal
+              </motion.span>
             </button>
+
+            {/* Izinkan Akses: Warna Merah */}
             <button
               type="button"
-              onClick={onGrant}
-              className="px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold tracking-wide bg-[#ef4444] text-white hover:bg-[#dc2626] shadow-lg shadow-[#ef4444]/35 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+              onClick={handleGrantClick}
+              className="group relative cursor-pointer outline-none rounded-full px-7 py-2.5 bg-[#ef4444] text-white hover:bg-[#dc2626] shadow-lg shadow-[#ef4444]/35 transition-all"
             >
-              Izinkan Akses
+              <motion.span
+                animate={choice === "izinkan" ? { scale: 1.25 } : {}}
+                transition={{ duration: 0.18 }}
+                className="block font-sans text-base sm:text-lg font-normal transition-all duration-200 group-hover:scale-110 active:scale-95"
+              >
+                Izinkan Akses
+              </motion.span>
             </button>
           </div>
 

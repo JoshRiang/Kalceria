@@ -2,48 +2,55 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { acquireCameraStream, stopMediaStream } from "@/lib/mediaHardware";
 
 export function CameraCaptureModal({
   isOpen,
   onClose,
-  onSendMedia, // ({ file, url, type, duration })
+  onSendMedia, // ({ url, blob, type, isViewOnce, rotation })
   isMapDark = true,
   onPermissionNeeded,
 }) {
-  const [activeTab, setActiveTab] = useState("camera"); // "camera" | "upload"
   const [facingMode, setFacingMode] = useState("user"); // "user" | "environment"
   const [hasStream, setHasStream] = useState(false);
   const [cameraError, setCameraError] = useState("");
-  const [previewMedia, setPreviewMedia] = useState(null); // { type: "photo" | "video", url, blob, duration }
-  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-  const [recordedVideoSeconds, setRecordedVideoSeconds] = useState(0);
+  const [previewMedia, setPreviewMedia] = useState(null); // { type: "photo", url, blob }
+  const [isViewOnce, setIsViewOnce] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1); // 1 or 2
+  const [canFlipCamera, setCanFlipCamera] = useState(false);
+  const [isSpinningFlip, setIsSpinningFlip] = useState(false);
+  const [photoRotation, setPhotoRotation] = useState(0); // 0, 90, 180, 270
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const recordedChunksRef = useRef([]);
-  const timerRef = useRef(null);
-  const fileInputRef = useRef(null);
+
+  // Hardware Camera Detection: check if multi-camera is supported
+  useEffect(() => {
+    async function checkCameraDevices() {
+      if (typeof navigator !== "undefined" && navigator.mediaDevices?.enumerateDevices) {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoInputs = devices.filter((d) => d.kind === "videoinput");
+          // Multi-camera enabled if >= 2 video input devices
+          setCanFlipCamera(videoInputs.length >= 2);
+        } catch {
+          setCanFlipCamera(false);
+        }
+      } else {
+        setCanFlipCamera(false);
+      }
+    }
+    if (isOpen) {
+      checkCameraDevices();
+    }
+  }, [isOpen]);
 
   const cleanupCamera = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch {}
-      mediaRecorderRef.current = null;
-    }
     if (streamRef.current) {
       stopMediaStream(streamRef.current);
       streamRef.current = null;
     }
     setHasStream(false);
-    setIsRecordingVideo(false);
   }, []);
 
   // Teardown when closing modal
@@ -52,7 +59,9 @@ export function CameraCaptureModal({
       cleanupCamera();
       setPreviewMedia(null);
       setCameraError("");
-      setRecordedVideoSeconds(0);
+      setIsViewOnce(false);
+      setZoomLevel(1);
+      setPhotoRotation(0);
     }
   }, [isOpen, cleanupCamera]);
 
@@ -69,11 +78,12 @@ export function CameraCaptureModal({
     setCameraError("");
 
     try {
-      const stream = await acquireCameraStream({ facingMode: facing }, true);
+      const stream = await acquireCameraStream({ facingMode: facing }, false);
       streamRef.current = stream;
       setHasStream(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play?.().catch(() => {});
       }
     } catch (err) {
       setHasStream(false);
@@ -84,14 +94,24 @@ export function CameraCaptureModal({
     }
   }, [cleanupCamera, onPermissionNeeded]);
 
-  // Re-start camera when activeTab is camera or facingMode changes
+  // Re-start camera when modal opens or facingMode changes
   useEffect(() => {
-    if (isOpen && activeTab === "camera" && !previewMedia) {
+    if (isOpen && !previewMedia) {
       startCamera(facingMode);
     } else {
       cleanupCamera();
     }
-  }, [isOpen, activeTab, facingMode, previewMedia, startCamera, cleanupCamera]);
+  }, [isOpen, facingMode, previewMedia, startCamera, cleanupCamera]);
+
+  // Ensure video element receives stream when ready
+  useEffect(() => {
+    if (hasStream && streamRef.current && videoRef.current && !previewMedia) {
+      if (videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play?.().catch(() => {});
+      }
+    }
+  }, [hasStream, previewMedia]);
 
   // Take Snapshot Photo
   const handleTakePhoto = () => {
@@ -100,16 +120,28 @@ export function CameraCaptureModal({
 
     try {
       const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
+      const vWidth = video.videoWidth || 640;
+      const vHeight = video.videoHeight || 480;
+      canvas.width = vWidth;
+      canvas.height = vHeight;
       const ctx = canvas.getContext("2d");
 
-      // Mirror if user front camera
+      // Handle front camera mirror
       if (facingMode === "user") {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Handle digital zoom crop if 2x
+      if (zoomLevel === 2) {
+        const cropW = vWidth / 1.5;
+        const cropH = vHeight / 1.5;
+        const cropX = (vWidth - cropW) / 2;
+        const cropY = (vHeight - cropH) / 2;
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, vWidth, vHeight);
+      } else {
+        ctx.drawImage(video, 0, 0, vWidth, vHeight);
+      }
 
       canvas.toBlob(
         (blob) => {
@@ -119,132 +151,40 @@ export function CameraCaptureModal({
             type: "photo",
             url,
             blob,
-            duration: null,
           });
+          setPhotoRotation(0);
           cleanupCamera();
         },
         "image/jpeg",
-        0.9
+        0.92
       );
-    } catch (err) {
+    } catch {
       setCameraError("Gagal mengambil foto.");
     }
   };
 
-  // Record Video (Strictly Max 60 Seconds / 1 Minute)
-  const handleStartRecordVideo = () => {
-    if (!streamRef.current || !hasStream) return;
-
-    recordedChunksRef.current = [];
-    setRecordedVideoSeconds(0);
-    setIsRecordingVideo(true);
-
-    const preferredMimes = ["video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
-    let selectedMime = "";
-    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported) {
-      selectedMime = preferredMimes.find((m) => MediaRecorder.isTypeSupported(m)) || "";
-    }
-
-    const recorder = new MediaRecorder(streamRef.current, selectedMime ? { mimeType: selectedMime } : {});
-    mediaRecorderRef.current = recorder;
-
-    recorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) {
-        recordedChunksRef.current.push(e.data);
-      }
-    };
-
-    recorder.onstop = () => {
-      const mime = recorder.mimeType || selectedMime || "video/webm";
-      const blob = new Blob(recordedChunksRef.current, { type: mime });
-      const url = URL.createObjectURL(blob);
-      setPreviewMedia({
-        type: "video",
-        url,
-        blob,
-        duration: Math.min(60, Math.max(1, recordedVideoSeconds)),
-      });
-      cleanupCamera();
-    };
-
-    recorder.start(250);
-
-    let sec = 0;
-    timerRef.current = setInterval(() => {
-      sec += 1;
-      setRecordedVideoSeconds(sec);
-      // Strictly enforce maximum 1 minute (60 seconds) video limit
-      if (sec >= 60) {
-        handleStopRecordVideo();
-      }
-    }, 1000);
+  const handleFlipCamera = () => {
+    if (!canFlipCamera) return;
+    setIsSpinningFlip(true);
+    setTimeout(() => setIsSpinningFlip(false), 360);
+    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
   };
 
-  const handleStopRecordVideo = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch {}
-    }
-    setIsRecordingVideo(false);
+  const handleToggleZoom = () => {
+    setZoomLevel((z) => (z === 1 ? 2 : 1));
   };
 
-  // File Upload Handler (Strictly verifies video <= 60 seconds)
-  const handleFilePicked = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setCameraError("");
-
-    if (file.size > 15 * 1024 * 1024) {
-      setCameraError("Ukuran file melebihi 15 MB.");
-      return;
-    }
-
-    const isVideo = file.type.startsWith("video/") || /\.(mp4|webm)$/i.test(file.name);
-
-    if (isVideo) {
-      const videoEl = document.createElement("video");
-      videoEl.preload = "metadata";
-      const objectUrl = URL.createObjectURL(file);
-
-      videoEl.onloadedmetadata = () => {
-        window.URL.revokeObjectURL(videoEl.src);
-        if (videoEl.duration > 60) {
-          setCameraError("Durasi video melebihi batas 1 menit (maksimal 60 detik).");
-          return;
-        }
-        setPreviewMedia({
-          type: "video",
-          url: objectUrl,
-          blob: file,
-          duration: Math.round(videoEl.duration),
-        });
-      };
-
-      videoEl.onerror = () => {
-        setCameraError("Gagal membaca format video.");
-      };
-
-      videoEl.src = objectUrl;
-    } else {
-      // Photo
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewMedia({
-        type: "photo",
-        url: objectUrl,
-        blob: file,
-        duration: null,
-      });
-    }
+  const handleRotatePhoto = () => {
+    setPhotoRotation((r) => (r + 90) % 360);
   };
 
   const handleConfirmSend = () => {
     if (!previewMedia) return;
-    onSendMedia?.(previewMedia);
+    onSendMedia?.({
+      ...previewMedia,
+      isViewOnce,
+      rotation: photoRotation,
+    });
     onClose();
   };
 
@@ -255,11 +195,9 @@ export function CameraCaptureModal({
       } catch {}
     }
     setPreviewMedia(null);
+    setPhotoRotation(0);
     setCameraError("");
-    setRecordedVideoSeconds(0);
-    if (activeTab === "camera") {
-      startCamera(facingMode);
-    }
+    startCamera(facingMode);
   };
 
   if (!isOpen) return null;
@@ -268,211 +206,220 @@ export function CameraCaptureModal({
     <AnimatePresence>
       <div className="fixed inset-0 z-[1050] flex items-center justify-center p-3 bg-black/75 backdrop-blur-sm select-none">
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 15 }}
-          className={`relative w-full max-w-[360px] rounded-2xl p-4 border flex flex-col overflow-hidden shadow-2xl ${
-            isMapDark
-              ? "bg-[#161b22] border-white/20 text-[#f0f6fc]"
-              : "bg-white border-black text-[#1f2328]"
-          }`}
+          initial={{ opacity: 0, scale: 0.94 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.94 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          /* Popout is directly a borderless box with no decorations */
+          className="relative w-full max-w-[340px] sm:max-w-[360px] aspect-[3/4] rounded-2xl overflow-hidden bg-black shadow-2xl flex flex-col justify-between select-none"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-current/10">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#ff006e]" />
-              <h3 className="text-sm font-bold tracking-tight">Kamera & Media</h3>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 rounded-full hover:bg-current/10 cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
+          {/* Top Subtle Close Button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-black/45 hover:bg-black/70 text-white backdrop-blur flex items-center justify-center text-xs cursor-pointer transition-all active:scale-90"
+            title="Tutup Kamera"
+          >
+            ✕
+          </button>
 
-          {/* Mode Switch Tabs */}
-          {!previewMedia && (
-            <div className="flex items-center justify-center gap-1 my-2.5 p-1 rounded-xl bg-black/10 border border-current/10">
-              <button
-                type="button"
-                onClick={() => setActiveTab("camera")}
-                className={`flex-1 py-1 px-2 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  activeTab === "camera"
-                    ? "bg-[#ff006e] text-white"
-                    : "opacity-75 hover:opacity-100"
-                }`}
-              >
-                Kamera Langsung
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab("upload");
-                  fileInputRef.current?.click();
-                }}
-                className={`flex-1 py-1 px-2 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                  activeTab === "upload"
-                    ? "bg-[#ff006e] text-white"
-                    : "opacity-75 hover:opacity-100"
-                }`}
-              >
-                Pilih File (Max 1 Menit)
-              </button>
-            </div>
-          )}
-
-          {/* Hidden File Input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
-            className="hidden"
-            onChange={handleFilePicked}
-          />
-
-          {/* Error Banner */}
+          {/* Optional Camera Error Alert */}
           {cameraError && (
             <div
-              style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-              className="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-[11px] leading-tight"
+              style={{ fontFamily: "Arial, sans-serif" }}
+              className="absolute top-12 left-3 right-3 z-30 p-2 rounded-lg bg-red-600/90 text-white text-[11px] leading-tight text-center shadow"
             >
               {cameraError}
             </div>
           )}
 
-          {/* Main Stage: Live Camera or Preview */}
-          <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-black/90 flex items-center justify-center border border-current/10">
+          {/* MAIN VIEWPORT: Live Viewfinder or Captured Photo Preview */}
+          <div className="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
             {previewMedia ? (
-              previewMedia.type === "video" ? (
-                <video
-                  src={previewMedia.url}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
+              // Clean photo preview box while editing
+              <div
+                style={{
+                  transform: `rotate(${photoRotation}deg)`,
+                  transition: "transform 0.25s ease-out",
+                }}
+                className="w-full h-full flex items-center justify-center"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={previewMedia.url}
-                  alt="Captured preview"
-                  className="w-full h-full object-contain"
+                  alt="Captured"
+                  className="w-full h-full object-cover"
                 />
-              )
-            ) : activeTab === "camera" ? (
-              hasStream ? (
-                <>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className={`w-full h-full object-cover ${
-                      facingMode === "user" ? "-scale-x-100" : ""
-                    }`}
-                  />
-                  {isRecordingVideo && (
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600/90 text-white text-[11px] font-mono font-bold shadow">
-                      <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                      REC 0:{String(recordedVideoSeconds).padStart(2, "0")} / 1:00
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center p-4 text-center">
-                  <Image
-                    src="/ForChat/Josh_AllowCamera.png"
-                    alt="Camera permission"
-                    width={90}
-                    height={90}
-                    className="opacity-80 mb-2"
-                  />
-                  <p className="text-xs text-white/80">Memuat akses kamera...</p>
-                </div>
-              )
+              </div>
+            ) : hasStream ? (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{
+                  transform: `${facingMode === "user" ? "scaleX(-1)" : "scaleX(1)"} ${
+                    zoomLevel === 2 ? "scale(1.4)" : "scale(1)"
+                  }`,
+                  transition: "transform 0.25s ease-out",
+                }}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="flex flex-col items-center justify-center p-4 text-center">
-                <p className="text-xs text-white/80 mb-2">Pilih foto atau video dari galeri</p>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="py-1.5 px-3 rounded-lg text-xs font-bold bg-[#ff006e] text-white cursor-pointer"
-                >
-                  Pilih Media
-                </button>
+                <span className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin mb-3" />
+                <p className="text-xs text-white/75 font-sans">Mempersiapkan kamera...</p>
               </div>
             )}
           </div>
 
-          {/* Controls Bar */}
-          {previewMedia ? (
-            <div className="flex items-center gap-2 mt-3">
-              <button
-                type="button"
-                onClick={handleRetake}
-                className="flex-1 py-2 rounded-xl text-xs font-semibold border border-current/25 hover:bg-current/10 cursor-pointer"
-              >
-                Ulangi
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmSend}
-                className="flex-1 py-2 rounded-xl text-xs font-bold bg-[#ff006e] text-white hover:bg-[#e00060] cursor-pointer shadow"
-              >
-                Kirim {previewMedia.type === "video" ? "Video" : "Foto"}
-              </button>
-            </div>
-          ) : activeTab === "camera" && hasStream ? (
-            <div className="flex items-center justify-between gap-2 mt-3 px-2">
-              {/* Flip camera */}
-              <button
-                type="button"
-                onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
-                title="Ganti Kamera Depan/Belakang"
-                className="p-2 rounded-full border border-current/20 hover:bg-current/10 cursor-pointer text-xs"
-              >
-                🔄
-              </button>
+          {/* TRANSPARENT FOOTER BOX (Mobile camera style gradient fade section) */}
+          <div className="relative z-20 mt-auto w-full bg-gradient-to-t from-black/85 via-black/45 to-transparent pt-10 pb-5 px-5 flex items-center justify-between">
+            {previewMedia ? (
+              /* PHOTO EDIT / PREVIEW FOOTER */
+              <>
+                {/* Retake / Discard */}
+                <button
+                  type="button"
+                  onClick={handleRetake}
+                  className="p-2.5 rounded-full bg-black/40 hover:bg-black/60 text-white text-xs font-semibold backdrop-blur flex items-center gap-1.5 cursor-pointer active:scale-90 transition-all"
+                  title="Ulangi Foto"
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10" />
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                  </svg>
+                  <span className="text-[11px] font-sans">Ulang</span>
+                </button>
 
-              {/* Photo snap */}
-              {!isRecordingVideo ? (
+                {/* Center: Distinct Pencil Icon for Crop / Rotate */}
                 <button
                   type="button"
-                  onClick={handleTakePhoto}
-                  title="Ambil Foto"
-                  className="w-12 h-12 rounded-full border-4 border-[#ff006e] bg-white flex items-center justify-center cursor-pointer transition-transform hover:scale-105 active:scale-95"
+                  onClick={handleRotatePhoto}
+                  className="p-2.5 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur flex items-center justify-center cursor-pointer active:scale-90 transition-all"
+                  title="Rotasi / Crop Foto"
                 >
-                  <span className="w-8 h-8 rounded-full bg-[#ff006e]" />
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
                 </button>
-              ) : null}
 
-              {/* Video Record / Stop */}
-              {isRecordingVideo ? (
+                {/* Right: Confirm Send Button */}
                 <button
                   type="button"
-                  onClick={handleStopRecordVideo}
-                  title="Selesai Rekam (Maks 1 Menit)"
-                  className="py-2 px-4 rounded-full bg-red-600 text-white font-bold text-xs cursor-pointer animate-pulse"
+                  onClick={handleConfirmSend}
+                  className="px-4 py-2 rounded-full bg-white text-black font-sans font-bold text-xs hover:bg-white/90 shadow-lg cursor-pointer active:scale-95 transition-all flex items-center gap-1"
                 >
-                  ■ Stop ({60 - recordedVideoSeconds}s)
+                  <span>Kirim</span>
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
                 </button>
-              ) : (
+              </>
+            ) : (
+              /* LIVE CAMERA SHUTTER FOOTER */
+              <>
+                {/* LEFT: View Once Option (Picture 4) */}
                 <button
                   type="button"
-                  onClick={handleStartRecordVideo}
-                  title="Rekam Video (Maks 1 Menit)"
-                  className="p-2 rounded-full border border-red-500/50 hover:bg-red-500/10 text-red-500 text-xs font-bold cursor-pointer"
+                  onClick={() => setIsViewOnce((v) => !v)}
+                  className={`p-2 rounded-full transition-all flex items-center justify-center cursor-pointer select-none ${
+                    isViewOnce
+                      ? "opacity-100 text-white bg-white/25 drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]"
+                      : "opacity-45 hover:opacity-75 text-white"
+                  }`}
+                  title={isViewOnce ? "Lihat Sekali Aktif" : "Aktifkan Lihat Sekali"}
                 >
-                  🔴 Video (1 min)
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+                    {/* Left solid arc */}
+                    <path d="M 12 3 A 9 9 0 0 0 12 21" strokeLinecap="round" />
+                    {/* Right dashed arc */}
+                    <path d="M 12 3 A 9 9 0 0 1 12 21" strokeDasharray="2 3.5" strokeLinecap="round" />
+                    {/* Number 1 in center */}
+                    <text
+                      x="12"
+                      y="16"
+                      textAnchor="middle"
+                      fill="currentColor"
+                      stroke="none"
+                      fontSize="10"
+                      fontWeight="bold"
+                      fontFamily="sans-serif"
+                    >
+                      1
+                    </text>
+                  </svg>
                 </button>
-              )}
-            </div>
-          ) : null}
+
+                {/* CENTER: White Shutter Button (White Inner Fill + Outer Ring Circle) */}
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleTakePhoto}
+                    title="Ambil Foto"
+                    className="w-14 h-14 rounded-full border-2 border-white flex items-center justify-center p-1 cursor-pointer transition-transform hover:scale-105 active:scale-90 select-none shadow-lg"
+                  >
+                    <span className="w-11 h-11 rounded-full bg-white block" />
+                  </button>
+
+                  {/* BESIDE SHUTTER: Zoom Control (1x / 2x) */}
+                  <button
+                    type="button"
+                    onClick={handleToggleZoom}
+                    title={`Zoom ${zoomLevel === 1 ? "2x" : "1x"}`}
+                    className="w-8 h-8 rounded-full bg-black/60 border border-white/40 text-white text-[11px] font-bold flex items-center justify-center cursor-pointer transition-all hover:bg-black/80 active:scale-95 select-none backdrop-blur-md"
+                  >
+                    {zoomLevel}x
+                  </button>
+                </div>
+
+                {/* RIGHT: Flip Camera Icon with Hardware Detection & Centrifugal Spin (Picture 5) */}
+                <motion.button
+                  type="button"
+                  disabled={!canFlipCamera}
+                  onClick={handleFlipCamera}
+                  animate={isSpinningFlip ? { rotate: 360 } : { rotate: 0 }}
+                  transition={{ duration: 0.36, ease: "easeOut" }}
+                  className={`p-2.5 rounded-full flex items-center justify-center select-none transition-all ${
+                    canFlipCamera
+                      ? "text-white opacity-100 hover:bg-white/10 active:scale-90 cursor-pointer"
+                      : "text-white opacity-25 cursor-not-allowed pointer-events-none"
+                  }`}
+                  title={
+                    canFlipCamera
+                      ? "Ganti Kamera Depan/Belakang"
+                      : "Kamera belakang tidak tersedia pada perangkat ini"
+                  }
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 12a8 8 0 0 1-13.66 5.66L4 15" />
+                    <polyline points="4 20 4 15 9 15" />
+                    <path d="M4 12A8 8 0 0 1 17.66 6.34L20 9" />
+                    <polyline points="20 4 20 9 15 9" />
+                  </svg>
+                </motion.button>
+              </>
+            )}
+          </div>
         </motion.div>
       </div>
     </AnimatePresence>
   );
 }
-

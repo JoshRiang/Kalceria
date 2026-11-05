@@ -377,10 +377,12 @@ export function usePersonalChatState({
       voiceDuration = null,
       voiceWaveform = null,
       videoDuration = null,
+      callMode = null,
+      callDuration = null,
     }) => {
       const ts = Date.now();
       const envelope = await encryptChatPayload(
-        { text, msgType, mediaUrl, voiceDuration, voiceWaveform },
+        { text, msgType, mediaUrl, voiceDuration, voiceWaveform, callMode, callDuration },
         myId,
         targetId
       );
@@ -394,6 +396,8 @@ export function usePersonalChatState({
         mediaUrl,
         voiceDuration,
         voiceWaveform,
+        callMode,
+        callDuration,
         ts,
         status: "read",
         verifiedE2EE: true,
@@ -407,7 +411,14 @@ export function usePersonalChatState({
 
       onOutgoingMessageUpdate?.(
         targetId,
-        text || (msgType === "voice" ? "🎤 Voice note" : "📷 Media"),
+        text ||
+          (msgType === "call"
+            ? callMode === "video"
+              ? "📹 Video call"
+              : "📞 Voice call"
+            : msgType === "voice"
+            ? "🎤 Voice note"
+            : "📷 Media"),
         ts
       );
 
@@ -415,6 +426,8 @@ export function usePersonalChatState({
         ...envelope,
         voiceWaveform,
         videoDuration,
+        callMode,
+        callDuration,
       }).catch(() => { });
 
       // If chatting with dummy user Ahmad Bintaro, simulate realistic E2EE reply
@@ -664,6 +677,21 @@ export function usePersonalChatState({
     return items;
   }, [messages, messageSearchQuery]);
 
+  const handleCallFinished = useCallback(
+    async (summary) => {
+      setCallState(null);
+      if (summary && summary.mode) {
+        await appendAndEncryptMessage({
+          text: summary.mode === "video" ? "Video call" : "Voice call",
+          msgType: "call",
+          callMode: summary.mode,
+          callDuration: Number(summary.seconds) || 0,
+        });
+      }
+    },
+    [appendAndEncryptMessage]
+  );
+
   return {
     starterPlaceholder,
     myId,
@@ -704,6 +732,7 @@ export function usePersonalChatState({
     setPlayingVoiceId,
     callState,
     setCallState,
+    handleCallFinished,
     isPeerTyping,
     messagesEndRef,
     menuContainerRef,

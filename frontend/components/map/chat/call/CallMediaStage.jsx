@@ -1,8 +1,27 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import Image from "next/image";
 import ContentImage from "@/components/ui/ContentImage";
 import { formatCallDuration } from "../hooks/usePersonalCallState";
+
+// Static distributed mini Coki faces with fixed random tilt angles (constant across all calls)
+const STATIC_COKI_VOICE_BG = [
+  { top: "7%", left: "12%", rotate: -14 },
+  { top: "8%", left: "50%", rotate: 16 },
+  { top: "7%", left: "84%", rotate: -8 },
+  { top: "25%", left: "28%", rotate: 22 },
+  { top: "27%", left: "72%", rotate: -18 },
+  { top: "42%", left: "9%", rotate: 12 },
+  { top: "44%", left: "88%", rotate: -15 },
+  { top: "58%", left: "22%", rotate: -20 },
+  { top: "60%", left: "74%", rotate: 18 },
+  { top: "76%", left: "12%", rotate: 10 },
+  { top: "78%", left: "48%", rotate: -12 },
+  { top: "80%", left: "84%", rotate: 24 },
+  { top: "92%", left: "30%", rotate: -6 },
+  { top: "93%", left: "68%", rotate: 15 },
+];
 
 export function CallMediaStage({
   targetUser,
@@ -16,9 +35,6 @@ export function CallMediaStage({
   isSpeakerOn,
   isCamOff,
   hasLocalStream,
-  safetyCode,
-  showSafetyTooltip,
-  setShowSafetyTooltip,
   localVideoRef,
   remoteVideoRef,
 }) {
@@ -31,7 +47,7 @@ export function CallMediaStage({
 
   return (
     <>
-      {/* Background Layer: Blurred Backdrop for Voice Call, or Remote Video Stream for Video Call */}
+      {/* Background Layer: White background with static mini-Coki faces for Voice Call, or Video Stream for Video Call */}
       {mode === "video" ? (
         <div className="absolute inset-0 z-0 overflow-hidden bg-black">
           {status === "connected" ? (
@@ -66,24 +82,29 @@ export function CallMediaStage({
           />
         </div>
       ) : (
-        /* Voice Call: Blurred Atmospheric Surface respecting Light/Dark Theme */
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          <ContentImage
-            src={avatarUrl(targetUser)}
-            alt={displayName}
-            width={180}
-            height={180}
-            className={`w-full h-full object-cover blur-[28px] scale-125 ${
-              isMapDark ? "opacity-25" : "opacity-20"
-            }`}
-          />
-          <div
-            className={`absolute inset-0 backdrop-blur-2xl ${
-              isMapDark
-                ? "bg-gradient-to-b from-[#111b21]/85 via-[#0b141a]/80 to-[#111b21]/95"
-                : "bg-gradient-to-b from-white/85 via-white/80 to-white/95"
-            }`}
-          />
+        /* Voice Call: Pure White Background patterned with static mini Coki faces */
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-white">
+          {STATIC_COKI_VOICE_BG.map((pos, idx) => (
+            <div
+              key={`coki-bg-${idx}`}
+              style={{
+                position: "absolute",
+                top: pos.top,
+                left: pos.left,
+                transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
+              }}
+              className="w-10 h-13 pointer-events-none opacity-25 select-none"
+            >
+              <Image
+                src="/ForChat/BackgroundVoiceTrimmed.png"
+                alt=""
+                width={40}
+                height={52}
+                className="w-full h-full object-contain"
+                priority={idx < 4}
+              />
+            </div>
+          ))}
         </div>
       )}
 
@@ -93,6 +114,8 @@ export function CallMediaStage({
           className={`font-sans font-bold text-base sm:text-lg tracking-tight truncate max-w-[260px] ${
             mode === "video" && status === "connected"
               ? "text-white drop-shadow"
+              : mode === "voice"
+              ? "text-black"
               : isMapDark
               ? "text-white"
               : "text-black"
@@ -101,16 +124,22 @@ export function CallMediaStage({
           {displayName}
         </h3>
 
+        {/* Live Call Timer & Status: Arial bold, tiny size matching chat timestamp */}
         <p
-          className={`text-xs font-medium mt-0.5 ${
+          style={{ fontFamily: "Arial, sans-serif" }}
+          className={`font-bold text-[9.5px] sm:text-[10px] tracking-tight mt-1 ${
             mode === "video" && status === "connected"
               ? "text-white/90 drop-shadow"
+              : mode === "voice"
+              ? "text-black/80"
               : isMapDark
               ? "text-white/70"
               : "text-black/70"
           }`}
         >
-          {status === "calling"
+          {status === "ended"
+            ? "Call Ended"
+            : status === "calling"
             ? "Calling..."
             : status === "ringing"
             ? "Ringing..."
@@ -118,10 +147,21 @@ export function CallMediaStage({
         </p>
       </div>
 
-      {/* CENTER: Avatar + Audio Pulse Rings (shown in Voice Call or before Video Call connects) */}
+      {/* CENTER: Avatar + Audio Pulse Rings (Smooth enlargement & movement to center on answer) */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4">
         {(mode === "voice" || status !== "connected") && (
-          <div className="relative flex items-center justify-center">
+          <motion.div
+            animate={{
+              scale: status === "connected" ? 1.25 : 0.95,
+              y: status === "connected" ? 0 : -20,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 220,
+              damping: 24,
+            }}
+            className="relative flex items-center justify-center"
+          >
             <motion.div
               animate={{
                 scale: status === "connected" ? [1, 1.24, 1] : [1, 1.15, 1],
@@ -129,7 +169,7 @@ export function CallMediaStage({
               }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className={`absolute w-28 h-28 rounded-full border-2 ${
-                isMapDark ? "border-emerald-400" : "border-black"
+                mode === "voice" ? "border-black/60" : isMapDark ? "border-emerald-400" : "border-black"
               }`}
             />
             <motion.div
@@ -139,13 +179,17 @@ export function CallMediaStage({
               }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.35 }}
               className={`absolute w-28 h-28 rounded-full border ${
-                isMapDark ? "border-emerald-400" : "border-black"
+                mode === "voice" ? "border-black/40" : isMapDark ? "border-emerald-400" : "border-black"
               }`}
             />
 
             <div
               className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 shadow-xl ${
-                isMapDark ? "border-white bg-[#161b22]" : "border-black bg-white"
+                mode === "voice"
+                  ? "border-black bg-white"
+                  : isMapDark
+                  ? "border-white bg-[#161b22]"
+                  : "border-black bg-white"
               }`}
             >
               <ContentImage
@@ -156,12 +200,12 @@ export function CallMediaStage({
                 className="w-full h-full object-cover"
               />
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Voice Call Live Waveform Bars when Connected */}
         {mode === "voice" && status === "connected" && (
-          <div className="mt-6 flex items-center gap-1 h-6">
+          <div className="mt-8 flex items-center gap-1 h-6">
             {[0.4, 0.85, 0.6, 1, 0.5, 0.9, 0.7, 0.45, 0.8].map((peak, idx) => (
               <motion.span
                 key={idx}
@@ -173,18 +217,16 @@ export function CallMediaStage({
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}
-                className={`w-1 rounded-full ${
-                  isMapDark ? "bg-emerald-400" : "bg-black"
-                }`}
+                className="w-1 rounded-full bg-black"
               />
             ))}
           </div>
         )}
 
-        {/* Picture-in-Picture (PiP) Self Camera Preview for Video Call (Borderless & Fontless) */}
+        {/* Picture-in-Picture (PiP) Self Camera Preview for Video Call */}
         {mode === "video" && (
           <div
-            className={`absolute bottom-3 right-3 w-[84px] h-[116px] rounded-xl overflow-hidden shadow-2xl flex items-center justify-center ${
+            className={`absolute bottom-3 right-3 w-[84px] h-[116px] rounded-xl overflow-hidden shadow-2xl flex items-center justify-center border border-white/20 ${
               isMapDark ? "bg-[#161b22]" : "bg-white"
             }`}
           >
@@ -192,8 +234,8 @@ export function CallMediaStage({
               <video
                 ref={localVideoRef}
                 autoPlay
-                muted
                 playsInline
+                muted
                 className="w-full h-full object-cover scale-x-[-1]"
               />
             ) : (
@@ -215,4 +257,3 @@ export function CallMediaStage({
     </>
   );
 }
-

@@ -18,6 +18,21 @@ function getFallbackWaveform(id, duration = 4) {
   return bars;
 }
 
+export function formatCallDurationTwoUnits(totalSeconds = 0) {
+  const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+  }
+  return `0m ${String(seconds).padStart(2, "0")}s`;
+}
+
 export function ChatMessageBubble({
   item,
   myId,
@@ -30,6 +45,65 @@ export function ChatMessageBubble({
 }) {
   const isMe = String(item.senderId) === myId;
   const isSelected = selectedMsgIds.includes(item.id);
+
+  // Dedicated Call Log Bubble: Large icon without outerbox, with white duration badge at bottom right
+  if (item.msgType === "call") {
+    const isVideo = item.callMode === "video";
+    const durationText = formatCallDurationTwoUnits(item.callDuration || 0);
+
+    return (
+      <div
+        onClick={() => {
+          if (selectMode) handleToggleSelectMsg(item.id);
+        }}
+        className={`flex items-center gap-2 ${
+          isMe ? "justify-end" : "justify-start"
+        } ${selectMode ? "cursor-pointer" : ""} my-2`}
+      >
+        {selectMode && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => handleToggleSelectMsg(item.id)}
+            className="w-3.5 h-3.5 accent-black cursor-pointer shrink-0"
+          />
+        )}
+
+        <div className="relative inline-flex items-center justify-center p-1 select-none">
+          {isVideo ? (
+            <svg
+              viewBox="0 0 24 24"
+              className={`w-11 h-11 drop-shadow-sm ${
+                isMapDark ? "text-white" : "text-black"
+              }`}
+              fill="currentColor"
+            >
+              <path d="M17 10.5V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5l4 4v-11l-4 4z" />
+            </svg>
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              className={`w-10 h-10 drop-shadow-sm ${
+                isMapDark ? "text-white" : "text-black"
+              }`}
+              fill="currentColor"
+            >
+              <path d="M6.62 10.79a15.053 15.053 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z" />
+            </svg>
+          )}
+
+          {/* White badge at bottom-right showing formatted duration */}
+          <span
+            style={{ fontFamily: "Arial, sans-serif" }}
+            className="absolute -bottom-1 -right-2 px-1.5 py-0.5 rounded bg-white text-black text-[9.5px] font-bold shadow-md border border-black/15 tracking-tight leading-none whitespace-nowrap"
+          >
+            {durationText}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   const isVideoMedia =
     item.mediaUrl &&
     (/\.(mp4|webm|ogg)($|\?)/i.test(item.mediaUrl) ||
