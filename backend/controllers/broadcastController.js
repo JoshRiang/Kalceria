@@ -1,4 +1,11 @@
 import prisma from '../lib/prisma.js';
+import redis from '../lib/redis.js';
+
+async function invalidateKalceriansCache() {
+  try {
+    await redis.del('cache:all_kalcerians', 'cache:map_users:global');
+  } catch {}
+}
 
 
 const BROADCAST_TTL_MS = 24 * 60 * 60 * 1000;
@@ -23,6 +30,7 @@ export async function getMyBroadcast(req, res, next) {
       where: { userId, expiresAt: { gt: new Date() } },
     });
 
+    await invalidateKalceriansCache();
     res.json({ broadcast });
   } catch (err) {
     next(err);
@@ -54,6 +62,7 @@ export async function createBroadcast(req, res, next) {
       data: { userId, message, expiresAt },
     });
 
+    await invalidateKalceriansCache();
     res.status(201).json({ broadcast });
   } catch (err) {
     next(err);
@@ -81,6 +90,7 @@ export async function updateBroadcast(req, res, next) {
       data: { message },
     });
 
+    await invalidateKalceriansCache();
     res.json({ broadcast });
   } catch (err) {
     next(err);
@@ -91,6 +101,7 @@ export async function deleteBroadcast(req, res, next) {
   try {
     const userId = req.user.userId;
     await prisma.userBroadcast.deleteMany({ where: { userId } });
+    await invalidateKalceriansCache();
     res.json({ message: 'Broadcast deleted.' });
   } catch (err) {
     next(err);

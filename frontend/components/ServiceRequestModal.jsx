@@ -570,10 +570,8 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                         key={s.id}
                         type="button"
                         onClick={() => setField("serviceType", form.serviceType === s.id ? "" : s.id)}
-                        className={`group relative text-left p-5 rounded-2xl border transition-all duration-300 overflow-hidden cursor-pointer ${
-                          form.serviceType === s.id 
-                          ? "bg-white/15 border-white shadow-[0_0_25px_rgba(255,255,255,0.15)] ring-1 ring-white/50" 
-                          : "bg-white/[0.05] border-white/20 hover:border-white/40 hover:bg-white/[0.08]"
+                        className={`group relative text-left py-4 px-2 sm:px-3 border-none bg-transparent shadow-none ring-0 transition-all duration-300 overflow-hidden cursor-pointer ${
+                          form.serviceType === s.id ? "opacity-100" : "opacity-80 hover:opacity-100"
                         }`}
                       >
                         <div className="relative flex items-center justify-between gap-6">
@@ -609,7 +607,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                     type="button"
                     onClick={handleNext}
                     disabled={!form.serviceType}
-                    className={`${buttonStyle} mt-4 bg-white text-black hover:bg-slate-200 disabled:opacity-30 cursor-pointer`}
+                    className="w-full py-4 bg-transparent border-none shadow-none ring-0 font-sans font-black uppercase tracking-tight text-base sm:text-lg text-white hover:text-white/80 disabled:opacity-30 cursor-pointer flex items-center justify-center gap-2 transition-colors mt-4"
                   >
                     NEXT
                   </button>
@@ -657,8 +655,8 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                         </div>
 
                         <div className="flex flex-row gap-2 sm:gap-4 w-full justify-center items-start">
-                          {/* Shift 1 */}
-                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-black/50 border border-white/15 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
+                          {/* Shift 1 (Boxless) */}
+                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] p-2 sm:p-4 relative h-fit overflow-hidden">
                             <div className="relative z-10">
                               <p className="font-sans text-white text-[10px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">09.00 - 16.00 WIB</p>
                               <div className="overflow-y-auto max-h-[180px] sm:max-h-[320px] pr-1 sm:pr-2 custom-scrollbar">
@@ -667,8 +665,8 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                             </div>
                           </div>
 
-                          {/* Shift 2 */}
-                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] bg-black/50 border border-white/15 rounded-[12px] sm:rounded-[28px] p-2 sm:p-8 backdrop-blur-xl shadow-2xl relative h-fit overflow-hidden">
+                          {/* Shift 2 (Boxless) */}
+                          <div className="w-[165px] xs:w-[220px] sm:w-[360px] p-2 sm:p-4 relative h-fit overflow-hidden">
                             <div className="relative z-10">
                               <p className="font-sans text-white text-[10px] sm:text-[13px] font-bold mb-2 sm:mb-4 tracking-widest uppercase">17.00 - 00.00 WIB</p>
                               <div className="overflow-y-auto max-h-[180px] sm:max-h-[320px] pr-1 sm:pr-2 custom-scrollbar">
@@ -678,8 +676,8 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                           </div>
                         </div>
 
-                        {/* Extended Legend & Counter: Ready, Busy, Lock (Arial, not all capital, not bold) + Week Navigation */}
-                        <div className="flex flex-row items-center justify-between gap-2 sm:gap-5 bg-black/50 px-4 sm:px-10 py-3 sm:py-6 rounded-full border border-white/15 shadow-2xl w-full mt-2 sm:mt-4">
+                        {/* Extended Legend & Counter (Boxless Pill): Ready, Busy, Lock + Week Navigation */}
+                        <div className="flex flex-row items-center justify-between gap-2 sm:gap-5 px-2 sm:px-4 py-2 sm:py-3 w-full mt-2 sm:mt-4 bg-transparent border-none shadow-none">
                           <div className="flex flex-row items-center gap-2.5 sm:gap-6 flex-wrap">
                             <div 
                               className="flex items-center gap-1 sm:gap-2 text-white text-[10px] sm:text-[12px]" 
@@ -736,19 +734,21 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                       <FormErrorBox error={error} onDismiss={() => setError("")} />
                     </div>
 
-                    {/* Horizontal Footer Navigation */}
+                    {/* Horizontal Footer Navigation (Boxless Back and Next) */}
                     <div className="flex gap-4 sm:gap-6 max-w-[900px] mx-auto w-full mt-2">
                       <button 
                         type="button" 
                         onClick={() => { setError(""); setStep(0); }} 
-                        className={`${buttonStyle} flex-1 py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] bg-white/10 text-white hover:bg-white/20 transition-all border border-white/20 cursor-pointer`}
+                        className="flex-1 py-3.5 sm:py-6 font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-colors flex items-center justify-center gap-2 bg-transparent text-white hover:text-white/70 border-none shadow-none cursor-pointer"
                       >
                         BACK
                       </button>
                       <button 
                         type="submit" 
                         disabled={loading} 
-                        className={`${buttonStyle} flex-1 py-3.5 sm:py-6 rounded-[20px] sm:rounded-[25px] ${isFormValid ? "bg-white text-black opacity-100 shadow-[0_0_50px_rgba(255,255,255,0.4)] cursor-pointer" : "bg-white/10 text-white/60 hover:bg-white/20 cursor-pointer"}`}
+                        className={`flex-1 py-3.5 sm:py-6 font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-colors flex items-center justify-center gap-2 bg-transparent border-none shadow-none cursor-pointer ${
+                          isFormValid ? "text-white hover:text-white/80" : "text-white/40 cursor-not-allowed"
+                        }`}
                       >
                         {loading ? "SENDING..." : "NEXT"}
                       </button>

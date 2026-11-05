@@ -168,7 +168,7 @@ export function KalcerianCardItem({
                           : "bg-white ring-1 ring-white"
                       }`}
                     >
-                      <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]" fill="#ef4444">
+                      <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]" fill="#000000">
                         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                       </svg>
                     </span>
@@ -193,7 +193,7 @@ export function KalcerianCardItem({
                           y1="8.5"
                           x2="21.5"
                           y2="15.5"
-                          stroke="#ef4444"
+                          stroke="#000000"
                           strokeWidth="3.2"
                           strokeLinecap="round"
                         />
@@ -202,7 +202,7 @@ export function KalcerianCardItem({
                           y1="8.5"
                           x2="15.5"
                           y2="15.5"
-                          stroke="#ef4444"
+                          stroke="#000000"
                           strokeWidth="3.2"
                           strokeLinecap="round"
                         />
@@ -428,11 +428,8 @@ export function KalcerianCardItem({
                   type="button"
                   onMouseEnter={() => setHoveredChatIconId?.(user.id)}
                   onMouseLeave={() => setHoveredChatIconId?.(null)}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    e.preventDefault();
                     onPersonalChatOpen?.(user);
                   }}
                   className="relative z-20 w-7 h-7 -m-0.5 flex items-center justify-center rounded-md transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"

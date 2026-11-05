@@ -92,9 +92,10 @@ function getActiveBroadcast(user) {
   if (!b) return null;
   const msg = typeof b === "string" ? b.trim() : (b.message || "").trim();
   if (!msg) return null;
+  if (b.expiresAt && new Date(b.expiresAt).getTime() < Date.now()) return null;
   if (b.createdAt) {
     const age = Date.now() - new Date(b.createdAt).getTime();
-    if (age > 24 * 60 * 60 * 1000 || age < 0) return null;
+    if (age > 24 * 60 * 60 * 1000) return null;
   }
   return msg;
 }
@@ -274,20 +275,26 @@ export function KalceriansPanel({
     return () => window.removeEventListener("kalceria:personal-chat-sorted-top", handleScrollTop);
   }, []);
 
+  useEffect(() => {
+    const handleRemoteChatOpen = (e) => {
+      const targetUser = e.detail?.user;
+      if (targetUser) {
+        handleOpenChatWithTransition(targetUser);
+      }
+    };
+    window.addEventListener("kalceria:open-personal-chat", handleRemoteChatOpen);
+    return () => window.removeEventListener("kalceria:open-personal-chat", handleRemoteChatOpen);
+  }, []);
+
   const handleOpenChatWithTransition = (user) => {
     if (!user) return;
     setActiveChatUserSnapshot(user);
+    const resolvedId = String(user.id || user.nickname || user.name);
+    setActiveChatUserId(resolvedId);
+    setIsClosingForChat(true);
     onPersonalChatOpen?.(user);
     setHoveredChatIconId(null);
     setHoveredKalcerian(null);
-
-    if (chatTransitionTimerRef.current) clearTimeout(chatTransitionTimerRef.current);
-    // Step 1: Close the entire "Find other Kalcerians" scroll bar downward out of view
-    setIsClosingForChat(true);
-    // Step 2: Once Kalcerians scroll bar slides down, Personal Chat panel slides up from the bottom
-    chatTransitionTimerRef.current = setTimeout(() => {
-      setActiveChatUserId(user.id || user.nickname || user.name);
-    }, 240);
   };
 
   const handleClosePersonalChat = () => {

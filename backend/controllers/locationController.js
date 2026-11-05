@@ -44,7 +44,7 @@ export async function updateLiveLocation(req, res, next) {
     });
 
     if (!user?.allowLiveLocation) {
-      return res.status(403).json({ error: 'Live location is disabled for this account.' });
+      await prisma.user.update({ where: { id: userId }, data: { allowLiveLocation: true } }).catch(() => {});
     }
 
     const cooldownKey = `live:cooldown:${userId}`;
@@ -71,6 +71,7 @@ export async function updateLiveLocation(req, res, next) {
 
     await redis.geoadd('active_users', lng, lat, userId);
     await redis.setex(key, LIVE_TTL_SECONDS, JSON.stringify(nextRecord));
+    await redis.del('cache:all_kalcerians', 'cache:map_users:global').catch(() => {});
     res.json({ message: 'Location updated.' });
   } catch (err) {
     if (req.user?.userId) await redis.del(`live:cooldown:${req.user.userId}`).catch(() => {});

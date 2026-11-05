@@ -807,7 +807,7 @@ export default function LandingPage({ onNavigateAuth }) {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative z-10 flex flex-col items-center justify-center w-full px-4 text-center my-auto pb-20 xs:pb-24 sm:pb-28 md:pb-16 lg:pb-0"
+          className="relative z-20 flex flex-col items-center justify-center w-full px-4 text-center my-auto pb-20 xs:pb-24 sm:pb-28 md:pb-16 lg:pb-0"
         >
           {/* Title Area with Mobile & Half-Desktop Cokineed Face ABOVE "NEED OUR HELP?" */}
           <div className="relative flex flex-col items-center justify-center mb-8 sm:mb-10 md:mb-12 w-full">
@@ -880,9 +880,9 @@ export default function LandingPage({ onNavigateAuth }) {
           </div>
         )}
 
-        {/* Desktop & iPad Family: Subtitute_NeedOurHelp.png tight to bottom middle, filled & standard */}
+        {/* Desktop & iPad Family: Subtitute_NeedOurHelp.png tight to bottom middle, scaled responsibly without overlapping button */}
         {!isMobile && (
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-20 flex justify-center items-end overflow-hidden">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-10 flex justify-center items-end overflow-hidden">
             <Image
               src="/png/Subtitute_NeedOurHelp.png?v=3"
               alt="Photographers"
@@ -891,7 +891,7 @@ export default function LandingPage({ onNavigateAuth }) {
               unoptimized
               loading="lazy"
               decoding="async"
-              className="w-[500px] sm:w-[580px] md:w-[680px] lg:w-[780px] xl:w-[880px] 2xl:w-[940px] max-h-[30vh] sm:max-h-[35vh] md:max-h-[40vh] lg:max-h-[45vh] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
+              className="w-[380px] sm:w-[460px] md:w-[480px] lg:w-[780px] xl:w-[880px] 2xl:w-[940px] max-h-[20vh] sm:max-h-[22vh] md:max-h-[24vh] lg:max-h-[42vh] xl:max-h-[45vh] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
               draggable={false}
             />
           </div>

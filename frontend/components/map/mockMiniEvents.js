@@ -2,6 +2,42 @@
 // 12 distinct events across 4 mini event categories with realistic Kalcerian declarers and distinct normalized media
 
 export const INITIAL_MOCK_MINI_EVENTS = [
+  // ─── DUMMY KALCERIAN (1 Event + 1 Broadcast Declared) ──────────────────────
+  {
+    id: "event_dummy_coki",
+    title: "Kopdar Sektor 9",
+    description: "Ngopi santuy dan briefing rute loop.",
+    location: "Kopi Manyar, Bintaro Sektor 9, Tangerang Selatan",
+    category: "cafe",
+    mediaUrl: "/media/gifs/event_cafe_1.mp4",
+    mediaUrls: ["/media/gifs/event_cafe_1.mp4"],
+    lat: -6.2735,
+    lng: 106.7110,
+    isActive: true,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    creator: {
+      id: "dummy_coki",
+      name: "Coki",
+      displayName: "Coki",
+      nickname: "coki",
+      profilePicture: "/ForChat/Coki_Speak.png",
+      broadcast: {
+        id: "bc_dummy_coki",
+        message: "Sunmori Gas Bintaro Loop jam 7 pagi!",
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+      coverType: null,
+      coverImage: null,
+      socialPlatform: "WA",
+      socialLink: null,
+      instagram: "coki_kalceria",
+      whatsapp: "+6281234567890",
+      phone: null,
+      reason: "Sunmori & automotive enthusiast in Bintaro sector 9",
+      createdAt: new Date().toISOString(),
+    },
+  },
   // ─── CAFE MEETING (3 Events) ───────────────────────────────────────────────
   {
     id: "mini_cafe_1",

@@ -183,7 +183,7 @@ export async function getAllKalcerians(req, res, next) {
 
     const now = new Date();
     const rawResult = users.map((u) => {
-      const isOnline = u.allowLiveLocation && onlineSet.has(u.id);
+      const isOnline = Boolean(onlineSet.has(u.id) || (u.allowLiveLocation && onlineSet.has(u.id)));
       const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
       return {
         id: u.id,

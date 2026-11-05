@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { uploadBlobMedia } from "@/lib/api";
 import { validateAndNormalizeMediaUrlClient } from "@/lib/urlSecurity";
 import { toSmartTitleCase } from "@/lib/titleCase";
+import { LocationAutocomplete } from "@/components/service-request/LocationAutocomplete";
 
 export const EVENT_CATEGORIES_GRID = [
   {
@@ -88,6 +89,7 @@ export function EventFormModal({
   const fileInputRef = useRef(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [isLocationVerified, setIsLocationVerified] = useState(false);
 
   if (!show) return null;
 
@@ -260,6 +262,24 @@ export function EventFormModal({
                 }))
               }
               placeholder="Nongs FM Sini"
+            />
+          </div>
+
+          {/* Location & Venue Segment (Modularized from LocationAutocomplete) */}
+          <div className="flex flex-col gap-1.5 sm:gap-2">
+            <LocationAutocomplete
+              value={eventForm.location || ""}
+              onChange={(loc, item) => {
+                setEventForm((f) => ({
+                  ...f,
+                  location: loc,
+                  lat: item?.lat || item?.latitude || f.lat,
+                  lng: item?.lon || item?.lng || item?.longitude || f.lng,
+                }));
+              }}
+              isVerified={isLocationVerified}
+              setIsVerified={setIsLocationVerified}
+              required={false}
             />
           </div>
 

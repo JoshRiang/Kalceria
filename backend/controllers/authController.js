@@ -285,6 +285,25 @@ export async function login(req, res, next) {
     setAuthCookie(res, token);
     const csrfToken = issueLoginCsrfToken(res);
 
+    // Auto-mark user active in Redis so online status is immediately coherent
+    try {
+      const lat = user.domicileLat || -6.2735;
+      const lng = user.domicileLng || 106.7110;
+      await redis.geoadd('active_users', lng, lat, user.id);
+      await redis.set(
+        `live:user:${user.id}`,
+        JSON.stringify({ lat, lng, updatedAt: Date.now() }),
+        'EX',
+        600
+      );
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { allowLiveLocation: true },
+      }).catch(() => {});
+      await redis.del('cache:all_kalcerians');
+      await redis.del('cache:map_users:global');
+    } catch {}
+
     res.json({
       userId: user.id,
       username: user.nickname || (user.email ? user.email.split('@')[0] : 'User'),
@@ -456,6 +475,25 @@ export async function completeRegistration(req, res, next) {
     const token = await createAuthSession(user);
     setAuthCookie(res, token);
     const csrfToken = issueLoginCsrfToken(res);
+
+    // Auto-mark user active in Redis so online status is immediately coherent
+    try {
+      const lat = user.domicileLat || -6.2735;
+      const lng = user.domicileLng || 106.7110;
+      await redis.geoadd('active_users', lng, lat, user.id);
+      await redis.set(
+        `live:user:${user.id}`,
+        JSON.stringify({ lat, lng, updatedAt: Date.now() }),
+        'EX',
+        600
+      );
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { allowLiveLocation: true },
+      }).catch(() => {});
+      await redis.del('cache:all_kalcerians');
+      await redis.del('cache:map_users:global');
+    } catch {}
 
     res.status(201).json({
       message: 'Registration completed successfully.',
@@ -745,6 +783,19 @@ export async function getMe(req, res, next) {
     const now = new Date();
     const broadcast = user.broadcast && user.broadcast.expiresAt > now ? user.broadcast : null;
     const enrichedUser = await ensurePersistentUserProfile({ ...user, broadcast });
+
+    // Keep live presence coherent in Redis whenever authenticated user is active
+    try {
+      const lat = user.domicileLat || -6.2735;
+      const lng = user.domicileLng || 106.7110;
+      await redis.geoadd('active_users', lng, lat, userId);
+      await redis.set(
+        `live:user:${userId}`,
+        JSON.stringify({ lat, lng, updatedAt: Date.now() }),
+        'EX',
+        600
+      );
+    } catch {}
 
     res.json({ user: enrichedUser });
   } catch (err) {

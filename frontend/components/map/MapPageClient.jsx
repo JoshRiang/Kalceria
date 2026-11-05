@@ -57,7 +57,7 @@ export default function MapPage() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusText, setStatusText] = useState("");
-  const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe", mediaUrl: "" });
+  const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe", mediaUrl: "", location: "", lat: null, lng: null });
   const [editingEventId, setEditingEventId] = useState(null);
   const {
     requestedEventId, setRequestedEventId,
@@ -204,6 +204,25 @@ export default function MapPage() {
       })
       .catch(() => setNotLoggedIn(true));
   }, []);
+
+  // Prompt location permission and sync live coordinates with backend on entry
+  useEffect(() => {
+    if (typeof window === "undefined" || !navigator.geolocation || !currentUser) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        postLocation(pos.coords.latitude, pos.coords.longitude)
+          .then(() => {
+            fetchMapUsers().then((u) => setMapUsersData(u || []));
+            fetchKalcerians().then((k) => setKalcerians(k || []));
+          })
+          .catch(() => {});
+      },
+      (err) => {
+        console.warn("[Map] Location permission skipped or denied:", err.message);
+      },
+      { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 }
+    );
+  }, [currentUser?.id]);
 
   // fetch map users + kalcerians (poll every 10s)
   useEffect(() => {
@@ -471,6 +490,36 @@ export default function MapPage() {
       }
     });
 
+    // 3. Guarantee current logged-in user is online in the sidebar list
+    if (currentUser?.id) {
+      if (map.has(currentUser.id)) {
+        const me = map.get(currentUser.id);
+        me.isOnline = presence === "online";
+        if (currentUser.broadcast) me.broadcast = currentUser.broadcast;
+      } else {
+        map.set(currentUser.id, {
+          id: currentUser.id,
+          name: currentUser.displayName || currentUser.name || currentUser.nickname || "Kalcerian",
+          displayName: currentUser.displayName || currentUser.name || currentUser.nickname || "Kalcerian",
+          nickname: currentUser.nickname || currentUser.name || "Kalcerian",
+          profilePicture: currentUser.profilePicture || null,
+          isOnline: presence === "online",
+          broadcast: currentUser.broadcast || null,
+          lat: currentUser.domicileLat || -6.2735,
+          lng: currentUser.domicileLng || 106.7110,
+          coverType: currentUser.coverType || null,
+          coverImage: currentUser.coverImage || null,
+          socialPlatform: currentUser.socialPlatform || null,
+          socialLink: currentUser.socialLink || null,
+          instagram: currentUser.instagram || null,
+          whatsapp: currentUser.whatsapp || null,
+          phone: currentUser.phone || null,
+          reason: currentUser.reason || null,
+          createdAt: currentUser.createdAt || null,
+        });
+      }
+    }
+
     let list = Array.from(map.values());
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -510,7 +559,7 @@ export default function MapPage() {
       if (!a.isOnline && b.isOnline) return 1;
       return a.name.localeCompare(b.name);
     });
-  }, [kalcerians, events, searchQuery, personalChatMap, favouriteUserIds]);
+  }, [kalcerians, events, searchQuery, personalChatMap, favouriteUserIds, currentUser, presence]);
 
   const activeOwnEvent = events.find(
     (e) => e.id === "own" || (currentUser?.id && e.creator?.id === currentUser?.id)
@@ -599,11 +648,14 @@ export default function MapPage() {
     const rawDesc = eventItem.description || "";
     const catMatch = rawDesc.match(/\[CAT:([a-z_]+)\]/i);
     const mediaMatch = rawDesc.match(/\[MEDIA:([^\]]+)\]/i);
+    const locMatch = rawDesc.match(/\[LOC:([^\]]+)\]/i);
     const category = catMatch ? catMatch[1].toLowerCase() : (eventItem.category || "cafe");
     const mediaUrl = eventItem.mediaUrl || (mediaMatch ? mediaMatch[1] : "");
+    const location = eventItem.location || (locMatch ? locMatch[1] : "");
     const cleanDesc = rawDesc
       .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
       .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+      .replace(/\[LOC:[^\]]+\]\s*/gi, "")
       .trim();
 
     setEventForm({
@@ -611,6 +663,9 @@ export default function MapPage() {
       description: cleanDesc,
       category,
       mediaUrl,
+      location,
+      lat: eventItem.lat || null,
+      lng: eventItem.lng || null,
     });
     setEditingEventId(eventItem.id);
     setShowEventModal(true);
@@ -629,11 +684,11 @@ export default function MapPage() {
         .replace(/\[LOC:[^\]]+\]\s*/gi, "")
         .trim();
 
-      // Capture user's coordinates at the exact moment of event creation
-      let currentLat = me?.lat || currentUser?.domicileLat || -6.2715;
-      let currentLng = me?.lng || currentUser?.domicileLng || 106.7135;
+      // Prioritize coordinates from LocationAutocomplete if selected, otherwise current GPS / user domicile
+      let currentLat = eventForm.lat ? Number(eventForm.lat) : (me?.lat || currentUser?.domicileLat || -6.2715);
+      let currentLng = eventForm.lng ? Number(eventForm.lng) : (me?.lng || currentUser?.domicileLng || 106.7135);
 
-      if (typeof navigator !== "undefined" && navigator.geolocation) {
+      if (!eventForm.lat && typeof navigator !== "undefined" && navigator.geolocation) {
         try {
           const pos = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -649,16 +704,18 @@ export default function MapPage() {
         } catch {}
       }
 
-      // Reverse geocode to Indonesian location string using reverse geocode algorithm
-      let locationName = "";
-      try {
-        const revRes = await api.get('/location/reverse', {
-          params: { lat: currentLat, lng: currentLng },
-        });
-        if (revRes?.data?.formatted) {
-          locationName = revRes.data.formatted;
-        }
-      } catch {}
+      // Location string from form or reverse geocoding
+      let locationName = (eventForm.location || "").trim();
+      if (!locationName) {
+        try {
+          const revRes = await api.get('/location/reverse', {
+            params: { lat: currentLat, lng: currentLng },
+          });
+          if (revRes?.data?.formatted) {
+            locationName = revRes.data.formatted;
+          }
+        } catch {}
+      }
 
       let encodedDesc = `[CAT:${category}] ${cleanDesc}`.trim();
       if (locationName) {
@@ -723,6 +780,7 @@ export default function MapPage() {
       if (updatedEvents) setEvents(mergeEvents(updatedEvents));
       setNotice(eventIdToUpdate ? "Mini event updated." : "Mini event saved.");
       setEditingEventId(null);
+      setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", location: "", lat: null, lng: null });
       setShowEventModal(false);
     } catch (err) {
       setNotice(err.message || "Failed to save mini event.");
@@ -739,7 +797,7 @@ export default function MapPage() {
           return;
         } else {
           setEditingEventId(null);
-          setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "" });
+          setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", location: "", lat: null, lng: null });
         }
       }
     } else {
