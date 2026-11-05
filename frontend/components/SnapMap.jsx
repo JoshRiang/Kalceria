@@ -245,8 +245,10 @@ export default function SnapMap({
 
         const openPopupSafe = () => {
           try {
-            targetMarker.openPopup();
-            tickAllEventUptimeElements();
+            if (targetMarker.getPopup && targetMarker.getPopup()) {
+              targetMarker.openPopup();
+              tickAllEventUptimeElements();
+            }
           } catch (_) {}
         };
 
@@ -285,9 +287,6 @@ export default function SnapMap({
       if (marker && mapRef.current) {
         const latLng = marker.getLatLng();
         mapRef.current.flyTo(latLng, 16, { animate: true, duration: 0.5 });
-        mapRef.current.once("moveend", () => {
-          marker.openPopup();
-        });
       }
     }
   }, [focusUserId, focusTarget, isReady]);
@@ -376,33 +375,60 @@ export default function SnapMap({
 
         marker.setIcon(createUserIcon(L, user, isMapDark));
 
-        const hasBroadcast = Boolean(
-          (typeof user?.broadcast === "string" ? user.broadcast : user?.broadcast?.message)?.trim()
-        );
-        const newPopupContent = userPopup(user, isMapDark);
-        if (marker._lastPopupContent !== newPopupContent) {
-          marker.getPopup().setContent(newPopupContent);
-          if (marker.getPopup().options) {
-            marker.getPopup().options.offset = hasBroadcast ? [0, -26] : [0, -60];
+        const popupContent = userPopup(user, isMapDark);
+        if (popupContent) {
+          if (!marker.getPopup()) {
+            marker.bindPopup(popupContent, {
+              className: "tactical-popup",
+              offset: [0, -26],
+              autoClose: true,
+              closeButton: false,
+            });
+          } else if (marker._lastPopupContent !== popupContent) {
+            marker.getPopup().setContent(popupContent);
+            if (marker.getPopup().options) {
+              marker.getPopup().options.offset = [0, -26];
+            }
           }
-          marker._lastPopupContent = newPopupContent;
+          marker._lastPopupContent = popupContent;
+        } else {
+          if (marker.getPopup()) {
+            marker.unbindPopup();
+          }
+          marker._lastPopupContent = null;
         }
 
         marker.options.userData = user;
       } else {
-        const hasBroadcast = Boolean(
-          (typeof user?.broadcast === "string" ? user.broadcast : user?.broadcast?.message)?.trim()
-        );
+        const popupContent = userPopup(user, isMapDark);
         const marker = L.marker([user.lat, user.lng], {
           icon: createUserIcon(L, user, isMapDark),
           userData: user,
-        }).bindPopup(userPopup(user, isMapDark), {
-          className: "tactical-popup",
-          offset: hasBroadcast ? [0, -26] : [0, -60],
-          autoClose: true,
-          closeButton: false,
         });
-        marker._lastPopupContent = userPopup(user, isMapDark);
+
+        if (popupContent) {
+          marker.bindPopup(popupContent, {
+            className: "tactical-popup",
+            offset: [0, -26],
+            autoClose: true,
+            closeButton: false,
+          });
+          marker._lastPopupContent = popupContent;
+        } else {
+          marker._lastPopupContent = null;
+        }
+
+        // When tapping an avatar marker on the map, trigger inline profile animation in the scroll bar
+        marker.on("click", () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("kalceria:expand-kalcerian-profile", {
+                detail: { userId: user.id, id: user.id },
+              })
+            );
+          }
+        });
+
         markerRefs.current[markerId] = marker;
         usersLayer.addLayer(marker);
       }

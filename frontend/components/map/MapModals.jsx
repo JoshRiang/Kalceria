@@ -2,7 +2,6 @@
 
 import { memo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { userPopup } from "@/components/map/UserPopup";
 import { ConfirmationPromptModal } from "./modals/ConfirmationPromptModal";
 import { StatusModal } from "./modals/StatusModal";
 import { EventFormModal } from "./modals/EventFormModal";
@@ -10,8 +9,6 @@ import { CollabRequestsModal } from "./modals/CollabRequestsModal";
 import { DeleteAccountModal } from "./modals/DeleteAccountModal";
 
 export const MapModals = memo(function MapModals({
-  offlineUserObj,
-  setSelectedOfflineUser,
   showStatusModal,
   setShowStatusModal,
   isMapDark,
@@ -70,20 +67,6 @@ export const MapModals = memo(function MapModals({
 
   return (
     <>
-      {/* Offline User Global Popup */}
-      {offlineUserObj && !offlineUserObj.isOnline && (
-        <div
-          className="fixed inset-0 md:inset-auto md:left-[380px] md:top-1/2 md:-translate-y-1/2 z-[3000] flex items-center justify-center md:block pointer-events-auto bg-black/60 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none"
-          onClick={() => setSelectedOfflineUser(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative [&>.popup-tail]:hidden shadow-2xl rounded-[16px] overflow-hidden bg-[#0a0e27]/40 backdrop-blur-3xl"
-            dangerouslySetInnerHTML={{ __html: userPopup(offlineUserObj, isMapDark, true) }}
-          />
-        </div>
-      )}
-
       {/* 1. Update Status Modal */}
       <StatusModal
         show={showStatusModal}

@@ -167,7 +167,6 @@ export function KalceriansPanel({
   setHoveredKalcerian,
   isMapDark,
   setFocusedUserId,
-  setSelectedOfflineUser,
   sidebarKalcerians,
   focusUser,
   blockedUserIds = [],
@@ -337,6 +336,18 @@ export function KalceriansPanel({
     };
     window.addEventListener("kalceria:open-personal-chat", handleRemoteChatOpen);
     return () => window.removeEventListener("kalceria:open-personal-chat", handleRemoteChatOpen);
+  }, []);
+
+  // Expand and animate profile card in the scroll bar when avatar marker is tapped on the map
+  useEffect(() => {
+    const handleRemoteProfileExpand = (e) => {
+      const targetId = e.detail?.userId || e.detail?.id;
+      if (targetId) {
+        setExpandedUserId((prev) => (prev === targetId ? null : targetId));
+      }
+    };
+    window.addEventListener("kalceria:expand-kalcerian-profile", handleRemoteProfileExpand);
+    return () => window.removeEventListener("kalceria:expand-kalcerian-profile", handleRemoteProfileExpand);
   }, []);
 
   const handleOpenChatWithTransition = (user) => {

@@ -151,7 +151,6 @@ export default function MapPage() {
   const [isMapDark, setIsMapDark] = useState(false);
   const [focusedUserId, setFocusedUserId] = useState(null);
   const [focusTarget, setFocusTarget] = useState(null);
-  const [selectedOfflineUser, setSelectedOfflineUser] = useState(null);
 
   const [showQuitModal, setShowQuitModal] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -965,8 +964,6 @@ export default function MapPage() {
     return <MapAuthGate />;
   }
 
-  const offlineUserObj = selectedOfflineUser ? sidebarKalcerians.find((k) => k.id === selectedOfflineUser) : null;
-
   return (
     <main 
       className={`relative h-screen max-h-screen w-full bg-[#0a0e27] overflow-hidden text-white font-sans selection:bg-[#ffd60a] selection:text-black transition-all ${isMapDark ? "dark-theme" : "light-theme"}`}
@@ -1052,7 +1049,7 @@ export default function MapPage() {
             scheduleTimeout={scheduleTimeout} mapUsersData={mapUsersData} kalcerians={kalcerians} events={events}
             searchQuery={searchQuery} setSearchQuery={setSearchQuery} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
             isDataLoading={isDataLoading} hoveredKalcerian={hoveredKalcerian} setHoveredKalcerian={setHoveredKalcerian}
-            isMapDark={isMapDark} setFocusedUserId={setFocusedUserId} setSelectedOfflineUser={setSelectedOfflineUser}
+            isMapDark={isMapDark} setFocusedUserId={setFocusedUserId}
             sidebarKalcerians={sidebarKalcerians} focusUser={focusUser} blockedUserIds={blockedUserIds}
             onBlockUser={handleBlockUser} onUnblockUser={handleUnblockUser} onOpenItemOnMap={handleOpenItemOnMap}
             currentUser={currentUser} requestedEventId={requestedEventId} eventRequestsMap={eventRequestsMap}
@@ -1106,7 +1103,6 @@ export default function MapPage() {
       />
 
       <MapModals
-        offlineUserObj={offlineUserObj} setSelectedOfflineUser={setSelectedOfflineUser}
         showStatusModal={showStatusModal} setShowStatusModal={setShowStatusModal}
         isMapDark={isMapDark} saveBroadcast={saveBroadcast} statusText={statusText} setStatusText={setStatusText} busy={busy}
         showEventModal={showEventModal} setShowEventModal={handleOpenEventModal}
