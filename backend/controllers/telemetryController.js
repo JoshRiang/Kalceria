@@ -64,11 +64,28 @@ export async function getMapUsers(req, res, next) {
     if (staleMembers.length) await redis.zrem("active_users", ...staleMembers);
     if (!activeMembers.length) return res.json({ users: [] });
 
-    // Batch fetch user profiles
+    // Batch fetch user profiles — authentic verified users only
     const users = await prisma.user.findMany({
       where: {
         id: { in: activeMembers },
         allowLiveLocation: true,
+        isEmailVerified: true,
+        role: "USER",
+        email: {
+          notIn: [
+            "admin1@gmail.com",
+            "admin2@gmail.com",
+            "admin3@gmail.com",
+            "admin4@gmail.com",
+          ],
+          not: {
+            contains: "admin",
+          },
+        },
+        NOT: [
+          { email: { contains: "laptop_tester" } },
+          { name: { in: ["Otniel", "Josh", "Reinathan"] } },
+        ],
       },
       select: {
         id: true,
@@ -135,8 +152,27 @@ export async function getAllKalcerians(req, res, next) {
     if (staleIds.length) await redis.zrem("active_users", ...staleIds);
     const onlineSet = new Set(activeIds);
 
-    // fetch all users — only safe public fields
+    // fetch authentic verified public users only — strictly omitting admin credentials and unverified accounts
     const users = await prisma.user.findMany({
+      where: {
+        isEmailVerified: true,
+        role: "USER",
+        email: {
+          notIn: [
+            "admin1@gmail.com",
+            "admin2@gmail.com",
+            "admin3@gmail.com",
+            "admin4@gmail.com",
+          ],
+          not: {
+            contains: "admin",
+          },
+        },
+        NOT: [
+          { email: { contains: "laptop_tester" } },
+          { name: { in: ["Otniel", "Josh", "Reinathan"] } },
+        ],
+      },
       select: {
         id: true,
         name: true,

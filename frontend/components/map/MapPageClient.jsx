@@ -430,13 +430,28 @@ export default function MapPage() {
     }
   }, [markPersonalChatRead]);
 
-  // derived: kalcerians for the sidebar (only real registered users, strictly omitting dummy mock profiles)
+  // derived: kalcerians for the sidebar (only real registered users, strictly omitting dummy mock profiles and admin test credentials)
   const sidebarKalcerians = useMemo(() => {
     const map = new Map();
 
+    const isExcludedUser = (u) => {
+      if (!u) return true;
+      const idStr = String(u.id || "");
+      if (idStr.startsWith("mock_")) return true;
+      const email = String(u.email || "").toLowerCase();
+      if (email.startsWith("admin") || email.includes("laptop_tester") || email.endsWith("@kalceria.id")) return true;
+      if (u.role === "ADMIN") return true;
+      const name = String(u.name || "").trim();
+      const nick = String(u.nickname || "").trim();
+      if (["Otniel", "Josh"].includes(name) || ["Otniel", "Josh"].includes(nick)) return true;
+      if (name.toLowerCase() === "otniel" || name.toLowerCase() === "josh") return true;
+      if (name.toLowerCase() === "reinathan" && (!nick || nick.toLowerCase() === "reinathan")) return true;
+      return false;
+    };
+
     // 1. Add registered kalcerians (real verified users from database)
     (kalcerians || []).forEach((u) => {
-      if (!u.id || String(u.id).startsWith("mock_")) return;
+      if (!u.id || isExcludedUser(u)) return;
       map.set(u.id, {
         id: u.id,
         name: u.name || u.nickname || "Kalcerian",
@@ -461,10 +476,11 @@ export default function MapPage() {
 
     // 2. Attach any event created by a registered user to their profile
     (events || []).forEach((ev) => {
+      if (!ev.creator || isExcludedUser(ev.creator)) return;
       if (ev.creator?.id && map.has(ev.creator.id)) {
         const existing = map.get(ev.creator.id);
         existing.event = ev;
-      } else if (ev.creator && !String(ev.creator.id).startsWith("mock_")) {
+      } else if (ev.creator && !isExcludedUser(ev.creator)) {
         const creatorId = ev.creator.id;
         map.set(creatorId, {
           id: creatorId,
@@ -491,7 +507,7 @@ export default function MapPage() {
     });
 
     // 3. Guarantee current logged-in user is online in the sidebar list
-    if (currentUser?.id) {
+    if (currentUser?.id && !isExcludedUser(currentUser)) {
       if (map.has(currentUser.id)) {
         const me = map.get(currentUser.id);
         me.isOnline = presence === "online";
