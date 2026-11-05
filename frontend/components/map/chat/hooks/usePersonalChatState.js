@@ -346,18 +346,6 @@ export function usePersonalChatState({
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [menuOpen]);
 
-  // Voice Note recording timer
-  useEffect(() => {
-    if (!isRecordingVoice) {
-      setRecordingSeconds(0);
-      return;
-    }
-    const interval = setInterval(() => {
-      setRecordingSeconds((s) => s + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isRecordingVoice]);
-
   const persistEncryptedLocal = useCallback(
     async (msgList) => {
       try {
