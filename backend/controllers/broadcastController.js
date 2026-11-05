@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma.js';
-import redis from '../lib/redis.js';
+import { redis } from '../lib/redis.js';
 
 async function invalidateKalceriansCache() {
   try {
