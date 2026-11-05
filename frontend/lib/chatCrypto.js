@@ -97,6 +97,7 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
     mediaUrl: payloadObj.mediaUrl || null,
     voiceDuration: payloadObj.voiceDuration || null,
     voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
+    replyTo: payloadObj.replyTo || null,
     senderId: String(userA || "me"),
     ts,
   });
@@ -126,6 +127,7 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
         mediaUrl: payloadObj.mediaUrl || null,
         voiceDuration: payloadObj.voiceDuration || null,
         voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
+        replyTo: payloadObj.replyTo || null,
         ts,
       };
     } catch {}
@@ -145,6 +147,7 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
     mediaUrl: payloadObj.mediaUrl || null,
     voiceDuration: payloadObj.voiceDuration || null,
     voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
+    replyTo: payloadObj.replyTo || null,
     ts,
   };
 }

@@ -44,9 +44,12 @@ export function ChatMessageBubble({
   playingVoiceId,
   setPlayingVoiceId,
   onResendMessage,
+  replyingTo,
+  onOpenContextMenu,
 }) {
   const isMe = String(item.senderId) === myId;
   const isSelected = selectedMsgIds.includes(item.id);
+  const isReplyingTarget = replyingTo?.id === item.id;
 
   // Dedicated Call Log Bubble: Large icon without outerbox, with duration timestamp to the LEFT of the icon
   if (item.msgType === "call") {
@@ -63,16 +66,40 @@ export function ChatMessageBubble({
         } ${selectMode ? "cursor-pointer" : ""} my-2.5`}
       >
         {selectMode && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => handleToggleSelectMsg(item.id)}
-            className="w-3.5 h-3.5 accent-black cursor-pointer shrink-0"
-          />
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleSelectMsg(item.id);
+            }}
+            className={`w-3 h-3 rounded-[3px] border flex items-center justify-center shrink-0 cursor-pointer transition-all ${
+              isSelected
+                ? isMapDark
+                  ? "bg-white border-white text-black"
+                  : "bg-black border-black text-white"
+                : isMapDark
+                ? "border-white/40 bg-transparent"
+                : "border-black/40 bg-transparent"
+            }`}
+          >
+            {isSelected && (
+              <svg viewBox="0 0 24 24" className="w-2 h-2 stroke-current" fill="none" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </div>
         )}
 
         {/* Timestamp aligned to the LEFT of the Phone / Video Icon */}
-        <div className="flex items-center gap-2 select-none pr-1">
+        <div
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onOpenContextMenu?.(e, item);
+          }}
+          className={`flex items-center gap-2 select-none pr-1 transition-all duration-200 ${
+            isSelected ? "scale-[1.04]" : "scale-100"
+          } ${isReplyingTarget ? "opacity-50" : "opacity-100"}`}
+        >
           <span
             style={{ fontFamily: "Arial, sans-serif" }}
             className={`text-[9.5px] sm:text-[10px] font-bold tracking-tight select-none leading-none ${
@@ -262,17 +289,37 @@ export function ChatMessageBubble({
 
       <div className={`flex items-center gap-2 ${isMe ? "justify-end" : "justify-start"} w-full`}>
         {selectMode && (
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => handleToggleSelectMsg(item.id)}
-            className="w-3.5 h-3.5 accent-black cursor-pointer shrink-0"
-          />
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleSelectMsg(item.id);
+            }}
+            className={`w-3 h-3 rounded-[3px] border flex items-center justify-center shrink-0 cursor-pointer transition-all ${
+              isSelected
+                ? isMapDark
+                  ? "bg-white border-white text-black"
+                  : "bg-black border-black text-white"
+                : isMapDark
+                ? "border-white/40 bg-transparent"
+                : "border-black/40 bg-transparent"
+            }`}
+          >
+            {isSelected && (
+              <svg viewBox="0 0 24 24" className="w-2 h-2 stroke-current" fill="none" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </div>
         )}
 
         <div
-          className={`relative max-w-[80%] rounded-xl px-2.5 py-1.5 text-xs leading-snug shadow-sm border transition-all ${
-            isSelected ? "ring-2 ring-[#ff006e]" : ""
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onOpenContextMenu?.(e, item);
+          }}
+          className={`relative max-w-[80%] rounded-xl px-2.5 py-1.5 text-xs leading-snug shadow-sm border transition-all duration-200 ${
+            isSelected ? "scale-[1.035] shadow-lg z-10" : "scale-100"
           } ${
             isMe
               ? item.status === "failed"
@@ -285,8 +332,31 @@ export function ChatMessageBubble({
               : isMapDark
               ? "bg-[#161b22] border-white/15 text-white rounded-tl-xs"
               : "bg-[#f4f4f5] border-black text-black rounded-tl-xs"
-          }`}
+          } ${isReplyingTarget ? "opacity-50" : "opacity-100"}`}
         >
+          {/* Reply Reference Card (standard Line/WA/IG quote) */}
+          {item.replyTo && (
+            <div
+              className={`mb-1.5 px-2 py-1 rounded-md text-[10.5px] leading-tight select-none border-l-2 ${
+                isMapDark
+                  ? "bg-white/10 border-white text-white/90"
+                  : "bg-black/5 border-black text-black/90"
+              }`}
+            >
+              <p
+                style={{ fontFamily: "Arial, sans-serif" }}
+                className="font-bold text-[9.5px] opacity-80"
+              >
+                {item.replyTo.senderName || "Kalcerian"}
+              </p>
+              <p
+                style={{ fontFamily: "Arial, sans-serif" }}
+                className="truncate opacity-75 mt-0.5 text-[10px]"
+              >
+                {item.replyTo.text || "Pesan"}
+              </p>
+            </div>
+          )}
           {/* Media Attachment Preview (Photo or Video <= 1 min) */}
           {item.mediaUrl && !isVoice && (
             <div className="mb-1.5 rounded-lg overflow-hidden border border-current/15 max-h-[190px]">

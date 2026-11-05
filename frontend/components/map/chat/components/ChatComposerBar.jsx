@@ -16,6 +16,8 @@ export function ChatComposerBar({
   isRecordingVoice,
   recordingSeconds,
   liveWaveform = [],
+  replyingTo,
+  onCancelReply,
   onOpenCameraModal,
   handleStartVoiceNote,
   handleCancelVoiceNote,
@@ -38,6 +40,55 @@ export function ChatComposerBar({
         </div>
       )}
 
+      {/* Reply Banner when user is replying to a message */}
+      {replyingTo && (
+        <div
+          className={`px-3 py-1.5 flex items-center justify-between text-xs select-none border-t transition-all ${
+            isMapDark
+              ? "bg-[#182229] text-white border-white/10"
+              : "bg-[#f4f5f7] text-black border-black/10"
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {/* Reply curved arrow icon from Picture 3 */}
+            <svg
+              viewBox="0 0 24 24"
+              className="w-4 h-4 shrink-0 opacity-80"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 15L3 9m0 0l6-6M3 9h11a6 6 0 0 1 6 6v3" />
+            </svg>
+            <div className="min-w-0 flex-1 border-l-2 border-current/40 pl-2">
+              <p
+                style={{ fontFamily: "Arial, sans-serif" }}
+                className="font-bold text-[10.5px] leading-tight truncate"
+              >
+                {replyingTo.senderName || "Kalcerian"}
+              </p>
+              <p
+                style={{ fontFamily: "Arial, sans-serif" }}
+                className="text-[10px] opacity-75 truncate leading-tight mt-0.5"
+              >
+                {replyingTo.text || (replyingTo.msgType === "voice" ? "🎤 Voice note" : "📷 Media")}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onCancelReply}
+            className="p-1 rounded-full hover:bg-current/10 cursor-pointer text-xs ml-2 opacity-65 hover:opacity-100 transition-opacity"
+            title="Batal balas"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Input Form Pill */}
       <form
         onSubmit={handleSendText}
@@ -46,38 +97,36 @@ export function ChatComposerBar({
         }`}
       >
         {isRecordingVoice ? (
-          /* Active Voice Note Recording Bar: No outer box, slim vertical lines, black X cancel, black triangle send */
+          /* Active Voice Note Recording Bar: Center-aligned, no outer box, slim vertical lines, black X cancel, black triangle send */
           <div className="flex-1 flex items-center justify-between px-2 py-1 select-none min-w-0">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              {/* Recording Time: Arial, matching chat time mark font size & color */}
-              <span
-                style={{ fontFamily: "Arial, sans-serif" }}
-                className={`text-[9.5px] sm:text-[10px] font-bold tracking-tight shrink-0 ${
-                  isMapDark ? "text-white/70" : "text-black/70"
-                }`}
-              >
-                0:{String(recordingSeconds).padStart(2, "0")}
-              </span>
+            {/* Recording Time pinned left */}
+            <span
+              style={{ fontFamily: "Arial, sans-serif" }}
+              className={`text-[9.5px] sm:text-[10px] font-bold tracking-tight shrink-0 mr-2.5 ${
+                isMapDark ? "text-white/70" : "text-black/70"
+              }`}
+            >
+              0:{String(recordingSeconds).padStart(2, "0")}
+            </span>
 
-              {/* Dynamic waveform vertical lines (slimmer lines like sent voice note) */}
-              <div className="flex items-center gap-[2.5px] h-6 overflow-hidden flex-1 px-1">
-                {(liveWaveform && liveWaveform.length > 0
-                  ? liveWaveform.slice(-28)
-                  : [6, 6, 6, 6, 6]
-                ).map((val, idx) => (
-                  <span
-                    key={idx}
-                    style={{ height: `${Math.max(3, Math.min(22, (val / 100) * 22))}px` }}
-                    className={`w-[1.5px] rounded-full transition-all duration-75 shrink-0 ${
-                      isMapDark ? "bg-white/80" : "bg-black/80"
-                    }`}
-                  />
-                ))}
-              </div>
+            {/* Dynamic waveform vertical lines CENTERED in the middle */}
+            <div className="flex-1 flex items-center justify-center gap-[2.5px] h-6 overflow-hidden px-1">
+              {(liveWaveform && liveWaveform.length > 0
+                ? liveWaveform.slice(-32)
+                : Array(24).fill(6)
+              ).map((val, idx) => (
+                <span
+                  key={idx}
+                  style={{ height: `${Math.max(3, Math.min(22, (val / 100) * 22))}px` }}
+                  className={`w-[1.5px] rounded-full transition-all duration-100 shrink-0 ${
+                    isMapDark ? "bg-white/80" : "bg-black/80"
+                  }`}
+                />
+              ))}
             </div>
 
             {/* Action Buttons: Cancel is black 'X', Send is black triangle icon */}
-            <div className="flex items-center gap-2 shrink-0 pl-1.5">
+            <div className="flex items-center gap-2 shrink-0 pl-2">
               {/* Batal: black X icon */}
               <button
                 type="button"

@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { ChatMessageBubble } from "./ChatMessageBubble";
+import { ChatMessageContextMenu } from "./ChatMessageContextMenu";
 
 export function ChatMessageThread({
   groupedMessages,
@@ -16,7 +18,31 @@ export function ChatMessageThread({
   loadOlderMessages,
   messagesEndRef,
   onResendMessage,
+  replyingTo,
+  onReplyMessage,
+  onCopyMessage,
+  onDeleteMessage,
 }) {
+  const [contextMenu, setContextMenu] = useState({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    message: null,
+  });
+
+  const handleOpenContextMenu = (e, message) => {
+    // If in select mode, do not open context menu; selection takes precedence
+    if (selectMode) return;
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      message,
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu((prev) => ({ ...prev, isOpen: false }));
+  };
+
   return (
     <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
       {/* BG_PersonalChat.jpg Background Layer (~60% opacity / reduced by 40% for soft clarity) */}
@@ -61,7 +87,7 @@ export function ChatMessageThread({
         {groupedMessages.map((item) => {
           if (item.type === "date_divider") {
             return (
-              /* Floating Sticky Date/Time Mark (WhatsApp UX Picture 4) */
+              /* Floating Sticky Date/Time Mark */
               <div key={item.id} className="sticky top-2 z-20 flex justify-center my-1.5 pointer-events-none">
                 <span
                   className={`px-3 py-0.5 rounded-md text-[10.5px] font-medium border shadow-md backdrop-blur-md pointer-events-auto ${
@@ -88,11 +114,24 @@ export function ChatMessageThread({
               playingVoiceId={playingVoiceId}
               setPlayingVoiceId={setPlayingVoiceId}
               onResendMessage={onResendMessage}
+              replyingTo={replyingTo}
+              onOpenContextMenu={handleOpenContextMenu}
             />
           );
         })}
       </div>
+
+      {/* Floating Right-Click Context Menu */}
+      <ChatMessageContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        targetMessage={contextMenu.message}
+        isMapDark={isMapDark}
+        onClose={handleCloseContextMenu}
+        onReply={(msg) => onReplyMessage?.(msg)}
+        onCopy={(msg) => onCopyMessage?.(msg)}
+        onDelete={(msg) => onDeleteMessage?.([msg.id])}
+      />
     </div>
   );
 }
-

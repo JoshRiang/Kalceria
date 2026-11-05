@@ -67,6 +67,10 @@ export function PersonalChatPanel({
     setCallState,
     handleCallFinished,
     handleResendMessage,
+    replyingTo,
+    setReplyingTo,
+    handleStartReply,
+    handleCopySingleMessage,
     isPeerTyping,
     messagesEndRef,
     menuContainerRef,
@@ -189,6 +193,10 @@ export function PersonalChatPanel({
             loadOlderMessages={loadOlderMessages}
             messagesEndRef={messagesEndRef}
             onResendMessage={handleResendMessage}
+            replyingTo={replyingTo}
+            onReplyMessage={handleStartReply}
+            onCopyMessage={handleCopySingleMessage}
+            onDeleteMessage={handleDeleteSelectedMessages}
           />
 
           {selectMode ? (
@@ -215,6 +223,8 @@ export function PersonalChatPanel({
               isRecordingVoice={isRecordingVoice}
               recordingSeconds={recordingSeconds}
               liveWaveform={liveWaveform}
+              replyingTo={replyingTo}
+              onCancelReply={() => setReplyingTo(null)}
               onOpenCameraModal={() => setIsCameraModalOpen(true)}
               handleStartVoiceNote={handleStartVoiceNote}
               handleCancelVoiceNote={handleCancelVoiceNote}

@@ -173,6 +173,7 @@ export function usePersonalChatState({
   const [selectedMsgIds, setSelectedMsgIds] = useState([]);
   const [showContactInfo, setShowContactInfo] = useState(false);
   const [showEmojiBar, setShowEmojiBar] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
 
   // Camera Capture Modal State
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
@@ -379,10 +380,11 @@ export function usePersonalChatState({
       videoDuration = null,
       callMode = null,
       callDuration = null,
+      replyTo = null,
     }) => {
       const ts = Date.now();
       const envelope = await encryptChatPayload(
-        { text, msgType, mediaUrl, voiceDuration, voiceWaveform, callMode, callDuration },
+        { text, msgType, mediaUrl, voiceDuration, voiceWaveform, callMode, callDuration, replyTo },
         myId,
         targetId
       );
@@ -400,6 +402,7 @@ export function usePersonalChatState({
         voiceWaveform,
         callMode,
         callDuration,
+        replyTo,
         ts,
         status: msgType === "call" ? "read" : "sending",
         verifiedE2EE: true,
@@ -514,7 +517,22 @@ export function usePersonalChatState({
     setInputText("");
     setShowEmojiBar(false);
     setMediaError("");
-    await appendAndEncryptMessage({ text: trimmed, msgType: "text" });
+
+    const currentReply = replyingTo;
+    setReplyingTo(null);
+
+    await appendAndEncryptMessage({
+      text: trimmed,
+      msgType: "text",
+      replyTo: currentReply
+        ? {
+            id: currentReply.id,
+            text: currentReply.text || (currentReply.msgType === "voice" ? "🎤 Voice note" : "📷 Media"),
+            senderId: currentReply.senderId,
+            senderName: currentReply.senderName || "Kalcerian",
+          }
+        : null,
+    });
   };
 
   // Surface-level Media Validation (Max 10MB, strictly PNG / JPEG / MP4, Consolas Red Error)
@@ -670,17 +688,44 @@ export function usePersonalChatState({
     );
   };
 
-  const handleDeleteSelectedMessages = async () => {
-    if (!selectedMsgIds.length) return;
-    const idSet = new Set(selectedMsgIds);
+  const handleDeleteSelectedMessages = async (customIds = null) => {
+    const ids = Array.isArray(customIds) ? customIds : selectedMsgIds;
+    if (!ids.length) return;
+    const idSet = new Set(ids);
     setMessages((prev) => {
       const next = prev.filter((m) => !idSet.has(m.id));
       persistEncryptedLocal(next);
       return next;
     });
-    deletePersonalChatMessages(targetId, { messageIds: selectedMsgIds }).catch(() => { });
-    setSelectedMsgIds([]);
-    setSelectMode(false);
+    deletePersonalChatMessages(targetId, { messageIds: ids }).catch(() => { });
+    if (!customIds) {
+      setSelectedMsgIds([]);
+      setSelectMode(false);
+    } else {
+      setSelectedMsgIds((prev) => prev.filter((id) => !idSet.has(id)));
+    }
+  };
+
+  const handleCopySingleMessage = (msg) => {
+    const text = typeof msg === "string" ? msg : msg?.text;
+    if (text && typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => { });
+    }
+  };
+
+  const handleStartReply = (msg) => {
+    if (!msg) return;
+    const senderName =
+      msg.senderId === myId
+        ? "You"
+        : activeChatUser?.displayName || activeChatUser?.name || "Kalcerian";
+    setReplyingTo({
+      id: msg.id,
+      text: msg.text,
+      msgType: msg.msgType,
+      senderId: msg.senderId,
+      senderName,
+    });
   };
 
   const handleCopySelectedMessages = () => {
@@ -797,6 +842,10 @@ export function usePersonalChatState({
     setShowContactInfo,
     showEmojiBar,
     setShowEmojiBar,
+    replyingTo,
+    setReplyingTo,
+    handleStartReply,
+    handleCopySingleMessage,
     fileInputRef,
     isUploadingMedia,
     mediaError,

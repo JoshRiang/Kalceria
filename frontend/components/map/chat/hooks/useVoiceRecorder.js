@@ -105,9 +105,9 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
         waveformAccumulatorRef.current.push(normalized);
         setLiveWaveform((prev) => {
           const next = [...prev, normalized];
-          return next.slice(-32); // keep latest 32 bars visible in UI
+          return next.slice(-36); // keep latest 36 bars visible in UI
         });
-      }, 40);
+      }, 115); // Calmer ~8.7 bars/sec sampling for smooth, non-rushed UX propagation
 
       // 3. MediaRecorder Audio Compression
       const preferredMimes = [
