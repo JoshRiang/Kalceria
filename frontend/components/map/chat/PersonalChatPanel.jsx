@@ -66,6 +66,7 @@ export function PersonalChatPanel({
     callState,
     setCallState,
     handleCallFinished,
+    handleResendMessage,
     isPeerTyping,
     messagesEndRef,
     menuContainerRef,
@@ -187,6 +188,7 @@ export function PersonalChatPanel({
             isLoadingOlder={isLoadingOlder}
             loadOlderMessages={loadOlderMessages}
             messagesEndRef={messagesEndRef}
+            onResendMessage={handleResendMessage}
           />
 
           {selectMode ? (

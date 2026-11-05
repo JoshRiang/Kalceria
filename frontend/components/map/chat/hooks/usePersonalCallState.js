@@ -57,6 +57,7 @@ export function usePersonalCallState({
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [isCamOff, setIsCamOff] = useState(false);
   const [hasLocalStream, setHasLocalStream] = useState(false);
+  const [isBadConnection, setIsBadConnection] = useState(false);
   const [safetyCode, setSafetyCode] = useState("");
   const [showSafetyTooltip, setShowSafetyTooltip] = useState(false);
 
@@ -174,6 +175,25 @@ export function usePersonalCallState({
               pc.addTrack(track, stream);
             });
           }
+
+          // Network Stack Monitor: detect lost or degraded VoIP connection
+          pc.oniceconnectionstatechange = () => {
+            const state = pc.iceConnectionState;
+            if (state === "disconnected" || state === "failed") {
+              setIsBadConnection(true);
+            } else if (state === "connected" || state === "completed") {
+              setIsBadConnection(false);
+            }
+          };
+
+          pc.onconnectionstatechange = () => {
+            const state = pc.connectionState;
+            if (state === "disconnected" || state === "failed") {
+              setIsBadConnection(true);
+            } else if (state === "connected") {
+              setIsBadConnection(false);
+            }
+          };
 
           // Remote stream receiver
           pc.ontrack = (event) => {
@@ -366,6 +386,7 @@ export function usePersonalCallState({
     isCamOff,
     setIsCamOff,
     hasLocalStream,
+    isBadConnection,
     safetyCode,
     showSafetyTooltip,
     setShowSafetyTooltip,

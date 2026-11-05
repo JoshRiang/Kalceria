@@ -28,6 +28,7 @@ export function PersonalCallView({
     isCamOff,
     setIsCamOff,
     hasLocalStream,
+    isBadConnection,
     safetyCode,
     showSafetyTooltip,
     setShowSafetyTooltip,
@@ -66,6 +67,7 @@ export function PersonalCallView({
         isSpeakerOn={isSpeakerOn}
         isCamOff={isCamOff}
         hasLocalStream={hasLocalStream}
+        isBadConnection={isBadConnection}
         safetyCode={safetyCode}
         showSafetyTooltip={showSafetyTooltip}
         setShowSafetyTooltip={setShowSafetyTooltip}

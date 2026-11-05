@@ -387,8 +387,10 @@ export function usePersonalChatState({
         targetId
       );
 
+      const msgId = envelope.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const newMsg = {
         ...envelope,
+        id: msgId,
         senderId: myId,
         recipientId: targetId,
         text,
@@ -399,7 +401,7 @@ export function usePersonalChatState({
         callMode,
         callDuration,
         ts,
-        status: "read",
+        status: msgType === "call" ? "read" : "sending",
         verifiedE2EE: true,
       };
 
@@ -422,13 +424,50 @@ export function usePersonalChatState({
         ts
       );
 
-      postPersonalChatMessage(targetId, {
-        ...envelope,
-        voiceWaveform,
-        videoDuration,
-        callMode,
-        callDuration,
-      }).catch(() => { });
+      if (msgType !== "call") {
+        let isTimedOut = false;
+        const timeoutTimer = setTimeout(() => {
+          isTimedOut = true;
+          setMessages((prev) => {
+            const next = prev.map((m) => (m.id === msgId && m.status === "sending" ? { ...m, status: "failed" } : m));
+            persistEncryptedLocal(next);
+            return next;
+          });
+        }, 7000);
+
+        postPersonalChatMessage(targetId, {
+          ...envelope,
+          voiceWaveform,
+          videoDuration,
+          callMode,
+          callDuration,
+        })
+          .then(() => {
+            clearTimeout(timeoutTimer);
+            if (!isTimedOut) {
+              setMessages((prev) => {
+                const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
+                persistEncryptedLocal(next);
+                return next;
+              });
+              setTimeout(() => {
+                setMessages((prev) => {
+                  const next = prev.map((m) => (m.id === msgId ? { ...m, status: "read" } : m));
+                  persistEncryptedLocal(next);
+                  return next;
+                });
+              }, 1200);
+            }
+          })
+          .catch(() => {
+            clearTimeout(timeoutTimer);
+            setMessages((prev) => {
+              const next = prev.map((m) => (m.id === msgId ? { ...m, status: "failed" } : m));
+              persistEncryptedLocal(next);
+              return next;
+            });
+          });
+      }
 
       // If chatting with dummy user Ahmad Bintaro, simulate realistic E2EE reply
       if (isAhmadDummyUser(activeChatUser)) {
@@ -692,6 +731,47 @@ export function usePersonalChatState({
     [appendAndEncryptMessage]
   );
 
+  const handleResendMessage = useCallback(
+    async (failedMsg) => {
+      if (!failedMsg?.id) return;
+      setMessages((prev) => {
+        const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "sending" } : m));
+        persistEncryptedLocal(next);
+        return next;
+      });
+
+      postPersonalChatMessage(targetId, {
+        id: failedMsg.id,
+        nonce: failedMsg.nonce,
+        encryptedPayload: failedMsg.encryptedPayload,
+        voiceWaveform: failedMsg.voiceWaveform,
+        videoDuration: failedMsg.videoDuration,
+      })
+        .then(() => {
+          setMessages((prev) => {
+            const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "sent" } : m));
+            persistEncryptedLocal(next);
+            return next;
+          });
+          setTimeout(() => {
+            setMessages((prev) => {
+              const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "read" } : m));
+              persistEncryptedLocal(next);
+              return next;
+            });
+          }, 1200);
+        })
+        .catch(() => {
+          setMessages((prev) => {
+            const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "failed" } : m));
+            persistEncryptedLocal(next);
+            return next;
+          });
+        });
+    },
+    [targetId]
+  );
+
   return {
     starterPlaceholder,
     myId,
@@ -733,6 +813,7 @@ export function usePersonalChatState({
     callState,
     setCallState,
     handleCallFinished,
+    handleResendMessage,
     isPeerTyping,
     messagesEndRef,
     menuContainerRef,

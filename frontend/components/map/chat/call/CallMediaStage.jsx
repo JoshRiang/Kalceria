@@ -35,6 +35,7 @@ export function CallMediaStage({
   isSpeakerOn,
   isCamOff,
   hasLocalStream,
+  isBadConnection = false,
   localVideoRef,
   remoteVideoRef,
 }) {
@@ -58,7 +59,9 @@ export function CallMediaStage({
               loop
               muted={!isSpeakerOn}
               playsInline
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover transition-all duration-500 ${
+                isBadConnection ? "filter blur-[12px] scale-105 opacity-80" : ""
+              }`}
             />
           ) : (
             <div className="relative w-full h-full flex items-center justify-center">
@@ -183,24 +186,66 @@ export function CallMediaStage({
               }`}
             />
 
-            <div
-              className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 shadow-xl ${
-                mode === "voice"
-                  ? "border-black bg-white"
-                  : isMapDark
-                  ? "border-white bg-[#161b22]"
-                  : "border-black bg-white"
-              }`}
-            >
-              <ContentImage
-                src={avatarUrl(targetUser)}
-                alt={displayName}
-                width={120}
-                height={120}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            {/* Avatar or Graceful Warning Sign on Bad Connection */}
+            {isBadConnection ? (
+              <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center animate-pulse">
+                <svg viewBox="0 0 24 24" className="w-20 h-20 sm:w-24 sm:h-24 drop-shadow-xl" fill="none">
+                  <mask id="warn-mask-voice">
+                    <rect width="24" height="24" fill="white" />
+                    <rect x="11" y="9" width="2" height="5" rx="1" fill="black" />
+                    <circle cx="12" cy="17" r="1.1" fill="black" />
+                  </mask>
+                  <path
+                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                    fill="#ffd60a"
+                    mask="url(#warn-mask-voice)"
+                  />
+                </svg>
+              </div>
+            ) : (
+              <div
+                className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 shadow-xl ${
+                  mode === "voice"
+                    ? "border-black bg-white"
+                    : isMapDark
+                    ? "border-white bg-[#161b22]"
+                    : "border-black bg-white"
+                }`}
+              >
+                <ContentImage
+                  src={avatarUrl(targetUser)}
+                  alt={displayName}
+                  width={120}
+                  height={120}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
           </motion.div>
+        )}
+
+        {/* Video Call Center Graceful Warning Sign when Connection is Bad */}
+        {mode === "video" && isBadConnection && status === "connected" && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center pointer-events-none animate-pulse">
+            <svg viewBox="0 0 24 24" className="w-20 h-20 sm:w-24 sm:h-24 drop-shadow-2xl" fill="none">
+              <mask id="warn-mask-video">
+                <rect width="24" height="24" fill="white" />
+                <rect x="11" y="9" width="2" height="5" rx="1" fill="black" />
+                <circle cx="12" cy="17" r="1.1" fill="black" />
+              </mask>
+              <path
+                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                fill="#ffd60a"
+                mask="url(#warn-mask-video)"
+              />
+            </svg>
+            <p
+              style={{ fontFamily: "Arial, sans-serif" }}
+              className="text-[11px] font-bold text-white drop-shadow mt-2 tracking-tight"
+            >
+              Koneksi Buruk
+            </p>
+          </div>
         )}
 
         {/* Voice Call Live Waveform Bars when Connected */}

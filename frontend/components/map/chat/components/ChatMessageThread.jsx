@@ -15,6 +15,7 @@ export function ChatMessageThread({
   isLoadingOlder,
   loadOlderMessages,
   messagesEndRef,
+  onResendMessage,
 }) {
   return (
     <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -33,10 +34,11 @@ export function ChatMessageThread({
         }`}
       />
 
-      {/* Scrollable Message Thread */}
+      {/* Scrollable Message Thread: Optimized with GPU acceleration & low-latency scrolling */}
       <div
         ref={messagesEndRef}
-        className="relative z-10 flex-1 overflow-y-auto px-3 py-2.5 flex flex-col gap-1.5 modern-kalcerian-scrollbar overscroll-contain"
+        style={{ WebkitOverflowScrolling: "touch" }}
+        className="relative z-10 flex-1 overflow-y-auto px-3 py-2.5 flex flex-col gap-1.5 modern-kalcerian-scrollbar overscroll-contain transform-gpu will-change-scroll"
       >
         {/* Cursor Pagination for Cold Archive */}
         {nextCursor && (
@@ -85,6 +87,7 @@ export function ChatMessageThread({
               handleToggleSelectMsg={handleToggleSelectMsg}
               playingVoiceId={playingVoiceId}
               setPlayingVoiceId={setPlayingVoiceId}
+              onResendMessage={onResendMessage}
             />
           );
         })}

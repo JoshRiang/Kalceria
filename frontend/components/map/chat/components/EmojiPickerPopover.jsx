@@ -36,28 +36,28 @@ export function EmojiPickerPopover({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 10 }}
           transition={{ duration: 0.18, ease: "easeOut" }}
-          className={`fixed z-[1020] flex flex-col overflow-hidden shadow-2xl rounded-2xl border select-none
+          className={`fixed z-[1020] flex flex-col overflow-hidden shadow-2xl rounded-2xl select-none
             /* Desktop / Laptop: Anchored cleanly to the right side of the chat panel */
             min-[861px]:left-[364px] sm:min-[861px]:left-[388px] min-[861px]:bottom-4 min-[861px]:w-[315px] min-[861px]:h-[395px]
             /* Mobile Layout: Anchored cleanly above chat composer bar */
             max-[860px]:bottom-[74px] max-[860px]:left-3 max-[860px]:right-3 max-[860px]:h-[255px] max-[860px]:w-auto
             ${
               isMapDark
-                ? "bg-[#161b22] border-white/20 text-[#f0f6fc] shadow-[0_16px_40px_rgba(0,0,0,0.85)]"
-                : "bg-white border-black text-[#1f2328] shadow-[0_16px_40px_rgba(0,0,0,0.2)]"
+                ? "bg-[#161b22] text-[#f0f6fc] shadow-[0_20px_50px_rgba(0,0,0,0.85)]"
+                : "bg-white text-[#1f2328] shadow-[0_20px_50px_rgba(0,0,0,0.22)]"
             }`}
         >
-          {/* Header & Search Bar (Arial Font style & behavior like 'Find other Kalcerians' search bar) */}
+          {/* Header & Search Bar: No border lines, subtle recessed texture */}
           <div
-            className={`p-2.5 border-b shrink-0 flex items-center gap-2 ${
-              isMapDark ? "bg-[#202c33] border-white/10" : "bg-white border-black"
+            className={`p-2.5 shrink-0 flex items-center gap-2 ${
+              isMapDark ? "bg-[#161b22]" : "bg-white"
             }`}
           >
             <div
-              className={`flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${
+              className={`flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all ${
                 isMapDark
-                  ? "bg-[#2a3942] border-white/15 text-white"
-                  : "bg-[#f0f2f5] border-black text-black"
+                  ? "bg-[#202c33] shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.5),inset_0_0_1px_rgba(255,255,255,0.08)] text-white"
+                  : "bg-[#f0f2f5] shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.12),inset_0_0_1px_rgba(0,0,0,0.12)] text-black"
               }`}
             >
               <svg
