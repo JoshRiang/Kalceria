@@ -1,12 +1,8 @@
 name: CI
 
+# Temporarily disabled automatic trigger on push/PR per user instruction
 on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: read

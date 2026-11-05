@@ -13,17 +13,14 @@ export function CallControlsBar({
   handleHangup,
 }) {
   const iconColor = isMapDark ? "#ffffff" : "#000000";
+  const barBgClass = isMapDark ? "bg-[#161b22]/90 shadow-lg" : "bg-white/95 shadow-md";
+  const speakerOpacity = !isSpeakerOn ? "opacity-35" : "opacity-100";
+  const camOpacity = mode === "video" && isCamOff ? "opacity-35" : "opacity-100";
 
   return (
     <div className="relative z-10 px-4 pb-4 pt-2">
       {/* Borderless Bottom Controls Bar */}
-      <div
-        className={`flex items-center justify-evenly py-2.5 px-3 rounded-2xl backdrop-blur-md ${
-          isMapDark
-            ? "bg-[#161b22]/90 shadow-lg"
-            : "bg-white/95 shadow-md"
-        }`}
-      >
+      <div className={"flex items-center justify-evenly py-2.5 px-3 rounded-2xl backdrop-blur-md " + barBgClass}>
         {/* 1. Toggle Speaker (Borderless, Outer Circle Gone) */}
         <button
           type="button"
@@ -33,7 +30,7 @@ export function CallControlsBar({
         >
           <svg
             viewBox="0 0 24 24"
-            className={`w-5 h-5 transition-opacity ${!isSpeakerOn ? "opacity-35" : "opacity-100"}`}
+            className={"w-5 h-5 transition-opacity " + speakerOpacity}
             fill={iconColor}
           >
             <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
@@ -55,7 +52,7 @@ export function CallControlsBar({
         >
           <svg
             viewBox="0 0 24 24"
-            className={`w-5 h-5 transition-opacity ${mode === "video" && isCamOff ? "opacity-35" : "opacity-100"}`}
+            className={"w-5 h-5 transition-opacity " + camOpacity}
             fill={iconColor}
           >
             <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
@@ -97,4 +94,3 @@ export function CallControlsBar({
     </div>
   );
 }
-
