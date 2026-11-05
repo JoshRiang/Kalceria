@@ -378,13 +378,14 @@ export function usePersonalChatState({
       voiceDuration = null,
       voiceWaveform = null,
       videoDuration = null,
+      isViewOnce = false,
       callMode = null,
       callDuration = null,
       replyTo = null,
     }) => {
       const ts = Date.now();
       const envelope = await encryptChatPayload(
-        { text, msgType, mediaUrl, voiceDuration, voiceWaveform, callMode, callDuration, replyTo },
+        { text, msgType, mediaUrl, voiceDuration, voiceWaveform, videoDuration, isViewOnce, callMode, callDuration, replyTo },
         myId,
         targetId
       );
@@ -400,6 +401,8 @@ export function usePersonalChatState({
         mediaUrl,
         voiceDuration,
         voiceWaveform,
+        videoDuration,
+        isViewOnce,
         callMode,
         callDuration,
         replyTo,
@@ -428,48 +431,66 @@ export function usePersonalChatState({
       );
 
       if (msgType !== "call") {
-        let isTimedOut = false;
-        const timeoutTimer = setTimeout(() => {
-          isTimedOut = true;
-          setMessages((prev) => {
-            const next = prev.map((m) => (m.id === msgId && m.status === "sending" ? { ...m, status: "failed" } : m));
-            persistEncryptedLocal(next);
-            return next;
-          });
-        }, 7000);
-
-        postPersonalChatMessage(targetId, {
-          ...envelope,
-          voiceWaveform,
-          videoDuration,
-          callMode,
-          callDuration,
-        })
-          .then(() => {
-            clearTimeout(timeoutTimer);
-            if (!isTimedOut) {
-              setMessages((prev) => {
-                const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
-                persistEncryptedLocal(next);
-                return next;
-              });
-              setTimeout(() => {
-                setMessages((prev) => {
-                  const next = prev.map((m) => (m.id === msgId ? { ...m, status: "read" } : m));
-                  persistEncryptedLocal(next);
-                  return next;
-                });
-              }, 1200);
-            }
-          })
-          .catch(() => {
-            clearTimeout(timeoutTimer);
+        if (isAhmadDummyUser(activeChatUser) || String(targetId).startsWith("mock_")) {
+          // Instant local simulation for dummy / Ahmad users
+          setTimeout(() => {
             setMessages((prev) => {
-              const next = prev.map((m) => (m.id === msgId ? { ...m, status: "failed" } : m));
+              const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
               persistEncryptedLocal(next);
               return next;
             });
-          });
+            setTimeout(() => {
+              setMessages((prev) => {
+                const next = prev.map((m) => (m.id === msgId ? { ...m, status: "read" } : m));
+                persistEncryptedLocal(next);
+                return next;
+              });
+            }, 800);
+          }, 300);
+        } else {
+          let isTimedOut = false;
+          const timeoutTimer = setTimeout(() => {
+            isTimedOut = true;
+            setMessages((prev) => {
+              const next = prev.map((m) => (m.id === msgId && m.status === "sending" ? { ...m, status: "failed" } : m));
+              persistEncryptedLocal(next);
+              return next;
+            });
+          }, 7000);
+
+          postPersonalChatMessage(targetId, {
+            ...envelope,
+            voiceWaveform,
+            videoDuration,
+            callMode,
+            callDuration,
+          })
+            .then(() => {
+              clearTimeout(timeoutTimer);
+              if (!isTimedOut) {
+                setMessages((prev) => {
+                  const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
+                  persistEncryptedLocal(next);
+                  return next;
+                });
+                setTimeout(() => {
+                  setMessages((prev) => {
+                    const next = prev.map((m) => (m.id === msgId ? { ...m, status: "read" } : m));
+                    persistEncryptedLocal(next);
+                    return next;
+                  });
+                }, 1200);
+              }
+            })
+            .catch(() => {
+              clearTimeout(timeoutTimer);
+              setMessages((prev) => {
+                const next = prev.map((m) => (m.id === msgId ? { ...m, status: "failed" } : m));
+                persistEncryptedLocal(next);
+                return next;
+              });
+            });
+        }
       }
 
       // If chatting with dummy user Ahmad Bintaro, simulate realistic E2EE reply
@@ -632,7 +653,7 @@ export function usePersonalChatState({
     });
   };
 
-  const handleSendCapturedMedia = async ({ blob, url, type, duration }) => {
+  const handleSendCapturedMedia = async ({ blob, url, type, duration, isViewOnce, caption }) => {
     if (type === "video" && duration && duration > 60) {
       setMediaError("Durasi video melebihi batas 1 menit (maksimal 60 detik).");
       return;
@@ -652,10 +673,11 @@ export function usePersonalChatState({
     }
 
     await appendAndEncryptMessage({
-      text: inputText.trim(),
-      msgType: "media",
+      text: (typeof caption === "string" ? caption : inputText).trim(),
+      msgType: type === "video" ? "video" : "media",
       mediaUrl: finalUrl,
       videoDuration: duration,
+      isViewOnce: Boolean(isViewOnce),
     });
     setInputText("");
   };
@@ -785,6 +807,24 @@ export function usePersonalChatState({
         return next;
       });
 
+      if (isAhmadDummyUser(activeChatUser) || String(targetId).startsWith("mock_")) {
+        setTimeout(() => {
+          setMessages((prev) => {
+            const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "sent" } : m));
+            persistEncryptedLocal(next);
+            return next;
+          });
+          setTimeout(() => {
+            setMessages((prev) => {
+              const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "read" } : m));
+              persistEncryptedLocal(next);
+              return next;
+            });
+          }, 800);
+        }, 300);
+        return;
+      }
+
       postPersonalChatMessage(targetId, {
         id: failedMsg.id,
         nonce: failedMsg.nonce,
@@ -814,7 +854,7 @@ export function usePersonalChatState({
           });
         });
     },
-    [targetId]
+    [targetId, activeChatUser]
   );
 
   return {

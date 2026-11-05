@@ -97,6 +97,8 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
     mediaUrl: payloadObj.mediaUrl || null,
     voiceDuration: payloadObj.voiceDuration || null,
     voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
+    videoDuration: payloadObj.videoDuration || null,
+    isViewOnce: Boolean(payloadObj.isViewOnce),
     replyTo: payloadObj.replyTo || null,
     senderId: String(userA || "me"),
     ts,
@@ -147,6 +149,8 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
     mediaUrl: payloadObj.mediaUrl || null,
     voiceDuration: payloadObj.voiceDuration || null,
     voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
+    videoDuration: payloadObj.videoDuration || null,
+    isViewOnce: Boolean(payloadObj.isViewOnce),
     replyTo: payloadObj.replyTo || null,
     ts,
   };
@@ -186,6 +190,9 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
         mediaUrl: decoded.mediaUrl || envelope.mediaUrl || null,
         voiceDuration: decoded.voiceDuration || envelope.voiceDuration || null,
         voiceWaveform: decoded.voiceWaveform || envelope.voiceWaveform || null,
+        videoDuration: decoded.videoDuration || envelope.videoDuration || null,
+        isViewOnce: decoded.isViewOnce !== undefined ? decoded.isViewOnce : envelope.isViewOnce,
+        replyTo: decoded.replyTo || envelope.replyTo || null,
         verifiedE2EE: true,
       };
     } catch {}
@@ -201,6 +208,9 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
       mediaUrl: decoded.mediaUrl || envelope.mediaUrl || null,
       voiceDuration: decoded.voiceDuration || envelope.voiceDuration || null,
       voiceWaveform: decoded.voiceWaveform || envelope.voiceWaveform || null,
+      videoDuration: decoded.videoDuration || envelope.videoDuration || null,
+      isViewOnce: decoded.isViewOnce !== undefined ? decoded.isViewOnce : envelope.isViewOnce,
+      replyTo: decoded.replyTo || envelope.replyTo || null,
       verifiedE2EE: true,
     };
   } catch {

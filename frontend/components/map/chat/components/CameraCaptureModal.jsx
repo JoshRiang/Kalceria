@@ -7,23 +7,33 @@ import { acquireCameraStream, stopMediaStream } from "@/lib/mediaHardware";
 export function CameraCaptureModal({
   isOpen,
   onClose,
-  onSendMedia, // ({ url, blob, type, isViewOnce, rotation })
+  onSendMedia, // ({ url, blob, type, isViewOnce, rotation, caption })
   isMapDark = true,
   onPermissionNeeded,
 }) {
   const [facingMode, setFacingMode] = useState("user"); // "user" | "environment"
   const [hasStream, setHasStream] = useState(false);
   const [cameraError, setCameraError] = useState("");
-  const [previewMedia, setPreviewMedia] = useState(null); // { type: "photo", url, blob }
+  const [previewMedia, setPreviewMedia] = useState(null); // { type: "photo" | "video", url, blob, duration }
   const [isViewOnce, setIsViewOnce] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1); // 1 or 2
   const [canFlipCamera, setCanFlipCamera] = useState(false);
   const [isSpinningFlip, setIsSpinningFlip] = useState(false);
   const [photoRotation, setPhotoRotation] = useState(0); // 0, 90, 180, 270
   const [isCropping, setIsCropping] = useState(false);
+  const [caption, setCaption] = useState("");
+
+  // Video recording on hold
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+  const holdTimerRef = useRef(null);
+  const recordIntervalRef = useRef(null);
+  const isHoldingShutterRef = useRef(false);
 
   // Hardware Camera Detection: check if multi-camera is supported
   useEffect(() => {
@@ -46,11 +56,26 @@ export function CameraCaptureModal({
   }, [isOpen]);
 
   const cleanupCamera = useCallback(() => {
+    if (recordIntervalRef.current) {
+      clearInterval(recordIntervalRef.current);
+      recordIntervalRef.current = null;
+    }
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+      mediaRecorderRef.current = null;
+    }
     if (streamRef.current) {
       stopMediaStream(streamRef.current);
       streamRef.current = null;
     }
     setHasStream(false);
+    setIsRecordingVideo(false);
   }, []);
 
   // Teardown when closing modal
@@ -63,6 +88,9 @@ export function CameraCaptureModal({
       setZoomLevel(1);
       setPhotoRotation(0);
       setIsCropping(false);
+      setCaption("");
+      setIsRecordingVideo(false);
+      setRecordingSeconds(0);
     }
   }, [isOpen, cleanupCamera]);
 
@@ -73,9 +101,12 @@ export function CameraCaptureModal({
     };
   }, [cleanupCamera]);
 
-  // Start Camera Stream
+  // Persistent Camera Stream initializer
   const startCamera = useCallback(async (facing = "user") => {
-    cleanupCamera();
+    if (streamRef.current) {
+      stopMediaStream(streamRef.current);
+      streamRef.current = null;
+    }
     setCameraError("");
 
     try {
@@ -93,16 +124,14 @@ export function CameraCaptureModal({
         onPermissionNeeded("camera");
       }
     }
-  }, [cleanupCamera, onPermissionNeeded]);
+  }, [onPermissionNeeded]);
 
   // Re-start camera when modal opens or facingMode changes
   useEffect(() => {
     if (isOpen && !previewMedia) {
       startCamera(facingMode);
-    } else {
-      cleanupCamera();
     }
-  }, [isOpen, facingMode, previewMedia, startCamera, cleanupCamera]);
+  }, [isOpen, facingMode, previewMedia, startCamera]);
 
   // Ensure video element receives stream when ready
   useEffect(() => {
@@ -115,7 +144,7 @@ export function CameraCaptureModal({
   }, [hasStream, previewMedia]);
 
   // Take Snapshot Photo
-  const handleTakePhoto = () => {
+  const handleTakePhoto = useCallback(() => {
     const video = videoRef.current;
     if (!video || !hasStream) return;
 
@@ -153,41 +182,133 @@ export function CameraCaptureModal({
           });
           setPhotoRotation(0);
           setIsCropping(false);
-          cleanupCamera();
         },
         "image/jpeg",
         0.92
       );
-    } catch {
+    } catch (err) {
       setCameraError("Gagal mengambil foto.");
     }
+  }, [hasStream, facingMode, zoomLevel]);
+
+  // Start Video Recording on Hold
+  const startVideoRecording = useCallback(() => {
+    if (!streamRef.current || !hasStream) return;
+    recordedChunksRef.current = [];
+    setRecordingSeconds(0);
+    setIsRecordingVideo(true);
+
+    try {
+      const mime =
+        typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+          ? "video/webm;codecs=vp9"
+          : "video/webm";
+      const recorder = new MediaRecorder(streamRef.current, { mimeType: mime });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          recordedChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: mime });
+        const url = URL.createObjectURL(blob);
+        setPreviewMedia({
+          type: "video",
+          url,
+          blob,
+          duration: recordingSeconds || 1,
+        });
+        setIsRecordingVideo(false);
+      };
+
+      recorder.start(100);
+
+      recordIntervalRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => {
+          if (prev >= 60) {
+            // Maximum 60 seconds
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+              mediaRecorderRef.current.stop();
+            }
+            clearInterval(recordIntervalRef.current);
+            return 60;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch {
+      setIsRecordingVideo(false);
+    }
+  }, [hasStream, recordingSeconds]);
+
+  // Stop Video Recording
+  const stopVideoRecording = useCallback(() => {
+    if (recordIntervalRef.current) {
+      clearInterval(recordIntervalRef.current);
+      recordIntervalRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+    }
+    setIsRecordingVideo(false);
+  }, []);
+
+  // Shutter pointer down / up
+  const handleShutterPointerDown = (e) => {
+    e.preventDefault();
+    if (previewMedia || !hasStream) return;
+    isHoldingShutterRef.current = true;
+
+    holdTimerRef.current = setTimeout(() => {
+      if (isHoldingShutterRef.current && hasStream) {
+        startVideoRecording();
+      }
+    }, 380);
   };
 
+  const handleShutterPointerUp = (e) => {
+    e.preventDefault();
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+
+    if (isRecordingVideo) {
+      stopVideoRecording();
+    } else if (isHoldingShutterRef.current) {
+      handleTakePhoto();
+    }
+    isHoldingShutterRef.current = false;
+  };
+
+  // Toggle Zoom Level 1x / 2x
+  const handleToggleZoom = () => {
+    setZoomLevel((prev) => (prev === 1 ? 2 : 1));
+  };
+
+  // Flip Camera User <-> Environment with 360 Spin Animation
   const handleFlipCamera = () => {
     if (!canFlipCamera) return;
     setIsSpinningFlip(true);
-    setTimeout(() => setIsSpinningFlip(false), 360);
-    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
+    const nextFacing = facingMode === "user" ? "environment" : "user";
+    setFacingMode(nextFacing);
+    startCamera(nextFacing);
+    setTimeout(() => {
+      setIsSpinningFlip(false);
+    }, 380);
   };
 
-  const handleToggleZoom = () => {
-    setZoomLevel((z) => (z === 1 ? 2 : 1));
-  };
-
+  // Rotate photo 90 degrees in edit mode
   const handleRotatePhoto = () => {
-    setPhotoRotation((r) => (r + 90) % 360);
+    setPhotoRotation((prev) => (prev + 90) % 360);
   };
 
-  const handleConfirmSend = () => {
-    if (!previewMedia) return;
-    onSendMedia?.({
-      ...previewMedia,
-      isViewOnce,
-      rotation: photoRotation,
-    });
-    onClose();
-  };
-
+  // Retake photo / video
   const handleRetake = () => {
     if (previewMedia?.url) {
       try {
@@ -197,15 +318,38 @@ export function CameraCaptureModal({
     setPreviewMedia(null);
     setPhotoRotation(0);
     setIsCropping(false);
+    setCaption("");
     setCameraError("");
+    setRecordingSeconds(0);
     startCamera(facingMode);
+  };
+
+  // Confirm Send Media with Caption and ViewOnce
+  const handleConfirmSend = () => {
+    if (!previewMedia) return;
+    onSendMedia({
+      blob: previewMedia.blob,
+      url: previewMedia.url,
+      type: previewMedia.type,
+      duration: previewMedia.duration || (previewMedia.type === "video" ? 6 : null),
+      isViewOnce,
+      rotation: photoRotation,
+      caption: caption.trim(),
+    });
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[1050] flex items-center justify-center p-3 bg-black/75 backdrop-blur-sm select-none">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.28, ease: "easeInOut" }}
+        className="fixed inset-0 z-[1050] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md select-none"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.94 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -217,11 +361,19 @@ export function CameraCaptureModal({
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3.5 right-3.5 z-30 text-black hover:text-black/70 font-sans font-bold text-base cursor-pointer select-none transition-transform active:scale-90"
+            className="absolute top-3 right-3 z-30 text-white/90 hover:text-white font-sans font-bold text-base cursor-pointer select-none transition-transform active:scale-90"
             title="Tutup Kamera"
           >
             ✕
           </button>
+
+          {/* Video Recording Indicator during hold */}
+          {isRecordingVideo && (
+            <div className="absolute top-3.5 left-3.5 z-30 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-600/90 text-white text-[10px] font-bold shadow animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-white block" />
+              <span>0:{String(recordingSeconds).padStart(2, "0")} / 1:00</span>
+            </div>
+          )}
 
           {/* Optional Camera Error Alert */}
           {cameraError && (
@@ -233,10 +385,10 @@ export function CameraCaptureModal({
             </div>
           )}
 
-          {/* MAIN VIEWPORT (Upper ~3/4): Live Viewfinder or Captured Photo Preview */}
+          {/* MAIN VIEWPORT: Live Viewfinder or Captured Photo/Video Preview */}
           <div className="relative w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
             {previewMedia ? (
-              // Clean photo preview box while editing
+              // Clean photo/video preview box
               <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
                 <div
                   style={{
@@ -245,12 +397,22 @@ export function CameraCaptureModal({
                   }}
                   className="w-full h-full flex items-center justify-center"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={previewMedia.url}
-                    alt="Captured"
-                    className="w-full h-full object-cover pointer-events-none"
-                  />
+                  {previewMedia.type === "video" ? (
+                    <video
+                      src={previewMedia.url}
+                      autoPlay
+                      loop
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={previewMedia.url}
+                      alt="Captured"
+                      className="w-full h-full object-cover pointer-events-none"
+                    />
+                  )}
                 </div>
 
                 {/* 3x3 Cropping Grid Overlay when editing */}
@@ -262,8 +424,8 @@ export function CameraCaptureModal({
                     <div className="border-r border-b border-white/35" />
                     <div className="border-r border-b border-white/35" />
                     <div className="border-b border-white/35" />
-                    <div className="border-r border-white/35" />
-                    <div className="border-r border-white/35" />
+                    <div className="border-r border-b border-white/35" />
+                    <div className="border-r border-b border-white/35" />
                     <div />
                   </div>
                 )}
@@ -290,17 +452,65 @@ export function CameraCaptureModal({
             )}
           </div>
 
-          {/* BOTTOM ~1/4 PANEL: Shadowed layer giving space for photo controls */}
-          <div className="relative z-20 w-full h-[88px] bg-gradient-to-t from-black via-black/95 to-black/75 shadow-[0_-12px_28px_rgba(0,0,0,0.7)] flex items-center justify-between px-6">
+          {/* PART 2 ONLY: Floating Caption Pill Input with 0/50 Counter and Send Button */}
+          {previewMedia && (
+            <div className="relative z-20 px-3 pb-2 pt-1 w-full bg-gradient-to-t from-black/80 to-transparent">
+              <div className="w-full flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white shadow-lg">
+                {/* Smiley Emoji Icon */}
+                <span className="text-white/80 select-none">
+                  <svg viewBox="0 0 24 24" className="w-[17px] h-[17px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                    <line x1="9" y1="9" x2="9.01" y2="9" />
+                    <line x1="15" y1="9" x2="15.01" y2="9" />
+                  </svg>
+                </span>
+
+                {/* Caption Input Field */}
+                <input
+                  type="text"
+                  value={caption}
+                  maxLength={50}
+                  onChange={(e) => setCaption(e.target.value.slice(0, 50))}
+                  placeholder="Ketik deskripsi..."
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="flex-1 bg-transparent text-xs text-white placeholder:text-white/50 outline-none min-w-0"
+                />
+
+                {/* 0/50 Character Counter */}
+                <span
+                  style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
+                  className="text-[10px] font-medium text-white/60 shrink-0 select-none"
+                >
+                  {caption.length}/50
+                </span>
+
+                {/* Send Button */}
+                <button
+                  type="button"
+                  onClick={handleConfirmSend}
+                  className="p-1 text-white hover:text-white/80 transition-transform active:scale-90 cursor-pointer shrink-0"
+                  title="Kirim Foto / Video"
+                >
+                  <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] fill-current">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* BOTTOM CONTROLS FOOTER: Height adjusted to 54px, semi-transparent */}
+          <div className="relative z-20 w-full h-[54px] bg-black/55 backdrop-blur-md flex items-center justify-between px-6">
             {previewMedia ? (
-              /* PHOTO EDIT / PREVIEW FOOTER: All icons full flat white, no outer box, no text */
+              /* PART 2 FOOTER: Ulang, Edit/Rotate, Once Icon */
               <>
                 {/* ULANG: reload icon only, full white, no outer box, no text */}
                 <button
                   type="button"
                   onClick={handleRetake}
                   className="p-2 text-white hover:text-white/80 transition-transform active:scale-90 cursor-pointer"
-                  title="Ulangi Foto"
+                  title="Ulangi"
                 >
                   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="1 4 1 10 7 10" />
@@ -322,12 +532,10 @@ export function CameraCaptureModal({
                   title={isCropping ? "Putar Foto 90°" : "Edit / Crop Foto"}
                 >
                   {isCropping ? (
-                    /* Rotate icon when cropping is active */
-                    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
                     </svg>
                   ) : (
-                    /* Clean Pencil Icon */
                     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 20h9" />
                       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
@@ -335,7 +543,7 @@ export function CameraCaptureModal({
                   )}
                 </button>
 
-                {/* VIEW ONCE: Flat full white, no glow, no outer box */}
+                {/* VIEW ONCE (PART 2 ONLY): Flat full white, no glow, no outer box */}
                 <button
                   type="button"
                   onClick={() => setIsViewOnce((v) => !v)}
@@ -347,73 +555,13 @@ export function CameraCaptureModal({
                   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M 12 3 A 9 9 0 0 0 12 21" strokeLinecap="round" />
                     <path d="M 12 3 A 9 9 0 0 1 12 21" strokeDasharray="2 3.5" strokeLinecap="round" />
-                    <text
-                      x="12"
-                      y="16"
-                      textAnchor="middle"
-                      fill="currentColor"
-                      stroke="none"
-                      fontSize="10"
-                      fontWeight="bold"
-                      fontFamily="sans-serif"
-                    >
-                      1
-                    </text>
-                  </svg>
-                </button>
-
-                {/* KIRIM: send triangle icon only, full white, no outer box, no text */}
-                <button
-                  type="button"
-                  onClick={handleConfirmSend}
-                  className="p-2 text-white hover:text-white/80 transition-transform active:scale-90 cursor-pointer"
-                  title="Kirim Foto"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                    <text x="12" y="16" textAnchor="middle" fill="currentColor" stroke="none" fontSize="10" fontWeight="bold">1</text>
                   </svg>
                 </button>
               </>
             ) : (
-              /* LIVE CAMERA SHUTTER FOOTER: No outer boxes on icons */
+              /* PART 1 FOOTER: Live Viewfinder (Zoom, Shutter [tap photo / hold video], Flip Camera) */
               <>
-                {/* VIEW ONCE: flat white, no glow, no outer box */}
-                <button
-                  type="button"
-                  onClick={() => setIsViewOnce((v) => !v)}
-                  className={`p-2 transition-opacity cursor-pointer select-none ${
-                    isViewOnce ? "opacity-100 text-white" : "opacity-45 hover:opacity-75 text-white"
-                  }`}
-                  title={isViewOnce ? "Lihat Sekali Aktif" : "Aktifkan Lihat Sekali"}
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M 12 3 A 9 9 0 0 0 12 21" strokeLinecap="round" />
-                    <path d="M 12 3 A 9 9 0 0 1 12 21" strokeDasharray="2 3.5" strokeLinecap="round" />
-                    <text
-                      x="12"
-                      y="16"
-                      textAnchor="middle"
-                      fill="currentColor"
-                      stroke="none"
-                      fontSize="10"
-                      fontWeight="bold"
-                      fontFamily="sans-serif"
-                    >
-                      1
-                    </text>
-                  </svg>
-                </button>
-
-                {/* SHUTTER BUTTON: Center white circle */}
-                <button
-                  type="button"
-                  onClick={handleTakePhoto}
-                  title="Ambil Foto"
-                  className="w-14 h-14 rounded-full border-2 border-white flex items-center justify-center p-1 cursor-pointer transition-transform hover:scale-105 active:scale-90 select-none shadow-lg"
-                >
-                  <span className="w-11 h-11 rounded-full bg-white block" />
-                </button>
-
                 {/* ZOOM CONTROL: flat white text 1x/2x, no outer box */}
                 <button
                   type="button"
@@ -423,6 +571,25 @@ export function CameraCaptureModal({
                 >
                   {zoomLevel}x
                 </button>
+
+                {/* SHUTTER BUTTON: Tap for Photo, Hold for Video */}
+                <div className="relative flex items-center justify-center">
+                  <button
+                    type="button"
+                    onPointerDown={handleShutterPointerDown}
+                    onPointerUp={handleShutterPointerUp}
+                    title="Ketuk untuk Foto, Tahan untuk Video"
+                    className={`w-12 h-12 rounded-full border-2 border-white flex items-center justify-center p-1 cursor-pointer transition-transform ${
+                      isRecordingVideo ? "scale-110 border-red-500" : "hover:scale-105 active:scale-90"
+                    } select-none shadow-lg`}
+                  >
+                    <span
+                      className={`w-9 h-9 rounded-full block transition-colors ${
+                        isRecordingVideo ? "bg-red-500 rounded-sm scale-75" : "bg-white"
+                      }`}
+                    />
+                  </button>
+                </div>
 
                 {/* TURN CAMERA (FLIP): flat white icon, no outer box */}
                 <motion.button
@@ -457,7 +624,7 @@ export function CameraCaptureModal({
             )}
           </div>
         </motion.div>
-      </div>
+      </motion.div>
     </AnimatePresence>
   );
 }
