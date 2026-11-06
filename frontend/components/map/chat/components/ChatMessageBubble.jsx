@@ -528,12 +528,14 @@ export function ChatMessageBubble({
             onOpenContextMenu={onOpenContextMenu}
           />
 
-          {/* Sent time mark */}
+          {/* Sent time mark: bold Arial mini, consistent with voice note and call log */}
           <div className="flex justify-end mt-1 pr-1 select-none">
             <span
               style={{ fontFamily: "Arial, sans-serif" }}
-              className={`text-[9.5px] leading-none ${
-                isMapDark ? "text-white/70" : "text-black/70"
+              className={`text-[8.5px] font-black leading-none ${
+                isMapDark
+                  ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
+                  : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
               }`}
             >
               {formatMessageTime(item.ts)}

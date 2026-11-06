@@ -554,9 +554,22 @@ export function usePersonalChatState({
           };
           setMessages((prev) => {
             const next = [...prev, replyMsg];
+            persistQuickLocal(next);
             persistEncryptedLocal(next);
             return next;
           });
+
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("kalceria:incoming-personal-chat", {
+                detail: {
+                  senderId: targetId,
+                  message: replyText,
+                  timestamp: Date.now(),
+                },
+              })
+            );
+          }
         }, 1500);
       }
     },

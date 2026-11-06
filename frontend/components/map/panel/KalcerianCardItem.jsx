@@ -61,8 +61,13 @@ export function KalcerianCardItem({
 }) {
   return (
     <motion.div
-      layout="position"
-      transition={{ type: "spring", stiffness: 360, damping: 32, mass: 0.9 }}
+      layout
+      transition={{
+        type: "spring",
+        stiffness: 280,
+        damping: 24,
+        mass: 0.8,
+      }}
       key={user.id}
       className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-colors duration-200 ${
         isExpanded ? "overflow-hidden" : "overflow-visible"
@@ -436,7 +441,7 @@ export function KalcerianCardItem({
                 >
                   <ChatButtonIcon isMapDark={isMapDark} />
                   {unreadPersonalChatCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full border-none shadow-none ring-0 pointer-events-none" />
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#ef4444] rounded-full shadow-sm pointer-events-none animate-pulse ring-1 ring-white/20" />
                   )}
                 </button>
 

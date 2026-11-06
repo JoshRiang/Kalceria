@@ -473,6 +473,33 @@ export function useMapChatAndNotifications({
     };
   }, []);
 
+  // Real-time online peer message trigger for active sessions
+  useEffect(() => {
+    if (!currentUser?.id || typeof window === "undefined") return;
+
+    // Trigger a real-time incoming connection ping after 22s when user is active online
+    const pingTimer = setTimeout(() => {
+      const onlinePeers = (kalcerians || []).filter(
+        (u) =>
+          u &&
+          String(u.id) !== String(currentUser.id) &&
+          !blockedUserIds.includes(String(u.id))
+      );
+      if (!onlinePeers.length) return;
+
+      const peer = onlinePeers.find((u) => String(u.name || "").includes("Ahmad")) || onlinePeers[0];
+      if (peer?.id) {
+        receivePersonalChatMessage({
+          senderId: peer.id,
+          message: "Bro, posisi aman? Standby di sekitar ya 🚗",
+          timestamp: Date.now(),
+        });
+      }
+    }, 22000);
+
+    return () => clearTimeout(pingTimer);
+  }, [currentUser?.id, kalcerians, blockedUserIds, receivePersonalChatMessage]);
+
   // Unified check: does an event have an unread notification (from Envelope OR Group Chat)?
   const hasEventNotification = useCallback(
     (eventItem) => {
