@@ -52,7 +52,7 @@ export function PersonalCallView({
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.28, ease: "easeOut" }}
       className={`absolute inset-0 z-40 flex flex-col justify-between overflow-hidden select-none ${
-        isMapDark ? "bg-[#0d1418]/90 text-white" : "bg-white/90 text-black"
+        isMapDark ? "bg-[#0d1418] text-white" : "bg-white text-black"
       }`}
     >
       <CallMediaStage

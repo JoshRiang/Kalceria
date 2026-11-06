@@ -242,9 +242,9 @@ export function CameraCaptureModal({
             clearInterval(recordIntervalRef.current);
             return 60;
           }
-          return prev + 1;
+          return Math.min(60, Number((prev + 0.1).toFixed(1)));
         });
-      }, 1000);
+      }, 100);
     } catch {
       setIsRecordingVideo(false);
     }
@@ -508,8 +508,8 @@ export function CameraCaptureModal({
             )}
           </div>
 
-          {/* BOTTOM CONTROLS FOOTER: Height adjusted to 54px, semi-transparent */}
-          <div className="relative z-20 w-full h-[54px] bg-black/55 backdrop-blur-md flex items-center justify-between px-6">
+          {/* BOTTOM CONTROLS FOOTER: Height adjusted to 66px, semi-shadow rather than pitch black */}
+          <div className="relative z-20 w-full h-[66px] sm:h-[70px] bg-black/45 backdrop-blur-md shadow-[0_-8px_24px_rgba(0,0,0,0.35)] flex items-center justify-between px-6">
             {previewMedia ? (
               /* PART 2 FOOTER: Ulang, Edit/Rotate, Once Icon */
               <>
@@ -613,7 +613,7 @@ export function CameraCaptureModal({
                           strokeDasharray={2 * Math.PI * 23}
                           strokeDashoffset={2 * Math.PI * 23 * (1 - Math.min(1, recordingSeconds / 60))}
                           strokeLinecap="round"
-                          style={{ transition: "stroke-dashoffset 0.2s linear" }}
+                          style={{ transition: "stroke-dashoffset 0.1s linear" }}
                         />
                       ) : (
                         <circle

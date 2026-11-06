@@ -140,37 +140,44 @@ export function IncomingCallModal({
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
           </div>
         ) : (
-          <div
-            className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-white"
-            style={{
-              WebkitMaskImage:
-                "radial-gradient(ellipse 170px 90px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
-              maskImage:
-                "radial-gradient(ellipse 170px 90px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
-            }}
-          >
-            {STATIC_COKI_VOICE_BG.map((pos, idx) => (
-              <div
-                key={`coki-bg-${idx}`}
-                style={{
-                  position: "absolute",
-                  top: pos.top,
-                  left: pos.left,
-                  transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
-                }}
-                className="w-10 h-13 pointer-events-none opacity-25 select-none"
-              >
-                <Image
-                  src="/ForChat/BackgroundVoiceTrimmed.png"
-                  alt=""
-                  width={40}
-                  height={52}
-                  className="w-full h-full object-contain"
-                  priority={idx < 4}
-                />
-              </div>
-            ))}
-          </div>
+          /* Voice Call: Solid 100% Opaque White Base Layer + Coki Faces Pattern trimmed naturally around top header */
+          <>
+            {/* 1. Pure Opaque White Base: Absolutely zero leakage from chat/map underneath */}
+            <div className="absolute inset-0 z-0 pointer-events-none bg-white" />
+
+            {/* 2. Pattern Layer: Mini Coki faces masked away cleanly from top header */}
+            <div
+              className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
+              style={{
+                WebkitMaskImage:
+                  "radial-gradient(ellipse 180px 100px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
+                maskImage:
+                  "radial-gradient(ellipse 180px 100px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
+              }}
+            >
+              {STATIC_COKI_VOICE_BG.map((pos, idx) => (
+                <div
+                  key={`coki-bg-${idx}`}
+                  style={{
+                    position: "absolute",
+                    top: pos.top,
+                    left: pos.left,
+                    transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
+                  }}
+                  className="w-10 h-13 pointer-events-none opacity-25 select-none"
+                >
+                  <Image
+                    src="/ForChat/BackgroundVoiceTrimmed.png"
+                    alt=""
+                    width={40}
+                    height={52}
+                    className="w-full h-full object-contain"
+                    priority={idx < 4}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* TOP BAR: Caller Display Name Mid-Center & Calling Status */}

@@ -58,8 +58,10 @@ export function ChatMessageBubble({
 
   const [playbackProgress, setPlaybackProgress] = useState(0); // 0 to 1
   const [currentPlaybackSec, setCurrentPlaybackSec] = useState(0);
+  const [realAudioDuration, setRealAudioDuration] = useState(item.voiceDuration || 0);
   const audioRef = useRef(null);
   const waveformRef = useRef(null);
+  const rafRef = useRef(null);
 
   const rawWaveform = Array.isArray(item.voiceWaveform) && item.voiceWaveform.length > 0
     ? item.voiceWaveform
@@ -80,7 +82,13 @@ export function ChatMessageBubble({
     return sampled;
   })();
 
-  const totalDuration = item.voiceDuration || 4;
+  const totalDuration = realAudioDuration || item.voiceDuration || 4;
+  const formatSec = (totalSec) => {
+    const sec = Math.max(0, Math.floor(totalSec));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  };
 
   // Syllable flap calculation for natural speech cadence:
   // Starts idle (first 0.25s) and ends idle (last 0.25s), oscillates between syllables
@@ -103,21 +111,28 @@ export function ChatMessageBubble({
       const audio = new Audio(item.mediaUrl);
       audioRef.current = audio;
 
-      audio.ontimeupdate = () => {
-        if (audio.duration && Number.isFinite(audio.duration)) {
-          const ratio = audio.currentTime / audio.duration;
-          setPlaybackProgress(Math.min(1, Math.max(0, ratio)));
-          setCurrentPlaybackSec(Math.floor(audio.currentTime));
+      const updateDuration = () => {
+        if (audio.duration && Number.isFinite(audio.duration) && audio.duration > 0) {
+          setRealAudioDuration(Math.round(audio.duration));
         }
       };
 
+      audio.addEventListener("loadedmetadata", updateDuration);
+      audio.addEventListener("durationchange", updateDuration);
+
       audio.onended = () => {
+        cancelAnimationFrame(rafRef.current);
         setPlayingVoiceId(null);
         setPlaybackProgress(0);
         setCurrentPlaybackSec(0);
       };
 
+      audio.onpause = () => {
+        cancelAnimationFrame(rafRef.current);
+      };
+
       audio.onerror = () => {
+        cancelAnimationFrame(rafRef.current);
         setPlayingVoiceId(null);
         setPlaybackProgress(0);
       };
@@ -134,16 +149,33 @@ export function ChatMessageBubble({
         audio.play().catch(() => {
           setPlayingVoiceId(null);
         });
+
+        // 60fps high-precision requestAnimationFrame loop (zero latency, zero jitter)
+        const loop = () => {
+          if (audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
+            const dur = audioRef.current.duration || realAudioDuration || item.voiceDuration || 4;
+            const cur = audioRef.current.currentTime || 0;
+            if (dur > 0) {
+              setPlaybackProgress(Math.min(1, Math.max(0, cur / dur)));
+              setCurrentPlaybackSec(Math.floor(cur));
+            }
+            rafRef.current = requestAnimationFrame(loop);
+          }
+        };
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(loop);
       }
     } else {
+      cancelAnimationFrame(rafRef.current);
       if (audioRef.current) {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, isVoice, item.mediaUrl, setPlayingVoiceId, getOrCreateAudio]);
+  }, [isPlaying, isVoice, item.mediaUrl, setPlayingVoiceId, getOrCreateAudio, realAudioDuration, item.voiceDuration]);
 
   useEffect(() => {
     return () => {
+      cancelAnimationFrame(rafRef.current);
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
@@ -210,6 +242,8 @@ export function ChatMessageBubble({
   const renderStatusIndicator = () => {
     if (!isMe) return null;
 
+    const isRead = item.status === "read" || Boolean(item.isRead);
+
     return (
       <div className="w-4 shrink-0 flex items-center justify-center select-none">
         {item.status === "sending" ? (
@@ -243,22 +277,14 @@ export function ChatMessageBubble({
               <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
             </svg>
           </button>
-        ) : item.status === "sent" ? (
-          <span
-            style={{ fontFamily: "Arial, sans-serif" }}
-            className={`font-black text-xs ${
-              isMapDark
-                ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
-                : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
-            }`}
-          >
-            !
-          </span>
         ) : (
+          /* Sent / Read: Checkmark (white/black when sent, gracefully fades to dark camo green #3d5c3a when read, no exclamation mark) */
           <svg
             viewBox="0 0 24 24"
-            className={`w-4 h-4 stroke-current filter ${
-              isMapDark
+            className={`w-4 h-4 stroke-current filter transition-colors duration-500 ease-in-out ${
+              isRead
+                ? "text-[#3d5c3a] drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.6)]"
+                : isMapDark
                 ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
                 : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
             }`}
@@ -340,27 +366,24 @@ export function ChatMessageBubble({
             {durationText}
           </span>
 
-          {isVideo ? (
-            <svg
-              viewBox="0 0 24 24"
-              className={`w-9 h-9 sm:w-10 sm:h-10 drop-shadow-sm shrink-0 ${
-                isMapDark ? "text-white" : "text-black"
-              }`}
-              fill="currentColor"
-            >
-              <path d="M17 10.5V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5l4 4v-11l-4 4z" />
-            </svg>
-          ) : (
-            <svg
-              viewBox="0 0 24 24"
-              className={`w-9 h-9 sm:w-10 sm:h-10 drop-shadow-sm shrink-0 ${
-                isMapDark ? "text-white" : "text-black"
-              }`}
-              fill="currentColor"
-            >
-              <path d="M6.62 10.79a15.053 15.053 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z" />
-            </svg>
-          )}
+          {/* Call Ended Icon: wrapped in a compact textured circle without border, uniform size */}
+          <div
+            className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full flex items-center justify-center shrink-0 ${
+              isMapDark
+                ? "bg-[#21262d] text-white shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_1.5px_4px_rgba(0,0,0,0.3)]"
+                : "bg-[#f0f2f5] text-black shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_1.5px_4px_rgba(0,0,0,0.08)]"
+            }`}
+          >
+            {isVideo ? (
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
+                <path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
+                <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.44-5.15-3.75-6.59-6.59l1.97-1.57c.28-.27.36-.66.25-1.01A11.36 11.36 0 0 1 8.56 4.4c0-.55-.45-1-1-1H4.07c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.49c0-.55-.45-1-1-1z" />
+              </svg>
+            )}
+          </div>
         </div>
 
         {renderStatusIndicator()}
@@ -414,25 +437,27 @@ export function ChatMessageBubble({
 
             {/* Voice Control Row: Play Button, Waveform centered under Coki, and Time Running (all mid-center aligned) */}
             <div className="flex items-center gap-2 py-0.5 select-none">
-              {/* 1. Play Button: Aligned to mid-center of voice line */}
+              {/* 1. Play Button: Wrapped in compact standard textured circle without border */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setPlayingVoiceId((prev) => (prev === item.id ? null : item.id));
                 }}
-                className={`w-6 h-6 flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-90 shrink-0 ${
-                  isMapDark ? "text-white" : "text-black"
+                className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all duration-150 hover:scale-105 active:scale-95 shrink-0 ${
+                  isMapDark
+                    ? "bg-[#21262d] text-white shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_1.5px_4px_rgba(0,0,0,0.3)]"
+                    : "bg-[#f0f2f5] text-black shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_1.5px_4px_rgba(0,0,0,0.08)]"
                 }`}
                 title={isPlaying ? "Pause" : "Play voice note"}
               >
                 {isPlaying ? (
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
+                  <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current">
                     <rect x="6" y="5" width="4" height="14" />
                     <rect x="14" y="5" width="4" height="14" />
                   </svg>
                 ) : (
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current ml-0.5">
+                  <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current ml-0.5">
                     <polygon points="6,4 20,12 6,20" />
                   </svg>
                 )}
@@ -467,7 +492,7 @@ export function ChatMessageBubble({
                 })}
               </div>
 
-              {/* 3. Time Running (0:06): NO outer box, mid-center aligned with voice line, bold/tebal mini */}
+              {/* 3. Time Running (0:06 / xx:xx): NO outer box, mid-center aligned with voice line, bold/tebal mini */}
               <span
                 style={{ fontFamily: "Arial, sans-serif" }}
                 className={`text-[8.5px] font-black tracking-tight leading-none select-none shrink-0 ${
@@ -477,8 +502,8 @@ export function ChatMessageBubble({
                 }`}
               >
                 {isPlaying || playbackProgress > 0
-                  ? `0:${String(currentPlaybackSec).padStart(2, "0")}`
-                  : `0:${String(totalDuration).padStart(2, "0")}`}
+                  ? formatSec(currentPlaybackSec)
+                  : formatSec(totalDuration)}
               </span>
             </div>
           </div>

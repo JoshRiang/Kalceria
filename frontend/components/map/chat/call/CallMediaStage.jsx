@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import ContentImage from "@/components/ui/ContentImage";
@@ -47,13 +47,28 @@ export function CallMediaStage({
   );
   const remoteVideoSrc = hasRemoteVideo ? targetUser.coverImage : null;
   const [videoProgress, setVideoProgress] = useState(0);
+  const callVideoRafRef = useRef(null);
 
-  const handleVideoTimeUpdate = (e) => {
-    const video = e.currentTarget;
-    if (video.duration && Number.isFinite(video.duration) && video.duration > 0) {
-      setVideoProgress(video.currentTime / video.duration);
-    }
-  };
+  const startCallVideoLoop = useCallback(() => {
+    const loop = () => {
+      if (remoteVideoRef?.current && !remoteVideoRef.current.paused && !remoteVideoRef.current.ended) {
+        const dur = remoteVideoRef.current.duration;
+        const cur = remoteVideoRef.current.currentTime;
+        if (dur && Number.isFinite(dur) && dur > 0) {
+          setVideoProgress(cur / dur);
+        }
+        callVideoRafRef.current = requestAnimationFrame(loop);
+      }
+    };
+    cancelAnimationFrame(callVideoRafRef.current);
+    callVideoRafRef.current = requestAnimationFrame(loop);
+  }, [remoteVideoRef]);
+
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(callVideoRafRef.current);
+    };
+  }, []);
 
   return (
     <>
@@ -70,7 +85,8 @@ export function CallMediaStage({
                   loop
                   muted={!isSpeakerOn}
                   playsInline
-                  onTimeUpdate={handleVideoTimeUpdate}
+                  onPlay={startCallVideoLoop}
+                  onPause={() => cancelAnimationFrame(callVideoRafRef.current)}
                   className={`w-full h-full object-cover transition-all duration-500 ${
                     isBadConnection ? "filter blur-[12px] scale-105 opacity-80" : ""
                   }`}
@@ -131,38 +147,44 @@ export function CallMediaStage({
           </div>
         )
       ) : (
-        /* Voice Call: Pure White Background patterned with static mini Coki faces, naturally trimmed around the top header */
-        <div
-          className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-white"
-          style={{
-            WebkitMaskImage:
-              "radial-gradient(ellipse 170px 90px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
-            maskImage:
-              "radial-gradient(ellipse 170px 90px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
-          }}
-        >
-          {STATIC_COKI_VOICE_BG.map((pos, idx) => (
-            <div
-              key={`coki-bg-${idx}`}
-              style={{
-                position: "absolute",
-                top: pos.top,
-                left: pos.left,
-                transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
-              }}
-              className="w-10 h-13 pointer-events-none opacity-25 select-none"
-            >
-              <Image
-                src="/ForChat/BackgroundVoiceTrimmed.png"
-                alt=""
-                width={40}
-                height={52}
-                className="w-full h-full object-contain"
-                priority={idx < 4}
-              />
-            </div>
-          ))}
-        </div>
+        /* Voice Call: Solid 100% Opaque White Base Layer + Coki Faces Pattern trimmed naturally around top header */
+        <>
+          {/* 1. Pure Opaque White Base: Absolutely zero leakage from chat/map underneath */}
+          <div className="absolute inset-0 z-0 pointer-events-none bg-white" />
+
+          {/* 2. Pattern Layer: Mini Coki faces masked away cleanly from top header */}
+          <div
+            className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
+            style={{
+              WebkitMaskImage:
+                "radial-gradient(ellipse 180px 100px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
+              maskImage:
+                "radial-gradient(ellipse 180px 100px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
+            }}
+          >
+            {STATIC_COKI_VOICE_BG.map((pos, idx) => (
+              <div
+                key={`coki-bg-${idx}`}
+                style={{
+                  position: "absolute",
+                  top: pos.top,
+                  left: pos.left,
+                  transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
+                }}
+                className="w-10 h-13 pointer-events-none opacity-25 select-none"
+              >
+                <Image
+                  src="/ForChat/BackgroundVoiceTrimmed.png"
+                  alt=""
+                  width={40}
+                  height={52}
+                  className="w-full h-full object-contain"
+                  priority={idx < 4}
+                />
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* TOP BAR: Call Header */}
