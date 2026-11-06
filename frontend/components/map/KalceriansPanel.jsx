@@ -202,6 +202,7 @@ export function KalceriansPanel({
   const listContainerRef = useRef(null);
   const chatTransitionTimerRef = useRef(null);
   const incomingCallRef = useRef(null);
+  const suspendedChatUserRef = useRef(null);
   incomingCallRef.current = incomingCall;
 
   // Poll for incoming call signals across devices (event-driven, offline-capable)
@@ -231,6 +232,19 @@ export function KalceriansPanel({
                   displayName: "Kalcerian",
                 };
 
+              // If chat box is currently open, suspend it and slide it down
+              if (activeChatUserId) {
+                const currentChatUser =
+                  sidebarKalcerians.find(
+                    (u) => String(u.id || u.nickname || u.name) === String(activeChatUserId)
+                  ) || activeChatUserSnapshot;
+                if (currentChatUser) {
+                  suspendedChatUserRef.current = currentChatUser;
+                }
+                setActiveChatUserId(null);
+                setActiveChatUserSnapshot(null);
+              }
+
               setIncomingCall({
                 callId: sig.callId,
                 fromUserId: sig.fromUserId,
@@ -254,6 +268,14 @@ export function KalceriansPanel({
             if (incomingCallRef.current && incomingCallRef.current.callId === sig.callId) {
               stopCallRingtone();
               setIncomingCall(null);
+              // Gracefully return to state 0 if caller canceled
+              if (suspendedChatUserRef.current) {
+                const prevUser = suspendedChatUserRef.current;
+                suspendedChatUserRef.current = null;
+                handleOpenChatWithTransition(prevUser);
+              } else {
+                setDrawerOpen(true);
+              }
             }
           }
         }
@@ -265,13 +287,14 @@ export function KalceriansPanel({
       clearInterval(interval);
       stopCallRingtone();
     };
-  }, [currentUser, sidebarKalcerians, mapUsersData]);
+  }, [currentUser, sidebarKalcerians, mapUsersData, activeChatUserId, activeChatUserSnapshot]);
 
   const handleAcceptIncomingCall = (call) => {
     stopCallRingtone();
     const callData = call || incomingCall;
     if (!callData) return;
 
+    suspendedChatUserRef.current = null;
     const caller = callData.callerUser;
     setIncomingCallInitialState({
       mode: callData.callMode,
@@ -295,6 +318,16 @@ export function KalceriansPanel({
       }).catch(() => {});
     }
     setIncomingCall(null);
+
+    // Return gracefully to State 0:
+    // If chat was open before call, slide chat back up; else slide Kalcerians scroll bar drawer back up
+    if (suspendedChatUserRef.current) {
+      const prevUser = suspendedChatUserRef.current;
+      suspendedChatUserRef.current = null;
+      handleOpenChatWithTransition(prevUser);
+    } else {
+      setDrawerOpen(true);
+    }
   };
 
   useEffect(() => {
@@ -382,7 +415,7 @@ export function KalceriansPanel({
       ) || activeChatUserSnapshot
     : null;
 
-  const isKalceriansHiddenForChat = Boolean(isClosingForChat || activeChatUser);
+  const isKalceriansHiddenForChat = Boolean(isClosingForChat || activeChatUser || incomingCall);
 
   const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;
 

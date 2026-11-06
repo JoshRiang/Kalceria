@@ -12,6 +12,7 @@ export function HardwarePermissionModal({
   onGrant,
   onCancel,
   errorMessage = null,
+  keepRingtonePlaying = false,
 }) {
   const [choice, setChoice] = useState(null); // "batal" | "izinkan"
 
@@ -23,7 +24,9 @@ export function HardwarePermissionModal({
 
   const handleBatalClick = () => {
     setChoice("batal");
-    stopCallRingtone();
+    if (!keepRingtonePlaying) {
+      stopCallRingtone();
+    }
     setTimeout(() => {
       setChoice(null);
       onCancel?.();

@@ -180,12 +180,12 @@ export function LocationAutocomplete({
                     ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
                     : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
                 } ${
-                  isVerified
+                  isVerified && !hideCheckmark
                     ? "border-emerald-500/50 focus:border-emerald-400 ring-1 ring-emerald-500/30"
                     : ""
                 }`
               : `w-full bg-black/60 border rounded-xl px-4 py-3 font-sans text-xs sm:text-sm text-white font-medium outline-none transition-all duration-300 placeholder:text-white/30 pr-10 ${
-                  isVerified
+                  isVerified && !hideCheckmark
                     ? "border-emerald-500/50 focus:border-emerald-400 ring-1 ring-emerald-500/30"
                     : query.trim().length > 0
                     ? "border-[#c2850c] focus:border-[#d99b1a]"

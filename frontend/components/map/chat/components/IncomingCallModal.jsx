@@ -1,9 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import ContentImage from "@/components/ui/ContentImage";
 import { resolvePersistentAvatarUrl } from "@/lib/profileIdentity";
+import { HardwarePermissionModal } from "./HardwarePermissionModal";
+
+// Static distributed mini Coki faces with fixed random tilt angles (constant across all calls)
+// Notice: The top center area (Name, Calling/Ringing status) is naturally kept completely clean and trimmed
+const STATIC_COKI_VOICE_BG = [
+  { top: "7%", left: "12%", rotate: -14 },
+  { top: "7%", left: "84%", rotate: -8 },
+  { top: "25%", left: "28%", rotate: 22 },
+  { top: "27%", left: "72%", rotate: -18 },
+  { top: "42%", left: "9%", rotate: 12 },
+  { top: "44%", left: "88%", rotate: -15 },
+  { top: "58%", left: "22%", rotate: -20 },
+  { top: "60%", left: "74%", rotate: 18 },
+  { top: "76%", left: "12%", rotate: 10 },
+  { top: "78%", left: "48%", rotate: -12 },
+  { top: "80%", left: "84%", rotate: 24 },
+  { top: "92%", left: "30%", rotate: -6 },
+  { top: "93%", left: "68%", rotate: 15 },
+];
 
 export function IncomingCallModal({
   incomingCall,
@@ -11,6 +31,9 @@ export function IncomingCallModal({
   onAccept,
   onDecline,
 }) {
+  const [showPermissionGate, setShowPermissionGate] = useState(null); // null | "camera" | "mic"
+  const [isDeclinePressed, setIsDeclinePressed] = useState(false);
+
   if (!incomingCall) return null;
 
   const caller = incomingCall.callerUser || {
@@ -22,86 +45,263 @@ export function IncomingCallModal({
   const avatarUrl = resolvePersistentAvatarUrl(caller);
   const isVideo = incomingCall.callMode === "video";
 
+  // Non-blocking permission check when tapping Accept (✓)
+  const handleAcceptClick = async () => {
+    let hasPermission = false;
+    try {
+      if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+        const permName = isVideo ? "camera" : "microphone";
+        const status = await navigator.permissions.query({ name: permName });
+        if (status.state === "granted") {
+          hasPermission = true;
+        }
+      }
+    } catch {
+      // If query throws or is unsupported in browser, we check via prompt
+      hasPermission = false;
+    }
+
+    if (hasPermission) {
+      onAccept?.(incomingCall);
+    } else {
+      // Do NOT block, drop, or stop ringtone: display non-blocking permission modal
+      setShowPermissionGate(isVideo ? "camera" : "mic");
+    }
+  };
+
+  const handleGrantFromModal = async () => {
+    try {
+      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia(
+          isVideo ? { video: true, audio: true } : { audio: true }
+        );
+        // Stop temporary stream probe tracks immediately
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    } catch {}
+    setShowPermissionGate(null);
+    onAccept?.(incomingCall);
+  };
+
+  const handleCancelFromModal = () => {
+    // Non-blocking: Ringtone keeps playing, dismiss permission overlay
+    setShowPermissionGate(null);
+  };
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          transition={{ type: "spring", damping: 22, stiffness: 280 }}
-          className={`relative w-full max-w-[340px] rounded-3xl p-6 border text-center shadow-2xl flex flex-col items-center overflow-hidden ${
-            isMapDark
-              ? "bg-[#161b22] border-white/20 text-[#f0f6fc]"
-              : "bg-white border-black text-[#1f2328]"
-          }`}
-        >
-          {/* Incoming Call Pill */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-bold tracking-wider uppercase mb-5 bg-[#ff006e]/15 text-[#ff006e] border border-[#ff006e]/30">
-            <span className="w-2 h-2 rounded-full bg-[#ff006e] animate-ping" />
-            {isVideo ? "Panggilan Video Masuk" : "Panggilan Suara Masuk"}
-          </div>
+      {/* Backdrop Dim Blur behind incoming call stage */}
+      <motion.div
+        key="incoming-call-backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.25 }}
+        className="fixed inset-0 z-[1140] bg-black/35 backdrop-blur-[2px] pointer-events-none"
+      />
 
-          {/* Caller Avatar with Animated Glow Rings */}
-          <div className="relative mb-4 flex items-center justify-center">
-            <span className="absolute w-28 h-28 rounded-full bg-[#ff006e]/20 animate-ping" />
-            <span className="absolute w-24 h-24 rounded-full bg-emerald-500/20 animate-pulse" />
-            <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-xl">
+      {/* Main Incoming Call Container: Slides up from bottom into same position as chat */}
+      <motion.div
+        key={`incoming-call-stage-${incomingCall.callId}`}
+        initial={{ y: "110%", opacity: 0 }}
+        animate={{ y: "0%", opacity: 1 }}
+        exit={{ y: "110%", opacity: 0 }}
+        transition={{
+          type: "spring",
+          stiffness: 320,
+          damping: 30,
+          mass: 0.8,
+        }}
+        className={`fixed z-[1150] overflow-hidden shadow-2xl flex flex-col justify-between select-none
+          /* Desktop / Laptop: Anchored cleanly to bottom-left matching chat panel */
+          min-[861px]:bottom-4 min-[861px]:left-4 min-[861px]:w-[340px] sm:min-[861px]:w-[360px] min-[861px]:h-[580px] min-[861px]:max-h-[calc(100vh-2rem)] min-[861px]:rounded-3xl
+          /* Mobile Layout: Full bottom-drawer card */
+          max-[860px]:inset-x-2 max-[860px]:bottom-2 max-[860px]:top-14 sm:max-[860px]:top-16 max-[860px]:rounded-3xl
+          ${
+            isVideo
+              ? "bg-[#0d1418]/90 text-white backdrop-blur-xl border border-white/10"
+              : "bg-white text-black shadow-[0_20px_50px_rgba(0,0,0,0.22)] border border-black/10"
+          }`}
+      >
+        {/* Background Layer:
+            - Voice Call: Pure White with static mini Coki faces, naturally trimmed around top header
+            - Video Call: Heavy backdrop blur over caller visual */}
+        {isVideo ? (
+          <div className="absolute inset-0 z-0 overflow-hidden bg-black/60 backdrop-blur-xl">
+            <div className="relative w-full h-full flex items-center justify-center">
               <ContentImage
                 src={avatarUrl}
                 alt={displayName}
-                width={80}
-                height={80}
-                className="w-full h-full object-cover"
+                width={180}
+                height={180}
+                className="w-full h-full object-cover blur-[28px] scale-125 opacity-30"
               />
             </div>
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
           </div>
+        ) : (
+          <div
+            className="absolute inset-0 z-0 overflow-hidden pointer-events-none bg-white"
+            style={{
+              WebkitMaskImage:
+                "radial-gradient(ellipse 170px 90px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
+              maskImage:
+                "radial-gradient(ellipse 170px 90px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
+            }}
+          >
+            {STATIC_COKI_VOICE_BG.map((pos, idx) => (
+              <div
+                key={`coki-bg-${idx}`}
+                style={{
+                  position: "absolute",
+                  top: pos.top,
+                  left: pos.left,
+                  transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
+                }}
+                className="w-10 h-13 pointer-events-none opacity-25 select-none"
+              >
+                <Image
+                  src="/ForChat/BackgroundVoiceTrimmed.png"
+                  alt=""
+                  width={40}
+                  height={52}
+                  className="w-full h-full object-contain"
+                  priority={idx < 4}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
-          {/* Caller Name */}
-          <h3 className="text-lg font-black tracking-tight mb-1">{displayName}</h3>
-          <p
-            className={`text-xs mb-6 ${
-              isMapDark ? "text-white/70" : "text-black/70"
+        {/* TOP BAR: Caller Display Name Mid-Center & Calling Status */}
+        <div className="relative z-10 pt-7 px-4 flex flex-col items-center text-center">
+          <h3
+            className={`font-sans font-bold text-lg sm:text-xl tracking-tight truncate max-w-[260px] ${
+              isVideo ? "text-white drop-shadow" : "text-black"
             }`}
           >
-            Menghubungi Anda via {isVideo ? "Video Call" : "Voice Call"}...
+            {displayName}
+          </h3>
+
+          <p
+            style={{ fontFamily: "Arial, sans-serif" }}
+            className={`font-bold text-[9.5px] sm:text-[10px] tracking-tight mt-1 ${
+              isVideo ? "text-white/80 drop-shadow" : "text-black/80"
+            }`}
+          >
+            {isVideo ? "Video Call Ringing..." : "Ringing..."}
           </p>
+        </div>
 
-          {/* Accept / Decline Buttons */}
-          <div className="w-full flex items-center justify-around gap-4 px-2">
-            {/* Decline Button (Red) */}
-            <button
-              type="button"
-              onClick={onDecline}
-              title="Tolak Panggilan"
-              className="flex flex-col items-center gap-1.5 cursor-pointer group"
-            >
-              <div className="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center shadow-lg shadow-red-600/30 transition-transform group-hover:scale-110 group-active:scale-95">
-                <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
-                  <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1 0-1.37C3.44 8.78 7.49 7 12 7s8.56 1.78 11.71 4.71c.38.38.38 1 0 1.38l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" />
-                </svg>
-              </div>
-              <span className="text-[11px] font-semibold text-red-500">Tolak</span>
-            </button>
+        {/* CENTER: Caller Avatar with 3-Second Heartbeat Pulse ('berdetak dug dug dug dug') */}
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4">
+          <div className="relative flex items-center justify-center">
+            {/* Soft outer pulse halo */}
+            <motion.div
+              animate={{
+                scale: [1, 1.24, 1],
+                opacity: [0.35, 0.05, 0.35],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                times: [0, 0.18, 1],
+                ease: "easeInOut",
+              }}
+              className={`absolute w-36 h-36 sm:w-40 sm:h-40 rounded-full border ${
+                isVideo ? "border-white/40" : "border-black/30"
+              }`}
+            />
 
-            {/* Accept Button (Green) */}
-            <button
-              type="button"
-              onClick={onAccept}
-              title="Terima Panggilan"
-              className="flex flex-col items-center gap-1.5 cursor-pointer group"
+            {/* Main Avatar Heartbeat Pulse:
+                Period = 3.0s, starting immediately at n = 0 (t = 0),
+                Double-thump heartbeat sequence ('dug dug'): [1, 1.15, 1.04, 1.20, 1, 1] */}
+            <motion.div
+              animate={{
+                scale: [1, 1.15, 1.04, 1.20, 1, 1],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                times: [0, 0.06, 0.12, 0.20, 0.32, 1],
+                ease: "easeInOut",
+              }}
+              className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 shadow-2xl ${
+                isVideo
+                  ? "border-white bg-[#161b22]"
+                  : "border-black bg-white"
+              }`}
             >
-              <div className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 transition-transform group-hover:scale-110 group-active:scale-95">
-                <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
-                  <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.44-5.15-3.75-6.59-6.59l1.97-1.57c.28-.27.36-.66.25-1.01A11.36 11.36 0 0 1 8.56 4.4c0-.55-.45-1-1-1H4.07c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.49c0-.55-.45-1-1-1z" />
-                </svg>
-              </div>
-              <span className="text-[11px] font-semibold text-emerald-500">Terima</span>
-            </button>
+              <ContentImage
+                src={avatarUrl}
+                alt={displayName}
+                width={128}
+                height={128}
+                className="w-full h-full object-cover"
+              />
+            </motion.div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+
+        {/* BOTTOM CONTROLS: Accept (✓) and Decline (✕)
+            - Font type & style identical to YES and NO from ConfirmationPromptModal
+            - Strictly NO GLOW, no outer boxes
+            - Default: pure black (or white in dark/video)
+            - Decline turns RED when pressed (active/pointerdown) */}
+        <div className="relative z-10 pb-9 px-8 flex items-center justify-around">
+          {/* Decline Button: Cross Icon (✕) */}
+          <button
+            type="button"
+            onClick={onDecline}
+            onPointerDown={() => setIsDeclinePressed(true)}
+            onPointerUp={() => setIsDeclinePressed(false)}
+            onPointerLeave={() => setIsDeclinePressed(false)}
+            title="Tolak Panggilan"
+            className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-3 transition-transform hover:scale-110 active:scale-95"
+          >
+            <span
+              className={`block font-sans text-3xl sm:text-4xl font-normal select-none transition-colors duration-150 ${
+                isDeclinePressed
+                  ? "text-[#ef4444]"
+                  : isVideo
+                  ? "text-white/80 group-hover:text-white active:text-[#ef4444]"
+                  : "text-black/80 group-hover:text-black active:text-[#ef4444]"
+              }`}
+            >
+              ✕
+            </span>
+          </button>
+
+          {/* Accept Button: Checklist Icon (✓) */}
+          <button
+            type="button"
+            onClick={handleAcceptClick}
+            title="Terima Panggilan"
+            className="group relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-lg p-3 transition-transform hover:scale-110 active:scale-95"
+          >
+            <span
+              className={`block font-sans text-3xl sm:text-4xl font-normal select-none transition-colors duration-150 ${
+                isVideo
+                  ? "text-white/80 group-hover:text-white"
+                  : "text-black/80 group-hover:text-black"
+              }`}
+            >
+              ✓
+            </span>
+          </button>
+        </div>
+
+        {/* Non-Blocking Hardware Permission Dialog:
+            Screen blurs, ringtone keeps playing, allows user to Grant or Cancel */}
+        <HardwarePermissionModal
+          isOpen={Boolean(showPermissionGate)}
+          type={showPermissionGate || "mic"}
+          isMapDark={isMapDark}
+          keepRingtonePlaying={true}
+          onGrant={handleGrantFromModal}
+          onCancel={handleCancelFromModal}
+        />
+      </motion.div>
     </AnimatePresence>
   );
 }
-
