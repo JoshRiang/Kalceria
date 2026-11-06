@@ -29,6 +29,7 @@ export const MapHeaderHud = memo(function MapHeaderHud({
   topDynamicEvent = null,
   hasTopDynamicEventNotif = false,
   onTopDynamicEventClick,
+  hasActiveOwnEvent = false,
 }) {
   const [soundMuted, setSoundMuted] = useState(false);
 
@@ -356,35 +357,43 @@ export const MapHeaderHud = memo(function MapHeaderHud({
               </span>
             </button>
 
-            {/* Item 2: Mini event - 3D Glass Pill */}
+            {/* Item 2: Mini event - 3D Glass Pill (Dimmed & disabled if active event already exists) */}
             <button
               type="button"
-              className={`group relative w-full flex flex-col px-3.5 py-2.5 text-left rounded-xl transition-all duration-200 cursor-pointer overflow-hidden outline-none hover:scale-[1.02] active:scale-[0.98] origin-center my-0.5 ${
+              disabled={hasActiveOwnEvent}
+              className={`group relative w-full flex flex-col px-3.5 py-2.5 text-left rounded-xl transition-all duration-200 overflow-hidden outline-none origin-center my-0.5 ${
+                hasActiveOwnEvent
+                  ? "opacity-35 cursor-not-allowed pointer-events-none"
+                  : "cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              } ${
                 isMapDark
                   ? "bg-[#21262d]/45 border border-[#38404a] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_2px_6px_rgba(0,0,0,0.3)]"
                   : "bg-white/60 border border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)]"
               }`}
               onClick={() => {
+                if (hasActiveOwnEvent) return;
                 setShowEventModal(true);
                 setActionMenuOpen(false);
               }}
             >
               {/* Dynamic Color Shift Blobs like in Kalcerian */}
-              <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-lg">
-                {isMapDark ? (
-                  <>
-                    <div className="absolute -top-[20%] -left-[20%] w-[90px] h-[90px] bg-red-500/30 rounded-full blur-[14px] mix-blend-screen animate-pulse duration-[2800ms]" />
-                    <div className="absolute -bottom-[20%] -right-[20%] w-[90px] h-[90px] bg-[#ffd60a]/30 rounded-full blur-[14px] mix-blend-screen animate-pulse duration-[3600ms] delay-100" />
-                    <div className="absolute top-[10%] right-[20%] w-[80px] h-[70px] bg-[#ff006e]/25 rounded-full blur-[15px] mix-blend-screen animate-pulse duration-[2200ms] delay-200" />
-                  </>
-                ) : (
-                  <>
-                    <div className="absolute -top-[20%] -left-[20%] w-[90px] h-[90px] bg-rose-400/25 rounded-full blur-[14px] mix-blend-multiply animate-pulse duration-[2800ms]" />
-                    <div className="absolute -bottom-[20%] -right-[20%] w-[90px] h-[90px] bg-amber-300/35 rounded-full blur-[14px] mix-blend-multiply animate-pulse duration-[3600ms] delay-100" />
-                    <div className="absolute top-[10%] right-[20%] w-[80px] h-[70px] bg-pink-300/25 rounded-full blur-[15px] mix-blend-multiply animate-pulse duration-[2200ms] delay-200" />
-                  </>
-                )}
-              </div>
+              {!hasActiveOwnEvent && (
+                <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-lg">
+                  {isMapDark ? (
+                    <>
+                      <div className="absolute -top-[20%] -left-[20%] w-[90px] h-[90px] bg-red-500/30 rounded-full blur-[14px] mix-blend-screen animate-pulse duration-[2800ms]" />
+                      <div className="absolute -bottom-[20%] -right-[20%] w-[90px] h-[90px] bg-[#ffd60a]/30 rounded-full blur-[14px] mix-blend-screen animate-pulse duration-[3600ms] delay-100" />
+                      <div className="absolute top-[10%] right-[20%] w-[80px] h-[70px] bg-[#ff006e]/25 rounded-full blur-[15px] mix-blend-screen animate-pulse duration-[2200ms] delay-200" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="absolute -top-[20%] -left-[20%] w-[90px] h-[90px] bg-rose-400/25 rounded-full blur-[14px] mix-blend-multiply animate-pulse duration-[2800ms]" />
+                      <div className="absolute -bottom-[20%] -right-[20%] w-[90px] h-[90px] bg-amber-300/35 rounded-full blur-[14px] mix-blend-multiply animate-pulse duration-[3600ms] delay-100" />
+                      <div className="absolute top-[10%] right-[20%] w-[80px] h-[70px] bg-pink-300/25 rounded-full blur-[15px] mix-blend-multiply animate-pulse duration-[2200ms] delay-200" />
+                    </>
+                  )}
+                </div>
+              )}
 
               <span
                 className={`relative z-10 text-[13.5px] leading-snug font-semibold transition-colors duration-200 ${
@@ -394,11 +403,13 @@ export const MapHeaderHud = memo(function MapHeaderHud({
                 Mini event
               </span>
               <span
-                className={`relative z-10 text-[11.5px] leading-tight mt-0.5 transition-colors duration-200 ${
-                  isMapDark ? "text-[#8b949e] group-hover:text-[#c9d1d9]" : "text-[#656d76] group-hover:text-[#424a53]"
+                className={`relative z-10 text-[11px] leading-tight mt-0.5 transition-colors duration-200 ${
+                  hasActiveOwnEvent
+                    ? isMapDark ? "text-amber-400/80" : "text-amber-600/90 font-medium"
+                    : isMapDark ? "text-[#8b949e] group-hover:text-[#c9d1d9]" : "text-[#656d76] group-hover:text-[#424a53]"
                 }`}
               >
-                Start an instant meetup
+                {hasActiveOwnEvent ? "Hapus event sebelumnya dulu" : "Start an instant meetup"}
               </span>
             </button>
           </div>

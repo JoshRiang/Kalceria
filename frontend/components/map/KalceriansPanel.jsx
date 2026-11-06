@@ -331,12 +331,13 @@ export function KalceriansPanel({
     const handleRemoteChatOpen = (e) => {
       const targetUser = e.detail?.user;
       if (targetUser) {
+        if (currentUser?.id && String(targetUser.id) === String(currentUser.id)) return;
         handleOpenChatWithTransition(targetUser);
       }
     };
     window.addEventListener("kalceria:open-personal-chat", handleRemoteChatOpen);
     return () => window.removeEventListener("kalceria:open-personal-chat", handleRemoteChatOpen);
-  }, []);
+  }, [currentUser]);
 
   // Expand and animate profile card in the scroll bar when avatar marker is tapped on the map
   useEffect(() => {
@@ -352,6 +353,8 @@ export function KalceriansPanel({
 
   const handleOpenChatWithTransition = (user) => {
     if (!user) return;
+    // Strict guard: Cannot chat with oneself
+    if (currentUser?.id && String(user.id) === String(currentUser.id)) return;
     setActiveChatUserSnapshot(user);
     const resolvedId = String(user.id || user.nickname || user.name);
     setActiveChatUserId(resolvedId);

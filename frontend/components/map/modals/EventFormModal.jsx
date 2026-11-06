@@ -282,6 +282,7 @@ export function EventFormModal({
               required={false}
               isModalDark={isModalDark}
               label="Deployment Area"
+              hideCheckmark={true}
             />
           </div>
 

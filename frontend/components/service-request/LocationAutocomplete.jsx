@@ -12,6 +12,7 @@ export function LocationAutocomplete({
   onDetectEnd,
   isModalDark,
   label = "Deployment Area",
+  hideCheckmark = false,
 }) {
   const [query, setQuery] = useState(value || "");
   const [suggestions, setSuggestions] = useState([]);
@@ -199,7 +200,7 @@ export function LocationAutocomplete({
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
           {loading ? (
             <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-          ) : isVerified ? (
+          ) : !hideCheckmark && isVerified ? (
             <span className="text-emerald-400 text-sm">✓</span>
           ) : null}
         </div>

@@ -331,7 +331,7 @@ export function ChatMessageBubble({
         >
           <span
             style={{ fontFamily: "Arial, sans-serif" }}
-            className={`text-[10px] sm:text-[10.5px] font-black tracking-tight select-none leading-none ${
+            className={`text-[8.5px] sm:text-[9px] font-black tracking-tight select-none leading-none ${
               isMapDark
                 ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
                 : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
@@ -467,10 +467,10 @@ export function ChatMessageBubble({
                 })}
               </div>
 
-              {/* 3. Time Running (0:06): NO outer box, mid-center aligned with voice line, bold/tebal */}
+              {/* 3. Time Running (0:06): NO outer box, mid-center aligned with voice line, bold/tebal mini */}
               <span
                 style={{ fontFamily: "Arial, sans-serif" }}
-                className={`text-[10px] font-black tracking-tight leading-none select-none shrink-0 ${
+                className={`text-[8.5px] font-black tracking-tight leading-none select-none shrink-0 ${
                   isMapDark
                     ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
                     : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
@@ -487,7 +487,7 @@ export function ChatMessageBubble({
           <div className="w-full flex justify-end mt-1 select-none pr-0.5">
             <span
               style={{ fontFamily: "Arial, sans-serif" }}
-              className={`text-[10px] font-black leading-none ${
+              className={`text-[8.5px] font-black leading-none ${
                 isMapDark
                   ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
                   : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"

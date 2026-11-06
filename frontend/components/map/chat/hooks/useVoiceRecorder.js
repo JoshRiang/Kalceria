@@ -18,6 +18,8 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
   const recordedChunksRef = useRef([]);
   const waveformAccumulatorRef = useRef([]);
   const resolveStopRef = useRef(null);
+  const startTimeRef = useRef(0);
+  const durationRef = useRef(0);
 
   const cleanupAudioPipeline = useCallback(() => {
     if (animFrameRef.current) {
@@ -56,6 +58,8 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
     recordedChunksRef.current = [];
     waveformAccumulatorRef.current = [];
     setLiveWaveform([]);
+    startTimeRef.current = Date.now();
+    durationRef.current = 0;
     setDuration(0);
 
     let stream;
@@ -137,13 +141,17 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
         const url = URL.createObjectURL(blob);
         const recordedWaveform = [...waveformAccumulatorRef.current];
 
+        const recordedDuration = startTimeRef.current
+          ? Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000))
+          : Math.max(1, durationRef.current);
+
         cleanupAudioPipeline();
 
         if (resolveStopRef.current) {
           resolveStopRef.current({
             blob,
             url,
-            duration: Math.max(1, duration),
+            duration: recordedDuration,
             waveform: recordedWaveform,
           });
           resolveStopRef.current = null;
@@ -155,7 +163,8 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
 
       // 4. Second Counter
       timerIntervalRef.current = setInterval(() => {
-        setDuration((d) => d + 1);
+        durationRef.current += 1;
+        setDuration(durationRef.current);
       }, 1000);
 
       return true;
@@ -189,6 +198,8 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
     cleanupAudioPipeline();
     setIsRecording(false);
     setLiveWaveform([]);
+    startTimeRef.current = Date.now();
+    durationRef.current = 0;
     setDuration(0);
     recordedChunksRef.current = [];
     waveformAccumulatorRef.current = [];

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import ContentImage from "@/components/ui/ContentImage";
@@ -41,49 +42,94 @@ export function CallMediaStage({
 }) {
   const displayName =
     targetUser?.displayName || targetUser?.name || targetUser?.nickname || "Kalcerian";
-  const remoteVideoSrc =
+  const hasRemoteVideo = Boolean(
     targetUser?.coverType === "video" && targetUser?.coverImage
-      ? targetUser.coverImage
-      : "/vid_login1.mp4";
+  );
+  const remoteVideoSrc = hasRemoteVideo ? targetUser.coverImage : null;
+  const [videoProgress, setVideoProgress] = useState(0);
+
+  const handleVideoTimeUpdate = (e) => {
+    const video = e.currentTarget;
+    if (video.duration && Number.isFinite(video.duration) && video.duration > 0) {
+      setVideoProgress(video.currentTime / video.duration);
+    }
+  };
 
   return (
     <>
       {/* Background Layer: White background with static mini-Coki faces for Voice Call, or Video Stream for Video Call */}
       {mode === "video" ? (
-        <div className="absolute inset-0 z-0 overflow-hidden bg-black">
-          {status === "connected" ? (
-            <video
-              ref={remoteVideoRef}
-              src={remoteVideoSrc}
-              autoPlay
-              loop
-              muted={!isSpeakerOn}
-              playsInline
-              className={`w-full h-full object-cover transition-all duration-500 ${
-                isBadConnection ? "filter blur-[12px] scale-105 opacity-80" : ""
+        hasRemoteVideo ? (
+          <div className="absolute inset-0 z-0 overflow-hidden bg-black">
+            {status === "connected" ? (
+              <>
+                <video
+                  ref={remoteVideoRef}
+                  src={remoteVideoSrc}
+                  autoPlay
+                  loop
+                  muted={!isSpeakerOn}
+                  playsInline
+                  onTimeUpdate={handleVideoTimeUpdate}
+                  className={`w-full h-full object-cover transition-all duration-500 ${
+                    isBadConnection ? "filter blur-[12px] scale-105 opacity-80" : ""
+                  }`}
+                />
+                {/* Coherent white progress line matching real video duration */}
+                <div className="absolute bottom-16 left-4 right-4 h-[2px] rounded-full bg-white/30 overflow-hidden z-20 pointer-events-none">
+                  <div
+                    style={{ width: `${Math.min(100, Math.max(0, videoProgress * 100))}%` }}
+                    className="h-full bg-white transition-all duration-100 ease-linear"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="relative w-full h-full flex items-center justify-center">
+                <ContentImage
+                  src={avatarUrl(targetUser)}
+                  alt={displayName}
+                  width={180}
+                  height={180}
+                  className="w-full h-full object-cover blur-[22px] scale-125 opacity-45"
+                />
+              </div>
+            )}
+            <div
+              className={`absolute inset-0 pointer-events-none ${
+                status === "connected"
+                  ? "bg-gradient-to-b from-black/65 via-transparent to-black/75"
+                  : isMapDark
+                  ? "bg-black/65 backdrop-blur-xl"
+                  : "bg-white/75 backdrop-blur-xl"
               }`}
             />
-          ) : (
-            <div className="relative w-full h-full flex items-center justify-center">
-              <ContentImage
-                src={avatarUrl(targetUser)}
-                alt={displayName}
-                width={180}
-                height={180}
-                className="w-full h-full object-cover blur-[22px] scale-125 opacity-45"
-              />
-            </div>
-          )}
+          </div>
+        ) : (
+          /* Fallback Stage when Peer has NO Video uploaded:
+             Light mode: Pure black screen
+             Dark mode: Pure white screen with profile photo centered. NO propagating line. */
           <div
-            className={`absolute inset-0 pointer-events-none ${
-              status === "connected"
-                ? "bg-gradient-to-b from-black/65 via-transparent to-black/75"
-                : isMapDark
-                ? "bg-black/65 backdrop-blur-xl"
-                : "bg-white/75 backdrop-blur-xl"
+            className={`absolute inset-0 z-0 flex flex-col items-center justify-center transition-colors duration-300 ${
+              isMapDark ? "bg-white" : "bg-black"
             }`}
-          />
-        </div>
+          >
+            <div className="relative flex items-center justify-center">
+              <div
+                className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 shadow-2xl ${
+                  isMapDark ? "border-black bg-white" : "border-white bg-[#161b22]"
+                }`}
+              >
+                <ContentImage
+                  src={avatarUrl(targetUser)}
+                  alt={displayName}
+                  width={120}
+                  height={120}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        )
       ) : (
         /* Voice Call: Pure White Background patterned with static mini Coki faces, naturally trimmed around the top header */
         <div
@@ -123,8 +169,12 @@ export function CallMediaStage({
       <div className="relative z-10 pt-5 px-4 flex flex-col items-center text-center">
         <h3
           className={`font-sans font-bold text-base sm:text-lg tracking-tight truncate max-w-[260px] ${
-            mode === "video" && status === "connected"
-              ? "text-white drop-shadow"
+            mode === "video"
+              ? hasRemoteVideo
+                ? "text-white drop-shadow"
+                : isMapDark
+                ? "text-black"
+                : "text-white"
               : mode === "voice"
               ? "text-black"
               : isMapDark
@@ -139,8 +189,12 @@ export function CallMediaStage({
         <p
           style={{ fontFamily: "Arial, sans-serif" }}
           className={`font-bold text-[9.5px] sm:text-[10px] tracking-tight mt-1 ${
-            mode === "video" && status === "connected"
-              ? "text-white/90 drop-shadow"
+            mode === "video"
+              ? hasRemoteVideo
+                ? "text-white/90 drop-shadow"
+                : isMapDark
+                ? "text-black/80"
+                : "text-white/80"
               : mode === "voice"
               ? "text-black/80"
               : isMapDark
@@ -160,7 +214,7 @@ export function CallMediaStage({
 
       {/* CENTER: Avatar + Audio Pulse Rings (Smooth enlargement & movement to center on answer) */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4">
-        {(mode === "voice" || status !== "connected") && (
+        {(mode === "voice" || (mode === "video" && hasRemoteVideo && status !== "connected")) && (
           <motion.div
             animate={{
               scale: status === "connected" ? 1.25 : 0.95,

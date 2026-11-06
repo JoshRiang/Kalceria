@@ -79,8 +79,8 @@ export default function SnapMap({
   const idleTimerRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
 
-  // Smooth idle auto-collapse timer for multi-open event popups
-  const resetIdleTimer = useCallback(() => {
+  // Smooth idle auto-collapse timer for event cards on map
+  const resetIdleTimer = useCallback((delayMs = 5000) => {
     if (idleTimerRef.current) {
       clearTimeout(idleTimerRef.current);
       idleTimerRef.current = null;
@@ -92,44 +92,62 @@ export default function SnapMap({
         el.classList.add("popup-shrinking");
       });
       setTimeout(() => {
-        if (!markerRefs.current) return;
-        Object.keys(markerRefs.current).forEach((key) => {
-          if (key.startsWith("event_")) {
+        if (mapRef.current) {
+          try {
+            mapRef.current.closePopup();
+          } catch {}
+        }
+        if (markerRefs.current) {
+          Object.keys(markerRefs.current).forEach((key) => {
             const m = markerRefs.current[key];
-            if (m?.isPopupOpen && m.isPopupOpen()) {
-              m.closePopup();
+            if (m?.closePopup) {
+              try {
+                m.closePopup();
+              } catch {}
             }
-          }
-        });
+          });
+        }
         activeEventPopups.forEach((el) => {
           el.classList.remove("popup-shrinking");
         });
-      }, 380);
-    }, 12000);
+      }, 300);
+    }, delayMs);
   }, []);
 
-  // Listen for user interaction to reset idle auto-collapse timer
+  // Wire event popup idle collapse listeners
   useEffect(() => {
-    const handleActivity = () => {
-      const openPopups = document.querySelectorAll(".event-tactical-popup");
-      if (openPopups.length > 0) {
-        resetIdleTimer();
+    const handlePopupMouseEnter = (e) => {
+      if (e.target.closest?.(".event-tactical-popup")) {
+        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       }
     };
 
-    window.addEventListener("mousemove", handleActivity, { passive: true });
-    window.addEventListener("pointerdown", handleActivity, { passive: true });
-    window.addEventListener("touchstart", handleActivity, { passive: true });
-    window.addEventListener("keydown", handleActivity, { passive: true });
-    window.addEventListener("wheel", handleActivity, { passive: true });
+    const handlePopupMouseLeave = (e) => {
+      if (e.target.closest?.(".event-tactical-popup")) {
+        resetIdleTimer(3000);
+      }
+    };
+
+    const handleMapMove = () => {
+      const openPopups = document.querySelectorAll(".event-tactical-popup");
+      if (openPopups.length > 0) {
+        resetIdleTimer(5000);
+      }
+    };
+
+    window.addEventListener("pointerdown", handleMapMove, { passive: true });
+    window.addEventListener("touchstart", handleMapMove, { passive: true });
+    window.addEventListener("keydown", handleMapMove, { passive: true });
+    document.addEventListener("mouseover", handlePopupMouseEnter, { passive: true });
+    document.addEventListener("mouseout", handlePopupMouseLeave, { passive: true });
 
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      window.removeEventListener("mousemove", handleActivity);
-      window.removeEventListener("pointerdown", handleActivity);
-      window.removeEventListener("touchstart", handleActivity);
-      window.removeEventListener("keydown", handleActivity);
-      window.removeEventListener("wheel", handleActivity);
+      window.removeEventListener("pointerdown", handleMapMove);
+      window.removeEventListener("touchstart", handleMapMove);
+      window.removeEventListener("keydown", handleMapMove);
+      document.removeEventListener("mouseover", handlePopupMouseEnter);
+      document.removeEventListener("mouseout", handlePopupMouseLeave);
     };
   }, [resetIdleTimer]);
 

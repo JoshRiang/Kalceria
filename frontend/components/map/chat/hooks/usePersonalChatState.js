@@ -233,32 +233,62 @@ export function usePersonalChatState({
 
   const storageKey = `${LOCAL_CHAT_CACHE_PREFIX}${[myId, targetId].sort().join("_")}`;
 
+  const persistQuickLocal = useCallback(
+    (msgList) => {
+      try {
+        sessionStorage.setItem(`quick_${storageKey}`, JSON.stringify(msgList.slice(-80)));
+      } catch {}
+    },
+    [storageKey]
+  );
+
   // Load & decrypt conversation history (latest 30 hot messages + local cache)
   useEffect(() => {
-    if (!activeChatUser || !targetId) return;
+    if (!targetId) return;
     let alive = true;
 
     async function loadMessages() {
       let localMsgs = [];
       try {
-        const cached = localStorage.getItem(storageKey);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const decryptedLocal = await Promise.all(
-              parsed.map((env) => decryptChatEnvelope(env, myId, targetId))
-            );
-            localMsgs = decryptedLocal.filter(Boolean);
+        const quick = sessionStorage.getItem(`quick_${storageKey}`);
+        if (quick) {
+          const parsedQuick = JSON.parse(quick);
+          if (Array.isArray(parsedQuick) && parsedQuick.length > 0) {
+            localMsgs = parsedQuick;
           }
         }
-      } catch { }
+      } catch {}
+
+      if (!localMsgs.length) {
+        try {
+          const cached = localStorage.getItem(storageKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const decryptedLocal = await Promise.all(
+                parsed.map((env) => decryptChatEnvelope(env, myId, targetId))
+              );
+              localMsgs = decryptedLocal.filter(Boolean);
+            }
+          }
+        } catch {}
+      }
 
       if (!localMsgs.length) {
         localMsgs = getInitialSeedMessages(activeChatUser, myId);
       }
 
       if (alive) {
-        setMessages(localMsgs);
+        setMessages((prev) => {
+          // Never clobber existing in-memory messages for this conversation
+          if (prev && prev.length > 0) {
+            const merged = new Map();
+            localMsgs.forEach((m) => merged.set(m.id, m));
+            prev.forEach((m) => merged.set(m.id, m));
+            return Array.from(merged.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+          }
+          return localMsgs;
+        });
       }
 
       // Sync encrypted envelopes from backend Hot Ring-Buffer
@@ -282,7 +312,7 @@ export function usePersonalChatState({
             return Array.from(mergedMap.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
           });
         }
-      } catch { }
+      } catch {}
     }
 
     loadMessages();
@@ -291,7 +321,7 @@ export function usePersonalChatState({
       alive = false;
       if (autoReplyTimerRef.current) clearTimeout(autoReplyTimerRef.current);
     };
-  }, [activeChatUser, targetId, myId, storageKey]);
+  }, [targetId, myId, storageKey]);
 
   // Cursor pagination for older messages from Cold Archive
   const loadOlderMessages = useCallback(async () => {
@@ -413,6 +443,7 @@ export function usePersonalChatState({
 
       setMessages((prev) => {
         const next = [...prev, newMsg];
+        persistQuickLocal(next);
         persistEncryptedLocal(next);
         return next;
       });
@@ -485,7 +516,8 @@ export function usePersonalChatState({
             .catch(() => {
               clearTimeout(timeoutTimer);
               setMessages((prev) => {
-                const next = prev.map((m) => (m.id === msgId ? { ...m, status: "failed" } : m));
+                const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
+                persistQuickLocal(next);
                 persistEncryptedLocal(next);
                 return next;
               });

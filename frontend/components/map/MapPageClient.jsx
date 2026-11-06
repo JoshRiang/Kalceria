@@ -437,7 +437,10 @@ export default function MapPage() {
       if (!u) return true;
       const idStr = String(u.id || "");
       if (idStr.startsWith("mock_")) return true;
+      // Filter out self so current logged-in user never appears in "Find other Kalcerians" scroll bar
+      if (currentUser?.id && idStr === String(currentUser.id)) return true;
       const email = String(u.email || "").toLowerCase();
+      if (currentUser?.email && email && email === String(currentUser.email).toLowerCase()) return true;
       if (email.startsWith("admin") || email.includes("laptop_tester") || email.endsWith("@kalceria.id")) return true;
       if (u.role === "ADMIN") return true;
       const name = String(u.name || "").trim();
@@ -505,34 +508,9 @@ export default function MapPage() {
       }
     });
 
-    // 3. Guarantee current logged-in user is online in the sidebar list
-    if (currentUser?.id && !isExcludedUser(currentUser)) {
-      if (map.has(currentUser.id)) {
-        const me = map.get(currentUser.id);
-        me.isOnline = presence === "online";
-        if (currentUser.broadcast) me.broadcast = currentUser.broadcast;
-      } else {
-        map.set(currentUser.id, {
-          id: currentUser.id,
-          name: currentUser.displayName || currentUser.name || currentUser.nickname || "Kalcerian",
-          displayName: currentUser.displayName || currentUser.name || currentUser.nickname || "Kalcerian",
-          nickname: currentUser.nickname || currentUser.name || "Kalcerian",
-          profilePicture: currentUser.profilePicture || null,
-          isOnline: presence === "online",
-          broadcast: currentUser.broadcast || null,
-          lat: currentUser.domicileLat || -6.2735,
-          lng: currentUser.domicileLng || 106.7110,
-          coverType: currentUser.coverType || null,
-          coverImage: currentUser.coverImage || null,
-          socialPlatform: currentUser.socialPlatform || null,
-          socialLink: currentUser.socialLink || null,
-          instagram: currentUser.instagram || null,
-          whatsapp: currentUser.whatsapp || null,
-          phone: currentUser.phone || null,
-          reason: currentUser.reason || null,
-          createdAt: currentUser.createdAt || null,
-        });
-      }
+    // 3. Ensure current logged-in user is strictly excluded from "Find other Kalcerians" sidebar list
+    if (currentUser?.id) {
+      map.delete(currentUser.id);
     }
 
     let list = Array.from(map.values());
@@ -1034,6 +1012,7 @@ export default function MapPage() {
             topDynamicEvent={topDynamicEvent}
             hasTopDynamicEventNotif={hasTopDynamicEventNotif}
             onTopDynamicEventClick={handleTopDynamicEventClick}
+            hasActiveOwnEvent={Boolean(activeOwnEvent)}
           />
 
           {/* Kalcerians Panel */}

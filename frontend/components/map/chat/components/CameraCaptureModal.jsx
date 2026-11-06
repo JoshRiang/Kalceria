@@ -22,6 +22,7 @@ export function CameraCaptureModal({
   const [photoRotation, setPhotoRotation] = useState(0); // 0, 90, 180, 270
   const [isCropping, setIsCropping] = useState(false);
   const [caption, setCaption] = useState("");
+  const [showCameraGuide, setShowCameraGuide] = useState(true);
 
   // Video recording on hold
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
@@ -78,7 +79,7 @@ export function CameraCaptureModal({
     setIsRecordingVideo(false);
   }, []);
 
-  // Teardown when closing modal
+  // Teardown when closing modal + auto-fade camera guide after 2s
   useEffect(() => {
     if (!isOpen) {
       cleanupCamera();
@@ -91,6 +92,11 @@ export function CameraCaptureModal({
       setCaption("");
       setIsRecordingVideo(false);
       setRecordingSeconds(0);
+      setShowCameraGuide(true);
+    } else {
+      setShowCameraGuide(true);
+      const timer = setTimeout(() => setShowCameraGuide(false), 2000);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, cleanupCamera]);
 
@@ -258,21 +264,31 @@ export function CameraCaptureModal({
     setIsRecordingVideo(false);
   }, []);
 
-  // Shutter pointer down / up
+  // Shutter pointer down / up with robust pointer capture
   const handleShutterPointerDown = (e) => {
     e.preventDefault();
     if (previewMedia || !hasStream) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    setShowCameraGuide(false);
     isHoldingShutterRef.current = true;
 
     holdTimerRef.current = setTimeout(() => {
       if (isHoldingShutterRef.current && hasStream) {
         startVideoRecording();
       }
-    }, 380);
+    }, 280);
   };
 
   const handleShutterPointerUp = (e) => {
     e.preventDefault();
+    try {
+      if (e.currentTarget?.hasPointerCapture && e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {}
+
     if (holdTimerRef.current) {
       clearTimeout(holdTimerRef.current);
       holdTimerRef.current = null;
@@ -348,8 +364,9 @@ export function CameraCaptureModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.28, ease: "easeInOut" }}
-        className="fixed inset-0 z-[1050] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md select-none"
+        className="fixed inset-0 z-[1050] flex flex-col items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md select-none"
       >
+        {/* BOX 1: Media Preview / Live Viewfinder Box */}
         <motion.div
           initial={{ opacity: 0, scale: 0.94 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -357,7 +374,7 @@ export function CameraCaptureModal({
           transition={{ duration: 0.22, ease: "easeOut" }}
           className="relative w-full max-w-[340px] sm:max-w-[360px] aspect-[3/4] rounded-2xl overflow-hidden bg-black shadow-2xl flex flex-col justify-between select-none"
         >
-          {/* Top Close Button: No outer box, clean black X */}
+          {/* Top Close Button: Clean X icon */}
           <button
             type="button"
             onClick={onClose}
@@ -366,14 +383,6 @@ export function CameraCaptureModal({
           >
             ✕
           </button>
-
-          {/* Video Recording Indicator during hold */}
-          {isRecordingVideo && (
-            <div className="absolute top-3.5 left-3.5 z-30 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-600/90 text-white text-[10px] font-bold shadow animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-white block" />
-              <span>0:{String(recordingSeconds).padStart(2, "0")} / 1:00</span>
-            </div>
-          )}
 
           {/* Optional Camera Error Alert */}
           {cameraError && (
@@ -415,35 +424,82 @@ export function CameraCaptureModal({
                   )}
                 </div>
 
-                {/* 3x3 Cropping Grid Overlay when editing */}
+                {/* 3x3 Cropping Grid Overlay with Thick L-Corners (Dynamic to theme) */}
                 {isCropping && (
-                  <div className="absolute inset-4 pointer-events-none border border-white/60 grid grid-cols-3 grid-rows-3 z-10 animate-fade-in">
-                    <div className="border-r border-b border-white/35" />
-                    <div className="border-r border-b border-white/35" />
-                    <div className="border-b border-white/35" />
-                    <div className="border-r border-b border-white/35" />
-                    <div className="border-r border-b border-white/35" />
-                    <div className="border-b border-white/35" />
-                    <div className="border-r border-b border-white/35" />
-                    <div className="border-r border-b border-white/35" />
-                    <div />
+                  <div className="absolute inset-5 pointer-events-none z-10 animate-fade-in">
+                    {/* Grid */}
+                    <div className="w-full h-full border border-white/40 grid grid-cols-3 grid-rows-3">
+                      <div className="border-r border-b border-white/25" />
+                      <div className="border-r border-b border-white/25" />
+                      <div className="border-b border-white/25" />
+                      <div className="border-r border-b border-white/25" />
+                      <div className="border-r border-b border-white/25" />
+                      <div className="border-b border-white/25" />
+                      <div className="border-r border-b border-white/25" />
+                      <div className="border-r border-b border-white/25" />
+                      <div />
+                    </div>
+
+                    {/* Thick L-shaped corner edges (dynamic to theme) */}
+                    <div
+                      className={`absolute -top-1 -left-1 w-4 h-4 border-t-[3.5px] border-l-[3.5px] ${
+                        isMapDark ? "border-white" : "border-black"
+                      }`}
+                    />
+                    <div
+                      className={`absolute -top-1 -right-1 w-4 h-4 border-t-[3.5px] border-r-[3.5px] ${
+                        isMapDark ? "border-white" : "border-black"
+                      }`}
+                    />
+                    <div
+                      className={`absolute -bottom-1 -left-1 w-4 h-4 border-b-[3.5px] border-l-[3.5px] ${
+                        isMapDark ? "border-white" : "border-black"
+                      }`}
+                    />
+                    <div
+                      className={`absolute -bottom-1 -right-1 w-4 h-4 border-b-[3.5px] border-r-[3.5px] ${
+                        isMapDark ? "border-white" : "border-black"
+                      }`}
+                    />
                   </div>
                 )}
               </div>
             ) : hasStream ? (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{
-                  transform: `${facingMode === "user" ? "scaleX(-1)" : "scaleX(1)"} ${
-                    zoomLevel === 2 ? "scale(1.4)" : "scale(1)"
-                  }`,
-                  transition: "transform 0.25s ease-out",
-                }}
-                className="w-full h-full object-cover"
-              />
+              <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    transform: `${facingMode === "user" ? "scaleX(-1)" : "scaleX(1)"} ${
+                      zoomLevel === 2 ? "scale(1.4)" : "scale(1)"
+                    }`,
+                    transition: "transform 0.25s ease-out",
+                  }}
+                  className="w-full h-full object-cover"
+                />
+
+                {/* Centered Camera Open Prompt: Arial non-bold, firm, auto fades out after 2s or on shutter press */}
+                <AnimatePresence>
+                  {showCameraGuide && !isRecordingVideo && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.35, ease: "easeOut" }}
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 px-4"
+                    >
+                      <p
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                        className="font-normal text-xs sm:text-[13px] text-center leading-relaxed select-none text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+                      >
+                        Tap to Take Photo or<br />Hold to Take Video
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-4 text-center">
                 <span className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin mb-3" />
@@ -451,54 +507,6 @@ export function CameraCaptureModal({
               </div>
             )}
           </div>
-
-          {/* PART 2 ONLY: Floating Caption Pill Input with 0/50 Counter and Send Button */}
-          {previewMedia && (
-            <div className="relative z-20 px-3 pb-2 pt-1 w-full bg-gradient-to-t from-black/80 to-transparent">
-              <div className="w-full flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white shadow-lg">
-                {/* Smiley Emoji Icon */}
-                <span className="text-white/80 select-none">
-                  <svg viewBox="0 0 24 24" className="w-[17px] h-[17px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                    <line x1="9" y1="9" x2="9.01" y2="9" />
-                    <line x1="15" y1="9" x2="15.01" y2="9" />
-                  </svg>
-                </span>
-
-                {/* Caption Input Field */}
-                <input
-                  type="text"
-                  value={caption}
-                  maxLength={50}
-                  onChange={(e) => setCaption(e.target.value.slice(0, 50))}
-                  placeholder="Ketik deskripsi..."
-                  style={{ fontFamily: "Arial, sans-serif" }}
-                  className="flex-1 bg-transparent text-xs text-white placeholder:text-white/50 outline-none min-w-0"
-                />
-
-                {/* 0/50 Character Counter */}
-                <span
-                  style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-                  className="text-[10px] font-medium text-white/60 shrink-0 select-none"
-                >
-                  {caption.length}/50
-                </span>
-
-                {/* Send Button */}
-                <button
-                  type="button"
-                  onClick={handleConfirmSend}
-                  className="p-1 text-white hover:text-white/80 transition-transform active:scale-90 cursor-pointer shrink-0"
-                  title="Kirim Foto / Video"
-                >
-                  <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] fill-current">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* BOTTOM CONTROLS FOOTER: Height adjusted to 54px, semi-transparent */}
           <div className="relative z-20 w-full h-[54px] bg-black/55 backdrop-blur-md flex items-center justify-between px-6">
@@ -518,7 +526,7 @@ export function CameraCaptureModal({
                   </svg>
                 </button>
 
-                {/* EDIT / ROTATE ICON: Tapping toggles crop grid & switches to rotate icon */}
+                {/* EDIT / ROTATE ICON: Tapping toggles crop grid & switches to rotate icon with photo rectangle border inside */}
                 <button
                   type="button"
                   onClick={() => {
@@ -532,8 +540,12 @@ export function CameraCaptureModal({
                   title={isCropping ? "Putar Foto 90°" : "Edit / Crop Foto"}
                 >
                   {isCropping ? (
-                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      {/* Rotation arrow arc */}
+                      <path d="M21.5 2v6h-6" />
+                      <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                      {/* Photo rectangle frame in center that rotates with icon */}
+                      <rect x="7.5" y="7.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.8" fill="none" />
                     </svg>
                   ) : (
                     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -572,20 +584,53 @@ export function CameraCaptureModal({
                   {zoomLevel}x
                 </button>
 
-                {/* SHUTTER BUTTON: Tap for Photo, Hold for Video */}
+                {/* SHUTTER BUTTON: Tap for Photo, Hold for Video (Cyan-Magenta Gradient Progress) */}
                 <div className="relative flex items-center justify-center">
                   <button
                     type="button"
                     onPointerDown={handleShutterPointerDown}
                     onPointerUp={handleShutterPointerUp}
+                    onPointerCancel={handleShutterPointerUp}
                     title="Ketuk untuk Foto, Tahan untuk Video"
-                    className={`w-12 h-12 rounded-full border-2 border-white flex items-center justify-center p-1 cursor-pointer transition-transform ${
-                      isRecordingVideo ? "scale-110 border-red-500" : "hover:scale-105 active:scale-90"
-                    } select-none shadow-lg`}
+                    className="relative w-[52px] h-[52px] flex items-center justify-center p-1 cursor-pointer select-none transition-transform active:scale-95 touch-none"
                   >
+                    {/* Outer Circular Ring with Cyan-to-Magenta gradient stroke on video hold */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none -rotate-90" viewBox="0 0 52 52">
+                      <defs>
+                        <linearGradient id="shutter-hold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#00f5d4" />
+                          <stop offset="100%" stopColor="#ff006e" />
+                        </linearGradient>
+                      </defs>
+                      {isRecordingVideo ? (
+                        <circle
+                          cx="26"
+                          cy="26"
+                          r="23"
+                          fill="none"
+                          stroke="url(#shutter-hold-gradient)"
+                          strokeWidth="3.5"
+                          strokeDasharray={2 * Math.PI * 23}
+                          strokeDashoffset={2 * Math.PI * 23 * (1 - Math.min(1, recordingSeconds / 60))}
+                          strokeLinecap="round"
+                          style={{ transition: "stroke-dashoffset 0.2s linear" }}
+                        />
+                      ) : (
+                        <circle
+                          cx="26"
+                          cy="26"
+                          r="23"
+                          fill="none"
+                          stroke="white"
+                          strokeWidth="2.5"
+                        />
+                      )}
+                    </svg>
+
+                    {/* Inner White Circle (shrinks slightly when held/recording) */}
                     <span
-                      className={`w-9 h-9 rounded-full block transition-colors ${
-                        isRecordingVideo ? "bg-red-500 rounded-sm scale-75" : "bg-white"
+                      className={`w-9 h-9 rounded-full block bg-white transition-all duration-200 ${
+                        isRecordingVideo ? "scale-[0.76] shadow-md" : "scale-100"
                       }`}
                     />
                   </button>
@@ -624,6 +669,58 @@ export function CameraCaptureModal({
             )}
           </div>
         </motion.div>
+
+        {/* BOX 2: SEPARATE FILL INPUT BOX DIRECTLY BELOW MEDIA BOX (PART 2 ONLY) */}
+        {previewMedia && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.2 }}
+            className="w-full max-w-[340px] sm:max-w-[360px] mt-2.5 flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-white shadow-xl z-30"
+          >
+            {/* Smiley Emoji Icon */}
+            <span className="text-white/80 select-none shrink-0">
+              <svg viewBox="0 0 24 24" className="w-[17px] h-[17px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                <line x1="9" y1="9" x2="9.01" y2="9" />
+                <line x1="15" y1="9" x2="15.01" y2="9" />
+              </svg>
+            </span>
+
+            {/* Caption Input Field */}
+            <input
+              type="text"
+              value={caption}
+              maxLength={50}
+              onChange={(e) => setCaption(e.target.value.slice(0, 50))}
+              placeholder="Ketik deskripsi..."
+              style={{ fontFamily: "Arial, sans-serif" }}
+              className="flex-1 bg-transparent text-xs text-white placeholder:text-white/50 outline-none min-w-0"
+            />
+
+            {/* 0/50 Character Counter: Arial non-bold, mini, consistent */}
+            <span
+              style={{ fontFamily: "Arial, sans-serif" }}
+              className="text-[10px] font-normal text-white/70 shrink-0 select-none"
+            >
+              {caption.length}/50
+            </span>
+
+            {/* Send Button */}
+            <button
+              type="button"
+              onClick={handleConfirmSend}
+              className="p-1 text-white hover:text-white/80 transition-transform active:scale-90 cursor-pointer shrink-0"
+              title="Kirim Foto / Video"
+            >
+              <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] fill-current">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
+            </button>
+          </motion.div>
+        )}
       </motion.div>
     </AnimatePresence>
   );
