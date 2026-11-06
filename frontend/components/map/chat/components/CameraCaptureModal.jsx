@@ -29,6 +29,7 @@ export function CameraCaptureModal({
   const [trimEnd, setTrimEnd] = useState(1);     // 0 to 1
   const previewVideoRef = useRef(null);
   const trimmerTrackRef = useRef(null);
+  const videoStartTimeRef = useRef(null);
 
   // Video recording on hold
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
@@ -209,6 +210,7 @@ export function CameraCaptureModal({
   const startVideoRecording = useCallback(() => {
     if (!streamRef.current || !hasStream) return;
     recordedChunksRef.current = [];
+    videoStartTimeRef.current = Date.now();
     setRecordingSeconds(0);
     setIsRecordingVideo(true);
 
@@ -229,11 +231,15 @@ export function CameraCaptureModal({
       recorder.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, { type: mime });
         const url = URL.createObjectURL(blob);
+        const elapsedSec = videoStartTimeRef.current
+          ? Math.max(1, Math.round((Date.now() - videoStartTimeRef.current) / 1000))
+          : 1;
+
         setPreviewMedia({
           type: "video",
           url,
           blob,
-          duration: recordingSeconds || 1,
+          duration: elapsedSec,
         });
         setIsRecordingVideo(false);
       };
@@ -486,6 +492,12 @@ export function CameraCaptureModal({
                         autoPlay
                         loop
                         playsInline
+                        onLoadedMetadata={(e) => {
+                          if (e.currentTarget.duration && Number.isFinite(e.currentTarget.duration) && e.currentTarget.duration > 0) {
+                            const realDur = Math.round(e.currentTarget.duration);
+                            setPreviewMedia((prev) => prev ? { ...prev, duration: realDur } : prev);
+                          }
+                        }}
                         onTimeUpdate={handlePreviewVideoTimeUpdate}
                         className="w-full h-full object-cover"
                       />

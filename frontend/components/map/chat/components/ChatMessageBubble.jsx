@@ -63,6 +63,22 @@ export function ChatMessageBubble({
   const waveformRef = useRef(null);
   const rafRef = useRef(null);
 
+  // Preload audio duration so time mark immediately shows true duration (e.g. 0:07) rather than 0:01
+  useEffect(() => {
+    if (!isVoice || !item.mediaUrl) return;
+    const probe = new Audio();
+    probe.preload = "metadata";
+    probe.onloadedmetadata = () => {
+      if (probe.duration && Number.isFinite(probe.duration) && probe.duration > 0) {
+        setRealAudioDuration(Math.round(probe.duration));
+      }
+    };
+    probe.src = item.mediaUrl;
+    return () => {
+      probe.src = "";
+    };
+  }, [isVoice, item.mediaUrl]);
+
   const rawWaveform = Array.isArray(item.voiceWaveform) && item.voiceWaveform.length > 0
     ? item.voiceWaveform
     : isVoice

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kalceria-pwa-v3';
+const CACHE_NAME = 'kalceria-pwa-v4';
 const MAX_TILE_ENTRIES = 150;
 
 const PRECACHE_ASSETS = [

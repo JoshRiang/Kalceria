@@ -208,11 +208,11 @@ export function LocationAutocomplete({
 
       {/* Verification Notice / Geolocation Notice */}
       {detectError && (
-        <p className="text-[10px] text-[#c2850c] mt-1 font-sans">{detectError}</p>
+        <p className="text-[10px] text-red-500 mt-1 font-sans">{detectError}</p>
       )}
-      {!isVerified && query.trim().length >= 2 && !isOpen && (
-        <p className="text-[10px] text-[#c2850c] mt-1 font-sans">
-          Select from the suggestion list below to verify your deployment area.
+      {((!isVerified && query.trim().length >= 2 && !isOpen) || (isOpen && suggestions.length === 0 && !isLoading && query.trim().length >= 2)) && (
+        <p className="text-[10px] text-red-500 mt-1 font-sans">
+          Lokasi tidak ditemukan
         </p>
       )}
 
@@ -225,15 +225,6 @@ export function LocationAutocomplete({
               : "bg-white border-neutral-300 divide-neutral-200 text-black"
           }`}
         >
-          <div
-            className={`px-3.5 py-2 font-sans font-bold text-xs border-b ${
-              isModalDark !== undefined && isModalDark
-                ? "bg-[#161b22] border-[#30363d] text-white"
-                : "bg-white border-neutral-200 text-neutral-800"
-            }`}
-          >
-            Verified List
-          </div>
           {suggestions.map((item) => (
             <button
               key={item.id}

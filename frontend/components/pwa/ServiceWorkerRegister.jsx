@@ -12,6 +12,9 @@ export default function ServiceWorkerRegister() {
       const handleLoad = () => {
         navigator.serviceWorker
           .register("/sw.js", { scope: "/" })
+          .then((reg) => {
+            reg.update().catch(() => {});
+          })
           .catch(() => {});
       };
 

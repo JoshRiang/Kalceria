@@ -31,6 +31,8 @@ export function ChatMediaCard({
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubSeconds, setScrubSeconds] = useState(0);
   const [isPlayingVideo, setIsPlayingVideo] = useState(true);
+  const [realVideoDuration, setRealVideoDuration] = useState(item.videoDuration || 0);
+  const [mediaLoadError, setMediaLoadError] = useState(false);
   const videoRafRef = useRef(null);
 
   // Deterministic random font selection based on item.id
@@ -100,11 +102,36 @@ export function ChatMediaCard({
     }
   };
 
+  // Get active video duration
+  const getVideoDuration = useCallback(() => {
+    if (videoRef.current && Number.isFinite(videoRef.current.duration) && videoRef.current.duration > 0) {
+      return videoRef.current.duration;
+    }
+    if (realVideoDuration > 0) return realVideoDuration;
+    if (item.videoDuration && Number.isFinite(item.videoDuration) && item.videoDuration > 0) {
+      return item.videoDuration;
+    }
+    return 6;
+  }, [realVideoDuration, item.videoDuration]);
+
+  // Preload video duration probe
+  useEffect(() => {
+    if (!isVideo || !item.mediaUrl) return;
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.onloadedmetadata = () => {
+      if (v.duration && Number.isFinite(v.duration) && v.duration > 0) {
+        setRealVideoDuration(v.duration);
+      }
+    };
+    v.src = item.mediaUrl;
+  }, [isVideo, item.mediaUrl]);
+
   // High-precision 60fps video loop for butter-smooth progress line
   const startVideoLoop = useCallback(() => {
     const loop = () => {
       if (videoRef.current && !videoRef.current.paused && !videoRef.current.ended && !isScrubbing) {
-        const dur = videoRef.current.duration || item.videoDuration || 1;
+        const dur = getVideoDuration();
         const cur = videoRef.current.currentTime || 0;
         if (dur > 0) {
           setVideoProgress(Math.min(1, Math.max(0, cur / dur)));
@@ -114,7 +141,7 @@ export function ChatMediaCard({
     };
     cancelAnimationFrame(videoRafRef.current);
     videoRafRef.current = requestAnimationFrame(loop);
-  }, [item.videoDuration, isScrubbing]);
+  }, [getVideoDuration, isScrubbing]);
 
   const togglePlayVideo = (e) => {
     e.stopPropagation();
@@ -147,10 +174,14 @@ export function ChatMediaCard({
     const updateScrub = (clientX) => {
       const ratio = Math.max(0, Math.min(1, (clientX - scrubberRect.left) / scrubberRect.width));
       setVideoProgress(ratio);
-      const dur = videoRef.current.duration || item.videoDuration || 60;
+      const dur = getVideoDuration();
       const targetTime = ratio * dur;
-      videoRef.current.currentTime = targetTime;
-      setScrubSeconds(Math.floor(targetTime));
+      if (videoRef.current && Number.isFinite(targetTime)) {
+        try {
+          videoRef.current.currentTime = targetTime;
+        } catch {}
+      }
+      setScrubSeconds(Math.round(targetTime));
     };
 
     updateScrub(e.clientX);
@@ -170,8 +201,9 @@ export function ChatMediaCard({
   };
 
   const formatMinSec = (totalSec) => {
-    const m = Math.floor(totalSec / 60);
-    const s = Math.floor(totalSec % 60);
+    const validSec = Number.isFinite(totalSec) && totalSec >= 0 ? Math.floor(totalSec) : 0;
+    const m = Math.floor(validSec / 60);
+    const s = Math.floor(validSec % 60);
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
@@ -281,7 +313,16 @@ export function ChatMediaCard({
         >
           {/* Media View */}
           <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
-            {isVideo ? (
+            {mediaLoadError ? (
+              <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-neutral-900 text-white/50 select-none">
+                <svg viewBox="0 0 24 24" className="w-7 h-7 fill-none stroke-current mb-1.5" strokeWidth="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <span className="text-[9px] font-sans text-white/60">Media tidak tersedia</span>
+              </div>
+            ) : isVideo ? (
               <>
                 <video
                   ref={videoRef}
@@ -290,6 +331,12 @@ export function ChatMediaCard({
                   autoPlay
                   muted={false}
                   loop
+                  onLoadedMetadata={(e) => {
+                    if (e.currentTarget.duration && Number.isFinite(e.currentTarget.duration) && e.currentTarget.duration > 0) {
+                      setRealVideoDuration(e.currentTarget.duration);
+                    }
+                  }}
+                  onError={() => setMediaLoadError(true)}
                   onPlay={() => {
                     setIsPlayingVideo(true);
                     startVideoLoop();
@@ -329,6 +376,7 @@ export function ChatMediaCard({
               <img
                 src={item.mediaUrl}
                 alt="Captured"
+                onError={() => setMediaLoadError(true)}
                 className="w-full h-full object-cover pointer-events-none"
               />
             )}
