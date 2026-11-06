@@ -366,105 +366,119 @@ export function CameraCaptureModal({
         transition={{ duration: 0.28, ease: "easeInOut" }}
         className="fixed inset-0 z-[1050] flex flex-col items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md select-none"
       >
-        {/* BOX 1: Media Preview / Live Viewfinder Box */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.94 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.94 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
-          className="relative w-full max-w-[340px] sm:max-w-[360px] aspect-[3/4] rounded-2xl overflow-hidden bg-black shadow-2xl flex flex-col justify-between select-none"
-        >
-          {/* Top Close Button: Clean X icon */}
+        <div className="relative w-full max-w-[340px] sm:max-w-[360px] flex flex-col items-end">
+          {/* Top Close Button: OUTSIDE the box at top-right, clean bare X icon, no outer box/circle */}
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 z-30 text-white/90 hover:text-white font-sans font-bold text-base cursor-pointer select-none transition-transform active:scale-90"
+            className={`mb-1.5 mr-0.5 font-sans font-normal text-xl sm:text-2xl cursor-pointer select-none transition-transform hover:scale-110 active:scale-90 p-1 ${
+              isMapDark ? "text-white/90 hover:text-white" : "text-black/90 hover:text-black"
+            }`}
             title="Tutup Kamera"
           >
             ✕
           </button>
 
-          {/* Optional Camera Error Alert */}
-          {cameraError && (
-            <div
-              style={{ fontFamily: "Arial, sans-serif" }}
-              className="absolute top-12 left-3 right-3 z-30 p-2 rounded-lg bg-red-600/90 text-white text-[11px] leading-tight text-center shadow"
-            >
-              {cameraError}
-            </div>
-          )}
+          {/* BOX 1: Media Preview / Live Viewfinder Box */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.94 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-black shadow-2xl flex flex-col justify-between select-none"
+          >
+            {/* Optional Camera Error Alert */}
+            {cameraError && (
+              <div
+                style={{ fontFamily: "Arial, sans-serif" }}
+                className="absolute top-12 left-3 right-3 z-30 p-2 rounded-lg bg-red-600/90 text-white text-[11px] leading-tight text-center shadow"
+              >
+                {cameraError}
+              </div>
+            )}
 
-          {/* MAIN VIEWPORT: Live Viewfinder or Captured Photo/Video Preview */}
-          <div className="relative w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
-            {previewMedia ? (
-              // Clean photo/video preview box
-              <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-                <div
-                  style={{
-                    transform: `rotate(${photoRotation}deg)`,
-                    transition: "transform 0.25s ease-out",
-                  }}
-                  className="w-full h-full flex items-center justify-center"
-                >
-                  {previewMedia.type === "video" ? (
-                    <video
-                      src={previewMedia.url}
-                      autoPlay
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={previewMedia.url}
-                      alt="Captured"
-                      className="w-full h-full object-cover pointer-events-none"
-                    />
+            {/* MAIN VIEWPORT: Live Viewfinder or Captured Photo/Video Preview */}
+            <div className="relative w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
+              {previewMedia ? (
+                // Clean photo/video preview box
+                <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+                  {/* Rotating Photo / Video Layer: Dims when cropping mode is active */}
+                  <div
+                    style={{
+                      transform: `rotate(${photoRotation}deg)`,
+                      transition: "transform 0.25s ease-out",
+                    }}
+                    className={`w-full h-full flex items-center justify-center transition-all duration-200 ${
+                      isCropping ? "opacity-55 brightness-75 contrast-90" : "opacity-100"
+                    }`}
+                  >
+                    {previewMedia.type === "video" ? (
+                      <video
+                        src={previewMedia.url}
+                        autoPlay
+                        loop
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={previewMedia.url}
+                        alt="Captured"
+                        className="w-full h-full object-cover pointer-events-none"
+                      />
+                    )}
+                  </div>
+
+                  {/* 3x3 Cropping Grid Overlay:
+                      - Utuh se-box penuh sampai ke atas footer shadow (inset-0)
+                      - Beroperasi di layer independen (tidak ikut berputar saat foto di-rotate)
+                      - Dua sisi atas tebal: round bevel (rounded-tl-2xl, rounded-tr-2xl)
+                      - Dua sisi bawah tebal: sharp edge (rounded-none)
+                      - Hitam di light mode, Putih di dark mode */}
+                  {isCropping && (
+                    <div className="absolute inset-0 pointer-events-none z-10 animate-fade-in">
+                      {/* Grid Lines */}
+                      <div className="w-full h-full border border-white/30 grid grid-cols-3 grid-rows-3">
+                        <div className="border-r border-b border-white/20" />
+                        <div className="border-r border-b border-white/20" />
+                        <div className="border-b border-white/20" />
+                        <div className="border-r border-b border-white/20" />
+                        <div className="border-r border-b border-white/20" />
+                        <div className="border-b border-white/20" />
+                        <div className="border-r border-b border-white/20" />
+                        <div className="border-r border-b border-white/20" />
+                        <div />
+                      </div>
+
+                      {/* Top-Left: Round Bevel */}
+                      <div
+                        className={`absolute top-0 left-0 w-6 h-6 border-t-[4px] border-l-[4px] rounded-tl-2xl ${
+                          isMapDark ? "border-white" : "border-black"
+                        }`}
+                      />
+                      {/* Top-Right: Round Bevel */}
+                      <div
+                        className={`absolute top-0 right-0 w-6 h-6 border-t-[4px] border-r-[4px] rounded-tr-2xl ${
+                          isMapDark ? "border-white" : "border-black"
+                        }`}
+                      />
+                      {/* Bottom-Left: Sharp Edge */}
+                      <div
+                        className={`absolute bottom-0 left-0 w-6 h-6 border-b-[4px] border-l-[4px] rounded-none ${
+                          isMapDark ? "border-white" : "border-black"
+                        }`}
+                      />
+                      {/* Bottom-Right: Sharp Edge */}
+                      <div
+                        className={`absolute bottom-0 right-0 w-6 h-6 border-b-[4px] border-r-[4px] rounded-none ${
+                          isMapDark ? "border-white" : "border-black"
+                        }`}
+                      />
+                    </div>
                   )}
                 </div>
-
-                {/* 3x3 Cropping Grid Overlay with Thick L-Corners (Dynamic to theme) */}
-                {isCropping && (
-                  <div className="absolute inset-5 pointer-events-none z-10 animate-fade-in">
-                    {/* Grid */}
-                    <div className="w-full h-full border border-white/40 grid grid-cols-3 grid-rows-3">
-                      <div className="border-r border-b border-white/25" />
-                      <div className="border-r border-b border-white/25" />
-                      <div className="border-b border-white/25" />
-                      <div className="border-r border-b border-white/25" />
-                      <div className="border-r border-b border-white/25" />
-                      <div className="border-b border-white/25" />
-                      <div className="border-r border-b border-white/25" />
-                      <div className="border-r border-b border-white/25" />
-                      <div />
-                    </div>
-
-                    {/* Thick L-shaped corner edges (dynamic to theme) */}
-                    <div
-                      className={`absolute -top-1 -left-1 w-4 h-4 border-t-[3.5px] border-l-[3.5px] ${
-                        isMapDark ? "border-white" : "border-black"
-                      }`}
-                    />
-                    <div
-                      className={`absolute -top-1 -right-1 w-4 h-4 border-t-[3.5px] border-r-[3.5px] ${
-                        isMapDark ? "border-white" : "border-black"
-                      }`}
-                    />
-                    <div
-                      className={`absolute -bottom-1 -left-1 w-4 h-4 border-b-[3.5px] border-l-[3.5px] ${
-                        isMapDark ? "border-white" : "border-black"
-                      }`}
-                    />
-                    <div
-                      className={`absolute -bottom-1 -right-1 w-4 h-4 border-b-[3.5px] border-r-[3.5px] ${
-                        isMapDark ? "border-white" : "border-black"
-                      }`}
-                    />
-                  </div>
-                )}
-              </div>
-            ) : hasStream ? (
+              ) : hasStream ? (
               <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
                 <video
                   ref={videoRef}
@@ -526,7 +540,7 @@ export function CameraCaptureModal({
                   </svg>
                 </button>
 
-                {/* EDIT / ROTATE ICON: Tapping toggles crop grid & switches to rotate icon with photo rectangle border inside */}
+                {/* EDIT / ROTATE ICON: Tapping toggles crop grid & switches to rotate icon without outer box */}
                 <button
                   type="button"
                   onClick={() => {
@@ -541,11 +555,11 @@ export function CameraCaptureModal({
                 >
                   {isCropping ? (
                     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      {/* Rotation arrow arc */}
-                      <path d="M21.5 2v6h-6" />
-                      <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-                      {/* Photo rectangle frame in center that rotates with icon */}
-                      <rect x="7.5" y="7.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.8" fill="none" />
+                      {/* Clean circular rotation arc without messy overlap */}
+                      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.57L21 8" />
+                      <polyline points="21 3 21 8 16 8" />
+                      {/* Centered photo frame that indicates rotating photo */}
+                      <rect x="8.5" y="8.5" width="7" height="7" rx="1.5" strokeWidth="1.8" />
                     </svg>
                   ) : (
                     <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -669,6 +683,7 @@ export function CameraCaptureModal({
             )}
           </div>
         </motion.div>
+      </div>
 
         {/* BOX 2: SEPARATE FILL INPUT BOX DIRECTLY BELOW MEDIA BOX (PART 2 ONLY) */}
         {previewMedia && (
