@@ -105,7 +105,7 @@ export function PersonalChatPanel({
           damping: 30,
           mass: 0.9,
         }}
-        className={`fixed z-[1005] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col overflow-hidden font-sans select-none max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[46vh] max-[860px]:max-h-[385px] max-[860px]:min-h-[340px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
+        className={`fixed z-[1005] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col overflow-hidden font-sans max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[70vh] max-[860px]:max-h-[calc(100vh-70px)] max-[860px]:min-h-[380px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
           isMapDark
             ? "bg-[#111b21] text-[#f0f6fc] shadow-[0_14px_38px_rgba(0,0,0,0.85)]"
             : "bg-[#ffffff] text-[#000000] shadow-[0_14px_38px_rgba(0,0,0,0.18)]"

@@ -97,44 +97,50 @@ export function ChatMessageBubble({
     return flapCycle && currentEnergy >= 26;
   })();
 
-  // Audio Playback Controller
+  // Audio Playback Controller & Instance Management
+  const getOrCreateAudio = useCallback(() => {
+    if (!audioRef.current && item.mediaUrl) {
+      const audio = new Audio(item.mediaUrl);
+      audioRef.current = audio;
+
+      audio.ontimeupdate = () => {
+        if (audio.duration && Number.isFinite(audio.duration)) {
+          const ratio = audio.currentTime / audio.duration;
+          setPlaybackProgress(Math.min(1, Math.max(0, ratio)));
+          setCurrentPlaybackSec(Math.floor(audio.currentTime));
+        }
+      };
+
+      audio.onended = () => {
+        setPlayingVoiceId(null);
+        setPlaybackProgress(0);
+        setCurrentPlaybackSec(0);
+      };
+
+      audio.onerror = () => {
+        setPlayingVoiceId(null);
+        setPlaybackProgress(0);
+      };
+    }
+    return audioRef.current;
+  }, [item.mediaUrl, setPlayingVoiceId]);
+
   useEffect(() => {
     if (!isVoice || !item.mediaUrl) return;
 
     if (isPlaying) {
-      if (!audioRef.current) {
-        const audio = new Audio(item.mediaUrl);
-        audioRef.current = audio;
-
-        audio.ontimeupdate = () => {
-          if (audio.duration && Number.isFinite(audio.duration)) {
-            const ratio = audio.currentTime / audio.duration;
-            setPlaybackProgress(Math.min(1, Math.max(0, ratio)));
-            setCurrentPlaybackSec(Math.floor(audio.currentTime));
-          }
-        };
-
-        audio.onended = () => {
+      const audio = getOrCreateAudio();
+      if (audio) {
+        audio.play().catch(() => {
           setPlayingVoiceId(null);
-          setPlaybackProgress(0);
-          setCurrentPlaybackSec(0);
-        };
-
-        audio.onerror = () => {
-          setPlayingVoiceId(null);
-          setPlaybackProgress(0);
-        };
+        });
       }
-
-      audioRef.current.play().catch(() => {
-        setPlayingVoiceId(null);
-      });
     } else {
       if (audioRef.current) {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, isVoice, item.mediaUrl, setPlayingVoiceId]);
+  }, [isPlaying, isVoice, item.mediaUrl, setPlayingVoiceId, getOrCreateAudio]);
 
   useEffect(() => {
     return () => {
@@ -147,13 +153,27 @@ export function ChatMessageBubble({
   }, []);
 
   // Hold & Drag dynamic scrubbing across the waveform
-  const handleSeekRatio = useCallback((ratio) => {
-    if (!audioRef.current || !audioRef.current.duration) return;
-    const targetTime = ratio * audioRef.current.duration;
-    audioRef.current.currentTime = targetTime;
-    setPlaybackProgress(ratio);
-    setCurrentPlaybackSec(Math.floor(targetTime));
-  }, []);
+  const handleSeekRatio = useCallback(
+    (ratio) => {
+      const audio = getOrCreateAudio();
+      if (!audio) return;
+
+      const applySeek = () => {
+        const dur = audio.duration || totalDuration || 4;
+        const targetTime = Math.min(dur, Math.max(0, ratio * dur));
+        audio.currentTime = targetTime;
+        setPlaybackProgress(ratio);
+        setCurrentPlaybackSec(Math.floor(targetTime));
+      };
+
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        applySeek();
+      } else {
+        audio.addEventListener("loadedmetadata", applySeek, { once: true });
+      }
+    },
+    [getOrCreateAudio, totalDuration]
+  );
 
   const handlePointerDownWaveform = (e) => {
     e.stopPropagation();
@@ -165,8 +185,11 @@ export function ChatMessageBubble({
 
     const initialRatio = calculateRatio(e.clientX);
     handleSeekRatio(initialRatio);
+
     if (!isPlaying) {
       setPlayingVoiceId(item.id);
+    } else if (audioRef.current && audioRef.current.paused) {
+      audioRef.current.play().catch(() => {});
     }
 
     const onPointerMove = (ev) => {
@@ -183,7 +206,7 @@ export function ChatMessageBubble({
     window.addEventListener("pointerup", onPointerUp);
   };
 
-  // Status Indicator Component (OUTSIDE box, aligned to middle point, NO outer circle)
+  // Status Indicator Component (OUTSIDE box, aligned to middle point, NO outer circle, bold & thick)
   const renderStatusIndicator = () => {
     if (!isMe) return null;
 
@@ -191,7 +214,7 @@ export function ChatMessageBubble({
       <div className="w-4 shrink-0 flex items-center justify-center select-none">
         {item.status === "sending" ? (
           <span
-            className={`w-3.5 h-3.5 rounded-full border-2 border-current/25 border-t-current animate-spin block ${
+            className={`w-3.5 h-3.5 rounded-full border-[2.5px] border-current/25 border-t-current animate-spin block ${
               isMapDark ? "text-white" : "text-black"
             }`}
           />
@@ -212,7 +235,7 @@ export function ChatMessageBubble({
               className="w-3.5 h-3.5"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2.5"
+              strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
@@ -223,8 +246,10 @@ export function ChatMessageBubble({
         ) : item.status === "sent" ? (
           <span
             style={{ fontFamily: "Arial, sans-serif" }}
-            className={`font-bold text-xs ${
-              isMapDark ? "text-white" : "text-black"
+            className={`font-black text-xs ${
+              isMapDark
+                ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
+                : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
             }`}
           >
             !
@@ -232,11 +257,13 @@ export function ChatMessageBubble({
         ) : (
           <svg
             viewBox="0 0 24 24"
-            className={`w-3.5 h-3.5 stroke-current ${
-              isMapDark ? "text-white" : "text-black"
+            className={`w-4 h-4 stroke-current filter ${
+              isMapDark
+                ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
+                : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
             }`}
             fill="none"
-            strokeWidth="3"
+            strokeWidth="3.8"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -304,8 +331,10 @@ export function ChatMessageBubble({
         >
           <span
             style={{ fontFamily: "Arial, sans-serif" }}
-            className={`text-[9.5px] font-bold tracking-tight select-none leading-none ${
-              isMapDark ? "text-white/70" : "text-black/70"
+            className={`text-[10px] sm:text-[10.5px] font-black tracking-tight select-none leading-none ${
+              isMapDark
+                ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
+                : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
             }`}
           >
             {durationText}
@@ -365,35 +394,37 @@ export function ChatMessageBubble({
             isSelected ? "scale-[1.04] z-10" : "scale-100"
           } ${isReplyingTarget ? "opacity-50" : "opacity-100"}`}
         >
-          {/* Coki Mascot (+35% larger width: ~65px) floating above VN */}
-          <motion.div
-            animate={{ y: [0, -2.5, 0] }}
-            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-            className="relative w-[65px] h-[76px] -mb-1 select-none pointer-events-none drop-shadow-sm flex items-center justify-center"
-          >
-            <Image
-              src={isSpeakingNow ? "/ForChat/Coki_Speak_Trimmed.png" : "/ForChat/Coki_Idle_Trimmed.png"}
-              alt="Coki Voice Mascot"
-              width={65}
-              height={76}
-              className="w-full h-full object-contain"
-              priority
-            />
-          </motion.div>
+          {/* Main Voice Note Unit: Coki mascot centered above voice line */}
+          <div className="flex flex-col items-center">
+            {/* Coki Mascot (+35% larger width: ~65px) centered directly above waveform */}
+            <motion.div
+              animate={{ y: [0, -2.5, 0] }}
+              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+              className="relative w-[65px] h-[76px] -mb-1 select-none pointer-events-none drop-shadow-sm flex items-center justify-center"
+            >
+              <Image
+                src={isSpeakingNow ? "/ForChat/Coki_Speak_Trimmed.png" : "/ForChat/Coki_Idle_Trimmed.png"}
+                alt="Coki Voice Mascot"
+                width={65}
+                height={76}
+                className="w-full h-full object-contain"
+                priority
+              />
+            </motion.div>
 
-          {/* Compact Voice Waveform Line directly under Coki */}
-          <div className="flex items-center gap-1.5 py-0.5 select-none w-[110px]">
-            {/* Play Button: No outer box */}
-            <div className="flex flex-col items-center shrink-0">
+            {/* Voice Control Row: Play Button, Waveform centered under Coki, and Time Running (all mid-center aligned) */}
+            <div className="flex items-center gap-2 py-0.5 select-none">
+              {/* 1. Play Button: Aligned to mid-center of voice line */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setPlayingVoiceId((prev) => (prev === item.id ? null : item.id));
                 }}
-                className={`w-6 h-6 flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-90 ${
+                className={`w-6 h-6 flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-90 shrink-0 ${
                   isMapDark ? "text-white" : "text-black"
                 }`}
+                title={isPlaying ? "Pause" : "Play voice note"}
               >
                 {isPlaying ? (
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
@@ -407,55 +438,59 @@ export function ChatMessageBubble({
                 )}
               </button>
 
-              {/* Playback time under play button */}
+              {/* 2. Waveform Bars: Centered directly beneath Coki */}
+              <div
+                ref={waveformRef}
+                onPointerDown={handlePointerDownWaveform}
+                className="flex items-center justify-center gap-[2.5px] h-6 cursor-pointer py-1 touch-none min-w-[70px]"
+              >
+                {displayWaveform.map((val, i) => {
+                  const barRatio = (i + 1) / displayWaveform.length;
+                  const isPlayed = (isPlaying || playbackProgress > 0) && barRatio <= playbackProgress;
+                  const heightPx = Math.max(3, Math.round((val / 100) * 18));
+
+                  return (
+                    <span
+                      key={i}
+                      style={{ height: `${heightPx}px` }}
+                      className={`w-[2.2px] rounded-full transition-colors duration-75 ${
+                        isPlaying || playbackProgress > 0
+                          ? isPlayed
+                            ? "bg-black"
+                            : "bg-white shadow-[0_0.5px_1.5px_rgba(0,0,0,0.5)] border border-black/15"
+                          : isMapDark
+                          ? "bg-white/80"
+                          : "bg-black/85"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* 3. Time Running (0:06): NO outer box, mid-center aligned with voice line, bold/tebal */}
               <span
                 style={{ fontFamily: "Arial, sans-serif" }}
-                className="mt-0.5 px-1 py-0.2 rounded bg-white text-black text-[8px] font-bold shadow-xs border border-black/10 tracking-tight leading-none"
+                className={`text-[10px] font-black tracking-tight leading-none select-none shrink-0 ${
+                  isMapDark
+                    ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
+                    : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
+                }`}
               >
-                {isPlaying
+                {isPlaying || playbackProgress > 0
                   ? `0:${String(currentPlaybackSec).padStart(2, "0")}`
                   : `0:${String(totalDuration).padStart(2, "0")}`}
               </span>
             </div>
-
-            {/* Compact Waveform Bars (14 bars) */}
-            <div
-              ref={waveformRef}
-              onPointerDown={handlePointerDownWaveform}
-              className="flex-1 flex items-center gap-[2px] h-5 cursor-pointer py-1 touch-none"
-            >
-              {displayWaveform.map((val, i) => {
-                const barRatio = (i + 1) / displayWaveform.length;
-                const isPlayed = isPlaying && barRatio <= playbackProgress;
-                const heightPx = Math.max(3, Math.round((val / 100) * 18));
-
-                return (
-                  <span
-                    key={i}
-                    style={{ height: `${heightPx}px` }}
-                    className={`w-[2px] rounded-full transition-colors duration-75 ${
-                      isPlayed
-                        ? "bg-emerald-400"
-                        : isPlaying
-                        ? isMapDark
-                          ? "bg-white/40"
-                          : "bg-black/35"
-                        : isMapDark
-                        ? "bg-white/75"
-                        : "bg-black/75"
-                    }`}
-                  />
-                );
-              })}
-            </div>
           </div>
 
-          {/* Time mark directly below VN line, flush right, Arial bold mini */}
-          <div className="w-full flex justify-end mt-0.5 select-none pr-0.5">
+          {/* Time mark directly below VN line, flush right, Arial bold/tebal mini */}
+          <div className="w-full flex justify-end mt-1 select-none pr-0.5">
             <span
               style={{ fontFamily: "Arial, sans-serif" }}
-              className={`text-[9.5px] font-bold leading-none ${
-                isMapDark ? "text-white/70" : "text-black/70"
+              className={`text-[10px] font-black leading-none ${
+                isMapDark
+                  ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
+                  : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
               }`}
             >
               {formatMessageTime(item.ts)}
@@ -575,8 +610,8 @@ export function ChatMessageBubble({
         {/* Sent Time Mark (Bottom Right inside bubble) */}
         <span
           style={{ fontFamily: "Arial, sans-serif" }}
-          className={`float-right ml-2 mt-1 text-[9.5px] leading-none select-none ${
-            isMapDark ? "text-white/70" : "text-black/70"
+          className={`float-right ml-2 mt-1 text-[9.5px] font-bold leading-none select-none ${
+            isMapDark ? "text-white/80" : "text-black/80"
           }`}
         >
           {formatMessageTime(item.ts)}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function ChatComposerBar({
@@ -24,6 +25,7 @@ export function ChatComposerBar({
   handleFinishVoiceNote,
   handleSendText,
 }) {
+  const inputRef = useRef(null);
   const iconColor = isMapDark ? "#ffffff" : "#000000";
 
   return (
@@ -167,7 +169,8 @@ export function ChatComposerBar({
           </div>
         ) : (
           <div
-            className={`flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
+            onClick={() => inputRef.current?.focus()}
+            className={`flex-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all cursor-text pointer-events-auto select-auto ${
               isMapDark
                 ? "bg-[#202c33] shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.5),inset_0_0_1px_rgba(255,255,255,0.08)] text-white"
                 : "bg-[#f0f2f5] shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.12),inset_0_0_1px_rgba(0,0,0,0.12)] text-black"
@@ -220,18 +223,28 @@ export function ChatComposerBar({
 
             {/* 3. Message Text Input */}
             <input
+              ref={inputRef}
               type="text"
               value={inputText}
               onChange={(e) => {
                 setInputText(e.target.value);
                 if (mediaError) setMediaError("");
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendText(e);
+                }
+              }}
               placeholder={
                 isUploadingMedia
                   ? "Mengunggah media..."
                   : placeholderText || "Ketik pesan..."
               }
-              className={`flex-1 bg-transparent text-xs outline-none min-w-0 ${
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className={`flex-1 bg-transparent text-xs outline-none min-w-0 select-text cursor-text pointer-events-auto ${
                 isMapDark
                   ? "text-white placeholder:text-white/50"
                   : "text-black placeholder:text-black/55"
