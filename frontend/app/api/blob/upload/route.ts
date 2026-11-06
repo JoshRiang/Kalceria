@@ -13,13 +13,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Security Enforcement: Strictly accept only .png, .jpg, .jpeg, and .mp4
-    const filename = file.name || "";
-    const ext = (filename.split(".").pop() || "").toLowerCase();
-    const allowedExts = ["png", "jpg", "jpeg", "mp4"];
+    // Security Enforcement: Strictly accept allowed media formats with MIME inference for Blobs
+    const mimeToExt: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+      "video/mp4": "mp4",
+      "video/webm": "webm",
+      "audio/webm": "webm",
+      "audio/mp4": "m4a",
+      "audio/m4a": "m4a",
+      "audio/ogg": "ogg",
+      "audio/wav": "wav",
+      "audio/mpeg": "mp3",
+      "audio/mp3": "mp3",
+    };
+
+    let filename = file.name || "";
+    let ext = (filename.split(".").pop() || "").toLowerCase();
+    if (!ext || ext === "blob" || !filename.includes(".")) {
+      const declaredMime = (file.type || "").toLowerCase().split(";")[0].trim();
+      ext = mimeToExt[declaredMime] || "bin";
+      filename = `upload-${Date.now()}.${ext}`;
+    }
+
+    const allowedExts = ["png", "jpg", "jpeg", "webp", "gif", "mp4", "webm", "m4a", "mp3", "ogg", "wav"];
     if (!allowedExts.includes(ext)) {
       return NextResponse.json(
-        { error: "Security enforcement: Only .png, .jpeg, and .mp4 files are allowed" },
+        { error: "Security enforcement: Only standard image, audio, and video files are allowed" },
         { status: 400 }
       );
     }
@@ -28,7 +50,7 @@ export async function POST(req: NextRequest) {
     const declaredMimeType = file.type || "application/octet-stream";
 
     // Server-side normalization & compression preserving 100% visual fidelity
-    const optimized = await optimizeUploadMedia(rawBuffer, file.name, declaredMimeType);
+    const optimized = await optimizeUploadMedia(rawBuffer, filename, declaredMimeType);
 
     const safeFilename = `events/${Date.now()}-${optimized.filename.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
@@ -82,10 +104,7 @@ export async function POST(req: NextRequest) {
         });
       } catch (blobErr: unknown) {
         const errMsg = blobErr instanceof Error ? blobErr.message : "Vercel Blob upload failed";
-        console.warn("Vercel Blob put failed:", errMsg);
-        if (isVercel) {
-          return NextResponse.json({ error: errMsg }, { status: 500 });
-        }
+        console.warn("Vercel Blob put failed, falling back to persistent payload:", errMsg);
       }
     }
 

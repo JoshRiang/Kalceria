@@ -214,12 +214,10 @@ export function ChatMediaCard({
             isMapDark
               ? "bg-black/95 backdrop-blur-md border border-white/20 text-white shadow-md"
               : "bg-white/85 backdrop-blur-md border border-black/15 text-black shadow-xs"
-          } ${
-            isOnceOpened ? "filter blur-lg opacity-40 pointer-events-none" : ""
           }`}
         >
-          {/* Once Seen Badge (Top Right): No shadow circle, clean outline line icon */}
-          {item.isViewOnce && !isOnceOpened && (
+          {/* Once Seen Badge (Top Right): Persists even after viewing */}
+          {item.isViewOnce && (
             <div
               className={`absolute top-2 right-2 z-20 flex items-center justify-center ${
                 isMapDark ? "text-white" : "text-black"
@@ -233,28 +231,36 @@ export function ChatMediaCard({
             </div>
           )}
 
-          {/* Centered Caption Text with Typing Animation - No Glow */}
+          {/* Centered Caption Text with Typing Animation or Loading Buffer */}
           <div className="flex-1 w-full h-full flex items-center justify-center text-center px-1">
-            <p
-              className={`${captionFont} ${textSizeClass} select-none break-words max-w-full font-normal ${
-                isMapDark ? "text-white" : "text-black"
-              }`}
-            >
-              {typedText || item.text || (isVideo ? "📹 Video" : "📷 Photo")}
-              {!hasFinishedTyping && item.text && (
-                <span
-                  className={`inline-block w-[1.5px] h-3 ml-0.5 align-middle animate-pulse ${
-                    isMapDark ? "bg-white" : "bg-black"
-                  }`}
-                />
-              )}
-            </p>
+            {item.status === "sending" ? (
+              <span
+                className={`w-4 h-4 rounded-full border-[2.2px] border-current/25 border-t-current animate-spin block ${
+                  isMapDark ? "text-white" : "text-black"
+                }`}
+              />
+            ) : (
+              <p
+                className={`${captionFont} ${textSizeClass} select-none break-words max-w-full font-normal ${
+                  isMapDark ? "text-white" : "text-black"
+                }`}
+              >
+                {typedText || item.text || (isVideo ? "📹 Video" : "📷 Photo")}
+                {!hasFinishedTyping && item.text && (
+                  <span
+                    className={`inline-block w-[1.5px] h-3 ml-0.5 align-middle animate-pulse ${
+                      isMapDark ? "bg-white" : "bg-black"
+                    }`}
+                  />
+                )}
+              </p>
+            )}
           </div>
 
-          {/* Flip Hint Icon in bottom right */}
+          {/* Flip Hint Icon in bottom right: Dimmed & disabled if view-once card was already opened */}
           <div
             className={`w-full flex justify-end items-center ${
-              isOnceOpened ? "opacity-20 pointer-events-none" : "opacity-40"
+              isOnceOpened ? "opacity-20 cursor-not-allowed pointer-events-none" : "opacity-40"
             }`}
           >
             <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current">
@@ -295,19 +301,28 @@ export function ChatMediaCard({
                   className="w-full h-full object-cover"
                 />
 
-                {/* Center Play/Pause Overlay Button */}
-                {!isPlayingVideo && (
+                {/* Center Play/Pause Overlay Button: Semi-transparent when playing, pure white when paused, graceful fade, no outer box, no glow */}
+                <div
+                  onClick={togglePlayVideo}
+                  className="absolute inset-0 z-20 flex items-center justify-center cursor-pointer select-none"
+                >
                   <div
-                    onClick={togglePlayVideo}
-                    className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 cursor-pointer"
+                    className={`transition-opacity duration-300 ${
+                      isPlayingVideo ? "opacity-35 hover:opacity-75" : "opacity-95"
+                    }`}
                   >
-                    <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-lg transition-transform hover:scale-110 active:scale-95">
-                      <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 fill-current ml-0.5">
+                    {isPlayingVideo ? (
+                      <svg viewBox="0 0 24 24" className="w-8 h-8 fill-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
+                        <rect x="6" y="5" width="4" height="14" rx="1" />
+                        <rect x="14" y="5" width="4" height="14" rx="1" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" className="w-8 h-8 fill-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)] ml-0.5">
                         <polygon points="6,4 20,12 6,20" />
                       </svg>
-                    </div>
+                    )}
                   </div>
-                )}
+                </div>
               </>
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
@@ -324,7 +339,7 @@ export function ChatMediaCard({
                 onPointerDown={handleScrubberPointerDown}
                 className="absolute inset-x-2 bottom-2 z-30 h-5 flex items-center cursor-pointer select-none"
               >
-                {/* Tooltip Timestamp Badge during scrub */}
+                {/* Tooltip Timestamp Badge during scrub: NO outer box, bold white text for both light and dark modes */}
                 {isScrubbing && (
                   <div
                     style={{
@@ -332,7 +347,7 @@ export function ChatMediaCard({
                       transform: "translateX(-50%)",
                       fontFamily: "Arial, sans-serif",
                     }}
-                    className="absolute -top-6 px-1 py-0.5 rounded bg-white text-black text-[8.5px] font-bold shadow-md leading-none select-none pointer-events-none"
+                    className="absolute -top-5 text-white text-[9px] font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] leading-none select-none pointer-events-none"
                   >
                     {formatMinSec(scrubSeconds)}
                   </div>
@@ -357,8 +372,8 @@ export function ChatMediaCard({
               </div>
             )}
 
-            {/* Flip Back Button: Full pure white for all modes, no glow, clearly visible */}
-            <div className="absolute bottom-2 right-2 z-35 pointer-events-auto">
+            {/* Flip Back Button: Moved to top-right of the video/photo box, clean white, no outer box/circle */}
+            <div className="absolute top-2 right-2 z-35 pointer-events-auto">
               <button
                 type="button"
                 onClick={handleFlipBack}
@@ -372,19 +387,6 @@ export function ChatMediaCard({
             </div>
           </div>
         </div>
-
-        {/* Once-Seen Opened Lock Overlay (As shown in Picture 5) */}
-        {isOnceOpened && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-2 text-center rounded-xl pointer-events-none">
-            <svg viewBox="0 0 24 24" className="w-6 h-6 text-white/75 mb-1.5" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            <p style={{ fontFamily: "Arial, sans-serif" }} className="text-[10px] font-bold text-white/90 leading-tight">
-              Opened<br />(Lihat Sekali)
-            </p>
-          </div>
-        )}
       </motion.div>
     </div>
   );

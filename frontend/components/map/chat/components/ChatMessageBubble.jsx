@@ -366,9 +366,9 @@ export function ChatMessageBubble({
             {durationText}
           </span>
 
-          {/* Call Ended Icon: wrapped in a compact textured circle without border, uniform size */}
+          {/* Call Ended Icon: wrapped in a compact textured circle with thin crisp black border, uniform size */}
           <div
-            className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full flex items-center justify-center shrink-0 ${
+            className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full flex items-center justify-center shrink-0 border border-black ${
               isMapDark
                 ? "bg-[#21262d] text-white shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_1.5px_4px_rgba(0,0,0,0.3)]"
                 : "bg-[#f0f2f5] text-black shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_1.5px_4px_rgba(0,0,0,0.08)]"
@@ -437,21 +437,27 @@ export function ChatMessageBubble({
 
             {/* Voice Control Row: Play Button, Waveform centered under Coki, and Time Running (all mid-center aligned) */}
             <div className="flex items-center gap-2 py-0.5 select-none">
-              {/* 1. Play Button: Wrapped in compact standard textured circle without border */}
+              {/* 1. Play Button: Wrapped in compact standard textured circle with thin crisp black border */}
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setPlayingVoiceId((prev) => (prev === item.id ? null : item.id));
                 }}
-                className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all duration-150 hover:scale-105 active:scale-95 shrink-0 ${
+                className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all duration-150 hover:scale-105 active:scale-95 shrink-0 border border-black ${
                   isMapDark
                     ? "bg-[#21262d] text-white shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_1.5px_4px_rgba(0,0,0,0.3)]"
                     : "bg-[#f0f2f5] text-black shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_1.5px_4px_rgba(0,0,0,0.08)]"
                 }`}
                 title={isPlaying ? "Pause" : "Play voice note"}
               >
-                {isPlaying ? (
+                {item.status === "sending" || (!item.mediaUrl && !item.voiceDuration) ? (
+                  <span
+                    className={`w-3 h-3 rounded-full border-[2px] border-current/25 border-t-current animate-spin block ${
+                      isMapDark ? "text-white" : "text-black"
+                    }`}
+                  />
+                ) : isPlaying ? (
                   <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current">
                     <rect x="6" y="5" width="4" height="14" />
                     <rect x="14" y="5" width="4" height="14" />

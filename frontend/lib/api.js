@@ -149,12 +149,34 @@ export const delMiniEvent = (id) => api.delete(`/mini-events/${id}`);
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 
+const MIME_EXT_MAP = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "audio/webm": "webm",
+  "audio/mp4": "m4a",
+  "audio/m4a": "m4a",
+  "audio/ogg": "ogg",
+  "audio/wav": "wav",
+  "audio/mpeg": "mp3",
+  "audio/mp3": "mp3",
+};
+
 export const uploadBlobMedia = async (file) => {
   if (file && file.size > MAX_UPLOAD_BYTES) {
     throw new Error("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
   }
   const formData = new FormData();
-  formData.append("file", file);
+  let filename = file?.name || "";
+  if (!filename || filename === "blob" || !filename.includes(".")) {
+    const rawType = (file?.type || "").split(";")[0].trim().toLowerCase();
+    const ext = MIME_EXT_MAP[rawType] || "bin";
+    filename = `upload-${Date.now()}.${ext}`;
+  }
+  formData.append("file", file, filename);
   const res = await fetch("/api/blob/upload", {
     method: "POST",
     body: formData,

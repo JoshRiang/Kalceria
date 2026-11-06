@@ -47,10 +47,16 @@ function packEnvelope(env) {
     n: env.nonce,
     t: env.msgType || 'text',
     u: env.ts,
+    st: env.status || 'sent',
   };
   if (env.mediaUrl) compact.m = env.mediaUrl;
   if (env.voiceDuration) compact.d = env.voiceDuration;
   if (Array.isArray(env.voiceWaveform) && env.voiceWaveform.length > 0) compact.w = env.voiceWaveform;
+  if (env.videoDuration) compact.vd = env.videoDuration;
+  if (env.isViewOnce) compact.vo = 1;
+  if (env.isOnceOpened) compact.oo = 1;
+  if (env.callMode) compact.cm = env.callMode;
+  if (env.callDuration) compact.cd = env.callDuration;
   return JSON.stringify(compact);
 }
 
@@ -61,7 +67,10 @@ function unpackEnvelope(raw) {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     if (!parsed || typeof parsed !== 'object') return null;
     if (parsed.ciphertext && parsed.id) {
-      return parsed;
+      return {
+        ...parsed,
+        status: parsed.status || 'sent',
+      };
     }
     if (parsed.c && parsed.i) {
       return {
@@ -77,8 +86,13 @@ function unpackEnvelope(raw) {
         mediaUrl: parsed.m || null,
         voiceDuration: parsed.d || null,
         voiceWaveform: parsed.w || null,
+        videoDuration: parsed.vd || null,
+        isViewOnce: Boolean(parsed.vo),
+        isOnceOpened: Boolean(parsed.oo),
+        callMode: parsed.cm || null,
+        callDuration: parsed.cd || null,
         ts: Number(parsed.u) || Date.now(),
-        status: 'delivered',
+        status: parsed.st || 'sent',
       };
     }
     return null;
@@ -163,7 +177,7 @@ export async function sendPersonalChatMessage(req, res, next) {
     const sig = typeof body.sig === 'string' ? body.sig.trim() : '';
     const nonce = typeof body.nonce === 'string' ? body.nonce.trim() : '';
     const alg = body.alg === 'AES-256-GCM' ? 'AES-256-GCM' : 'AES-256-GCM';
-    const msgType = ['text', 'media', 'voice'].includes(body.msgType) ? body.msgType : 'text';
+    const msgType = ['text', 'media', 'voice', 'video', 'call'].includes(body.msgType) ? body.msgType : 'text';
     const ts = Number(body.ts) || Date.now();
 
     if (!ciphertext || ciphertext.length > MAX_CIPHERTEXT_LENGTH || !iv || !sig || !nonce) {
@@ -202,13 +216,18 @@ export async function sendPersonalChatMessage(req, res, next) {
       sig: sig.slice(0, 256),
       nonce,
       msgType,
-      mediaUrl: typeof body.mediaUrl === 'string' ? body.mediaUrl.slice(0, 1024) : null,
+      mediaUrl: typeof body.mediaUrl === 'string' ? body.mediaUrl.slice(0, 2 * 1024 * 1024) : null,
       voiceDuration: typeof body.voiceDuration === 'number' ? Math.min(300, Math.max(1, body.voiceDuration)) : null,
       voiceWaveform: Array.isArray(body.voiceWaveform)
         ? body.voiceWaveform.slice(0, 60).map((v) => Math.min(100, Math.max(0, Math.round(Number(v) || 0))))
         : null,
+      videoDuration: typeof body.videoDuration === 'number' ? Math.min(300, Math.max(1, body.videoDuration)) : null,
+      isViewOnce: Boolean(body.isViewOnce),
+      isOnceOpened: Boolean(body.isOnceOpened),
+      callMode: typeof body.callMode === 'string' ? body.callMode : null,
+      callDuration: typeof body.callDuration === 'number' ? body.callDuration : null,
       ts: Date.now(),
-      status: 'delivered',
+      status: body.status === 'read' ? 'read' : 'sent',
     };
 
     const hotKey = getHotConversationKey(userId, targetId);

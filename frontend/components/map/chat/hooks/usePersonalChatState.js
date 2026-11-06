@@ -390,7 +390,7 @@ export function usePersonalChatState({
               senderId: m.senderId || myId,
               recipientId: m.recipientId || targetId,
               ts: m.ts,
-              status: m.status || "read",
+              status: m.status || (String(m.senderId) === String(myId) ? "sent" : "read"),
             };
           })
         );
@@ -470,13 +470,6 @@ export function usePersonalChatState({
               persistEncryptedLocal(next);
               return next;
             });
-            setTimeout(() => {
-              setMessages((prev) => {
-                const next = prev.map((m) => (m.id === msgId ? { ...m, status: "read" } : m));
-                persistEncryptedLocal(next);
-                return next;
-              });
-            }, 800);
           }, 300);
         } else {
           let isTimedOut = false;
@@ -504,13 +497,6 @@ export function usePersonalChatState({
                   persistEncryptedLocal(next);
                   return next;
                 });
-                setTimeout(() => {
-                  setMessages((prev) => {
-                    const next = prev.map((m) => (m.id === msgId ? { ...m, status: "read" } : m));
-                    persistEncryptedLocal(next);
-                    return next;
-                  });
-                }, 1200);
               }
             })
             .catch(() => {
@@ -859,13 +845,6 @@ export function usePersonalChatState({
             persistEncryptedLocal(next);
             return next;
           });
-          setTimeout(() => {
-            setMessages((prev) => {
-              const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "read" } : m));
-              persistEncryptedLocal(next);
-              return next;
-            });
-          }, 800);
         }, 300);
         return;
       }
@@ -883,13 +862,6 @@ export function usePersonalChatState({
             persistEncryptedLocal(next);
             return next;
           });
-          setTimeout(() => {
-            setMessages((prev) => {
-              const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "read" } : m));
-              persistEncryptedLocal(next);
-              return next;
-            });
-          }, 1200);
         })
         .catch(() => {
           setMessages((prev) => {

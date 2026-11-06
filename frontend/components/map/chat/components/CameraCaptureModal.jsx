@@ -24,6 +24,12 @@ export function CameraCaptureModal({
   const [caption, setCaption] = useState("");
   const [showCameraGuide, setShowCameraGuide] = useState(true);
 
+  // Video duration crop (trimming)
+  const [trimStart, setTrimStart] = useState(0); // 0 to 1
+  const [trimEnd, setTrimEnd] = useState(1);     // 0 to 1
+  const previewVideoRef = useRef(null);
+  const trimmerTrackRef = useRef(null);
+
   // Video recording on hold
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -89,6 +95,8 @@ export function CameraCaptureModal({
       setZoomLevel(1);
       setPhotoRotation(0);
       setIsCropping(false);
+      setTrimStart(0);
+      setTrimEnd(1);
       setCaption("");
       setIsRecordingVideo(false);
       setRecordingSeconds(0);
@@ -334,20 +342,79 @@ export function CameraCaptureModal({
     setPreviewMedia(null);
     setPhotoRotation(0);
     setIsCropping(false);
+    setTrimStart(0);
+    setTrimEnd(1);
     setCaption("");
     setCameraError("");
     setRecordingSeconds(0);
     startCamera(facingMode);
   };
 
+  // Video Duration Trimming Handle Drag with zero latency
+  const handleTrimmerPointerDown = (e, handleType) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!trimmerTrackRef.current) return;
+    const trackRect = trimmerTrackRef.current.getBoundingClientRect();
+    const dur = previewVideoRef.current?.duration || previewMedia?.duration || 1;
+
+    const onPointerMove = (ev) => {
+      const clientX = ev.clientX;
+      const ratio = Math.max(0, Math.min(1, (clientX - trackRect.left) / trackRect.width));
+      if (handleType === "start") {
+        setTrimStart((prevStart) => {
+          const nextStart = Math.min(ratio, trimEnd - 0.05);
+          if (previewVideoRef.current) {
+            previewVideoRef.current.currentTime = nextStart * dur;
+          }
+          return Math.max(0, nextStart);
+        });
+      } else {
+        setTrimEnd((prevEnd) => {
+          const nextEnd = Math.max(ratio, trimStart + 0.05);
+          if (previewVideoRef.current) {
+            previewVideoRef.current.currentTime = nextEnd * dur;
+          }
+          return Math.min(1, nextEnd);
+        });
+      }
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+  };
+
+  // Video preview playback looping between [trimStart, trimEnd]
+  const handlePreviewVideoTimeUpdate = () => {
+    if (!previewVideoRef.current) return;
+    const dur = previewVideoRef.current.duration || previewMedia?.duration || 1;
+    const startSec = trimStart * dur;
+    const endSec = trimEnd * dur;
+    if (previewVideoRef.current.currentTime >= endSec - 0.05 || previewVideoRef.current.currentTime < startSec) {
+      previewVideoRef.current.currentTime = startSec;
+    }
+  };
+
   // Confirm Send Media with Caption and ViewOnce
   const handleConfirmSend = () => {
     if (!previewMedia) return;
+    const dur = previewVideoRef.current?.duration || previewMedia.duration || 1;
+    const trimmedDuration = previewMedia.type === "video"
+      ? Math.max(1, Math.round((trimEnd - trimStart) * dur))
+      : (previewMedia.duration || null);
+
     onSendMedia({
       blob: previewMedia.blob,
       url: previewMedia.url,
       type: previewMedia.type,
-      duration: previewMedia.duration || (previewMedia.type === "video" ? 6 : null),
+      duration: trimmedDuration,
+      trimStart,
+      trimEnd,
       isViewOnce,
       rotation: photoRotation,
       caption: caption.trim(),
@@ -414,10 +481,12 @@ export function CameraCaptureModal({
                   >
                     {previewMedia.type === "video" ? (
                       <video
+                        ref={previewVideoRef}
                         src={previewMedia.url}
                         autoPlay
                         loop
                         playsInline
+                        onTimeUpdate={handlePreviewVideoTimeUpdate}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -475,6 +544,68 @@ export function CameraCaptureModal({
                           isMapDark ? "border-white" : "border-black"
                         }`}
                       />
+                    </div>
+                  )}
+
+                  {/* Video Duration Trimming Panel: Located below video crop layer */}
+                  {previewMedia.type === "video" && (
+                    <div className="absolute bottom-2 inset-x-3 z-25 flex flex-col gap-1 select-none pointer-events-auto">
+                      {/* Trimmer Track Container */}
+                      <div
+                        ref={trimmerTrackRef}
+                        className="relative w-full h-5 flex items-center cursor-pointer select-none touch-none"
+                      >
+                        {/* Base Full Track Bar */}
+                        <div className="relative w-full h-[2.5px] rounded-full overflow-hidden bg-black/50 backdrop-blur-sm">
+                          {/* Dimmed Left Segment (Outside boundary) */}
+                          <div
+                            style={{ width: `${trimStart * 100}%` }}
+                            className="absolute left-0 top-0 h-full bg-white/25"
+                          />
+
+                          {/* Active Selected Segment */}
+                          <div
+                            style={{
+                              left: `${trimStart * 100}%`,
+                              width: `${(trimEnd - trimStart) * 100}%`,
+                            }}
+                            className="absolute top-0 h-full bg-white shadow-xs"
+                          />
+
+                          {/* Dimmed Right Segment (Outside boundary) */}
+                          <div
+                            style={{
+                              left: `${trimEnd * 100}%`,
+                              width: `${(1 - trimEnd) * 100}%`,
+                            }}
+                            className="absolute top-0 h-full bg-white/25"
+                          />
+                        </div>
+
+                        {/* Left Vertical Boundary Handle: Thin, small, white non-glow, rounded edge */}
+                        <div
+                          onPointerDown={(e) => handleTrimmerPointerDown(e, "start")}
+                          style={{
+                            left: `${trimStart * 100}%`,
+                          }}
+                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-5 flex items-center justify-center cursor-ew-resize z-10"
+                          title="Batas awal"
+                        >
+                          <span className="w-[3px] h-4 bg-white rounded-full block shadow-md hover:scale-110 active:scale-95 transition-transform" />
+                        </div>
+
+                        {/* Right Vertical Boundary Handle: Thin, small, white non-glow, rounded edge */}
+                        <div
+                          onPointerDown={(e) => handleTrimmerPointerDown(e, "end")}
+                          style={{
+                            left: `${trimEnd * 100}%`,
+                          }}
+                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-5 flex items-center justify-center cursor-ew-resize z-10"
+                          title="Batas akhir"
+                        >
+                          <span className="w-[3px] h-4 bg-white rounded-full block shadow-md hover:scale-110 active:scale-95 transition-transform" />
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
