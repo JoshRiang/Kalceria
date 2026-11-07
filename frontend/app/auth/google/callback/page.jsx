@@ -115,13 +115,29 @@ function GoogleCallbackContent() {
   }, [searchParams]);
 
   return (
-    <div className="min-h-screen bg-[#070d1a] flex flex-col items-center justify-center p-6 text-white text-center font-sans">
-      <div className="w-10 h-10 border-2 border-white/20 border-t-emerald-400 rounded-full animate-spin mb-4" />
-      <h2 className="text-base sm:text-lg font-bold tracking-wide">
-        {isError ? "Authentication Issue" : "Connecting to Google"}
-      </h2>
-      <p className={`text-xs sm:text-sm mt-2 max-w-sm ${isError ? "text-red-400 font-mono" : "text-slate-400 font-mono"}`}>
-        {statusMessage}
+    <div className="fixed inset-0 w-screen h-screen flex flex-col items-center justify-center p-6 text-white text-center bg-black/80 backdrop-blur-md select-none">
+      <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mb-3.5">
+        <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
+          <circle
+            cx="50"
+            cy="50"
+            r="45"
+            fill="none"
+            stroke="white"
+            strokeWidth="4"
+            strokeDasharray="70 200"
+            strokeLinecap="round"
+            className="opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.6)]"
+          />
+        </svg>
+      </div>
+      <p
+        className={`text-[11px] font-bold tracking-normal leading-tight ${
+          isError ? "text-red-400 font-mono" : "text-white/90"
+        }`}
+        style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+      >
+        {isError ? statusMessage : "Authenticating with Google…"}
       </p>
     </div>
   );
@@ -131,8 +147,28 @@ export default function GoogleCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#070d1a] flex items-center justify-center text-white">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        <div className="fixed inset-0 w-screen h-screen flex flex-col items-center justify-center p-6 text-white text-center bg-black/80 backdrop-blur-md select-none">
+          <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mb-3.5">
+            <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="white"
+                strokeWidth="4"
+                strokeDasharray="70 200"
+                strokeLinecap="round"
+                className="opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.6)]"
+              />
+            </svg>
+          </div>
+          <p
+            className="text-[11px] font-bold text-white/90 tracking-normal leading-tight"
+            style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+          >
+            Authenticating with Google…
+          </p>
         </div>
       }
     >
