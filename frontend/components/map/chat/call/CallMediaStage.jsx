@@ -39,102 +39,40 @@ export function CallMediaStage({
   isBadConnection = false,
   localVideoRef,
   remoteVideoRef,
+  remoteAudioRef,
 }) {
   const displayName =
     targetUser?.displayName || targetUser?.name || targetUser?.nickname || "Kalcerian";
-  const hasRemoteVideo = Boolean(
-    targetUser?.coverType === "video" && targetUser?.coverImage
-  );
-  const remoteVideoSrc = hasRemoteVideo ? targetUser.coverImage : null;
-  const [videoProgress, setVideoProgress] = useState(0);
-  const callVideoRafRef = useRef(null);
-
-  const startCallVideoLoop = useCallback(() => {
-    const loop = () => {
-      if (remoteVideoRef?.current && !remoteVideoRef.current.paused && !remoteVideoRef.current.ended) {
-        const dur = remoteVideoRef.current.duration;
-        const cur = remoteVideoRef.current.currentTime;
-        if (dur && Number.isFinite(dur) && dur > 0) {
-          setVideoProgress(cur / dur);
-        }
-        callVideoRafRef.current = requestAnimationFrame(loop);
-      }
-    };
-    cancelAnimationFrame(callVideoRafRef.current);
-    callVideoRafRef.current = requestAnimationFrame(loop);
-  }, [remoteVideoRef]);
-
-  useEffect(() => {
-    return () => {
-      cancelAnimationFrame(callVideoRafRef.current);
-    };
-  }, []);
 
   return (
     <>
-      {/* Background Layer: White background with static mini-Coki faces for Voice Call, or Video Stream for Video Call */}
+      {/* Hidden WebRTC Remote Audio Receiver for Voice and Video Calls */}
+      <audio
+        ref={remoteAudioRef}
+        autoPlay
+        playsInline
+        muted={!isSpeakerOn}
+        className="hidden"
+      />
+
+      {/* Background Layer: Live Video Feed for Video Call, or Pure Opaque Base for Voice Call */}
       {mode === "video" ? (
-        hasRemoteVideo ? (
-          <div className="absolute inset-0 z-0 overflow-hidden bg-black">
-            {status === "connected" ? (
-              <>
-                <video
-                  ref={remoteVideoRef}
-                  src={remoteVideoSrc}
-                  autoPlay
-                  loop
-                  muted={!isSpeakerOn}
-                  playsInline
-                  onPlay={startCallVideoLoop}
-                  onPause={() => cancelAnimationFrame(callVideoRafRef.current)}
-                  className={`w-full h-full object-cover transition-all duration-500 ${
-                    isBadConnection ? "filter blur-[12px] scale-105 opacity-80" : ""
-                  }`}
-                />
-                {/* Coherent white progress line matching real video duration */}
-                <div className="absolute bottom-16 left-4 right-4 h-[2px] rounded-full bg-white/30 overflow-hidden z-20 pointer-events-none">
-                  <div
-                    style={{ width: `${Math.min(100, Math.max(0, videoProgress * 100))}%` }}
-                    className="h-full bg-white transition-all duration-100 ease-linear"
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="relative w-full h-full flex items-center justify-center">
-                <ContentImage
-                  src={avatarUrl(targetUser)}
-                  alt={displayName}
-                  width={180}
-                  height={180}
-                  className="w-full h-full object-cover blur-[22px] scale-125 opacity-45"
-                />
-              </div>
-            )}
-            <div
-              className={`absolute inset-0 pointer-events-none ${
-                status === "connected"
-                  ? "bg-gradient-to-b from-black/65 via-transparent to-black/75"
-                  : isMapDark
-                  ? "bg-black/65 backdrop-blur-xl"
-                  : "bg-white/75 backdrop-blur-xl"
-              }`}
-            />
-          </div>
-        ) : (
-          /* Fallback Stage when Peer has NO Video uploaded:
-             Light mode: Pure black screen
-             Dark mode: Pure white screen with profile photo centered. NO propagating line. */
-          <div
-            className={`absolute inset-0 z-0 flex flex-col items-center justify-center transition-colors duration-300 ${
-              isMapDark ? "bg-white" : "bg-black"
-            }`}
-          >
-            <div className="relative flex items-center justify-center">
-              <div
-                className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 shadow-2xl ${
-                  isMapDark ? "border-black bg-white" : "border-white bg-[#161b22]"
-                }`}
-              >
+        <div className="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
+          {/* Live Peer WebRTC Video Feed (Direct hardware stream, zero spoofing) */}
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            muted={!isSpeakerOn}
+            className={`w-full h-full object-cover transition-opacity duration-300 ${
+              status === "connected" ? "opacity-100" : "opacity-0 pointer-events-none"
+            } ${isBadConnection ? "filter blur-[12px] scale-105" : ""}`}
+          />
+
+          {/* Calling / Ringing State: Peer Avatar centered while connecting */}
+          {status !== "connected" && (
+            <div className="absolute inset-0 z-1 flex flex-col items-center justify-center pointer-events-none">
+              <div className="relative w-28 h-28 rounded-full overflow-hidden border-2 border-white/80 shadow-2xl bg-[#161b22]">
                 <ContentImage
                   src={avatarUrl(targetUser)}
                   alt={displayName}
@@ -144,8 +82,19 @@ export function CallMediaStage({
                 />
               </div>
             </div>
-          </div>
-        )
+          )}
+
+          {/* Contrast Gradient Overlay */}
+          <div
+            className={`absolute inset-0 pointer-events-none ${
+              status === "connected"
+                ? "bg-gradient-to-b from-black/55 via-transparent to-black/70"
+                : isMapDark
+                ? "bg-black/65 backdrop-blur-xl"
+                : "bg-white/75 backdrop-blur-xl"
+            }`}
+          />
+        </div>
       ) : (
         /* Voice Call: Solid 100% Opaque White Base Layer + Coki Faces Pattern trimmed naturally around top header */
         <>
@@ -192,15 +141,7 @@ export function CallMediaStage({
         <h3
           className={`font-sans font-bold text-base sm:text-lg tracking-tight truncate max-w-[260px] ${
             mode === "video"
-              ? hasRemoteVideo
-                ? "text-white drop-shadow"
-                : isMapDark
-                ? "text-black"
-                : "text-white"
-              : mode === "voice"
-              ? "text-black"
-              : isMapDark
-              ? "text-white"
+              ? "text-white drop-shadow"
               : "text-black"
           }`}
         >
@@ -212,16 +153,8 @@ export function CallMediaStage({
           style={{ fontFamily: "Arial, sans-serif" }}
           className={`font-bold text-[9.5px] sm:text-[10px] tracking-tight mt-1 ${
             mode === "video"
-              ? hasRemoteVideo
-                ? "text-white/90 drop-shadow"
-                : isMapDark
-                ? "text-black/80"
-                : "text-white/80"
-              : mode === "voice"
-              ? "text-black/80"
-              : isMapDark
-              ? "text-white/70"
-              : "text-black/70"
+              ? "text-white/90 drop-shadow"
+              : "text-black/80"
           }`}
         >
           {status === "ended"
@@ -234,9 +167,9 @@ export function CallMediaStage({
         </p>
       </div>
 
-      {/* CENTER: Avatar + Audio Pulse Rings (Smooth enlargement & movement to center on answer) */}
+      {/* CENTER: Avatar + Audio Pulse Rings for Voice Call */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4">
-        {(mode === "voice" || (mode === "video" && hasRemoteVideo && status !== "connected")) && (
+        {mode === "voice" && (
           <motion.div
             animate={{
               scale: status === "connected" ? 1.25 : 0.95,

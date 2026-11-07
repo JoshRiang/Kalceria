@@ -64,6 +64,7 @@ export function usePersonalCallState({
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const pcRef = useRef(null);
   const activeCallIdRef = useRef(callState?.callId || `call_${Date.now()}`);
   const pollTimerRef = useRef(null);
@@ -89,6 +90,13 @@ export function usePersonalCallState({
     if (localStreamRef.current) {
       stopMediaStream(localStreamRef.current);
       localStreamRef.current = null;
+    }
+
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
     }
 
     setHasLocalStream(false);
@@ -195,10 +203,16 @@ export function usePersonalCallState({
             }
           };
 
-          // Remote stream receiver
+          // Remote stream receiver: attach live WebRTC media directly to players
           pc.ontrack = (event) => {
-            if (remoteVideoRef.current && event.streams?.[0]) {
-              remoteVideoRef.current.srcObject = event.streams[0];
+            const incomingStream = event.streams?.[0] || new MediaStream([event.track]);
+            if (remoteVideoRef.current && mode === "video") {
+              remoteVideoRef.current.srcObject = incomingStream;
+              remoteVideoRef.current.play?.().catch(() => {});
+            }
+            if (remoteAudioRef.current) {
+              remoteAudioRef.current.srcObject = incomingStream;
+              remoteAudioRef.current.play?.().catch(() => {});
             }
           };
 
@@ -328,6 +342,16 @@ export function usePersonalCallState({
     teardownCall,
   ]);
 
+  // Toggle Speaker: update mute on remote media elements
+  useEffect(() => {
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = !isSpeakerOn;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.muted = !isSpeakerOn;
+    }
+  }, [isSpeakerOn]);
+
   // Toggle Microphone Mute
   useEffect(() => {
     if (localStreamRef.current) {
@@ -392,6 +416,7 @@ export function usePersonalCallState({
     setShowSafetyTooltip,
     localVideoRef,
     remoteVideoRef,
+    remoteAudioRef,
     handleHangup,
   };
 }
