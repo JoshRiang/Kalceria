@@ -304,9 +304,9 @@ export function MerchCard({ item, index, isMobile }) {
 
   return (
     <div ref={cardRef} className="flex flex-col items-center justify-start select-none w-full max-w-[240px] sm:max-w-none">
-      {/* 3D Flip Card Container (Inheriting Minigame Card Dynamics) */}
+      {/* 3D Flip Card Container (Inheriting Minigame Card Dynamics - Compacted for iPad Mini) */}
       <div
-        className="relative w-[190px] h-[250px] xs:w-[210px] xs:h-[275px] sm:w-[200px] sm:h-[265px] md:w-[215px] md:h-[285px] lg:w-[230px] lg:h-[305px] cursor-pointer"
+        className="relative w-[190px] h-[250px] xs:w-[210px] xs:h-[275px] sm:w-[200px] sm:h-[265px] md:w-[155px] md:h-[205px] lg:w-[225px] lg:h-[300px] cursor-pointer"
         style={{ perspective: "1000px" }}
       >
         <motion.div
@@ -345,7 +345,7 @@ export function MerchCard({ item, index, isMobile }) {
               unoptimized
               loading="eager"
               decoding="auto"
-              className="w-[88px] h-[88px] xs:w-[98px] xs:h-[98px] sm:w-[110px] sm:h-[110px] md:w-[126px] md:h-[126px] lg:w-[134px] lg:h-[134px] object-contain drop-shadow-[0_0_25px_rgba(255,120,0,0.5)] transition-transform duration-300"
+              className="w-[88px] h-[88px] xs:w-[98px] xs:h-[98px] sm:w-[110px] sm:h-[110px] md:w-[86px] md:h-[86px] lg:w-[130px] lg:h-[130px] object-contain drop-shadow-[0_0_25px_rgba(255,120,0,0.5)] transition-transform duration-300"
             />
           </div>
 
@@ -383,7 +383,7 @@ export function MerchCard({ item, index, isMobile }) {
       {/* Under the Card: Typing Animation with Picture 4 Font Style & Texture */}
       <div className="mt-4 sm:mt-5 text-center min-h-[28px] flex items-center justify-center px-2">
         <span
-          className="text-white text-sm sm:text-base md:text-[17px] font-normal tracking-tight"
+          className="text-white text-xs sm:text-sm md:text-xs lg:text-[16px] font-normal tracking-tight"
           style={{ fontFamily: "Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
         >
           {typedName}

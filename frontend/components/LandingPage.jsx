@@ -291,8 +291,8 @@ export default function LandingPage({ onNavigateAuth }) {
           />
         </div>
 
-        {/* Mobile & Half-Desktop Silhouette: grup_hp.webp (dragged an extra 30% more down to completely eliminate overlap and ground firmly) */}
-        <div className="absolute bottom-0 left-0 w-full h-[360px] xs:h-[400px] sm:h-[450px] md:h-[500px] pointer-events-none z-[1] overflow-hidden xl:hidden flex justify-center items-end">
+        {/* Mobile Silhouette: grup_hp.webp (strictly mobile screens < 768px; purged on iPad, Mini, Pro, Surface) */}
+        <div className="absolute bottom-0 left-0 w-full h-[360px] xs:h-[400px] sm:h-[450px] pointer-events-none z-[1] overflow-hidden md:hidden flex justify-center items-end">
           <Image 
             src="/hp/grup_hp.webp" 
             alt="Group Mobile" 
@@ -300,7 +300,7 @@ export default function LandingPage({ onNavigateAuth }) {
             height={1848} 
             loading="lazy" 
             decoding="async" 
-            className="h-full w-auto object-contain opacity-50 translate-y-[65%] xs:translate-y-[68%] sm:translate-y-[70%] md:translate-y-[72%]" 
+            className="h-full w-auto object-contain opacity-50 translate-y-[65%] xs:translate-y-[68%] sm:translate-y-[70%]" 
           />
         </div>
 
@@ -381,9 +381,9 @@ export default function LandingPage({ onNavigateAuth }) {
           {/* Crystal 1 Bottom Left (Truncated at Bottom) */}
           <Image src="/crystal_1.webp" alt="Crystal 1" width={2016} height={2120} loading="lazy" decoding="async" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-2 xl:left-4 h-[80px] md:h-[120px] xl:h-[130px] w-auto object-contain opacity-80 z-[15] hidden md:block" />
 
-          {/* Group Silhouette: Shifted flush to left edge for iPad Family to eliminate overlap with carousel and explore button */}
-          <div className="absolute bottom-0 left-0 md:-left-16 lg:-left-12 xl:left-40 hidden md:flex items-end z-10">
-            <Image src="/grup.webp" alt="Group" width={2064} height={1655} loading="lazy" decoding="async" className="relative z-10 h-[180px] md:h-[220px] lg:h-[250px] xl:h-[280px] w-auto object-contain translate-y-[2.5px] opacity-35" />
+          {/* Group Silhouette: Desktop Widescreen Only (Purged on iPad, Mini, Pro, Surface) */}
+          <div className="absolute bottom-0 left-0 xl:left-40 hidden xl:flex items-end z-10">
+            <Image src="/grup.webp" alt="Group" width={2064} height={1655} loading="lazy" decoding="async" className="relative z-10 xl:h-[280px] w-auto object-contain translate-y-[2.5px] opacity-35" />
           </div>
 
           <div className="absolute bottom-0 right-4 md:right-2 lg:right-6 xl:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
@@ -467,7 +467,7 @@ export default function LandingPage({ onNavigateAuth }) {
 
         <div className="relative z-10 w-full max-w-6xl px-4 mb-20 flex justify-center">
           <StarDust />
-          <div className={`grid gap-8 justify-items-center w-full ${isMobile ? "grid-cols-1 max-w-[280px]" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-4"}`}>
+          <div className={`grid gap-4 sm:gap-6 md:gap-3.5 lg:gap-8 justify-items-center w-full ${isMobile ? "grid-cols-1 max-w-[280px]" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-4"}`}>
             {(isMobile ? displayedMerch.slice(0, 1) : displayedMerch).map((item, idx) => (
               <MerchCard key={idx} item={item} isInitial={merchInitial} index={idx} isMobile={isMobile} />
             ))}

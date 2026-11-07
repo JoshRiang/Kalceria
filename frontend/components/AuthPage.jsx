@@ -1186,9 +1186,9 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             : "Register Account"}
                         </button>
 
-                        {/* Sign in with Google (Login Card Gap) */}
+                        {/* Sign in with Google (Balanced Gap) */}
                         {mode === "login" && (
-                          <div className="mt-6 mb-2 sm:mt-7 sm:mb-3 flex items-center justify-center">
+                          <div className="mt-5 mb-0 sm:mt-6 sm:mb-0 flex items-center justify-center">
                             <button
                               type="button"
                               onClick={handleGoogleSignIn}
@@ -1267,7 +1267,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
                     {/* ── Footer ── */}
                     {mode !== "verify" && mode !== "forgot-password" && (
-                      <div className={mode === "login" ? "mt-12 sm:mt-14 pb-1 text-center" : "mt-8 text-center"}>
+                      <div className={mode === "login" ? "mt-5 sm:mt-6 pb-4 sm:pb-6 text-center" : "mt-8 pb-3 text-center"}>
                         <p className="font-mono text-xs text-slate-500">
                           {mode === "login" ? "Don't have an account? " : "Already have an account? "}
                           <button
