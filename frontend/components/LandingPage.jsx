@@ -17,6 +17,7 @@ import { useHasMounted } from "@/hooks/useHasMounted";
 import { useIsMobileViewport, useIsMobileOrTabletViewport } from "@/hooks/useIsMobileViewport";
 import api from "@/lib/api";
 import { clearSession, establishSession, hasUserSession } from "@/lib/session";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function LandingPage({ onNavigateAuth }) {
   const mounted = useHasMounted();
@@ -48,7 +49,7 @@ export default function LandingPage({ onNavigateAuth }) {
   const [showIdeaModal, setShowIdeaModal] = useState(false);
   const openIdeaModal = useCallback(() => setShowIdeaModal(true), []);
   const closeIdeaModal = useCallback(() => setShowIdeaModal(false), []);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [skipAnim, setSkipAnim] = useState(false);
   const [ambientGated, setAmbientGated] = useState(true);
   const displayedMerch = useMerchRandomizer();
@@ -98,13 +99,10 @@ export default function LandingPage({ onNavigateAuth }) {
     const gateTimer = setTimeout(() => {
       setAmbientGated(false);
     }, 1800);
-    // Check login status
     // Check login status & heal session if cookie exists
-    setIsLoggedIn(hasUserSession());
     api.get("/users/me").then((res) => {
       if (res.data?.user) {
         establishSession(res.data.user);
-        setIsLoggedIn(true);
       }
     }).catch(() => { });
 
@@ -166,7 +164,6 @@ export default function LandingPage({ onNavigateAuth }) {
     }
     clearSession();
     localStorage.removeItem("user");
-    setIsLoggedIn(false);
     setShowLogoutConfirm(false);
     sessionStorage.setItem("introPlayed", "true");
     sessionStorage.setItem("landingSeen", "true");
@@ -176,7 +173,7 @@ export default function LandingPage({ onNavigateAuth }) {
     const handlePageShow = (e) => {
       if (e.persisted || !hasUserSession()) {
         if (!hasUserSession()) {
-          setIsLoggedIn(false);
+          useAuthStore.getState().clearSession();
         }
       }
     };

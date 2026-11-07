@@ -27,6 +27,7 @@ import {
 } from "@/lib/profileIdentity";
 import { toSmartTitleCase } from "@/lib/titleCase";
 import { prewarmOsmTiles, hasValidCoordinates } from "@/lib/osmTilePrewarmer";
+import { useMapBlockedUsers } from "@/components/map/mapPage/useMapBlockedUsers";
 import {
   useMapChatAndNotifications,
   doesEventBelongToUser,
@@ -35,7 +36,6 @@ import api, {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents,
   postBroadcast, putBroadcast, postLocation, patchVisibility,
   postMiniEvent, putMiniEvent, delMiniEvent,
-  fetchBlockedUsers, blockKalcerian, unblockKalcerian,
 } from "@/lib/api";
 
 import {
@@ -351,46 +351,8 @@ export default function MapPage() {
     }
   }, [showStartup]);
 
-  // Blocked users state (synced with localStorage + backend API)
-  const [blockedUserIds, setBlockedUserIds] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("kalceria_blocked_users");
-        if (stored) return JSON.parse(stored);
-      } catch {}
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    fetchBlockedUsers().then((ids) => {
-      if (Array.isArray(ids) && ids.length) {
-        setBlockedUserIds((prev) => Array.from(new Set([...prev, ...ids])));
-      }
-    }).catch(() => {});
-  }, []);
-
-  const handleBlockUser = useCallback(async (targetId) => {
-    setBlockedUserIds((prev) => {
-      const next = Array.from(new Set([...prev, targetId]));
-      try { localStorage.setItem("kalceria_blocked_users", JSON.stringify(next)); } catch {}
-      return next;
-    });
-    try {
-      await blockKalcerian(targetId);
-    } catch {}
-  }, []);
-
-  const handleUnblockUser = useCallback(async (targetId) => {
-    setBlockedUserIds((prev) => {
-      const next = prev.filter((id) => id !== targetId);
-      try { localStorage.setItem("kalceria_blocked_users", JSON.stringify(next)); } catch {}
-      return next;
-    });
-    try {
-      await unblockKalcerian(targetId);
-    } catch {}
-  }, []);
+  // Blocked users state (modularized package hook: synced with localStorage + backend API)
+  const { blockedUserIds, handleBlockUser, handleUnblockUser } = useMapBlockedUsers();
 
   // derived: ONLY online & live-location-enabled users with real finite coordinates render on the map (zero mock coordinates, zero offline avatars)
   const visibleMapUsers = useMemo(() => {
