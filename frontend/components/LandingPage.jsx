@@ -381,9 +381,9 @@ export default function LandingPage({ onNavigateAuth }) {
           {/* Crystal 1 Bottom Left (Truncated at Bottom) */}
           <Image src="/crystal_1.webp" alt="Crystal 1" width={2016} height={2120} loading="lazy" decoding="async" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-2 xl:left-4 h-[80px] md:h-[120px] xl:h-[130px] w-auto object-contain opacity-80 z-[15] hidden md:block" />
 
-          {/* Group Silhouette: Desktop Widescreen Only (Purged on iPad, Mini, Pro, Surface) */}
-          <div className="absolute bottom-0 left-0 xl:left-40 hidden xl:flex items-end z-10">
-            <Image src="/grup.webp" alt="Group" width={2064} height={1655} loading="lazy" decoding="async" className="relative z-10 xl:h-[280px] w-auto object-contain translate-y-[2.5px] opacity-35" />
+          {/* Group Silhouette: Preserved for iPad Family (md/lg, shifted flush to left) & Desktop Widescreen (xl:left-40) */}
+          <div className="absolute bottom-0 left-0 md:-left-16 lg:-left-12 xl:left-40 hidden md:flex items-end z-10">
+            <Image src="/grup.webp" alt="Group" width={2064} height={1655} loading="lazy" decoding="async" className="relative z-10 h-[180px] md:h-[220px] lg:h-[250px] xl:h-[280px] w-auto object-contain translate-y-[2.5px] opacity-35" />
           </div>
 
           <div className="absolute bottom-0 right-4 md:right-2 lg:right-6 xl:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
