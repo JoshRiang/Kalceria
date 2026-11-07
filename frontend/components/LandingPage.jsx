@@ -862,20 +862,20 @@ export default function LandingPage({ onNavigateAuth }) {
               </motion.div>
             )}
 
-            <h2 className="relative text-4xl xs:text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-mono font-black uppercase tracking-tighter text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)] text-center select-none leading-none">
+            <h2 className="relative text-4xl xs:text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-mono font-black uppercase tracking-tighter text-black text-center select-none leading-none">
               <Typewriter text="NEED OUR HELP?" mode="none" delay={400} skipAnim={false} />
             </h2>
           </div>
 
-          {/* Apply A Request Button - Unified with SEE THE JOURNEY Typography & Proportion */}
+          {/* Apply A Request Button - Unified with SEE THE JOURNEY Typography & Proportion (Inverted: Black BG, White Text) */}
           <button
             type="button"
             onClick={handleApplyRequest}
-            className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_6px_28px_rgba(0,0,0,0.16)] focus-polygon focus-visible:outline-none cursor-pointer z-20"
+            className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-white bg-black transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_6px_28px_rgba(0,0,0,0.16)] focus-polygon focus-visible:outline-none cursor-pointer z-20"
             style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
           >
             <span className="relative z-10">APPLY A REQUEST</span>
-            <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
+            <div className="absolute inset-0 bg-[#FF00FF] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
           </button>
         </motion.div>
 

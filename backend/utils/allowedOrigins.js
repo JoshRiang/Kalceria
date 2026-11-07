@@ -46,3 +46,4 @@ export function isAllowedOrigin(origin) {
 
   return false;
 }
+
