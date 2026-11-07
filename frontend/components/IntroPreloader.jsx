@@ -1,338 +1,13 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { usePhoenixAurora } from "@/hooks/usePhoenixAurora";
-import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 import api from "@/lib/api";
 import { hasUserSession } from "@/lib/session";
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// DYNAMIC MERGED PRELOADER (Desktop = FinalJosh branch, Mobile = Obsidian Black current logic)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-// ─── In-Memory Blob Video Pool (Eliminates Chromium HTTP 206 Range-Cache Deadlock) ───
-const INTRO_VIDEO_PATHS = ["/vid_login1.mp4", "/vid_login2.mp4", "/vid_login3.mp4"];
-let sharedVideoElements = null;
-let sharedVideoBlobUrls = [];
-let sharedVideoInitPromise = null;
-let activeCanvasSubscribers = 0;
-
-function ensureIntroVideoPool() {
-  if (typeof window === "undefined") return [];
-  if (sharedVideoElements && sharedVideoElements.length === INTRO_VIDEO_PATHS.length) {
-    sharedVideoElements.forEach((v) => {
-      if (v.paused && v.src) v.play().catch(() => {});
-    });
-    return sharedVideoElements;
-  }
-
-  const elements = INTRO_VIDEO_PATHS.map((srcPath) => {
-    const v = document.createElement("video");
-    v.muted = true;
-    v.defaultMuted = true;
-    v.loop = true;
-    v.playsInline = true;
-    v.preload = "auto";
-    v.setAttribute("muted", "");
-    v.setAttribute("playsinline", "");
-    const tryPlay = () => {
-      v.play().catch(() => {});
-    };
-    v.addEventListener("loadeddata", tryPlay);
-    v.addEventListener("canplay", tryPlay);
-    // Attach direct source immediately for instant t=0 decode, then upgrade to full in-memory Blob URL if needed
-    v.src = srcPath;
-    tryPlay();
-    return v;
-  });
-
-  sharedVideoElements = elements;
-
-  if (!sharedVideoInitPromise) {
-    sharedVideoInitPromise = Promise.all(
-      INTRO_VIDEO_PATHS.map(async (srcPath, idx) => {
-        try {
-          const res = await fetch(srcPath, { cache: "no-cache" });
-          if (!res.ok) return;
-          const blob = await res.blob();
-          if (!blob || blob.size === 0) return;
-          const blobUrl = URL.createObjectURL(blob);
-          sharedVideoBlobUrls[idx] = blobUrl;
-          const vid = sharedVideoElements?.[idx];
-          if (vid && vid.readyState < 2) {
-            vid.src = blobUrl;
-            vid.load();
-            vid.play().catch(() => {});
-          }
-        } catch {
-          // Direct video element fallback remains active
-        }
-      })
-    );
-  }
-
-  return elements;
-}
-
-function releaseIntroVideoPoolSubscriber() {
-  activeCanvasSubscribers = Math.max(0, activeCanvasSubscribers - 1);
-  if (activeCanvasSubscribers === 0 && sharedVideoElements) {
-    sharedVideoElements.forEach((v) => {
-      try {
-        v.pause();
-      } catch {}
-    });
-  }
-}
-
-// ─── Laser Grid ───────────────────────────────────────────────────────────────
-const LASER_PALETTE = [
-  ...Array(30).fill("#FFD700"),
-  ...Array(30).fill("#FF00FF"),
-  ...Array(20).fill("#FF8C00"),
-  ...Array(10).fill("#FFFFFF"),
-  ...Array(10).fill("#C0C0C0"),
-];
-
-function LaserGrid({ active, bgColor = "#050a14" }) {
-  const canvasRef = useRef(null);
-  const rafRef    = useRef(null);
-
-  useEffect(() => {
-    if (!active) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const random = createRuntimeSeededRandom("intro-laser-grid-v1");
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const W = canvas.width, H = canvas.height;
-
-    const COUNT = 140;
-    const lines = Array.from({ length: COUNT }, (_, i) => {
-      const horiz = random() > 0.5;
-      return {
-        horiz,
-        delay:      (i / COUNT) * 1800,
-        drainDelay: ((COUNT - 1 - i) / COUNT) * 900,
-        color:      LASER_PALETTE[Math.floor(random() * LASER_PALETTE.length)],
-        pos:        horiz ? random() * H : random() * W,
-        thick:      random() < 0.15 ? 2.5 : 1,
-      };
-    });
-
-    const FILL_END  = 2000;
-    const HOLD_END  = 2500;
-    const DRAIN_END = 3500;
-    const BLACK_END = 3700;
-
-    let start = null;
-
-    const draw = (ts) => {
-      if (!start) start = ts;
-      const el = ts - start;
-
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, W, H);
-
-      for (const ln of lines) {
-        let alpha = 0;
-
-        if (el < FILL_END) {
-          if (el >= ln.delay) alpha = Math.min((el - ln.delay) / 300, 1) * 0.9;
-        } else if (el < HOLD_END) {
-          alpha = 0.9 * (0.72 + random() * 0.28);
-        } else if (el < DRAIN_END) {
-          const drainEl = el - HOLD_END;
-          alpha = drainEl < ln.drainDelay
-            ? 0.9
-            : Math.max(0, 0.9 - (drainEl - ln.drainDelay) / 250);
-        }
-
-        if (alpha <= 0) continue;
-        ctx.save();
-        ctx.globalAlpha  = alpha;
-        ctx.strokeStyle  = ln.color;
-        ctx.lineWidth    = ln.thick;
-        ctx.shadowBlur   = 10;
-        ctx.shadowColor  = ln.color;
-        ctx.beginPath();
-        if (ln.horiz) { ctx.moveTo(0, ln.pos); ctx.lineTo(W, ln.pos); }
-        else          { ctx.moveTo(ln.pos, 0); ctx.lineTo(ln.pos, H); }
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      if (el < BLACK_END) {
-        rafRef.current = requestAnimationFrame(draw);
-      } else {
-        ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, W, H);
-      }
-    };
-
-    rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [active, bgColor]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
-        zIndex: 50,
-        display: active ? "block" : "none",
-      }}
-    />
-  );
-}
-
-// ─── WakingUpText ─────────────────────────────────────────────────────────────
-function WakingUpText() {
-  const [text, setText] = useState("");
-  const fullText = "WAKING UP SERVER";
-  const [showDots, setShowDots] = useState(false);
-  const [dots, setDots] = useState("");
-
-  useEffect(() => {
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i <= fullText.length) {
-        setText(fullText.slice(0, i));
-        i++;
-      } else {
-        clearInterval(interval);
-        setShowDots(true);
-      }
-    }, 80);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (!showDots) return;
-    let dotCount = 1;
-    const dotInterval = setInterval(() => {
-      setDots(".".repeat(dotCount));
-      dotCount = (dotCount % 3) + 1;
-    }, 400);
-
-    return () => clearInterval(dotInterval);
-  }, [showDots]);
-
-  return (
-    <div 
-      className="mt-0 flex relative w-fit" 
-      style={{ 
-        color: "rgba(255,255,255,0.7)", 
-        fontFamily: "'Inter', sans-serif",
-        fontSize: "9px",
-        letterSpacing: "0.8em",
-        textTransform: "uppercase",
-        fontWeight: 300,
-      }}
-    >
-      <span>{text}</span>
-      <span style={{ position: "absolute", left: "100%", whiteSpace: "pre" }}>
-        {showDots ? dots : ""}
-      </span>
-    </div>
-  );
-}
-
-// ─── Tiled Video Canvas (MCU Full Fidelity + Cache-Safe Shared Decoder Pool) ───
-function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    if (!active) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    const updateSize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    updateSize();
-    window.addEventListener("resize", updateSize);
-
-    activeCanvasSubscribers += 1;
-    const videos = ensureIntroVideoPool();
-
-    let raf;
-    const cols = window.innerWidth > 768 ? 7 : 6;
-    const rows = window.innerWidth > 768 ? 6 : 7;
-    const totalCells = cols * rows;
-    const random = createRuntimeSeededRandom(`intro-video-grid-v1-${seedSalt}`);
-
-    const cellAssignments = Array.from({ length: totalCells }).map((_, idx) =>
-      videos.length > 0 ? (idx + Math.floor(random() * videos.length)) % videos.length : 0
-    );
-
-    const switchInterval = setInterval(() => {
-      if (!videos.length) return;
-      const flips = Math.floor(random() * 6) + 1;
-      for (let i = 0; i < flips; i++) {
-        const cellIdx = Math.floor(random() * totalCells);
-        cellAssignments[cellIdx] = Math.floor(random() * videos.length);
-      }
-    }, 150);
-
-    const draw = () => {
-      const w = canvas.width;
-      const h = canvas.height;
-      const cellW = w / cols;
-      const cellH = h / rows;
-
-      ctx.clearRect(0, 0, w, h);
-
-      let cellIdx = 0;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          let v = videos[cellAssignments[cellIdx]];
-          if (!v || v.readyState < 2) {
-            v = videos.find((vid) => vid && vid.readyState >= 2);
-          } else if (v.paused) {
-            v.play().catch(() => {});
-          }
-
-          if (v) {
-            ctx.drawImage(v, c * cellW, r * cellH, cellW, cellH);
-          }
-
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-          ctx.lineWidth = 1;
-          ctx.strokeRect(c * cellW, r * cellH, cellW, cellH);
-          cellIdx++;
-        }
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    draw();
-
-    return () => {
-      window.removeEventListener("resize", updateSize);
-      clearInterval(switchInterval);
-      cancelAnimationFrame(raf);
-      releaseIntroVideoPoolSubscriber();
-    };
-  }, [active, seedSalt]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 w-full h-full object-cover filter grayscale contrast-125 bg-black/50"
-    />
-  );
-}
+import { LaserGrid, WakingUpText, MCUVideoGridCanvas } from "./preloader";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // IntroPreloader — Dynamic desktop/mobile hybrid
@@ -340,11 +15,10 @@ function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
 export default function IntroPreloader({ onComplete }) {
   const mounted = useHasMounted();
   const isMobile = useIsMobileViewport();
-  const [showLogo,      setShowLogo]     = useState(false);
-  const [showSubtitle,  setShowSubtitle] = useState(false);
-  const [showGears,     setShowGears]    = useState(false);
-  const [laserActive,   setLaserActive]  = useState(false);
-  const [done,          setDone]         = useState(false);
+  const [showLogo, setShowLogo] = useState(false);
+  const [showSubtitle, setShowSubtitle] = useState(false);
+  const [laserActive, setLaserActive] = useState(false);
+  const [done, setDone] = useState(false);
 
   const threadsCanvasRef = useRef(null);
   usePhoenixAurora(threadsCanvasRef, mounted && !done && !isMobile, 9500);
@@ -363,7 +37,9 @@ export default function IntroPreloader({ onComplete }) {
       }
     };
     prepareBackend();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // Hybrid Timelines
@@ -390,19 +66,17 @@ export default function IntroPreloader({ onComplete }) {
           onComplete?.();
         }, 3900); // 3.9s after laser fires (complete at t = 7.9s)
       }, 4000);
-
     } else {
       // ── DESKTOP LOGIC (Fully matching the FinalJosh branch) ──
       // t = 1.0s → logo fades in
       t1 = setTimeout(() => setShowLogo(true), 1000);
 
-      // t = 2.5s → subtitle + gears + MCU video collage fade in
+      // t = 2.5s → subtitle + MCU video collage fade in
       t2 = setTimeout(() => {
         setShowSubtitle(true);
-        setShowGears(true);
       }, 2500);
 
-      // t = 9.5s → fire lasers (exactly 7.0s after subtitle/gears appear)
+      // t = 9.5s → fire lasers (exactly 7.0s after subtitle appears)
       t3 = setTimeout(() => {
         setLaserActive(true);
         t4 = setTimeout(() => {
@@ -412,8 +86,11 @@ export default function IntroPreloader({ onComplete }) {
       }, 9500);
     }
 
-    return () => { 
-      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
     };
   }, [mounted, isMobile, onComplete]);
 
@@ -450,7 +127,10 @@ export default function IntroPreloader({ onComplete }) {
             animate={{ opacity: showSubtitle ? 0.35 : 0, scale: showSubtitle ? 1 : 0.98 }}
             transition={{ duration: 3, ease: "easeInOut" }}
             className="absolute inset-0"
-            style={{ clipPath: "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)" }}
+            style={{
+              clipPath:
+                "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)",
+            }}
           >
             <MCUVideoGridCanvas active={true} seedSalt="k-mask" />
             {/* Gradient Tint Overlays */}
@@ -504,11 +184,11 @@ export default function IntroPreloader({ onComplete }) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: showLogo ? 1 : 0, scale: showLogo ? 1 : 0.95 }}
             transition={{ duration: 1.0, ease: "easeInOut" }}
-            style={{ 
+            style={{
               width: "310px",
               height: "auto",
-              pointerEvents: "none", 
-              display: "block", 
+              pointerEvents: "none",
+              display: "block",
               filter: "drop-shadow(0 0 35px rgba(255, 255, 255, 0.12))",
             }}
             draggable={false}
