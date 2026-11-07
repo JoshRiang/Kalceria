@@ -20,6 +20,8 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
   const resolveStopRef = useRef(null);
   const startTimeRef = useRef(0);
   const durationRef = useRef(0);
+  const onPermissionNeededRef = useRef(onPermissionNeeded);
+  onPermissionNeededRef.current = onPermissionNeeded;
 
   const cleanupAudioPipeline = useCallback(() => {
     if (animFrameRef.current) {
@@ -67,8 +69,8 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
       stream = await acquireMicrophoneStream();
       streamRef.current = stream;
     } catch (err) {
-      if (err.code === "PERMISSION_DENIED" && onPermissionNeeded) {
-        onPermissionNeeded("mic");
+      if (err.code === "PERMISSION_DENIED" && onPermissionNeededRef.current) {
+        onPermissionNeededRef.current("mic");
       }
       setRecorderError(err.message);
       return false;
@@ -173,7 +175,7 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
       setRecorderError(setupErr?.message || "Gagal menginisialisasi rekaman suara.");
       return false;
     }
-  }, [cleanupAudioPipeline, duration, onPermissionNeeded]);
+  }, [cleanupAudioPipeline]);
 
   const stopRecording = useCallback(() => {
     return new Promise((resolve) => {

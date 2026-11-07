@@ -21,13 +21,17 @@ export function CameraCaptureModal({
   const [isSpinningFlip, setIsSpinningFlip] = useState(false);
   const [photoRotation, setPhotoRotation] = useState(0); // 0, 90, 180, 270
   const [isCropping, setIsCropping] = useState(false);
+  const [cropRect, setCropRect] = useState({ left: 0, top: 0, right: 1, bottom: 1 });
   const [caption, setCaption] = useState("");
   const [showCameraGuide, setShowCameraGuide] = useState(true);
 
   // Video duration crop (trimming)
   const [trimStart, setTrimStart] = useState(0); // 0 to 1
   const [trimEnd, setTrimEnd] = useState(1);     // 0 to 1
+  const [activeTrimHandle, setActiveTrimHandle] = useState(null); // "start" | "end" | null
+  const [videoTrueDuration, setVideoTrueDuration] = useState(0);
   const previewVideoRef = useRef(null);
+  const previewViewportRef = useRef(null);
   const trimmerTrackRef = useRef(null);
   const videoStartTimeRef = useRef(null);
 
@@ -37,6 +41,9 @@ export function CameraCaptureModal({
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const activeStreamFacingRef = useRef(null);
+  const onPermissionNeededRef = useRef(onPermissionNeeded);
+  onPermissionNeededRef.current = onPermissionNeeded;
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const holdTimerRef = useRef(null);
@@ -82,6 +89,7 @@ export function CameraCaptureModal({
       stopMediaStream(streamRef.current);
       streamRef.current = null;
     }
+    activeStreamFacingRef.current = null;
     setHasStream(false);
     setIsRecordingVideo(false);
   }, []);
@@ -96,8 +104,11 @@ export function CameraCaptureModal({
       setZoomLevel(1);
       setPhotoRotation(0);
       setIsCropping(false);
+      setCropRect({ left: 0, top: 0, right: 1, bottom: 1 });
       setTrimStart(0);
       setTrimEnd(1);
+      setActiveTrimHandle(null);
+      setVideoTrueDuration(0);
       setCaption("");
       setIsRecordingVideo(false);
       setRecordingSeconds(0);
@@ -116,17 +127,33 @@ export function CameraCaptureModal({
     };
   }, [cleanupCamera]);
 
-  // Persistent Camera Stream initializer
-  const startCamera = useCallback(async (facing = "user") => {
+  // Persistent Camera Stream initializer (stable reference, never restarts an active matching stream)
+  const startCamera = useCallback(async (facing = "user", forceRestart = false) => {
+    if (
+      !forceRestart &&
+      streamRef.current &&
+      activeStreamFacingRef.current === facing &&
+      streamRef.current.getTracks?.().some((t) => t.readyState === "live")
+    ) {
+      setHasStream(true);
+      if (videoRef.current && videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play?.().catch(() => {});
+      }
+      return;
+    }
+
     if (streamRef.current) {
       stopMediaStream(streamRef.current);
       streamRef.current = null;
     }
+    activeStreamFacingRef.current = null;
     setCameraError("");
 
     try {
       const stream = await acquireCameraStream({ facingMode: facing }, false);
       streamRef.current = stream;
+      activeStreamFacingRef.current = facing;
       setHasStream(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -135,28 +162,29 @@ export function CameraCaptureModal({
     } catch (err) {
       setHasStream(false);
       setCameraError(err?.message || "Tidak dapat mengakses kamera.");
-      if (err?.code === "PERMISSION_DENIED" && onPermissionNeeded) {
-        onPermissionNeeded("camera");
+      if (err?.code === "PERMISSION_DENIED" && onPermissionNeededRef.current) {
+        onPermissionNeededRef.current("camera");
       }
     }
-  }, [onPermissionNeeded]);
+  }, []);
 
-  // Re-start camera when modal opens or facingMode changes
+  // Re-start camera only when modal opens, preview closes, or facingMode changes
+  const hasPreview = Boolean(previewMedia);
   useEffect(() => {
-    if (isOpen && !previewMedia) {
-      startCamera(facingMode);
+    if (isOpen && !hasPreview) {
+      startCamera(facingMode, false);
     }
-  }, [isOpen, facingMode, previewMedia, startCamera]);
+  }, [isOpen, facingMode, hasPreview, startCamera]);
 
   // Ensure video element receives stream when ready
   useEffect(() => {
-    if (hasStream && streamRef.current && videoRef.current && !previewMedia) {
+    if (hasStream && streamRef.current && videoRef.current && !hasPreview) {
       if (videoRef.current.srcObject !== streamRef.current) {
         videoRef.current.srcObject = streamRef.current;
         videoRef.current.play?.().catch(() => {});
       }
     }
-  }, [hasStream, previewMedia]);
+  }, [hasStream, hasPreview]);
 
   // Take Snapshot Photo
   const handleTakePhoto = useCallback(() => {
@@ -197,29 +225,41 @@ export function CameraCaptureModal({
           });
           setPhotoRotation(0);
           setIsCropping(false);
+          setCropRect({ left: 0, top: 0, right: 1, bottom: 1 });
         },
         "image/jpeg",
         0.92
       );
-    } catch (err) {
+    } catch {
       setCameraError("Gagal mengambil foto.");
     }
   }, [hasStream, facingMode, zoomLevel]);
 
-  // Start Video Recording on Hold
+  // Start Video Recording on Hold (stable callback, never interrupted by timer ticks)
   const startVideoRecording = useCallback(() => {
     if (!streamRef.current || !hasStream) return;
     recordedChunksRef.current = [];
     videoStartTimeRef.current = Date.now();
     setRecordingSeconds(0);
+    setVideoTrueDuration(0);
     setIsRecordingVideo(true);
 
     try {
       const mime =
         typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
           ? "video/webm;codecs=vp9"
-          : "video/webm";
-      const recorder = new MediaRecorder(streamRef.current, { mimeType: mime });
+          : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("video/webm")
+          ? "video/webm"
+          : "video/mp4";
+      let recorder;
+      try {
+        recorder = new MediaRecorder(streamRef.current, {
+          mimeType: mime,
+          videoBitsPerSecond: 1200000,
+        });
+      } catch {
+        recorder = new MediaRecorder(streamRef.current, { mimeType: mime });
+      }
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
@@ -229,12 +269,20 @@ export function CameraCaptureModal({
       };
 
       recorder.onstop = () => {
+        if (recordIntervalRef.current) {
+          clearInterval(recordIntervalRef.current);
+          recordIntervalRef.current = null;
+        }
         const blob = new Blob(recordedChunksRef.current, { type: mime });
         const url = URL.createObjectURL(blob);
         const elapsedSec = videoStartTimeRef.current
           ? Math.max(1, Math.round((Date.now() - videoStartTimeRef.current) / 1000))
           : 1;
 
+        setVideoTrueDuration(elapsedSec);
+        setTrimStart(0);
+        setTrimEnd(1);
+        setActiveTrimHandle(null);
         setPreviewMedia({
           type: "video",
           url,
@@ -247,22 +295,28 @@ export function CameraCaptureModal({
       recorder.start(100);
 
       recordIntervalRef.current = setInterval(() => {
-        setRecordingSeconds((prev) => {
-          if (prev >= 60) {
-            // Maximum 60 seconds
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        const elapsed = videoStartTimeRef.current
+          ? (Date.now() - videoStartTimeRef.current) / 1000
+          : 0;
+        if (elapsed >= 60) {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            try {
               mediaRecorderRef.current.stop();
-            }
-            clearInterval(recordIntervalRef.current);
-            return 60;
+            } catch {}
           }
-          return Math.min(60, Number((prev + 0.1).toFixed(1)));
-        });
+          if (recordIntervalRef.current) {
+            clearInterval(recordIntervalRef.current);
+            recordIntervalRef.current = null;
+          }
+          setRecordingSeconds(60);
+        } else {
+          setRecordingSeconds(Math.min(60, Number(elapsed.toFixed(1))));
+        }
       }, 100);
     } catch {
       setIsRecordingVideo(false);
     }
-  }, [hasStream, recordingSeconds]);
+  }, [hasStream]);
 
   // Stop Video Recording
   const stopVideoRecording = useCallback(() => {
@@ -297,6 +351,7 @@ export function CameraCaptureModal({
 
   const handleShutterPointerUp = (e) => {
     e.preventDefault();
+    if (!isHoldingShutterRef.current && !isRecordingVideo) return;
     try {
       if (e.currentTarget?.hasPointerCapture && e.currentTarget.hasPointerCapture(e.pointerId)) {
         e.currentTarget.releasePointerCapture(e.pointerId);
@@ -308,12 +363,14 @@ export function CameraCaptureModal({
       holdTimerRef.current = null;
     }
 
-    if (isRecordingVideo) {
+    const wasHolding = isHoldingShutterRef.current;
+    isHoldingShutterRef.current = false;
+
+    if (isRecordingVideo || (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording")) {
       stopVideoRecording();
-    } else if (isHoldingShutterRef.current) {
+    } else if (wasHolding) {
       handleTakePhoto();
     }
-    isHoldingShutterRef.current = false;
   };
 
   // Toggle Zoom Level 1x / 2x
@@ -327,7 +384,7 @@ export function CameraCaptureModal({
     setIsSpinningFlip(true);
     const nextFacing = facingMode === "user" ? "environment" : "user";
     setFacingMode(nextFacing);
-    startCamera(nextFacing);
+    startCamera(nextFacing, true);
     setTimeout(() => {
       setIsSpinningFlip(false);
     }, 380);
@@ -336,6 +393,59 @@ export function CameraCaptureModal({
   // Rotate photo 90 degrees in edit mode
   const handleRotatePhoto = () => {
     setPhotoRotation((prev) => (prev + 90) % 360);
+  };
+
+  // Interactive Photo Crop Drag (Move / Resize Corners & Edges)
+  const handleCropPointerDown = (e, mode) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!previewViewportRef.current) return;
+    const rect = previewViewportRef.current.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initial = { ...cropRect };
+    const minSize = 0.18;
+
+    const onPointerMove = (ev) => {
+      const dx = (ev.clientX - startX) / rect.width;
+      const dy = (ev.clientY - startY) / rect.height;
+
+      setCropRect(() => {
+        let { left, top, right, bottom } = initial;
+        if (mode === "move") {
+          const w = right - left;
+          const h = bottom - top;
+          left = Math.max(0, Math.min(1 - w, left + dx));
+          top = Math.max(0, Math.min(1 - h, top + dy));
+          right = left + w;
+          bottom = top + h;
+        } else {
+          if (mode.includes("w")) {
+            left = Math.max(0, Math.min(right - minSize, left + dx));
+          }
+          if (mode.includes("e")) {
+            right = Math.min(1, Math.max(left + minSize, right + dx));
+          }
+          if (mode.includes("n")) {
+            top = Math.max(0, Math.min(bottom - minSize, top + dy));
+          }
+          if (mode.includes("s")) {
+            bottom = Math.min(1, Math.max(top + minSize, bottom + dy));
+          }
+        }
+        return { left, top, right, bottom };
+      });
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
   };
 
   // Retake photo / video
@@ -348,19 +458,30 @@ export function CameraCaptureModal({
     setPreviewMedia(null);
     setPhotoRotation(0);
     setIsCropping(false);
+    setCropRect({ left: 0, top: 0, right: 1, bottom: 1 });
     setTrimStart(0);
     setTrimEnd(1);
+    setActiveTrimHandle(null);
+    setVideoTrueDuration(0);
     setCaption("");
     setCameraError("");
     setRecordingSeconds(0);
-    startCamera(facingMode);
+    startCamera(facingMode, false);
   };
 
   const getActiveVideoDur = () => {
     const vDur = previewVideoRef.current?.duration;
     if (Number.isFinite(vDur) && vDur > 0) return vDur;
+    if (Number.isFinite(videoTrueDuration) && videoTrueDuration > 0) return videoTrueDuration;
     if (Number.isFinite(previewMedia?.duration) && previewMedia.duration > 0) return previewMedia.duration;
     return 1;
+  };
+
+  const formatTrimTime = (totalSec) => {
+    const validSec = Number.isFinite(totalSec) && totalSec >= 0 ? Math.floor(totalSec) : 0;
+    const m = Math.floor(validSec / 60);
+    const s = Math.floor(validSec % 60);
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
   // Video Duration Trimming Handle Drag with zero latency
@@ -368,6 +489,7 @@ export function CameraCaptureModal({
     e.stopPropagation();
     e.preventDefault();
     if (!trimmerTrackRef.current) return;
+    setActiveTrimHandle(handleType);
     const trackRect = trimmerTrackRef.current.getBoundingClientRect();
     const dur = getActiveVideoDur();
 
@@ -375,25 +497,26 @@ export function CameraCaptureModal({
       const clientX = ev.clientX;
       const ratio = Math.max(0, Math.min(1, (clientX - trackRect.left) / trackRect.width));
       if (handleType === "start") {
-        setTrimStart((prevStart) => {
-          const nextStart = Math.min(ratio, trimEnd - 0.05);
+        setTrimStart(() => {
+          const nextStart = Math.max(0, Math.min(ratio, trimEnd - 0.05));
           if (previewVideoRef.current && Number.isFinite(nextStart * dur)) {
             previewVideoRef.current.currentTime = nextStart * dur;
           }
-          return Math.max(0, nextStart);
+          return nextStart;
         });
       } else {
-        setTrimEnd((prevEnd) => {
-          const nextEnd = Math.max(ratio, trimStart + 0.05);
+        setTrimEnd(() => {
+          const nextEnd = Math.min(1, Math.max(ratio, trimStart + 0.05));
           if (previewVideoRef.current && Number.isFinite(nextEnd * dur)) {
             previewVideoRef.current.currentTime = nextEnd * dur;
           }
-          return Math.min(1, nextEnd);
+          return nextEnd;
         });
       }
     };
 
     const onPointerUp = () => {
+      setActiveTrimHandle(null);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
     };
@@ -425,29 +548,54 @@ export function CameraCaptureModal({
     let finalUrl = previewMedia.url;
     let trimFragment = "";
 
-    if (previewMedia.type === "photo" && (photoRotation !== 0 || isCropping) && previewMedia.url) {
+    const hasCustomCrop =
+      cropRect.left > 0.005 ||
+      cropRect.top > 0.005 ||
+      cropRect.right < 0.995 ||
+      cropRect.bottom < 0.995;
+
+    if (previewMedia.type === "photo" && (photoRotation !== 0 || hasCustomCrop) && previewMedia.url) {
       try {
         const baked = await new Promise((resolve) => {
           const img = new window.Image();
           img.onload = () => {
             const srcW = img.naturalWidth || 640;
             const srcH = img.naturalHeight || 480;
-            const cropFactor = isCropping ? 0.82 : 1;
-            const cropW = Math.round(srcW * cropFactor);
-            const cropH = Math.round(srcH * cropFactor);
-            const cropX = Math.round((srcW - cropW) / 2);
-            const cropY = Math.round((srcH - cropH) / 2);
+
+            // 1. Rotate source onto an intermediate canvas matching the 3:4 preview viewport
+            const vpRect = previewViewportRef.current?.getBoundingClientRect();
+            const vpW = Math.round(vpRect?.width || 360) * 2;
+            const vpH = Math.round(vpRect?.height || 480) * 2;
+            const stageCanvas = document.createElement("canvas");
+            stageCanvas.width = vpW;
+            stageCanvas.height = vpH;
+            const stageCtx = stageCanvas.getContext("2d");
 
             const rad = ((photoRotation % 360) * Math.PI) / 180;
-            const swapDims = photoRotation % 180 !== 0;
-            const canvas = document.createElement("canvas");
-            canvas.width = swapDims ? cropH : cropW;
-            canvas.height = swapDims ? cropW : cropH;
-            const ctx = canvas.getContext("2d");
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate(rad);
-            ctx.drawImage(img, cropX, cropY, cropW, cropH, -cropW / 2, -cropH / 2, cropW, cropH);
-            canvas.toBlob(
+            stageCtx.save();
+            stageCtx.translate(vpW / 2, vpH / 2);
+            stageCtx.rotate(rad);
+
+            // Replicate CSS object-cover inside the viewport
+            const scale = Math.max(vpW / srcW, vpH / srcH);
+            const drawW = srcW * scale;
+            const drawH = srcH * scale;
+            stageCtx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+            stageCtx.restore();
+
+            // 2. Extract exact user-dragged cropRect from the stage canvas
+            const cropX = Math.round(vpW * cropRect.left);
+            const cropY = Math.round(vpH * cropRect.top);
+            const cropW = Math.max(32, Math.round(vpW * (cropRect.right - cropRect.left)));
+            const cropH = Math.max(32, Math.round(vpH * (cropRect.bottom - cropRect.top)));
+
+            const outCanvas = document.createElement("canvas");
+            outCanvas.width = cropW;
+            outCanvas.height = cropH;
+            const outCtx = outCanvas.getContext("2d");
+            outCtx.drawImage(stageCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+            outCanvas.toBlob(
               (b) => {
                 if (b) {
                   resolve({ blob: b, url: URL.createObjectURL(b) });
@@ -536,16 +684,17 @@ export function CameraCaptureModal({
             <div className="relative w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
               {previewMedia ? (
                 // Clean photo/video preview box
-                <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-                  {/* Rotating Photo / Video Layer: Dims when cropping mode is active */}
+                <div
+                  ref={previewViewportRef}
+                  className="relative w-full h-full flex items-center justify-center overflow-hidden"
+                >
+                  {/* Rotating Photo / Video Layer: Always 100% bright inside the crop area */}
                   <div
                     style={{
                       transform: `rotate(${photoRotation}deg)`,
                       transition: "transform 0.25s ease-out",
                     }}
-                    className={`w-full h-full flex items-center justify-center transition-all duration-200 ${
-                      isCropping ? "opacity-55 brightness-75 contrast-90" : "opacity-100"
-                    }`}
+                    className="w-full h-full flex items-center justify-center transition-all duration-200 opacity-100"
                   >
                     {previewMedia.type === "video" ? (
                       <video
@@ -555,9 +704,21 @@ export function CameraCaptureModal({
                         loop
                         playsInline
                         onLoadedMetadata={(e) => {
-                          if (e.currentTarget.duration && Number.isFinite(e.currentTarget.duration) && e.currentTarget.duration > 0) {
-                            const realDur = Math.round(e.currentTarget.duration);
-                            setPreviewMedia((prev) => prev ? { ...prev, duration: realDur } : prev);
+                          const v = e.currentTarget;
+                          if (v.duration === Infinity) {
+                            v.currentTime = 1e101;
+                            const handleDurationFix = () => {
+                              v.removeEventListener("timeupdate", handleDurationFix);
+                              if (Number.isFinite(v.duration) && v.duration > 0) {
+                                setVideoTrueDuration(v.duration);
+                              }
+                              try {
+                                v.currentTime = 0;
+                              } catch {}
+                            };
+                            v.addEventListener("timeupdate", handleDurationFix);
+                          } else if (v.duration && Number.isFinite(v.duration) && v.duration > 0) {
+                            setVideoTrueDuration(v.duration);
                           }
                         }}
                         onTimeUpdate={handlePreviewVideoTimeUpdate}
@@ -573,51 +734,121 @@ export function CameraCaptureModal({
                     )}
                   </div>
 
-                  {/* 3x3 Cropping Grid Overlay:
-                      - Utuh se-box penuh sampai ke atas footer shadow (inset-0)
-                      - Beroperasi di layer independen (tidak ikut berputar saat foto di-rotate)
-                      - Dua sisi atas tebal: round bevel (rounded-tl-2xl, rounded-tr-2xl)
-                      - Dua sisi bawah tebal: sharp edge (rounded-none)
-                      - Hitam di light mode, Putih di dark mode */}
+                  {/* Interactive 3x3 Cropping Grid Overlay:
+                      - Does NOT dim the image when uncropped (utuh 0..1)
+                      - Only dims the outer regions outside cropRect when dragged inward
+                      - Draggable corners, edges, and interior pan */}
                   {isCropping && (
-                    <div className="absolute inset-0 pointer-events-none z-10 animate-fade-in">
-                      {/* Grid Lines */}
-                      <div className="w-full h-full border border-white/30 grid grid-cols-3 grid-rows-3">
-                        <div className="border-r border-b border-white/20" />
-                        <div className="border-r border-b border-white/20" />
-                        <div className="border-b border-white/20" />
-                        <div className="border-r border-b border-white/20" />
-                        <div className="border-r border-b border-white/20" />
-                        <div className="border-b border-white/20" />
-                        <div className="border-r border-b border-white/20" />
-                        <div className="border-r border-b border-white/20" />
-                        <div />
-                      </div>
+                    <div className="absolute inset-0 z-15 pointer-events-none select-none touch-none">
+                      {/* 4 Outer Mask Strips (Only visible when cropped inward; 0% size when full frame) */}
+                      <div
+                        style={{
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: `${cropRect.top * 100}%`,
+                        }}
+                        className="absolute bg-black/55 pointer-events-none"
+                      />
+                      <div
+                        style={{
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: `${(1 - cropRect.bottom) * 100}%`,
+                        }}
+                        className="absolute bg-black/55 pointer-events-none"
+                      />
+                      <div
+                        style={{
+                          top: `${cropRect.top * 100}%`,
+                          height: `${(cropRect.bottom - cropRect.top) * 100}%`,
+                          left: 0,
+                          width: `${cropRect.left * 100}%`,
+                        }}
+                        className="absolute bg-black/55 pointer-events-none"
+                      />
+                      <div
+                        style={{
+                          top: `${cropRect.top * 100}%`,
+                          height: `${(cropRect.bottom - cropRect.top) * 100}%`,
+                          right: 0,
+                          width: `${(1 - cropRect.right) * 100}%`,
+                        }}
+                        className="absolute bg-black/55 pointer-events-none"
+                      />
 
-                      {/* Top-Left: Round Bevel */}
+                      {/* Interactive Crop Box */}
                       <div
-                        className={`absolute top-0 left-0 w-6 h-6 border-t-[4px] border-l-[4px] rounded-tl-2xl ${
-                          isMapDark ? "border-white" : "border-black"
-                        }`}
-                      />
-                      {/* Top-Right: Round Bevel */}
-                      <div
-                        className={`absolute top-0 right-0 w-6 h-6 border-t-[4px] border-r-[4px] rounded-tr-2xl ${
-                          isMapDark ? "border-white" : "border-black"
-                        }`}
-                      />
-                      {/* Bottom-Left: Sharp Edge */}
-                      <div
-                        className={`absolute bottom-0 left-0 w-6 h-6 border-b-[4px] border-l-[4px] rounded-none ${
-                          isMapDark ? "border-white" : "border-black"
-                        }`}
-                      />
-                      {/* Bottom-Right: Sharp Edge */}
-                      <div
-                        className={`absolute bottom-0 right-0 w-6 h-6 border-b-[4px] border-r-[4px] rounded-none ${
-                          isMapDark ? "border-white" : "border-black"
-                        }`}
-                      />
+                        onPointerDown={(e) => handleCropPointerDown(e, "move")}
+                        style={{
+                          left: `${cropRect.left * 100}%`,
+                          top: `${cropRect.top * 100}%`,
+                          width: `${(cropRect.right - cropRect.left) * 100}%`,
+                          height: `${(cropRect.bottom - cropRect.top) * 100}%`,
+                        }}
+                        className="absolute pointer-events-auto cursor-move touch-none"
+                      >
+                        {/* 3x3 Grid Lines */}
+                        <div className="w-full h-full border border-white/45 grid grid-cols-3 grid-rows-3 pointer-events-none">
+                          <div className="border-r border-b border-white/30" />
+                          <div className="border-r border-b border-white/30" />
+                          <div className="border-b border-white/30" />
+                          <div className="border-r border-b border-white/30" />
+                          <div className="border-r border-b border-white/30" />
+                          <div className="border-b border-white/30" />
+                          <div className="border-r border-b border-white/30" />
+                          <div className="border-r border-b border-white/30" />
+                          <div />
+                        </div>
+
+                        {/* Edge Drag Handles (N, S, W, E) */}
+                        <div
+                          onPointerDown={(e) => handleCropPointerDown(e, "n")}
+                          className="absolute -top-2 left-6 right-6 h-4 cursor-ns-resize z-20"
+                        />
+                        <div
+                          onPointerDown={(e) => handleCropPointerDown(e, "s")}
+                          className="absolute -bottom-2 left-6 right-6 h-4 cursor-ns-resize z-20"
+                        />
+                        <div
+                          onPointerDown={(e) => handleCropPointerDown(e, "w")}
+                          className="absolute top-6 bottom-6 -left-2 w-4 cursor-ew-resize z-20"
+                        />
+                        <div
+                          onPointerDown={(e) => handleCropPointerDown(e, "e")}
+                          className="absolute top-6 bottom-6 -right-2 w-4 cursor-ew-resize z-20"
+                        />
+
+                        {/* Top-Left Corner Bracket & Drag Handle: Round Bevel */}
+                        <div
+                          onPointerDown={(e) => handleCropPointerDown(e, "nw")}
+                          className={`absolute top-0 left-0 w-7 h-7 border-t-[4px] border-l-[4px] cursor-nwse-resize z-30 ${
+                            cropRect.top < 0.02 && cropRect.left < 0.02 ? "rounded-tl-2xl" : "rounded-tl-md"
+                          } ${isMapDark ? "border-white" : "border-black"}`}
+                        />
+                        {/* Top-Right Corner Bracket & Drag Handle: Round Bevel */}
+                        <div
+                          onPointerDown={(e) => handleCropPointerDown(e, "ne")}
+                          className={`absolute top-0 right-0 w-7 h-7 border-t-[4px] border-r-[4px] cursor-nesw-resize z-30 ${
+                            cropRect.top < 0.02 && cropRect.right > 0.98 ? "rounded-tr-2xl" : "rounded-tr-md"
+                          } ${isMapDark ? "border-white" : "border-black"}`}
+                        />
+                        {/* Bottom-Left Corner Bracket & Drag Handle: Sharp Edge */}
+                        <div
+                          onPointerDown={(e) => handleCropPointerDown(e, "sw")}
+                          className={`absolute bottom-0 left-0 w-7 h-7 border-b-[4px] border-l-[4px] rounded-none cursor-nesw-resize z-30 ${
+                            isMapDark ? "border-white" : "border-black"
+                          }`}
+                        />
+                        {/* Bottom-Right Corner Bracket & Drag Handle: Sharp Edge */}
+                        <div
+                          onPointerDown={(e) => handleCropPointerDown(e, "se")}
+                          className={`absolute bottom-0 right-0 w-7 h-7 border-b-[4px] border-r-[4px] rounded-none cursor-nwse-resize z-30 ${
+                            isMapDark ? "border-white" : "border-black"
+                          }`}
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -629,6 +860,27 @@ export function CameraCaptureModal({
                         ref={trimmerTrackRef}
                         className="relative w-full h-5 flex items-center cursor-pointer select-none touch-none"
                       >
+                        {/* White Outer Box Time Mark Badge (consistent with Picture 3 font & style) */}
+                        {(() => {
+                          const dur = getActiveVideoDur();
+                          const showStartBadge = activeTrimHandle === "start" || (!activeTrimHandle && trimStart > 0.005);
+                          const showEndBadge = activeTrimHandle === "end" || (!activeTrimHandle && trimStart <= 0.005);
+                          const badgeRatio = showStartBadge ? trimStart : trimEnd;
+                          const badgeSeconds = badgeRatio * dur;
+                          const clampedPercent = Math.min(92, Math.max(8, badgeRatio * 100));
+                          return (
+                            <div
+                              style={{
+                                left: `${clampedPercent}%`,
+                                transform: "translateX(-50%)",
+                              }}
+                              className="absolute -top-6 px-2 py-0.5 rounded-md bg-white border border-black text-black font-sans font-medium text-[10px] leading-none shadow-sm select-none pointer-events-none whitespace-nowrap z-30"
+                            >
+                              {formatTrimTime(badgeSeconds)}
+                            </div>
+                          );
+                        })()}
+
                         {/* Base Full Track Bar */}
                         <div className="relative w-full h-[2.5px] rounded-full overflow-hidden bg-black/50 backdrop-blur-sm">
                           {/* Dimmed Left Segment (Outside boundary) */}
@@ -662,7 +914,7 @@ export function CameraCaptureModal({
                           style={{
                             left: `${trimStart * 100}%`,
                           }}
-                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-5 flex items-center justify-center cursor-ew-resize z-10"
+                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-6 flex items-center justify-center cursor-ew-resize z-10"
                           title="Batas awal"
                         >
                           <span className="w-[3px] h-4 bg-white rounded-full block shadow-md hover:scale-110 active:scale-95 transition-transform" />
@@ -674,7 +926,7 @@ export function CameraCaptureModal({
                           style={{
                             left: `${trimEnd * 100}%`,
                           }}
-                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-5 flex items-center justify-center cursor-ew-resize z-10"
+                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-6 flex items-center justify-center cursor-ew-resize z-10"
                           title="Batas akhir"
                         >
                           <span className="w-[3px] h-4 bg-white rounded-full block shadow-md hover:scale-110 active:scale-95 transition-transform" />
@@ -809,7 +1061,9 @@ export function CameraCaptureModal({
                     type="button"
                     onPointerDown={handleShutterPointerDown}
                     onPointerUp={handleShutterPointerUp}
-                    onPointerCancel={handleShutterPointerUp}
+                    onLostPointerCapture={handleShutterPointerUp}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onDragStart={(e) => e.preventDefault()}
                     title="Ketuk untuk Foto, Tahan untuk Video"
                     className="relative w-[52px] h-[52px] flex items-center justify-center p-1 cursor-pointer select-none transition-transform active:scale-95 touch-none"
                   >

@@ -202,8 +202,19 @@ export function KalceriansPanel({
   const listContainerRef = useRef(null);
   const chatTransitionTimerRef = useRef(null);
   const incomingCallRef = useRef(null);
+  const handledCallIdsRef = useRef(new Set());
   const suspendedChatUserRef = useRef(null);
+  const sidebarKalceriansRef = useRef(sidebarKalcerians);
+  const mapUsersDataRef = useRef(mapUsersData);
+  const activeChatUserIdRef = useRef(activeChatUserId);
+  const activeChatUserSnapshotRef = useRef(activeChatUserSnapshot);
+  const incomingCallInitialStateRef = useRef(incomingCallInitialState);
   incomingCallRef.current = incomingCall;
+  sidebarKalceriansRef.current = sidebarKalcerians;
+  mapUsersDataRef.current = mapUsersData;
+  activeChatUserIdRef.current = activeChatUserId;
+  activeChatUserSnapshotRef.current = activeChatUserSnapshot;
+  incomingCallInitialStateRef.current = incomingCallInitialState;
 
   // Poll for incoming call signals across devices (event-driven, offline-capable)
   useEffect(() => {
@@ -218,13 +229,16 @@ export function KalceriansPanel({
 
         for (const sig of signals) {
           if (sig.signalType === "offer") {
+            if (sig.callId && handledCallIdsRef.current.has(sig.callId)) continue;
             // New incoming call offer from another user
             if (!incomingCallRef.current || incomingCallRef.current.callId !== sig.callId) {
+              const currentSidebar = sidebarKalceriansRef.current || [];
+              const currentMapUsers = mapUsersDataRef.current || [];
               const caller =
-                sidebarKalcerians.find(
+                currentSidebar.find(
                   (u) => String(u.id || u.nickname) === String(sig.fromUserId)
                 ) ||
-                (mapUsersData || []).find(
+                currentMapUsers.find(
                   (u) => String(u.id || u.nickname) === String(sig.fromUserId)
                 ) || {
                   id: sig.fromUserId,
@@ -233,11 +247,11 @@ export function KalceriansPanel({
                 };
 
               // If chat box is currently open, suspend it and slide it down
-              if (activeChatUserId) {
+              if (activeChatUserIdRef.current) {
                 const currentChatUser =
-                  sidebarKalcerians.find(
-                    (u) => String(u.id || u.nickname || u.name) === String(activeChatUserId)
-                  ) || activeChatUserSnapshot;
+                  currentSidebar.find(
+                    (u) => String(u.id || u.nickname || u.name) === String(activeChatUserIdRef.current)
+                  ) || activeChatUserSnapshotRef.current;
                 if (currentChatUser) {
                   suspendedChatUserRef.current = currentChatUser;
                 }
@@ -272,9 +286,11 @@ export function KalceriansPanel({
               }
             }
           } else if (sig.signalType === "hangup") {
+            if (sig.callId) handledCallIdsRef.current.add(sig.callId);
             if (incomingCallRef.current && incomingCallRef.current.callId === sig.callId) {
               stopCallRingtone();
               setIncomingCall(null);
+              fetchCallSignals({ clear: "true" }).catch(() => {});
               // Gracefully return to state 0 if caller canceled
               if (suspendedChatUserRef.current) {
                 const prevUser = suspendedChatUserRef.current;
@@ -292,15 +308,17 @@ export function KalceriansPanel({
     return () => {
       active = false;
       clearInterval(interval);
-      stopCallRingtone();
     };
-  }, [currentUser, sidebarKalcerians, mapUsersData, activeChatUserId, activeChatUserSnapshot]);
+  }, [currentUser?.id]);
 
   const handleAcceptIncomingCall = (call) => {
     stopCallRingtone();
     const callData = call || incomingCall;
     if (!callData) return;
 
+    if (callData.callId) {
+      handledCallIdsRef.current.add(callData.callId);
+    }
     suspendedChatUserRef.current = null;
     const caller = callData.callerUser;
     setIncomingCallInitialState({
@@ -316,6 +334,9 @@ export function KalceriansPanel({
 
   const handleDeclineIncomingCall = () => {
     stopCallRingtone();
+    if (incomingCall?.callId) {
+      handledCallIdsRef.current.add(incomingCall.callId);
+    }
     if (incomingCall?.fromUserId) {
       postCallSignal(incomingCall.fromUserId, {
         callId: incomingCall.callId,
@@ -324,6 +345,7 @@ export function KalceriansPanel({
         nonce: generateCryptoNonce(),
       }).catch(() => {});
     }
+    fetchCallSignals({ clear: "true" }).catch(() => {});
     setIncomingCall(null);
 
     // Return gracefully to State 0:
@@ -455,6 +477,7 @@ export function KalceriansPanel({
               isFavourite={favouriteUserIds.includes(String(activeChatUser.id))}
               isMuted={mutedUserIds.includes(String(activeChatUser.id))}
               initialCallState={incomingCallInitialState}
+              onCallEnded={() => setIncomingCallInitialState(null)}
               onToggleFavourite={onToggleFavourite}
               onToggleMute={onToggleMute}
               onCloseChat={() => {

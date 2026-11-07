@@ -11,6 +11,11 @@ import {
   deletePersonalChatMessages,
   uploadBlobMedia,
 } from "@/lib/api";
+import {
+  savePendingMediaBlob,
+  getPendingMediaBlob,
+  deletePendingMediaBlob,
+} from "@/lib/chatMediaStore";
 
 const LOCAL_CHAT_CACHE_PREFIX = "kalceria_e2ee_chat_v4_";
 
@@ -160,6 +165,7 @@ export function usePersonalChatState({
   currentUser,
   onOutgoingMessageUpdate,
   initialCallState = null,
+  onCallEnded,
 }) {
   const myId = String(currentUser?.id || "me");
   const targetId = String(activeChatUser?.id || "");
@@ -243,6 +249,12 @@ export function usePersonalChatState({
   const menuContainerRef = useRef(null);
   const autoReplyTimerRef = useRef(null);
   const pendingBlobsRef = useRef(new Map());
+  const activeChatUserRef = useRef(activeChatUser);
+  const onOutgoingMessageUpdateRef = useRef(onOutgoingMessageUpdate);
+  const onCallEndedRef = useRef(onCallEnded);
+  activeChatUserRef.current = activeChatUser;
+  onOutgoingMessageUpdateRef.current = onOutgoingMessageUpdate;
+  onCallEndedRef.current = onCallEnded;
 
   const storageKey = `${LOCAL_CHAT_CACHE_PREFIX}${[myId, targetId].sort().join("_")}`;
 
@@ -262,7 +274,7 @@ export function usePersonalChatState({
   useEffect(() => {
     if (!targetId) return;
     let alive = true;
-    const isAhmad = isAhmadDummyUser(activeChatUser);
+    const isAhmad = isAhmadDummyUser(activeChatUserRef.current);
 
     // Clean up legacy v1/v2/v3 cache keys that stored stale fake seed messages or dead blob: URLs
     try {
@@ -350,7 +362,7 @@ export function usePersonalChatState({
       }
 
       if (!localMsgs.length) {
-        localMsgs = getInitialSeedMessages(activeChatUser, myId);
+        localMsgs = getInitialSeedMessages(activeChatUserRef.current, myId);
       }
 
       if (alive) {
@@ -376,7 +388,7 @@ export function usePersonalChatState({
 
     // Poll every 5s while chat panel is open so incoming messages & peer read receipts update in real time
     const syncInterval = setInterval(() => {
-      if (alive && !isAhmadDummyUser(activeChatUser) && !String(targetId).startsWith("mock_")) {
+      if (alive && !isAhmadDummyUser(activeChatUserRef.current) && !String(targetId).startsWith("mock_")) {
         syncFromRemote();
       }
     }, 5000);
@@ -386,7 +398,7 @@ export function usePersonalChatState({
       clearInterval(syncInterval);
       if (autoReplyTimerRef.current) clearTimeout(autoReplyTimerRef.current);
     };
-  }, [targetId, myId, storageKey, activeChatUser, persistQuickLocal]);
+  }, [targetId, myId, storageKey, persistQuickLocal]);
 
   // Cursor pagination for older messages from Cold Archive
   const loadOlderMessages = useCallback(async () => {
@@ -506,6 +518,7 @@ export function usePersonalChatState({
       const msgId = initialEnvelope.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       if (rawBlob) {
         pendingBlobsRef.current.set(msgId, { blob: rawBlob, trimFragment });
+        savePendingMediaBlob(msgId, rawBlob, { trimFragment }).catch(() => {});
       }
 
       const newMsg = {
@@ -535,7 +548,7 @@ export function usePersonalChatState({
         return next;
       });
 
-      onOutgoingMessageUpdate?.(
+      onOutgoingMessageUpdateRef.current?.(
         targetId,
         text ||
           (msgType === "call"
@@ -583,10 +596,11 @@ export function usePersonalChatState({
           )
         : initialEnvelope;
 
-      if (isAhmadDummyUser(activeChatUser) || String(targetId).startsWith("mock_")) {
+      if (isAhmadDummyUser(activeChatUserRef.current) || String(targetId).startsWith("mock_")) {
         // Instant local simulation for dummy / Ahmad users
         setTimeout(() => {
           pendingBlobsRef.current.delete(msgId);
+          deletePendingMediaBlob(msgId).catch(() => {});
           setMessages((prev) => {
             const next = prev.map((m) =>
               m.id === msgId ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: "sent" } : m
@@ -622,6 +636,7 @@ export function usePersonalChatState({
           .then(() => {
             clearTimeout(timeoutTimer);
             pendingBlobsRef.current.delete(msgId);
+            deletePendingMediaBlob(msgId).catch(() => {});
             if (!isTimedOut) {
               setMessages((prev) => {
                 const next = prev.map((m) =>
@@ -647,7 +662,7 @@ export function usePersonalChatState({
       }
 
       // If chatting with dummy user Ahmad Bintaro, simulate realistic E2EE reply
-      if (isAhmadDummyUser(activeChatUser)) {
+      if (isAhmadDummyUser(activeChatUserRef.current)) {
         if (autoReplyTimerRef.current) clearTimeout(autoReplyTimerRef.current);
         setIsPeerTyping(true);
         autoReplyTimerRef.current = setTimeout(async () => {
@@ -694,7 +709,7 @@ export function usePersonalChatState({
         }, 1500);
       }
     },
-    [myId, targetId, activeChatUser, persistEncryptedLocal, onOutgoingMessageUpdate]
+    [myId, targetId, persistQuickLocal, persistEncryptedLocal]
   );
 
   const handleSendText = async (e) => {
@@ -943,6 +958,7 @@ export function usePersonalChatState({
   const handleCallFinished = useCallback(
     async (summary) => {
       setCallState(null);
+      onCallEndedRef.current?.();
       if (summary && summary.mode) {
         await appendAndEncryptMessage({
           text: summary.mode === "video" ? "Video call" : "Voice call",
@@ -964,7 +980,7 @@ export function usePersonalChatState({
         return next;
       });
 
-      if (isAhmadDummyUser(activeChatUser) || String(targetId).startsWith("mock_")) {
+      if (isAhmadDummyUser(activeChatUserRef.current) || String(targetId).startsWith("mock_")) {
         setTimeout(() => {
           setMessages((prev) => {
             const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "sent" } : m));
@@ -976,7 +992,14 @@ export function usePersonalChatState({
       }
 
       let mediaUrlToSend = failedMsg.mediaUrl;
-      const pendingMedia = pendingBlobsRef.current.get(failedMsg.id);
+      let pendingMedia = pendingBlobsRef.current.get(failedMsg.id);
+      if (!pendingMedia?.blob) {
+        const stored = await getPendingMediaBlob(failedMsg.id);
+        if (stored?.blob) {
+          pendingMedia = stored;
+          pendingBlobsRef.current.set(failedMsg.id, stored);
+        }
+      }
       if (pendingMedia?.blob && (!mediaUrlToSend || String(mediaUrlToSend).startsWith("blob:"))) {
         const uploadedUrl = await uploadMediaWithPersistFallback(pendingMedia.blob);
         if (!uploadedUrl) {
@@ -1021,6 +1044,7 @@ export function usePersonalChatState({
       })
         .then(() => {
           pendingBlobsRef.current.delete(failedMsg.id);
+          deletePendingMediaBlob(failedMsg.id).catch(() => {});
           setMessages((prev) => {
             const next = prev.map((m) =>
               m.id === failedMsg.id
@@ -1045,7 +1069,7 @@ export function usePersonalChatState({
           });
         });
     },
-    [myId, targetId, activeChatUser, persistQuickLocal, persistEncryptedLocal]
+    [myId, targetId, persistQuickLocal, persistEncryptedLocal]
   );
 
   return {

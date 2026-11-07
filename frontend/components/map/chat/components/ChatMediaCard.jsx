@@ -434,15 +434,14 @@ export function ChatMediaCard({
                 onPointerDown={handleScrubberPointerDown}
                 className="absolute inset-x-2 bottom-2 z-30 h-5 flex items-center cursor-pointer select-none"
               >
-                {/* Tooltip Timestamp Badge during scrub: NO outer box, bold white text for both light and dark modes */}
+                {/* Tooltip Timestamp Badge during scrub: White outer box with black border and consistent font */}
                 {isScrubbing && (
                   <div
                     style={{
-                      left: `${videoProgress * 100}%`,
+                      left: `${Math.min(88, Math.max(12, videoProgress * 100))}%`,
                       transform: "translateX(-50%)",
-                      fontFamily: "Arial, sans-serif",
                     }}
-                    className="absolute -top-5 text-white text-[9px] font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] leading-none select-none pointer-events-none"
+                    className="absolute -top-6 px-1.5 py-0.5 rounded-md bg-white border border-black text-black font-sans font-medium text-[9.5px] leading-none shadow-sm select-none pointer-events-none whitespace-nowrap z-30"
                   >
                     {formatMinSec(scrubSeconds)}
                   </div>

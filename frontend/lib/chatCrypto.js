@@ -2,6 +2,16 @@
 
 const KEY_CACHE = new Map();
 
+function getWebCrypto() {
+  if (typeof globalThis !== "undefined" && globalThis.crypto?.subtle) {
+    return globalThis.crypto;
+  }
+  if (typeof window !== "undefined" && window.crypto?.subtle) {
+    return window.crypto;
+  }
+  return null;
+}
+
 function bytesToBase64(bytes) {
   let binary = "";
   const len = bytes.byteLength;
@@ -28,18 +38,20 @@ function bytesToHex(bytes) {
 }
 
 export function generateCryptoNonce() {
-  if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
+  const wc = getWebCrypto();
+  if (wc?.getRandomValues) {
     const arr = new Uint8Array(16);
-    window.crypto.getRandomValues(arr);
+    wc.getRandomValues(arr);
     return bytesToHex(arr);
   }
   return `nc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 14)}`;
 }
 
 async function sha256Hex(input) {
-  if (typeof window !== "undefined" && window.crypto?.subtle) {
+  const wc = getWebCrypto();
+  if (wc?.subtle) {
     const encoded = new TextEncoder().encode(input);
-    const hashBuf = await window.crypto.subtle.digest("SHA-256", encoded);
+    const hashBuf = await wc.subtle.digest("SHA-256", encoded);
     return bytesToHex(new Uint8Array(hashBuf));
   }
   let hash = 0;
@@ -57,12 +69,13 @@ async function deriveConversationKey(userA, userB) {
     return KEY_CACHE.get(pairId);
   }
 
-  if (typeof window === "undefined" || !window.crypto?.subtle) {
+  const wc = getWebCrypto();
+  if (!wc?.subtle) {
     return null;
   }
 
   const encoder = new TextEncoder();
-  const keyMaterial = await window.crypto.subtle.importKey(
+  const keyMaterial = await wc.subtle.importKey(
     "raw",
     encoder.encode(`kalceria_e2ee_v1::${pairId}`),
     { name: "PBKDF2" },
@@ -70,7 +83,7 @@ async function deriveConversationKey(userA, userB) {
     ["deriveKey"]
   );
 
-  const key = await window.crypto.subtle.deriveKey(
+  const key = await wc.subtle.deriveKey(
     {
       name: "PBKDF2",
       salt: encoder.encode(`kalceria_salt_v1::${sorted[0]}_${sorted[1]}`),
@@ -88,7 +101,7 @@ async function deriveConversationKey(userA, userB) {
 }
 
 export async function encryptChatPayload(payloadObj, userA, userB) {
-  const ts = Date.now();
+  const ts = Number(payloadObj.ts) || Date.now();
   const nonce = generateCryptoNonce();
   const id = payloadObj.id || `msg_${nonce.slice(0, 14)}`;
   const safeVoiceDuration = Number.isFinite(Number(payloadObj.voiceDuration)) && Number(payloadObj.voiceDuration) > 0
@@ -113,13 +126,14 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
     ts,
   });
 
-  if (typeof window !== "undefined" && window.crypto?.subtle) {
+  const wc = getWebCrypto();
+  if (wc?.subtle) {
     try {
       const key = await deriveConversationKey(userA, userB);
       const ivBytes = new Uint8Array(12);
-      window.crypto.getRandomValues(ivBytes);
+      wc.getRandomValues(ivBytes);
       const encoded = new TextEncoder().encode(rawJson);
-      const encryptedBuf = await window.crypto.subtle.encrypt(
+      const encryptedBuf = await wc.subtle.encrypt(
         { name: "AES-GCM", iv: ivBytes },
         key,
         encoded
@@ -187,12 +201,13 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
     return outerUrl || innerUrl || null;
   };
 
-  if (typeof window !== "undefined" && window.crypto?.subtle) {
+  const wc = getWebCrypto();
+  if (wc?.subtle) {
     try {
       const key = await deriveConversationKey(userA, userB);
       const ivBytes = base64ToBytes(iv);
       const cipherBytes = base64ToBytes(ciphertext);
-      const plainBuf = await window.crypto.subtle.decrypt(
+      const plainBuf = await wc.subtle.decrypt(
         { name: "AES-GCM", iv: ivBytes },
         key,
         cipherBytes

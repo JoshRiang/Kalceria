@@ -8,14 +8,19 @@ import { register, verifyOtp, completeRegistration } from '../controllers/authCo
 import {
   getPersonalChatMessages,
   sendPersonalChatMessage,
+  deletePersonalChatMessages,
   sendCallSignal,
   getCallSignals,
-  clearCallSignals,
 } from '../controllers/personalChatController.js';
+import {
+  encryptChatPayload,
+  decryptChatEnvelope,
+  generateSafetyCode,
+} from '../../frontend/lib/chatCrypto.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LOCAL CONFIGURATION: Two Devices (Laptop & HP Mobile) Simulation
-// Configurable local variables for bi-device testing with mic & camera capabilities
+// LOCAL CONFIGURATION: Two Devices (Laptop & HP Mobile) Real E2E Verification
+// No hardcoded fake ciphertexts — uses real WebCrypto AES-256-GCM + PBKDF2 + SHA-256
 // ═══════════════════════════════════════════════════════════════════════════════
 export const DEVICE_LAPTOP_CONFIG = {
   deviceName: 'Laptop (Device 1)',
@@ -41,14 +46,13 @@ export const DEVICE_HP_CONFIG = {
   },
 };
 
-// Helper: Setup mock Express response
 function createMockRes() {
-  const res = {
+  return {
     statusCode: 200,
     body: null,
     cookies: {},
     headers: {},
-    cookie(name, val, opts) {
+    cookie(name, val) {
       this.cookies[name] = val;
       return this;
     },
@@ -69,421 +73,600 @@ function createMockRes() {
       return this;
     },
   };
-  return res;
 }
 
-// Helper: Programmatically register and activate a test user
 async function setupTestUser(config) {
-  try {
-    const reqReg = {
-      body: {
-        name: config.name,
-        dob: '1998-05-12',
-        email: config.email,
-        phone: '0812' + Math.floor(10000000 + Math.random() * 90000000),
-        domicile: 'Jakarta Selatan',
-        password: config.password,
-      },
-    };
-    const resReg = createMockRes();
-    console.log(`[Test] Registering ${config.email}...`);
-    await register(reqReg, resReg, (e) => {
-      if (e) throw e;
-    });
-    console.log(`[Test] Register status: ${resReg.statusCode}`, resReg.body);
+  const reqReg = {
+    body: {
+      name: config.name,
+      dob: '1998-05-12',
+      email: config.email,
+      phone: '0812' + Math.floor(10000000 + Math.random() * 90000000),
+      domicile: 'Jakarta Selatan',
+      password: config.password,
+    },
+  };
+  const resReg = createMockRes();
+  await register(reqReg, resReg, (e) => {
+    if (e) throw e;
+  });
 
-    const otpKey = `otp:${config.email}`;
-    const otpCode = await redis.get(otpKey);
-    console.log(`[Test] OTP for ${config.email}: ${otpCode}`);
-    assert.ok(otpCode, `OTP must be generated in Redis for ${config.email}`);
+  const otpKey = `otp:${config.email}`;
+  const otpCode = await redis.get(otpKey);
+  assert.ok(otpCode, `OTP must be generated in Redis for ${config.email}`);
 
-    const reqVerify = { body: { email: config.email, otp: otpCode } };
-    const resVerify = createMockRes();
-    await verifyOtp(reqVerify, resVerify, (e) => {
-      if (e) throw e;
-    });
-    console.log(`[Test] Verify status: ${resVerify.statusCode}`, resVerify.body);
+  const reqVerify = { body: { email: config.email, otp: otpCode } };
+  const resVerify = createMockRes();
+  await verifyOtp(reqVerify, resVerify, (e) => {
+    if (e) throw e;
+  });
 
-    const reqComplete = {
-      body: { email: config.email, username: config.nickname },
-    };
-    const resComplete = createMockRes();
-    await completeRegistration(reqComplete, resComplete, (e) => {
-      if (e) throw e;
-    });
-    console.log(`[Test] Complete status: ${resComplete.statusCode}`, resComplete.body);
+  const reqComplete = {
+    body: { email: config.email, username: config.nickname },
+  };
+  const resComplete = createMockRes();
+  await completeRegistration(reqComplete, resComplete, (e) => {
+    if (e) throw e;
+  });
 
-    const user = await prisma.user.findUnique({
-      where: { email: config.email },
-    });
-    assert.ok(user, `User ${config.email} must exist in Prisma database`);
+  const user = await prisma.user.findUnique({
+    where: { email: config.email },
+  });
+  assert.ok(user, `User ${config.email} must exist in Prisma database`);
 
-    return {
-      ...config,
-      userId: user.id,
-      userObj: user,
-    };
-  } catch (err) {
-    console.error(`[Test] Error in setupTestUser for ${config.email}:`, err);
-    throw err;
-  }
+  return {
+    ...config,
+    userId: user.id,
+    userObj: user,
+  };
 }
 
-test('Vertical Slice: Two Users Bi-Device Chat, Voice Note Waveform, Media & Call Signaling', async () => {
-  console.log('\n[Bi-Device Test] Initializing two users on distinct virtual devices...');
-  console.log(`[Bi-Device Test] Device 1: ${DEVICE_LAPTOP_CONFIG.deviceName} (Mic: ${DEVICE_LAPTOP_CONFIG.hardware.mic}, Camera: ${DEVICE_LAPTOP_CONFIG.hardware.camera})`);
-  console.log(`[Bi-Device Test] Device 2: ${DEVICE_HP_CONFIG.deviceName} (Mic: ${DEVICE_HP_CONFIG.hardware.mic}, Camera: ${DEVICE_HP_CONFIG.hardware.camera})`);
-
+test('E2E Verification: Real AES-256-GCM Chat, Media Persistence, Tiered Redis/Postgres Self-Healing & Trickle-ICE WebRTC Call Signaling', async () => {
   let userA = null;
   let userB = null;
+  let sortedPair = null;
 
   try {
     userA = await setupTestUser(DEVICE_LAPTOP_CONFIG);
     userB = await setupTestUser(DEVICE_HP_CONFIG);
-    console.log(`[Bi-Device Test] User A (Laptop) ID: ${userA.userId}`);
-    console.log(`[Bi-Device Test] User B (HP) ID: ${userB.userId}`);
+    sortedPair = [String(userA.userId), String(userB.userId)].sort();
+
+    // Verify deterministic E2EE Safety Code matches on both devices
+    const safetyCodeA = await generateSafetyCode(userA.userId, userB.userId);
+    const safetyCodeB = await generateSafetyCode(userB.userId, userA.userId);
+    assert.equal(safetyCodeA, safetyCodeB, 'E2EE Safety Code must be identical on both devices');
+    assert.match(safetyCodeA, /^\d{5} \d{5} \d{5} \d{5}$/, 'Safety code must be 20 digits in 4 blocks');
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Acceptance Criteria 1: Voice Note with Dynamic Voice Waveform (Reading User Voice)
+    // 1. REAL AES-256-GCM Voice Note + Honest Read Receipts + Replay & Tamper Defense
     // ─────────────────────────────────────────────────────────────────────────────
-    console.log('\n[Bi-Device Test] Testing Voice Note with Real Voice Sampled Waveform...');
-    const simulatedSampledWaveform = [8, 14, 32, 68, 94, 86, 52, 22, 10, 8, 25, 70, 88, 45, 8];
-    const voiceDurationSec = 6;
-    const voiceNonce = `vn_${Date.now().toString(36)}_${crypto.randomBytes(8).toString('hex')}`;
-
-    const sendVnReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      params: { targetId: userB.userId },
-      body: {
-        id: `msg_vn_${Date.now()}`,
-        ciphertext: 'ENCRYPTED_VOICE_PAYLOAD_CIPHERTEXT',
-        iv: 'ENCRYPTED_IV_BASE64',
-        sig: 'ENCRYPTED_SIG_HEX',
-        nonce: voiceNonce,
+    const sampledWaveform = [8, 14, 32, 68, 94, 86, 52, 22, 10, 8, 25, 70, 88, 45, 8];
+    const voiceMediaUrl = '/api/blob/raw?url=https%3A%2F%2Fe4fpd2ehtpty3ad6.private.blob.vercel-storage.com%2Fevents%2Fvoice_real_test.webm';
+    const encryptedVn = await encryptChatPayload(
+      {
+        text: 'Voice message',
         msgType: 'voice',
-        mediaUrl: 'https://blob.kalceria.id/voice/sample_recorded_audio.webm',
-        voiceDuration: voiceDurationSec,
-        voiceWaveform: simulatedSampledWaveform,
-        ts: Date.now(),
+        mediaUrl: voiceMediaUrl,
+        voiceDuration: 7,
+        voiceWaveform: sampledWaveform,
       },
-    };
+      userA.userId,
+      userB.userId
+    );
+
+    assert.equal(encryptedVn.alg, 'AES-256-GCM');
+    assert.ok(encryptedVn.ciphertext && encryptedVn.ciphertext !== 'Voice message', 'Payload must be genuinely AES-256-GCM encrypted');
+    assert.ok(encryptedVn.iv && encryptedVn.sig && encryptedVn.nonce);
+
+    // Send Voice Note from User A (Laptop) to User B (HP)
     const sendVnRes = createMockRes();
-    await sendPersonalChatMessage(sendVnReq, sendVnRes, (e) => {
-      if (e) throw e;
-    });
-
-    assert.equal(sendVnRes.statusCode, 201, 'Voice note must be sent with 201 Created');
-    assert.equal(sendVnRes.body?.ok, true);
-    assert.deepEqual(
-      sendVnRes.body?.envelope?.voiceWaveform,
-      simulatedSampledWaveform,
-      'Waveform peaks must match recorded sample energy'
-    );
-    console.log('[Bi-Device Test] Voice Note successfully queued with dynamic waveform:', sendVnRes.body?.envelope?.voiceWaveform);
-
-    // User B receives the voice note
-    const getVnReq = {
-      user: { userId: userB.userId, id: userB.userId },
-      params: { targetId: userA.userId },
-      query: { limit: 10 },
-    };
-    const getVnRes = createMockRes();
-    await getPersonalChatMessages(getVnReq, getVnRes, (e) => {
-      if (e) throw e;
-    });
-
-    assert.equal(getVnRes.statusCode, 200);
-    const receivedVn = getVnRes.body?.messages?.find((m) => m.msgType === 'voice');
-    assert.ok(receivedVn, 'User B must receive the voice message');
-    assert.equal(receivedVn.voiceDuration, voiceDurationSec, 'Voice duration must match');
-    assert.deepEqual(receivedVn.voiceWaveform, simulatedSampledWaveform, 'Sampled waveform must match across devices');
-    console.log('[Bi-Device Test] User B received voice note with verified sampled waveform peaks.');
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Acceptance Criteria 2: Media Photo & Video Constraint (Max 1 Minute Video)
-    // ─────────────────────────────────────────────────────────────────────────────
-    console.log('\n[Bi-Device Test] Testing Media Constraints (Max 1 Minute Video)...');
-
-    // 2A: Valid Photo Media
-    const photoNonce = `photo_${Date.now().toString(36)}_${crypto.randomBytes(8).toString('hex')}`;
-    const sendPhotoReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      params: { targetId: userB.userId },
-      body: {
-        ciphertext: 'ENCRYPTED_PHOTO_PAYLOAD',
-        iv: 'IV_BASE64',
-        sig: 'SIG_HEX',
-        nonce: photoNonce,
-        msgType: 'media',
-        mediaUrl: 'https://blob.kalceria.id/events/car_meet.jpg',
-        ts: Date.now(),
+    await sendPersonalChatMessage(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: encryptedVn,
       },
+      sendVnRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(sendVnRes.statusCode, 201, 'Encrypted voice note must be persisted with 201 Created');
+    assert.equal(sendVnRes.body?.envelope?.status, 'sent', 'Newly sent message must start with status="sent"');
+
+    // Replay Attack Test: Sending the exact same nonce again MUST be rejected with 409 Conflict
+    const replayRes = createMockRes();
+    await sendPersonalChatMessage(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: encryptedVn,
+      },
+      replayRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(replayRes.statusCode, 409, 'Replay attack with duplicate nonce must be rejected with 409');
+
+    // Honest Read Receipt Check 1: When Sender (User A) fetches conversation before User B reads it,
+    // status MUST remain 'sent' (1 check mark), NOT spoofed as 'read'!
+    const senderFetchRes = createMockRes();
+    await getPersonalChatMessages(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        query: { limit: 10 },
+      },
+      senderFetchRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(senderFetchRes.statusCode, 200);
+    const vnSeenBySender = senderFetchRes.body?.messages?.find((m) => m.id === encryptedVn.id);
+    assert.ok(vnSeenBySender, 'Sender must see their sent voice note');
+    assert.equal(vnSeenBySender.status, 'sent', 'Status must stay "sent" when only the sender has fetched the chat');
+
+    // Honest Read Receipt Check 2: Now Recipient (User B on HP) fetches the conversation ->
+    // status MUST transition to 'read' AND decrypt cleanly with WebCrypto AES-256-GCM!
+    const recipientFetchRes = createMockRes();
+    await getPersonalChatMessages(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        query: { limit: 10 },
+      },
+      recipientFetchRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(recipientFetchRes.statusCode, 200);
+    const rawReceivedVn = recipientFetchRes.body?.messages?.find((m) => m.id === encryptedVn.id);
+    assert.ok(rawReceivedVn, 'Recipient User B must receive the voice note envelope');
+    assert.equal(rawReceivedVn.status, 'read', 'Status must transition to "read" once recipient User B fetches the chat');
+
+    const decryptedVn = await decryptChatEnvelope(rawReceivedVn, userB.userId, userA.userId);
+    assert.ok(decryptedVn, 'Recipient must decrypt AES-256-GCM envelope');
+    assert.equal(decryptedVn.verifiedE2EE, true);
+    assert.equal(decryptedVn.msgType, 'voice');
+    assert.equal(decryptedVn.mediaUrl, voiceMediaUrl);
+    assert.equal(decryptedVn.voiceDuration, 7);
+    assert.deepEqual(decryptedVn.voiceWaveform, sampledWaveform);
+
+    // Tamper Detection Check: Modifying ciphertext or signature MUST cause decryptChatEnvelope to return null
+    const tamperedEnvelope = {
+      ...rawReceivedVn,
+      sig: rawReceivedVn.sig.replace(/^./, rawReceivedVn.sig[0] === 'a' ? 'b' : 'a'),
     };
+    const tamperedResult = await decryptChatEnvelope(tamperedEnvelope, userB.userId, userA.userId);
+    assert.equal(tamperedResult, null, 'Tampered E2EE signature must be rejected by decryptChatEnvelope');
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 2. REAL Media Photo (View-Once) & Trimmed Video (#t=start,end) + >60s Rejection
+    // ─────────────────────────────────────────────────────────────────────────────
+    const photoUrl = '/api/blob/raw?url=https%3A%2F%2Fe4fpd2ehtpty3ad6.private.blob.vercel-storage.com%2Fevents%2Fcropped_photo.jpg';
+    const encryptedPhoto = await encryptChatPayload(
+      {
+        text: 'Cropped car meet shot',
+        msgType: 'media',
+        mediaUrl: photoUrl,
+        isViewOnce: true,
+      },
+      userA.userId,
+      userB.userId
+    );
     const sendPhotoRes = createMockRes();
-    await sendPersonalChatMessage(sendPhotoReq, sendPhotoRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(sendPhotoRes.statusCode, 201, 'Photo media must be accepted');
-    console.log('[Bi-Device Test] Photo media successfully accepted.');
-
-    // 2B: Video under 1 minute (45 seconds) -> MUST BE ACCEPTED
-    const validVideoNonce = `vid_valid_${Date.now().toString(36)}_${crypto.randomBytes(8).toString('hex')}`;
-    const sendValidVideoReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      params: { targetId: userB.userId },
-      body: {
-        ciphertext: 'ENCRYPTED_VALID_VIDEO_PAYLOAD',
-        iv: 'IV_BASE64',
-        sig: 'SIG_HEX',
-        nonce: validVideoNonce,
-        msgType: 'media',
-        mediaUrl: 'https://blob.kalceria.id/events/exhaust_clip_45s.mp4',
-        videoDuration: 45, // 45 seconds <= 60 seconds
-        ts: Date.now(),
+    await sendPersonalChatMessage(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: encryptedPhoto,
       },
-    };
-    const sendValidVideoRes = createMockRes();
-    await sendPersonalChatMessage(sendValidVideoReq, sendValidVideoRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(sendValidVideoRes.statusCode, 201, 'Video <= 60s must be accepted');
-    console.log('[Bi-Device Test] 45-second video successfully accepted.');
-
-    // 2C: Video exceeding 1 minute (75 seconds) -> MUST BE REJECTED WITH 400
-    const overVideoNonce = `vid_over_${Date.now().toString(36)}_${crypto.randomBytes(8).toString('hex')}`;
-    const sendOverVideoReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      params: { targetId: userB.userId },
-      body: {
-        ciphertext: 'ENCRYPTED_OVER_VIDEO_PAYLOAD',
-        iv: 'IV_BASE64',
-        sig: 'SIG_HEX',
-        nonce: overVideoNonce,
-        msgType: 'media',
-        mediaUrl: 'https://blob.kalceria.id/events/exhaust_clip_75s.mp4',
-        videoDuration: 75, // 75 seconds > 60 seconds!
-        ts: Date.now(),
-      },
-    };
-    const sendOverVideoRes = createMockRes();
-    await sendPersonalChatMessage(sendOverVideoReq, sendOverVideoRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(sendOverVideoRes.statusCode, 400, 'Video > 60s must be rejected with 400 Bad Request');
-    assert.match(
-      sendOverVideoRes.body?.error || '',
-      /1 menit/i,
-      'Error message must state 1 minute maximum'
+      sendPhotoRes,
+      (e) => {
+        if (e) throw e;
+      }
     );
-    console.log('[Bi-Device Test] 75-second video correctly rejected:', sendOverVideoRes.body?.error);
+    assert.equal(sendPhotoRes.statusCode, 201);
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Acceptance Criteria 3: Real Voice Call Across Two Devices (WebRTC Signaling)
-    // ─────────────────────────────────────────────────────────────────────────────
-    console.log('\n[Bi-Device Test] Testing Voice Call across two devices (Laptop -> Mobile HP)...');
-    const voiceCallId = `call_${Date.now()}_voice`;
-
-    // 3A: User A initiates Voice Call (Mic access)
-    const offerReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      params: { targetId: userB.userId },
-      body: {
-        callId: voiceCallId,
-        callMode: 'voice',
-        signalType: 'offer',
-        nonce: `nonce_offer_${Date.now()}`,
-        encryptedPayload: JSON.stringify({ sdp: 'MOCK_SDP_OFFER_VOICE', type: 'offer' }),
+    const videoTrimmedUrl = '/api/blob/raw?url=https%3A%2F%2Fe4fpd2ehtpty3ad6.private.blob.vercel-storage.com%2Fevents%2Fcapture.webm#t=1.25,8.75';
+    const encryptedVideo = await encryptChatPayload(
+      {
+        text: 'Trimmed exhaust clip',
+        msgType: 'video',
+        mediaUrl: videoTrimmedUrl,
+        videoDuration: 8,
+        isViewOnce: false,
       },
-    };
+      userA.userId,
+      userB.userId
+    );
+    const sendVideoRes = createMockRes();
+    await sendPersonalChatMessage(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: encryptedVideo,
+      },
+      sendVideoRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(sendVideoRes.statusCode, 201);
+
+    // Reject video > 60s
+    const overVideoEnv = await encryptChatPayload(
+      {
+        text: 'Too long video',
+        msgType: 'video',
+        mediaUrl: videoTrimmedUrl,
+        videoDuration: 75,
+      },
+      userA.userId,
+      userB.userId
+    );
+    const sendOverVideoRes = createMockRes();
+    await sendPersonalChatMessage(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: overVideoEnv,
+      },
+      sendOverVideoRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(sendOverVideoRes.statusCode, 400, 'Video > 60s must be rejected with 400');
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 3. Tiered Storage Stress Test: 55 Messages -> Hot Ring-Buffer (50) + Cold Overflow
+    //    + Simulated Redis Eviction + PostgreSQL Read-Through & Self-Healing + Cursor Pagination
+    // ─────────────────────────────────────────────────────────────────────────────
+    // We already sent 3 valid messages (1 voice, 1 photo, 1 video). Let's send 52 text messages = 55 total.
+    const convHash = crypto
+      .createHash('sha256')
+      .update(`kalceria_e2ee_conv:${sortedPair[0]}:${sortedPair[1]}`)
+      .digest('hex')
+      .slice(0, 40);
+    const hotKey = `chat:conv:${convHash}`;
+    const coldKey = `chat:cold:${convHash}`;
+
+    const baseLoopTs = Date.now() + 50;
+    for (let i = 1; i <= 52; i++) {
+      const sender = i % 2 === 0 ? userB.userId : userA.userId;
+      const recipient = i % 2 === 0 ? userA.userId : userB.userId;
+      const env = await encryptChatPayload(
+        {
+          text: `E2EE Scalability Message #${i}`,
+          msgType: 'text',
+          ts: baseLoopTs + i * 10,
+        },
+        sender,
+        recipient
+      );
+      const res = createMockRes();
+      await sendPersonalChatMessage(
+        {
+          user: { userId: sender, id: sender },
+          params: { targetId: recipient },
+          body: env,
+        },
+        res,
+        (e) => {
+          if (e) throw e;
+        }
+      );
+      assert.equal(res.statusCode, 201);
+    }
+
+    const hotCount = await redis.llen(hotKey);
+    const coldCount = await redis.llen(coldKey);
+    const pgCount = await prisma.personalChatMessage.count({
+      where: {
+        convHash,
+      },
+    });
+
+    assert.equal(hotCount, 50, 'Redis Hot Ring-Buffer must cap at exactly 50 messages');
+    assert.equal(coldCount, 5, 'Oldest 5 messages must overflow into Redis Cold Archive');
+    assert.equal(pgCount, 55, 'PostgreSQL durable store must retain all 55 messages');
+
+    // Now simulate catastrophic Redis eviction (both Hot and Cold keys deleted from Redis!)
+    await redis.del(hotKey);
+    await redis.del(coldKey);
+    assert.equal(await redis.llen(hotKey), 0, 'Hot key must be empty after simulated eviction');
+
+    // Fetch latest 30 messages -> MUST read through from PostgreSQL AND self-heal Redis Hot Tier!
+    const page1Res = createMockRes();
+    await getPersonalChatMessages(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        query: { limit: 30 },
+      },
+      page1Res,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(page1Res.statusCode, 200);
+    assert.equal(page1Res.body?.messages?.length, 30, 'Page 1 must return latest 30 messages from Postgres read-through');
+    assert.ok(page1Res.body?.nextCursor, 'Page 1 must provide nextCursor for older messages');
+
+    // Verify Redis Hot Tier was automatically self-healed (up to 50 messages restored)
+    const healedHotCount = await redis.llen(hotKey);
+    assert.equal(healedHotCount, 50, 'Redis Hot Tier must self-heal to 50 messages from PostgreSQL');
+
+    // Fetch Page 2 using nextCursor -> must return remaining 25 older messages (including our initial Voice Note, Photo & Video!)
+    const page2Res = createMockRes();
+    await getPersonalChatMessages(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        query: { limit: 30, cursor: page1Res.body.nextCursor },
+      },
+      page2Res,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(page2Res.statusCode, 200);
+    assert.equal(page2Res.body?.messages?.length, 25, 'Page 2 must return the remaining 25 older messages');
+    assert.equal(page2Res.body?.nextCursor, null, 'Page 2 must have nextCursor=null at start of history');
+
+    // Decrypt all 55 combined messages across Page 2 + Page 1 and verify zero corruption
+    const allFetchedEnvelopes = [...page2Res.body.messages, ...page1Res.body.messages];
+    assert.equal(allFetchedEnvelopes.length, 55);
+    const decryptedAll = await Promise.all(
+      allFetchedEnvelopes.map((env) => decryptChatEnvelope(env, userB.userId, userA.userId))
+    );
+    assert.ok(decryptedAll.every(Boolean), 'Every single one of the 55 messages must decrypt without error');
+    assert.equal(decryptedAll[0].msgType, 'voice');
+    assert.equal(decryptedAll[0].mediaUrl, voiceMediaUrl);
+    assert.equal(decryptedAll[1].msgType, 'media');
+    assert.equal(decryptedAll[1].isViewOnce, true);
+    assert.equal(decryptedAll[2].msgType, 'video');
+    assert.equal(decryptedAll[2].mediaUrl, videoTrimmedUrl);
+    assert.equal(decryptedAll[54].text, 'E2EE Scalability Message #52');
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 4. Real 2-Device WebRTC Call Signaling Stress Test (Trickle ICE + Busy Lock)
+    // ─────────────────────────────────────────────────────────────────────────────
+    const callId = `call_${Date.now()}_webrtc_stress`;
+
+    // 4A: User A (Laptop) sends Offer to User B (HP)
     const offerRes = createMockRes();
-    await sendCallSignal(offerReq, offerRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(offerRes.statusCode, 200, 'Voice call offer signal must succeed');
-    console.log('[Bi-Device Test] User A (Laptop) dispatched voice call offer.');
-
-    // 3B: User B polls signals -> receives User A's call offer
-    const userBSignalsReq = {
-      user: { userId: userB.userId, id: userB.userId },
-      query: { clear: 'true' },
-    };
-    const userBSignalsRes = createMockRes();
-    await getCallSignals(userBSignalsReq, userBSignalsRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(userBSignalsRes.statusCode, 200);
-    const offerSignal = userBSignalsRes.body?.signals?.find((s) => s.callId === voiceCallId && s.signalType === 'offer');
-    assert.ok(offerSignal, 'User B must receive the incoming voice call offer');
-    assert.equal(offerSignal.callMode, 'voice');
-    console.log('[Bi-Device Test] User B (HP) received incoming voice call signal from User A.');
-
-    // 3C: User B answers the voice call
-    const answerReq = {
-      user: { userId: userB.userId, id: userB.userId },
-      params: { targetId: userA.userId },
-      body: {
-        callId: voiceCallId,
-        callMode: 'voice',
-        signalType: 'answer',
-        nonce: `nonce_answer_${Date.now()}`,
-        encryptedPayload: JSON.stringify({ sdp: 'MOCK_SDP_ANSWER_VOICE', type: 'answer' }),
+    await sendCallSignal(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: {
+          callId,
+          callMode: 'video',
+          signalType: 'offer',
+          nonce: `offer_nc_${Date.now()}`,
+          encryptedPayload: JSON.stringify({ type: 'offer', sdp: 'v=0\r\no=- 4611731400430051336 2 IN IP4 127.0.0.1\r\n' }),
+        },
       },
-    };
-    const answerRes = createMockRes();
-    await sendCallSignal(answerReq, answerRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(answerRes.statusCode, 200);
-    console.log('[Bi-Device Test] User B answered the voice call.');
+      offerRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(offerRes.statusCode, 200);
 
-    // 3D: User A polls signals -> receives User B's answer
-    const userASignalsReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      query: { clear: 'true' },
-    };
-    const userASignalsRes = createMockRes();
-    await getCallSignals(userASignalsReq, userASignalsRes, (e) => {
-      if (e) throw e;
-    });
-    const answerSignal = userASignalsRes.body?.signals?.find((s) => s.callId === voiceCallId && s.signalType === 'answer');
-    assert.ok(answerSignal, 'User A must receive the voice call answer');
-    console.log('[Bi-Device Test] User A received answer; bi-device voice call connected.');
-
-    // 3E: User A hangs up call
-    const hangupReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      params: { targetId: userB.userId },
-      body: {
-        callId: voiceCallId,
-        callMode: 'voice',
-        signalType: 'hangup',
-        nonce: `nonce_hangup_${Date.now()}`,
+    // 4B: User B's KalceriansPanel peeks at signals WITHOUT clearing (clear omitted)
+    const peekRes = createMockRes();
+    await getCallSignals(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        query: {},
       },
-    };
+      peekRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(peekRes.body?.signals?.length, 1);
+    assert.equal(peekRes.body.signals[0].signalType, 'offer');
+
+    // 4C: User B sends 'ringing' back to User A
+    const ringingRes = createMockRes();
+    await sendCallSignal(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        body: {
+          callId,
+          callMode: 'video',
+          signalType: 'ringing',
+          nonce: `ring_nc_${Date.now()}`,
+        },
+      },
+      ringingRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(ringingRes.statusCode, 200);
+
+    // 4D: While User B's phone is ringing, User A's WebRTC stack Trickle-ICEs 20 rapid ICE candidates!
+    for (let c = 1; c <= 20; c++) {
+      const iceRes = createMockRes();
+      await sendCallSignal(
+        {
+          user: { userId: userA.userId, id: userA.userId },
+          params: { targetId: userB.userId },
+          body: {
+            callId,
+            callMode: 'video',
+            signalType: 'ice',
+            nonce: `ice_a_${c}_${Date.now()}`,
+            encryptedPayload: JSON.stringify({ candidate: `candidate:${c} 1 UDP 2122252543 192.168.1.${c} 54321 typ host`, sdpMid: '0', sdpMLineIndex: 0 }),
+          },
+        },
+        iceRes,
+        (e) => {
+          if (e) throw e;
+        }
+      );
+      assert.equal(iceRes.statusCode, 200);
+    }
+
+    // 4E: Concurrency Lock Test: A 3rd user tries to call User B while User B is in call with User A -> MUST get 409 Busy!
+    const thirdUserId = `usr_third_${Date.now()}`;
+    const busyRes = createMockRes();
+    await sendCallSignal(
+      {
+        user: { userId: thirdUserId, id: thirdUserId },
+        params: { targetId: userB.userId },
+        body: {
+          callId: `call_intruder_${Date.now()}`,
+          callMode: 'voice',
+          signalType: 'offer',
+          nonce: `intruder_nc_${Date.now()}`,
+          encryptedPayload: JSON.stringify({ type: 'offer', sdp: 'v=0' }),
+        },
+      },
+      busyRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(busyRes.statusCode, 409, 'Concurrent call from 3rd user must be rejected with 409 Busy');
+
+    // 4F: User B accepts the call and polls getCallSignals({ clear: 'true' }) ->
+    // MUST receive the initial 'offer' PLUS all 20 'ice' candidates in chronological order (21 signals total)!
+    const userBClearRes = createMockRes();
+    await getCallSignals(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        query: { clear: 'true' },
+      },
+      userBClearRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    const bSignals = userBClearRes.body?.signals || [];
+    assert.equal(bSignals.length, 21, 'All 21 signals (1 offer + 20 trickle ICE candidates) must be preserved without eviction');
+    assert.equal(bSignals[0].signalType, 'offer', 'Chronological order: first signal must be offer');
+    assert.equal(bSignals[1].signalType, 'ice');
+    assert.ok(bSignals[1].encryptedPayload.includes('candidate:1 '), 'First ICE candidate must be #1');
+    assert.ok(bSignals[20].encryptedPayload.includes('candidate:20 '), 'Last ICE candidate must be #20');
+
+    // 4G: User B sends 'answer' + 10 ICE candidates to User A
+    await sendCallSignal(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        body: {
+          callId,
+          callMode: 'video',
+          signalType: 'answer',
+          nonce: `ans_nc_${Date.now()}`,
+          encryptedPayload: JSON.stringify({ type: 'answer', sdp: 'v=0\r\no=- 999999 2 IN IP4 127.0.0.1\r\n' }),
+        },
+      },
+      createMockRes(),
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    for (let c = 1; c <= 10; c++) {
+      await sendCallSignal(
+        {
+          user: { userId: userB.userId, id: userB.userId },
+          params: { targetId: userA.userId },
+          body: {
+            callId,
+            callMode: 'video',
+            signalType: 'ice',
+            nonce: `ice_b_${c}_${Date.now()}`,
+            encryptedPayload: JSON.stringify({ candidate: `candidate:b${c} 1 UDP 2122252543 10.0.0.${c} 50000 typ host` }),
+          },
+        },
+        createMockRes(),
+        (e) => {
+          if (e) throw e;
+        }
+      );
+    }
+
+    // User A polls getCallSignals({ clear: 'true' }) -> receives ringing + answer + 10 ICE candidates (12 signals) in chronological order
+    const userAClearRes = createMockRes();
+    await getCallSignals(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        query: { clear: 'true' },
+      },
+      userAClearRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    const aSignals = userAClearRes.body?.signals || [];
+    assert.equal(aSignals.length, 12, 'User A must receive ringing + answer + 10 ICE candidates');
+    assert.equal(aSignals[0].signalType, 'ringing');
+    assert.equal(aSignals[1].signalType, 'answer');
+    assert.equal(aSignals[2].signalType, 'ice');
+
+    // 4H: User A hangs up -> Call locks are cleared AND User B receives the 'hangup' signal
     const hangupRes = createMockRes();
-    await sendCallSignal(hangupReq, hangupRes, (e) => {
-      if (e) throw e;
-    });
+    await sendCallSignal(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: {
+          callId,
+          callMode: 'video',
+          signalType: 'hangup',
+          nonce: `hang_nc_${Date.now()}`,
+        },
+      },
+      hangupRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
     assert.equal(hangupRes.statusCode, 200);
-    console.log('[Bi-Device Test] Voice call cleanly terminated.');
+    assert.equal(await redis.get(`call:lock:${userA.userId}`), null, 'Caller lock must be released on hangup');
+    assert.equal(await redis.get(`call:lock:${userB.userId}`), null, 'Callee lock must be released on hangup');
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Acceptance Criteria 4: Real Video Call Across Two Devices (Mobile HP -> Laptop)
-    // ─────────────────────────────────────────────────────────────────────────────
-    console.log('\n[Bi-Device Test] Testing Video Call across two devices (Mobile HP -> Laptop)...');
-    const vidCallId = `call_${Date.now()}_video`;
-
-    // 4A: User B initiates Video Call (Mic + Camera access)
-    const vidOfferReq = {
-      user: { userId: userB.userId, id: userB.userId },
-      params: { targetId: userA.userId },
-      body: {
-        callId: vidCallId,
-        callMode: 'video',
-        signalType: 'offer',
-        nonce: `nonce_vidoffer_${Date.now()}`,
-        encryptedPayload: JSON.stringify({ sdp: 'MOCK_SDP_OFFER_VIDEO', type: 'offer' }),
+    const userBHangupPollRes = createMockRes();
+    await getCallSignals(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        query: { clear: 'true' },
       },
-    };
-    const vidOfferRes = createMockRes();
-    await sendCallSignal(vidOfferReq, vidOfferRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(vidOfferRes.statusCode, 200);
+      userBHangupPollRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    const hangupSignals = userBHangupPollRes.body?.signals || [];
+    assert.equal(hangupSignals.length, 1, 'Peer device User B must receive the hangup signal');
+    assert.equal(hangupSignals[0].signalType, 'hangup');
+    assert.equal(hangupSignals[0].callId, callId);
 
-    // 4B: User A polls signals -> receives incoming Video Call
-    const userAVidSignalsReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      query: { clear: 'true' },
-    };
-    const userAVidSignalsRes = createMockRes();
-    await getCallSignals(userAVidSignalsReq, userAVidSignalsRes, (e) => {
-      if (e) throw e;
-    });
-    const vidSignal = userAVidSignalsRes.body?.signals?.find((s) => s.callId === vidCallId);
-    assert.ok(vidSignal, 'User A must receive video call offer');
-    assert.equal(vidSignal.callMode, 'video', 'Call mode must be video');
-    console.log('[Bi-Device Test] User A received incoming video call signal from User B.');
-
-    // 4C: User A answers Video Call
-    const vidAnswerReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      params: { targetId: userB.userId },
-      body: {
-        callId: vidCallId,
-        callMode: 'video',
-        signalType: 'answer',
-        nonce: `nonce_vidanswer_${Date.now()}`,
-        encryptedPayload: JSON.stringify({ sdp: 'MOCK_SDP_ANSWER_VIDEO', type: 'answer' }),
-      },
-    };
-    const vidAnswerRes = createMockRes();
-    await sendCallSignal(vidAnswerReq, vidAnswerRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(vidAnswerRes.statusCode, 200);
-    console.log('[Bi-Device Test] Bi-device video call connected successfully.');
-
-    // 4D: Hangup Video Call
-    const vidHangupReq = {
-      user: { userId: userB.userId, id: userB.userId },
-      params: { targetId: userA.userId },
-      body: {
-        callId: vidCallId,
-        callMode: 'video',
-        signalType: 'hangup',
-        nonce: `nonce_vidhangup_${Date.now()}`,
-      },
-    };
-    const vidHangupRes = createMockRes();
-    await sendCallSignal(vidHangupReq, vidHangupRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(vidHangupRes.statusCode, 200);
-    console.log('[Bi-Device Test] Video call cleanly terminated.');
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Acceptance Criteria 5: Calling an Offline User (Never Blocked)
-    // ─────────────────────────────────────────────────────────────────────────────
-    console.log('\n[Bi-Device Test] Testing Calling an Offline Target User...');
-    const offlineTargetId = `usr_offline_${Date.now().toString(36)}`;
-    const offlineCallId = `call_offline_${Date.now()}`;
-
-    const offlineCallReq = {
-      user: { userId: userA.userId, id: userA.userId },
-      params: { targetId: offlineTargetId },
-      body: {
-        callId: offlineCallId,
-        callMode: 'voice',
-        signalType: 'offer',
-        nonce: `nonce_offline_${Date.now()}`,
-        encryptedPayload: JSON.stringify({ sdp: 'OFFER_SDP' }),
-      },
-    };
-    const offlineCallRes = createMockRes();
-    await sendCallSignal(offlineCallReq, offlineCallRes, (e) => {
-      if (e) throw e;
-    });
-    assert.equal(offlineCallRes.statusCode, 200, 'Calling an offline user must succeed and initiate ringing');
-    console.log('[Bi-Device Test] User A successfully initiated call to offline user (event-driven ringing confirmed).');
-
-    // Clean up offline call
-    const cleanOfflineHangup = {
-      user: { userId: userA.userId, id: userA.userId },
-      params: { targetId: offlineTargetId },
-      body: {
-        callId: offlineCallId,
-        callMode: 'voice',
-        signalType: 'hangup',
-        nonce: `nonce_offline_hang_${Date.now()}`,
-      },
-    };
-    await sendCallSignal(cleanOfflineHangup, createMockRes(), () => {});
-
-    console.log('\n[Bi-Device Test] All Vertical Slice Acceptance Criteria PASSED successfully!\n');
+    console.log('\n[Bi-Device E2E Verification] ALL REAL E2EE CHAT, TIERED STORAGE & WEBRTC SIGNALING TESTS PASSED!\n');
   } finally {
-    // Cleanup generated test data from Prisma and Redis
-    console.log('[Bi-Device Test] Cleaning up test users from database...');
+    if (sortedPair) {
+      const convHash = crypto
+        .createHash('sha256')
+        .update(`kalceria_e2ee_conv:${sortedPair[0]}:${sortedPair[1]}`)
+        .digest('hex')
+        .slice(0, 40);
+      await prisma.personalChatMessage
+        .deleteMany({ where: { convHash } })
+        .catch(() => {});
+      await redis.del(`chat:conv:${convHash}`).catch(() => {});
+      await redis.del(`chat:cold:${convHash}`).catch(() => {});
+    }
     if (userA?.userId) {
       await prisma.user.delete({ where: { id: userA.userId } }).catch(() => {});
       await redis.del(`chat:call:${userA.userId}`).catch(() => {});
@@ -494,5 +677,7 @@ test('Vertical Slice: Two Users Bi-Device Chat, Voice Note Waveform, Media & Cal
       await redis.del(`chat:call:${userB.userId}`).catch(() => {});
       await redis.del(`call:lock:${userB.userId}`).catch(() => {});
     }
+    await prisma.$disconnect().catch(() => {});
+    await redis.quit().catch(() => {});
   }
 });

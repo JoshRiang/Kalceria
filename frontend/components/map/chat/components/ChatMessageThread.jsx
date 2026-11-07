@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { ChatMessageContextMenu } from "./ChatMessageContextMenu";
 
@@ -28,6 +28,34 @@ export function ChatMessageThread({
     position: { x: 0, y: 0 },
     message: null,
   });
+
+  // Group flat [date_divider, message, ...] list into scoped day sections
+  // so each sticky date divider stays strictly inside its own day's scroll boundary and never overlaps.
+  const daySections = useMemo(() => {
+    const sections = [];
+    let current = null;
+    (groupedMessages || []).forEach((item) => {
+      if (item.type === "date_divider") {
+        current = {
+          id: item.id,
+          label: item.label,
+          messages: [],
+        };
+        sections.push(current);
+      } else {
+        if (!current) {
+          current = {
+            id: `sec_${item.id || sections.length}`,
+            label: null,
+            messages: [],
+          };
+          sections.push(current);
+        }
+        current.messages.push(item);
+      }
+    });
+    return sections;
+  }, [groupedMessages]);
 
   const handleOpenContextMenu = (e, message) => {
     // If in select mode, do not open context menu; selection takes precedence
@@ -64,7 +92,7 @@ export function ChatMessageThread({
       <div
         ref={messagesEndRef}
         style={{ WebkitOverflowScrolling: "touch" }}
-        className="relative z-10 flex-1 overflow-y-auto px-3 py-2.5 flex flex-col gap-1.5 modern-kalcerian-scrollbar overscroll-contain transform-gpu will-change-scroll"
+        className="relative z-10 flex-1 overflow-y-auto px-3 py-2.5 flex flex-col gap-2 modern-kalcerian-scrollbar overscroll-contain transform-gpu will-change-scroll"
       >
         {/* Cursor Pagination for Cold Archive */}
         {nextCursor && (
@@ -84,11 +112,11 @@ export function ChatMessageThread({
           </div>
         )}
 
-        {groupedMessages.map((item) => {
-          if (item.type === "date_divider") {
-            return (
-              /* Floating Sticky Date/Time Mark */
-              <div key={item.id} className="sticky top-2 z-20 flex justify-center my-1.5 pointer-events-none">
+        {daySections.map((section) => (
+          <div key={section.id} className="relative flex flex-col gap-1.5">
+            {section.label && (
+              /* Scoped Sticky Date/Time Mark: Pushes out cleanly when next day section arrives */
+              <div className="sticky top-1.5 z-20 flex justify-center my-1 pointer-events-none">
                 <span
                   className={`px-3 py-0.5 rounded-md text-[10.5px] font-medium border shadow-md backdrop-blur-md pointer-events-auto ${
                     isMapDark
@@ -96,29 +124,29 @@ export function ChatMessageThread({
                       : "bg-white/95 border-black text-black shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
                   }`}
                 >
-                  {item.label}
+                  {section.label}
                 </span>
               </div>
-            );
-          }
+            )}
 
-          return (
-            <ChatMessageBubble
-              key={item.id}
-              item={item}
-              myId={myId}
-              isMapDark={isMapDark}
-              selectMode={selectMode}
-              selectedMsgIds={selectedMsgIds}
-              handleToggleSelectMsg={handleToggleSelectMsg}
-              playingVoiceId={playingVoiceId}
-              setPlayingVoiceId={setPlayingVoiceId}
-              onResendMessage={onResendMessage}
-              replyingTo={replyingTo}
-              onOpenContextMenu={handleOpenContextMenu}
-            />
-          );
-        })}
+            {section.messages.map((item) => (
+              <ChatMessageBubble
+                key={item.id}
+                item={item}
+                myId={myId}
+                isMapDark={isMapDark}
+                selectMode={selectMode}
+                selectedMsgIds={selectedMsgIds}
+                handleToggleSelectMsg={handleToggleSelectMsg}
+                playingVoiceId={playingVoiceId}
+                setPlayingVoiceId={setPlayingVoiceId}
+                onResendMessage={onResendMessage}
+                replyingTo={replyingTo}
+                onOpenContextMenu={handleOpenContextMenu}
+              />
+            ))}
+          </div>
+        ))}
       </div>
 
       {/* Floating Right-Click Context Menu */}

@@ -21,6 +21,7 @@ export function PersonalChatPanel({
   isFavourite = false,
   isMuted = false,
   initialCallState = null,
+  onCallEnded,
   onToggleFavourite,
   onToggleMute,
   onCloseChat,
@@ -88,6 +89,7 @@ export function PersonalChatPanel({
     currentUser,
     onOutgoingMessageUpdate,
     initialCallState,
+    onCallEnded,
   });
 
   if (!activeChatUser) return null;

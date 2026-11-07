@@ -7,21 +7,22 @@ import ContentImage from "@/components/ui/ContentImage";
 import { formatCallDuration } from "../hooks/usePersonalCallState";
 
 // Static distributed mini Coki faces with fixed random tilt angles (constant across all calls)
-// Notice: The top center area (Name, Calling/Ringing status, and Call Timer) is naturally kept completely clean and trimmed
+// Positioned strictly below the sleek solid white top header so zero faces are ever cut in half.
 const STATIC_COKI_VOICE_BG = [
-  { top: "7%", left: "12%", rotate: -14 },
-  { top: "7%", left: "84%", rotate: -8 },
-  { top: "25%", left: "28%", rotate: 22 },
-  { top: "27%", left: "72%", rotate: -18 },
-  { top: "42%", left: "9%", rotate: 12 },
-  { top: "44%", left: "88%", rotate: -15 },
-  { top: "58%", left: "22%", rotate: -20 },
-  { top: "60%", left: "74%", rotate: 18 },
-  { top: "76%", left: "12%", rotate: 10 },
-  { top: "78%", left: "48%", rotate: -12 },
+  { top: "24%", left: "16%", rotate: -14 },
+  { top: "25%", left: "50%", rotate: 10 },
+  { top: "24%", left: "84%", rotate: -8 },
+  { top: "40%", left: "26%", rotate: 22 },
+  { top: "41%", left: "74%", rotate: -18 },
+  { top: "55%", left: "12%", rotate: 12 },
+  { top: "56%", left: "86%", rotate: -15 },
+  { top: "68%", left: "24%", rotate: -20 },
+  { top: "69%", left: "74%", rotate: 18 },
+  { top: "80%", left: "14%", rotate: 10 },
+  { top: "81%", left: "50%", rotate: -12 },
   { top: "80%", left: "84%", rotate: 24 },
   { top: "92%", left: "30%", rotate: -6 },
-  { top: "93%", left: "68%", rotate: 15 },
+  { top: "92%", left: "70%", rotate: 15 },
 ];
 
 export function CallMediaStage({
@@ -58,12 +59,12 @@ export function CallMediaStage({
       {/* Background Layer: Live Video Feed for Video Call, or Pure Opaque Base for Voice Call */}
       {mode === "video" ? (
         <div className="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
-          {/* Live Peer WebRTC Video Feed (Direct hardware stream, zero spoofing) */}
+          {/* Live Peer WebRTC Video Feed (Muted because remoteAudioRef plays the audio stream cleanly) */}
           <video
             ref={remoteVideoRef}
             autoPlay
             playsInline
-            muted={!isSpeakerOn}
+            muted
             className={`w-full h-full object-cover transition-opacity duration-300 ${
               status === "connected" ? "opacity-100" : "opacity-0 pointer-events-none"
             } ${isBadConnection ? "filter blur-[12px] scale-105" : ""}`}
@@ -96,21 +97,13 @@ export function CallMediaStage({
           />
         </div>
       ) : (
-        /* Voice Call: Solid 100% Opaque White Base Layer + Coki Faces Pattern trimmed naturally around top header */
+        /* Voice Call: Solid 100% Opaque White Base Layer + Intact Coki Faces Pattern below the sleek white header */
         <>
           {/* 1. Pure Opaque White Base: Absolutely zero leakage from chat/map underneath */}
           <div className="absolute inset-0 z-0 pointer-events-none bg-white" />
 
-          {/* 2. Pattern Layer: Mini Coki faces masked away cleanly from top header */}
-          <div
-            className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
-            style={{
-              WebkitMaskImage:
-                "radial-gradient(ellipse 180px 100px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
-              maskImage:
-                "radial-gradient(ellipse 180px 100px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
-            }}
-          >
+          {/* 2. Pattern Layer: Intact Mini Coki faces without any half-cut mask */}
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             {STATIC_COKI_VOICE_BG.map((pos, idx) => (
               <div
                 key={`coki-bg-${idx}`}
@@ -136,8 +129,12 @@ export function CallMediaStage({
         </>
       )}
 
-      {/* TOP BAR: Call Header */}
-      <div className="relative z-10 pt-5 px-4 flex flex-col items-center text-center">
+      {/* TOP BAR: Sleek Solid White Header for Voice Call, Transparent Overlay for Video Call */}
+      <div
+        className={`relative z-10 w-full pt-5 pb-3.5 px-4 flex flex-col items-center text-center ${
+          mode === "voice" ? "bg-white" : ""
+        }`}
+      >
         <h3
           className={`font-sans font-bold text-base sm:text-lg tracking-tight truncate max-w-[260px] ${
             mode === "video"

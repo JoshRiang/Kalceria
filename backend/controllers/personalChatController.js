@@ -159,9 +159,11 @@ export async function getPersonalChatMessages(req, res, next) {
               .slice(0, HOT_RING_BUFFER_SIZE)
               .map(packEnvelope);
             if (toHydrate.length > 0) {
-              await redis.del(hotKey).catch(() => {});
-              await redis.rpush(hotKey, ...toHydrate).catch(() => {});
-              await redis.expire(hotKey, HOT_TTL_SECONDS).catch(() => {});
+              const healPipe = redis.pipeline();
+              healPipe.del(hotKey);
+              healPipe.rpush(hotKey, ...toHydrate);
+              healPipe.expire(hotKey, HOT_TTL_SECONDS);
+              await healPipe.exec().catch(() => {});
             }
           }
         }
@@ -201,19 +203,25 @@ export async function getPersonalChatMessages(req, res, next) {
         .sort((a, b) => Number(b.ts) - Number(a.ts))
         .slice(0, HOT_RING_BUFFER_SIZE)
         .map(packEnvelope);
+      const readPromises = [];
       if (updatedHot.length > 0) {
-        await redis.del(hotKey).catch(() => {});
-        await redis.rpush(hotKey, ...updatedHot).catch(() => {});
-        await redis.expire(hotKey, HOT_TTL_SECONDS).catch(() => {});
+        const readPipe = redis.pipeline();
+        readPipe.del(hotKey);
+        readPipe.rpush(hotKey, ...updatedHot);
+        readPipe.expire(hotKey, HOT_TTL_SECONDS);
+        readPromises.push(readPipe.exec().catch(() => {}));
       }
       if (prisma?.personalChatMessage && newlyReadIds.length > 0) {
-        prisma.personalChatMessage
-          .updateMany({
-            where: { id: { in: newlyReadIds } },
-            data: { status: 'read' },
-          })
-          .catch(() => {});
+        readPromises.push(
+          prisma.personalChatMessage
+            .updateMany({
+              where: { id: { in: newlyReadIds } },
+              data: { status: 'read' },
+            })
+            .catch(() => {})
+        );
       }
+      await Promise.all(readPromises);
     }
 
     if (cursorTs && Number.isFinite(cursorTs)) {
@@ -245,15 +253,6 @@ export async function sendPersonalChatMessage(req, res, next) {
       return res.status(400).json({ error: 'Invalid conversation target.' });
     }
 
-    // Check if either user has blocked the other
-    const [blockedByMe, blockedByTarget] = await Promise.all([
-      redis.sismember(`blocked:${userId}`, targetId).catch(() => 0),
-      redis.sismember(`blocked:${targetId}`, userId).catch(() => 0),
-    ]);
-    if (blockedByMe || blockedByTarget) {
-      return res.status(403).json({ error: 'Cannot send message to this user.' });
-    }
-
     const body = req.body || {};
     const ciphertext = typeof body.ciphertext === 'string' ? body.ciphertext.trim() : '';
     const iv = typeof body.iv === 'string' ? body.iv.trim() : '';
@@ -275,16 +274,29 @@ export async function sendPersonalChatMessage(req, res, next) {
       return res.status(400).json({ error: 'Invalid cryptographic nonce.' });
     }
 
-    const nonceKey = `chat:nonce:${nonce}`;
-    const alreadySeen = await redis.get(nonceKey).catch(() => null);
-    if (alreadySeen) {
-      return res.status(409).json({ error: 'Replay detected: duplicate nonce.' });
-    }
-    await redis.set(nonceKey, '1', 'EX', NONCE_TTL_SECONDS).catch(() => {});
-
     // Video media duration validation: maximum 60 seconds (1 minute)
     if (body.videoDuration && typeof body.videoDuration === 'number' && body.videoDuration > 60) {
       return res.status(400).json({ error: 'Durasi video melebihi batas 1 menit (maksimal 60 detik).' });
+    }
+
+    const nonceKey = `chat:nonce:${nonce}`;
+    const convHash = getConversationHash(userId, targetId);
+    const hotKey = `chat:conv:${convHash}`;
+    const coldKey = `chat:cold:${convHash}`;
+
+    // Parallel pre-flight check: block status + atomic anti-replay nonce lock + current hot buffer length
+    const [blockedByMe, blockedByTarget, nonceAcquired, currentHotLen] = await Promise.all([
+      redis.sismember(`blocked:${userId}`, targetId).catch(() => 0),
+      redis.sismember(`blocked:${targetId}`, userId).catch(() => 0),
+      redis.set(nonceKey, '1', 'EX', NONCE_TTL_SECONDS, 'NX').catch(() => 'OK'),
+      redis.llen(hotKey).catch(() => 0),
+    ]);
+
+    if (blockedByMe || blockedByTarget) {
+      return res.status(403).json({ error: 'Cannot send message to this user.' });
+    }
+    if (!nonceAcquired) {
+      return res.status(409).json({ error: 'Replay detected: duplicate nonce.' });
     }
 
     // Never persist ephemeral browser RAM blob: URLs
@@ -319,47 +331,47 @@ export async function sendPersonalChatMessage(req, res, next) {
       status: 'sent', // Always starts as 'sent' until the recipient opens & reads the chat
     };
 
-    const convHash = getConversationHash(userId, targetId);
-    const hotKey = `chat:conv:${convHash}`;
-    const coldKey = `chat:cold:${convHash}`;
     const packed = packEnvelope(envelope);
+    const writePipe = redis.pipeline();
 
     // Check if hot ring-buffer is at capacity; if so, archive oldest entry into cold tier before trimming
-    const currentHotLen = await redis.llen(hotKey).catch(() => 0);
     if (currentHotLen >= HOT_RING_BUFFER_SIZE) {
       const oldestRaw = await redis.lindex(hotKey, HOT_RING_BUFFER_SIZE - 1).catch(() => null);
       if (oldestRaw) {
-        await redis.lpush(coldKey, oldestRaw).catch(() => {});
-        await redis.ltrim(coldKey, 0, COLD_ARCHIVE_MAX_SIZE - 1).catch(() => {});
-        await redis.expire(coldKey, COLD_TTL_SECONDS).catch(() => {});
+        writePipe.lpush(coldKey, oldestRaw);
+        writePipe.ltrim(coldKey, 0, COLD_ARCHIVE_MAX_SIZE - 1);
+        writePipe.expire(coldKey, COLD_TTL_SECONDS);
       }
     }
 
-    await redis.lpush(hotKey, packed).catch(() => {});
-    await redis.ltrim(hotKey, 0, HOT_RING_BUFFER_SIZE - 1).catch(() => {});
-    await redis.expire(hotKey, HOT_TTL_SECONDS).catch(() => {});
+    writePipe.lpush(hotKey, packed);
+    writePipe.ltrim(hotKey, 0, HOT_RING_BUFFER_SIZE - 1);
+    writePipe.expire(hotKey, HOT_TTL_SECONDS);
 
-    // Write-through to permanent PostgreSQL table so messages never disappear or corrupt
-    if (prisma?.personalChatMessage) {
-      await prisma.personalChatMessage
-        .upsert({
-          where: { id: envelope.id },
-          create: {
-            id: envelope.id,
-            convHash,
-            senderId: envelope.senderId,
-            recipientId: envelope.recipientId,
-            packedJson: packed,
-            ts: BigInt(Math.floor(envelope.ts)),
-            status: envelope.status,
-          },
-          update: {
-            packedJson: packed,
-            status: envelope.status,
-          },
-        })
-        .catch(() => {});
-    }
+    // Execute Redis pipeline & PostgreSQL write-through concurrently
+    await Promise.all([
+      writePipe.exec().catch(() => {}),
+      prisma?.personalChatMessage
+        ? prisma.personalChatMessage
+            .upsert({
+              where: { id: envelope.id },
+              create: {
+                id: envelope.id,
+                convHash,
+                senderId: envelope.senderId,
+                recipientId: envelope.recipientId,
+                packedJson: packed,
+                ts: BigInt(Math.floor(envelope.ts)),
+                status: envelope.status,
+              },
+              update: {
+                packedJson: packed,
+                status: envelope.status,
+              },
+            })
+            .catch(() => {})
+        : Promise.resolve(),
+    ]);
 
     res.status(201).json({ ok: true, envelope });
   } catch (err) {
@@ -448,25 +460,47 @@ export async function sendCallSignal(req, res, next) {
       : `call_${Date.now()}`;
 
     const nonceKey = `call:nonce:${nonce.slice(0, 96)}`;
-    const seen = await redis.get(nonceKey).catch(() => null);
-    if (seen) {
-      return res.status(409).json({ error: 'Duplicate call signal nonce rejected.' });
-    }
-    await redis.set(nonceKey, '1', 'EX', 120).catch(() => {});
-
     const callerLockKey = `call:lock:${userId}`;
     const targetLockKey = `call:lock:${targetId}`;
     const signalKey = `chat:call:${targetId}`;
 
+    const [nonceAcquired, existingTargetLock] = await Promise.all([
+      redis.set(nonceKey, '1', 'EX', 120, 'NX').catch(() => 'OK'),
+      signalType === 'offer' || signalType === 'ringing' || signalType === 'answer'
+        ? redis.get(targetLockKey).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    if (!nonceAcquired) {
+      return res.status(409).json({ error: 'Duplicate call signal nonce rejected.' });
+    }
+
+    const packet = {
+      callId: safeCallId,
+      fromUserId: String(userId),
+      toUserId: String(targetId),
+      callMode: callMode === 'video' ? 'video' : 'voice',
+      signalType,
+      encryptedPayload: typeof encryptedPayload === 'string' ? encryptedPayload.slice(0, 16000) : null,
+      sig: typeof sig === 'string' ? sig.slice(0, 256) : null,
+      ts: Date.now(),
+    };
+
+    const sigPipe = redis.pipeline();
+
     // Single-Call Concurrency Lock enforcement (prevents call flooding & multiple simultaneous calls)
     if (signalType === 'hangup') {
-      await Promise.all([
-        redis.del(callerLockKey).catch(() => {}),
-        redis.del(targetLockKey).catch(() => {}),
-        redis.del(signalKey).catch(() => {}),
-      ]);
-    } else if (signalType === 'offer' || signalType === 'ringing' || signalType === 'answer') {
-      const existingTargetLock = await redis.get(targetLockKey).catch(() => null);
+      sigPipe.del(callerLockKey);
+      sigPipe.del(targetLockKey);
+      sigPipe.del(signalKey);
+      // Push the hangup packet so the peer device immediately receives the hangup signal on its next poll
+      sigPipe.lpush(signalKey, JSON.stringify(packet));
+      sigPipe.expire(signalKey, 30);
+      await sigPipe.exec().catch(() => {});
+      return res.json({ ok: true, packet });
+    }
+
+    if (signalType === 'offer' || signalType === 'ringing' || signalType === 'answer') {
       if (existingTargetLock) {
         try {
           const parsedLock = JSON.parse(existingTargetLock);
@@ -491,28 +525,14 @@ export async function sendCallSignal(req, res, next) {
         mode: callMode === 'video' ? 'video' : 'voice',
         ts: Date.now(),
       });
-      await Promise.all([
-        redis.set(callerLockKey, lockPayload, 'EX', CALL_LOCK_TTL_SECONDS).catch(() => {}),
-        redis.set(targetLockKey, lockPayload, 'EX', CALL_LOCK_TTL_SECONDS).catch(() => {}),
-      ]);
+      sigPipe.set(callerLockKey, lockPayload, 'EX', CALL_LOCK_TTL_SECONDS);
+      sigPipe.set(targetLockKey, lockPayload, 'EX', CALL_LOCK_TTL_SECONDS);
     }
 
-    const packet = {
-      callId: safeCallId,
-      fromUserId: String(userId),
-      toUserId: String(targetId),
-      callMode: callMode === 'video' ? 'video' : 'voice',
-      signalType,
-      encryptedPayload: typeof encryptedPayload === 'string' ? encryptedPayload.slice(0, 16000) : null,
-      sig: typeof sig === 'string' ? sig.slice(0, 256) : null,
-      ts: Date.now(),
-    };
-
-    if (signalType !== 'hangup') {
-      await redis.lpush(signalKey, JSON.stringify(packet)).catch(() => {});
-      await redis.ltrim(signalKey, 0, 49).catch(() => {});
-      await redis.expire(signalKey, CALL_SIGNAL_TTL_SECONDS).catch(() => {});
-    }
+    sigPipe.lpush(signalKey, JSON.stringify(packet));
+    sigPipe.ltrim(signalKey, 0, 49);
+    sigPipe.expire(signalKey, CALL_SIGNAL_TTL_SECONDS);
+    await sigPipe.exec().catch(() => {});
 
     res.json({ ok: true, packet });
   } catch (err) {
