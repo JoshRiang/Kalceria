@@ -117,26 +117,32 @@ export function SupportUsBackground() {
       {/* Background base */}
       <div className="absolute inset-0 bg-[#050a14] z-[-10]" />
 
-      {/* Dynamic Blobs (Z: -5) - Unaffected by Glitch */}
+      {/* Dynamic Blobs (Z: -5) - GPU Radial Gradients, Unaffected by Glitch */}
       <motion.div 
-        className="absolute top-[-10%] left-[5%] w-[60vw] h-[60vw] rounded-full bg-[#D946EF] mix-blend-screen blur-[140px] z-[-5]"
+        className="absolute top-[-15%] left-[0%] w-[72vw] h-[72vw] rounded-full mix-blend-screen z-[-5]"
         animate={{
           x: ["0%", "15%", "-10%", "0%"],
           y: ["0%", "-10%", "20%", "0%"],
-          opacity: [0.15, 0.2, 0.15]
+          opacity: [0.15, 0.22, 0.15]
         }}
         transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-        style={{ willChange: "transform, opacity" }}
+        style={{
+          willChange: "transform, opacity",
+          background: "radial-gradient(circle closest-side, rgba(217,70,239,0.9) 0%, rgba(217,70,239,0.38) 45%, transparent 100%)",
+        }}
       />
       <motion.div 
-        className="absolute bottom-[-10%] right-[5%] w-[55vw] h-[55vw] rounded-full bg-[#F97316] mix-blend-screen blur-[130px] z-[-5]"
+        className="absolute bottom-[-15%] right-[0%] w-[68vw] h-[68vw] rounded-full mix-blend-screen z-[-5]"
         animate={{
           x: ["0%", "-20%", "10%", "0%"],
           y: ["0%", "15%", "-15%", "0%"],
-          opacity: [0.15, 0.2, 0.15]
+          opacity: [0.15, 0.22, 0.15]
         }}
         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-        style={{ willChange: "transform, opacity" }}
+        style={{
+          willChange: "transform, opacity",
+          background: "radial-gradient(circle closest-side, rgba(249,115,22,0.9) 0%, rgba(249,115,22,0.38) 45%, transparent 100%)",
+        }}
       />
 
       {/* Extreme Radar Noise Waves (Z: -2) */}
@@ -204,18 +210,24 @@ export function SolarPhoenix({ isMobile }) {
 
   return (
     <div className="absolute inset-0 z-[4] flex items-center justify-center pointer-events-none overflow-hidden">
-      {/* Deep Red Corona Backdrop */}
+      {/* Deep Red Corona Backdrop (Zero-Blur GPU Radial Gradient) */}
       <motion.div
         animate={{ scale: [1, 1.15, 1], opacity: isMobile ? [0.42, 0.63, 0.42] : [0.6, 0.9, 0.6] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className={`absolute rounded-full bg-red-600 blur-[120px] ${isMobile ? "w-[42vw] h-[42vw]" : "w-[60vw] h-[60vw]"}`}
+        className={`absolute rounded-full will-change-transform ${isMobile ? "w-[54vw] h-[54vw]" : "w-[72vw] h-[72vw]"}`}
+        style={{
+          background: "radial-gradient(circle closest-side, rgba(220,38,38,0.88) 0%, rgba(220,38,38,0.38) 46%, transparent 100%)",
+        }}
       />
       
-      {/* Intense Yellow Core */}
+      {/* Intense Yellow Core (Zero-Blur GPU Radial Gradient) */}
       <motion.div
         animate={{ scale: [1, 1.3, 1], opacity: isMobile ? [0.56, 0.7, 0.56] : [0.8, 1, 0.8] }}
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        className={`absolute rounded-full bg-gradient-to-t from-yellow-500 to-white mix-blend-add ${isMobile ? "w-[17vw] h-[17vw] blur-[42px]" : "w-[25vw] h-[25vw] blur-[60px]"}`}
+        className={`absolute rounded-full mix-blend-screen will-change-transform ${isMobile ? "w-[26vw] h-[26vw]" : "w-[36vw] h-[36vw]"}`}
+        style={{
+          background: "radial-gradient(circle closest-side, rgba(255,255,255,0.95) 0%, rgba(234,179,8,0.65) 42%, transparent 100%)",
+        }}
       />
 
       {/* Micro Pixel Fire Particles */}

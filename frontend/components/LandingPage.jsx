@@ -217,7 +217,7 @@ export default function LandingPage({ onNavigateAuth }) {
         <div className="absolute inset-0 bg-gradient-to-b from-[#050a14]/50 via-[#050a14]/10 to-[#050a14] z-0" />
 
         {/* Video Container */}
-        <div className="relative w-[88%] md:w-[72%] max-w-4xl aspect-square md:aspect-video rounded-lg overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-md flex flex-col items-center justify-center z-10">
+        <div className="relative w-[88%] md:w-[72%] max-w-4xl aspect-square md:aspect-video rounded-lg overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-white/10 bg-[#050a14]/90 flex flex-col items-center justify-center z-10">
           <video ref={heroVideoRef} autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover bg-[#000000]/60">
             <source src="/video_landingatas.mp4" type="video/mp4" />
           </video>
@@ -259,11 +259,36 @@ export default function LandingPage({ onNavigateAuth }) {
       <section id="section-events" className="relative w-full min-h-[70vh] flex flex-col xl:flex-row items-center justify-center xl:justify-between overflow-hidden bg-[#050a14] z-20 px-6 sm:px-8 xl:px-24 py-16 xl:py-20 gap-8 sm:gap-10 xl:gap-16" style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}>
         <StarDust />
         <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
-          <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.3, 0.15] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] rounded-full blur-[100px] bg-[#FF00FF]" />
-          <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }} className="absolute bottom-[0%] right-[10%] w-[50vw] h-[50vw] rounded-full blur-[120px] bg-[#FFD700]" />
-          <motion.div animate={{ scale: [1, 1.05, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute top-[30%] left-[50%] w-[30vw] h-[30vw] rounded-full blur-[80px] bg-[#ffffff]" />
-          <motion.div animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 3 }} className="absolute bottom-[-10%] left-[5%] w-[40vw] h-[40vw] rounded-full blur-[110px] bg-[#FF0000]" />
-          <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }} className="absolute top-[20%] right-[-10%] w-[45vw] h-[45vw] rounded-full blur-[120px] bg-[#FF8C00]" />
+          <motion.div
+            animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.3, 0.15] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[5%] left-[15%] w-[52vw] h-[52vw] rounded-full will-change-transform"
+            style={{ background: "radial-gradient(circle closest-side, rgba(255,0,255,0.9) 0%, rgba(255,0,255,0.38) 45%, transparent 100%)" }}
+          />
+          <motion.div
+            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            className="absolute bottom-[-8%] right-[4%] w-[62vw] h-[62vw] rounded-full will-change-transform"
+            style={{ background: "radial-gradient(circle closest-side, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.38) 45%, transparent 100%)" }}
+          />
+          <motion.div
+            animate={{ scale: [1, 1.05, 1], opacity: [0.1, 0.2, 0.1] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute top-[25%] left-[44%] w-[40vw] h-[40vw] rounded-full will-change-transform"
+            style={{ background: "radial-gradient(circle closest-side, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.32) 45%, transparent 100%)" }}
+          />
+          <motion.div
+            animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.2, 0.1] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+            className="absolute bottom-[-16%] left-[0%] w-[52vw] h-[52vw] rounded-full will-change-transform"
+            style={{ background: "radial-gradient(circle closest-side, rgba(255,0,0,0.85) 0%, rgba(255,0,0,0.35) 45%, transparent 100%)" }}
+          />
+          <motion.div
+            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }}
+            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+            className="absolute top-[14%] right-[-16%] w-[56vw] h-[56vw] rounded-full will-change-transform"
+            style={{ background: "radial-gradient(circle closest-side, rgba(255,140,0,0.9) 0%, rgba(255,140,0,0.38) 45%, transparent 100%)" }}
+          />
         </div>
 
         {/* Mobile & Half-Desktop Silhouette: grup_hp.webp (dragged an extra 30% more down to completely eliminate overlap and ground firmly) */}
@@ -493,10 +518,20 @@ export default function LandingPage({ onNavigateAuth }) {
       {/* ── Section 5: Find More ── */}
       <section className="relative w-full min-h-[1080px] md:min-h-[90vh] bg-[#050a14] flex flex-col items-center justify-center py-16 md:py-20 z-50 border-t border-slate-900 overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}>
 
-        {/* Ambient Blobs */}
+        {/* Ambient Blobs (GPU-Accelerated Radial Gradients) */}
         <div className="absolute inset-0 z-0 pointer-events-none opacity-50 mix-blend-screen">
-          <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[20%] left-[30%] w-[30vw] h-[30vw] rounded-full blur-[120px] bg-[#00FFFF]" />
-          <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.25, 0.1] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }} className="absolute bottom-[20%] right-[30%] w-[40vw] h-[40vw] rounded-full blur-[140px] bg-[#FF00FF]" />
+          <motion.div
+            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[12%] left-[22%] w-[44vw] h-[44vw] rounded-full will-change-transform"
+            style={{ background: "radial-gradient(circle closest-side, rgba(0,255,255,0.9) 0%, rgba(0,255,255,0.38) 45%, transparent 100%)" }}
+          />
+          <motion.div
+            animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.25, 0.1] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            className="absolute bottom-[12%] right-[22%] w-[54vw] h-[54vw] rounded-full will-change-transform"
+            style={{ background: "radial-gradient(circle closest-side, rgba(255,0,255,0.9) 0%, rgba(255,0,255,0.38) 45%, transparent 100%)" }}
+          />
         </div>
 
         {/* Prince Rupert's Drop Assembly */}
@@ -762,7 +797,7 @@ export default function LandingPage({ onNavigateAuth }) {
           <div className="absolute inset-0" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, rgba(0,0,0,0.1) 1px, transparent 0)`, backgroundSize: '40px 40px' }} />
         </div>
 
-        {/* Dynamic Aggressive Blobs (Magenta & Gold) */}
+        {/* Dynamic Aggressive Blobs (Magenta & Gold - GPU Radial Gradients) */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
           <motion.div
             animate={{
@@ -771,7 +806,8 @@ export default function LandingPage({ onNavigateAuth }) {
               y: ["-10%", "15%", "-10%"]
             }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-0 left-0 w-[70vw] h-[70vw] rounded-full blur-[140px] bg-[#D946EF] opacity-40 mix-blend-multiply"
+            className="absolute top-[-10%] left-[-10%] w-[85vw] h-[85vw] rounded-full opacity-45 mix-blend-multiply will-change-transform"
+            style={{ background: "radial-gradient(circle closest-side, rgba(217,70,239,0.92) 0%, rgba(217,70,239,0.42) 45%, transparent 100%)" }}
           />
           <motion.div
             animate={{
@@ -780,7 +816,8 @@ export default function LandingPage({ onNavigateAuth }) {
               y: ["20%", "-5%", "20%"]
             }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-            className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#FACC15] opacity-40 mix-blend-multiply"
+            className="absolute bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] rounded-full opacity-45 mix-blend-multiply will-change-transform"
+            style={{ background: "radial-gradient(circle closest-side, rgba(250,204,21,0.92) 0%, rgba(250,204,21,0.42) 45%, transparent 100%)" }}
           />
         </div>
 
@@ -880,14 +917,14 @@ export default function LandingPage({ onNavigateAuth }) {
           </div>
         )}
 
-        {/* Desktop & iPad Family: Subtitute_NeedOurHelp.png tight to bottom middle, scaled responsibly without overlapping button */}
+        {/* Desktop & iPad Family: Subtitute_NeedOurHelp.webp tight to bottom middle, scaled responsibly without overlapping button */}
         {!isMobile && (
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-10 flex justify-center items-end overflow-hidden">
             <Image
-              src="/png/Subtitute_NeedOurHelp.png?v=3"
+              src="/Subtitute_NeedOurHelp.webp"
               alt="Photographers"
-              width={2400}
-              height={1340}
+              width={1680}
+              height={938}
               unoptimized
               loading="lazy"
               decoding="async"

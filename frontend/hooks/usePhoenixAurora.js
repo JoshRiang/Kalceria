@@ -115,7 +115,7 @@ export function usePhoenixAurora(canvasRef, active, duration = 5000) {
       if (env < 0.005) return;
 
       // Build polyline
-      const SEG = 200;
+      const SEG = 96;
       const pts = [];
       for (let i = 0; i <= SEG; i++) {
         const t = i / SEG;
@@ -149,14 +149,12 @@ export function usePhoenixAurora(canvasRef, active, duration = 5000) {
       ctx.stroke();
       ctx.restore();
 
-      // ── Crisp main thread ─────────────────────────────────────────────────
+      // ── Crisp main thread (halo already rendered by additive gradient pass above) ──
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       ctx.lineWidth   = thick;
       ctx.lineCap     = "round";
       ctx.lineJoin    = "round";
-      ctx.shadowBlur  = 6;
-      ctx.shadowColor = `rgba(${p.shadow},${env * 0.9})`;
 
       const main = ctx.createLinearGradient(tailX, 0, headX, 0);
       main.addColorStop(0,    `rgba(${p.tail},0)`);

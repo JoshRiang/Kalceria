@@ -5,13 +5,15 @@
 .snap-tactical-map.light-theme .leaflet-container {
   background: #f2efe9 !important;
 }
+.snap-tactical-map.light-theme .leaflet-tile-pane {
+  filter: none !important;
+}
 .snap-tactical-map.light-theme .leaflet-tile {
   filter: none !important;
   visibility: visible !important;
   opacity: 1 !important;
   max-width: none !important;
   max-height: none !important;
-  will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -25,13 +27,17 @@
   background: #2b2c30 !important;
 }
 
-.snap-tactical-map.dark-theme .leaflet-tile {
+/* Single GPU container filter pass instead of hundreds of per-tile shader layers */
+.snap-tactical-map.dark-theme .leaflet-tile-pane {
   filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7) !important;
+  will-change: filter;
+}
+
+.snap-tactical-map.dark-theme .leaflet-tile {
   visibility: visible !important;
   opacity: 1 !important;
   max-width: none !important;
   max-height: none !important;
-  will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }

@@ -10,7 +10,6 @@ import { CategoryIcon } from "./panel/PanelIcons";
 export const MapHeaderHud = memo(function MapHeaderHud({
   isMapDark,
   setIsMapDark,
-  mapCenter,
   actionMenuOpen,
   setActionMenuOpen,
   menuOpen,

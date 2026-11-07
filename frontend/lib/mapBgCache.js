@@ -22,6 +22,7 @@ const BLOB_URL_MAP = new Map();
 const IN_FLIGHT_MAP = new Map();
 const DECODED_IMAGE_REFS = [];
 let hasInitializedCssVars = false;
+let hasScheduledStaggeredWarm = false;
 
 function syncRootCssVar(assetPath, resolvedUrl) {
   if (typeof document === "undefined" || !document.documentElement) return;
@@ -38,12 +39,13 @@ function syncRootCssVar(assetPath, resolvedUrl) {
   }
 }
 
-function decodeIntoMemory(url) {
+function decodeIntoMemory(url, isHighPriority = false) {
   if (typeof window === "undefined") return Promise.resolve();
   const img = new window.Image();
-  img.decoding = "sync";
+  // Always decode off the main UI thread so Map Intro & UI animations stay 60fps
+  img.decoding = "async";
   if ("fetchPriority" in img) {
-    img.fetchPriority = "high";
+    img.fetchPriority = isHighPriority ? "high" : "low";
   }
   img.src = url;
   DECODED_IMAGE_REFS.push(img);
@@ -64,7 +66,7 @@ function warmSingleMapBg(assetPath, isHighPriority = false) {
 
   const task = fetch(assetPath, {
     cache: "force-cache",
-    priority: isHighPriority ? "high" : "auto",
+    priority: isHighPriority ? "high" : "low",
   })
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -73,13 +75,13 @@ function warmSingleMapBg(assetPath, isHighPriority = false) {
     .then(async (blob) => {
       if (!blob || blob.size === 0) throw new Error("Empty blob");
       const blobUrl = URL.createObjectURL(blob);
-      await decodeIntoMemory(blobUrl);
+      await decodeIntoMemory(blobUrl, isHighPriority);
       BLOB_URL_MAP.set(assetPath, blobUrl);
       syncRootCssVar(assetPath, blobUrl);
       return blobUrl;
     })
     .catch(async () => {
-      await decodeIntoMemory(assetPath);
+      await decodeIntoMemory(assetPath, isHighPriority);
       syncRootCssVar(assetPath, assetPath);
       return assetPath;
     })
@@ -100,17 +102,32 @@ export function preloadAllMapBackgrounds() {
     syncRootCssVar(EVENT_CARD_BG_DARK, BLOB_URL_MAP.get(EVENT_CARD_BG_DARK) || EVENT_CARD_BG_DARK);
   }
 
-  MAP_BG_WEBP_ASSETS.forEach((assetPath, idx) => {
-    warmSingleMapBg(assetPath, idx < 2);
+  if (hasScheduledStaggeredWarm) return;
+  hasScheduledStaggeredWarm = true;
+
+  const scheduleIdle =
+    typeof window.requestIdleCallback === "function"
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 600 })
+      : (cb) => setTimeout(cb, 250);
+
+  // 1. Warm the 2 Event Card backgrounds during idle frames
+  scheduleIdle(() => {
+    warmSingleMapBg(EVENT_CARD_BG_LIGHT, true);
+    warmSingleMapBg(EVENT_CARD_BG_DARK, true);
+  });
+
+  // 2. Stagger the remaining modal backgrounds sequentially after startup intro settles
+  const secondaryAssets = MAP_BG_WEBP_ASSETS.slice(2);
+  secondaryAssets.forEach((assetPath, idx) => {
+    setTimeout(() => {
+      scheduleIdle(() => {
+        warmSingleMapBg(assetPath, false);
+      });
+    }, 1800 + idx * 260);
   });
 }
 
 export function getInstantMapBgUrl(assetPath) {
   if (!assetPath) return "";
   return BLOB_URL_MAP.get(assetPath) || assetPath;
-}
-
-// Start warming Event Card backgrounds immediately when evaluated on client
-if (typeof window !== "undefined") {
-  preloadAllMapBackgrounds();
 }

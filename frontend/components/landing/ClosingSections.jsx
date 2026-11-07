@@ -27,17 +27,20 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               <motion.div 
                 animate={{ scale: [1, 1.25, 1], x: ["-15%", "15%", "-15%"], y: ["-10%", "10%", "-10%"] }} 
                 transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} 
-                className="absolute top-0 left-0 w-[60vw] h-[60vw] rounded-full blur-[140px] bg-[#00FFFF]" 
+                className="absolute top-[-10%] left-[-10%] w-[75vw] h-[75vw] rounded-full will-change-transform"
+                style={{ background: "radial-gradient(circle closest-side, rgba(0,255,255,0.68) 0%, rgba(0,255,255,0.28) 45%, transparent 100%)" }}
               />
               <motion.div 
                 animate={{ scale: [1.1, 1.35, 1.1], x: ["15%", "-15%", "15%"], y: ["10%", "-10%", "10%"] }} 
                 transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }} 
-                className="absolute bottom-0 right-0 w-[65vw] h-[65vw] rounded-full blur-[150px] bg-[#D946EF]" 
+                className="absolute bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] rounded-full will-change-transform"
+                style={{ background: "radial-gradient(circle closest-side, rgba(217,70,239,0.68) 0%, rgba(217,70,239,0.28) 45%, transparent 100%)" }}
               />
               <motion.div 
                 animate={{ scale: [1, 1.4, 1], x: ["0%", "10%", "0%"], y: ["20%", "-20%", "20%"] }} 
                 transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 4 }} 
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[55vw] h-[55vw] rounded-full blur-[160px] bg-[#FACC15]" 
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70vw] h-[70vw] rounded-full will-change-transform"
+                style={{ background: "radial-gradient(circle closest-side, rgba(250,204,21,0.58) 0%, rgba(250,204,21,0.22) 45%, transparent 100%)" }}
               />
             </>
           )}
@@ -230,13 +233,15 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
               <motion.div 
                 animate={{ opacity: [0.3, 0.5, 0.3] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-[-10%] left-[-15%] w-[60%] h-[120%] bg-red-600/25 blur-[130px] rounded-full will-change-transform"
+                className="absolute top-[-15%] left-[-20%] w-[70%] h-[130%] rounded-full will-change-transform"
+                style={{ background: "radial-gradient(ellipse closest-side, rgba(220,38,38,0.42) 0%, rgba(220,38,38,0.16) 48%, transparent 100%)" }}
               />
               {/* Cyan Dynamic Glow (Right / DSL) */}
               <motion.div 
                 animate={{ opacity: [0.3, 0.5, 0.3] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2.5 }}
-                className="absolute top-[-10%] right-[-15%] w-[60%] h-[120%] bg-cyan-500/25 blur-[130px] rounded-full will-change-transform"
+                className="absolute top-[-15%] right-[-20%] w-[70%] h-[130%] rounded-full will-change-transform"
+                style={{ background: "radial-gradient(ellipse closest-side, rgba(6,182,212,0.42) 0%, rgba(6,182,212,0.16) 48%, transparent 100%)" }}
               />
             </>
           )}

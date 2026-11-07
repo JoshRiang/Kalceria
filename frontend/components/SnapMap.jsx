@@ -11,7 +11,7 @@ import {
   getEventPendingRequests,
 } from "./map/hooks/useMapChatAndNotifications";
 
-import { OSM_SUBDOMAINS, prewarmOsmTiles } from "@/lib/osmTilePrewarmer";
+import { OSM_SUBDOMAINS, prewarmOsmTiles, hasValidCoordinates } from "@/lib/osmTilePrewarmer";
 
 import "leaflet/dist/leaflet.css";
 import "./map/snapmap.css";
@@ -385,17 +385,17 @@ export default function SnapMap({
         resetIdleTimer();
       });
 
-      // Keyless multi-shard OpenStreetMap CDN with deep keepBuffer + continuous mid-pan tile streaming
+      // Keyless multi-shard OpenStreetMap CDN with right-sized viewport keepBuffer so Desktop/iPad never mount 500+ tile bitmaps
       const tileLayer = L.tileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
           subdomains: OSM_SUBDOMAINS,
           maxZoom: 19,
           maxNativeZoom: 19,
-          keepBuffer: 8,
+          keepBuffer: typeof window !== "undefined" && window.innerWidth >= 768 ? 2 : 3,
           updateWhenIdle: false,
           updateWhenZooming: false,
-          updateInterval: 80,
+          updateInterval: 140,
           attribution: "&copy; OpenStreetMap contributors",
         }
       ).addTo(map);
@@ -447,9 +447,12 @@ export default function SnapMap({
     const currentUserIds = new Set();
     (users || []).forEach((user) => {
       if (!user?.isOnline || user.allowLiveLocation === false) return;
-      if (!Number.isFinite(user.lat) || !Number.isFinite(user.lng)) return;
+      if (!hasValidCoordinates(user.lat, user.lng)) return;
       const markerId = `user_${user.id}`;
       currentUserIds.add(markerId);
+
+      const nextUserIcon = createUserIcon(L, user, isMapDark);
+      const nextUserIconHtml = nextUserIcon?.options?.html || "";
 
       if (markerRefs.current[markerId]) {
         const marker = markerRefs.current[markerId];
@@ -459,7 +462,10 @@ export default function SnapMap({
           marker.setLatLng([user.lat, user.lng]);
         }
 
-        marker.setIcon(createUserIcon(L, user, isMapDark));
+        if (marker._lastIconHtml !== nextUserIconHtml) {
+          marker.setIcon(nextUserIcon);
+          marker._lastIconHtml = nextUserIconHtml;
+        }
 
         const popupContent = userPopup(user, isMapDark);
         if (popupContent) {
@@ -488,9 +494,10 @@ export default function SnapMap({
       } else {
         const popupContent = userPopup(user, isMapDark);
         const marker = L.marker([user.lat, user.lng], {
-          icon: createUserIcon(L, user, isMapDark),
+          icon: nextUserIcon,
           userData: user,
         });
+        marker._lastIconHtml = nextUserIconHtml;
 
         if (popupContent) {
           marker.bindPopup(popupContent, {
@@ -536,7 +543,7 @@ export default function SnapMap({
     // 2. Reconcile Dummy & Live Events (Always unclustered and visible!)
     const currentEventIds = new Set();
     (events || []).forEach((item) => {
-      if (!Number.isFinite(item.lat) || !Number.isFinite(item.lng)) return;
+      if (!hasValidCoordinates(item.lat, item.lng)) return;
       const markerId = `event_${item.id}`;
       currentEventIds.add(markerId);
 
@@ -547,6 +554,9 @@ export default function SnapMap({
       const unreadGroupChatCount = (isOwner || isCollaborator) ? (eventGroupChatMap?.[item.id]?.unreadCount || 0) : 0;
       const hasEventNotif = pendingCount > 0 || unreadGroupChatCount > 0;
 
+      const nextEventIcon = createEventIcon(L, item, isMapDark, hasEventNotif);
+      const nextEventIconHtml = nextEventIcon?.options?.html || "";
+
       if (markerRefs.current[markerId]) {
         const marker = markerRefs.current[markerId];
 
@@ -555,7 +565,10 @@ export default function SnapMap({
           marker.setLatLng([item.lat, item.lng]);
         }
 
-        marker.setIcon(createEventIcon(L, item, isMapDark, hasEventNotif));
+        if (marker._lastIconHtml !== nextEventIconHtml) {
+          marker.setIcon(nextEventIcon);
+          marker._lastIconHtml = nextEventIconHtml;
+        }
 
         const newPopupContent = eventPopup(
           item,
@@ -590,7 +603,7 @@ export default function SnapMap({
           isSelfOffline
         );
         const marker = L.marker([item.lat, item.lng], {
-          icon: createEventIcon(L, item, isMapDark, hasEventNotif),
+          icon: nextEventIcon,
           userData: { color: "#ff006e" },
         }).bindPopup(newPopupContent, {
           className: "tactical-popup event-tactical-popup",
@@ -599,6 +612,7 @@ export default function SnapMap({
           closeOnClick: false,
           closeButton: false,
         });
+        marker._lastIconHtml = nextEventIconHtml;
         marker._lastPopupContent = newPopupContent;
         marker._lastPopupSig = stripDynamicUptime(newPopupContent);
         markerRefs.current[markerId] = marker;

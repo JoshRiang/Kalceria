@@ -26,7 +26,7 @@ import {
   persistProfileIdentityCache,
 } from "@/lib/profileIdentity";
 import { toSmartTitleCase } from "@/lib/titleCase";
-import { prewarmOsmTiles } from "@/lib/osmTilePrewarmer";
+import { prewarmOsmTiles, hasValidCoordinates } from "@/lib/osmTilePrewarmer";
 import {
   useMapChatAndNotifications,
   doesEventBelongToUser,
@@ -41,7 +41,6 @@ import api, {
 import {
   EVENT_CARD_BG_DARK,
   EVENT_CARD_BG_LIGHT,
-  MAP_BG_WEBP_ASSETS,
   preloadAllMapBackgrounds,
 } from "@/lib/mapBgCache";
 
@@ -156,7 +155,6 @@ export default function MapPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const hasMounted = useHasMounted();
   const [notLoggedIn, setNotLoggedIn] = useState(() => (typeof window !== "undefined" ? !hasUserSession() : false));
-  const [hoveredKalcerian, setHoveredKalcerian] = useState(null);
   const hasInitialCenteredRef = useRef(false);
   const [isStatusBusy, setIsStatusBusy] = useState(false);
   const [isMapDark, setIsMapDark] = useState(false);
@@ -216,7 +214,7 @@ export default function MapPage() {
         setCurrentUser(enrichedUser);
         setPresence(user.allowLiveLocation ? "online" : "invisible");
         if (user.broadcast?.message) setStatusText(user.broadcast.message);
-        if (Number.isFinite(Number(user.domicileLat)) && Number.isFinite(Number(user.domicileLng))) {
+        if (hasValidCoordinates(user.domicileLat, user.domicileLng)) {
           prewarmOsmTiles(Number(user.domicileLat), Number(user.domicileLng), 15);
         }
       })
@@ -287,24 +285,23 @@ export default function MapPage() {
     if (!mapRef.current) return;
     setIsRecentering(true);
     const me = mapUsersData.find((u) => u.id === currentUser?.id);
-    if (me && Number.isFinite(Number(me.lat)) && Number.isFinite(Number(me.lng))) {
-      prewarmOsmTiles(me.lat, me.lng, 15);
-      mapRef.current.flyTo([me.lat, me.lng], 15, {
+    if (me && me.isOnline !== false && hasValidCoordinates(me.lat, me.lng)) {
+      const mLat = Number(me.lat);
+      const mLng = Number(me.lng);
+      prewarmOsmTiles(mLat, mLng, 15);
+      mapRef.current.flyTo([mLat, mLng], 15, {
         animate: true,
         duration: 0.5,
         easeLinearity: 0.25,
       });
-    } else if (selfLiveCoords && Number.isFinite(selfLiveCoords.lat) && Number.isFinite(selfLiveCoords.lng)) {
+    } else if (selfLiveCoords && hasValidCoordinates(selfLiveCoords.lat, selfLiveCoords.lng)) {
       prewarmOsmTiles(selfLiveCoords.lat, selfLiveCoords.lng, 15);
       mapRef.current.flyTo([selfLiveCoords.lat, selfLiveCoords.lng], 15, {
         animate: true,
         duration: 0.5,
         easeLinearity: 0.25,
       });
-    } else if (
-      Number.isFinite(Number(currentUser?.domicileLat)) &&
-      Number.isFinite(Number(currentUser?.domicileLng))
-    ) {
+    } else if (hasValidCoordinates(currentUser?.domicileLat, currentUser?.domicileLng)) {
       const dLat = Number(currentUser.domicileLat);
       const dLng = Number(currentUser.domicileLng);
       prewarmOsmTiles(dLat, dLng, 15);
@@ -323,18 +320,6 @@ export default function MapPage() {
     }
   }, [mapUsersData, currentUser, selfLiveCoords]);
 
-  const [mapCenter, setMapCenter] = useState({ lat: -6.2735, lng: 106.7150 });
-  const [mapZoom, setMapZoom] = useState(14);
-
-  const isCentered = useMemo(() => {
-    const me = mapUsersData.find((u) => u.id === currentUser?.id);
-    const target = (me && me.lat && me.lng) ? [me.lat, me.lng] : [-6.2735, 106.7150];
-    const dist = Math.sqrt(
-      Math.pow(mapCenter.lat - target[0], 2) + Math.pow(mapCenter.lng - target[1], 2),
-    );
-    return dist < 0.0001;
-  }, [mapCenter, mapUsersData, currentUser]);
-
   const mapRef = useRef(null);
 
   // Map Event Tracking
@@ -343,21 +328,12 @@ export default function MapPage() {
     mapRef.current = mapInstance;
     setIsMapEngineReady(true);
 
-    setMapCenter(mapInstance.getCenter());
-    setMapZoom(mapInstance.getZoom());
-
     // Invalidate size immediately so tiles compute & load in background
     mapInstance.invalidateSize();
 
     mapInstance.on("moveend", () => {
-      setMapCenter(mapInstance.getCenter());
       setIsRecentering(false);
     });
-    mapInstance.on("zoomend", () => {
-      setMapZoom(mapInstance.getZoom());
-      setMapCenter(mapInstance.getCenter());
-    });
-    mapInstance.on("movestart", () => {});
   }, []);
 
   // Guarantee tile loading & full viewport invalidation when startup sequence completes
@@ -423,9 +399,9 @@ export default function MapPage() {
     (mapUsersData || []).forEach((u) => {
       if (!u?.id || blockedUserIds.includes(u.id)) return;
       if (u.isOnline === false || u.allowLiveLocation === false) return;
+      if (!hasValidCoordinates(u.lat, u.lng)) return;
       const lat = Number(u.lat);
       const lng = Number(u.lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
       mergedMap.set(String(u.id), {
         ...u,
         displayName: u.displayName || u.name || u.nickname || "Kalcerian",
@@ -447,9 +423,11 @@ export default function MapPage() {
         mergedMap.delete(key);
         return;
       }
-      const lat = existing ? existing.lat : Number(u.lat);
-      const lng = existing ? existing.lng : Number(u.lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const rawLat = existing ? existing.lat : u.lat;
+      const rawLng = existing ? existing.lng : u.lng;
+      if (!hasValidCoordinates(rawLat, rawLng)) return;
+      const lat = Number(rawLat);
+      const lng = Number(rawLng);
       mergedMap.set(key, {
         ...(existing || {}),
         ...u,
@@ -468,14 +446,11 @@ export default function MapPage() {
       if (presence === "online") {
         const existingSelf = mergedMap.get(selfKey);
         let selfCoords = null;
-        if (existingSelf && Number.isFinite(existingSelf.lat) && Number.isFinite(existingSelf.lng)) {
+        if (existingSelf && hasValidCoordinates(existingSelf.lat, existingSelf.lng)) {
           selfCoords = { lat: existingSelf.lat, lng: existingSelf.lng };
-        } else if (selfLiveCoords && Number.isFinite(selfLiveCoords.lat) && Number.isFinite(selfLiveCoords.lng)) {
+        } else if (selfLiveCoords && hasValidCoordinates(selfLiveCoords.lat, selfLiveCoords.lng)) {
           selfCoords = { lat: selfLiveCoords.lat, lng: selfLiveCoords.lng };
-        } else if (
-          Number.isFinite(Number(currentUser.domicileLat)) &&
-          Number.isFinite(Number(currentUser.domicileLng))
-        ) {
+        } else if (hasValidCoordinates(currentUser.domicileLat, currentUser.domicileLng)) {
           selfCoords = {
             lat: Number(currentUser.domicileLat),
             lng: Number(currentUser.domicileLng),
@@ -515,14 +490,23 @@ export default function MapPage() {
   // Handlers
   const focusUser = useCallback((user) => {
     if (!mapRef.current || !user) return;
-    let target = user;
-    // if coming from sidebar kalcerians, lat/lng might be missing. Look up in mapUsersData
-    if (!Number.isFinite(Number(target.lat)) || !Number.isFinite(Number(target.lng))) {
-      target = mapUsersData.find((u) => u.id === user.id) || target;
+    const isEventTarget = "title" in user;
+    if (!isEventTarget && (!user.isOnline || user.allowLiveLocation === false)) {
+      return;
     }
-    if (!Number.isFinite(Number(target.lat)) || !Number.isFinite(Number(target.lng))) return;
-    prewarmOsmTiles(Number(target.lat), Number(target.lng), 16);
-    mapRef.current.flyTo([Number(target.lat), Number(target.lng)], 16, {
+    let target = user;
+    // if coming from sidebar kalcerians, lat/lng might be missing. Look up in mapUsersData (online only)
+    if (!hasValidCoordinates(target.lat, target.lng) && !isEventTarget) {
+      const liveMatch = mapUsersData.find(
+        (u) => String(u.id) === String(user.id) && u.isOnline !== false && u.allowLiveLocation !== false
+      );
+      if (liveMatch) target = liveMatch;
+    }
+    if (!hasValidCoordinates(target.lat, target.lng)) return;
+    const tLat = Number(target.lat);
+    const tLng = Number(target.lng);
+    prewarmOsmTiles(tLat, tLng, 16);
+    mapRef.current.flyTo([tLat, tLng], 16, {
       animate: true,
       duration: 0.48,
       easeLinearity: 0.25,
@@ -531,7 +515,8 @@ export default function MapPage() {
 
   const handleOpenItemOnMap = useCallback((item, type = "user") => {
     if (!item) return;
-    if (Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng))) {
+    if (type === "user" && (!item.isOnline || item.allowLiveLocation === false)) return;
+    if (hasValidCoordinates(item.lat, item.lng)) {
       prewarmOsmTiles(Number(item.lat), Number(item.lng), 16);
     }
     setFocusTarget({
@@ -1181,42 +1166,33 @@ export default function MapPage() {
 
   return (
     <main 
-      className={`relative h-screen max-h-screen w-full bg-[#0a0e27] overflow-hidden text-white font-sans selection:bg-[#ffd60a] selection:text-black transition-all ${isMapDark ? "dark-theme" : "light-theme"}`}
-      style={{
-        filter: isExiting ? "blur(30px)" : "none",
-        transition: "filter 1.2s ease-in-out"
-      }}
+      className={`relative h-screen max-h-screen w-full bg-[#0a0e27] overflow-hidden text-white font-sans selection:bg-[#ffd60a] selection:text-black transition-colors ${isMapDark ? "dark-theme" : "light-theme"}`}
+      style={
+        isExiting
+          ? {
+              filter: "blur(30px)",
+              transition: "filter 1.2s ease-in-out",
+            }
+          : undefined
+      }
     >
-      {/* Persistent in-viewport GPU-pinned WebP texture layer so all 9 BG_IMPROVE_FOR_MAP assets + RAM blob: Event Card textures render in 0ms */}
-      <div
-        aria-hidden="true"
-        className="fixed bottom-0 left-0 w-1 h-1 overflow-hidden opacity-[0.002] pointer-events-none select-none z-0"
-      >
+      {/* Lightweight active-theme Event Card texture pin (rendered only after startup sequence completes) */}
+      {!showStartup && (
         <div
-          style={{
-            width: 1,
-            height: 1,
-            backgroundImage: `var(--kalceria-event-bg-light, url("${EVENT_CARD_BG_LIGHT}"))`,
-          }}
-        />
-        <div
-          style={{
-            width: 1,
-            height: 1,
-            backgroundImage: `var(--kalceria-event-bg-dark, url("${EVENT_CARD_BG_DARK}"))`,
-          }}
-        />
-        {MAP_BG_WEBP_ASSETS.map((assetUrl) => (
+          aria-hidden="true"
+          className="fixed bottom-0 left-0 w-1 h-1 overflow-hidden opacity-[0.002] pointer-events-none select-none z-0"
+        >
           <div
-            key={assetUrl}
             style={{
               width: 1,
               height: 1,
-              backgroundImage: `url('${assetUrl}')`,
+              backgroundImage: isMapDark
+                ? `var(--kalceria-event-bg-dark, url("${EVENT_CARD_BG_DARK}"))`
+                : `var(--kalceria-event-bg-light, url("${EVENT_CARD_BG_LIGHT}"))`,
             }}
           />
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* 🌌 Atmospheric Tactical Background (Behind Map) */}
       <AtmosphericBackground
@@ -1272,7 +1248,7 @@ export default function MapPage() {
       {!showStartup && hasMounted && (
         <>
           <MapHeaderHud
-            isMapDark={isMapDark} setIsMapDark={setIsMapDark} mapCenter={mapCenter} mapZoom={mapZoom}
+            isMapDark={isMapDark} setIsMapDark={setIsMapDark}
             actionMenuOpen={actionMenuOpen} setActionMenuOpen={setActionMenuOpen} menuOpen={menuOpen} setMenuOpen={setMenuOpen}
             setShowQuitModal={setShowQuitModal} setShowStatusModal={setShowStatusModal} setShowEventModal={handleOpenEventModal}
             isStatusBusy={isStatusBusy} currentUser={currentUser} avatarUrl={avatarUrl} presence={presence}
@@ -1297,7 +1273,7 @@ export default function MapPage() {
           <KalceriansPanel
             scheduleTimeout={scheduleTimeout} mapUsersData={mapUsersData} kalcerians={kalcerians} events={events}
             searchQuery={searchQuery} setSearchQuery={setSearchQuery} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
-            isDataLoading={isDataLoading} hoveredKalcerian={hoveredKalcerian} setHoveredKalcerian={setHoveredKalcerian}
+            isDataLoading={isDataLoading}
             isMapDark={isMapDark} setFocusedUserId={setFocusedUserId}
             sidebarKalcerians={sidebarKalcerians} focusUser={focusUser} blockedUserIds={blockedUserIds}
             onBlockUser={handleBlockUser} onUnblockUser={handleUnblockUser} onOpenItemOnMap={handleOpenItemOnMap}

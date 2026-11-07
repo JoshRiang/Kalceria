@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
 import { getEventCategory } from "../EventIcon";
@@ -13,7 +14,7 @@ import {
 } from "./PanelIcons";
 import { BlockConfirmModal } from "./BlockConfirmModal";
 
-export function KalcerianCardItem({
+export const KalcerianCardItem = memo(function KalcerianCardItem({
   user,
   userEvent,
   isBlocked,
@@ -39,6 +40,7 @@ export function KalcerianCardItem({
   limits,
   deviceFamily,
   isMapDark,
+  isHovered = false,
   hoveredKalcerian,
   setHoveredKalcerian,
   hoveredEventIconId,
@@ -62,7 +64,7 @@ export function KalcerianCardItem({
 }) {
   return (
     <motion.div
-      layout
+      layout="position"
       transition={{
         type: "spring",
         stiffness: 280,
@@ -70,7 +72,7 @@ export function KalcerianCardItem({
         mass: 0.8,
       }}
       key={user.id}
-      className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-colors duration-200 backdrop-blur-[2px] ${
+      className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-colors duration-200 ${
         isExpanded ? "overflow-hidden" : "overflow-visible"
       } ${
         isBlocked
@@ -78,12 +80,12 @@ export function KalcerianCardItem({
             ? "bg-[#0f1014]/50 border-[#2a2d37]/40 opacity-40 select-none shadow-none"
             : "bg-white/50 border-[#e5e7eb]/60 opacity-40 select-none shadow-none"
           : isMapDark
-          ? "bg-[#0f1014]/75 border-[#2e323d] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.1),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)] hover:border-[#4d5663] hover:bg-[#0f1014]/88"
-          : "bg-white/80 border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] hover:border-[#b0b8c2] hover:bg-white/92"
+          ? "bg-[#0f1014]/84 border-[#2e323d] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.1),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)] hover:border-[#4d5663] hover:bg-[#0f1014]/92"
+          : "bg-white/88 border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] hover:border-[#b0b8c2] hover:bg-white/95"
       }`}
     >
       <div
-        className={`relative w-full grid grid-cols-[52px_1fr_54px] items-center gap-2 px-3 py-2.5 text-left transition-all group outline-none ${
+        className={`relative w-full grid grid-cols-[52px_1fr_54px] items-center gap-2 px-3 py-2.5 text-left transition-colors group outline-none ${
           isBlocked
             ? "cursor-default pointer-events-none"
             : "cursor-pointer active:scale-[0.99]"
@@ -92,14 +94,15 @@ export function KalcerianCardItem({
         onMouseLeave={() => !isBlocked && !isConfirming && setHoveredKalcerian(null)}
         onClick={() => {
           if (isBlocked || isConfirming) return;
-          if (userEvent) {
-            focusUser(userEvent);
-          } else if (user.isOnline) {
-            setFocusedUserId(user.id);
-            focusUser(user);
-            scheduleTimeout(() => setFocusedUserId(null), 100);
-          } else {
-            focusUser(user);
+          const isUserActivelyOnline = Boolean(user?.isOnline && user?.allowLiveLocation !== false);
+          if (isUserActivelyOnline) {
+            if (userEvent) {
+              focusUser(userEvent);
+            } else {
+              setFocusedUserId(user.id);
+              focusUser(user);
+              scheduleTimeout(() => setFocusedUserId(null), 100);
+            }
           }
           setExpandedUserId((prev) => (prev === user.id ? null : user.id));
         }}
@@ -408,12 +411,17 @@ export function KalcerianCardItem({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (onOpenItemOnMap) {
-                        onOpenItemOnMap(user, "user");
+                      const isUserActivelyOnline = Boolean(user?.isOnline && user?.allowLiveLocation !== false);
+                      if (isUserActivelyOnline) {
+                        if (onOpenItemOnMap) {
+                          onOpenItemOnMap(user, "user");
+                        } else {
+                          focusUser(user);
+                        }
+                        if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
                       } else {
-                        focusUser(user);
+                        setExpandedUserId((prev) => (prev === user.id ? null : user.id));
                       }
-                      if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
                     }}
                     className={`relative z-20 w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 outline-none cursor-pointer ${
                       userEvent ? "-ml-2.5" : ""
@@ -553,7 +561,7 @@ export function KalcerianCardItem({
       />
 
       {/* 6. Desktop Hover Card (Only for non-blocked users) */}
-      {hoveredKalcerian === user.id && !isBlocked && (
+      {(isHovered || (hoveredKalcerian !== undefined && hoveredKalcerian === user.id)) && !isBlocked && (
         <div
           className={`absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 w-[220px] border rounded-lg shadow-xl p-3 flex flex-col gap-2.5 pointer-events-auto hidden md:flex font-sans backdrop-blur-md ${
             isMapDark
@@ -615,7 +623,7 @@ export function KalcerianCardItem({
             >
               Profile
             </a>
-            {(user.isOnline || userEvent) && (
+            {Boolean(user?.isOnline && user?.allowLiveLocation !== false) && (
               <button
                 type="button"
                 className={`flex-1 py-1.5 text-center text-[10.5px] font-medium border rounded transition-colors cursor-pointer ${
@@ -641,4 +649,4 @@ export function KalcerianCardItem({
       )}
     </motion.div>
   );
-}
+});

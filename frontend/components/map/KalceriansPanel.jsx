@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Component } from "react";
+import { memo, useState, useEffect, useRef, useCallback, Component } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { KalcerianCardItem } from "./panel/KalcerianCardItem";
 import { PersonalChatPanel } from "./chat/PersonalChatPanel";
@@ -154,7 +154,7 @@ function getActiveBroadcast(user) {
   return msg;
 }
 
-export function KalceriansPanel({
+export const KalceriansPanel = memo(function KalceriansPanel({
   scheduleTimeout,
   mapUsersData,
   kalcerians,
@@ -164,8 +164,6 @@ export function KalceriansPanel({
   drawerOpen,
   setDrawerOpen,
   isDataLoading,
-  hoveredKalcerian,
-  setHoveredKalcerian,
   isMapDark,
   setFocusedUserId,
   sidebarKalcerians,
@@ -191,6 +189,7 @@ export function KalceriansPanel({
   onPromptCancelRequest,
   onOpenRequests,
 }) {
+  const [localHoveredKalcerian, setLocalHoveredKalcerian] = useState(null);
   const [hoveredEventIconId, setHoveredEventIconId] = useState(null);
   const [hoveredChatIconId, setHoveredChatIconId] = useState(null);
   const [confirmingAction, setConfirmingAction] = useState(null); // { userId, type: "block" | "unblock" }
@@ -497,13 +496,18 @@ export function KalceriansPanel({
 
   const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;
 
-  function handleAvatarClick(e, user) {
+  const blockedUserIdsRef = useRef(blockedUserIds);
+  blockedUserIdsRef.current = blockedUserIds;
+
+  const handleAvatarClick = useCallback((e, user) => {
     if (e?.stopPropagation) e.stopPropagation();
-    if (blockedUserIds.includes(user.id)) return;
-    focusUser(user);
+    if (blockedUserIdsRef.current.includes(user.id)) return;
+    if (Boolean(user?.isOnline && user?.allowLiveLocation !== false)) {
+      focusUser(user);
+    }
     // On all device families, keep drawer open and smoothly elongate profile card inline
     setExpandedUserId((prev) => (prev === user.id ? null : user.id));
-  }
+  }, [focusUser]);
 
   return (
     <>
@@ -651,10 +655,10 @@ export function KalceriansPanel({
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full border rounded-xl py-1.5 pl-8 pr-3 text-[12px] font-sans outline-none transition-all backdrop-blur-sm ${
+            className={`w-full border rounded-xl py-1.5 pl-8 pr-3 text-[12px] font-sans outline-none transition-colors ${
               isMapDark
-                ? "bg-[#0f1014]/85 border-[#2e323d] text-[#f0f6fc] placeholder:text-[#8b949e] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.1),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)] focus:border-[#58a6ff]"
-                : "bg-white/85 border-[#d1d5db] text-[#1f2328] placeholder:text-[#656d76] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] focus:border-[#0969da]"
+                ? "bg-[#0f1014]/92 border-[#2e323d] text-[#f0f6fc] placeholder:text-[#8b949e] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.1),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)] focus:border-[#58a6ff]"
+                : "bg-white/92 border-[#d1d5db] text-[#1f2328] placeholder:text-[#656d76] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] focus:border-[#0969da]"
             }`}
           />
           <svg
@@ -762,8 +766,8 @@ export function KalceriansPanel({
                 limits={limits}
                 deviceFamily={deviceFamily}
                 isMapDark={isMapDark}
-                hoveredKalcerian={hoveredKalcerian}
-                setHoveredKalcerian={setHoveredKalcerian}
+                isHovered={localHoveredKalcerian === user.id}
+                setHoveredKalcerian={setLocalHoveredKalcerian}
                 hoveredEventIconId={hoveredEventIconId}
                 setHoveredEventIconId={setHoveredEventIconId}
                 hoveredChatIconId={hoveredChatIconId}
@@ -798,4 +802,4 @@ export function KalceriansPanel({
     </motion.aside>
     </>
   );
-}
+});

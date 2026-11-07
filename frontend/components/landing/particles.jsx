@@ -197,20 +197,20 @@ export function AuroraParticles({ isMobile = false }) {
         skew: (random() - 0.5) * 40,
         blur: isMobile ? 35 : random() * 50 + 80,
       };
-      setPillars(prev => [...prev.slice(isMobile ? -2 : -10), newPillar]);
+      setPillars(prev => [...prev.slice(isMobile ? -2 : -5), newPillar]);
       scheduleTimeout(() => {
         setPillars(prev => prev.filter(p => p.id !== id));
       }, newPillar.duration * 1000);
     };
 
     // Initial scattered start
-    const count = isMobile ? 2 : 8;
+    const count = isMobile ? 2 : 5;
     for(let i=0; i<count; i++) {
       scheduleTimeout(spawnPillar, i * 600);
     }
 
     if (!isMobile) {
-      const interval = setInterval(spawnPillar, 4000); 
+      const interval = setInterval(spawnPillar, 5500); 
       return () => {
         active = false;
         clearInterval(interval);
@@ -244,13 +244,11 @@ export function AuroraParticles({ isMobile = false }) {
               ease: "easeInOut",
               times: [0, 0.15, 0.5, 0.85, 1] 
             }}
-            className="absolute top-[-30%] h-[160%]"
+            className="absolute top-[-30%] h-[160%] will-change-transform"
             style={{
-              width: p.width,
+              width: p.width * 1.35,
               left: p.left,
-              filter: `blur(${p.blur}px)`,
-              background: `linear-gradient(to bottom, transparent, ${p.color}22 20%, ${p.color} 50%, ${p.color}22 80%, transparent)`,
-              maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)',
+              background: `radial-gradient(ellipse 50% 50% at 50% 50%, ${p.color}66 0%, ${p.color}26 48%, transparent 100%)`,
             }}
           />
         ))}
@@ -295,6 +293,7 @@ export function DynamicCollage({ isGated = false }) {
         }
         .animate-roll {
           animation: roll 80s linear infinite;
+          will-change: transform;
         }
         @media (prefers-reduced-motion: reduce) {
           .animate-roll {

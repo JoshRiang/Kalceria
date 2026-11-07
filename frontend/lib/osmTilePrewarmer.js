@@ -2,6 +2,16 @@ export const OSM_SUBDOMAINS = ["a", "b", "c"];
 
 const PREWARMED_TILE_URLS = new Set();
 
+export function hasValidCoordinates(lat, lng) {
+  if (lat === null || lat === undefined || lat === "" || typeof lat === "boolean") return false;
+  if (lng === null || lng === undefined || lng === "" || typeof lng === "boolean") return false;
+  const nLat = Number(lat);
+  const nLng = Number(lng);
+  if (!Number.isFinite(nLat) || !Number.isFinite(nLng)) return false;
+  if (Math.abs(nLat) < 0.0001 && Math.abs(nLng) < 0.0001) return false;
+  return nLat >= -90 && nLat <= 90 && nLng >= -180 && nLng <= 180;
+}
+
 export function latLngToTileXY(lat, lng, z) {
   const n = 2 ** z;
   const clampedLat = Math.max(-85.05112878, Math.min(85.05112878, Number(lat)));
@@ -23,15 +33,17 @@ export function latLngToTileXY(lat, lng, z) {
  */
 export function prewarmOsmTiles(lat, lng, zoom = 16) {
   if (typeof window === "undefined") return;
-  if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return;
+  if (!hasValidCoordinates(lat, lng)) return;
 
   const targetZ = Math.max(1, Math.min(19, Math.round(Number(zoom) || 16)));
-  const levels = [
-    { z: targetZ, radius: 1 },
-    { z: Math.max(11, targetZ - 2), radius: 1 },
-  ];
+  const scheduleIdle =
+    typeof window.requestIdleCallback === "function"
+      ? (cb) => window.requestIdleCallback(cb, { timeout: 200 })
+      : (cb) => setTimeout(cb, 16);
 
-  levels.forEach(({ z, radius }) => {
+  scheduleIdle(() => {
+    const z = targetZ;
+    const radius = 1;
     const maxIndex = 2 ** z - 1;
     const center = latLngToTileXY(lat, lng, z);
     for (let dx = -radius; dx <= radius; dx++) {
@@ -42,7 +54,7 @@ export function prewarmOsmTiles(lat, lng, zoom = 16) {
         const shard = OSM_SUBDOMAINS[Math.abs(tx + ty) % OSM_SUBDOMAINS.length];
         const url = `https://${shard}.tile.openstreetmap.org/${z}/${tx}/${ty}.png`;
         if (PREWARMED_TILE_URLS.has(url)) continue;
-        if (PREWARMED_TILE_URLS.size >= 600) {
+        if (PREWARMED_TILE_URLS.size >= 400) {
           const oldest = PREWARMED_TILE_URLS.values().next().value;
           if (oldest) PREWARMED_TILE_URLS.delete(oldest);
         }

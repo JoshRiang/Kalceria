@@ -73,11 +73,11 @@ export function ChatMessageThread({
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-      {/* BG_PersonalChat.jpg Background Layer (~60% opacity / reduced by 40% for soft clarity) */}
+      {/* BG_PersonalChat.webp Background Layer (~60% opacity / reduced by 40% for soft clarity) */}
       <div
         className="absolute inset-0 z-0 pointer-events-none bg-cover bg-center bg-no-repeat transition-opacity duration-300"
         style={{
-          backgroundImage: "url('/BG_PersonalChat.jpg')",
+          backgroundImage: "url('/BG_PersonalChat.webp')",
           opacity: isMapDark ? 0.45 : 0.58,
         }}
       />
