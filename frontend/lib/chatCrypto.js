@@ -91,14 +91,23 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
   const ts = Date.now();
   const nonce = generateCryptoNonce();
   const id = payloadObj.id || `msg_${nonce.slice(0, 14)}`;
+  const safeVoiceDuration = Number.isFinite(Number(payloadObj.voiceDuration)) && Number(payloadObj.voiceDuration) > 0
+    ? Math.round(Number(payloadObj.voiceDuration))
+    : null;
+  const safeVideoDuration = Number.isFinite(Number(payloadObj.videoDuration)) && Number(payloadObj.videoDuration) > 0
+    ? Math.round(Number(payloadObj.videoDuration))
+    : null;
+
   const rawJson = JSON.stringify({
     text: String(payloadObj.text || ""),
     msgType: payloadObj.msgType || "text",
-    mediaUrl: payloadObj.mediaUrl || null,
-    voiceDuration: payloadObj.voiceDuration || null,
+    mediaUrl: payloadObj.mediaUrl && String(payloadObj.mediaUrl).length < 4096 ? payloadObj.mediaUrl : null,
+    voiceDuration: safeVoiceDuration,
     voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
-    videoDuration: payloadObj.videoDuration || null,
+    videoDuration: safeVideoDuration,
     isViewOnce: Boolean(payloadObj.isViewOnce),
+    callMode: payloadObj.callMode || null,
+    callDuration: payloadObj.callDuration || null,
     replyTo: payloadObj.replyTo || null,
     senderId: String(userA || "me"),
     ts,
@@ -127,8 +136,12 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
         nonce,
         msgType: payloadObj.msgType || "text",
         mediaUrl: payloadObj.mediaUrl || null,
-        voiceDuration: payloadObj.voiceDuration || null,
+        voiceDuration: safeVoiceDuration,
         voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
+        videoDuration: safeVideoDuration,
+        isViewOnce: Boolean(payloadObj.isViewOnce),
+        callMode: payloadObj.callMode || null,
+        callDuration: payloadObj.callDuration || null,
         replyTo: payloadObj.replyTo || null,
         ts,
       };
@@ -147,10 +160,12 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
     nonce,
     msgType: payloadObj.msgType || "text",
     mediaUrl: payloadObj.mediaUrl || null,
-    voiceDuration: payloadObj.voiceDuration || null,
+    voiceDuration: safeVoiceDuration,
     voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
-    videoDuration: payloadObj.videoDuration || null,
+    videoDuration: safeVideoDuration,
     isViewOnce: Boolean(payloadObj.isViewOnce),
+    callMode: payloadObj.callMode || null,
+    callDuration: payloadObj.callDuration || null,
     replyTo: payloadObj.replyTo || null,
     ts,
   };
@@ -165,15 +180,15 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
   const { ciphertext, iv, nonce, ts, sig } = envelope;
   if (!ciphertext || !iv) return null;
 
+  const pickValidMediaUrl = (outerUrl, innerUrl) => {
+    const isGood = (u) => typeof u === "string" && u.trim().length > 0 && !u.trim().startsWith("blob:");
+    if (isGood(outerUrl)) return outerUrl.trim();
+    if (isGood(innerUrl)) return innerUrl.trim();
+    return outerUrl || innerUrl || null;
+  };
+
   if (typeof window !== "undefined" && window.crypto?.subtle) {
     try {
-      if (nonce && sig && ts) {
-        const expectedSig = await sha256Hex(`${nonce}:${iv}:${ciphertext}:${ts}`);
-        if (expectedSig !== sig) {
-          // Reject tampered/intercepted packet
-          return null;
-        }
-      }
       const key = await deriveConversationKey(userA, userB);
       const ivBytes = base64ToBytes(iv);
       const cipherBytes = base64ToBytes(ciphertext);
@@ -183,16 +198,29 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
         cipherBytes
       );
       const decoded = JSON.parse(new TextDecoder().decode(plainBuf));
+
+      if (nonce && sig) {
+        const sigOuter = ts ? await sha256Hex(`${nonce}:${iv}:${ciphertext}:${ts}`) : "";
+        const sigInner = decoded.ts ? await sha256Hex(`${nonce}:${iv}:${ciphertext}:${decoded.ts}`) : "";
+        if (sigOuter !== sig && sigInner !== sig) {
+          return null;
+        }
+      }
+
       return {
         ...envelope,
         text: decoded.text || "",
-        msgType: decoded.msgType || envelope.msgType || "text",
-        mediaUrl: decoded.mediaUrl || envelope.mediaUrl || null,
-        voiceDuration: decoded.voiceDuration || envelope.voiceDuration || null,
-        voiceWaveform: decoded.voiceWaveform || envelope.voiceWaveform || null,
-        videoDuration: decoded.videoDuration || envelope.videoDuration || null,
-        isViewOnce: decoded.isViewOnce !== undefined ? decoded.isViewOnce : envelope.isViewOnce,
+        msgType: envelope.msgType && envelope.msgType !== "text" ? envelope.msgType : (decoded.msgType || envelope.msgType || "text"),
+        mediaUrl: pickValidMediaUrl(envelope.mediaUrl, decoded.mediaUrl),
+        voiceDuration: envelope.voiceDuration || decoded.voiceDuration || null,
+        voiceWaveform: envelope.voiceWaveform || decoded.voiceWaveform || null,
+        videoDuration: envelope.videoDuration || decoded.videoDuration || null,
+        isViewOnce: envelope.isViewOnce !== undefined ? envelope.isViewOnce : decoded.isViewOnce,
+        callMode: envelope.callMode || decoded.callMode || null,
+        callDuration: envelope.callDuration !== undefined && envelope.callDuration !== null ? envelope.callDuration : (decoded.callDuration || null),
         replyTo: decoded.replyTo || envelope.replyTo || null,
+        ts: Number(decoded.ts || envelope.ts) || Date.now(),
+        status: envelope.status || "sent",
         verifiedE2EE: true,
       };
     } catch {}
@@ -204,13 +232,17 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
     return {
       ...envelope,
       text: decoded.text || "",
-      msgType: decoded.msgType || envelope.msgType || "text",
-      mediaUrl: decoded.mediaUrl || envelope.mediaUrl || null,
-      voiceDuration: decoded.voiceDuration || envelope.voiceDuration || null,
-      voiceWaveform: decoded.voiceWaveform || envelope.voiceWaveform || null,
-      videoDuration: decoded.videoDuration || envelope.videoDuration || null,
-      isViewOnce: decoded.isViewOnce !== undefined ? decoded.isViewOnce : envelope.isViewOnce,
+      msgType: envelope.msgType && envelope.msgType !== "text" ? envelope.msgType : (decoded.msgType || envelope.msgType || "text"),
+      mediaUrl: pickValidMediaUrl(envelope.mediaUrl, decoded.mediaUrl),
+      voiceDuration: envelope.voiceDuration || decoded.voiceDuration || null,
+      voiceWaveform: envelope.voiceWaveform || decoded.voiceWaveform || null,
+      videoDuration: envelope.videoDuration || decoded.videoDuration || null,
+      isViewOnce: envelope.isViewOnce !== undefined ? envelope.isViewOnce : decoded.isViewOnce,
+      callMode: envelope.callMode || decoded.callMode || null,
+      callDuration: envelope.callDuration !== undefined && envelope.callDuration !== null ? envelope.callDuration : (decoded.callDuration || null),
       replyTo: decoded.replyTo || envelope.replyTo || null,
+      ts: Number(decoded.ts || envelope.ts) || Date.now(),
+      status: envelope.status || "sent",
       verifiedE2EE: true,
     };
   } catch {

@@ -1,11 +1,12 @@
 import crypto from 'node:crypto';
 import { redis } from '../lib/redis.js';
+import prisma from '../lib/prisma.js';
 
-const MAX_CIPHERTEXT_LENGTH = 24000;
+const MAX_CIPHERTEXT_LENGTH = 400000;
 const HOT_RING_BUFFER_SIZE = 50; // Hot tier: latest 50 messages in fast Redis list
 const COLD_ARCHIVE_MAX_SIZE = 500; // Cold overflow tier for older history pages
-const HOT_TTL_SECONDS = 14 * 24 * 60 * 60; // 14 days hot cache TTL
-const COLD_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 days cold archive TTL
+const HOT_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days hot cache TTL (backed by permanent PostgreSQL)
+const COLD_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days cold archive TTL
 const NONCE_TTL_SECONDS = 10 * 60; // 10 minutes anti-replay window
 const CALL_LOCK_TTL_SECONDS = 30; // 30s single-call concurrency lock TTL
 const CALL_SIGNAL_TTL_SECONDS = 30; // 30s ephemeral WebRTC signaling TTL
@@ -113,27 +114,109 @@ export async function getPersonalChatMessages(req, res, next) {
     const limit = Number.isFinite(limitRaw) ? Math.min(50, Math.max(1, Math.floor(limitRaw))) : 30;
     const cursorTs = req.query?.cursor ? Number(req.query.cursor) : null;
 
-    const hotKey = getHotConversationKey(userId, targetId);
-    const coldKey = getColdConversationKey(userId, targetId);
+    const convHash = getConversationHash(userId, targetId);
+    const hotKey = `chat:conv:${convHash}`;
+    const coldKey = `chat:cold:${convHash}`;
 
     const rawHot = await redis.lrange(hotKey, 0, HOT_RING_BUFFER_SIZE - 1).catch(() => []);
-    let combined = (Array.isArray(rawHot) ? rawHot : [])
+    const hotMsgs = (Array.isArray(rawHot) ? rawHot : [])
       .map(unpackEnvelope)
       .filter(Boolean);
 
-    // If paginating older history with a cursor or hot buffer is full, check cold archive
+    const byId = new Map();
+    for (const m of hotMsgs) {
+      byId.set(m.id, m);
+    }
+
+    // Read-through from permanent PostgreSQL tier if hot buffer is incomplete or paginating older history
+    if (hotMsgs.length < limit || (cursorTs && Number.isFinite(cursorTs))) {
+      try {
+        if (prisma?.personalChatMessage) {
+          const dbRows = await prisma.personalChatMessage.findMany({
+            where: {
+              convHash,
+              ...(cursorTs && Number.isFinite(cursorTs) ? { ts: { lt: BigInt(Math.floor(cursorTs)) } } : {}),
+            },
+            orderBy: { ts: 'desc' },
+            take: Math.max(limit, HOT_RING_BUFFER_SIZE),
+          });
+          for (const row of dbRows) {
+            const unpacked = unpackEnvelope(row.packedJson);
+            if (!unpacked) continue;
+            if (row.status === 'read') unpacked.status = 'read';
+            const existing = byId.get(unpacked.id);
+            if (!existing) {
+              byId.set(unpacked.id, unpacked);
+            } else if (unpacked.status === 'read' && existing.status !== 'read') {
+              existing.status = 'read';
+            }
+          }
+
+          // Auto-heal Redis hot buffer if it was empty or evicted
+          if (hotMsgs.length === 0 && byId.size > 0 && !cursorTs) {
+            const toHydrate = Array.from(byId.values())
+              .sort((a, b) => Number(b.ts) - Number(a.ts))
+              .slice(0, HOT_RING_BUFFER_SIZE)
+              .map(packEnvelope);
+            if (toHydrate.length > 0) {
+              await redis.del(hotKey).catch(() => {});
+              await redis.rpush(hotKey, ...toHydrate).catch(() => {});
+              await redis.expire(hotKey, HOT_TTL_SECONDS).catch(() => {});
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // If paginating older history with a cursor, also check Redis cold archive
     if (cursorTs && Number.isFinite(cursorTs)) {
       const rawCold = await redis.lrange(coldKey, 0, COLD_ARCHIVE_MAX_SIZE - 1).catch(() => []);
       const coldMsgs = (Array.isArray(rawCold) ? rawCold : [])
         .map(unpackEnvelope)
         .filter(Boolean);
-      const seenIds = new Set(combined.map((m) => m.id));
       for (const cm of coldMsgs) {
-        if (!seenIds.has(cm.id)) {
-          seenIds.add(cm.id);
-          combined.push(cm);
+        if (!byId.has(cm.id)) {
+          byId.set(cm.id, cm);
         }
       }
+    }
+
+    let combined = Array.from(byId.values());
+
+    // Real Read Receipt Update: ONLY mark messages as 'read' when the actual recipient (recipientId === userId) fetches the chat
+    let readUpdated = false;
+    const newlyReadIds = [];
+    for (const m of combined) {
+      if (String(m.recipientId) === String(userId) && m.status !== 'read') {
+        m.status = 'read';
+        readUpdated = true;
+        newlyReadIds.push(m.id);
+      }
+    }
+
+    if (readUpdated) {
+      // Persist read receipt back to Redis hot buffer & PostgreSQL
+      const updatedHot = combined
+        .slice()
+        .sort((a, b) => Number(b.ts) - Number(a.ts))
+        .slice(0, HOT_RING_BUFFER_SIZE)
+        .map(packEnvelope);
+      if (updatedHot.length > 0) {
+        await redis.del(hotKey).catch(() => {});
+        await redis.rpush(hotKey, ...updatedHot).catch(() => {});
+        await redis.expire(hotKey, HOT_TTL_SECONDS).catch(() => {});
+      }
+      if (prisma?.personalChatMessage && newlyReadIds.length > 0) {
+        prisma.personalChatMessage
+          .updateMany({
+            where: { id: { in: newlyReadIds } },
+            data: { status: 'read' },
+          })
+          .catch(() => {});
+      }
+    }
+
+    if (cursorTs && Number.isFinite(cursorTs)) {
       combined = combined.filter((m) => Number(m.ts) < cursorTs);
     }
 
@@ -204,6 +287,12 @@ export async function sendPersonalChatMessage(req, res, next) {
       return res.status(400).json({ error: 'Durasi video melebihi batas 1 menit (maksimal 60 detik).' });
     }
 
+    // Never persist ephemeral browser RAM blob: URLs
+    const safeMediaUrl =
+      typeof body.mediaUrl === 'string' && !body.mediaUrl.trim().startsWith('blob:')
+        ? body.mediaUrl.trim().slice(0, 2 * 1024 * 1024)
+        : null;
+
     const envelope = {
       id: typeof body.id === 'string' && /^[a-zA-Z0-9_-]{6,64}$/.test(body.id)
         ? body.id
@@ -216,22 +305,23 @@ export async function sendPersonalChatMessage(req, res, next) {
       sig: sig.slice(0, 256),
       nonce,
       msgType,
-      mediaUrl: typeof body.mediaUrl === 'string' ? body.mediaUrl.slice(0, 2 * 1024 * 1024) : null,
-      voiceDuration: typeof body.voiceDuration === 'number' ? Math.min(300, Math.max(1, body.voiceDuration)) : null,
+      mediaUrl: safeMediaUrl,
+      voiceDuration: typeof body.voiceDuration === 'number' && Number.isFinite(body.voiceDuration) ? Math.min(300, Math.max(1, Math.round(body.voiceDuration))) : null,
       voiceWaveform: Array.isArray(body.voiceWaveform)
         ? body.voiceWaveform.slice(0, 60).map((v) => Math.min(100, Math.max(0, Math.round(Number(v) || 0))))
         : null,
-      videoDuration: typeof body.videoDuration === 'number' ? Math.min(300, Math.max(1, body.videoDuration)) : null,
+      videoDuration: typeof body.videoDuration === 'number' && Number.isFinite(body.videoDuration) ? Math.min(300, Math.max(1, Math.round(body.videoDuration))) : null,
       isViewOnce: Boolean(body.isViewOnce),
       isOnceOpened: Boolean(body.isOnceOpened),
       callMode: typeof body.callMode === 'string' ? body.callMode : null,
-      callDuration: typeof body.callDuration === 'number' ? body.callDuration : null,
-      ts: Date.now(),
-      status: body.status === 'read' ? 'read' : 'sent',
+      callDuration: typeof body.callDuration === 'number' && Number.isFinite(body.callDuration) ? body.callDuration : null,
+      ts, // Preserve client signed timestamp so E2EE signature verification matches 100%
+      status: 'sent', // Always starts as 'sent' until the recipient opens & reads the chat
     };
 
-    const hotKey = getHotConversationKey(userId, targetId);
-    const coldKey = getColdConversationKey(userId, targetId);
+    const convHash = getConversationHash(userId, targetId);
+    const hotKey = `chat:conv:${convHash}`;
+    const coldKey = `chat:cold:${convHash}`;
     const packed = packEnvelope(envelope);
 
     // Check if hot ring-buffer is at capacity; if so, archive oldest entry into cold tier before trimming
@@ -249,6 +339,28 @@ export async function sendPersonalChatMessage(req, res, next) {
     await redis.ltrim(hotKey, 0, HOT_RING_BUFFER_SIZE - 1).catch(() => {});
     await redis.expire(hotKey, HOT_TTL_SECONDS).catch(() => {});
 
+    // Write-through to permanent PostgreSQL table so messages never disappear or corrupt
+    if (prisma?.personalChatMessage) {
+      await prisma.personalChatMessage
+        .upsert({
+          where: { id: envelope.id },
+          create: {
+            id: envelope.id,
+            convHash,
+            senderId: envelope.senderId,
+            recipientId: envelope.recipientId,
+            packedJson: packed,
+            ts: BigInt(Math.floor(envelope.ts)),
+            status: envelope.status,
+          },
+          update: {
+            packedJson: packed,
+            status: envelope.status,
+          },
+        })
+        .catch(() => {});
+    }
+
     res.status(201).json({ ok: true, envelope });
   } catch (err) {
     next(err);
@@ -263,14 +375,18 @@ export async function deletePersonalChatMessages(req, res, next) {
       return res.status(400).json({ error: 'Invalid conversation target.' });
     }
 
-    const hotKey = getHotConversationKey(userId, targetId);
-    const coldKey = getColdConversationKey(userId, targetId);
+    const convHash = getConversationHash(userId, targetId);
+    const hotKey = `chat:conv:${convHash}`;
+    const coldKey = `chat:cold:${convHash}`;
     const { messageIds, clearAll } = req.body || {};
 
     if (clearAll) {
       await Promise.all([
         redis.del(hotKey).catch(() => {}),
         redis.del(coldKey).catch(() => {}),
+        prisma?.personalChatMessage
+          ? prisma.personalChatMessage.deleteMany({ where: { convHash } }).catch(() => {})
+          : Promise.resolve(),
       ]);
       return res.json({ ok: true, cleared: true });
     }
@@ -293,6 +409,17 @@ export async function deletePersonalChatMessages(req, res, next) {
           await redis.rpush(key, ...filtered).catch(() => {});
           await redis.expire(key, ttl).catch(() => {});
         }
+      }
+
+      if (prisma?.personalChatMessage) {
+        await prisma.personalChatMessage
+          .deleteMany({
+            where: {
+              convHash,
+              id: { in: Array.from(idSet) },
+            },
+          })
+          .catch(() => {});
       }
     }
 

@@ -114,17 +114,33 @@ export function ChatMediaCard({
     return 6;
   }, [realVideoDuration, item.videoDuration]);
 
-  // Preload video duration probe
+  // Preload video duration probe & reset error state when mediaUrl updates
   useEffect(() => {
-    if (!isVideo || !item.mediaUrl) return;
+    setMediaLoadError(false);
+    if (!isVideo || !item.mediaUrl || String(item.mediaUrl).startsWith("blob:")) return;
     const v = document.createElement("video");
     v.preload = "metadata";
     v.onloadedmetadata = () => {
-      if (v.duration && Number.isFinite(v.duration) && v.duration > 0) {
+      if (v.duration === Infinity) {
+        v.currentTime = 1e101;
+        v.ontimeupdate = () => {
+          v.ontimeupdate = null;
+          if (Number.isFinite(v.duration) && v.duration > 0) {
+            setRealVideoDuration(v.duration);
+          }
+          try {
+            v.currentTime = 0;
+          } catch {}
+        };
+      } else if (v.duration && Number.isFinite(v.duration) && v.duration > 0) {
         setRealVideoDuration(v.duration);
       }
     };
     v.src = item.mediaUrl;
+    return () => {
+      v.ontimeupdate = null;
+      v.src = "";
+    };
   }, [isVideo, item.mediaUrl]);
 
   // High-precision 60fps video loop for butter-smooth progress line

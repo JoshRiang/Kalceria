@@ -299,3 +299,19 @@ model Comment {
 
   @@map("comments")
 }
+
+// ─── Personal Chat Message (Permanent Tier Backing Redis Hot Buffer) ─────────
+model PersonalChatMessage {
+  id          String   @id
+  convHash    String
+  senderId    String
+  recipientId String
+  packedJson  String
+  ts          BigInt
+  status      String   @default("sent")
+  createdAt   DateTime @default(now())
+
+  @@index([convHash, ts(sort: Desc)])
+  @@map("personal_chat_messages")
+}
+

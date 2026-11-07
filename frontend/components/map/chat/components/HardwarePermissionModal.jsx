@@ -95,35 +95,47 @@ export function HardwarePermissionModal({
             <span className="font-bold text-[#ef4444]">{hardwareWord}</span>
           </h3>
 
-          {/* Action Buttons: Exact Behavior, Font, and Style matching No/Yes on Quit the map */}
-          <div className="relative z-10 flex items-center justify-center gap-6 sm:gap-10">
-            {/* Batal: Warna Hitam */}
+          {/* Action Buttons: Exact Behavior, Font, and Style matching No/Yes on Quit the map (no outer box) */}
+          <div className="relative z-10 flex items-center justify-center gap-8 sm:gap-12">
+            {/* Batal: No outer box */}
             <button
               type="button"
               onClick={handleBatalClick}
-              className="group relative cursor-pointer outline-none rounded-full px-7 py-2.5 bg-black text-white hover:bg-black/85 shadow-lg border border-black/30 transition-all"
+              className="group relative cursor-pointer outline-none p-2 transition-all"
             >
               <motion.span
                 animate={choice === "batal" ? { scale: 1.25 } : {}}
                 transition={{ duration: 0.18 }}
-                className="block font-sans text-base sm:text-lg font-normal transition-all duration-200 group-hover:scale-110 active:scale-95"
+                className={`block font-sans text-lg sm:text-xl font-normal transition-all duration-200 group-hover:scale-110 active:scale-95 ${
+                  isMapDark ? "text-white hover:text-white/80" : "text-black hover:text-black/80"
+                }`}
+                style={{
+                  textShadow: isMapDark
+                    ? "0 2px 10px rgba(0,0,0,0.8)"
+                    : "0 1px 6px rgba(255,255,255,0.9)",
+                }}
               >
                 Batal
               </motion.span>
             </button>
 
-            {/* Izinkan Akses: Warna Merah */}
+            {/* Izinkan: Warna Merah, No outer box */}
             <button
               type="button"
               onClick={handleGrantClick}
-              className="group relative cursor-pointer outline-none rounded-full px-7 py-2.5 bg-[#ef4444] text-white hover:bg-[#dc2626] shadow-lg shadow-[#ef4444]/35 transition-all"
+              className="group relative cursor-pointer outline-none p-2 transition-all"
             >
               <motion.span
                 animate={choice === "izinkan" ? { scale: 1.25 } : {}}
                 transition={{ duration: 0.18 }}
-                className="block font-sans text-base sm:text-lg font-normal transition-all duration-200 group-hover:scale-110 active:scale-95"
+                className="block font-sans text-lg sm:text-xl font-normal text-[#ef4444] hover:text-[#dc2626] transition-all duration-200 group-hover:scale-110 active:scale-95"
+                style={{
+                  textShadow: isMapDark
+                    ? "0 2px 10px rgba(0,0,0,0.8)"
+                    : "0 1px 6px rgba(255,255,255,0.9)",
+                }}
               >
-                Izinkan Akses
+                Izinkan
               </motion.span>
             </button>
           </div>

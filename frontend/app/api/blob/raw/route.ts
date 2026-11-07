@@ -22,12 +22,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Blob not found" }, { status: 404 });
     }
 
+    const headers: Record<string, string> = {
+      "Content-Type": result.blob.contentType || "application/octet-stream",
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "Accept-Ranges": "bytes",
+    };
+    if (result.blob.size) {
+      headers["Content-Length"] = String(result.blob.size);
+    }
+
     return new NextResponse(result.stream as ReadableStream, {
       status: 200,
-      headers: {
-        "Content-Type": result.blob.contentType || "application/octet-stream",
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
+      headers,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to retrieve blob";

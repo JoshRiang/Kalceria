@@ -12,7 +12,34 @@ import {
   uploadBlobMedia,
 } from "@/lib/api";
 
-const LOCAL_CHAT_CACHE_PREFIX = "kalceria_e2ee_chat_v1_";
+const LOCAL_CHAT_CACHE_PREFIX = "kalceria_e2ee_chat_v3_";
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function uploadMediaWithPersistFallback(blobOrFile) {
+  if (!blobOrFile) return null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await uploadBlobMedia(blobOrFile);
+      if (res?.url && !String(res.url).startsWith("blob:")) {
+        return res.url;
+      }
+    } catch {}
+  }
+  if (blobOrFile.size <= 350 * 1024) {
+    try {
+      return await blobToDataUrl(blobOrFile);
+    } catch {}
+  }
+  return null;
+}
 export const QUICK_EMOJIS = ["🔥", "🚗", "💨", "🙌", "😎", "❤️", "😂", "👍", "⚡", "🏁"];
 
 export function formatMessageTime(ts) {
@@ -242,10 +269,55 @@ export function usePersonalChatState({
     [storageKey]
   );
 
-  // Load & decrypt conversation history (latest 30 hot messages + local cache)
+  // Load & decrypt conversation history (latest 30 hot messages + local cache + periodic sync)
   useEffect(() => {
     if (!targetId) return;
     let alive = true;
+
+    // Clean up legacy v1/v2 cache keys that stored stale fake read statuses or dead blob: URLs
+    try {
+      const legacySuffix = [myId, targetId].sort().join("_");
+      localStorage.removeItem(`kalceria_e2ee_chat_v1_${legacySuffix}`);
+      localStorage.removeItem(`kalceria_e2ee_chat_v2_${legacySuffix}`);
+      sessionStorage.removeItem(`quick_kalceria_e2ee_chat_v1_${legacySuffix}`);
+      sessionStorage.removeItem(`quick_kalceria_e2ee_chat_v2_${legacySuffix}`);
+    } catch {}
+
+    async function syncFromRemote() {
+      try {
+        const page = await fetchPersonalChatPage(targetId, { limit: 30 });
+        if (!alive) return;
+        setNextCursor((prevCursor) => page?.nextCursor || prevCursor || null);
+        const remoteEnvelopes = page?.messages || [];
+        if (!Array.isArray(remoteEnvelopes) || !remoteEnvelopes.length) return;
+        const decryptedRemote = (
+          await Promise.all(
+            remoteEnvelopes.map((env) => decryptChatEnvelope(env, myId, targetId))
+          )
+        ).filter(Boolean);
+
+        if (decryptedRemote.length > 0 && alive) {
+          setMessages((prev) => {
+            const mergedMap = new Map();
+            prev.forEach((m) => {
+              // Keep seed messages or messages currently sending/failed locally
+              if (String(m.id).startsWith("seed_") || m.status === "sending" || m.status === "failed") {
+                mergedMap.set(m.id, m);
+              } else if (!String(m.mediaUrl || "").startsWith("blob:")) {
+                mergedMap.set(m.id, m);
+              }
+            });
+            decryptedRemote.forEach((m) => mergedMap.set(m.id, m));
+            const sorted = Array.from(mergedMap.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+            persistQuickLocal(sorted);
+            try {
+              localStorage.setItem(storageKey, JSON.stringify(remoteEnvelopes.slice(-80)));
+            } catch {}
+            return sorted;
+          });
+        }
+      } catch {}
+    }
 
     async function loadMessages() {
       let localMsgs = [];
@@ -254,7 +326,7 @@ export function usePersonalChatState({
         if (quick) {
           const parsedQuick = JSON.parse(quick);
           if (Array.isArray(parsedQuick) && parsedQuick.length > 0) {
-            localMsgs = parsedQuick;
+            localMsgs = parsedQuick.filter((m) => !String(m?.mediaUrl || "").startsWith("blob:"));
           }
         }
       } catch {}
@@ -268,7 +340,9 @@ export function usePersonalChatState({
               const decryptedLocal = await Promise.all(
                 parsed.map((env) => decryptChatEnvelope(env, myId, targetId))
               );
-              localMsgs = decryptedLocal.filter(Boolean);
+              localMsgs = decryptedLocal
+                .filter(Boolean)
+                .filter((m) => !String(m?.mediaUrl || "").startsWith("blob:"));
             }
           }
         } catch {}
@@ -280,7 +354,6 @@ export function usePersonalChatState({
 
       if (alive) {
         setMessages((prev) => {
-          // Never clobber existing in-memory messages for this conversation
           if (prev && prev.length > 0) {
             const merged = new Map();
             localMsgs.forEach((m) => merged.set(m.id, m));
@@ -291,37 +364,24 @@ export function usePersonalChatState({
         });
       }
 
-      // Sync encrypted envelopes from backend Hot Ring-Buffer
-      try {
-        const page = await fetchPersonalChatPage(targetId, { limit: 30 });
-        if (!alive) return;
-        setNextCursor(page?.nextCursor || null);
-        const remoteEnvelopes = page?.messages || [];
-        if (!Array.isArray(remoteEnvelopes) || !remoteEnvelopes.length) return;
-        const decryptedRemote = (
-          await Promise.all(
-            remoteEnvelopes.map((env) => decryptChatEnvelope(env, myId, targetId))
-          )
-        ).filter(Boolean);
-
-        if (decryptedRemote.length > 0 && alive) {
-          setMessages((prev) => {
-            const mergedMap = new Map();
-            prev.forEach((m) => mergedMap.set(m.id, m));
-            decryptedRemote.forEach((m) => mergedMap.set(m.id, m));
-            return Array.from(mergedMap.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
-          });
-        }
-      } catch {}
+      await syncFromRemote();
     }
 
     loadMessages();
 
+    // Poll every 5s while chat panel is open so incoming messages & peer read receipts update in real time
+    const syncInterval = setInterval(() => {
+      if (alive && !isAhmadDummyUser(activeChatUser) && !String(targetId).startsWith("mock_")) {
+        syncFromRemote();
+      }
+    }, 5000);
+
     return () => {
       alive = false;
+      clearInterval(syncInterval);
       if (autoReplyTimerRef.current) clearTimeout(autoReplyTimerRef.current);
     };
-  }, [targetId, myId, storageKey]);
+  }, [targetId, myId, storageKey, activeChatUser, persistQuickLocal]);
 
   // Cursor pagination for older messages from Cold Archive
   const loadOlderMessages = useCallback(async () => {
@@ -437,7 +497,7 @@ export function usePersonalChatState({
         callDuration,
         replyTo,
         ts,
-        status: msgType === "call" ? "read" : "sending",
+        status: "sending",
         verifiedE2EE: true,
       };
 
@@ -461,54 +521,54 @@ export function usePersonalChatState({
         ts
       );
 
-      if (msgType !== "call") {
-        if (isAhmadDummyUser(activeChatUser) || String(targetId).startsWith("mock_")) {
-          // Instant local simulation for dummy / Ahmad users
-          setTimeout(() => {
-            setMessages((prev) => {
-              const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
-              persistEncryptedLocal(next);
-              return next;
-            });
-          }, 300);
-        } else {
-          let isTimedOut = false;
-          const timeoutTimer = setTimeout(() => {
-            isTimedOut = true;
-            setMessages((prev) => {
-              const next = prev.map((m) => (m.id === msgId && m.status === "sending" ? { ...m, status: "failed" } : m));
-              persistEncryptedLocal(next);
-              return next;
-            });
-          }, 7000);
+      if (isAhmadDummyUser(activeChatUser) || String(targetId).startsWith("mock_")) {
+        // Instant local simulation for dummy / Ahmad users
+        setTimeout(() => {
+          setMessages((prev) => {
+            const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
+            persistEncryptedLocal(next);
+            return next;
+          });
+        }, 300);
+      } else {
+        let isTimedOut = false;
+        const timeoutTimer = setTimeout(() => {
+          isTimedOut = true;
+          setMessages((prev) => {
+            const next = prev.map((m) => (m.id === msgId && m.status === "sending" ? { ...m, status: "failed" } : m));
+            persistEncryptedLocal(next);
+            return next;
+          });
+        }, 9000);
 
-          postPersonalChatMessage(targetId, {
-            ...envelope,
-            voiceWaveform,
-            videoDuration,
-            callMode,
-            callDuration,
-          })
-            .then(() => {
-              clearTimeout(timeoutTimer);
-              if (!isTimedOut) {
-                setMessages((prev) => {
-                  const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
-                  persistEncryptedLocal(next);
-                  return next;
-                });
-              }
-            })
-            .catch(() => {
-              clearTimeout(timeoutTimer);
+        postPersonalChatMessage(targetId, {
+          ...envelope,
+          voiceWaveform,
+          videoDuration,
+          isViewOnce,
+          callMode,
+          callDuration,
+        })
+          .then(() => {
+            clearTimeout(timeoutTimer);
+            if (!isTimedOut) {
               setMessages((prev) => {
                 const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
                 persistQuickLocal(next);
                 persistEncryptedLocal(next);
                 return next;
               });
+            }
+          })
+          .catch(() => {
+            clearTimeout(timeoutTimer);
+            setMessages((prev) => {
+              const next = prev.map((m) => (m.id === msgId ? { ...m, status: "failed" } : m));
+              persistQuickLocal(next);
+              persistEncryptedLocal(next);
+              return next;
             });
-        }
+          });
       }
 
       // If chatting with dummy user Ahmad Bintaro, simulate realistic E2EE reply
@@ -612,23 +672,17 @@ export function usePersonalChatState({
 
     setIsUploadingMedia(true);
     try {
-      const res = await uploadBlobMedia(file);
-      if (res?.url) {
+      const persistedUrl = await uploadMediaWithPersistFallback(file);
+      if (persistedUrl) {
         await appendAndEncryptMessage({
           text: inputText.trim(),
           msgType: "media",
-          mediaUrl: res.url,
+          mediaUrl: persistedUrl,
         });
         setInputText("");
+      } else {
+        setMediaError("Gagal mengunggah media. Periksa koneksi internet Anda.");
       }
-    } catch {
-      const localUrl = URL.createObjectURL(file);
-      await appendAndEncryptMessage({
-        text: inputText.trim(),
-        msgType: "media",
-        mediaUrl: localUrl,
-      });
-      setInputText("");
     } finally {
       setIsUploadingMedia(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -663,17 +717,13 @@ export function usePersonalChatState({
   const handleFinishVoiceNote = async () => {
     const result = await voiceRecorder.stopRecording();
     if (!result) return;
-    const { blob, url, duration, waveform } = result;
+    const { blob, duration, waveform } = result;
 
-    let finalMediaUrl = url;
-    try {
-      if (blob) {
-        const uploadRes = await uploadBlobMedia(blob);
-        if (uploadRes?.url) {
-          finalMediaUrl = uploadRes.url;
-        }
-      }
-    } catch { }
+    const finalMediaUrl = await uploadMediaWithPersistFallback(blob);
+    if (!finalMediaUrl) {
+      setMediaError("Gagal mengunggah pesan suara. Periksa koneksi internet Anda.");
+      return;
+    }
 
     await appendAndEncryptMessage({
       text: "Voice message",
@@ -684,23 +734,23 @@ export function usePersonalChatState({
     });
   };
 
-  const handleSendCapturedMedia = async ({ blob, url, type, duration, isViewOnce, caption }) => {
+  const handleSendCapturedMedia = async ({ blob, type, duration, isViewOnce, caption }) => {
     if (type === "video" && duration && duration > 60) {
       setMediaError("Durasi video melebihi batas 1 menit (maksimal 60 detik).");
       return;
     }
 
     setIsUploadingMedia(true);
-    let finalUrl = url;
+    let finalUrl = null;
     try {
-      if (blob) {
-        const uploadRes = await uploadBlobMedia(blob);
-        if (uploadRes?.url) finalUrl = uploadRes.url;
-      }
-    } catch {
-      finalUrl = url;
+      finalUrl = await uploadMediaWithPersistFallback(blob);
     } finally {
       setIsUploadingMedia(false);
+    }
+
+    if (!finalUrl) {
+      setMediaError("Gagal mengunggah media kamera. Periksa koneksi internet Anda.");
+      return;
     }
 
     await appendAndEncryptMessage({
@@ -849,12 +899,31 @@ export function usePersonalChatState({
         return;
       }
 
+      const freshEnv = await encryptChatPayload(
+        {
+          id: failedMsg.id,
+          text: failedMsg.text,
+          msgType: failedMsg.msgType,
+          mediaUrl: failedMsg.mediaUrl,
+          voiceDuration: failedMsg.voiceDuration,
+          voiceWaveform: failedMsg.voiceWaveform,
+          videoDuration: failedMsg.videoDuration,
+          isViewOnce: failedMsg.isViewOnce,
+          callMode: failedMsg.callMode,
+          callDuration: failedMsg.callDuration,
+          replyTo: failedMsg.replyTo,
+        },
+        myId,
+        targetId
+      );
+
       postPersonalChatMessage(targetId, {
-        id: failedMsg.id,
-        nonce: failedMsg.nonce,
-        encryptedPayload: failedMsg.encryptedPayload,
+        ...freshEnv,
         voiceWaveform: failedMsg.voiceWaveform,
         videoDuration: failedMsg.videoDuration,
+        isViewOnce: failedMsg.isViewOnce,
+        callMode: failedMsg.callMode,
+        callDuration: failedMsg.callDuration,
       })
         .then(() => {
           setMessages((prev) => {

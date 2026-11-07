@@ -356,13 +356,20 @@ export function CameraCaptureModal({
     startCamera(facingMode);
   };
 
+  const getActiveVideoDur = () => {
+    const vDur = previewVideoRef.current?.duration;
+    if (Number.isFinite(vDur) && vDur > 0) return vDur;
+    if (Number.isFinite(previewMedia?.duration) && previewMedia.duration > 0) return previewMedia.duration;
+    return 1;
+  };
+
   // Video Duration Trimming Handle Drag with zero latency
   const handleTrimmerPointerDown = (e, handleType) => {
     e.stopPropagation();
     e.preventDefault();
     if (!trimmerTrackRef.current) return;
     const trackRect = trimmerTrackRef.current.getBoundingClientRect();
-    const dur = previewVideoRef.current?.duration || previewMedia?.duration || 1;
+    const dur = getActiveVideoDur();
 
     const onPointerMove = (ev) => {
       const clientX = ev.clientX;
@@ -370,7 +377,7 @@ export function CameraCaptureModal({
       if (handleType === "start") {
         setTrimStart((prevStart) => {
           const nextStart = Math.min(ratio, trimEnd - 0.05);
-          if (previewVideoRef.current) {
+          if (previewVideoRef.current && Number.isFinite(nextStart * dur)) {
             previewVideoRef.current.currentTime = nextStart * dur;
           }
           return Math.max(0, nextStart);
@@ -378,7 +385,7 @@ export function CameraCaptureModal({
       } else {
         setTrimEnd((prevEnd) => {
           const nextEnd = Math.max(ratio, trimStart + 0.05);
-          if (previewVideoRef.current) {
+          if (previewVideoRef.current && Number.isFinite(nextEnd * dur)) {
             previewVideoRef.current.currentTime = nextEnd * dur;
           }
           return Math.min(1, nextEnd);
@@ -398,7 +405,7 @@ export function CameraCaptureModal({
   // Video preview playback looping between [trimStart, trimEnd]
   const handlePreviewVideoTimeUpdate = () => {
     if (!previewVideoRef.current) return;
-    const dur = previewVideoRef.current.duration || previewMedia?.duration || 1;
+    const dur = getActiveVideoDur();
     const startSec = trimStart * dur;
     const endSec = trimEnd * dur;
     if (previewVideoRef.current.currentTime >= endSec - 0.05 || previewVideoRef.current.currentTime < startSec) {
@@ -409,7 +416,7 @@ export function CameraCaptureModal({
   // Confirm Send Media with Caption and ViewOnce
   const handleConfirmSend = () => {
     if (!previewMedia) return;
-    const dur = previewVideoRef.current?.duration || previewMedia.duration || 1;
+    const dur = getActiveVideoDur();
     const trimmedDuration = previewMedia.type === "video"
       ? Math.max(1, Math.round((trimEnd - trimStart) * dur))
       : (previewMedia.duration || null);

@@ -58,23 +58,46 @@ export function ChatMessageBubble({
 
   const [playbackProgress, setPlaybackProgress] = useState(0); // 0 to 1
   const [currentPlaybackSec, setCurrentPlaybackSec] = useState(0);
-  const [realAudioDuration, setRealAudioDuration] = useState(item.voiceDuration || 0);
+  const [realAudioDuration, setRealAudioDuration] = useState(
+    Number.isFinite(Number(item.voiceDuration)) && Number(item.voiceDuration) > 0
+      ? Number(item.voiceDuration)
+      : 0
+  );
   const audioRef = useRef(null);
   const waveformRef = useRef(null);
   const rafRef = useRef(null);
 
+  const getFiniteSec = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+
   // Preload audio duration so time mark immediately shows true duration (e.g. 0:07) rather than 0:01
   useEffect(() => {
-    if (!isVoice || !item.mediaUrl) return;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+    if (!isVoice || !item.mediaUrl || String(item.mediaUrl).startsWith("blob:")) return;
     const probe = new Audio();
     probe.preload = "metadata";
     probe.onloadedmetadata = () => {
-      if (probe.duration && Number.isFinite(probe.duration) && probe.duration > 0) {
-        setRealAudioDuration(Math.round(probe.duration));
+      if (probe.duration === Infinity) {
+        probe.currentTime = 1e101;
+        probe.ontimeupdate = () => {
+          probe.ontimeupdate = null;
+          if (Number.isFinite(probe.duration) && probe.duration > 0) {
+            setRealAudioDuration(Math.max(1, Math.round(probe.duration)));
+          }
+          try {
+            probe.currentTime = 0;
+          } catch {}
+        };
+      } else if (Number.isFinite(probe.duration) && probe.duration > 0) {
+        setRealAudioDuration(Math.max(1, Math.round(probe.duration)));
       }
     };
     probe.src = item.mediaUrl;
     return () => {
+      probe.ontimeupdate = null;
       probe.src = "";
     };
   }, [isVoice, item.mediaUrl]);
@@ -82,7 +105,7 @@ export function ChatMessageBubble({
   const rawWaveform = Array.isArray(item.voiceWaveform) && item.voiceWaveform.length > 0
     ? item.voiceWaveform
     : isVoice
-    ? getFallbackWaveform(item.id, item.voiceDuration || 4)
+    ? getFallbackWaveform(item.id, getFiniteSec(item.voiceDuration) || 4)
     : [];
 
   // Compact 14 bars matching Coki width perfectly
@@ -98,9 +121,9 @@ export function ChatMessageBubble({
     return sampled;
   })();
 
-  const totalDuration = realAudioDuration || item.voiceDuration || 4;
+  const totalDuration = getFiniteSec(realAudioDuration) || getFiniteSec(item.voiceDuration) || 4;
   const formatSec = (totalSec) => {
-    const sec = Math.max(0, Math.floor(totalSec));
+    const sec = Math.max(0, Math.floor(getFiniteSec(totalSec)));
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
@@ -110,8 +133,8 @@ export function ChatMessageBubble({
   // Starts idle (first 0.25s) and ends idle (last 0.25s), oscillates between syllables
   const isSpeakingNow = (() => {
     if (!isPlaying || !audioRef.current) return false;
-    const dur = audioRef.current.duration || totalDuration || 4;
-    const cur = audioRef.current.currentTime || (playbackProgress * dur);
+    const dur = getFiniteSec(audioRef.current.duration) || totalDuration || 4;
+    const cur = getFiniteSec(audioRef.current.currentTime) || (playbackProgress * dur);
     if (cur < 0.25 || cur > dur - 0.25) return false;
 
     // Flap mouth with human speech syllable cadence (~3.2 Hz) when energy is present:
@@ -128,8 +151,8 @@ export function ChatMessageBubble({
       audioRef.current = audio;
 
       const updateDuration = () => {
-        if (audio.duration && Number.isFinite(audio.duration) && audio.duration > 0) {
-          setRealAudioDuration(Math.round(audio.duration));
+        if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          setRealAudioDuration(Math.max(1, Math.round(audio.duration)));
         }
       };
 
@@ -169,8 +192,12 @@ export function ChatMessageBubble({
         // 60fps high-precision requestAnimationFrame loop (zero latency, zero jitter)
         const loop = () => {
           if (audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
-            const dur = audioRef.current.duration || realAudioDuration || item.voiceDuration || 4;
-            const cur = audioRef.current.currentTime || 0;
+            const dur =
+              getFiniteSec(audioRef.current.duration) ||
+              getFiniteSec(realAudioDuration) ||
+              getFiniteSec(item.voiceDuration) ||
+              4;
+            const cur = getFiniteSec(audioRef.current.currentTime);
             if (dur > 0) {
               setPlaybackProgress(Math.min(1, Math.max(0, cur / dur)));
               setCurrentPlaybackSec(Math.floor(cur));
@@ -207,14 +234,18 @@ export function ChatMessageBubble({
       if (!audio) return;
 
       const applySeek = () => {
-        const dur = audio.duration || totalDuration || 4;
+        const dur = getFiniteSec(audio.duration) || totalDuration || 4;
         const targetTime = Math.min(dur, Math.max(0, ratio * dur));
-        audio.currentTime = targetTime;
+        try {
+          if (Number.isFinite(targetTime)) {
+            audio.currentTime = targetTime;
+          }
+        } catch {}
         setPlaybackProgress(ratio);
         setCurrentPlaybackSec(Math.floor(targetTime));
       };
 
-      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+      if (audio.readyState >= 1 || (Number.isFinite(audio.duration) && audio.duration > 0)) {
         applySeek();
       } else {
         audio.addEventListener("loadedmetadata", applySeek, { once: true });

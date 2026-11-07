@@ -184,7 +184,7 @@ const SQL_LOGIC_BYPASS_PATTERN =
 const XSS_SCRIPT_PATTERN =
   /<script[\s/>]|<\/script>|javascript\s*:|vbscript\s*:|data\s*:\s*text\/html|<iframe[\s/>]|<object[\s/>]|<embed[\s/>]|\bon[a-z]{3,20}\s*=/i;
 
-export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0 }) {
+export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStringLen: MAX_STRING_INSPECT_LEN }) {
   if (depth > MAX_PAYLOAD_DEPTH) {
     return { safe: false, reason: 'Payload depth exceeds allowed limits.' };
   }
@@ -195,7 +195,8 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0 }) {
 
   if (!obj || typeof obj !== 'object') {
     if (typeof obj === 'string') {
-      if (obj.length > MAX_STRING_INSPECT_LEN) {
+      const limit = state.maxStringLen || MAX_STRING_INSPECT_LEN;
+      if (obj.length > limit) {
         return { safe: false, reason: 'Field length exceeds maximum security limit.' };
       }
       if (XSS_SCRIPT_PATTERN.test(obj)) {
@@ -223,8 +224,11 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0 }) {
     if (key.startsWith('$') || key.includes('.')) {
       return { safe: false, reason: 'Operator injection attempt detected.' };
     }
-    const check = inspectPayloadSafety(obj[key], depth + 1, state);
+    const isLargeMediaField = key === 'ciphertext' || key === 'mediaUrl' || key === 'encryptedPayload';
+    const childState = isLargeMediaField ? { ...state, maxStringLen: 500_000 } : state;
+    const check = inspectPayloadSafety(obj[key], depth + 1, childState);
     if (!check.safe) return check;
+    state.nodes = childState.nodes;
   }
   return { safe: true };
 }
