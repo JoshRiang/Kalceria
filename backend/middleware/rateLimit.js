@@ -133,3 +133,16 @@ export const miniEventRateLimit = rateLimit({
   windowSeconds: 60 * 60,
   key: (req) => req.user?.userId || req.ip,
 });
+
+export const googleAuthRateLimit = rateLimit({
+  name: 'auth-google',
+  max: 20,
+  windowSeconds: 15 * 60,
+});
+
+export const citySearchRateLimit = rateLimit({
+  name: 'city-search',
+  max: 90,
+  windowSeconds: 5 * 60,
+});
+

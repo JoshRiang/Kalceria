@@ -1,6 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { getInstantMapBgUrl } from "@/lib/mapBgCache";
+
+const BROADCAST_FORM_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Dark.webp";
+const BROADCAST_FORM_BG_LIGHT = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Light.webp";
 
 export function StatusModal({
   show,
@@ -14,6 +18,17 @@ export function StatusModal({
   if (!show) return null;
 
   const isBroadcastValid = Boolean((statusText || "").trim());
+  const resolvedBgUrl = getInstantMapBgUrl(
+    isModalDark ? BROADCAST_FORM_BG_DARK : BROADCAST_FORM_BG_LIGHT
+  );
+
+  // 2-Piece Smooth-Trimmed Mask (3 : 1 Top-to-Bottom Proportion with Tight Gap):
+  // - 0% -> 16%: strictly transparent so "Update Status" header stays 100% uncontaminated
+  // - Top Segment (~54% span: 18.5% -> 72.5% midpoint-to-midpoint) = 3 parts
+  // - Tight Smooth Gap (75% -> 79%, narrower than Create Mini Event)
+  // - Bottom Segment (~18% span: 81% -> 99% midpoint-to-midpoint) = 1 part (54% : 18% = 3 : 1)
+  const smoothTwoBandMask =
+    "linear-gradient(to bottom, transparent 0%, transparent 16%, black 21%, black 71%, transparent 75%, transparent 79%, black 83%, black 100%)";
 
   return (
     <div
@@ -30,7 +45,29 @@ export function StatusModal({
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* 2-Piece (3 : 1) Smooth-Trimmed Broadcast Background Layer */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
+          style={{
+            backgroundColor: isModalDark ? "#010101" : "#ffffff",
+            maskImage: smoothTwoBandMask,
+            WebkitMaskImage: smoothTwoBandMask,
+          }}
+        >
+          <div
+            className="w-full h-full"
+            style={{
+              backgroundImage: `url("${resolvedBgUrl}")`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              opacity: isModalDark ? 0.45 : 0.58,
+            }}
+          />
+        </div>
+
+        {/* Header (Solid #010101 / #ffffff, 100% uncontaminated by background) */}
         <div
           className={`shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-none ${
             isModalDark ? "bg-[#010101]" : "bg-[#ffffff]"
@@ -86,8 +123,8 @@ export function StatusModal({
             <textarea
               className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm outline-none min-h-[90px] sm:min-h-[120px] transition-all resize-none ${
                 isModalDark
-                  ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
-                  : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
+                  ? "bg-[#0a0c10]/90 border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
+                  : "bg-[#f6f8fa]/94 border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
               }`}
               value={statusText}
               onChange={(e) => setStatusText(e.target.value)}

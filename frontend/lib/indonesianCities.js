@@ -265,3 +265,19 @@ export function getCitySuggestions(query, limit = 6) {
   return [...new Set(matched)];
 }
 
+/**
+ * Checks whether an input city is valid: either matching an Indonesian city or a verified worldwide/dynamic city
+ */
+export function isKnownCity(input, verifiedCitiesMap = null) {
+  if (!input || String(input).trim().length < 2) return false;
+  if (isIndonesianCity(input)) return true;
+  if (verifiedCitiesMap && typeof verifiedCitiesMap === "object") {
+    const key = cleanCityStr(input);
+    if (verifiedCitiesMap[key] || verifiedCitiesMap[String(input).trim().toLowerCase()]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+

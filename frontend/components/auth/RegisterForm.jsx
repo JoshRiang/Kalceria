@@ -12,6 +12,7 @@ export default function RegisterForm({
   form,
   setField,
   isActive = true,
+  isGooglePrefill = false,
   PUBLIC_SIGNUP_ENABLED,
   // Validation flags
   nameValid,
@@ -33,6 +34,8 @@ export default function RegisterForm({
   photoError,
   setPhotoError,
   handlePhotoSelect,
+  extraCities = [],
+  onCityInput,
 }) {
   const [initialPassword] = useState(() => generateClientStrongPassword());
   const [recommendedPassword, setRecommendedPassword] = useState(initialPassword);
@@ -41,17 +44,17 @@ export default function RegisterForm({
   const isActiveRef = useRef(isActive);
   isActiveRef.current = isActive;
 
-  // Auto-fill the first password input box strictly when RegisterForm is active
+  // Auto-fill the first password input box strictly when RegisterForm is active AND NOT isGooglePrefill
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || isGooglePrefill) return;
     if (PUBLIC_SIGNUP_ENABLED && !recommendationDismissed && !form.password) {
       setField("password", initialPassword);
       setShowRecommendation(true);
     }
-  }, [isActive, PUBLIC_SIGNUP_ENABLED, initialPassword, recommendationDismissed, form.password, setField]);
+  }, [isActive, isGooglePrefill, PUBLIC_SIGNUP_ENABLED, initialPassword, recommendationDismissed, form.password, setField]);
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || isGooglePrefill) return;
     let active = true;
     fetchRecommendedPassword({ email: form.email || "" }).then((pwd) => {
       if (active && isActiveRef.current && pwd) {
@@ -65,7 +68,7 @@ export default function RegisterForm({
     return () => {
       active = false;
     };
-  }, [isActive, form.email, initialPassword, recommendationDismissed, form.password, setField]);
+  }, [isActive, isGooglePrefill, form.email, initialPassword, recommendationDismissed, form.password, setField]);
 
   const handlePasswordChange = (id, value) => {
     setField(id, value);
@@ -189,7 +192,10 @@ export default function RegisterForm({
           type="text"
           placeholder={PUBLIC_SIGNUP_ENABLED ? "e.g. Jakarta, Bandung" : "Not Ready Yet"}
           val={form.domicile || ""}
-          onChange={setField}
+          onChange={(id, val) => {
+            setField(id, val);
+            onCityInput?.(val);
+          }}
           required={true}
           list="indonesia-cities"
           isValid={cityValid}
@@ -202,7 +208,10 @@ export default function RegisterForm({
       {/* Autocomplete cities list */}
       <datalist id="indonesia-cities">
         {INDONESIAN_CITIES.map((c) => (
-          <option key={c} value={c} />
+          <option key={`id-${c}`} value={c} />
+        ))}
+        {extraCities.map((c) => (
+          <option key={`extra-${c}`} value={c} />
         ))}
       </datalist>
 

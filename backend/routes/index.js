@@ -60,8 +60,11 @@ import {
   eventRegistrationDefense,
   authLoginDefense,
   authSignupDefense,
-  miniEventDefense
+  miniEventDefense,
+  googleAuthDefense,
 } from "../middleware/ingressDefense.js";
+import { startGoogleOAuth, exchangeGoogleOAuth } from "../controllers/googleAuthController.js";
+import { searchCitiesEndpoint } from "../utils/cityResolver.js";
 import { listComments, togglePinComment, deleteComment } from "../controllers/adminCommentController.js";
 import { getEarnings } from "../controllers/adminEarningsController.js";
 import { sendGeneralEmail } from "../controllers/emailController.js";
@@ -97,6 +100,8 @@ import {
   passwordResetRateLimit,
   signupRateLimit,
   usernameCheckRateLimit,
+  googleAuthRateLimit,
+  citySearchRateLimit,
 } from "../middleware/rateLimit.js";
 import crypto from 'node:crypto';
 
@@ -110,6 +115,8 @@ router.get("/auth/csrf", issueCsrfToken);
 router.post("/auth/register", signupRateLimit, authSignupDefense, requirePublicSignup, register);
 router.post("/auth/register/complete", signupRateLimit, authSignupDefense, requirePublicSignup, completeRegistration);
 router.post("/auth/login", loginIpRateLimit, loginIdentityRateLimit, authLoginDefense, login);
+router.get("/auth/google/start", googleAuthRateLimit, googleAuthDefense, startGoogleOAuth);
+router.post("/auth/google/exchange", googleAuthRateLimit, googleAuthDefense, exchangeGoogleOAuth);
 router.post("/auth/logout", logout);
 router.post("/auth/otp/request", otpRequestIpRateLimit, otpRequestEmailRateLimit, requireEmailAuth, requestOtp);
 router.post("/auth/otp/verify", otpVerifyRateLimit, requireEmailAuth, verifyOtp);
@@ -148,6 +155,7 @@ router.get("/events/:eventId", getPublicEvent);
 router.post("/events/:eventId/register", optionalAuth, bookingRateLimit, eventRegistrationDefense, registerEvent);
 
 // ─── Location & Geocoding ────────────────────────────────────────────────────
+router.get("/location/cities", citySearchRateLimit, searchCitiesEndpoint);
 router.get("/location/search", searchIndonesianLocations);
 router.get("/location/reverse", reverseGeocodeLocation);
 router.post("/location/update", requireAuth, updateLiveLocation);

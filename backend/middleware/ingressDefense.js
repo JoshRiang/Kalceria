@@ -244,6 +244,9 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
       key === 'iv' ||
       key === 'sig' ||
       key === 'nonce' ||
+      key === 'code' ||
+      key === 'state' ||
+      key === 'cityToken' ||
       key === 'encryptedPayload' ||
       key === 'rtcPayload' ||
       key === 'mediaUrl' ||
@@ -549,4 +552,11 @@ export const miniEventDefense = createIngressShield({
   maxBurst: 6,
   burstWindow: 30,
   formName: 'Mini Event Form',
+});
+
+export const googleAuthDefense = createIngressShield({
+  name: 'auth-google',
+  maxBurst: 8,
+  burstWindow: 30,
+  formName: 'Google Sign-In',
 });

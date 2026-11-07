@@ -19,6 +19,7 @@ import {
   sanitizeCoverMediaUrl,
   sanitizeProfilePictureUrl,
 } from '../utils/profileDefaults.js';
+import { resolveAndValidateCity } from '../utils/cityResolver.js';
 
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
 
@@ -170,7 +171,24 @@ export async function register(req, res, next) {
       return res.status(400).json({ error: 'Please provide a valid gender.' });
     }
 
-    const [parsedLat, parsedLng] = resolveDomicileCoords(domicile, domicileLat, domicileLng);
+    let parsedLat = 0;
+    let parsedLng = 0;
+    if (domicileLat !== undefined || domicileLng !== undefined) {
+      parsedLat = domicileLat === undefined ? 0 : Number(domicileLat);
+      parsedLng = domicileLng === undefined ? 0 : Number(domicileLng);
+    } else if (typeof domicile === 'string' && domicile.trim()) {
+      const cityResolved = await resolveAndValidateCity(domicile, {
+        domicileLat,
+        domicileLng,
+        cityToken: req.body?.cityToken,
+      });
+      if (cityResolved.valid && Array.isArray(cityResolved.coords)) {
+        [parsedLat, parsedLng] = cityResolved.coords;
+      } else {
+        [parsedLat, parsedLng] = resolveDomicileCoords(domicile, domicileLat, domicileLng);
+      }
+    }
+
     if (
       !Number.isFinite(parsedLat) || parsedLat < -90 || parsedLat > 90
       || !Number.isFinite(parsedLng) || parsedLng < -180 || parsedLng > 180

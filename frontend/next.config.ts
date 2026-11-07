@@ -36,6 +36,24 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: '/vid_login1.mp4',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+      {
+        source: '/vid_login2.mp4',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+      {
+        source: '/vid_login3.mp4',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+      {
         source: '/:all*(webp|png|jpg|jpeg|gif|svg|ico|avif)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
@@ -66,7 +84,7 @@ const nextConfig: NextConfig = {
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
         { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self)' },
-        { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+        { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
         { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ...(process.env.NODE_ENV === 'production'
           ? [

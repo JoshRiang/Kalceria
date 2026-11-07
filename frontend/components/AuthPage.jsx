@@ -8,7 +8,7 @@ import { EMAIL_AUTH_ENABLED, PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
 import { establishSession } from "@/lib/session";
 import { persistProfileIdentityCache } from "@/lib/profileIdentity";
 import { PhotoCropEditorModal } from "@/components/map/modals/PhotoCropEditorModal";
-import { isIndonesianCity } from "@/lib/indonesianCities";
+import { isIndonesianCity, isKnownCity } from "@/lib/indonesianCities";
 
 // Modular Subcomponents
 import LoginForm from "@/components/auth/LoginForm";
@@ -83,6 +83,10 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   });
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [isGooglePrefill, setIsGooglePrefill] = useState(false);
+  const [verifiedCitiesMap, setVerifiedCitiesMap] = useState({});
+  const [extraCitiesList, setExtraCitiesList] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -232,6 +236,178 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
       confirmPassword: "",
     }));
     setMode(newMode);
+  };
+
+  const citySearchTimeoutRef = useRef(null);
+  const handleCityInput = useCallback((query) => {
+    if (citySearchTimeoutRef.current) clearTimeout(citySearchTimeoutRef.current);
+    const q = String(query || "").trim();
+    if (q.length < 2) return;
+    citySearchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/location/cities?q=${encodeURIComponent(q)}`);
+        const found = res.data?.cities || [];
+        if (found.length > 0) {
+          setVerifiedCitiesMap((prev) => {
+            const next = { ...prev };
+            found.forEach((c) => {
+              const k1 = String(c.name || "").toLowerCase().trim();
+              const k2 = String(c.label || "").toLowerCase().trim();
+              if (k1) next[k1] = c;
+              if (k2) next[k2] = c;
+            });
+            return next;
+          });
+          setExtraCitiesList((prev) => {
+            const set = new Set([...prev, ...found.map((c) => c.label || c.name)]);
+            return Array.from(set).slice(0, 30);
+          });
+        }
+      } catch {}
+    }, 220);
+  }, []);
+
+  const applyGoogleOAuthResult = useCallback((result) => {
+    setGoogleLoading(false);
+    if (!result) return;
+    if (!result.ok) {
+      setError(result.error || "Google Sign-In failed.");
+      return;
+    }
+
+    const payload = result.payload || {};
+    if (payload.status === "EXISTING_USER") {
+      if (payload.csrfToken) sessionStorage.setItem("kalceriaCsrfToken", payload.csrfToken);
+      establishSession(payload.user || payload);
+      setSuccess("Authentication successful.");
+      setTimeout(() => {
+        onAuthSuccess?.({ ...payload, isNewUser: false, isRegister: false });
+      }, 600);
+      return;
+    }
+
+    if (payload.status === "NEW_USER") {
+      const gp = payload.googleProfile || {};
+      setIsGooglePrefill(true);
+
+      if (gp.city) {
+        const cityKey = String(gp.city).toLowerCase().trim();
+        const cityObj = {
+          name: gp.city,
+          label: gp.cityLabel || gp.city,
+          lat: gp.domicileLat,
+          lng: gp.domicileLng,
+          cityToken: gp.cityToken,
+        };
+        setVerifiedCitiesMap((prev) => ({ ...prev, [cityKey]: cityObj }));
+        setExtraCitiesList((prev) => Array.from(new Set([gp.cityLabel || gp.city, ...prev])));
+      }
+
+      modeRef.current = "register";
+      setForm({
+        name: gp.name || "",
+        email: gp.email || "",
+        dob: gp.birthYear ? String(gp.birthYear) : "",
+        domicile: gp.city || "",
+        domicileLat: gp.domicileLat ?? undefined,
+        domicileLng: gp.domicileLng ?? undefined,
+        cityToken: gp.cityToken || undefined,
+        password: "",
+        confirmPassword: "",
+      });
+
+      setCroppedAvatar(null);
+      setError("");
+      setSuccess("");
+      setMode("register");
+    }
+  }, [onAuthSuccess]);
+
+  // Google OAuth Listener & Handoff Consumer
+  useEffect(() => {
+    try {
+      const handoffRaw = localStorage.getItem("kalceria_google_oauth_handoff");
+      if (handoffRaw) {
+        localStorage.removeItem("kalceria_google_oauth_handoff");
+        const handoff = JSON.parse(handoffRaw);
+        if (Date.now() - (handoff.ts || 0) < 60_000) {
+          applyGoogleOAuthResult(handoff);
+        }
+      }
+    } catch {}
+
+    let bc;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("kalceria_google_oauth");
+        bc.onmessage = (event) => {
+          if (event.data?.type === "KALCERIA_GOOGLE_OAUTH_RESULT") {
+            applyGoogleOAuthResult(event.data);
+          }
+        };
+      }
+    } catch {}
+
+    const handlePostMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === "KALCERIA_GOOGLE_OAUTH_RESULT") {
+        applyGoogleOAuthResult(event.data);
+      }
+    };
+    window.addEventListener("message", handlePostMessage);
+
+    return () => {
+      if (bc) bc.close();
+      window.removeEventListener("message", handlePostMessage);
+    };
+  }, [applyGoogleOAuthResult]);
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const redirectUri = `${window.location.origin}/auth/google/callback`;
+      const res = await api.get(`/auth/google/start?redirectUri=${encodeURIComponent(redirectUri)}&mode=popup`);
+      const { authUrl } = res.data || {};
+
+      if (!authUrl) {
+        throw new Error("Unable to obtain Google sign-in URL.");
+      }
+
+      const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
+      if (isMobileDevice) {
+        window.location.href = authUrl;
+        return;
+      }
+
+      const width = 500;
+      const height = 620;
+      const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2);
+      const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
+      const popup = window.open(
+        authUrl,
+        "kalceria_google_oauth",
+        `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+      );
+
+      if (!popup || popup.closed || typeof popup.closed === "undefined") {
+        window.location.href = authUrl;
+        return;
+      }
+
+      const checkTimer = setInterval(() => {
+        if (!popup || popup.closed) {
+          clearInterval(checkTimer);
+          setGoogleLoading(false);
+        }
+      }, 1000);
+    } catch (err) {
+      setGoogleLoading(false);
+      const msg = err.response?.data?.error || err.message || "Failed to start Google sign-in.";
+      setError(msg);
+    }
   };
 
   // ── Profile Photo Selection (Mobile & Desktop Hardware-Safe) ──
@@ -576,8 +752,30 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         return;
       }
 
-      // 2. City validation: must be in the Indonesian cities list
-      if (!isIndonesianCity(form.domicile)) {
+      // 2. City validation: must be in the known cities list (Indonesia priority + dynamic worldwide)
+      let currentCityValid = isKnownCity(form.domicile, verifiedCitiesMap);
+      let matchedCoord = null;
+      let matchedToken = null;
+
+      if (!currentCityValid && form.domicile && form.domicile.trim().length >= 2) {
+        try {
+          const res = await api.get(`/location/cities?q=${encodeURIComponent(form.domicile.trim())}`);
+          const found = res.data?.cities || [];
+          const matched = found.find((c) => {
+            const cName = String(c.name || "").toLowerCase().trim();
+            const cLabel = String(c.label || "").toLowerCase().trim();
+            const q = form.domicile.trim().toLowerCase();
+            return cName === q || cLabel === q || (q.length >= 4 && cName.startsWith(q));
+          });
+          if (matched) {
+            currentCityValid = true;
+            matchedCoord = [matched.lat, matched.lng];
+            matchedToken = matched.cityToken;
+          }
+        } catch {}
+      }
+
+      if (!currentCityValid) {
         setError("City is not in the list.");
         return;
       }
@@ -621,11 +819,18 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
           profilePicture: profilePicture || null,
         };
 
+        const domicileLatToSend = matchedCoord ? matchedCoord[0] : form.domicileLat;
+        const domicileLngToSend = matchedCoord ? matchedCoord[1] : form.domicileLng;
+        const cityTokenToSend = matchedToken || form.cityToken;
+
         const regRes = await api.post("/auth/register", {
           name: registeredName,
           dob: birthDateIso,
           email: registeredEmail,
           domicile: form.domicile?.trim() || undefined,
+          domicileLat: domicileLatToSend,
+          domicileLng: domicileLngToSend,
+          cityToken: cityTokenToSend,
           gender: "OTHER",
           password: registeredPassword,
           profilePicture,
@@ -694,7 +899,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const isEmailValid = emailRegex.test(form.email || "");
   const isEmailError = Boolean(form.email && !isEmailValid);
 
-  const cityValid = isIndonesianCity(form.domicile);
+  const cityValid = isKnownCity(form.domicile, verifiedCitiesMap);
   const isCityError = Boolean(form.domicile && form.domicile.trim().length >= 3 && !cityValid);
 
   const passwordValid = PASSWORD_CHECK_REGEX.test(form.password || "");
@@ -905,6 +1110,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                                 form={form}
                                 setField={setRegisterField}
                                 isActive={mode === "register"}
+                                isGooglePrefill={isGooglePrefill}
                                 PUBLIC_SIGNUP_ENABLED={PUBLIC_SIGNUP_ENABLED}
                                 nameValid={nameValid}
                                 isDobValid={isDobValid}
@@ -924,6 +1130,8 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                                 photoError={photoError}
                                 setPhotoError={setPhotoError}
                                 handlePhotoSelect={handlePhotoSelect}
+                                extraCities={extraCitiesList}
+                                onCityInput={handleCityInput}
                               />
                             )}
                           </motion.div>
@@ -977,6 +1185,31 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             ? "Sign In"
                             : "Register Account"}
                         </button>
+
+                        {/* Sign in with Google (Login Card Gap) */}
+                        {mode === "login" && (
+                          <div className="mt-6 mb-2 sm:mt-7 sm:mb-3 flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={handleGoogleSignIn}
+                              disabled={loading || googleLoading}
+                              className="inline-flex items-center justify-center gap-2 cursor-pointer group disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src="/Google_Loginn.png"
+                                alt="Google"
+                                width={16}
+                                height={16}
+                                className="w-[15px] h-[15px] sm:w-4 sm:h-4 object-contain shrink-0 select-none"
+                                draggable={false}
+                              />
+                              <span className="font-sans font-bold text-xs text-white group-hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4">
+                                {googleLoading ? "Connecting to Google…" : "Sign in with Google"}
+                              </span>
+                            </button>
+                          </div>
+                        )}
                       </form>
                     ) : mode === "verify" ? (
                       <AnimatePresence mode="wait">
@@ -1034,7 +1267,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
                     {/* ── Footer ── */}
                     {mode !== "verify" && mode !== "forgot-password" && (
-                      <div className="mt-8 text-center">
+                      <div className={mode === "login" ? "mt-12 sm:mt-14 pb-1 text-center" : "mt-8 text-center"}>
                         <p className="font-mono text-xs text-slate-500">
                           {mode === "login" ? "Don't have an account? " : "Already have an account? "}
                           <button

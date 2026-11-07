@@ -86,23 +86,13 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
             }}
             className="bg-transparent border-none p-0 inline-block cursor-pointer focus:outline-none hover:scale-[1.02] active:scale-[0.98] transition-transform"
           >
-            <motion.h2
-              className="font-black uppercase tracking-tighter text-5xl xs:text-6xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[9.5rem] 2xl:text-[11rem] text-transparent bg-clip-text whitespace-nowrap leading-none drop-shadow-2xl"
-              style={{
-                backgroundColor: "white",
-                backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
-                backgroundSize: "100% 200%",
-                textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)"
-              }}
-              animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            >
+            <h2 className="font-mono font-black uppercase tracking-tighter text-4xl xs:text-5xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[9.5rem] 2xl:text-[11rem] text-white whitespace-nowrap leading-none">
               USERS MAP
-            </motion.h2>
+            </h2>
           </button>
         </div>
 
-          {/* Find The Others Button - Exact Explore Style & Behaviour */}
+          {/* Find The Others Button - Unified with SEE THE JOURNEY Typography & Proportion */}
           <div className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 flex items-center justify-center">
             <button
               type="button"
@@ -113,11 +103,11 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
                 sessionStorage.setItem("playMapIntro", "true");
                 window.location.href = "/map";
               }}
-              className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none"
-              style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
+              className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
+              style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
             >
               <span className="relative z-10">FIND THE OTHERS</span>
-              <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+              <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
             </button>
           </div>
 
@@ -365,17 +355,13 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              </div>
            )}
            
-           {/* 2. JOIN US - Dead center aligned */}
+           {/* 2. JOIN US - Dead center aligned, 2D parent title typography */}
            <motion.h2 
              initial={{ opacity: 0, y: 15, filter: "blur(8px)" }}
              whileInView={{ opacity: 1, y: 0, x: 0, filter: "blur(0px)" }}
              viewport={{ once: false, amount: 0.5 }}
              transition={{ duration: 1, ease: "easeOut" }}
-             className="w-full max-w-2xl mx-auto text-center text-5xl sm:text-7xl md:text-8xl font-black uppercase tracking-tighter text-white select-none"
-             style={{ 
-               textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
-                filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
-             }}
+             className="w-full max-w-2xl mx-auto text-center text-5xl sm:text-7xl md:text-8xl font-mono font-black uppercase tracking-tighter text-white select-none"
            >
              JOIN US
            </motion.h2>
@@ -514,27 +500,21 @@ export const ClosingSections = memo(function ClosingSections({ isMobile, onOpenI
              viewport={{ once: true }}
              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
            >
-             <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter text-white"
-                 style={{ 
-                   textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 0px #555, 5px 5px 20px rgba(0,0,0,0.8)",
-                   filter: "drop-shadow(0 0 15px rgba(255,255,255,0.2))"
-                 }}>
+             <h2 className="text-4xl sm:text-6xl md:text-7xl font-mono font-black uppercase tracking-tighter text-white select-none">
                Make Us Better
              </h2>
            </motion.div>
 
-           {/* Leave It Here Button - Exact Apply a Request Style & Behaviour */}
-            <motion.button
+           {/* Leave It Here Button - Unified with SEE THE JOURNEY Typography & Proportion */}
+            <button
               type="button"
               onClick={onOpenIdeaModal}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="relative px-10 xs:px-12 sm:px-16 py-4 xs:py-5 sm:py-6 font-sans font-black uppercase tracking-tighter text-base sm:text-lg md:text-xl text-black bg-white group cursor-pointer shadow-[0_0_35px_rgba(255,255,255,0.3)] focus-polygon focus-visible:outline-none z-40 mx-auto"
-              style={{ clipPath: "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)" }}
+              className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer z-40 mx-auto"
+              style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
             >
               <span className="relative z-10">LEAVE IT HERE</span>
-              <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
-            </motion.button>
+              <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
+            </button>
           </div>
           <DungeonGate />
         </section>

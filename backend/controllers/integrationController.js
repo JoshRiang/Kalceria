@@ -1,6 +1,7 @@
 import { isEmailAuthConfigured, isEmailNotifConfigured } from '../lib/mailer.js';
 import { isOnlinePaymentEnabled, isPaymentBrokerConfigured, getPaymentProviderName } from '../lib/paymentBroker.js';
 import { isWhatsAppBotEnabled, isWhatsAppBotConfigured, getWhatsAppBotProvider } from '../lib/whatsappBroker.js';
+import { isGoogleOAuthConfigured } from './googleAuthController.js';
 
 // ─── GET /integrations/status (Public Capabilities) ──────────────────────────
 export function getPublicIntegrationStatus(_req, res) {
@@ -11,6 +12,7 @@ export function getPublicIntegrationStatus(_req, res) {
     paymentProvider: getPaymentProviderName(),
     whatsappBotEnabled: isWhatsAppBotEnabled() && isWhatsAppBotConfigured(),
     whatsappBotProvider: getWhatsAppBotProvider(),
+    googleOAuthEnabled: isGoogleOAuthConfigured(),
   });
 }
 
@@ -84,6 +86,16 @@ export function getAdminIntegrationReadiness(_req, res) {
       missingVariables: waMissing,
       adminNumber: process.env.WA_ADMIN_NUMBER || null,
       webhookUrl: 'https://kalceria-backend.vercel.app/api/webhooks/whatsapp',
+    },
+    googleOAuth: {
+      flagEnabled: true,
+      isConfigured: isGoogleOAuthConfigured(),
+      readyToExecute: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      missingVariables: [
+        ...(!process.env.GOOGLE_CLIENT_ID ? ['GOOGLE_CLIENT_ID'] : []),
+        ...(!process.env.GOOGLE_CLIENT_SECRET ? ['GOOGLE_CLIENT_SECRET'] : []),
+      ],
+      redirectUri: 'https://kalceria.id/auth/google/callback',
     },
   });
 }

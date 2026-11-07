@@ -15,6 +15,8 @@ export const MAP_BG_WEBP_ASSETS = [
   "/BG_IMPROVE_FOR_MAP/BG_BroadscastBoxDark.webp",
   "/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.webp",
   "/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp",
+  "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Light.webp",
+  "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Dark.webp",
   "/BG_IMPROVE_FOR_MAP/CokiEditProfile.webp",
 ];
 

@@ -66,12 +66,7 @@ export const MapAuthGate = memo(function MapAuthGate() {
         />
 
         <div className="space-y-4">
-          <h1
-            className="font-sans font-black uppercase tracking-tighter text-4xl md:text-5xl lg:text-6xl text-white"
-            style={{
-              textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 10px rgba(0,0,0,0.8)",
-            }}
-          >
+          <h1 className="font-mono font-black uppercase tracking-tighter text-3xl xs:text-4xl md:text-5xl lg:text-6xl text-white leading-tight">
             Authentication Required
           </h1>
           <p className="font-sans text-white text-sm md:text-base font-semibold tracking-wide max-w-sm mx-auto opacity-90">
@@ -81,8 +76,8 @@ export const MapAuthGate = memo(function MapAuthGate() {
 
         <Link
           href="/?auth=true"
-          className="relative inline-block pointer-events-auto mt-2 px-12 sm:px-14 py-4 sm:py-4.5 font-sans font-black uppercase tracking-[0.2em] text-sm sm:text-base md:text-[17px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.15)]"
-          style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
+          className="relative inline-block pointer-events-auto mt-2 px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
+          style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
           onClick={() => {
             if (typeof window !== "undefined") {
               sessionStorage.setItem("triggerAuth", "true");
@@ -91,7 +86,7 @@ export const MapAuthGate = memo(function MapAuthGate() {
           }}
         >
           <span className="relative z-10">GO TO LOGIN</span>
-          <span aria-hidden="true" className="block absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+          <span aria-hidden="true" className="block absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
         </Link>
       </div>
 

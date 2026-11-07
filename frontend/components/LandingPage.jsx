@@ -244,7 +244,7 @@ export default function LandingPage({ onNavigateAuth }) {
             ) : (
               <button
                 onClick={onNavigateAuth}
-                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_30px_rgba(255,255,255,0.15)] focus-polygon focus-visible:outline-none"
+                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
                 style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
               >
                 <span className="relative z-10">LOGIN / REGISTER</span>
@@ -329,11 +329,11 @@ export default function LandingPage({ onNavigateAuth }) {
             sessionStorage.setItem("landingScrollY", window.scrollY);
           }}>
             <button
-              className="relative px-8 py-3 font-sans font-extrabold uppercase tracking-wide text-[13px] text-[#050a14] bg-white border border-white transition-all hover:border-[#FF00FF] hover:bg-transparent hover:text-white group cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)] focus-polygon focus-visible:outline-none"
-              style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
+              className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
+              style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
             >
               <span className="relative z-10">EXPLORE</span>
-              <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
+              <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
             </button>
           </Link>
         </div>
@@ -419,7 +419,7 @@ export default function LandingPage({ onNavigateAuth }) {
               sessionStorage.setItem("landingScrollY", window.scrollY);
             }}>
               <button
-                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none"
+                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
                 style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
               >
                 <span className="relative z-10">Get to Know More</span>
@@ -459,20 +459,10 @@ export default function LandingPage({ onNavigateAuth }) {
         </div>
 
 
-        <div className="relative z-10 mb-24 flex justify-center w-full">
-          <motion.h2
-            className="relative text-6xl md:text-8xl font-black uppercase tracking-tighter text-transparent bg-clip-text"
-            style={{
-              backgroundColor: "white",
-              backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
-              backgroundSize: "100% 200%",
-              textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)"
-            }}
-            animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          >
+        <div className="relative z-10 mb-24 flex justify-center w-full px-4">
+          <h2 className="relative text-5xl sm:text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter text-white text-center select-none">
             <Typewriter text="SUPPORT US" mode="none" delay={400} skipAnim={false} />
-          </motion.h2>
+          </h2>
         </div>
 
         <div className="relative z-10 w-full max-w-6xl px-4 mb-20 flex justify-center">
@@ -872,32 +862,21 @@ export default function LandingPage({ onNavigateAuth }) {
               </motion.div>
             )}
 
-            <motion.h2
-              className="relative text-5xl xs:text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black uppercase tracking-tighter text-transparent bg-clip-text text-center select-none leading-none"
-              style={{
-                backgroundColor: "white",
-                backgroundImage: "linear-gradient(to bottom, #ffffff 20%, #fff5f0 50%, #ffccac 100%)",
-                backgroundSize: "100% 200%",
-                textShadow: "1px 1.5px 0px #e2e8f0, 2px 3px 0px #cbd5e1, 3px 4.5px 0px #94a3b8, 4px 6px 25px rgba(0,0,0,0.6)"
-              }}
-              animate={{ backgroundPosition: ["0% 0%", "0% 100%", "0% 0%"] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            >
+            <h2 className="relative text-4xl xs:text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-mono font-black uppercase tracking-tighter text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.45)] text-center select-none leading-none">
               <Typewriter text="NEED OUR HELP?" mode="none" delay={400} skipAnim={false} />
-            </motion.h2>
+            </h2>
           </div>
 
-          {/* Apply A Request Button - Big & Impactful */}
-          <motion.button
+          {/* Apply A Request Button - Unified with SEE THE JOURNEY Typography & Proportion */}
+          <button
+            type="button"
             onClick={handleApplyRequest}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="relative px-10 xs:px-12 sm:px-16 py-4 xs:py-5 sm:py-6 font-sans font-black uppercase tracking-tighter text-base sm:text-lg md:text-xl text-black bg-white group cursor-pointer shadow-[0_0_35px_rgba(255,255,255,0.3)] focus-polygon focus-visible:outline-none z-20"
-            style={{ clipPath: "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)" }}
+            className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_6px_28px_rgba(0,0,0,0.16)] focus-polygon focus-visible:outline-none cursor-pointer z-20"
+            style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
           >
             <span className="relative z-10">APPLY A REQUEST</span>
-            <div className="absolute inset-0 bg-[#FF00FF]/10 scale-y-0 origin-bottom group-hover:scale-y-100 transition-transform duration-300 ease-out z-0" />
-          </motion.button>
+            <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
+          </button>
         </motion.div>
 
         {/* Mobile & Half-Desktop / Tab Family: Bounded responsive camera hands at bottom middle */}

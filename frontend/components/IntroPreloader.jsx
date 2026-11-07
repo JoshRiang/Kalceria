@@ -12,6 +12,81 @@ import { hasUserSession } from "@/lib/session";
 // DYNAMIC MERGED PRELOADER (Desktop = FinalJosh branch, Mobile = Obsidian Black current logic)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+// ─── In-Memory Blob Video Pool (Eliminates Chromium HTTP 206 Range-Cache Deadlock) ───
+const INTRO_VIDEO_PATHS = ["/vid_login1.mp4", "/vid_login2.mp4", "/vid_login3.mp4"];
+let sharedVideoElements = null;
+let sharedVideoBlobUrls = [];
+let sharedVideoInitPromise = null;
+let activeCanvasSubscribers = 0;
+
+function ensureIntroVideoPool() {
+  if (typeof window === "undefined") return [];
+  if (sharedVideoElements && sharedVideoElements.length === INTRO_VIDEO_PATHS.length) {
+    sharedVideoElements.forEach((v) => {
+      if (v.paused && v.src) v.play().catch(() => {});
+    });
+    return sharedVideoElements;
+  }
+
+  const elements = INTRO_VIDEO_PATHS.map((srcPath) => {
+    const v = document.createElement("video");
+    v.muted = true;
+    v.defaultMuted = true;
+    v.loop = true;
+    v.playsInline = true;
+    v.preload = "auto";
+    v.setAttribute("muted", "");
+    v.setAttribute("playsinline", "");
+    const tryPlay = () => {
+      v.play().catch(() => {});
+    };
+    v.addEventListener("loadeddata", tryPlay);
+    v.addEventListener("canplay", tryPlay);
+    // Attach direct source immediately for instant t=0 decode, then upgrade to full in-memory Blob URL if needed
+    v.src = srcPath;
+    tryPlay();
+    return v;
+  });
+
+  sharedVideoElements = elements;
+
+  if (!sharedVideoInitPromise) {
+    sharedVideoInitPromise = Promise.all(
+      INTRO_VIDEO_PATHS.map(async (srcPath, idx) => {
+        try {
+          const res = await fetch(srcPath, { cache: "no-cache" });
+          if (!res.ok) return;
+          const blob = await res.blob();
+          if (!blob || blob.size === 0) return;
+          const blobUrl = URL.createObjectURL(blob);
+          sharedVideoBlobUrls[idx] = blobUrl;
+          const vid = sharedVideoElements?.[idx];
+          if (vid && vid.readyState < 2) {
+            vid.src = blobUrl;
+            vid.load();
+            vid.play().catch(() => {});
+          }
+        } catch {
+          // Direct video element fallback remains active
+        }
+      })
+    );
+  }
+
+  return elements;
+}
+
+function releaseIntroVideoPoolSubscriber() {
+  activeCanvasSubscribers = Math.max(0, activeCanvasSubscribers - 1);
+  if (activeCanvasSubscribers === 0 && sharedVideoElements) {
+    sharedVideoElements.forEach((v) => {
+      try {
+        v.pause();
+      } catch {}
+    });
+  }
+}
+
 // ─── Laser Grid ───────────────────────────────────────────────────────────────
 const LASER_PALETTE = [
   ...Array(30).fill("#FFD700"),
@@ -78,19 +153,18 @@ function LaserGrid({ active, bgColor = "#050a14" }) {
         }
 
         if (alpha <= 0) continue;
-        ctx.strokeStyle = ln.color;
+        ctx.save();
+        ctx.globalAlpha  = alpha;
+        ctx.strokeStyle  = ln.color;
+        ctx.lineWidth    = ln.thick;
+        ctx.shadowBlur   = 10;
+        ctx.shadowColor  = ln.color;
         ctx.beginPath();
         if (ln.horiz) { ctx.moveTo(0, ln.pos); ctx.lineTo(W, ln.pos); }
         else          { ctx.moveTo(ln.pos, 0); ctx.lineTo(ln.pos, H); }
-        // Fast 2-pass additive halo + crisp core instead of expensive per-line Gaussian shadowBlur
-        ctx.globalAlpha = alpha * 0.24;
-        ctx.lineWidth   = ln.thick * 3.6;
         ctx.stroke();
-        ctx.globalAlpha = alpha;
-        ctx.lineWidth   = ln.thick;
-        ctx.stroke();
+        ctx.restore();
       }
-      ctx.globalAlpha = 1;
 
       if (el < BLACK_END) {
         rafRef.current = requestAnimationFrame(draw);
@@ -173,96 +247,52 @@ function WakingUpText() {
   );
 }
 
-// ─── Shared Dual-Layer Tiled Video Collage (Single 3-Video Pool + Single Offscreen Buffer) ───
-function MCUVideoCollageBackdrop({ active, visible }) {
-  const baseCanvasRef = useRef(null);
-  const kMaskCanvasRef = useRef(null);
-  const videosRef = useRef([]);
-
-  useEffect(() => {
-    const videos = [1, 2, 3].map((num) => {
-      const v = document.createElement("video");
-      v.src = `/vid_login${num}.mp4`;
-      v.muted = true;
-      v.loop = true;
-      v.playsInline = true;
-      v.preload = "auto";
-      return v;
-    });
-    videosRef.current = videos;
-
-    return () => {
-      videos.forEach((v) => {
-        try {
-          v.pause();
-          v.removeAttribute("src");
-          v.load();
-        } catch {}
-      });
-      videosRef.current = [];
-    };
-  }, []);
+// ─── Tiled Video Canvas (MCU Full Fidelity + Cache-Safe Shared Decoder Pool) ───
+function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     if (!active) return;
-    const baseCanvas = baseCanvasRef.current;
-    const kMaskCanvas = kMaskCanvasRef.current;
-    if (!baseCanvas || !kMaskCanvas) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    const baseCtx = baseCanvas.getContext("2d", { alpha: false });
-    const kMaskCtx = kMaskCanvas.getContext("2d", { alpha: false });
-    const offscreen = document.createElement("canvas");
-    const offCtx = offscreen.getContext("2d", { alpha: false });
-
+    const ctx = canvas.getContext("2d");
     const updateSize = () => {
-      const targetW = Math.min(960, Math.max(480, Math.round(window.innerWidth * 0.55)));
-      const targetH = Math.min(540, Math.max(270, Math.round(window.innerHeight * 0.55)));
-      offscreen.width = targetW;
-      offscreen.height = targetH;
-      baseCanvas.width = targetW;
-      baseCanvas.height = targetH;
-      kMaskCanvas.width = targetW;
-      kMaskCanvas.height = targetH;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     };
     updateSize();
     window.addEventListener("resize", updateSize);
 
-    const videos = videosRef.current;
-    videos.forEach((v) => {
-      v.play().catch(() => {});
-    });
+    activeCanvasSubscribers += 1;
+    const videos = ensureIntroVideoPool();
 
-    let raf = null;
-    let lastFrameTs = 0;
+    let raf;
     const cols = window.innerWidth > 768 ? 7 : 6;
     const rows = window.innerWidth > 768 ? 6 : 7;
     const totalCells = cols * rows;
-    const random = createRuntimeSeededRandom("intro-video-grid-v1");
+    const random = createRuntimeSeededRandom(`intro-video-grid-v1-${seedSalt}`);
 
-    const cellAssignments = Array.from({ length: totalCells }).map(() =>
-      Math.floor(random() * Math.max(1, videos.length))
+    const cellAssignments = Array.from({ length: totalCells }).map((_, idx) =>
+      videos.length > 0 ? (idx + Math.floor(random() * videos.length)) % videos.length : 0
     );
 
     const switchInterval = setInterval(() => {
+      if (!videos.length) return;
       const flips = Math.floor(random() * 6) + 1;
       for (let i = 0; i < flips; i++) {
         const cellIdx = Math.floor(random() * totalCells);
-        cellAssignments[cellIdx] = Math.floor(random() * Math.max(1, videos.length));
+        cellAssignments[cellIdx] = Math.floor(random() * videos.length);
       }
     }, 150);
 
-    const draw = (ts) => {
-      raf = requestAnimationFrame(draw);
-      if (ts - lastFrameTs < 33) return; // Smooth 30fps cap for background video mosaic
-      lastFrameTs = ts;
-
-      const w = offscreen.width;
-      const h = offscreen.height;
+    const draw = () => {
+      const w = canvas.width;
+      const h = canvas.height;
       const cellW = w / cols;
       const cellH = h / rows;
 
-      offCtx.fillStyle = "#050a14";
-      offCtx.fillRect(0, 0, w, h);
+      ctx.clearRect(0, 0, w, h);
 
       let cellIdx = 0;
       for (let r = 0; r < rows; r++) {
@@ -270,71 +300,37 @@ function MCUVideoCollageBackdrop({ active, visible }) {
           let v = videos[cellAssignments[cellIdx]];
           if (!v || v.readyState < 2) {
             v = videos.find((vid) => vid && vid.readyState >= 2);
+          } else if (v.paused) {
+            v.play().catch(() => {});
           }
 
           if (v) {
-            offCtx.drawImage(v, c * cellW, r * cellH, cellW, cellH);
+            ctx.drawImage(v, c * cellW, r * cellH, cellW, cellH);
           }
 
-          offCtx.strokeStyle = "rgba(255, 255, 255, 0.06)";
-          offCtx.lineWidth = 1;
-          offCtx.strokeRect(c * cellW, r * cellH, cellW, cellH);
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(c * cellW, r * cellH, cellW, cellH);
           cellIdx++;
         }
       }
-
-      baseCtx.drawImage(offscreen, 0, 0);
-      kMaskCtx.drawImage(offscreen, 0, 0);
+      raf = requestAnimationFrame(draw);
     };
-    raf = requestAnimationFrame(draw);
+    draw();
 
     return () => {
       window.removeEventListener("resize", updateSize);
       clearInterval(switchInterval);
-      if (raf) cancelAnimationFrame(raf);
-      videos.forEach((v) => {
-        try {
-          v.pause();
-        } catch {}
-      });
+      cancelAnimationFrame(raf);
+      releaseIntroVideoPoolSubscriber();
     };
-  }, [active]);
+  }, [active, seedSalt]);
 
   return (
-    <div className="absolute inset-0 z-0 pointer-events-none">
-      {/* Base Layer: B&W Collage outside the K shape */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: visible ? 0.15 : 0, scale: visible ? 1 : 0.98 }}
-        transition={{ duration: 3, ease: "easeInOut" }}
-        className="absolute inset-0 will-change-transform"
-      >
-        <canvas
-          ref={baseCanvasRef}
-          className="absolute inset-0 w-full h-full object-cover grayscale contrast-125 bg-black/50"
-        />
-      </motion.div>
-
-      {/* Top Layer: Peach-Magenta Gradient masked strictly to the K shape */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: visible ? 0.35 : 0, scale: visible ? 1 : 0.98 }}
-        transition={{ duration: 3, ease: "easeInOut" }}
-        className="absolute inset-0 will-change-transform"
-        style={{
-          clipPath:
-            "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)",
-        }}
-      >
-        <canvas
-          ref={kMaskCanvasRef}
-          className="absolute inset-0 w-full h-full object-cover grayscale contrast-125 bg-black/50"
-        />
-        {/* Separable GPU-Hardware Blend Overlays (replaces full-screen framebuffer-readback mix-blend-color) */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-multiply opacity-85" />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-screen opacity-45" />
-      </motion.div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full object-cover filter grayscale contrast-125 bg-black/50"
+    />
   );
 }
 
@@ -437,10 +433,31 @@ export default function IntroPreloader({ onComplete }) {
     >
       {/* ── Background Videos (MCU-Style Canvas Render) — Desktop Only ── */}
       {!isMobile && (
-        <MCUVideoCollageBackdrop
-          active={showSubtitle && !laserActive}
-          visible={showSubtitle}
-        />
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          {/* Base Layer: Normal B&W Collage outside the K shape */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: showSubtitle ? 0.15 : 0, scale: showSubtitle ? 1 : 0.98 }}
+            transition={{ duration: 3, ease: "easeInOut" }}
+            className="absolute inset-0"
+          >
+            <MCUVideoGridCanvas active={true} seedSalt="outer" />
+          </motion.div>
+
+          {/* Top Layer: Peach-Magenta Gradient masked strictly to the K shape */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: showSubtitle ? 0.35 : 0, scale: showSubtitle ? 1 : 0.98 }}
+            transition={{ duration: 3, ease: "easeInOut" }}
+            className="absolute inset-0"
+            style={{ clipPath: "polygon(20% 0%, 32% 0%, 28.5% 45%, 70% 0%, 85% 0%, 42% 50%, 85% 100%, 70% 100%, 27.5% 55%, 24% 100%, 12% 100%)" }}
+          >
+            <MCUVideoGridCanvas active={true} seedSalt="k-mask" />
+            {/* Gradient Tint Overlays */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-color opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FFA500] via-[#FF4500] to-[#FF00FF] mix-blend-overlay opacity-40" />
+          </motion.div>
+        </div>
       )}
 
       {/* ── Golden spiral threads canvas — Desktop Only ── */}
