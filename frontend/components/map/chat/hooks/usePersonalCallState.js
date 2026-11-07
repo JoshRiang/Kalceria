@@ -47,6 +47,7 @@ export function usePersonalCallState({
   onPermissionNeeded,
 }) {
   const targetUser = callState?.user;
+  const targetUserId = String(targetUser?.id || "");
   const mode = callState?.mode || "voice";
   const isIncomingAnswer = Boolean(callState?.isIncoming);
   const incomingOfferSdp = callState?.offerSdp || null;
@@ -57,6 +58,7 @@ export function usePersonalCallState({
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [isCamOff, setIsCamOff] = useState(false);
   const [hasLocalStream, setHasLocalStream] = useState(false);
+  const [hasRemoteStream, setHasRemoteStream] = useState(false);
   const [isBadConnection, setIsBadConnection] = useState(false);
   const [safetyCode, setSafetyCode] = useState("");
   const [showSafetyTooltip, setShowSafetyTooltip] = useState(false);
@@ -65,15 +67,26 @@ export function usePersonalCallState({
   const localStreamRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const pcRef = useRef(null);
+  const pendingIceCandidatesRef = useRef([]);
+  const secondsRef = useRef(0);
   const activeCallIdRef = useRef(callState?.callId || `call_${Date.now()}`);
   const pollTimerRef = useRef(null);
   const isHungUpRef = useRef(false);
+
+  const targetUserRef = useRef(targetUser);
+  const onEndCallRef = useRef(onEndCall);
+  const onPermissionNeededRef = useRef(onPermissionNeeded);
+  targetUserRef.current = targetUser;
+  onEndCallRef.current = onEndCall;
+  onPermissionNeededRef.current = onPermissionNeeded;
 
   // Teardown WebRTC and Media Hardware
   const teardownCall = useCallback(() => {
     isHungUpRef.current = true;
     stopCallRingtone();
+    pendingIceCandidatesRef.current = [];
 
     if (pollTimerRef.current) {
       clearInterval(pollTimerRef.current);
@@ -92,6 +105,7 @@ export function usePersonalCallState({
       localStreamRef.current = null;
     }
 
+    remoteStreamRef.current = null;
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null;
     }
@@ -100,34 +114,51 @@ export function usePersonalCallState({
     }
 
     setHasLocalStream(false);
+    setHasRemoteStream(false);
   }, []);
 
   // Connected Call Timer
   useEffect(() => {
     if (status !== "connected") return;
     const interval = setInterval(() => {
-      setSeconds((s) => s + 1);
+      setSeconds((s) => {
+        const next = s + 1;
+        secondsRef.current = next;
+        return next;
+      });
     }, 1000);
     return () => clearInterval(interval);
   }, [status]);
 
   // Generate E2EE safety verification code
   useEffect(() => {
-    if (!targetUser) return;
+    if (!targetUserId) return;
     let active = true;
-    generateSafetyCode(currentUser?.id || "me", targetUser.id).then((code) => {
+    generateSafetyCode(currentUser?.id || "me", targetUserId).then((code) => {
       if (active) setSafetyCode(code);
     });
     return () => {
       active = false;
     };
-  }, [targetUser, currentUser]);
+  }, [targetUserId, currentUser?.id]);
 
   // Main Call Lifecycle and WebRTC Pipeline
   useEffect(() => {
-    if (!targetUser) return;
+    if (!targetUserId) return;
     isHungUpRef.current = false;
+    secondsRef.current = 0;
+    pendingIceCandidatesRef.current = [];
     let cancelled = false;
+
+    const flushPendingIceCandidates = async (pcInstance) => {
+      if (!pcInstance || !pcInstance.remoteDescription) return;
+      const queued = pendingIceCandidatesRef.current.splice(0);
+      for (const cand of queued) {
+        try {
+          await pcInstance.addIceCandidate(new RTCIceCandidate(cand));
+        } catch {}
+      }
+    };
 
     async function initCall() {
       // 1. Play Outgoing Ringtone if initiating call
@@ -147,14 +178,14 @@ export function usePersonalCallState({
       } catch (hardwareErr) {
         stopCallRingtone();
         if (cancelled) return;
-        if (hardwareErr.code === "PERMISSION_DENIED" && onPermissionNeeded) {
-          onPermissionNeeded(mode === "video" ? "camera" : "mic");
+        if (hardwareErr.code === "PERMISSION_DENIED" && onPermissionNeededRef.current) {
+          onPermissionNeededRef.current(mode === "video" ? "camera" : "mic");
           return;
         }
         // Device not found, busy, or denied: immediately cancel call & abort stuck state
         setStatus("ended");
         teardownCall();
-        onEndCall?.({ mode, seconds: 0 });
+        onEndCallRef.current?.({ mode, seconds: 0 });
         return;
       }
 
@@ -203,9 +234,19 @@ export function usePersonalCallState({
             }
           };
 
-          // Remote stream receiver: attach live WebRTC media directly to players
+          // Remote stream receiver: store & attach live WebRTC media directly to players
           pc.ontrack = (event) => {
-            const incomingStream = event.streams?.[0] || new MediaStream([event.track]);
+            let incomingStream = event.streams?.[0];
+            if (!incomingStream) {
+              if (!remoteStreamRef.current) {
+                remoteStreamRef.current = new MediaStream();
+              }
+              remoteStreamRef.current.addTrack(event.track);
+              incomingStream = remoteStreamRef.current;
+            } else {
+              remoteStreamRef.current = incomingStream;
+            }
+            setHasRemoteStream(true);
             if (remoteVideoRef.current && mode === "video") {
               remoteVideoRef.current.srcObject = incomingStream;
               remoteVideoRef.current.play?.().catch(() => {});
@@ -218,8 +259,8 @@ export function usePersonalCallState({
 
           // ICE Candidate forwarder
           pc.onicecandidate = (event) => {
-            if (event.candidate && targetUser?.id) {
-              postCallSignal(targetUser.id, {
+            if (event.candidate && targetUserId) {
+              postCallSignal(targetUserId, {
                 callId: activeCallIdRef.current,
                 callMode: mode,
                 signalType: "ice",
@@ -240,10 +281,11 @@ export function usePersonalCallState({
         if (pc && incomingOfferSdp) {
           try {
             await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(incomingOfferSdp)));
+            await flushPendingIceCandidates(pc);
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
 
-            postCallSignal(targetUser.id, {
+            postCallSignal(targetUserId, {
               callId: activeCallIdRef.current,
               callMode: mode,
               signalType: "answer",
@@ -267,7 +309,7 @@ export function usePersonalCallState({
         }
 
         // Post offer to backend (stores in Redis, event-driven, even if peer is offline)
-        postCallSignal(targetUser.id, {
+        postCallSignal(targetUserId, {
           callId,
           callMode: mode,
           signalType: "offer",
@@ -275,15 +317,15 @@ export function usePersonalCallState({
           encryptedPayload: offerSdpString || btoa(JSON.stringify({ sdpType: "e2ee_offer", mode, ts: Date.now() })),
         }).catch(() => {});
 
-        // Transition from Calling to Ringing
+        // Transition from Calling to Ringing once offer is dispatched
         setTimeout(() => {
           if (!cancelled && !isHungUpRef.current) {
-            setStatus("ringing");
+            setStatus((prev) => (prev === "calling" ? "ringing" : prev));
           }
         }, 750);
       }
 
-      // 5. Polling Loop for Callee Response Signals (Answer / ICE / Hangup)
+      // 5. Polling Loop for Peer Signals (Ringing / Answer / ICE / Hangup)
       pollTimerRef.current = setInterval(async () => {
         if (cancelled || isHungUpRef.current) return;
         try {
@@ -296,12 +338,16 @@ export function usePersonalCallState({
             if (sig.signalType === "hangup") {
               stopCallRingtone();
               setStatus("ended");
-              const callDuration = seconds;
+              const callDuration = secondsRef.current;
               setTimeout(() => {
                 teardownCall();
-                onEndCall?.({ mode, seconds: callDuration });
+                onEndCallRef.current?.({ mode, seconds: callDuration });
               }, 700);
               return;
+            }
+
+            if (sig.signalType === "ringing" && !isIncomingAnswer) {
+              setStatus((prev) => (prev === "calling" ? "ringing" : prev));
             }
 
             if (sig.signalType === "answer" && !isIncomingAnswer) {
@@ -311,6 +357,7 @@ export function usePersonalCallState({
                 try {
                   const answerDesc = JSON.parse(sig.encryptedPayload);
                   await pcRef.current.setRemoteDescription(new RTCSessionDescription(answerDesc));
+                  await flushPendingIceCandidates(pcRef.current);
                 } catch {}
               }
             }
@@ -318,12 +365,16 @@ export function usePersonalCallState({
             if (sig.signalType === "ice" && pcRef.current && sig.encryptedPayload) {
               try {
                 const candidateObj = JSON.parse(sig.encryptedPayload);
-                await pcRef.current.addIceCandidate(new RTCIceCandidate(candidateObj));
+                if (pcRef.current.remoteDescription && pcRef.current.remoteDescription.type) {
+                  await pcRef.current.addIceCandidate(new RTCIceCandidate(candidateObj));
+                } else {
+                  pendingIceCandidatesRef.current.push(candidateObj);
+                }
               } catch {}
             }
           }
         } catch {}
-      }, 1200);
+      }, 1000);
     }
 
     initCall();
@@ -333,12 +384,10 @@ export function usePersonalCallState({
       teardownCall();
     };
   }, [
-    targetUser,
+    targetUserId,
     mode,
     isIncomingAnswer,
     incomingOfferSdp,
-    onEndCall,
-    onPermissionNeeded,
     teardownCall,
   ]);
 
@@ -370,7 +419,7 @@ export function usePersonalCallState({
     }
   }, [isCamOff]);
 
-  // Reactive binding: ensure local video element plays stream as soon as video element mounts
+  // Reactive binding: ensure local & remote media elements play stream as soon as elements mount
   useEffect(() => {
     if (localVideoRef.current && localStreamRef.current && mode === "video" && !isCamOff) {
       if (localVideoRef.current.srcObject !== localStreamRef.current) {
@@ -378,25 +427,42 @@ export function usePersonalCallState({
         localVideoRef.current.play?.().catch(() => {});
       }
     }
-  }, [hasLocalStream, isCamOff, mode]);
+  }, [hasLocalStream, isCamOff, mode, status]);
+
+  useEffect(() => {
+    if (remoteStreamRef.current) {
+      if (remoteVideoRef.current && mode === "video") {
+        if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
+          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          remoteVideoRef.current.play?.().catch(() => {});
+        }
+      }
+      if (remoteAudioRef.current) {
+        if (remoteAudioRef.current.srcObject !== remoteStreamRef.current) {
+          remoteAudioRef.current.srcObject = remoteStreamRef.current;
+          remoteAudioRef.current.play?.().catch(() => {});
+        }
+      }
+    }
+  }, [hasRemoteStream, mode, status]);
 
   const handleHangup = useCallback(() => {
     stopCallRingtone();
     setStatus("ended");
-    if (targetUser?.id) {
-      postCallSignal(targetUser.id, {
+    if (targetUserId) {
+      postCallSignal(targetUserId, {
         callId: activeCallIdRef.current,
         callMode: mode,
         signalType: "hangup",
         nonce: generateCryptoNonce(),
       }).catch(() => {});
     }
-    const finalSeconds = seconds;
+    const finalSeconds = secondsRef.current;
     setTimeout(() => {
       teardownCall();
-      onEndCall?.({ mode, seconds: finalSeconds });
+      onEndCallRef.current?.({ mode, seconds: finalSeconds });
     }, 750);
-  }, [targetUser, mode, seconds, teardownCall, onEndCall]);
+  }, [targetUserId, mode, teardownCall]);
 
   return {
     targetUser,

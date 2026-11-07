@@ -102,8 +102,22 @@ export function ChatMediaCard({
     }
   };
 
+  // Parse optional #t=start,end media fragment from trimmed video URL
+  const trimRange = useMemo(() => {
+    const raw = String(item.mediaUrl || "");
+    const match = raw.match(/#t=([\d.]+),([\d.]+)$/);
+    if (!match) return null;
+    const start = parseFloat(match[1]);
+    const end = parseFloat(match[2]);
+    if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+      return { start, end, duration: end - start };
+    }
+    return null;
+  }, [item.mediaUrl]);
+
   // Get active video duration
   const getVideoDuration = useCallback(() => {
+    if (trimRange) return trimRange.duration;
     if (videoRef.current && Number.isFinite(videoRef.current.duration) && videoRef.current.duration > 0) {
       return videoRef.current.duration;
     }
@@ -112,7 +126,7 @@ export function ChatMediaCard({
       return item.videoDuration;
     }
     return 6;
-  }, [realVideoDuration, item.videoDuration]);
+  }, [trimRange, realVideoDuration, item.videoDuration]);
 
   // Preload video duration probe & reset error state when mediaUrl updates
   useEffect(() => {
@@ -148,8 +162,16 @@ export function ChatMediaCard({
     const loop = () => {
       if (videoRef.current && !videoRef.current.paused && !videoRef.current.ended && !isScrubbing) {
         const dur = getVideoDuration();
-        const cur = videoRef.current.currentTime || 0;
-        if (dur > 0) {
+        let cur = videoRef.current.currentTime || 0;
+        if (trimRange) {
+          if (cur >= trimRange.end - 0.05 || cur < trimRange.start) {
+            try {
+              videoRef.current.currentTime = trimRange.start;
+              cur = trimRange.start;
+            } catch {}
+          }
+          setVideoProgress(Math.min(1, Math.max(0, (cur - trimRange.start) / trimRange.duration)));
+        } else if (dur > 0) {
           setVideoProgress(Math.min(1, Math.max(0, cur / dur)));
         }
         videoRafRef.current = requestAnimationFrame(loop);
@@ -157,7 +179,7 @@ export function ChatMediaCard({
     };
     cancelAnimationFrame(videoRafRef.current);
     videoRafRef.current = requestAnimationFrame(loop);
-  }, [getVideoDuration, isScrubbing]);
+  }, [getVideoDuration, isScrubbing, trimRange]);
 
   const togglePlayVideo = (e) => {
     e.stopPropagation();
@@ -191,13 +213,13 @@ export function ChatMediaCard({
       const ratio = Math.max(0, Math.min(1, (clientX - scrubberRect.left) / scrubberRect.width));
       setVideoProgress(ratio);
       const dur = getVideoDuration();
-      const targetTime = ratio * dur;
+      const targetTime = trimRange ? trimRange.start + ratio * dur : ratio * dur;
       if (videoRef.current && Number.isFinite(targetTime)) {
         try {
           videoRef.current.currentTime = targetTime;
         } catch {}
       }
-      setScrubSeconds(Math.round(targetTime));
+      setScrubSeconds(Math.round(ratio * dur));
     };
 
     updateScrub(e.clientX);
@@ -329,7 +351,11 @@ export function ChatMediaCard({
         >
           {/* Media View */}
           <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
-            {mediaLoadError ? (
+            {item.status === "sending" && !item.mediaUrl ? (
+              <div className="w-full h-full flex items-center justify-center bg-neutral-900">
+                <span className="w-5 h-5 rounded-full border-[2.5px] border-white/25 border-t-white animate-spin block" />
+              </div>
+            ) : mediaLoadError || !item.mediaUrl ? (
               <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-neutral-900 text-white/50 select-none">
                 <svg viewBox="0 0 24 24" className="w-7 h-7 fill-none stroke-current mb-1.5" strokeWidth="1.5">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -350,6 +376,11 @@ export function ChatMediaCard({
                   onLoadedMetadata={(e) => {
                     if (e.currentTarget.duration && Number.isFinite(e.currentTarget.duration) && e.currentTarget.duration > 0) {
                       setRealVideoDuration(e.currentTarget.duration);
+                    }
+                    if (trimRange && e.currentTarget.currentTime < trimRange.start) {
+                      try {
+                        e.currentTarget.currentTime = trimRange.start;
+                      } catch {}
                     }
                   }}
                   onError={() => setMediaLoadError(true)}
@@ -398,7 +429,7 @@ export function ChatMediaCard({
             )}
 
             {/* Video Scrubber Line (60fps propagation) */}
-            {isVideo && (
+            {isVideo && item.mediaUrl && !mediaLoadError && (
               <div
                 onPointerDown={handleScrubberPointerDown}
                 className="absolute inset-x-2 bottom-2 z-30 h-5 flex items-center cursor-pointer select-none"

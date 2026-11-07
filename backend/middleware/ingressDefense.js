@@ -199,11 +199,13 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
       if (obj.length > limit) {
         return { safe: false, reason: 'Field length exceeds maximum security limit.' };
       }
-      if (XSS_SCRIPT_PATTERN.test(obj)) {
-        return { safe: false, reason: 'Disallowed script injection detected.' };
-      }
-      if (SQL_INJECTION_PATTERN.test(obj) || SQL_LOGIC_BYPASS_PATTERN.test(obj)) {
-        return { safe: false, reason: 'Disallowed SQL injection pattern detected.' };
+      if (!state.skipPatternRegex) {
+        if (XSS_SCRIPT_PATTERN.test(obj)) {
+          return { safe: false, reason: 'Disallowed script injection detected.' };
+        }
+        if (SQL_INJECTION_PATTERN.test(obj) || SQL_LOGIC_BYPASS_PATTERN.test(obj)) {
+          return { safe: false, reason: 'Disallowed SQL injection pattern detected.' };
+        }
       }
     }
     return { safe: true };
@@ -225,7 +227,13 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
       return { safe: false, reason: 'Operator injection attempt detected.' };
     }
     const isLargeMediaField = key === 'ciphertext' || key === 'mediaUrl' || key === 'encryptedPayload';
-    const childState = isLargeMediaField ? { ...state, maxStringLen: 500_000 } : state;
+    const isOpaqueCryptoField =
+      key === 'ciphertext' || key === 'iv' || key === 'sig' || key === 'nonce' || key === 'encryptedPayload';
+    const childState = {
+      ...state,
+      maxStringLen: isLargeMediaField ? 500_000 : state.maxStringLen,
+      skipPatternRegex: isOpaqueCryptoField ? true : state.skipPatternRegex,
+    };
     const check = inspectPayloadSafety(obj[key], depth + 1, childState);
     if (!check.safe) return check;
     state.nodes = childState.nodes;

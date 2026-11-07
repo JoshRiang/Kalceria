@@ -101,7 +101,7 @@ export async function encryptChatPayload(payloadObj, userA, userB) {
   const rawJson = JSON.stringify({
     text: String(payloadObj.text || ""),
     msgType: payloadObj.msgType || "text",
-    mediaUrl: payloadObj.mediaUrl && String(payloadObj.mediaUrl).length < 4096 ? payloadObj.mediaUrl : null,
+    mediaUrl: payloadObj.mediaUrl && String(payloadObj.mediaUrl).length < 350000 ? payloadObj.mediaUrl : null,
     voiceDuration: safeVoiceDuration,
     voiceWaveform: Array.isArray(payloadObj.voiceWaveform) ? payloadObj.voiceWaveform : null,
     videoDuration: safeVideoDuration,

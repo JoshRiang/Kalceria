@@ -53,11 +53,13 @@ export function ChatMessageBubble({
   const isReplyingTarget = replyingTo?.id === item.id;
 
   const isVoice = item.msgType === "voice";
-  const isMedia = item.mediaUrl && !isVoice;
+  const isMedia =
+    (item.msgType === "media" || item.msgType === "video" || Boolean(item.mediaUrl)) && !isVoice;
   const isPlaying = playingVoiceId === item.id;
 
   const [playbackProgress, setPlaybackProgress] = useState(0); // 0 to 1
   const [currentPlaybackSec, setCurrentPlaybackSec] = useState(0);
+  const [audioError, setAudioError] = useState(false);
   const [realAudioDuration, setRealAudioDuration] = useState(
     Number.isFinite(Number(item.voiceDuration)) && Number(item.voiceDuration) > 0
       ? Number(item.voiceDuration)
@@ -71,6 +73,7 @@ export function ChatMessageBubble({
 
   // Preload audio duration so time mark immediately shows true duration (e.g. 0:07) rather than 0:01
   useEffect(() => {
+    setAudioError(false);
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";
@@ -172,21 +175,34 @@ export function ChatMessageBubble({
 
       audio.onerror = () => {
         cancelAnimationFrame(rafRef.current);
+        setAudioError(true);
         setPlayingVoiceId(null);
         setPlaybackProgress(0);
+        setCurrentPlaybackSec(0);
       };
     }
     return audioRef.current;
   }, [item.mediaUrl, setPlayingVoiceId]);
 
   useEffect(() => {
-    if (!isVoice || !item.mediaUrl) return;
+    if (!isVoice) return;
+    if (!item.mediaUrl) {
+      if (isPlaying) {
+        setPlayingVoiceId(null);
+        setPlaybackProgress(0);
+        setCurrentPlaybackSec(0);
+      }
+      return;
+    }
 
     if (isPlaying) {
       const audio = getOrCreateAudio();
       if (audio) {
         audio.play().catch(() => {
+          setAudioError(true);
           setPlayingVoiceId(null);
+          setPlaybackProgress(0);
+          setCurrentPlaybackSec(0);
         });
 
         // 60fps high-precision requestAnimationFrame loop (zero latency, zero jitter)
@@ -256,7 +272,7 @@ export function ChatMessageBubble({
 
   const handlePointerDownWaveform = (e) => {
     e.stopPropagation();
-    if (!waveformRef.current) return;
+    if (!waveformRef.current || !item.mediaUrl || item.status === "sending" || audioError) return;
     const rect = waveformRef.current.getBoundingClientRect();
     const calculateRatio = (clientX) => {
       return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
@@ -489,16 +505,27 @@ export function ChatMessageBubble({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (item.status === "sending" || !item.mediaUrl || audioError) return;
                   setPlayingVoiceId((prev) => (prev === item.id ? null : item.id));
                 }}
-                className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition-all duration-150 hover:scale-105 active:scale-95 shrink-0 border border-black ${
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 border border-black ${
+                  !item.mediaUrl && item.status !== "sending"
+                    ? "opacity-45 cursor-not-allowed"
+                    : "cursor-pointer hover:scale-105 active:scale-95"
+                } ${
                   isMapDark
                     ? "bg-[#21262d] text-white shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_1.5px_4px_rgba(0,0,0,0.3)]"
                     : "bg-[#f0f2f5] text-black shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_1.5px_4px_rgba(0,0,0,0.08)]"
                 }`}
-                title={isPlaying ? "Pause" : "Play voice note"}
+                title={
+                  !item.mediaUrl && item.status !== "sending"
+                    ? "Audio tidak tersedia"
+                    : isPlaying
+                    ? "Pause"
+                    : "Play voice note"
+                }
               >
-                {item.status === "sending" || (!item.mediaUrl && !item.voiceDuration) ? (
+                {item.status === "sending" ? (
                   <span
                     className={`w-3 h-3 rounded-full border-[2px] border-current/25 border-t-current animate-spin block ${
                       isMapDark ? "text-white" : "text-black"

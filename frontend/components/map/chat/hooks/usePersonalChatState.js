@@ -12,7 +12,7 @@ import {
   uploadBlobMedia,
 } from "@/lib/api";
 
-const LOCAL_CHAT_CACHE_PREFIX = "kalceria_e2ee_chat_v3_";
+const LOCAL_CHAT_CACHE_PREFIX = "kalceria_e2ee_chat_v4_";
 
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
@@ -25,7 +25,7 @@ function blobToDataUrl(blob) {
 
 async function uploadMediaWithPersistFallback(blobOrFile) {
   if (!blobOrFile) return null;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const res = await uploadBlobMedia(blobOrFile);
       if (res?.url && !String(res.url).startsWith("blob:")) {
@@ -114,56 +114,41 @@ export function getDateLabel(ts) {
 
 function getInitialSeedMessages(targetUser, currentUserId) {
   if (!targetUser) return [];
+  const isAhmad = isAhmadDummyUser(targetUser);
+  if (!isAhmad) return [];
+
   const now = Date.now();
   const yesterdayEvening = now - 21 * 60 * 60 * 1000;
   const todayAfternoon = now - 45 * 60 * 1000;
-  const isAhmad = isAhmadDummyUser(targetUser);
-
-  if (isAhmad) {
-    return [
-      {
-        id: `seed_${targetUser.id}_1`,
-        senderId: String(targetUser.id),
-        recipientId: String(currentUserId || "me"),
-        text: "Bro, malem ini jadi rolling ke Sektor 9?",
-        msgType: "text",
-        ts: yesterdayEvening - 120000,
-        status: "read",
-        verifiedE2EE: true,
-      },
-      {
-        id: `seed_${targetUser.id}_2`,
-        senderId: String(currentUserId || "me"),
-        recipientId: String(targetUser.id),
-        text: "Gas bro, jam 9 kumpul di titik biasa ya",
-        msgType: "text",
-        ts: yesterdayEvening,
-        status: "read",
-        verifiedE2EE: true,
-      },
-      {
-        id: `seed_${targetUser.id}_3`,
-        senderId: String(targetUser.id),
-        recipientId: String(currentUserId || "me"),
-        text: "Siap mantap! Kabarin kalo udah otw, bisa voice/video call langsung.",
-        msgType: "text",
-        ts: todayAfternoon,
-        status: "read",
-        verifiedE2EE: true,
-      },
-    ];
-  }
 
   return [
     {
       id: `seed_${targetUser.id}_1`,
       senderId: String(targetUser.id),
       recipientId: String(currentUserId || "me"),
-      text: targetUser.broadcast?.message
-        ? `"${targetUser.broadcast.message}"`
-        : `Hey! Let's connect on Kalceria Map.`,
+      text: "Bro, malem ini jadi rolling ke Sektor 9?",
+      msgType: "text",
+      ts: yesterdayEvening - 120000,
+      status: "read",
+      verifiedE2EE: true,
+    },
+    {
+      id: `seed_${targetUser.id}_2`,
+      senderId: String(currentUserId || "me"),
+      recipientId: String(targetUser.id),
+      text: "Gas bro, jam 9 kumpul di titik biasa ya",
       msgType: "text",
       ts: yesterdayEvening,
+      status: "read",
+      verifiedE2EE: true,
+    },
+    {
+      id: `seed_${targetUser.id}_3`,
+      senderId: String(targetUser.id),
+      recipientId: String(currentUserId || "me"),
+      text: "Siap mantap! Kabarin kalo udah otw, bisa voice/video call langsung.",
+      msgType: "text",
+      ts: todayAfternoon,
       status: "read",
       verifiedE2EE: true,
     },
@@ -257,13 +242,17 @@ export function usePersonalChatState({
   const messagesEndRef = useRef(null);
   const menuContainerRef = useRef(null);
   const autoReplyTimerRef = useRef(null);
+  const pendingBlobsRef = useRef(new Map());
 
   const storageKey = `${LOCAL_CHAT_CACHE_PREFIX}${[myId, targetId].sort().join("_")}`;
 
   const persistQuickLocal = useCallback(
     (msgList) => {
       try {
-        sessionStorage.setItem(`quick_${storageKey}`, JSON.stringify(msgList.slice(-80)));
+        const sanitized = msgList.slice(-80).map((m) =>
+          String(m?.mediaUrl || "").startsWith("blob:") ? { ...m, mediaUrl: null } : m
+        );
+        sessionStorage.setItem(`quick_${storageKey}`, JSON.stringify(sanitized));
       } catch {}
     },
     [storageKey]
@@ -273,14 +262,17 @@ export function usePersonalChatState({
   useEffect(() => {
     if (!targetId) return;
     let alive = true;
+    const isAhmad = isAhmadDummyUser(activeChatUser);
 
-    // Clean up legacy v1/v2 cache keys that stored stale fake read statuses or dead blob: URLs
+    // Clean up legacy v1/v2/v3 cache keys that stored stale fake seed messages or dead blob: URLs
     try {
       const legacySuffix = [myId, targetId].sort().join("_");
       localStorage.removeItem(`kalceria_e2ee_chat_v1_${legacySuffix}`);
       localStorage.removeItem(`kalceria_e2ee_chat_v2_${legacySuffix}`);
+      localStorage.removeItem(`kalceria_e2ee_chat_v3_${legacySuffix}`);
       sessionStorage.removeItem(`quick_kalceria_e2ee_chat_v1_${legacySuffix}`);
       sessionStorage.removeItem(`quick_kalceria_e2ee_chat_v2_${legacySuffix}`);
+      sessionStorage.removeItem(`quick_kalceria_e2ee_chat_v3_${legacySuffix}`);
     } catch {}
 
     async function syncFromRemote() {
@@ -300,8 +292,9 @@ export function usePersonalChatState({
           setMessages((prev) => {
             const mergedMap = new Map();
             prev.forEach((m) => {
-              // Keep seed messages or messages currently sending/failed locally
-              if (String(m.id).startsWith("seed_") || m.status === "sending" || m.status === "failed") {
+              if (!isAhmad && String(m.id).startsWith("seed_")) return;
+              // Keep messages currently sending/failed locally
+              if ((isAhmad && String(m.id).startsWith("seed_")) || m.status === "sending" || m.status === "failed") {
                 mergedMap.set(m.id, m);
               } else if (!String(m.mediaUrl || "").startsWith("blob:")) {
                 mergedMap.set(m.id, m);
@@ -326,7 +319,11 @@ export function usePersonalChatState({
         if (quick) {
           const parsedQuick = JSON.parse(quick);
           if (Array.isArray(parsedQuick) && parsedQuick.length > 0) {
-            localMsgs = parsedQuick.filter((m) => !String(m?.mediaUrl || "").startsWith("blob:"));
+            localMsgs = parsedQuick.filter(
+              (m) =>
+                !String(m?.mediaUrl || "").startsWith("blob:") &&
+                (isAhmad || !String(m?.id || "").startsWith("seed_"))
+            );
           }
         }
       } catch {}
@@ -342,7 +339,11 @@ export function usePersonalChatState({
               );
               localMsgs = decryptedLocal
                 .filter(Boolean)
-                .filter((m) => !String(m?.mediaUrl || "").startsWith("blob:"));
+                .filter(
+                  (m) =>
+                    !String(m?.mediaUrl || "").startsWith("blob:") &&
+                    (isAhmad || !String(m?.id || "").startsWith("seed_"))
+                );
             }
           }
         } catch {}
@@ -357,7 +358,11 @@ export function usePersonalChatState({
           if (prev && prev.length > 0) {
             const merged = new Map();
             localMsgs.forEach((m) => merged.set(m.id, m));
-            prev.forEach((m) => merged.set(m.id, m));
+            prev.forEach((m) => {
+              if (isAhmad || !String(m?.id || "").startsWith("seed_")) {
+                merged.set(m.id, m);
+              }
+            });
             return Array.from(merged.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
           }
           return localMsgs;
@@ -442,15 +447,20 @@ export function usePersonalChatState({
       try {
         const encryptedList = await Promise.all(
           msgList.slice(-80).map(async (m) => {
-            if (m.ciphertext && m.iv) return m;
-            const env = await encryptChatPayload(m, m.senderId || myId, m.recipientId || targetId);
+            const safeMsg = String(m?.mediaUrl || "").startsWith("blob:")
+              ? { ...m, mediaUrl: null }
+              : m;
+            if (safeMsg.ciphertext && safeMsg.iv && !String(m?.mediaUrl || "").startsWith("blob:")) {
+              return safeMsg;
+            }
+            const env = await encryptChatPayload(safeMsg, safeMsg.senderId || myId, safeMsg.recipientId || targetId);
             return {
               ...env,
-              id: m.id,
-              senderId: m.senderId || myId,
-              recipientId: m.recipientId || targetId,
-              ts: m.ts,
-              status: m.status || (String(m.senderId) === String(myId) ? "sent" : "read"),
+              id: safeMsg.id,
+              senderId: safeMsg.senderId || myId,
+              recipientId: safeMsg.recipientId || targetId,
+              ts: safeMsg.ts,
+              status: safeMsg.status || (String(safeMsg.senderId) === String(myId) ? "sent" : "read"),
             };
           })
         );
@@ -465,6 +475,8 @@ export function usePersonalChatState({
       text = "",
       msgType = "text",
       mediaUrl = null,
+      rawBlob = null,
+      trimFragment = "",
       voiceDuration = null,
       voiceWaveform = null,
       videoDuration = null,
@@ -474,15 +486,30 @@ export function usePersonalChatState({
       replyTo = null,
     }) => {
       const ts = Date.now();
-      const envelope = await encryptChatPayload(
-        { text, msgType, mediaUrl, voiceDuration, voiceWaveform, videoDuration, isViewOnce, callMode, callDuration, replyTo },
+      const initialEnvelope = await encryptChatPayload(
+        {
+          text,
+          msgType,
+          mediaUrl: String(mediaUrl || "").startsWith("blob:") ? null : mediaUrl,
+          voiceDuration,
+          voiceWaveform,
+          videoDuration,
+          isViewOnce,
+          callMode,
+          callDuration,
+          replyTo,
+        },
         myId,
         targetId
       );
 
-      const msgId = envelope.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const msgId = initialEnvelope.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      if (rawBlob) {
+        pendingBlobsRef.current.set(msgId, { blob: rawBlob, trimFragment });
+      }
+
       const newMsg = {
-        ...envelope,
+        ...initialEnvelope,
         id: msgId,
         senderId: myId,
         recipientId: targetId,
@@ -521,11 +548,49 @@ export function usePersonalChatState({
         ts
       );
 
+      let finalMediaUrl = mediaUrl;
+      if (rawBlob) {
+        const uploadedUrl = await uploadMediaWithPersistFallback(rawBlob);
+        if (!uploadedUrl) {
+          setMessages((prev) => {
+            const next = prev.map((m) => (m.id === msgId ? { ...m, status: "failed" } : m));
+            persistQuickLocal(next);
+            persistEncryptedLocal(next);
+            return next;
+          });
+          return;
+        }
+        finalMediaUrl = trimFragment ? `${uploadedUrl}${trimFragment}` : uploadedUrl;
+      }
+
+      const envelope = rawBlob
+        ? await encryptChatPayload(
+            {
+              id: msgId,
+              text,
+              msgType,
+              mediaUrl: finalMediaUrl,
+              voiceDuration,
+              voiceWaveform,
+              videoDuration,
+              isViewOnce,
+              callMode,
+              callDuration,
+              replyTo,
+            },
+            myId,
+            targetId
+          )
+        : initialEnvelope;
+
       if (isAhmadDummyUser(activeChatUser) || String(targetId).startsWith("mock_")) {
         // Instant local simulation for dummy / Ahmad users
         setTimeout(() => {
+          pendingBlobsRef.current.delete(msgId);
           setMessages((prev) => {
-            const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
+            const next = prev.map((m) =>
+              m.id === msgId ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: "sent" } : m
+            );
             persistEncryptedLocal(next);
             return next;
           });
@@ -535,14 +600,19 @@ export function usePersonalChatState({
         const timeoutTimer = setTimeout(() => {
           isTimedOut = true;
           setMessages((prev) => {
-            const next = prev.map((m) => (m.id === msgId && m.status === "sending" ? { ...m, status: "failed" } : m));
+            const next = prev.map((m) =>
+              m.id === msgId && m.status === "sending"
+                ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: "failed" }
+                : m
+            );
             persistEncryptedLocal(next);
             return next;
           });
-        }, 9000);
+        }, 12000);
 
         postPersonalChatMessage(targetId, {
           ...envelope,
+          mediaUrl: finalMediaUrl,
           voiceWaveform,
           videoDuration,
           isViewOnce,
@@ -551,9 +621,12 @@ export function usePersonalChatState({
         })
           .then(() => {
             clearTimeout(timeoutTimer);
+            pendingBlobsRef.current.delete(msgId);
             if (!isTimedOut) {
               setMessages((prev) => {
-                const next = prev.map((m) => (m.id === msgId ? { ...m, status: "sent" } : m));
+                const next = prev.map((m) =>
+                  m.id === msgId ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: "sent" } : m
+                );
                 persistQuickLocal(next);
                 persistEncryptedLocal(next);
                 return next;
@@ -563,7 +636,9 @@ export function usePersonalChatState({
           .catch(() => {
             clearTimeout(timeoutTimer);
             setMessages((prev) => {
-              const next = prev.map((m) => (m.id === msgId ? { ...m, status: "failed" } : m));
+              const next = prev.map((m) =>
+                m.id === msgId ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: "failed" } : m
+              );
               persistQuickLocal(next);
               persistEncryptedLocal(next);
               return next;
@@ -670,22 +745,22 @@ export function usePersonalChatState({
       return;
     }
 
+    const captionText = inputText.trim();
+    setInputText("");
+    const localPreviewUrl = URL.createObjectURL(file);
+    const isVideoFile = ext === "mp4" || declaredMime.startsWith("video/");
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setIsUploadingMedia(true);
     try {
-      const persistedUrl = await uploadMediaWithPersistFallback(file);
-      if (persistedUrl) {
-        await appendAndEncryptMessage({
-          text: inputText.trim(),
-          msgType: "media",
-          mediaUrl: persistedUrl,
-        });
-        setInputText("");
-      } else {
-        setMediaError("Gagal mengunggah media. Periksa koneksi internet Anda.");
-      }
+      await appendAndEncryptMessage({
+        text: captionText,
+        msgType: isVideoFile ? "video" : "media",
+        mediaUrl: localPreviewUrl,
+        rawBlob: file,
+      });
     } finally {
       setIsUploadingMedia(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -717,50 +792,51 @@ export function usePersonalChatState({
   const handleFinishVoiceNote = async () => {
     const result = await voiceRecorder.stopRecording();
     if (!result) return;
-    const { blob, duration, waveform } = result;
-
-    const finalMediaUrl = await uploadMediaWithPersistFallback(blob);
-    if (!finalMediaUrl) {
-      setMediaError("Gagal mengunggah pesan suara. Periksa koneksi internet Anda.");
-      return;
-    }
+    const { blob, url, duration, waveform } = result;
+    const localPreviewUrl = url || (blob ? URL.createObjectURL(blob) : null);
 
     await appendAndEncryptMessage({
       text: "Voice message",
       msgType: "voice",
-      mediaUrl: finalMediaUrl,
+      mediaUrl: localPreviewUrl,
+      rawBlob: blob,
       voiceDuration: duration,
       voiceWaveform: waveform,
     });
   };
 
-  const handleSendCapturedMedia = async ({ blob, type, duration, isViewOnce, caption }) => {
+  const handleSendCapturedMedia = async ({
+    blob,
+    url,
+    type,
+    duration,
+    trimFragment = "",
+    isViewOnce,
+    caption,
+  }) => {
     if (type === "video" && duration && duration > 60) {
       setMediaError("Durasi video melebihi batas 1 menit (maksimal 60 detik).");
       return;
     }
 
+    const captionText = (typeof caption === "string" ? caption : inputText).trim();
+    setInputText("");
+    const localPreviewUrl = url || (blob ? URL.createObjectURL(blob) : null);
+
     setIsUploadingMedia(true);
-    let finalUrl = null;
     try {
-      finalUrl = await uploadMediaWithPersistFallback(blob);
+      await appendAndEncryptMessage({
+        text: captionText,
+        msgType: type === "video" ? "video" : "media",
+        mediaUrl: localPreviewUrl,
+        rawBlob: blob,
+        trimFragment,
+        videoDuration: duration,
+        isViewOnce: Boolean(isViewOnce),
+      });
     } finally {
       setIsUploadingMedia(false);
     }
-
-    if (!finalUrl) {
-      setMediaError("Gagal mengunggah media kamera. Periksa koneksi internet Anda.");
-      return;
-    }
-
-    await appendAndEncryptMessage({
-      text: (typeof caption === "string" ? caption : inputText).trim(),
-      msgType: type === "video" ? "video" : "media",
-      mediaUrl: finalUrl,
-      videoDuration: duration,
-      isViewOnce: Boolean(isViewOnce),
-    });
-    setInputText("");
   };
 
   const handleTriggerCall = async (mode = "voice") => {
@@ -899,12 +975,29 @@ export function usePersonalChatState({
         return;
       }
 
+      let mediaUrlToSend = failedMsg.mediaUrl;
+      const pendingMedia = pendingBlobsRef.current.get(failedMsg.id);
+      if (pendingMedia?.blob && (!mediaUrlToSend || String(mediaUrlToSend).startsWith("blob:"))) {
+        const uploadedUrl = await uploadMediaWithPersistFallback(pendingMedia.blob);
+        if (!uploadedUrl) {
+          setMessages((prev) => {
+            const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "failed" } : m));
+            persistEncryptedLocal(next);
+            return next;
+          });
+          return;
+        }
+        mediaUrlToSend = pendingMedia.trimFragment
+          ? `${uploadedUrl}${pendingMedia.trimFragment}`
+          : uploadedUrl;
+      }
+
       const freshEnv = await encryptChatPayload(
         {
           id: failedMsg.id,
           text: failedMsg.text,
           msgType: failedMsg.msgType,
-          mediaUrl: failedMsg.mediaUrl,
+          mediaUrl: mediaUrlToSend,
           voiceDuration: failedMsg.voiceDuration,
           voiceWaveform: failedMsg.voiceWaveform,
           videoDuration: failedMsg.videoDuration,
@@ -919,6 +1012,7 @@ export function usePersonalChatState({
 
       postPersonalChatMessage(targetId, {
         ...freshEnv,
+        mediaUrl: mediaUrlToSend,
         voiceWaveform: failedMsg.voiceWaveform,
         videoDuration: failedMsg.videoDuration,
         isViewOnce: failedMsg.isViewOnce,
@@ -926,21 +1020,32 @@ export function usePersonalChatState({
         callDuration: failedMsg.callDuration,
       })
         .then(() => {
+          pendingBlobsRef.current.delete(failedMsg.id);
           setMessages((prev) => {
-            const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "sent" } : m));
+            const next = prev.map((m) =>
+              m.id === failedMsg.id
+                ? { ...m, ...freshEnv, mediaUrl: mediaUrlToSend, status: "sent" }
+                : m
+            );
+            persistQuickLocal(next);
             persistEncryptedLocal(next);
             return next;
           });
         })
         .catch(() => {
           setMessages((prev) => {
-            const next = prev.map((m) => (m.id === failedMsg.id ? { ...m, status: "failed" } : m));
+            const next = prev.map((m) =>
+              m.id === failedMsg.id
+                ? { ...m, ...freshEnv, mediaUrl: mediaUrlToSend, status: "failed" }
+                : m
+            );
+            persistQuickLocal(next);
             persistEncryptedLocal(next);
             return next;
           });
         });
     },
-    [targetId, activeChatUser]
+    [myId, targetId, activeChatUser, persistQuickLocal, persistEncryptedLocal]
   );
 
   return {

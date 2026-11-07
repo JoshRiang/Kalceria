@@ -8,8 +8,8 @@ const COLD_ARCHIVE_MAX_SIZE = 500; // Cold overflow tier for older history pages
 const HOT_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days hot cache TTL (backed by permanent PostgreSQL)
 const COLD_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days cold archive TTL
 const NONCE_TTL_SECONDS = 10 * 60; // 10 minutes anti-replay window
-const CALL_LOCK_TTL_SECONDS = 30; // 30s single-call concurrency lock TTL
-const CALL_SIGNAL_TTL_SECONDS = 30; // 30s ephemeral WebRTC signaling TTL
+const CALL_LOCK_TTL_SECONDS = 60; // 60s single-call concurrency lock TTL
+const CALL_SIGNAL_TTL_SECONDS = 60; // 60s ephemeral WebRTC signaling TTL
 
 function sanitizeTargetId(raw) {
   if (!raw || typeof raw !== 'string') return null;
@@ -510,7 +510,7 @@ export async function sendCallSignal(req, res, next) {
 
     if (signalType !== 'hangup') {
       await redis.lpush(signalKey, JSON.stringify(packet)).catch(() => {});
-      await redis.ltrim(signalKey, 0, 9).catch(() => {});
+      await redis.ltrim(signalKey, 0, 49).catch(() => {});
       await redis.expire(signalKey, CALL_SIGNAL_TTL_SECONDS).catch(() => {});
     }
 
@@ -543,7 +543,8 @@ export async function getCallSignals(req, res, next) {
           return null;
         }
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      .reverse();
 
     let activeLock = null;
     if (activeLockRaw) {

@@ -253,6 +253,13 @@ export function KalceriansPanel({
                 offerSdp: sig.encryptedPayload,
               });
 
+              postCallSignal(sig.fromUserId, {
+                callId: sig.callId,
+                callMode: sig.callMode,
+                signalType: "ringing",
+                nonce: generateCryptoNonce(),
+              }).catch(() => {});
+
               startIncomingRingtone();
 
               if (typeof Notification !== "undefined" && Notification.permission === "granted") {

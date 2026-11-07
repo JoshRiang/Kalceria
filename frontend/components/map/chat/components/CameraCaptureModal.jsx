@@ -413,21 +413,76 @@ export function CameraCaptureModal({
     }
   };
 
-  // Confirm Send Media with Caption and ViewOnce
-  const handleConfirmSend = () => {
+  // Confirm Send Media with Caption, ViewOnce, and Baked Photo Crop/Rotation or Video Trim Fragment
+  const handleConfirmSend = async () => {
     if (!previewMedia) return;
     const dur = getActiveVideoDur();
     const trimmedDuration = previewMedia.type === "video"
       ? Math.max(1, Math.round((trimEnd - trimStart) * dur))
       : (previewMedia.duration || null);
 
+    let finalBlob = previewMedia.blob;
+    let finalUrl = previewMedia.url;
+    let trimFragment = "";
+
+    if (previewMedia.type === "photo" && (photoRotation !== 0 || isCropping) && previewMedia.url) {
+      try {
+        const baked = await new Promise((resolve) => {
+          const img = new window.Image();
+          img.onload = () => {
+            const srcW = img.naturalWidth || 640;
+            const srcH = img.naturalHeight || 480;
+            const cropFactor = isCropping ? 0.82 : 1;
+            const cropW = Math.round(srcW * cropFactor);
+            const cropH = Math.round(srcH * cropFactor);
+            const cropX = Math.round((srcW - cropW) / 2);
+            const cropY = Math.round((srcH - cropH) / 2);
+
+            const rad = ((photoRotation % 360) * Math.PI) / 180;
+            const swapDims = photoRotation % 180 !== 0;
+            const canvas = document.createElement("canvas");
+            canvas.width = swapDims ? cropH : cropW;
+            canvas.height = swapDims ? cropW : cropH;
+            const ctx = canvas.getContext("2d");
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(rad);
+            ctx.drawImage(img, cropX, cropY, cropW, cropH, -cropW / 2, -cropH / 2, cropW, cropH);
+            canvas.toBlob(
+              (b) => {
+                if (b) {
+                  resolve({ blob: b, url: URL.createObjectURL(b) });
+                } else {
+                  resolve(null);
+                }
+              },
+              "image/jpeg",
+              0.92
+            );
+          };
+          img.onerror = () => resolve(null);
+          img.src = previewMedia.url;
+        });
+        if (baked?.blob) {
+          finalBlob = baked.blob;
+          finalUrl = baked.url;
+        }
+      } catch {}
+    } else if (previewMedia.type === "video" && (trimStart > 0.005 || trimEnd < 0.995)) {
+      const startSec = Number((trimStart * dur).toFixed(2));
+      const endSec = Number((trimEnd * dur).toFixed(2));
+      if (endSec > startSec) {
+        trimFragment = `#t=${startSec},${endSec}`;
+      }
+    }
+
     onSendMedia({
-      blob: previewMedia.blob,
-      url: previewMedia.url,
+      blob: finalBlob,
+      url: finalUrl ? `${finalUrl}${trimFragment}` : null,
       type: previewMedia.type,
       duration: trimmedDuration,
       trimStart,
       trimEnd,
+      trimFragment,
       isViewOnce,
       rotation: photoRotation,
       caption: caption.trim(),

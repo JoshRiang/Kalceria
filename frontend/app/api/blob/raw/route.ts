@@ -22,13 +22,40 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Blob not found" }, { status: 404 });
     }
 
+    const totalSize = Number(result.blob.size) || 0;
+    const rangeHeader = req.headers.get("range");
+
+    if (rangeHeader && totalSize > 0) {
+      const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+      if (match) {
+        const fullBuffer = new Uint8Array(await new Response(result.stream as ReadableStream).arrayBuffer());
+        const actualTotal = fullBuffer.byteLength || totalSize;
+        const start = match[1] ? parseInt(match[1], 10) : 0;
+        const requestedEnd = match[2] ? parseInt(match[2], 10) : actualTotal - 1;
+        const safeStart = Math.max(0, Math.min(start, actualTotal - 1));
+        const safeEnd = Math.max(safeStart, Math.min(requestedEnd, actualTotal - 1));
+        const sliced = fullBuffer.subarray(safeStart, safeEnd + 1);
+
+        return new NextResponse(sliced, {
+          status: 206,
+          headers: {
+            "Content-Type": result.blob.contentType || "application/octet-stream",
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "Accept-Ranges": "bytes",
+            "Content-Range": `bytes ${safeStart}-${safeEnd}/${actualTotal}`,
+            "Content-Length": String(sliced.byteLength),
+          },
+        });
+      }
+    }
+
     const headers: Record<string, string> = {
       "Content-Type": result.blob.contentType || "application/octet-stream",
       "Cache-Control": "public, max-age=31536000, immutable",
       "Accept-Ranges": "bytes",
     };
-    if (result.blob.size) {
-      headers["Content-Length"] = String(result.blob.size);
+    if (totalSize) {
+      headers["Content-Length"] = String(totalSize);
     }
 
     return new NextResponse(result.stream as ReadableStream, {
