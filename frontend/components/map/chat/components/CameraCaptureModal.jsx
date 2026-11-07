@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { acquireCameraStream, stopMediaStream } from "@/lib/mediaHardware";
+import { CameraCropOverlay } from "./cameraCapture/CameraCropOverlay";
+import { CameraTrimmerBar } from "./cameraCapture/CameraTrimmerBar";
 
 export function CameraCaptureModal({
   isOpen,
@@ -734,205 +736,25 @@ export function CameraCaptureModal({
                     )}
                   </div>
 
-                  {/* Interactive 3x3 Cropping Grid Overlay:
-                      - Does NOT dim the image when uncropped (utuh 0..1)
-                      - Only dims the outer regions outside cropRect when dragged inward
-                      - Draggable corners, edges, and interior pan */}
+                  {/* Interactive 3x3 Cropping Grid Overlay */}
                   {isCropping && (
-                    <div className="absolute inset-0 z-15 pointer-events-none select-none touch-none">
-                      {/* 4 Outer Mask Strips (Only visible when cropped inward; 0% size when full frame) */}
-                      <div
-                        style={{
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: `${cropRect.top * 100}%`,
-                        }}
-                        className="absolute bg-black/55 pointer-events-none"
-                      />
-                      <div
-                        style={{
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          height: `${(1 - cropRect.bottom) * 100}%`,
-                        }}
-                        className="absolute bg-black/55 pointer-events-none"
-                      />
-                      <div
-                        style={{
-                          top: `${cropRect.top * 100}%`,
-                          height: `${(cropRect.bottom - cropRect.top) * 100}%`,
-                          left: 0,
-                          width: `${cropRect.left * 100}%`,
-                        }}
-                        className="absolute bg-black/55 pointer-events-none"
-                      />
-                      <div
-                        style={{
-                          top: `${cropRect.top * 100}%`,
-                          height: `${(cropRect.bottom - cropRect.top) * 100}%`,
-                          right: 0,
-                          width: `${(1 - cropRect.right) * 100}%`,
-                        }}
-                        className="absolute bg-black/55 pointer-events-none"
-                      />
-
-                      {/* Interactive Crop Box */}
-                      <div
-                        onPointerDown={(e) => handleCropPointerDown(e, "move")}
-                        style={{
-                          left: `${cropRect.left * 100}%`,
-                          top: `${cropRect.top * 100}%`,
-                          width: `${(cropRect.right - cropRect.left) * 100}%`,
-                          height: `${(cropRect.bottom - cropRect.top) * 100}%`,
-                        }}
-                        className="absolute pointer-events-auto cursor-move touch-none"
-                      >
-                        {/* 3x3 Grid Lines */}
-                        <div className="w-full h-full border border-white/45 grid grid-cols-3 grid-rows-3 pointer-events-none">
-                          <div className="border-r border-b border-white/30" />
-                          <div className="border-r border-b border-white/30" />
-                          <div className="border-b border-white/30" />
-                          <div className="border-r border-b border-white/30" />
-                          <div className="border-r border-b border-white/30" />
-                          <div className="border-b border-white/30" />
-                          <div className="border-r border-b border-white/30" />
-                          <div className="border-r border-b border-white/30" />
-                          <div />
-                        </div>
-
-                        {/* Edge Drag Handles (N, S, W, E) */}
-                        <div
-                          onPointerDown={(e) => handleCropPointerDown(e, "n")}
-                          className="absolute -top-2 left-6 right-6 h-4 cursor-ns-resize z-20"
-                        />
-                        <div
-                          onPointerDown={(e) => handleCropPointerDown(e, "s")}
-                          className="absolute -bottom-2 left-6 right-6 h-4 cursor-ns-resize z-20"
-                        />
-                        <div
-                          onPointerDown={(e) => handleCropPointerDown(e, "w")}
-                          className="absolute top-6 bottom-6 -left-2 w-4 cursor-ew-resize z-20"
-                        />
-                        <div
-                          onPointerDown={(e) => handleCropPointerDown(e, "e")}
-                          className="absolute top-6 bottom-6 -right-2 w-4 cursor-ew-resize z-20"
-                        />
-
-                        {/* Top-Left Corner Bracket & Drag Handle: Round Bevel */}
-                        <div
-                          onPointerDown={(e) => handleCropPointerDown(e, "nw")}
-                          className={`absolute top-0 left-0 w-7 h-7 border-t-[4px] border-l-[4px] cursor-nwse-resize z-30 ${
-                            cropRect.top < 0.02 && cropRect.left < 0.02 ? "rounded-tl-2xl" : "rounded-tl-md"
-                          } ${isMapDark ? "border-white" : "border-black"}`}
-                        />
-                        {/* Top-Right Corner Bracket & Drag Handle: Round Bevel */}
-                        <div
-                          onPointerDown={(e) => handleCropPointerDown(e, "ne")}
-                          className={`absolute top-0 right-0 w-7 h-7 border-t-[4px] border-r-[4px] cursor-nesw-resize z-30 ${
-                            cropRect.top < 0.02 && cropRect.right > 0.98 ? "rounded-tr-2xl" : "rounded-tr-md"
-                          } ${isMapDark ? "border-white" : "border-black"}`}
-                        />
-                        {/* Bottom-Left Corner Bracket & Drag Handle: Sharp Edge */}
-                        <div
-                          onPointerDown={(e) => handleCropPointerDown(e, "sw")}
-                          className={`absolute bottom-0 left-0 w-7 h-7 border-b-[4px] border-l-[4px] rounded-none cursor-nesw-resize z-30 ${
-                            isMapDark ? "border-white" : "border-black"
-                          }`}
-                        />
-                        {/* Bottom-Right Corner Bracket & Drag Handle: Sharp Edge */}
-                        <div
-                          onPointerDown={(e) => handleCropPointerDown(e, "se")}
-                          className={`absolute bottom-0 right-0 w-7 h-7 border-b-[4px] border-r-[4px] rounded-none cursor-nwse-resize z-30 ${
-                            isMapDark ? "border-white" : "border-black"
-                          }`}
-                        />
-                      </div>
-                    </div>
+                    <CameraCropOverlay
+                      cropRect={cropRect}
+                      handleCropPointerDown={handleCropPointerDown}
+                      isMapDark={isMapDark}
+                    />
                   )}
 
                   {/* Video Duration Trimming Panel: Located below video crop layer */}
                   {previewMedia.type === "video" && (
-                    <div className="absolute bottom-2 inset-x-3 z-25 flex flex-col gap-1 select-none pointer-events-auto">
-                      {/* Trimmer Track Container */}
-                      <div
-                        ref={trimmerTrackRef}
-                        className="relative w-full h-5 flex items-center cursor-pointer select-none touch-none"
-                      >
-                        {/* White Outer Box Time Mark Badge (consistent with Picture 3 font & style) */}
-                        {(() => {
-                          const dur = getActiveVideoDur();
-                          const showStartBadge = activeTrimHandle === "start" || (!activeTrimHandle && trimStart > 0.005);
-                          const showEndBadge = activeTrimHandle === "end" || (!activeTrimHandle && trimStart <= 0.005);
-                          const badgeRatio = showStartBadge ? trimStart : trimEnd;
-                          const badgeSeconds = badgeRatio * dur;
-                          const clampedPercent = Math.min(92, Math.max(8, badgeRatio * 100));
-                          return (
-                            <div
-                              style={{
-                                left: `${clampedPercent}%`,
-                                transform: "translateX(-50%)",
-                              }}
-                              className="absolute -top-6 px-2 py-0.5 rounded-md bg-white border border-black text-black font-sans font-medium text-[10px] leading-none shadow-sm select-none pointer-events-none whitespace-nowrap z-30"
-                            >
-                              {formatTrimTime(badgeSeconds)}
-                            </div>
-                          );
-                        })()}
-
-                        {/* Base Full Track Bar */}
-                        <div className="relative w-full h-[2.5px] rounded-full overflow-hidden bg-black/50 backdrop-blur-sm">
-                          {/* Dimmed Left Segment (Outside boundary) */}
-                          <div
-                            style={{ width: `${trimStart * 100}%` }}
-                            className="absolute left-0 top-0 h-full bg-white/25"
-                          />
-
-                          {/* Active Selected Segment */}
-                          <div
-                            style={{
-                              left: `${trimStart * 100}%`,
-                              width: `${(trimEnd - trimStart) * 100}%`,
-                            }}
-                            className="absolute top-0 h-full bg-white shadow-xs"
-                          />
-
-                          {/* Dimmed Right Segment (Outside boundary) */}
-                          <div
-                            style={{
-                              left: `${trimEnd * 100}%`,
-                              width: `${(1 - trimEnd) * 100}%`,
-                            }}
-                            className="absolute top-0 h-full bg-white/25"
-                          />
-                        </div>
-
-                        {/* Left Vertical Boundary Handle: Thin, small, white non-glow, rounded edge */}
-                        <div
-                          onPointerDown={(e) => handleTrimmerPointerDown(e, "start")}
-                          style={{
-                            left: `${trimStart * 100}%`,
-                          }}
-                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-6 flex items-center justify-center cursor-ew-resize z-10"
-                          title="Batas awal"
-                        >
-                          <span className="w-[3px] h-4 bg-white rounded-full block shadow-md hover:scale-110 active:scale-95 transition-transform" />
-                        </div>
-
-                        {/* Right Vertical Boundary Handle: Thin, small, white non-glow, rounded edge */}
-                        <div
-                          onPointerDown={(e) => handleTrimmerPointerDown(e, "end")}
-                          style={{
-                            left: `${trimEnd * 100}%`,
-                          }}
-                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-6 flex items-center justify-center cursor-ew-resize z-10"
-                          title="Batas akhir"
-                        >
-                          <span className="w-[3px] h-4 bg-white rounded-full block shadow-md hover:scale-110 active:scale-95 transition-transform" />
-                        </div>
-                      </div>
-                    </div>
+                    <CameraTrimmerBar
+                      trimmerTrackRef={trimmerTrackRef}
+                      getActiveVideoDur={getActiveVideoDur}
+                      activeTrimHandle={activeTrimHandle}
+                      trimStart={trimStart}
+                      trimEnd={trimEnd}
+                      handleTrimmerPointerDown={handleTrimmerPointerDown}
+                    />
                   )}
                 </div>
               ) : hasStream ? (
