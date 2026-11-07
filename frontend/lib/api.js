@@ -134,6 +134,14 @@ export const fetchPersonalChatMessages = (targetId, params = {}) =>
 export const fetchPersonalChatPage = (targetId, params = {}) =>
   api.get(`/map/chat/${targetId}`, { params }).then(r => r.data || { messages: [], nextCursor: null }).catch(() => ({ messages: [], nextCursor: null }));
 export const postPersonalChatMessage = (targetId, envelope) => api.post(`/map/chat/${targetId}`, envelope).then(r => r.data);
+export const ackPersonalChatRead = (targetId, payload) =>
+  api.post(`/map/chat/${targetId}/read`, payload).then(r => r.data).catch(() => ({ ok: false }));
+export const postChatRtcSignal = (targetId, payload) =>
+  api.post(`/map/chat/${targetId}/rtc-signal`, payload).then(r => r.data).catch(() => ({ ok: false }));
+export const fetchChatRtcSignals = (targetId) =>
+  api.get(`/map/chat/${targetId}/rtc-signal`).then(r => r.data?.signals || []).catch(() => []);
+export const fetchPersonalChatInboxSummary = (params = {}) =>
+  api.get('/map/chat-inbox/summary', { params }).then(r => r.data || { ok: false }).catch(() => ({ ok: false }));
 export const deletePersonalChatMessages = (targetId, payload) => api.delete(`/map/chat/${targetId}`, { data: payload }).then(r => r.data);
 export const postCallSignal = (targetId, payload) => api.post(`/map/call/${targetId}/signal`, payload).then(r => r.data);
 export const fetchCallSignals = (params = {}) => api.get('/map/call/signals', { params }).then(r => r.data || { ok: false, signals: [] }).catch(() => ({ ok: false, signals: [] }));

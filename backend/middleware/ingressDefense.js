@@ -230,6 +230,7 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
       key === 'ciphertext' ||
       key === 'mediaUrl' ||
       key === 'encryptedPayload' ||
+      key === 'rtcPayload' ||
       key === 'description' ||
       key === 'profilePicture' ||
       key === 'coverImage' ||
@@ -240,6 +241,7 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
       key === 'sig' ||
       key === 'nonce' ||
       key === 'encryptedPayload' ||
+      key === 'rtcPayload' ||
       key === 'mediaUrl';
     const childState = {
       ...state,

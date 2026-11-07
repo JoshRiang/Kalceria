@@ -21,6 +21,10 @@ import {
   getPersonalChatMessages,
   sendPersonalChatMessage,
   deletePersonalChatMessages,
+  ackPersonalChatRead,
+  getPersonalChatInboxSummary,
+  sendChatRtcSignal,
+  getChatRtcSignals,
   sendCallSignal,
   getCallSignals,
   clearCallSignals,
@@ -186,9 +190,13 @@ router.get("/map/muted", requireAuth, getMutedUsers);
 router.post("/map/mute/:targetId", requireAuth, muteUser);
 router.delete("/map/mute/:targetId", requireAuth, unmuteUser);
 
-// ─── Personal Chat & Call Signaling (E2EE) ────────────────────────────────────
+// ─── Personal Chat & Call Signaling (E2EE + O(1) Real-Time Sync) ──────────────
+router.get("/map/chat-inbox/summary", requireAuth, getPersonalChatInboxSummary);
 router.get("/map/chat/:targetId", requireAuth, getPersonalChatMessages);
 router.post("/map/chat/:targetId", requireAuth, sendPersonalChatMessage);
+router.post("/map/chat/:targetId/read", requireAuth, ackPersonalChatRead);
+router.get("/map/chat/:targetId/rtc-signal", requireAuth, getChatRtcSignals);
+router.post("/map/chat/:targetId/rtc-signal", requireAuth, sendChatRtcSignal);
 router.delete("/map/chat/:targetId", requireAuth, deletePersonalChatMessages);
 router.get("/map/call/signals", requireAuth, getCallSignals);
 router.delete("/map/call/signals", requireAuth, clearCallSignals);

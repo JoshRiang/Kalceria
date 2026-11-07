@@ -4,10 +4,12 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { encryptChatPayload, decryptChatEnvelope } from "@/lib/chatCrypto";
 import { isAhmadDummyUser } from "./usePersonalCallState";
 import { useVoiceRecorder } from "./useVoiceRecorder";
+import { useChatRealtimeChannel } from "./useChatRealtimeChannel";
 import { checkHardwarePermission } from "@/lib/mediaHardware";
 import {
   fetchPersonalChatPage,
   postPersonalChatMessage,
+  ackPersonalChatRead,
   deletePersonalChatMessages,
   uploadBlobMedia,
 } from "@/lib/api";
@@ -248,6 +250,17 @@ export function usePersonalChatState({
   const messagesEndRef = useRef(null);
   const menuContainerRef = useRef(null);
   const autoReplyTimerRef = useRef(null);
+  const peerTypingTimerRef = useRef(null);
+  const persistDebounceRef = useRef(null);
+  const pendingPersistListRef = useRef(null);
+  const syncWatermarkRef = useRef({
+    lastTs: 0,
+    peerReadTs: 0,
+    deleteRev: 0,
+    initialized: false,
+  });
+  const syncNowRef = useRef(null);
+  const isP2PConnectedRef = useRef(false);
   const pendingBlobsRef = useRef(new Map());
   const activeChatUserRef = useRef(activeChatUser);
   const onOutgoingMessageUpdateRef = useRef(onOutgoingMessageUpdate);
@@ -255,6 +268,14 @@ export function usePersonalChatState({
   activeChatUserRef.current = activeChatUser;
   onOutgoingMessageUpdateRef.current = onOutgoingMessageUpdate;
   onCallEndedRef.current = onCallEnded;
+
+  const isRealPeer = Boolean(
+    targetId &&
+      myId &&
+      targetId !== myId &&
+      !isAhmadDummyUser(activeChatUser) &&
+      !String(targetId).startsWith("mock_")
+  );
 
   const storageKey = `${LOCAL_CHAT_CACHE_PREFIX}${[myId, targetId].sort().join("_")}`;
 
@@ -270,11 +291,220 @@ export function usePersonalChatState({
     [storageKey]
   );
 
-  // Load & decrypt conversation history (latest 30 hot messages + local cache + periodic sync)
+  const flushEncryptedLocal = useCallback(
+    async (msgList) => {
+      try {
+        const encryptedList = await Promise.all(
+          msgList.slice(-80).map(async (m) => {
+            const safeMsg = String(m?.mediaUrl || "").startsWith("blob:")
+              ? { ...m, mediaUrl: null }
+              : m;
+            if (safeMsg.ciphertext && safeMsg.iv && !String(m?.mediaUrl || "").startsWith("blob:")) {
+              return safeMsg;
+            }
+            const env = await encryptChatPayload(
+              safeMsg,
+              safeMsg.senderId || myId,
+              safeMsg.recipientId || targetId
+            );
+            return {
+              ...env,
+              id: safeMsg.id,
+              senderId: safeMsg.senderId || myId,
+              recipientId: safeMsg.recipientId || targetId,
+              ts: safeMsg.ts,
+              status: safeMsg.status || (String(safeMsg.senderId) === String(myId) ? "sent" : "read"),
+            };
+          })
+        );
+        localStorage.setItem(storageKey, JSON.stringify(encryptedList));
+      } catch {}
+    },
+    [myId, targetId, storageKey]
+  );
+
+  // Non-blocking debounced persistence so localStorage I/O never stalls critical send/receive hot path
+  const persistEncryptedLocal = useCallback(
+    (msgList) => {
+      pendingPersistListRef.current = msgList;
+      if (persistDebounceRef.current) clearTimeout(persistDebounceRef.current);
+      persistDebounceRef.current = setTimeout(() => {
+        persistDebounceRef.current = null;
+        const latest = pendingPersistListRef.current;
+        if (latest) {
+          flushEncryptedLocal(latest);
+        }
+      }, 260);
+    },
+    [flushEncryptedLocal]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (persistDebounceRef.current) {
+        clearTimeout(persistDebounceRef.current);
+        persistDebounceRef.current = null;
+        if (pendingPersistListRef.current) {
+          flushEncryptedLocal(pendingPersistListRef.current);
+        }
+      }
+      if (peerTypingTimerRef.current) {
+        clearTimeout(peerTypingTimerRef.current);
+      }
+    };
+  }, [flushEncryptedLocal]);
+
+  // Direct P2P WebRTC DataChannel Handler (~5-20ms LAN/Same-ISP E2EE delivery, 0ms server overhead)
+  const sendRealtimePacketRef = useRef(null);
+
+  const handleRealtimeP2PPacket = useCallback(
+    async (packet) => {
+      if (!packet || typeof packet !== "object") return;
+
+      if (packet.type === "e2ee_msg" && packet.envelope) {
+        if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
+        setIsPeerTyping(false);
+
+        const decrypted = await decryptChatEnvelope(packet.envelope, myId, targetId);
+        if (!decrypted) return;
+
+        const readyMsg = {
+          ...decrypted,
+          status: "read",
+        };
+
+        const msgTs = Number(readyMsg.ts) || Date.now();
+        syncWatermarkRef.current.lastTs = Math.max(syncWatermarkRef.current.lastTs, msgTs);
+
+        setMessages((prev) => {
+          const exists = prev.find((m) => m.id === readyMsg.id);
+          if (exists && exists.mediaUrl === readyMsg.mediaUrl && exists.status === "read") {
+            return prev;
+          }
+          const map = new Map();
+          prev.forEach((m) => map.set(m.id, m));
+          map.set(readyMsg.id, readyMsg);
+          const sorted = Array.from(map.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+          persistQuickLocal(sorted);
+          persistEncryptedLocal(sorted);
+          return sorted;
+        });
+
+        // Instant P2P Read Receipt back to sender + durable O(1) Redis/Postgres watermark ack
+        sendRealtimePacketRef.current?.({
+          type: "read_ack",
+          upToTs: msgTs,
+        });
+        ackPersonalChatRead(targetId, {
+          upToTs: msgTs,
+          messageIds: [readyMsg.id],
+        }).catch(() => {});
+        return;
+      }
+
+      if (packet.type === "read_ack" && packet.upToTs) {
+        const ackTs = Number(packet.upToTs) || 0;
+        if (ackTs <= 0) return;
+        syncWatermarkRef.current.peerReadTs = Math.max(syncWatermarkRef.current.peerReadTs, ackTs);
+        setMessages((prev) => {
+          let changed = false;
+          const next = prev.map((m) => {
+            if (
+              String(m.senderId) === String(myId) &&
+              m.status === "sent" &&
+              Number(m.ts || 0) <= ackTs
+            ) {
+              changed = true;
+              return { ...m, status: "read" };
+            }
+            return m;
+          });
+          if (changed) {
+            persistQuickLocal(next);
+            persistEncryptedLocal(next);
+            return next;
+          }
+          return prev;
+        });
+        return;
+      }
+
+      if (packet.type === "typing") {
+        if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
+        if (packet.isTyping) {
+          setIsPeerTyping(true);
+          peerTypingTimerRef.current = setTimeout(() => {
+            setIsPeerTyping(false);
+          }, 3200);
+        } else {
+          setIsPeerTyping(false);
+        }
+        return;
+      }
+
+      if (packet.type === "delete_msgs" && Array.isArray(packet.ids)) {
+        const delSet = new Set(packet.ids.map(String));
+        if (delSet.size > 0) {
+          setMessages((prev) => {
+            const next = prev.filter((m) => !delSet.has(String(m.id)));
+            if (next.length !== prev.length) {
+              persistQuickLocal(next);
+              persistEncryptedLocal(next);
+              return next;
+            }
+            return prev;
+          });
+        }
+        return;
+      }
+
+      if (packet.type === "sync_nudge") {
+        syncNowRef.current?.();
+      }
+    },
+    [myId, targetId, persistQuickLocal, persistEncryptedLocal]
+  );
+
+  const {
+    isP2PConnected,
+    sendRealtimePacket,
+    sendTypingState,
+    ingestPiggybackedSignals,
+  } = useChatRealtimeChannel({
+    myId,
+    targetId,
+    enabled: isRealPeer,
+    onPacket: handleRealtimeP2PPacket,
+  });
+
+  isP2PConnectedRef.current = isP2PConnected;
+  sendRealtimePacketRef.current = sendRealtimePacket;
+  const ingestPiggybackedRef = useRef(ingestPiggybackedSignals);
+  ingestPiggybackedRef.current = ingestPiggybackedSignals;
+
+  // Broadcast real-time P2P typing state with zero HTTP/server load
+  useEffect(() => {
+    if (!isRealPeer) return;
+    if (inputText && inputText.trim().length > 0) {
+      sendTypingState(true);
+    } else {
+      sendTypingState(false);
+    }
+  }, [inputText, isRealPeer, sendTypingState]);
+
+  // Load & decrypt conversation history + Adaptive O(1) Delta Sync
   useEffect(() => {
     if (!targetId) return;
     let alive = true;
+    let syncTimerId = null;
+    let inFlight = false;
     const isAhmad = isAhmadDummyUser(activeChatUserRef.current);
+    syncWatermarkRef.current = {
+      lastTs: 0,
+      peerReadTs: 0,
+      deleteRev: 0,
+      initialized: false,
+    };
 
     // Clean up legacy v1/v2/v3 cache keys that stored stale fake seed messages or dead blob: URLs
     try {
@@ -288,41 +518,146 @@ export function usePersonalChatState({
     } catch {}
 
     async function syncFromRemote() {
+      if (!alive || inFlight) return;
+      inFlight = true;
       try {
-        const page = await fetchPersonalChatPage(targetId, { limit: 30 });
-        if (!alive) return;
-        setNextCursor((prevCursor) => page?.nextCursor || prevCursor || null);
-        const remoteEnvelopes = page?.messages || [];
-        if (!Array.isArray(remoteEnvelopes) || !remoteEnvelopes.length) return;
+        const wm = syncWatermarkRef.current;
+        const params = wm.initialized
+          ? {
+              limit: 30,
+              sinceTs: wm.lastTs,
+              sinceReadTs: wm.peerReadTs,
+              sinceDelRev: wm.deleteRev,
+              includeRtc: 1,
+            }
+          : {
+              limit: 30,
+              includeRtc: 1,
+            };
+
+        const page = await fetchPersonalChatPage(targetId, params);
+        if (!alive || !page) return;
+
+        if (Array.isArray(page.rtcSignals) && page.rtcSignals.length > 0) {
+          ingestPiggybackedRef.current?.(page.rtcSignals);
+        }
+
+        if (page.unchanged) {
+          return;
+        }
+
+        const serverLastTs = Number(page.lastTs || 0);
+        const serverPeerReadTs = Number(page.peerReadTs || 0);
+        const serverDelRev = Number(page.deleteRev || 0);
+        const prevDelRev = wm.deleteRev;
+        const wasInitialized = wm.initialized;
+
+        wm.lastTs = Math.max(wm.lastTs, serverLastTs);
+        wm.peerReadTs = Math.max(wm.peerReadTs, serverPeerReadTs);
+        wm.deleteRev = serverDelRev;
+        wm.initialized = true;
+
+        if (!page.delta) {
+          setNextCursor((prevCursor) => page?.nextCursor || prevCursor || null);
+        }
+
+        const remoteEnvelopes = Array.isArray(page.messages) ? page.messages : [];
+
+        // Even if delta returned 0 new envelopes (e.g. only peerReadTs advanced!), update read statuses in O(1)
+        if (remoteEnvelopes.length === 0) {
+          if (serverPeerReadTs > 0) {
+            setMessages((prev) => {
+              let changed = false;
+              const next = prev.map((m) => {
+                if (
+                  String(m.senderId) === String(myId) &&
+                  m.status === "sent" &&
+                  Number(m.ts || 0) <= serverPeerReadTs
+                ) {
+                  changed = true;
+                  return { ...m, status: "read" };
+                }
+                return m;
+              });
+              if (changed) {
+                persistQuickLocal(next);
+                persistEncryptedLocal(next);
+                return next;
+              }
+              return prev;
+            });
+          }
+          // If clearAll happened on another device (deleteRev advanced and full fetch returned 0 messages)
+          if (wasInitialized && serverDelRev !== prevDelRev && !page.delta) {
+            setMessages((prev) => {
+              const kept = prev.filter((m) => m.status === "sending" || m.status === "failed");
+              persistQuickLocal(kept);
+              persistEncryptedLocal(kept);
+              return kept;
+            });
+          }
+          return;
+        }
+
         const decryptedRemote = (
           await Promise.all(
             remoteEnvelopes.map((env) => decryptChatEnvelope(env, myId, targetId))
           )
         ).filter(Boolean);
 
-        if (decryptedRemote.length > 0 && alive) {
+        if (alive) {
           setMessages((prev) => {
+            const isFullReconcile = wasInitialized && serverDelRev !== prevDelRev && !page.delta;
             const mergedMap = new Map();
-            prev.forEach((m) => {
-              if (!isAhmad && String(m.id).startsWith("seed_")) return;
-              // Keep messages currently sending/failed locally
-              if ((isAhmad && String(m.id).startsWith("seed_")) || m.status === "sending" || m.status === "failed") {
-                mergedMap.set(m.id, m);
-              } else if (!String(m.mediaUrl || "").startsWith("blob:")) {
-                mergedMap.set(m.id, m);
-              }
+
+            if (!isFullReconcile) {
+              prev.forEach((m) => {
+                if (!isAhmad && String(m.id).startsWith("seed_")) return;
+                if (
+                  (isAhmad && String(m.id).startsWith("seed_")) ||
+                  m.status === "sending" ||
+                  m.status === "failed"
+                ) {
+                  mergedMap.set(m.id, m);
+                } else if (!String(m.mediaUrl || "").startsWith("blob:")) {
+                  const updatedStatus =
+                    String(m.senderId) === String(myId) &&
+                    m.status === "sent" &&
+                    serverPeerReadTs > 0 &&
+                    Number(m.ts || 0) <= serverPeerReadTs
+                      ? "read"
+                      : m.status;
+                  mergedMap.set(m.id, updatedStatus !== m.status ? { ...m, status: updatedStatus } : m);
+                }
+              });
+            } else {
+              // Full reconcile after remote message deletion: keep only local in-flight/failed messages + server truth
+              prev.forEach((m) => {
+                if (m.status === "sending" || m.status === "failed") {
+                  mergedMap.set(m.id, m);
+                }
+              });
+            }
+
+            decryptedRemote.forEach((m) => {
+              const existing = mergedMap.get(m.id);
+              // Never downgrade a locally confirmed 'read' receipt back to 'sent'
+              const bestStatus = existing?.status === "read" ? "read" : m.status;
+              mergedMap.set(m.id, bestStatus !== m.status ? { ...m, status: bestStatus } : m);
             });
-            decryptedRemote.forEach((m) => mergedMap.set(m.id, m));
+
             const sorted = Array.from(mergedMap.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
             persistQuickLocal(sorted);
-            try {
-              localStorage.setItem(storageKey, JSON.stringify(remoteEnvelopes.slice(-80)));
-            } catch {}
+            persistEncryptedLocal(sorted);
             return sorted;
           });
         }
-      } catch {}
+      } catch {} finally {
+        inFlight = false;
+      }
     }
+
+    syncNowRef.current = syncFromRemote;
 
     async function loadMessages() {
       let localMsgs = [];
@@ -384,21 +719,52 @@ export function usePersonalChatState({
       await syncFromRemote();
     }
 
-    loadMessages();
+    const scheduleNextSync = () => {
+      if (!alive) return;
+      if (isAhmadDummyUser(activeChatUserRef.current) || String(targetId).startsWith("mock_")) {
+        return;
+      }
+      const isHidden = typeof document !== "undefined" && document.hidden;
+      const delayMs = isHidden
+        ? 6000
+        : isP2PConnectedRef.current
+        ? 2500
+        : 850;
+      syncTimerId = setTimeout(async () => {
+        await syncFromRemote();
+        scheduleNextSync();
+      }, delayMs);
+    };
 
-    // Poll every 5s while chat panel is open so incoming messages & peer read receipts update in real time
-    const syncInterval = setInterval(() => {
-      if (alive && !isAhmadDummyUser(activeChatUserRef.current) && !String(targetId).startsWith("mock_")) {
+    loadMessages().then(() => {
+      scheduleNextSync();
+    });
+
+    const onWakeSync = () => {
+      if (alive && typeof document !== "undefined" && !document.hidden) {
         syncFromRemote();
       }
-    }, 5000);
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onWakeSync);
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", onWakeSync);
+    }
 
     return () => {
       alive = false;
-      clearInterval(syncInterval);
+      syncNowRef.current = null;
+      if (syncTimerId) clearTimeout(syncTimerId);
       if (autoReplyTimerRef.current) clearTimeout(autoReplyTimerRef.current);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onWakeSync);
+      }
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", onWakeSync);
+      }
     };
-  }, [targetId, myId, storageKey, persistQuickLocal]);
+  }, [targetId, myId, storageKey, persistQuickLocal, persistEncryptedLocal]);
 
   // Cursor pagination for older messages from Cold Archive
   const loadOlderMessages = useCallback(async () => {
@@ -454,34 +820,6 @@ export function usePersonalChatState({
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [menuOpen]);
 
-  const persistEncryptedLocal = useCallback(
-    async (msgList) => {
-      try {
-        const encryptedList = await Promise.all(
-          msgList.slice(-80).map(async (m) => {
-            const safeMsg = String(m?.mediaUrl || "").startsWith("blob:")
-              ? { ...m, mediaUrl: null }
-              : m;
-            if (safeMsg.ciphertext && safeMsg.iv && !String(m?.mediaUrl || "").startsWith("blob:")) {
-              return safeMsg;
-            }
-            const env = await encryptChatPayload(safeMsg, safeMsg.senderId || myId, safeMsg.recipientId || targetId);
-            return {
-              ...env,
-              id: safeMsg.id,
-              senderId: safeMsg.senderId || myId,
-              recipientId: safeMsg.recipientId || targetId,
-              ts: safeMsg.ts,
-              status: safeMsg.status || (String(safeMsg.senderId) === String(myId) ? "sent" : "read"),
-            };
-          })
-        );
-        localStorage.setItem(storageKey, JSON.stringify(encryptedList));
-      } catch { }
-    },
-    [myId, targetId, storageKey]
-  );
-
   const appendAndEncryptMessage = useCallback(
     async ({
       text = "",
@@ -510,6 +848,7 @@ export function usePersonalChatState({
           callMode,
           callDuration,
           replyTo,
+          ts,
         },
         myId,
         targetId
@@ -590,6 +929,7 @@ export function usePersonalChatState({
               callMode,
               callDuration,
               replyTo,
+              ts,
             },
             myId,
             targetId
@@ -610,6 +950,26 @@ export function usePersonalChatState({
           });
         }, 300);
       } else {
+        // Parallel 0ms-server-overhead P2P DataChannel dispatch (delivers E2EE envelope directly to peer in ~5-20ms)
+        const p2pResult = sendRealtimePacketRef.current?.({
+          type: "e2ee_msg",
+          envelope: {
+            ...envelope,
+            id: msgId,
+            senderId: myId,
+            recipientId: targetId,
+            mediaUrl: finalMediaUrl,
+            voiceDuration,
+            voiceWaveform,
+            videoDuration,
+            isViewOnce,
+            callMode,
+            callDuration,
+            ts,
+            status: "sent",
+          },
+        });
+
         let isTimedOut = false;
         const timeoutTimer = setTimeout(() => {
           isTimedOut = true;
@@ -643,11 +1003,22 @@ export function usePersonalChatState({
             clearTimeout(timeoutTimer);
             pendingBlobsRef.current.delete(msgId);
             deletePendingMediaBlob(msgId).catch(() => {});
+            syncWatermarkRef.current.lastTs = Math.max(syncWatermarkRef.current.lastTs, ts);
+            if (p2pResult === "oversize") {
+              sendRealtimePacketRef.current?.({ type: "sync_nudge", ts });
+            }
             const persistedStatus = resData?.envelope?.status || resData?.message?.status || "sent";
             if (!isTimedOut) {
               setMessages((prev) => {
                 const next = prev.map((m) =>
-                  m.id === msgId ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: persistedStatus } : m
+                  m.id === msgId
+                    ? {
+                        ...m,
+                        ...envelope,
+                        mediaUrl: finalMediaUrl,
+                        status: m.status === "read" ? "read" : persistedStatus,
+                      }
+                    : m
                 );
                 persistQuickLocal(next);
                 persistEncryptedLocal(next);
@@ -660,7 +1031,12 @@ export function usePersonalChatState({
             setMessages((prev) => {
               const next = prev.map((m) =>
                 m.id === msgId
-                  ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: msgType === "call" ? "sent" : "failed" }
+                  ? {
+                      ...m,
+                      ...envelope,
+                      mediaUrl: finalMediaUrl,
+                      status: m.status === "read" ? "read" : msgType === "call" ? "sent" : "failed",
+                    }
                   : m
               );
               persistQuickLocal(next);
@@ -897,9 +1273,11 @@ export function usePersonalChatState({
     const idSet = new Set(ids);
     setMessages((prev) => {
       const next = prev.filter((m) => !idSet.has(m.id));
+      persistQuickLocal(next);
       persistEncryptedLocal(next);
       return next;
     });
+    sendRealtimePacketRef.current?.({ type: "delete_msgs", ids });
     deletePersonalChatMessages(targetId, { messageIds: ids }).catch(() => { });
     if (!customIds) {
       setSelectedMsgIds([]);
@@ -1024,6 +1402,7 @@ export function usePersonalChatState({
           : uploadedUrl;
       }
 
+      const resendTs = Date.now();
       const freshEnv = await encryptChatPayload(
         {
           id: failedMsg.id,
@@ -1037,10 +1416,30 @@ export function usePersonalChatState({
           callMode: failedMsg.callMode,
           callDuration: failedMsg.callDuration,
           replyTo: failedMsg.replyTo,
+          ts: resendTs,
         },
         myId,
         targetId
       );
+
+      const p2pResult = sendRealtimePacketRef.current?.({
+        type: "e2ee_msg",
+        envelope: {
+          ...freshEnv,
+          id: failedMsg.id,
+          senderId: myId,
+          recipientId: targetId,
+          mediaUrl: mediaUrlToSend,
+          voiceDuration: failedMsg.voiceDuration,
+          voiceWaveform: failedMsg.voiceWaveform,
+          videoDuration: failedMsg.videoDuration,
+          isViewOnce: failedMsg.isViewOnce,
+          callMode: failedMsg.callMode,
+          callDuration: failedMsg.callDuration,
+          ts: resendTs,
+          status: "sent",
+        },
+      });
 
       postPersonalChatMessage(targetId, {
         ...freshEnv,
@@ -1051,13 +1450,24 @@ export function usePersonalChatState({
         callMode: failedMsg.callMode,
         callDuration: failedMsg.callDuration,
       })
-        .then(() => {
+        .then((resData) => {
           pendingBlobsRef.current.delete(failedMsg.id);
           deletePendingMediaBlob(failedMsg.id).catch(() => {});
+          syncWatermarkRef.current.lastTs = Math.max(syncWatermarkRef.current.lastTs, resendTs);
+          if (p2pResult === "oversize") {
+            sendRealtimePacketRef.current?.({ type: "sync_nudge", ts: resendTs });
+          }
+          const persistedStatus = resData?.envelope?.status || resData?.message?.status || "sent";
           setMessages((prev) => {
             const next = prev.map((m) =>
               m.id === failedMsg.id
-                ? { ...m, ...freshEnv, mediaUrl: mediaUrlToSend, status: "sent" }
+                ? {
+                    ...m,
+                    ...freshEnv,
+                    mediaUrl: mediaUrlToSend,
+                    ts: resendTs,
+                    status: m.status === "read" ? "read" : persistedStatus,
+                  }
                 : m
             );
             persistQuickLocal(next);
@@ -1069,7 +1479,13 @@ export function usePersonalChatState({
           setMessages((prev) => {
             const next = prev.map((m) =>
               m.id === failedMsg.id
-                ? { ...m, ...freshEnv, mediaUrl: mediaUrlToSend, status: "failed" }
+                ? {
+                    ...m,
+                    ...freshEnv,
+                    mediaUrl: mediaUrlToSend,
+                    ts: resendTs,
+                    status: m.status === "read" ? "read" : "failed",
+                  }
                 : m
             );
             persistQuickLocal(next);

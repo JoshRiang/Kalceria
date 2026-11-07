@@ -10,6 +10,12 @@ const COLD_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days cold archive TTL
 const NONCE_TTL_SECONDS = 10 * 60; // 10 minutes anti-replay window
 const CALL_LOCK_TTL_SECONDS = 60; // 60s single-call concurrency lock TTL
 const CALL_SIGNAL_TTL_SECONDS = 60; // 60s ephemeral WebRTC signaling TTL
+const CHAT_RTC_TTL_SECONDS = 45; // 45s ephemeral P2P DataChannel signaling TTL
+
+function unwrapPipeResult(tuple, onErrFallback = null) {
+  if (!Array.isArray(tuple) || tuple[0]) return onErrFallback;
+  return tuple[1];
+}
 
 function sanitizeTargetId(raw) {
   if (!raw || typeof raw !== 'string') return null;
@@ -34,6 +40,14 @@ function getHotConversationKey(userA, userB) {
 
 function getColdConversationKey(userA, userB) {
   return `chat:cold:${getConversationHash(userA, userB)}`;
+}
+
+function getMetaConversationKey(convHash) {
+  return `chat:meta:${convHash}`;
+}
+
+function getChatRtcSignalKey(recipientId, senderId) {
+  return `chat:rtc:${recipientId}:${senderId}`;
 }
 
 // Compact storage representation (~42% smaller in Redis RAM)
@@ -113,10 +127,75 @@ export async function getPersonalChatMessages(req, res, next) {
     const limitRaw = Number(req.query?.limit);
     const limit = Number.isFinite(limitRaw) ? Math.min(50, Math.max(1, Math.floor(limitRaw))) : 30;
     const cursorTs = req.query?.cursor ? Number(req.query.cursor) : null;
+    const isCursorPagination = Boolean(cursorTs && Number.isFinite(cursorTs));
+    const sinceTs = req.query?.sinceTs ? Number(req.query.sinceTs) : 0;
+    const sinceReadTs = req.query?.sinceReadTs ? Number(req.query.sinceReadTs) : 0;
+    const sinceDelRev = req.query?.sinceDelRev ? Number(req.query.sinceDelRev) : 0;
+    const isPeekOnly = String(req.query?.peek || '') === '1';
+    const includeRtc = String(req.query?.includeRtc || '') === '1';
 
     const convHash = getConversationHash(userId, targetId);
     const hotKey = `chat:conv:${convHash}`;
     const coldKey = `chat:cold:${convHash}`;
+    const metaKey = getMetaConversationKey(convHash);
+    const myRtcKey = getChatRtcSignalKey(userId, targetId);
+
+    // 1. Single O(1) Redis pipeline: conversation metadata + optional piggybacked P2P WebRTC signals
+    const metaPipe = redis.pipeline();
+    metaPipe.hgetall(metaKey);
+    if (includeRtc) {
+      metaPipe.lrange(myRtcKey, 0, -1);
+      metaPipe.del(myRtcKey);
+    }
+    const metaPipeRes = await metaPipe.exec().catch(() => null);
+    const meta = unwrapPipeResult(metaPipeRes?.[0], {}) || {};
+
+    let rtcSignals = [];
+    if (includeRtc) {
+      const rawRtc = unwrapPipeResult(metaPipeRes?.[1], []);
+      rtcSignals = (Array.isArray(rawRtc) ? rawRtc : [])
+        .map((item) => {
+          try {
+            return typeof item === 'string' ? JSON.parse(item) : item;
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean)
+        .reverse();
+    }
+
+    const metaLastTs = Number(meta.lastTs || 0);
+    const myReadUpTo = Number(meta[`readUpTo:${userId}`] || 0);
+    const peerReadUpTo = Number(meta[`readUpTo:${targetId}`] || 0);
+    const deleteRev = Number(meta.deleteRev || 0);
+    const hasPendingUnreadForMe =
+      !isPeekOnly &&
+      meta.lastSender === String(targetId) &&
+      metaLastTs > myReadUpTo;
+
+    // 2. O(1) Delta Short-Circuit: If client has latest watermark, zero LRANGE & zero DB queries!
+    if (
+      sinceTs > 0 &&
+      !isCursorPagination &&
+      (meta.emptyConfirmed === '1' || metaLastTs > 0) &&
+      metaLastTs <= sinceTs &&
+      peerReadUpTo === sinceReadTs &&
+      deleteRev === sinceDelRev &&
+      !hasPendingUnreadForMe
+    ) {
+      return res.json({
+        messages: [],
+        unchanged: true,
+        lastTs: metaLastTs,
+        peerReadTs: peerReadUpTo,
+        deleteRev,
+        rtcSignals,
+        nextCursor: null,
+        hasMore: false,
+        e2ee: true,
+      });
+    }
 
     const rawHot = await redis.lrange(hotKey, 0, HOT_RING_BUFFER_SIZE - 1).catch(() => []);
     const hotMsgs = (Array.isArray(rawHot) ? rawHot : [])
@@ -128,17 +207,24 @@ export async function getPersonalChatMessages(req, res, next) {
       byId.set(m.id, m);
     }
 
-    // Read-through from permanent PostgreSQL tier if hot buffer is incomplete or paginating older history
-    if (hotMsgs.length < limit || (cursorTs && Number.isFinite(cursorTs))) {
+    // 3. Smart Read-Through: ONLY hit PostgreSQL on cold miss / eviction, cursor pagination, or one-time backfill
+    const isColdOrEvicted = hotMsgs.length === 0 && meta.emptyConfirmed !== '1';
+    const needsInitialBackfill =
+      hotMsgs.length > 0 &&
+      hotMsgs.length < limit &&
+      meta.backfilled !== '1' &&
+      !sinceTs;
+
+    if (isCursorPagination || isColdOrEvicted || needsInitialBackfill) {
       try {
         if (prisma?.personalChatMessage) {
           const dbRows = await prisma.personalChatMessage.findMany({
             where: {
               convHash,
-              ...(cursorTs && Number.isFinite(cursorTs) ? { ts: { lt: BigInt(Math.floor(cursorTs)) } } : {}),
+              ...(isCursorPagination ? { ts: { lt: BigInt(Math.floor(cursorTs)) } } : {}),
             },
             orderBy: { ts: 'desc' },
-            take: Math.max(limit, HOT_RING_BUFFER_SIZE),
+            take: Math.max(limit + 1, HOT_RING_BUFFER_SIZE),
           });
           for (const row of dbRows) {
             const unpacked = unpackEnvelope(row.packedJson);
@@ -152,26 +238,43 @@ export async function getPersonalChatMessages(req, res, next) {
             }
           }
 
-          // Auto-heal Redis hot buffer if it was empty or evicted
-          if (hotMsgs.length === 0 && byId.size > 0 && !cursorTs) {
-            const toHydrate = Array.from(byId.values())
-              .sort((a, b) => Number(b.ts) - Number(a.ts))
-              .slice(0, HOT_RING_BUFFER_SIZE)
-              .map(packEnvelope);
-            if (toHydrate.length > 0) {
-              const healPipe = redis.pipeline();
-              healPipe.del(hotKey);
-              healPipe.rpush(hotKey, ...toHydrate);
-              healPipe.expire(hotKey, HOT_TTL_SECONDS);
-              await healPipe.exec().catch(() => {});
+          if (!isCursorPagination) {
+            const healPipe = redis.pipeline();
+            if (byId.size === 0) {
+              healPipe.hset(metaKey, 'emptyConfirmed', '1', 'backfilled', '1', 'lastTs', '0');
+              healPipe.expire(metaKey, HOT_TTL_SECONDS);
+            } else {
+              const sortedDesc = Array.from(byId.values()).sort((a, b) => Number(b.ts) - Number(a.ts));
+              const newestFromDb = sortedDesc[0];
+              if (hotMsgs.length === 0 || needsInitialBackfill) {
+                const toHydrate = sortedDesc.slice(0, HOT_RING_BUFFER_SIZE).map(packEnvelope);
+                if (toHydrate.length > 0) {
+                  healPipe.del(hotKey);
+                  healPipe.rpush(hotKey, ...toHydrate);
+                  healPipe.expire(hotKey, HOT_TTL_SECONDS);
+                }
+              }
+              healPipe.hset(
+                metaKey,
+                'emptyConfirmed',
+                '0',
+                'backfilled',
+                '1',
+                'lastTs',
+                String(Math.max(metaLastTs, Number(newestFromDb?.ts || 0))),
+                'lastSender',
+                String(newestFromDb?.senderId || meta.lastSender || '')
+              );
+              healPipe.expire(metaKey, HOT_TTL_SECONDS);
             }
+            await healPipe.exec().catch(() => {});
           }
         }
       } catch {}
     }
 
     // If paginating older history with a cursor, also check Redis cold archive
-    if (cursorTs && Number.isFinite(cursorTs)) {
+    if (isCursorPagination) {
       const rawCold = await redis.lrange(coldKey, 0, COLD_ARCHIVE_MAX_SIZE - 1).catch(() => []);
       const coldMsgs = (Array.isArray(rawCold) ? rawCold : [])
         .map(unpackEnvelope)
@@ -185,35 +288,47 @@ export async function getPersonalChatMessages(req, res, next) {
 
     let combined = Array.from(byId.values());
 
-    // Real Read Receipt Update: ONLY mark messages as 'read' when the actual recipient (recipientId === userId) fetches the chat (and not a background peek)
-    const isPeekOnly = String(req.query?.peek || '') === '1';
+    // Apply monotonic O(1) read watermarks before checking newly-read transitions
+    for (const m of combined) {
+      if (m.status === 'read') continue;
+      const recipientStr = String(m.recipientId);
+      const watermark =
+        recipientStr === String(userId)
+          ? myReadUpTo
+          : recipientStr === String(targetId)
+          ? peerReadUpTo
+          : 0;
+      if (watermark > 0 && Number(m.ts) <= watermark) {
+        m.status = 'read';
+      }
+    }
+
+    // Real Read Receipt Update: ONLY mark messages as 'read' when actual recipient fetches chat (not peek)
     let readUpdated = false;
     const newlyReadIds = [];
+    let maxNewlyReadTs = myReadUpTo;
     if (!isPeekOnly) {
       for (const m of combined) {
         if (String(m.recipientId) === String(userId) && m.status !== 'read') {
           m.status = 'read';
           readUpdated = true;
           newlyReadIds.push(m.id);
+          if (Number(m.ts) > maxNewlyReadTs) {
+            maxNewlyReadTs = Number(m.ts);
+          }
         }
       }
     }
 
     if (readUpdated) {
-      // Persist read receipt back to Redis hot buffer & PostgreSQL
-      const updatedHot = combined
-        .slice()
-        .sort((a, b) => Number(b.ts) - Number(a.ts))
-        .slice(0, HOT_RING_BUFFER_SIZE)
-        .map(packEnvelope);
-      const readPromises = [];
-      if (updatedHot.length > 0) {
-        const readPipe = redis.pipeline();
-        readPipe.del(hotKey);
-        readPipe.rpush(hotKey, ...updatedHot);
-        readPipe.expire(hotKey, HOT_TTL_SECONDS);
-        readPromises.push(readPipe.exec().catch(() => {}));
-      }
+      // Atomic O(1) Redis watermark update (eliminates non-atomic DEL+RPUSH race condition!) + Postgres status sync
+      const readPipe = redis.pipeline();
+      readPipe.hset(metaKey, `readUpTo:${userId}`, String(maxNewlyReadTs));
+      readPipe.expire(metaKey, HOT_TTL_SECONDS);
+      readPipe.hdel(`chat:unread:${userId}`, String(targetId));
+      readPipe.set(`chat:inbox_ver:${userId}`, `${Date.now()}_r`, 'EX', HOT_TTL_SECONDS);
+
+      const readPromises = [readPipe.exec().catch(() => {})];
       if (prisma?.personalChatMessage && newlyReadIds.length > 0) {
         readPromises.push(
           prisma.personalChatMessage
@@ -225,14 +340,37 @@ export async function getPersonalChatMessages(req, res, next) {
         );
       }
       await Promise.all(readPromises);
+    } else if (!isPeekOnly && !isCursorPagination && !sinceTs) {
+      // Ensure any residual unread badge for this peer is cleared on initial chat open
+      redis.hdel(`chat:unread:${userId}`, String(targetId)).catch(() => {});
     }
 
-    if (cursorTs && Number.isFinite(cursorTs)) {
+    if (isCursorPagination) {
       combined = combined.filter((m) => Number(m.ts) < cursorTs);
     }
 
-    // Sort newest-first to slice page, then reverse to chronological order for UI
     combined.sort((a, b) => Number(b.ts) - Number(a.ts));
+    const newestOverallTs = combined.length > 0 ? Number(combined[0].ts) : metaLastTs;
+
+    // Delta mode: transmit ONLY newly arrived envelopes when deleteRev matches
+    if (sinceTs > 0 && !isCursorPagination && deleteRev === sinceDelRev) {
+      const deltaSlice = combined
+        .filter((m) => Number(m.ts) > sinceTs)
+        .reverse();
+      return res.json({
+        messages: deltaSlice,
+        delta: true,
+        unchanged: false,
+        lastTs: Math.max(metaLastTs, newestOverallTs),
+        peerReadTs: peerReadUpTo,
+        deleteRev,
+        rtcSignals,
+        nextCursor: null,
+        hasMore: false,
+        e2ee: true,
+      });
+    }
+
     const hasMore = combined.length > limit;
     const pageSlice = combined.slice(0, limit).reverse();
     const nextCursor = hasMore && pageSlice.length > 0 ? pageSlice[0].ts : null;
@@ -241,6 +379,10 @@ export async function getPersonalChatMessages(req, res, next) {
       messages: pageSlice,
       nextCursor,
       hasMore,
+      lastTs: Math.max(metaLastTs, newestOverallTs),
+      peerReadTs: peerReadUpTo,
+      deleteRev,
+      rtcSignals,
       e2ee: true,
     });
   } catch (err) {
@@ -286,19 +428,27 @@ export async function sendPersonalChatMessage(req, res, next) {
     const convHash = getConversationHash(userId, targetId);
     const hotKey = `chat:conv:${convHash}`;
     const coldKey = `chat:cold:${convHash}`;
+    const metaKey = getMetaConversationKey(convHash);
 
-    // Parallel pre-flight check: block status + atomic anti-replay nonce lock + current hot buffer length
-    const [blockedByMe, blockedByTarget, nonceAcquired, currentHotLen] = await Promise.all([
-      redis.sismember(`blocked:${userId}`, targetId).catch(() => 0),
-      redis.sismember(`blocked:${targetId}`, userId).catch(() => 0),
-      redis.set(nonceKey, '1', 'EX', NONCE_TTL_SECONDS, 'NX').catch(() => 'OK'),
-      redis.llen(hotKey).catch(() => 0),
-    ]);
+    // 1. Single-RTT Pre-Flight Pipeline: block checks + atomic nonce lock + ring-buffer tail peek + empty flag
+    const prePipe = redis.pipeline();
+    prePipe.sismember(`blocked:${userId}`, targetId);
+    prePipe.sismember(`blocked:${targetId}`, userId);
+    prePipe.set(nonceKey, '1', 'EX', NONCE_TTL_SECONDS, 'NX');
+    prePipe.lindex(hotKey, HOT_RING_BUFFER_SIZE - 1);
+    prePipe.hget(metaKey, 'emptyConfirmed');
+    const preResults = await prePipe.exec().catch(() => null);
+
+    const blockedByMe = Number(unwrapPipeResult(preResults?.[0], 0));
+    const blockedByTarget = Number(unwrapPipeResult(preResults?.[1], 0));
+    const nonceSetReply = preResults ? unwrapPipeResult(preResults[2], 'OK') : 'OK';
+    const oldestRaw = unwrapPipeResult(preResults?.[3], null);
+    const emptyConfirmed = unwrapPipeResult(preResults?.[4], null);
 
     if (blockedByMe || blockedByTarget) {
       return res.status(403).json({ error: 'Cannot send message to this user.' });
     }
-    if (!nonceAcquired) {
+    if (nonceSetReply !== 'OK') {
       return res.status(409).json({ error: 'Replay detected: duplicate nonce.' });
     }
 
@@ -337,46 +487,251 @@ export async function sendPersonalChatMessage(req, res, next) {
     const packed = packEnvelope(envelope);
     const writePipe = redis.pipeline();
 
-    // Check if hot ring-buffer is at capacity; if so, archive oldest entry into cold tier before trimming
-    if (currentHotLen >= HOT_RING_BUFFER_SIZE) {
-      const oldestRaw = await redis.lindex(hotKey, HOT_RING_BUFFER_SIZE - 1).catch(() => null);
-      if (oldestRaw) {
-        writePipe.lpush(coldKey, oldestRaw);
-        writePipe.ltrim(coldKey, 0, COLD_ARCHIVE_MAX_SIZE - 1);
-        writePipe.expire(coldKey, COLD_TTL_SECONDS);
-      }
+    // Archive 50th entry into cold overflow tier in the same pipeline (zero extra LINDEX RTT!)
+    if (oldestRaw) {
+      writePipe.lpush(coldKey, oldestRaw);
+      writePipe.ltrim(coldKey, 0, COLD_ARCHIVE_MAX_SIZE - 1);
+      writePipe.expire(coldKey, COLD_TTL_SECONDS);
     }
 
     writePipe.lpush(hotKey, packed);
     writePipe.ltrim(hotKey, 0, HOT_RING_BUFFER_SIZE - 1);
     writePipe.expire(hotKey, HOT_TTL_SECONDS);
 
-    // Execute Redis pipeline & PostgreSQL write-through concurrently
-    await Promise.all([
-      writePipe.exec().catch(() => {}),
-      prisma?.personalChatMessage
-        ? prisma.personalChatMessage
-            .upsert({
-              where: { id: envelope.id },
-              create: {
-                id: envelope.id,
-                convHash,
-                senderId: envelope.senderId,
-                recipientId: envelope.recipientId,
-                packedJson: packed,
-                ts: BigInt(Math.floor(envelope.ts)),
-                status: envelope.status,
-              },
-              update: {
-                packedJson: packed,
-                status: envelope.status,
-              },
-            })
-            .catch(() => {})
-        : Promise.resolve(),
-    ]);
+    // Update O(1) conversation metadata & O(1) recipient global inbox watermark in the exact same pipeline
+    const metaFields = [
+      'lastTs',
+      String(envelope.ts),
+      'lastId',
+      envelope.id,
+      'lastSender',
+      String(userId),
+      'emptyConfirmed',
+      '0',
+    ];
+    if (emptyConfirmed === '1' || oldestRaw) {
+      metaFields.push('backfilled', '1');
+    }
+    writePipe.hset(metaKey, ...metaFields);
+    writePipe.expire(metaKey, HOT_TTL_SECONDS);
+
+    const inboxVer = `${Date.now()}_${envelope.id.slice(-6)}`;
+    writePipe.hincrby(`chat:unread:${targetId}`, String(userId), 1);
+    writePipe.expire(`chat:unread:${targetId}`, HOT_TTL_SECONDS);
+    writePipe.hset(
+      `chat:inbox_meta:${targetId}`,
+      String(userId),
+      JSON.stringify({ ts: envelope.ts, id: envelope.id, msgType: envelope.msgType })
+    );
+    writePipe.expire(`chat:inbox_meta:${targetId}`, HOT_TTL_SECONDS);
+    writePipe.set(`chat:inbox_ver:${targetId}`, inboxVer, 'EX', HOT_TTL_SECONDS);
+
+    // Fast single-statement INSERT on PostgreSQL (falling back to UPDATE only on rare P2002 retry) concurrently with Redis writePipe
+    const dbWritePromise = prisma?.personalChatMessage
+      ? prisma.personalChatMessage
+          .create({
+            data: {
+              id: envelope.id,
+              convHash,
+              senderId: envelope.senderId,
+              recipientId: envelope.recipientId,
+              packedJson: packed,
+              ts: BigInt(Math.floor(envelope.ts)),
+              status: envelope.status,
+            },
+          })
+          .catch(async (err) => {
+            if (err?.code === 'P2002') {
+              return prisma.personalChatMessage
+                .update({
+                  where: { id: envelope.id },
+                  data: {
+                    packedJson: packed,
+                    status: envelope.status,
+                  },
+                })
+                .catch(() => {});
+            }
+          })
+      : Promise.resolve();
+
+    await Promise.all([writePipe.exec().catch(() => {}), dbWritePromise]);
 
     res.status(201).json({ ok: true, envelope });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function ackPersonalChatRead(req, res, next) {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const targetId = sanitizeTargetId(req.params?.targetId);
+    if (!userId || !targetId) {
+      return res.status(400).json({ error: 'Invalid conversation target.' });
+    }
+
+    const upToTs = Number(req.body?.upToTs) || Date.now();
+    const messageIds = Array.isArray(req.body?.messageIds)
+      ? req.body.messageIds.map(String).filter(Boolean).slice(0, 50)
+      : [];
+
+    const convHash = getConversationHash(userId, targetId);
+    const metaKey = getMetaConversationKey(convHash);
+
+    const currentReadRaw = await redis.hget(metaKey, `readUpTo:${userId}`).catch(() => null);
+    const nextReadTs = Math.max(Number(currentReadRaw || 0), upToTs);
+
+    const pipe = redis.pipeline();
+    pipe.hset(metaKey, `readUpTo:${userId}`, String(nextReadTs));
+    pipe.expire(metaKey, HOT_TTL_SECONDS);
+    pipe.hdel(`chat:unread:${userId}`, String(targetId));
+    pipe.set(`chat:inbox_ver:${userId}`, `${Date.now()}_r`, 'EX', HOT_TTL_SECONDS);
+
+    const tasks = [pipe.exec().catch(() => {})];
+    if (prisma?.personalChatMessage) {
+      tasks.push(
+        prisma.personalChatMessage
+          .updateMany({
+            where: messageIds.length > 0
+              ? { convHash, recipientId: String(userId), id: { in: messageIds } }
+              : { convHash, recipientId: String(userId), status: { not: 'read' }, ts: { lte: BigInt(Math.floor(nextReadTs)) } },
+            data: { status: 'read' },
+          })
+          .catch(() => {})
+      );
+    }
+
+    await Promise.all(tasks);
+    res.json({ ok: true, readUpTo: nextReadTs });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getPersonalChatInboxSummary(req, res, next) {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const sinceVer = typeof req.query?.sinceVer === 'string' ? req.query.sinceVer.trim() : '';
+    const verKey = `chat:inbox_ver:${userId}`;
+    const currentVer = (await redis.get(verKey).catch(() => null)) || '0';
+
+    if (sinceVer && sinceVer === currentVer) {
+      return res.json({ ok: true, unchanged: true, ver: currentVer });
+    }
+
+    const pipe = redis.pipeline();
+    pipe.hgetall(`chat:unread:${userId}`);
+    pipe.hgetall(`chat:inbox_meta:${userId}`);
+    const pipeRes = await pipe.exec().catch(() => null);
+
+    const rawUnread = unwrapPipeResult(pipeRes?.[0], {}) || {};
+    const rawMeta = unwrapPipeResult(pipeRes?.[1], {}) || {};
+
+    const peers = {};
+    for (const [peerId, countStr] of Object.entries(rawUnread)) {
+      const unreadCount = Math.max(0, Number(countStr) || 0);
+      let metaObj = null;
+      if (rawMeta[peerId]) {
+        try {
+          metaObj = JSON.parse(rawMeta[peerId]);
+        } catch {}
+      }
+      peers[peerId] = {
+        unreadCount,
+        lastTs: Number(metaObj?.ts || 0),
+        lastId: metaObj?.id || null,
+        msgType: metaObj?.msgType || 'text',
+      };
+    }
+
+    res.json({
+      ok: true,
+      unchanged: false,
+      ver: currentVer,
+      peers,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function sendChatRtcSignal(req, res, next) {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const targetId = sanitizeTargetId(req.params?.targetId);
+    if (!userId || !targetId || String(userId) === String(targetId)) {
+      return res.status(400).json({ error: 'Invalid chat RTC target.' });
+    }
+
+    const { signalType, encryptedPayload, payload, sessionId } = req.body || {};
+    const rawSignalPayload = typeof encryptedPayload === 'string' ? encryptedPayload : payload;
+    const validTypes = ['rtc-offer', 'rtc-answer', 'rtc-ice', 'rtc-renegotiate'];
+    if (!validTypes.includes(signalType) || typeof rawSignalPayload !== 'string' || rawSignalPayload.length > 24000) {
+      return res.status(400).json({ error: 'Invalid chat RTC signal.' });
+    }
+
+    const rtcKey = getChatRtcSignalKey(targetId, userId);
+    const packet = JSON.stringify({
+      fromUserId: String(userId),
+      toUserId: String(targetId),
+      sessionId: typeof sessionId === 'string' ? sessionId.slice(0, 48) : null,
+      signalType,
+      payload: rawSignalPayload,
+      ts: Date.now(),
+    });
+
+    const pipe = redis.pipeline();
+    pipe.sismember(`blocked:${userId}`, targetId);
+    pipe.sismember(`blocked:${targetId}`, userId);
+    const blockRes = await pipe.exec().catch(() => null);
+    if (Number(unwrapPipeResult(blockRes?.[0], 0)) || Number(unwrapPipeResult(blockRes?.[1], 0))) {
+      return res.status(403).json({ error: 'Blocked user.' });
+    }
+
+    const writePipe = redis.pipeline();
+    writePipe.lpush(rtcKey, packet);
+    writePipe.ltrim(rtcKey, 0, 39);
+    writePipe.expire(rtcKey, CHAT_RTC_TTL_SECONDS);
+    await writePipe.exec().catch(() => {});
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getChatRtcSignals(req, res, next) {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const targetId = sanitizeTargetId(req.params?.targetId);
+    if (!userId || !targetId) {
+      return res.status(400).json({ error: 'Invalid chat RTC target.' });
+    }
+
+    const rtcKey = getChatRtcSignalKey(userId, targetId);
+    const pipe = redis.pipeline();
+    pipe.lrange(rtcKey, 0, -1);
+    pipe.del(rtcKey);
+    const pipeRes = await pipe.exec().catch(() => null);
+    const rawList = unwrapPipeResult(pipeRes?.[0], []);
+
+    const signals = (Array.isArray(rawList) ? rawList : [])
+      .map((item) => {
+        try {
+          return typeof item === 'string' ? JSON.parse(item) : item;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean)
+      .reverse();
+
+    res.json({ ok: true, signals });
   } catch (err) {
     next(err);
   }
@@ -393,12 +748,21 @@ export async function deletePersonalChatMessages(req, res, next) {
     const convHash = getConversationHash(userId, targetId);
     const hotKey = `chat:conv:${convHash}`;
     const coldKey = `chat:cold:${convHash}`;
+    const metaKey = getMetaConversationKey(convHash);
     const { messageIds, clearAll } = req.body || {};
 
     if (clearAll) {
+      const clearPipe = redis.pipeline();
+      clearPipe.del(hotKey);
+      clearPipe.del(coldKey);
+      clearPipe.hincrby(metaKey, 'deleteRev', 1);
+      clearPipe.hset(metaKey, 'emptyConfirmed', '1', 'backfilled', '1', 'lastTs', '0');
+      clearPipe.expire(metaKey, HOT_TTL_SECONDS);
+      clearPipe.hdel(`chat:unread:${userId}`, String(targetId));
+      clearPipe.hdel(`chat:unread:${targetId}`, String(userId));
+
       await Promise.all([
-        redis.del(hotKey).catch(() => {}),
-        redis.del(coldKey).catch(() => {}),
+        clearPipe.exec().catch(() => {}),
         prisma?.personalChatMessage
           ? prisma.personalChatMessage.deleteMany({ where: { convHash } }).catch(() => {})
           : Promise.resolve(),
@@ -419,23 +783,33 @@ export async function deletePersonalChatMessages(req, res, next) {
           const env = unpackEnvelope(raw);
           return env && !idSet.has(String(env.id));
         });
-        await redis.del(key).catch(() => {});
+        const p = redis.pipeline();
+        p.del(key);
         if (filtered.length > 0) {
-          await redis.rpush(key, ...filtered).catch(() => {});
-          await redis.expire(key, ttl).catch(() => {});
+          p.rpush(key, ...filtered);
+          p.expire(key, ttl);
         }
+        await p.exec().catch(() => {});
       }
 
-      if (prisma?.personalChatMessage) {
-        await prisma.personalChatMessage
-          .deleteMany({
-            where: {
-              convHash,
-              id: { in: Array.from(idSet) },
-            },
-          })
-          .catch(() => {});
-      }
+      const metaPipe = redis.pipeline();
+      metaPipe.hincrby(metaKey, 'deleteRev', 1);
+      metaPipe.hset(metaKey, 'backfilled', '0');
+      metaPipe.expire(metaKey, HOT_TTL_SECONDS);
+
+      await Promise.all([
+        metaPipe.exec().catch(() => {}),
+        prisma?.personalChatMessage
+          ? prisma.personalChatMessage
+              .deleteMany({
+                where: {
+                  convHash,
+                  id: { in: Array.from(idSet) },
+                },
+              })
+              .catch(() => {})
+          : Promise.resolve(),
+      ]);
     }
 
     res.json({ ok: true });
@@ -453,7 +827,7 @@ export async function sendCallSignal(req, res, next) {
     }
 
     const { callId, callMode, signalType, encryptedPayload, nonce, sig } = req.body || {};
-    const validSignalTypes = ['offer', 'answer', 'ice', 'ringing', 'hangup'];
+    const validSignalTypes = ['offer', 'answer', 'ice', 'ringing', 'hangup', 'cam_state'];
     if (!validSignalTypes.includes(signalType) || !nonce || typeof nonce !== 'string') {
       return res.status(400).json({ error: 'Invalid E2EE call signal.' });
     }
@@ -467,14 +841,19 @@ export async function sendCallSignal(req, res, next) {
     const targetLockKey = `call:lock:${targetId}`;
     const signalKey = `chat:call:${targetId}`;
 
-    const [nonceAcquired, existingTargetLock] = await Promise.all([
-      redis.set(nonceKey, '1', 'EX', 120, 'NX').catch(() => 'OK'),
-      signalType === 'offer' || signalType === 'ringing' || signalType === 'answer'
-        ? redis.get(targetLockKey).catch(() => null)
-        : Promise.resolve(null),
-    ]);
+    const checkLockNeeded =
+      signalType === 'offer' || signalType === 'ringing' || signalType === 'answer';
 
-    if (!nonceAcquired) {
+    const prePipe = redis.pipeline();
+    prePipe.set(nonceKey, '1', 'EX', 120, 'NX');
+    if (checkLockNeeded) {
+      prePipe.get(targetLockKey);
+    }
+    const preRes = await prePipe.exec().catch(() => null);
+    const nonceReply = preRes ? unwrapPipeResult(preRes[0], 'OK') : 'OK';
+    const existingTargetLock = checkLockNeeded ? unwrapPipeResult(preRes?.[1], null) : null;
+
+    if (nonceReply !== 'OK') {
       return res.status(409).json({ error: 'Duplicate call signal nonce rejected.' });
     }
 
@@ -503,7 +882,7 @@ export async function sendCallSignal(req, res, next) {
       return res.json({ ok: true, packet });
     }
 
-    if (signalType === 'offer' || signalType === 'ringing' || signalType === 'answer') {
+    if (checkLockNeeded) {
       if (existingTargetLock) {
         try {
           const parsedLock = JSON.parse(existingTargetLock);
@@ -552,11 +931,17 @@ export async function getCallSignals(req, res, next) {
 
     const signalKey = `chat:call:${userId}`;
     const targetLockKey = `call:lock:${userId}`;
+    const shouldClear = req.query?.clear === 'true';
 
-    const [rawSignals, activeLockRaw] = await Promise.all([
-      redis.lrange(signalKey, 0, -1).catch(() => []),
-      redis.get(targetLockKey).catch(() => null),
-    ]);
+    const pipe = redis.pipeline();
+    pipe.lrange(signalKey, 0, -1);
+    pipe.get(targetLockKey);
+    if (shouldClear) {
+      pipe.del(signalKey);
+    }
+    const pipeRes = await pipe.exec().catch(() => null);
+    const rawSignals = unwrapPipeResult(pipeRes?.[0], []);
+    const activeLockRaw = unwrapPipeResult(pipeRes?.[1], null);
 
     const signals = (Array.isArray(rawSignals) ? rawSignals : [])
       .map((item) => {
@@ -574,10 +959,6 @@ export async function getCallSignals(req, res, next) {
       try {
         activeLock = JSON.parse(activeLockRaw);
       } catch {}
-    }
-
-    if (req.query?.clear === 'true' && signals.length > 0) {
-      await redis.del(signalKey).catch(() => {});
     }
 
     res.json({

@@ -216,12 +216,14 @@ export function KalceriansPanel({
   activeChatUserSnapshotRef.current = activeChatUserSnapshot;
   incomingCallInitialStateRef.current = incomingCallInitialState;
 
-  // Poll for incoming call signals across devices (event-driven, offline-capable)
+  // Poll for incoming call signals across devices (event-driven, visibility-adaptive)
   useEffect(() => {
     if (!currentUser?.id) return;
 
     let active = true;
-    const interval = setInterval(async () => {
+    let timerId = null;
+
+    const checkSignals = async () => {
       if (!active) return;
       try {
         const res = await fetchCallSignals();
@@ -278,7 +280,7 @@ export function KalceriansPanel({
 
               if (typeof Notification !== "undefined" && Notification.permission === "granted") {
                 new Notification(`Panggilan Masuk dari ${caller.displayName || caller.name}`, {
-                  body: `Panggilan ${sig.callMode === "video" ? "Video" : "Suara"} masuk di Kalceria Map`,
+                  body: `Panggilan ${sig.callMode === "video" ? "video" : "suara"} masuk di Kalceria Map`,
                   icon: "/ForChat/Coki_Speak.png",
                   tag: `call-${sig.callId}`,
                   renotify: true,
@@ -303,11 +305,31 @@ export function KalceriansPanel({
           }
         }
       } catch {}
-    }, 2400);
+
+      if (active) {
+        const isHidden = typeof document !== "undefined" && document.hidden;
+        timerId = setTimeout(checkSignals, isHidden ? 4800 : 1200);
+      }
+    };
+
+    timerId = setTimeout(checkSignals, 600);
+
+    const onVisibilityWake = () => {
+      if (active && typeof document !== "undefined" && !document.hidden) {
+        if (timerId) clearTimeout(timerId);
+        checkSignals();
+      }
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibilityWake);
+    }
 
     return () => {
       active = false;
-      clearInterval(interval);
+      if (timerId) clearTimeout(timerId);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibilityWake);
+      }
     };
   }, [currentUser?.id]);
 

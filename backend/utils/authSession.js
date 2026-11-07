@@ -7,6 +7,27 @@ export const AUTH_TTL_SECONDS = 20 * 60;
 const JWT_ISSUER = 'kalceria-api';
 const JWT_AUDIENCE = 'kalceria-web';
 
+// Bounded O(1) in-process session micro-cache (eliminates redundant Redis RTTs during high-frequency chat/WebRTC bursts while keeping logout revocation 0ms immediate)
+const SESSION_MEM_CACHE = new Map();
+const SESSION_MEM_TTL_MS = 2500;
+const SESSION_MEM_MAX_SIZE = 25000;
+
+function cacheVerifiedJti(jti, userId) {
+  if (!jti || !userId) return;
+  if (SESSION_MEM_CACHE.size >= SESSION_MEM_MAX_SIZE) {
+    const oldestKey = SESSION_MEM_CACHE.keys().next().value;
+    if (oldestKey !== undefined) SESSION_MEM_CACHE.delete(oldestKey);
+  }
+  SESSION_MEM_CACHE.set(jti, { userId, expAt: Date.now() + SESSION_MEM_TTL_MS });
+}
+
+function evictUserFromMemCache(userId) {
+  if (!userId) return;
+  for (const [k, v] of SESSION_MEM_CACHE.entries()) {
+    if (v.userId === userId) SESSION_MEM_CACHE.delete(k);
+  }
+}
+
 function sessionKey(jti) {
   return `auth:session:${jti}`;
 }
@@ -29,9 +50,13 @@ export async function createAuthSession(user) {
     },
   );
 
-  await redis.set(sessionKey(jti), user.id, 'EX', AUTH_TTL_SECONDS);
-  await redis.sadd(userSessionsKey(user.id), jti);
-  await redis.expire(userSessionsKey(user.id), AUTH_TTL_SECONDS);
+  const pipe = redis.pipeline();
+  pipe.set(sessionKey(jti), user.id, 'EX', AUTH_TTL_SECONDS);
+  pipe.sadd(userSessionsKey(user.id), jti);
+  pipe.expire(userSessionsKey(user.id), AUTH_TTL_SECONDS);
+  await pipe.exec();
+
+  cacheVerifiedJti(jti, user.id);
 
   return token;
 }
@@ -45,8 +70,21 @@ export async function verifyAuthSession(token) {
     });
 
     if (!payload.userId || !payload.jti) return null;
+
+    const cached = SESSION_MEM_CACHE.get(payload.jti);
+    if (cached) {
+      if (Date.now() < cached.expAt && cached.userId === payload.userId) {
+        return payload;
+      }
+      SESSION_MEM_CACHE.delete(payload.jti);
+    }
+
     const sessionUserId = await redis.get(sessionKey(payload.jti));
-    return sessionUserId === payload.userId ? payload : null;
+    if (sessionUserId === payload.userId) {
+      cacheVerifiedJti(payload.jti, payload.userId);
+      return payload;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -86,17 +124,24 @@ export async function revokeAuthSession(token) {
       ignoreExpiration: true,
     });
     if (!payload.userId || !payload.jti) return;
-    await redis.del(sessionKey(payload.jti));
-    await redis.srem(userSessionsKey(payload.userId), payload.jti);
+    SESSION_MEM_CACHE.delete(payload.jti);
+    const pipe = redis.pipeline();
+    pipe.del(sessionKey(payload.jti));
+    pipe.srem(userSessionsKey(payload.userId), payload.jti);
+    await pipe.exec();
   } catch {
     // Invalid or expired cookies are still cleared by the logout route.
   }
 }
 
 export async function revokeUserSessions(userId) {
+  evictUserFromMemCache(userId);
   const key = userSessionsKey(userId);
   const sessionIds = await redis.smembers(key);
   if (sessionIds.length) {
+    for (const jti of sessionIds) {
+      SESSION_MEM_CACHE.delete(jti);
+    }
     await redis.del(...sessionIds.map(sessionKey));
   }
   await redis.del(key);

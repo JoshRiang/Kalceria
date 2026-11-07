@@ -1,6 +1,17 @@
 "use client";
 
 const KEY_CACHE = new Map();
+const MAX_KEY_CACHE = 500;
+const DECRYPT_CACHE = new Map();
+const MAX_DECRYPT_CACHE = 1200;
+
+function setBoundedMap(map, maxLen, key, val) {
+  if (map.size >= maxLen && !map.has(key)) {
+    const oldest = map.keys().next().value;
+    if (oldest !== undefined) map.delete(oldest);
+  }
+  map.set(key, val);
+}
 
 function getWebCrypto() {
   if (typeof globalThis !== "undefined" && globalThis.crypto?.subtle) {
@@ -96,7 +107,7 @@ async function deriveConversationKey(userA, userB) {
     ["encrypt", "decrypt"]
   );
 
-  KEY_CACHE.set(pairId, key);
+  setBoundedMap(KEY_CACHE, MAX_KEY_CACHE, pairId, key);
   return key;
 }
 
@@ -201,6 +212,38 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
     return outerUrl || innerUrl || null;
   };
 
+  const sortedPair = [String(userA || "anon"), String(userB || "anon")].sort();
+  const decryptCacheKey =
+    envelope.id && sig && iv
+      ? `${sortedPair[0]}::${sortedPair[1]}::${envelope.id}::${iv}::${sig}`
+      : null;
+
+  if (decryptCacheKey && DECRYPT_CACHE.has(decryptCacheKey)) {
+    const cachedDecoded = DECRYPT_CACHE.get(decryptCacheKey);
+    return {
+      ...envelope,
+      text: cachedDecoded.text || "",
+      msgType:
+        envelope.msgType && envelope.msgType !== "text"
+          ? envelope.msgType
+          : cachedDecoded.msgType || envelope.msgType || "text",
+      mediaUrl: pickValidMediaUrl(envelope.mediaUrl, cachedDecoded.mediaUrl),
+      voiceDuration: envelope.voiceDuration || cachedDecoded.voiceDuration || null,
+      voiceWaveform: envelope.voiceWaveform || cachedDecoded.voiceWaveform || null,
+      videoDuration: envelope.videoDuration || cachedDecoded.videoDuration || null,
+      isViewOnce: envelope.isViewOnce !== undefined ? envelope.isViewOnce : cachedDecoded.isViewOnce,
+      callMode: envelope.callMode || cachedDecoded.callMode || null,
+      callDuration:
+        envelope.callDuration !== undefined && envelope.callDuration !== null
+          ? envelope.callDuration
+          : cachedDecoded.callDuration || null,
+      replyTo: cachedDecoded.replyTo || envelope.replyTo || null,
+      ts: Number(cachedDecoded.ts || envelope.ts) || Date.now(),
+      status: envelope.status || "sent",
+      verifiedE2EE: true,
+    };
+  }
+
   const wc = getWebCrypto();
   if (wc?.subtle) {
     try {
@@ -220,6 +263,10 @@ export async function decryptChatEnvelope(envelope, userA, userB) {
         if (sigOuter !== sig && sigInner !== sig) {
           return null;
         }
+      }
+
+      if (decryptCacheKey) {
+        setBoundedMap(DECRYPT_CACHE, MAX_DECRYPT_CACHE, decryptCacheKey, decoded);
       }
 
       return {

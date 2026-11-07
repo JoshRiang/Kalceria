@@ -57,6 +57,7 @@ export function usePersonalCallState({
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [isCamOff, setIsCamOff] = useState(false);
+  const [isRemoteCamOff, setIsRemoteCamOff] = useState(false);
   const [hasLocalStream, setHasLocalStream] = useState(false);
   const [hasRemoteStream, setHasRemoteStream] = useState(false);
   const [isBadConnection, setIsBadConnection] = useState(false);
@@ -69,11 +70,17 @@ export function usePersonalCallState({
   const remoteAudioRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const pcRef = useRef(null);
+  const callCtrlChannelRef = useRef(null);
   const pendingIceCandidatesRef = useRef([]);
   const secondsRef = useRef(0);
   const activeCallIdRef = useRef(callState?.callId || `call_${Date.now()}`);
   const pollTimerRef = useRef(null);
   const isHungUpRef = useRef(false);
+  const isCamOffRef = useRef(isCamOff);
+  const statusRef = useRef(status);
+  const camMountSyncedRef = useRef(false);
+  isCamOffRef.current = isCamOff;
+  statusRef.current = status;
 
   const targetUserRef = useRef(targetUser);
   const onEndCallRef = useRef(onEndCall);
@@ -89,8 +96,16 @@ export function usePersonalCallState({
     pendingIceCandidatesRef.current = [];
 
     if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
       clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
+    }
+
+    if (callCtrlChannelRef.current) {
+      try {
+        callCtrlChannelRef.current.close();
+      } catch {}
+      callCtrlChannelRef.current = null;
     }
 
     if (pcRef.current) {
@@ -115,6 +130,7 @@ export function usePersonalCallState({
 
     setHasLocalStream(false);
     setHasRemoteStream(false);
+    setIsRemoteCamOff(false);
   }, []);
 
   // Connected Call Timer
@@ -166,7 +182,17 @@ export function usePersonalCallState({
       let stream = null;
       try {
         if (mode === "video") {
-          stream = await acquireCameraStream({ facingMode: "user" }, true);
+          try {
+            stream = await acquireCameraStream({ facingMode: "user" }, true);
+          } catch (camErr) {
+            if (camErr?.code === "PERMISSION_DENIED") {
+              throw camErr;
+            }
+            // Camera unavailable or busy: fall back to microphone-only so video call still connects cleanly with camera-off state
+            stream = await acquireMicrophoneStream();
+            isCamOffRef.current = true;
+            setIsCamOff(true);
+          }
         } else {
           stream = await acquireMicrophoneStream();
         }
@@ -205,10 +231,55 @@ export function usePersonalCallState({
 
       // 3. WebRTC Peer Connection Setup
       let pc = null;
+      const attachControlDataChannel = (dc) => {
+        if (!dc) return;
+        callCtrlChannelRef.current = dc;
+        dc.onopen = () => {
+          try {
+            dc.send(
+              JSON.stringify({
+                type: "cam_state",
+                isCamOff: Boolean(isCamOffRef.current),
+                ts: Date.now(),
+              })
+            );
+          } catch {}
+        };
+        dc.onmessage = (ev) => {
+          try {
+            const parsed = JSON.parse(ev.data);
+            if (parsed?.type === "cam_state") {
+              setIsRemoteCamOff(Boolean(parsed.isCamOff));
+            } else if (parsed?.type === "hangup" && !isHungUpRef.current) {
+              stopCallRingtone();
+              setStatus("ended");
+              const callDuration = secondsRef.current;
+              setTimeout(() => {
+                teardownCall();
+                onEndCallRef.current?.({ mode, seconds: callDuration });
+              }, 500);
+            }
+          } catch {}
+        };
+      };
+
       if (typeof RTCPeerConnection !== "undefined") {
         try {
           pc = new RTCPeerConnection(RTC_CONFIG);
           pcRef.current = pc;
+
+          if (!isIncomingAnswer) {
+            try {
+              const ctrlDc = pc.createDataChannel("kalceria_call_ctrl", { ordered: true });
+              attachControlDataChannel(ctrlDc);
+            } catch {}
+          } else {
+            pc.ondatachannel = (ev) => {
+              if (ev.channel?.label === "kalceria_call_ctrl") {
+                attachControlDataChannel(ev.channel);
+              }
+            };
+          }
 
           if (stream) {
             stream.getTracks().forEach((track) => {
@@ -247,8 +318,10 @@ export function usePersonalCallState({
             } else {
               remoteStreamRef.current = incomingStream;
             }
-            setHasRemoteStream(true);
-            if (remoteVideoRef.current && mode === "video") {
+
+            const hasVideoTrack = incomingStream.getVideoTracks().length > 0;
+            setHasRemoteStream(mode === "video" ? hasVideoTrack : true);
+            if (remoteVideoRef.current && mode === "video" && hasVideoTrack) {
               remoteVideoRef.current.srcObject = incomingStream;
               remoteVideoRef.current.play?.().catch(() => {});
             }
@@ -293,6 +366,16 @@ export function usePersonalCallState({
               nonce: generateCryptoNonce(),
               encryptedPayload: JSON.stringify(answer),
             }).catch(() => {});
+
+            if (isCamOffRef.current && mode === "video") {
+              postCallSignal(targetUserId, {
+                callId: activeCallIdRef.current,
+                callMode: mode,
+                signalType: "cam_state",
+                nonce: generateCryptoNonce(),
+                encryptedPayload: JSON.stringify({ isCamOff: true }),
+              }).catch(() => {});
+            }
           } catch {}
         }
       } else {
@@ -326,8 +409,9 @@ export function usePersonalCallState({
         }, 750);
       }
 
-      // 5. Polling Loop for Peer Signals (Ringing / Answer / ICE / Hangup)
-      pollTimerRef.current = setInterval(async () => {
+      // 5. Adaptive Polling Loop for Peer Signals (Ringing / Answer / ICE / CamState / Hangup)
+      // Fast 450ms handshake during call establishment; relaxes to 1000ms once connected
+      const runSignalPoll = async () => {
         if (cancelled || isHungUpRef.current) return;
         try {
           const res = await fetchCallSignals({ clear: "true" });
@@ -345,6 +429,13 @@ export function usePersonalCallState({
                 onEndCallRef.current?.({ mode, seconds: callDuration });
               }, 700);
               return;
+            }
+
+            if (sig.signalType === "cam_state" && sig.encryptedPayload) {
+              try {
+                const camPayload = JSON.parse(sig.encryptedPayload);
+                setIsRemoteCamOff(Boolean(camPayload?.isCamOff));
+              } catch {}
             }
 
             if (sig.signalType === "ringing" && !isIncomingAnswer) {
@@ -375,7 +466,14 @@ export function usePersonalCallState({
             }
           }
         } catch {}
-      }, 1000);
+
+        if (!cancelled && !isHungUpRef.current) {
+          const nextDelay = statusRef.current === "connected" ? 1000 : 450;
+          pollTimerRef.current = setTimeout(runSignalPoll, nextDelay);
+        }
+      };
+
+      pollTimerRef.current = setTimeout(runSignalPoll, 350);
     }
 
     initCall();
@@ -411,14 +509,36 @@ export function usePersonalCallState({
     }
   }, [isMicMuted]);
 
-  // Toggle Camera Mute
+  // Toggle Camera Mute + Real-Time Peer Camera State Sync (DataChannel + Signal Queue Fallback)
   useEffect(() => {
     if (localStreamRef.current) {
       localStreamRef.current.getVideoTracks().forEach((track) => {
         track.enabled = !isCamOff;
       });
     }
-  }, [isCamOff]);
+
+    const dc = callCtrlChannelRef.current;
+    if (dc && dc.readyState === "open") {
+      try {
+        dc.send(JSON.stringify({ type: "cam_state", isCamOff: Boolean(isCamOff), ts: Date.now() }));
+      } catch {}
+    }
+
+    if (!camMountSyncedRef.current) {
+      camMountSyncedRef.current = true;
+      if (!isCamOff) return;
+    }
+
+    if (mode === "video" && targetUserId && !isHungUpRef.current) {
+      postCallSignal(targetUserId, {
+        callId: activeCallIdRef.current,
+        callMode: mode,
+        signalType: "cam_state",
+        nonce: generateCryptoNonce(),
+        encryptedPayload: JSON.stringify({ isCamOff: Boolean(isCamOff) }),
+      }).catch(() => {});
+    }
+  }, [isCamOff, mode, targetUserId]);
 
   // Reactive binding: ensure local & remote media elements play stream as soon as elements mount
   useEffect(() => {
@@ -435,6 +555,8 @@ export function usePersonalCallState({
       if (remoteVideoRef.current && mode === "video") {
         if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
           remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        }
+        if (!isRemoteCamOff) {
           remoteVideoRef.current.play?.().catch(() => {});
         }
       }
@@ -445,11 +567,17 @@ export function usePersonalCallState({
         }
       }
     }
-  }, [hasRemoteStream, mode, status]);
+  }, [hasRemoteStream, isRemoteCamOff, mode, status]);
 
   const handleHangup = useCallback(() => {
     stopCallRingtone();
     setStatus("ended");
+    const dc = callCtrlChannelRef.current;
+    if (dc && dc.readyState === "open") {
+      try {
+        dc.send(JSON.stringify({ type: "hangup", ts: Date.now() }));
+      } catch {}
+    }
     if (targetUserId) {
       postCallSignal(targetUserId, {
         callId: activeCallIdRef.current,
@@ -476,7 +604,9 @@ export function usePersonalCallState({
     setIsSpeakerOn,
     isCamOff,
     setIsCamOff,
+    isRemoteCamOff,
     hasLocalStream,
+    hasRemoteStream,
     isBadConnection,
     safetyCode,
     showSafetyTooltip,

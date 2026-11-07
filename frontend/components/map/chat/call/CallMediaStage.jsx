@@ -36,7 +36,9 @@ export function CallMediaStage({
   isMicMuted,
   isSpeakerOn,
   isCamOff,
+  isRemoteCamOff = false,
   hasLocalStream,
+  hasRemoteStream = false,
   isBadConnection = false,
   localVideoRef,
   remoteVideoRef,
@@ -44,6 +46,7 @@ export function CallMediaStage({
 }) {
   const displayName =
     targetUser?.displayName || targetUser?.name || targetUser?.nickname || "Kalcerian";
+  const showRemoteLiveVideo = status === "connected" && hasRemoteStream && !isRemoteCamOff;
 
   return (
     <>
@@ -56,9 +59,17 @@ export function CallMediaStage({
         className="hidden"
       />
 
-      {/* Background Layer: Live Video Feed for Video Call, or Pure Opaque Base for Voice Call */}
+      {/* Background Layer: Live Video Feed (or Greyish-Black Blurred Stage when Peer Camera is Off) for Video Call, or Pure Opaque Base for Voice Call */}
       {mode === "video" ? (
-        <div className="absolute inset-0 z-0 overflow-hidden bg-black flex items-center justify-center">
+        <div
+          className={`absolute inset-0 z-0 overflow-hidden flex items-center justify-center transition-colors duration-300 ${
+            showRemoteLiveVideo
+              ? "bg-black"
+              : isMapDark
+              ? "bg-[#12151b]"
+              : "bg-[#262a33]"
+          }`}
+        >
           {/* Live Peer WebRTC Video Feed (Muted because remoteAudioRef plays the audio stream cleanly) */}
           <video
             ref={remoteVideoRef}
@@ -66,35 +77,49 @@ export function CallMediaStage({
             playsInline
             muted
             className={`w-full h-full object-cover transition-opacity duration-300 ${
-              status === "connected" ? "opacity-100" : "opacity-0 pointer-events-none"
+              showRemoteLiveVideo ? "opacity-100" : "opacity-0 pointer-events-none"
             } ${isBadConnection ? "filter blur-[12px] scale-105" : ""}`}
           />
 
-          {/* Calling / Ringing State: Peer Avatar centered while connecting */}
-          {status !== "connected" && (
-            <div className="absolute inset-0 z-1 flex flex-col items-center justify-center pointer-events-none">
-              <div className="relative w-28 h-28 rounded-full overflow-hidden border-2 border-white/80 shadow-2xl bg-[#161b22]">
-                <ContentImage
-                  src={avatarUrl(targetUser)}
-                  alt={displayName}
-                  width={120}
-                  height={120}
-                  className="w-full h-full object-cover"
-                />
+          {/* Target User Camera-Off / Connecting Stage: Abu Black Greyish Blur adapted to Light/Dark Mode + Centered Avatar */}
+          {!showRemoteLiveVideo && (
+            <>
+              <div
+                className={`absolute inset-0 z-1 pointer-events-none transition-colors duration-300 ${
+                  isMapDark
+                    ? "bg-gradient-to-b from-[#252932]/85 via-[#161920]/92 to-[#0b0d12]/96 backdrop-blur-2xl"
+                    : "bg-gradient-to-b from-[#424754]/85 via-[#2e323c]/90 to-[#1e2128]/95 backdrop-blur-2xl"
+                }`}
+              />
+              <div
+                className={`absolute w-64 h-64 rounded-full blur-3xl pointer-events-none z-1 ${
+                  isMapDark ? "bg-white/[0.06]" : "bg-white/[0.12]"
+                }`}
+              />
+              <div className="absolute inset-0 z-2 flex flex-col items-center justify-center pointer-events-none">
+                <div
+                  className={`relative w-28 h-28 rounded-full overflow-hidden border-2 shadow-2xl ${
+                    isMapDark
+                      ? "border-white/75 bg-[#161b22]"
+                      : "border-white/85 bg-[#2d313a]"
+                  }`}
+                >
+                  <ContentImage
+                    src={avatarUrl(targetUser)}
+                    alt={displayName}
+                    width={120}
+                    height={120}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
-          {/* Contrast Gradient Overlay */}
-          <div
-            className={`absolute inset-0 pointer-events-none ${
-              status === "connected"
-                ? "bg-gradient-to-b from-black/55 via-transparent to-black/70"
-                : isMapDark
-                ? "bg-black/65 backdrop-blur-xl"
-                : "bg-white/75 backdrop-blur-xl"
-            }`}
-          />
+          {/* Contrast Gradient Overlay when Live Video is Active */}
+          {showRemoteLiveVideo && (
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/55 via-transparent to-black/70" />
+          )}
         </div>
       ) : (
         /* Voice Call: Solid 100% Opaque Base Layer (White in Light Mode, Obsidian Dark in Dark Mode) + Clear Coki Faces Pattern below sleek header */
@@ -296,11 +321,15 @@ export function CallMediaStage({
           </div>
         )}
 
-        {/* Picture-in-Picture (PiP) Self Camera Preview for Video Call */}
+        {/* Picture-in-Picture (PiP) Self Camera Preview for Video Call — Hitam/Greyish when camera is off, adapted to Light/Dark Mode */}
         {mode === "video" && (
           <div
-            className={`absolute bottom-3 right-3 w-[84px] h-[116px] rounded-xl overflow-hidden shadow-2xl flex items-center justify-center border border-white/20 ${
-              isMapDark ? "bg-[#161b22]" : "bg-white"
+            className={`absolute bottom-3 right-3 w-[84px] h-[116px] rounded-xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors duration-250 border ${
+              hasLocalStream && !isCamOff
+                ? "bg-[#0d0f14] border-white/25"
+                : isMapDark
+                ? "bg-[#0b0d11] border-white/20"
+                : "bg-[#2a2e36] border-white/35"
             }`}
           >
             {hasLocalStream && !isCamOff ? (
@@ -313,7 +342,11 @@ export function CallMediaStage({
               />
             ) : (
               <div className="flex items-center justify-center p-2 text-center">
-                <div className="w-12 h-12 rounded-full overflow-hidden shadow-sm">
+                <div
+                  className={`w-12 h-12 rounded-full overflow-hidden border shadow-md ${
+                    isMapDark ? "border-white/30 bg-[#161b22]" : "border-white/50 bg-[#363b45]"
+                  }`}
+                >
                   <ContentImage
                     src={avatarUrl(currentUser || { name: "Me" })}
                     alt="Self"

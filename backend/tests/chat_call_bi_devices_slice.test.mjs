@@ -9,6 +9,10 @@ import {
   getPersonalChatMessages,
   sendPersonalChatMessage,
   deletePersonalChatMessages,
+  ackPersonalChatRead,
+  getPersonalChatInboxSummary,
+  sendChatRtcSignal,
+  getChatRtcSignals,
   sendCallSignal,
   getCallSignals,
 } from '../controllers/personalChatController.js';
@@ -653,7 +657,289 @@ test('E2E Verification: Real AES-256-GCM Chat, Media Persistence, Tiered Redis/P
     assert.equal(hangupSignals[0].signalType, 'hangup');
     assert.equal(hangupSignals[0].callId, callId);
 
-    console.log('\n[Bi-Device E2E Verification] ALL REAL E2EE CHAT, TIERED STORAGE & WEBRTC SIGNALING TESTS PASSED!\n');
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 5. O(1) Watermark Delta Sync (?sinceTs=), Monotonic Read Ack & Global Inbox Summary
+    // ─────────────────────────────────────────────────────────────────────────────
+    const baselineSyncRes = createMockRes();
+    await getPersonalChatMessages(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        query: { limit: 30 },
+      },
+      baselineSyncRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(baselineSyncRes.statusCode, 200);
+    const baselineLastTs = baselineSyncRes.body.lastTs;
+    const baselinePeerReadTs = baselineSyncRes.body.peerReadTs;
+    const baselineDelRev = baselineSyncRes.body.deleteRev;
+    assert.ok(baselineLastTs > 0, 'Baseline sync must report positive lastTs watermark');
+
+    // 5A: Poll with exact current watermarks -> MUST short-circuit in O(1) with unchanged=true & 0 messages!
+    const unchangedRes = createMockRes();
+    await getPersonalChatMessages(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        query: {
+          limit: 30,
+          sinceTs: baselineLastTs,
+          sinceReadTs: baselinePeerReadTs,
+          sinceDelRev: baselineDelRev,
+        },
+      },
+      unchangedRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(unchangedRes.body?.unchanged, true, 'Delta poll with matching watermarks must short-circuit with unchanged=true');
+    assert.equal(unchangedRes.body?.messages?.length, 0);
+
+    // 5B: Send 1 new real AES-256-GCM message from User A -> User B
+    const deltaMsgTs = Math.max(Date.now(), baselineLastTs + 25);
+    const deltaEnv = await encryptChatPayload(
+      {
+        text: 'Zero-latency delta message!',
+        msgType: 'text',
+        ts: deltaMsgTs,
+      },
+      userA.userId,
+      userB.userId
+    );
+    const sendDeltaRes = createMockRes();
+    await sendPersonalChatMessage(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: deltaEnv,
+      },
+      sendDeltaRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(sendDeltaRes.statusCode, 201);
+
+    // 5C: Global O(1) Inbox Summary on User B must report unreadCount >= 1 for User A + version token
+    const inboxRes1 = createMockRes();
+    await getPersonalChatInboxSummary(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        query: {},
+      },
+      inboxRes1,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(inboxRes1.body?.ok, true);
+    assert.equal(inboxRes1.body?.unchanged, false);
+    assert.ok(inboxRes1.body?.ver && inboxRes1.body.ver !== '0');
+    assert.ok(inboxRes1.body?.peers?.[userA.userId]?.unreadCount >= 1, 'Inbox summary must report unread message from User A');
+
+    // Polling inbox summary again with matching sinceVer -> O(1) unchanged fast-path!
+    const inboxUnchangedRes = createMockRes();
+    await getPersonalChatInboxSummary(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        query: { sinceVer: inboxRes1.body.ver },
+      },
+      inboxUnchangedRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(inboxUnchangedRes.body?.unchanged, true, 'Inbox summary must short-circuit in O(1) when sinceVer matches');
+
+    // 5D: User B delta-polls with ?sinceTs=baselineLastTs -> MUST return delta=true and ONLY the 1 new message!
+    const deltaFetchRes = createMockRes();
+    await getPersonalChatMessages(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        query: {
+          limit: 30,
+          sinceTs: baselineLastTs,
+          sinceReadTs: baselinePeerReadTs,
+          sinceDelRev: baselineDelRev,
+        },
+      },
+      deltaFetchRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(deltaFetchRes.body?.delta, true, 'Incremental fetch must return delta=true');
+    assert.equal(deltaFetchRes.body?.messages?.length, 1, 'Delta fetch must transmit ONLY the 1 newly sent message');
+    assert.equal(deltaFetchRes.body.messages[0].id, deltaEnv.id);
+
+    // 5E: Direct O(1) P2P Read Receipt Ack endpoint test (ackPersonalChatRead)
+    const deltaMsg2Ts = deltaMsgTs + 25;
+    const deltaEnv2 = await encryptChatPayload(
+      {
+        text: 'P2P DataChannel message acked via O(1) read endpoint',
+        msgType: 'text',
+        ts: deltaMsg2Ts,
+      },
+      userA.userId,
+      userB.userId
+    );
+    await sendPersonalChatMessage(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: deltaEnv2,
+      },
+      createMockRes(),
+      (e) => {
+        if (e) throw e;
+      }
+    );
+
+    const ackReadRes = createMockRes();
+    await ackPersonalChatRead(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        body: { upToTs: deltaMsg2Ts, messageIds: [deltaEnv2.id] },
+      },
+      ackReadRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(ackReadRes.body?.ok, true);
+    assert.equal(ackReadRes.body?.readUpTo, deltaMsg2Ts);
+
+    // Inbox unread badge for User A on User B's summary must now be cleared!
+    const inboxAfterAckRes = createMockRes();
+    await getPersonalChatInboxSummary(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        query: { sinceVer: inboxRes1.body.ver },
+      },
+      inboxAfterAckRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(inboxAfterAckRes.body?.peers?.[userA.userId], undefined, 'Unread entry must be cleared after ackPersonalChatRead');
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 6. Isolated P2P Chat WebRTC DataChannel Signaling + Piggybacked Sync & Video Call cam_state
+    // ─────────────────────────────────────────────────────────────────────────────
+    const rtcOfferRes = createMockRes();
+    await sendChatRtcSignal(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+        body: {
+          signalType: 'rtc-offer',
+          sessionId: 'crtc_test_session',
+          encryptedPayload: JSON.stringify({ type: 'offer', sdp: 'v=0\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n' }),
+        },
+      },
+      rtcOfferRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(rtcOfferRes.statusCode, 200);
+    assert.equal(await redis.get(`call:lock:${userA.userId}`), null, 'Chat P2P DataChannel signaling must NEVER acquire voice/video call lock');
+    assert.equal(await redis.get(`call:lock:${userB.userId}`), null, 'Chat P2P DataChannel signaling must NEVER lock callee');
+
+    // Piggybacked retrieval via includeRtc=1 inside getPersonalChatMessages (even on unchanged short-circuit!)
+    const piggybackRes = createMockRes();
+    await getPersonalChatMessages(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        query: {
+          limit: 30,
+          sinceTs: deltaMsg2Ts,
+          sinceReadTs: 0,
+          sinceDelRev: baselineDelRev,
+          includeRtc: '1',
+        },
+      },
+      piggybackRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(piggybackRes.body?.rtcSignals?.length, 1, 'Piggybacked includeRtc=1 must deliver queued P2P DataChannel offer');
+    assert.equal(piggybackRes.body.rtcSignals[0].signalType, 'rtc-offer');
+
+    // Dedicated getChatRtcSignals endpoint test for answer + trickle ICE
+    await sendChatRtcSignal(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        body: {
+          signalType: 'rtc-answer',
+          sessionId: 'crtc_test_session',
+          encryptedPayload: JSON.stringify({ type: 'answer', sdp: 'v=0\r\n' }),
+        },
+      },
+      createMockRes(),
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    const rtcPollARes = createMockRes();
+    await getChatRtcSignals(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        params: { targetId: userB.userId },
+      },
+      rtcPollARes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(rtcPollARes.body?.signals?.length, 1);
+    assert.equal(rtcPollARes.body.signals[0].signalType, 'rtc-answer');
+
+    // Video Call cam_state signal verification
+    const camCallId = `call_cam_${Date.now()}`;
+    const camSigRes = createMockRes();
+    await sendCallSignal(
+      {
+        user: { userId: userB.userId, id: userB.userId },
+        params: { targetId: userA.userId },
+        body: {
+          callId: camCallId,
+          callMode: 'video',
+          signalType: 'cam_state',
+          nonce: `cam_nc_${Date.now()}`,
+          encryptedPayload: JSON.stringify({ isCamOff: true }),
+        },
+      },
+      camSigRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(camSigRes.statusCode, 200);
+    const camPollRes = createMockRes();
+    await getCallSignals(
+      {
+        user: { userId: userA.userId, id: userA.userId },
+        query: { clear: 'true' },
+      },
+      camPollRes,
+      (e) => {
+        if (e) throw e;
+      }
+    );
+    assert.equal(camPollRes.body?.signals?.[0]?.signalType, 'cam_state');
+    assert.deepEqual(JSON.parse(camPollRes.body.signals[0].encryptedPayload), { isCamOff: true });
+
+    console.log('\n[Bi-Device E2E Verification] ALL REAL E2EE CHAT, TIERED STORAGE, O(1) DELTA SYNC & WEBRTC SIGNALING TESTS PASSED!\n');
   } finally {
     if (sortedPair) {
       const convHash = crypto
@@ -666,16 +952,27 @@ test('E2E Verification: Real AES-256-GCM Chat, Media Persistence, Tiered Redis/P
         .catch(() => {});
       await redis.del(`chat:conv:${convHash}`).catch(() => {});
       await redis.del(`chat:cold:${convHash}`).catch(() => {});
+      await redis.del(`chat:meta:${convHash}`).catch(() => {});
     }
     if (userA?.userId) {
       await prisma.user.delete({ where: { id: userA.userId } }).catch(() => {});
       await redis.del(`chat:call:${userA.userId}`).catch(() => {});
       await redis.del(`call:lock:${userA.userId}`).catch(() => {});
+      await redis.del(`chat:unread:${userA.userId}`).catch(() => {});
+      await redis.del(`chat:inbox_meta:${userA.userId}`).catch(() => {});
+      await redis.del(`chat:inbox_ver:${userA.userId}`).catch(() => {});
+      if (userB?.userId) {
+        await redis.del(`chat:rtc:${userA.userId}:${userB.userId}`).catch(() => {});
+        await redis.del(`chat:rtc:${userB.userId}:${userA.userId}`).catch(() => {});
+      }
     }
     if (userB?.userId) {
       await prisma.user.delete({ where: { id: userB.userId } }).catch(() => {});
       await redis.del(`chat:call:${userB.userId}`).catch(() => {});
       await redis.del(`call:lock:${userB.userId}`).catch(() => {});
+      await redis.del(`chat:unread:${userB.userId}`).catch(() => {});
+      await redis.del(`chat:inbox_meta:${userB.userId}`).catch(() => {});
+      await redis.del(`chat:inbox_ver:${userB.userId}`).catch(() => {});
     }
     await prisma.$disconnect().catch(() => {});
     await redis.quit().catch(() => {});

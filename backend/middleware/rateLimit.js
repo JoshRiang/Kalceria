@@ -34,9 +34,20 @@ export function rateLimit({ name, max, windowSeconds, key = (req) => req.ip || '
 }
 
 export const apiRateLimit = rateLimit({
-  name: 'api-ip',
-  max: 900,
+  name: 'api-actor',
+  max: 3600,
   windowSeconds: 15 * 60,
+  key: (req) => {
+    const sessionToken = req.cookies?.token;
+    if (typeof sessionToken === 'string' && sessionToken.length >= 24) {
+      return `tok:${sessionToken}`;
+    }
+    const xff = req.headers?.['x-forwarded-for'];
+    const clientIp = typeof xff === 'string' && xff.trim()
+      ? xff.split(',')[0].trim()
+      : (req.ip || 'unknown');
+    return `ip:${clientIp}`;
+  },
 });
 
 export const loginIpRateLimit = rateLimit({
