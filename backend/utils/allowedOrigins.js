@@ -9,6 +9,10 @@ export const DEFAULT_ALLOWED_ORIGINS = [
   "https://www.kalceria.id",
   "http://kalceria.id",
   "http://www.kalceria.id",
+  "https://kalceria.or.id",
+  "https://www.kalceria.or.id",
+  "http://kalceria.or.id",
+  "http://www.kalceria.or.id",
   "https://kalceria-frontend.vercel.app",
   "https://kalceria-backend.vercel.app",
   "http://localhost:3000",
@@ -28,8 +32,13 @@ export function isAllowedOrigin(origin) {
     const url = new URL(normalized);
     const hostname = url.hostname.toLowerCase();
 
-    // 1. Official domain and any subdomains (*.kalceria.id, kalceria.id)
-    if (hostname === "kalceria.id" || hostname.endsWith(".kalceria.id")) {
+    // 1. Official domain and any subdomains (*.kalceria.id, *.kalceria.or.id)
+    if (
+      hostname === "kalceria.id" ||
+      hostname.endsWith(".kalceria.id") ||
+      hostname === "kalceria.or.id" ||
+      hostname.endsWith(".kalceria.or.id")
+    ) {
       return true;
     }
 
