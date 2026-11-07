@@ -97,12 +97,16 @@ export function CallMediaStage({
           />
         </div>
       ) : (
-        /* Voice Call: Solid 100% Opaque White Base Layer + Intact Coki Faces Pattern below the sleek white header */
+        /* Voice Call: Solid 100% Opaque Base Layer (White in Light Mode, Obsidian Dark in Dark Mode) + Clear Coki Faces Pattern below sleek header */
         <>
-          {/* 1. Pure Opaque White Base: Absolutely zero leakage from chat/map underneath */}
-          <div className="absolute inset-0 z-0 pointer-events-none bg-white" />
+          {/* 1. Pure Opaque Base: Absolutely zero leakage from chat/map underneath */}
+          <div
+            className={`absolute inset-0 z-0 pointer-events-none transition-colors duration-200 ${
+              isMapDark ? "bg-[#0f1014]" : "bg-white"
+            }`}
+          />
 
-          {/* 2. Pattern Layer: Intact Mini Coki faces without any half-cut mask */}
+          {/* 2. Pattern Layer: Intact Mini Coki faces without any half-cut mask, clearly visible in both Light & Dark Mode */}
           <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             {STATIC_COKI_VOICE_BG.map((pos, idx) => (
               <div
@@ -113,7 +117,11 @@ export function CallMediaStage({
                   left: pos.left,
                   transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
                 }}
-                className="w-10 h-13 pointer-events-none opacity-25 select-none"
+                className={`w-10 h-13 pointer-events-none select-none ${
+                  isMapDark
+                    ? "opacity-[0.38] invert brightness-115 contrast-125"
+                    : "opacity-[0.42] contrast-125"
+                }`}
               >
                 <Image
                   src="/ForChat/BackgroundVoiceTrimmed.png"
@@ -129,16 +137,22 @@ export function CallMediaStage({
         </>
       )}
 
-      {/* TOP BAR: Sleek Solid White Header for Voice Call, Transparent Overlay for Video Call */}
+      {/* TOP BAR: Sleek Solid Header for Voice Call (White in Light Mode, Dark in Dark Mode), Transparent Overlay for Video Call */}
       <div
-        className={`relative z-10 w-full pt-5 pb-3.5 px-4 flex flex-col items-center text-center ${
-          mode === "voice" ? "bg-white" : ""
+        className={`relative z-10 w-full pt-5 pb-3.5 px-4 flex flex-col items-center text-center transition-colors duration-200 ${
+          mode === "voice"
+            ? isMapDark
+              ? "bg-[#0f1014]"
+              : "bg-white"
+            : ""
         }`}
       >
         <h3
           className={`font-sans font-bold text-base sm:text-lg tracking-tight truncate max-w-[260px] ${
             mode === "video"
               ? "text-white drop-shadow"
+              : isMapDark
+              ? "text-white"
               : "text-black"
           }`}
         >
@@ -151,6 +165,8 @@ export function CallMediaStage({
           className={`font-bold text-[9.5px] sm:text-[10px] tracking-tight mt-1 ${
             mode === "video"
               ? "text-white/90 drop-shadow"
+              : isMapDark
+              ? "text-white/85"
               : "text-black/80"
           }`}
         >
@@ -186,7 +202,7 @@ export function CallMediaStage({
               }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
               className={`absolute w-28 h-28 rounded-full border-2 ${
-                mode === "voice" ? "border-black/60" : isMapDark ? "border-emerald-400" : "border-black"
+                isMapDark ? "border-white/55" : "border-black/60"
               }`}
             />
             <motion.div
@@ -196,7 +212,7 @@ export function CallMediaStage({
               }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.35 }}
               className={`absolute w-28 h-28 rounded-full border ${
-                mode === "voice" ? "border-black/40" : isMapDark ? "border-emerald-400" : "border-black"
+                isMapDark ? "border-white/35" : "border-black/40"
               }`}
             />
 
@@ -219,9 +235,7 @@ export function CallMediaStage({
             ) : (
               <div
                 className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 shadow-xl ${
-                  mode === "voice"
-                    ? "border-black bg-white"
-                    : isMapDark
+                  isMapDark
                     ? "border-white bg-[#161b22]"
                     : "border-black bg-white"
                 }`}
@@ -276,7 +290,7 @@ export function CallMediaStage({
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}
-                className="w-1 rounded-full bg-black"
+                className={`w-1 rounded-full ${isMapDark ? "bg-white" : "bg-black"}`}
               />
             ))}
           </div>

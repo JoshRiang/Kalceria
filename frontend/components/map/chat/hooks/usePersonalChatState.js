@@ -537,7 +537,7 @@ export function usePersonalChatState({
         callDuration,
         replyTo,
         ts,
-        status: "sending",
+        status: msgType === "call" ? "sent" : "sending",
         verifiedE2EE: true,
       };
 
@@ -616,7 +616,7 @@ export function usePersonalChatState({
           setMessages((prev) => {
             const next = prev.map((m) =>
               m.id === msgId && m.status === "sending"
-                ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: "failed" }
+                ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: msgType === "call" ? "sent" : "failed" }
                 : m
             );
             persistEncryptedLocal(next);
@@ -624,7 +624,7 @@ export function usePersonalChatState({
           });
         }, 12000);
 
-        postPersonalChatMessage(targetId, {
+        const payloadToSend = {
           ...envelope,
           mediaUrl: finalMediaUrl,
           voiceWaveform,
@@ -632,15 +632,22 @@ export function usePersonalChatState({
           isViewOnce,
           callMode,
           callDuration,
-        })
-          .then(() => {
+        };
+
+        postPersonalChatMessage(targetId, payloadToSend)
+          .catch(async () => {
+            await new Promise((r) => setTimeout(r, 400));
+            return postPersonalChatMessage(targetId, payloadToSend);
+          })
+          .then((resData) => {
             clearTimeout(timeoutTimer);
             pendingBlobsRef.current.delete(msgId);
             deletePendingMediaBlob(msgId).catch(() => {});
+            const persistedStatus = resData?.envelope?.status || resData?.message?.status || "sent";
             if (!isTimedOut) {
               setMessages((prev) => {
                 const next = prev.map((m) =>
-                  m.id === msgId ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: "sent" } : m
+                  m.id === msgId ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: persistedStatus } : m
                 );
                 persistQuickLocal(next);
                 persistEncryptedLocal(next);
@@ -652,7 +659,9 @@ export function usePersonalChatState({
             clearTimeout(timeoutTimer);
             setMessages((prev) => {
               const next = prev.map((m) =>
-                m.id === msgId ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: "failed" } : m
+                m.id === msgId
+                  ? { ...m, ...envelope, mediaUrl: finalMediaUrl, status: msgType === "call" ? "sent" : "failed" }
+                  : m
               );
               persistQuickLocal(next);
               persistEncryptedLocal(next);

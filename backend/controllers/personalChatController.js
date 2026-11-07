@@ -57,7 +57,7 @@ function packEnvelope(env) {
   if (env.isViewOnce) compact.vo = 1;
   if (env.isOnceOpened) compact.oo = 1;
   if (env.callMode) compact.cm = env.callMode;
-  if (env.callDuration) compact.cd = env.callDuration;
+  if (env.callDuration !== undefined && env.callDuration !== null) compact.cd = Number(env.callDuration) || 0;
   return JSON.stringify(compact);
 }
 
@@ -91,7 +91,7 @@ function unpackEnvelope(raw) {
         isViewOnce: Boolean(parsed.vo),
         isOnceOpened: Boolean(parsed.oo),
         callMode: parsed.cm || null,
-        callDuration: parsed.cd || null,
+        callDuration: parsed.cd !== undefined && parsed.cd !== null ? Number(parsed.cd) : null,
         ts: Number(parsed.u) || Date.now(),
         status: parsed.st || 'sent',
       };
@@ -185,14 +185,17 @@ export async function getPersonalChatMessages(req, res, next) {
 
     let combined = Array.from(byId.values());
 
-    // Real Read Receipt Update: ONLY mark messages as 'read' when the actual recipient (recipientId === userId) fetches the chat
+    // Real Read Receipt Update: ONLY mark messages as 'read' when the actual recipient (recipientId === userId) fetches the chat (and not a background peek)
+    const isPeekOnly = String(req.query?.peek || '') === '1';
     let readUpdated = false;
     const newlyReadIds = [];
-    for (const m of combined) {
-      if (String(m.recipientId) === String(userId) && m.status !== 'read') {
-        m.status = 'read';
-        readUpdated = true;
-        newlyReadIds.push(m.id);
+    if (!isPeekOnly) {
+      for (const m of combined) {
+        if (String(m.recipientId) === String(userId) && m.status !== 'read') {
+          m.status = 'read';
+          readUpdated = true;
+          newlyReadIds.push(m.id);
+        }
       }
     }
 

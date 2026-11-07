@@ -3,7 +3,7 @@ import { redis } from '../lib/redis.js';
 
 async function invalidateKalceriansCache() {
   try {
-    await redis.del('cache:all_kalcerians', 'cache:map_users:global');
+    await redis.del('cache:all_kalcerians', 'cache:map_users:global', 'cache:map_users_enriched');
   } catch {}
 }
 

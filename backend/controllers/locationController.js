@@ -71,7 +71,7 @@ export async function updateLiveLocation(req, res, next) {
 
     await redis.geoadd('active_users', lng, lat, userId);
     await redis.setex(key, LIVE_TTL_SECONDS, JSON.stringify(nextRecord));
-    await redis.del('cache:all_kalcerians', 'cache:map_users:global').catch(() => {});
+    await redis.del('cache:all_kalcerians', 'cache:map_users:global', 'cache:map_users_enriched').catch(() => {});
     res.json({ message: 'Location updated.' });
   } catch (err) {
     if (req.user?.userId) await redis.del(`live:cooldown:${req.user.userId}`).catch(() => {});

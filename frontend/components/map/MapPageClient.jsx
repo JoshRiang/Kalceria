@@ -356,10 +356,81 @@ export default function MapPage() {
     } catch {}
   }, []);
 
-  // derived: users and events for the map (filtering out blocked users)
+  // derived: users and events for the map (merging mapUsersData + kalcerians + currentUser so profile markers always render on map)
   const visibleMapUsers = useMemo(() => {
-    return (mapUsersData || []).filter((u) => !blockedUserIds.includes(u.id));
-  }, [mapUsersData, blockedUserIds]);
+    const mergedMap = new Map();
+
+    const resolveFallbackCoords = (u) => {
+      if (Number.isFinite(Number(u?.lat)) && Number.isFinite(Number(u?.lng))) {
+        return { lat: Number(u.lat), lng: Number(u.lng) };
+      }
+      if (Number.isFinite(Number(u?.domicileLat)) && Number.isFinite(Number(u?.domicileLng))) {
+        return { lat: Number(u.domicileLat), lng: Number(u.domicileLng) };
+      }
+      const rng = createSeededRandom(`map-coords-${u?.id || u?.nickname || u?.name || "user"}`);
+      const dLat = (rng() - 0.5) * 0.016;
+      const dLng = (rng() - 0.5) * 0.016;
+      return {
+        lat: Number((-6.2735 + dLat).toFixed(6)),
+        lng: Number((106.7150 + dLng).toFixed(6)),
+      };
+    };
+
+    (mapUsersData || []).forEach((u) => {
+      if (!u?.id || blockedUserIds.includes(u.id)) return;
+      const coords = resolveFallbackCoords(u);
+      mergedMap.set(String(u.id), {
+        ...u,
+        displayName: u.displayName || u.name || u.nickname || "Kalcerian",
+        nickname: u.nickname || u.name || "Kalcerian",
+        profilePicture: resolvePersistentAvatarUrl(u),
+        lat: coords.lat,
+        lng: coords.lng,
+      });
+    });
+
+    (kalcerians || []).forEach((u) => {
+      if (!u?.id || blockedUserIds.includes(u.id)) return;
+      const key = String(u.id);
+      const existing = mergedMap.get(key);
+      const coords = existing
+        ? { lat: existing.lat, lng: existing.lng }
+        : resolveFallbackCoords(u);
+      mergedMap.set(key, {
+        ...(existing || {}),
+        ...u,
+        displayName: u.displayName || existing?.displayName || u.name || u.nickname || "Kalcerian",
+        nickname: u.nickname || existing?.nickname || u.name || "Kalcerian",
+        profilePicture: resolvePersistentAvatarUrl(u),
+        lat: coords.lat,
+        lng: coords.lng,
+      });
+    });
+
+    if (currentUser?.id) {
+      const selfKey = String(currentUser.id);
+      if (presence === "online") {
+        const existingSelf = mergedMap.get(selfKey);
+        const coords = existingSelf
+          ? { lat: existingSelf.lat, lng: existingSelf.lng }
+          : resolveFallbackCoords(currentUser);
+        mergedMap.set(selfKey, {
+          ...(existingSelf || {}),
+          ...currentUser,
+          displayName: currentUser.displayName || currentUser.name || currentUser.nickname || "Kalcerian",
+          nickname: currentUser.nickname || currentUser.name || "Kalcerian",
+          profilePicture: resolvePersistentAvatarUrl(currentUser),
+          isOnline: true,
+          lat: coords.lat,
+          lng: coords.lng,
+        });
+      } else {
+        mergedMap.delete(selfKey);
+      }
+    }
+
+    return Array.from(mergedMap.values());
+  }, [mapUsersData, kalcerians, currentUser, presence, blockedUserIds]);
 
   const visibleEvents = useMemo(() => {
     const now = Date.now();
@@ -555,8 +626,13 @@ export default function MapPage() {
   }, [kalcerians, events, searchQuery, personalChatMap, favouriteUserIds, currentUser, presence]);
 
   const activeOwnEvent = events.find(
-    (e) => e.id === "own" || (currentUser?.id && e.creator?.id === currentUser?.id)
+    (e) => e.id === "own" || (currentUser?.id && String(e.creator?.id) === String(currentUser?.id))
   );
+
+  const handleGoToOwnEvent = useCallback(() => {
+    if (!activeOwnEvent) return;
+    handleOpenItemOnMap(activeOwnEvent, "event");
+  }, [activeOwnEvent, handleOpenItemOnMap]);
 
   // real broadcast save
   async function saveBroadcast(e) {
@@ -729,52 +805,93 @@ export default function MapPage() {
         lng: currentLng,
       };
 
-      const eventIdToUpdate = editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;
+      let eventIdToUpdate = editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;
+      let savedEventObj = null;
 
-      if (eventIdToUpdate) {
-        await putMiniEvent(eventIdToUpdate, payload).catch(() => {});
-        setEvents((prev) =>
-          prev.map((ev) =>
-            ev.id === eventIdToUpdate
-              ? {
-                  ...ev,
-                  ...payload,
-                  description: encodedDesc,
-                  creator: {
-                    ...(ev.creator || {}),
-                    id: currentUser?.id || ev.creator?.id,
-                    name: currentUser?.displayName || currentUser?.name || ev.creator?.name,
-                    displayName: currentUser?.displayName || currentUser?.name || ev.creator?.displayName,
-                    nickname: currentUser?.nickname || ev.creator?.nickname,
-                  },
-                }
-              : ev
-          )
-        );
-      } else {
-        const createdRes = await postMiniEvent(payload).catch(() => null);
-        const createdEvent = createdRes?.data?.event || createdRes?.data || createdRes;
-        if (createdEvent && typeof createdEvent === "object") {
-          const enriched = {
-            ...createdEvent,
-            creator: {
-              ...(createdEvent.creator || {}),
-              id: currentUser?.id || createdEvent.creator?.id,
-              name: currentUser?.displayName || currentUser?.name || createdEvent.creator?.name,
-              displayName: currentUser?.displayName || currentUser?.name || createdEvent.creator?.displayName,
-              nickname: currentUser?.nickname || createdEvent.creator?.nickname,
-            },
-          };
-          setEvents((prev) => [cleanEventDesc(enriched), ...prev]);
+      if (!eventIdToUpdate) {
+        try {
+          const createdRes = await postMiniEvent(payload);
+          const createdEvent = createdRes?.data?.event || createdRes?.data || createdRes;
+          if (createdEvent && typeof createdEvent === "object") {
+            savedEventObj = cleanEventDesc({
+              ...createdEvent,
+              ...payload,
+              id: createdEvent.id || `evt_${Date.now()}`,
+              lat: Number(createdEvent.lat ?? currentLat),
+              lng: Number(createdEvent.lng ?? currentLng),
+              description: encodedDesc,
+              creator: {
+                ...(createdEvent.creator || {}),
+                id: currentUser?.id || createdEvent.creator?.id,
+                name: currentUser?.displayName || currentUser?.name || createdEvent.creator?.name,
+                displayName: currentUser?.displayName || currentUser?.name || createdEvent.creator?.displayName,
+                nickname: currentUser?.nickname || createdEvent.creator?.nickname,
+                profilePicture: resolvePersistentAvatarUrl(currentUser),
+              },
+            });
+            setEvents((prev) => [
+              savedEventObj,
+              ...prev.filter((ev) => String(ev.id) !== String(savedEventObj.id) && String(ev.creator?.id) !== String(currentUser?.id)),
+            ]);
+          }
+        } catch (postErr) {
+          // If backend reports 409 (user already has an active event), fetch and update it
+          const latestList = await fetchMiniEvents().catch(() => []);
+          const existingOwn = (latestList || []).find((ev) => String(ev.creator?.id || ev.creatorId) === String(currentUser?.id));
+          if (existingOwn?.id) {
+            eventIdToUpdate = existingOwn.id;
+          } else {
+            throw postErr;
+          }
         }
       }
 
+      if (eventIdToUpdate) {
+        const updatedRes = await putMiniEvent(eventIdToUpdate, payload).catch(() => null);
+        const updatedEvent = updatedRes?.data?.event || updatedRes?.data || updatedRes;
+        savedEventObj = cleanEventDesc({
+          ...(updatedEvent && typeof updatedEvent === "object" ? updatedEvent : {}),
+          ...payload,
+          id: eventIdToUpdate,
+          lat: Number(currentLat),
+          lng: Number(currentLng),
+          description: encodedDesc,
+          creator: {
+            id: currentUser?.id,
+            name: currentUser?.displayName || currentUser?.name,
+            displayName: currentUser?.displayName || currentUser?.name,
+            nickname: currentUser?.nickname,
+            profilePicture: resolvePersistentAvatarUrl(currentUser),
+          },
+        });
+        setEvents((prev) => {
+          const exists = prev.some((ev) => String(ev.id) === String(eventIdToUpdate));
+          if (exists) {
+            return prev.map((ev) => (String(ev.id) === String(eventIdToUpdate) ? { ...ev, ...savedEventObj } : ev));
+          }
+          return [savedEventObj, ...prev];
+        });
+      }
+
       const updatedEvents = await fetchMiniEvents().catch(() => null);
-      if (updatedEvents) setEvents(mergeEvents(updatedEvents));
+      if (updatedEvents && updatedEvents.length > 0) {
+        const merged = mergeEvents(updatedEvents);
+        setEvents(merged);
+        if (!savedEventObj && currentUser?.id) {
+          savedEventObj = merged.find((ev) => String(ev.creator?.id) === String(currentUser.id)) || null;
+        }
+      }
       setNotice(eventIdToUpdate ? "Mini event updated." : "Mini event saved.");
       setEditingEventId(null);
       setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", location: "", lat: null, lng: null });
       setShowEventModal(false);
+
+      // Immediately pan/fly to the created/updated event on the map and open its popup
+      if (savedEventObj) {
+        setTimeout(() => {
+          handleOpenItemOnMap(savedEventObj, "event");
+        }, 120);
+      }
     } catch (err) {
       setNotice(err.message || "Failed to save mini event.");
     }
@@ -1013,6 +1130,7 @@ export default function MapPage() {
             hasTopDynamicEventNotif={hasTopDynamicEventNotif}
             onTopDynamicEventClick={handleTopDynamicEventClick}
             hasActiveOwnEvent={Boolean(activeOwnEvent)}
+            onGoToOwnEvent={handleGoToOwnEvent}
           />
 
           {/* Kalcerians Panel */}

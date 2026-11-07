@@ -210,7 +210,7 @@ export function LocationAutocomplete({
       {detectError && (
         <p className="text-[10px] text-red-500 mt-1 font-sans">{detectError}</p>
       )}
-      {((!isVerified && query.trim().length >= 2 && !isOpen) || (isOpen && suggestions.length === 0 && !isLoading && query.trim().length >= 2)) && (
+      {((!isVerified && query.trim().length >= 2 && !isOpen) || (isOpen && suggestions.length === 0 && !loading && query.trim().length >= 2)) && (
         <p className="text-[10px] text-red-500 mt-1 font-sans">
           Lokasi tidak ditemukan
         </p>

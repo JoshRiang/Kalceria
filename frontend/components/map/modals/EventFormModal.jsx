@@ -134,6 +134,13 @@ export function EventFormModal({
     });
   };
 
+  const isEventFormValid = Boolean(
+    (eventForm.category || "cafe").trim() &&
+    (eventForm.title || "").trim() &&
+    (eventForm.location || "").trim() &&
+    (eventForm.description || "").trim()
+  );
+
   return (
     <div
       className="fixed inset-0 z-[2000] flex items-center justify-center p-2.5 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 select-none"
@@ -144,13 +151,43 @@ export function EventFormModal({
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
         className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[26px] shadow-2xl overflow-hidden transition-colors duration-300 ${
           isModalDark
-            ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"
+            ? "bg-[#010101] border border-[#30363d] text-[#f0f6fc]"
             : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-none">
+        {/* 3-Piece Smooth-Trimmed Background (BGCreateMini_Light / BGCreateMini_Dark) with clear reading gaps */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
+          style={{
+            backgroundColor: isModalDark ? "#010101" : "#ffffff",
+            maskImage:
+              "linear-gradient(to bottom, transparent 0%, transparent 13%, black 19%, black 34%, transparent 40%, transparent 55%, black 60%, black 67%, transparent 72%, transparent 83%, black 88%, black 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, transparent 0%, transparent 13%, black 19%, black 34%, transparent 40%, transparent 55%, black 60%, black 67%, transparent 72%, transparent 83%, black 88%, black 100%)",
+          }}
+        >
+          <div
+            className="w-full h-full"
+            style={{
+              backgroundImage: isModalDark
+                ? "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.jpg')"
+                : "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.jpg')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              opacity: isModalDark ? 0.45 : 0.58,
+            }}
+          />
+        </div>
+
+        {/* Header (Solid #010101 / #ffffff, uncontaminated by background) */}
+        <div
+          className={`shrink-0 relative z-10 flex justify-between items-center px-4 xs:px-6 py-3.5 sm:py-4 border-none ${
+            isModalDark ? "bg-[#010101]" : "bg-[#ffffff]"
+          }`}
+        >
           <h2
             className={`font-sans font-bold text-base sm:text-lg tracking-tight ${
               isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
@@ -173,7 +210,13 @@ export function EventFormModal({
 
         {/* Form */}
         <form
-          onSubmit={saveMiniEvent}
+          onSubmit={(e) => {
+            if (!isEventFormValid) {
+              e.preventDefault();
+              return;
+            }
+            saveMiniEvent(e);
+          }}
           className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3 sm:gap-4 custom-scrollbar"
         >
           <p
@@ -191,7 +234,7 @@ export function EventFormModal({
                 isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
               }`}
             >
-              Category
+              Category <span className="text-[#ef4444]">*</span>
             </label>
             <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
               {EVENT_CATEGORIES_GRID.map((cat) => {
@@ -204,11 +247,11 @@ export function EventFormModal({
                     className={`flex flex-col items-center justify-center p-2.5 xs:p-3 rounded-xl border transition-all duration-200 outline-none cursor-pointer ${
                       isSelected
                         ? isModalDark
-                          ? "bg-[#21262d] border-2 border-[#ffffff] shadow-[0_0_12px_rgba(255,255,255,0.25)]"
-                          : "bg-[#f6f8fa] border-2 border-[#000000] shadow-[0_0_12px_rgba(0,0,0,0.15)]"
+                          ? "bg-[#16181d]/90 border-2 border-[#ffffff] shadow-[0_0_12px_rgba(255,255,255,0.25)]"
+                          : "bg-[#f6f8fa]/95 border-2 border-[#000000] shadow-[0_0_12px_rgba(0,0,0,0.15)]"
                         : isModalDark
-                        ? "bg-[#0d1117] border-[#30363d] hover:border-[#8b949e]"
-                        : "bg-[#ffffff] border-[#d0d7de] hover:border-[#8c959f]"
+                        ? "bg-[#0a0c10]/88 border-[#30363d] hover:border-[#8b949e]"
+                        : "bg-[#ffffff]/90 border-[#d0d7de] hover:border-[#8c959f]"
                     }`}
                   >
                     <div className="transition-transform duration-200">
@@ -240,13 +283,13 @@ export function EventFormModal({
                 isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
               }`}
             >
-              Event Title
+              Event Title <span className="text-[#ef4444]">*</span>
             </label>
             <input
               className={`w-full border rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm outline-none transition-all ${
                 isModalDark
-                  ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
-                  : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
+                  ? "bg-[#0a0c10]/92 border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
+                  : "bg-[#f6f8fa]/95 border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
               }`}
               value={eventForm.title}
               onChange={(e) =>
@@ -279,9 +322,9 @@ export function EventFormModal({
               }}
               isVerified={isLocationVerified}
               setIsVerified={setIsLocationVerified}
-              required={false}
+              required={true}
               isModalDark={isModalDark}
-              label="Deployment Area"
+              label={<>Deployment Area <span className="text-[#ef4444]">*</span></>}
               hideCheckmark={true}
             />
           </div>
@@ -293,13 +336,13 @@ export function EventFormModal({
                 isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
               }`}
             >
-              Briefing
+              Briefing <span className="text-[#ef4444]">*</span>
             </label>
             <textarea
               className={`w-full border rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm outline-none min-h-[75px] sm:min-h-[100px] resize-y transition-all ${
                 isModalDark
-                  ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
-                  : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
+                  ? "bg-[#0a0c10]/92 border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
+                  : "bg-[#f6f8fa]/95 border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
               }`}
               value={eventForm.description}
               onChange={(e) =>
@@ -452,7 +495,7 @@ export function EventFormModal({
           {/* Action Buttons */}
           {(editingEventId || activeOwnEvent) ? (
             <div className="flex items-center justify-between mt-auto pt-3 shrink-0 px-1">
-              {/* Left: Red Trashcan Icon Button (Full of red, with white interior lines vice-versa) */}
+              {/* Left: Red Trashcan Icon Button with truly hollow/transparent interior cutouts (bolong & tidak berwarna) */}
               <button
                 type="button"
                 onClick={onPromptDeleteConfirm}
@@ -462,26 +505,37 @@ export function EventFormModal({
                 className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer group flex items-center justify-center"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="w-5 h-5">
-                  <path
-                    d="M 19 6 L 18.1 19.3 C 18 20.3 17.2 21 16.2 21 H 7.8 C 6.8 21 6 20.3 5.9 19.3 L 5 6 Z"
-                    fill="#ef4444"
-                  />
-                  <path
-                    d="M 8 6 V 4 C 8 3.4 8.4 3 9 3 H 15 C 15.6 3 16 3.4 16 4 V 6 Z"
-                    fill="#ef4444"
-                  />
-                  <path d="M 3 6 H 21" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
-                  <line x1="9.5" y1="9.5" x2="9.5" y2="17" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" />
-                  <line x1="14.5" y1="9.5" x2="14.5" y2="17" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" />
-                  <line x1="6" y1="6" x2="18" y2="6" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" />
+                  <defs>
+                    <mask id="hollow-trashcan-mask">
+                      <rect x="0" y="0" width="24" height="24" fill="#ffffff" />
+                      {/* Hollow handle opening */}
+                      <rect x="9.6" y="4.2" width="4.8" height="1.8" rx="0.6" fill="#000000" />
+                      {/* Hollow lid separation line */}
+                      <line x1="5" y1="6.4" x2="19" y2="6.4" stroke="#000000" strokeWidth="1.2" strokeLinecap="round" />
+                      {/* Hollow interior vertical slits */}
+                      <line x1="9.5" y1="9.5" x2="9.5" y2="17" stroke="#000000" strokeWidth="1.7" strokeLinecap="round" />
+                      <line x1="14.5" y1="9.5" x2="14.5" y2="17" stroke="#000000" strokeWidth="1.7" strokeLinecap="round" />
+                    </mask>
+                  </defs>
+                  <g mask="url(#hollow-trashcan-mask)">
+                    <path
+                      d="M 19 6 L 18.1 19.3 C 18 20.3 17.2 21 16.2 21 H 7.8 C 6.8 21 6 20.3 5.9 19.3 L 5 6 Z"
+                      fill="#ef4444"
+                    />
+                    <path
+                      d="M 8 6 V 3.8 C 8 3.1 8.5 2.6 9.2 2.6 H 14.8 C 15.5 2.6 16 3.1 16 3.8 V 6 Z"
+                      fill="#ef4444"
+                    />
+                    <path d="M 3 5.4 H 21" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
+                  </g>
                 </svg>
               </button>
 
-              {/* Right: Box button with Update font, styled like Create button */}
+              {/* Right: Box button with Update font, dimmed until required * fields are filled */}
               <button
                 type="submit"
-                disabled={busy}
-                className={`px-6 py-2.5 sm:py-3 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
+                disabled={busy || !isEventFormValid}
+                className={`px-6 py-2.5 sm:py-3 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
                   isModalDark
                     ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
                     : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
@@ -494,12 +548,12 @@ export function EventFormModal({
             <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
               <button
                 type="submit"
-                className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
+                disabled={busy || !isEventFormValid}
+                className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
                   isModalDark
                     ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
                     : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
                 }`}
-                disabled={busy}
               >
                 {busy ? "Creating..." : "Create"}
               </button>

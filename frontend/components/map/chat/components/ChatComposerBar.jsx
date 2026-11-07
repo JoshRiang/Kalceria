@@ -180,9 +180,13 @@ export function ChatComposerBar({
             <button
               type="button"
               disabled={isUploadingMedia}
-              onClick={onOpenCameraModal}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenCameraModal?.(e);
+              }}
               title="Ambil foto atau rekam video (maks 1 menit)"
-              className="p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer shrink-0 disabled:opacity-40"
+              className="p-1.5 -m-0.5 transition-transform hover:scale-110 active:scale-95 cursor-pointer shrink-0 disabled:opacity-40"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -201,9 +205,14 @@ export function ChatComposerBar({
             {/* 2. Emoji Sticker Icon */}
             <button
               type="button"
-              onClick={() => setShowEmojiBar((p) => !p)}
+              data-emoji-trigger="true"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEmojiBar((p) => !p);
+              }}
               title="Emoji"
-              className="p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer shrink-0"
+              className="p-1.5 -m-0.5 transition-transform hover:scale-110 active:scale-95 cursor-pointer shrink-0"
             >
               <svg
                 viewBox="0 0 24 24"

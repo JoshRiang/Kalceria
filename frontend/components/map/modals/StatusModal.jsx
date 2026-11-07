@@ -13,6 +13,8 @@ export function StatusModal({
 }) {
   if (!show) return null;
 
+  const isBroadcastValid = Boolean((statusText || "").trim());
+
   return (
     <div
       className="fixed inset-0 z-[2000] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 select-none"
@@ -23,13 +25,17 @@ export function StatusModal({
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
         className={`relative w-full max-w-[420px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[24px] shadow-2xl overflow-hidden transition-colors duration-300 ${
           isModalDark
-            ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"
+            ? "bg-[#010101] border border-[#30363d] text-[#f0f6fc]"
             : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-none">
+        <div
+          className={`shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-none ${
+            isModalDark ? "bg-[#010101]" : "bg-[#ffffff]"
+          }`}
+        >
           <h2
             className={`font-sans font-bold text-base sm:text-lg tracking-tight ${
               isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
@@ -52,7 +58,13 @@ export function StatusModal({
 
         {/* Form */}
         <form
-          onSubmit={saveBroadcast}
+          onSubmit={(e) => {
+            if (!isBroadcastValid) {
+              e.preventDefault();
+              return;
+            }
+            saveBroadcast(e);
+          }}
           className="relative z-10 p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-4 sm:gap-5 custom-scrollbar"
         >
           <p
@@ -69,7 +81,7 @@ export function StatusModal({
                 isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
               }`}
             >
-              Broadcast
+              Broadcast <span className="text-[#ef4444]">*</span>
             </label>
             <textarea
               className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm outline-none min-h-[90px] sm:min-h-[120px] transition-all resize-none ${
@@ -87,12 +99,12 @@ export function StatusModal({
           <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
             <button
               type="submit"
-              className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
+              className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
                 isModalDark
                   ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
                   : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
               }`}
-              disabled={busy}
+              disabled={busy || !isBroadcastValid}
             >
               {busy ? "Posting..." : "Post"}
             </button>

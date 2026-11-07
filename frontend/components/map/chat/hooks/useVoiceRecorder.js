@@ -10,6 +10,7 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
   const [recorderError, setRecorderError] = useState(null);
 
   const streamRef = useRef(null);
+  const analyserStreamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
@@ -31,6 +32,10 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
+    }
+    if (analyserStreamRef.current) {
+      stopMediaStream(analyserStreamRef.current);
+      analyserStreamRef.current = null;
     }
     if (streamRef.current) {
       stopMediaStream(streamRef.current);
@@ -66,7 +71,14 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
 
     let stream;
     try {
-      stream = await acquireMicrophoneStream();
+      // Disable echoCancellation and autoGainControl for single-speaker voice notes so syllables are never clipped or gated
+      stream = await acquireMicrophoneStream({
+        sampleRate: 48000,
+        channelCount: 1,
+        echoCancellation: false,
+        noiseSuppression: true,
+        autoGainControl: false,
+      });
       streamRef.current = stream;
     } catch (err) {
       if (err.code === "PERMISSION_DENIED" && onPermissionNeededRef.current) {
@@ -77,45 +89,48 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
     }
 
     try {
-      // 1. Web Audio API Voice Analyzer Pipeline
+      // 1. Web Audio API Voice Analyzer Pipeline on an isolated cloned stream so AudioContext never contends with MediaRecorder
       const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      const audioCtx = new AudioCtxClass();
-      if (audioCtx.state === "suspended") {
-        await audioCtx.resume().catch(() => {});
-      }
-      audioCtxRef.current = audioCtx;
-
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 128;
-      analyser.smoothingTimeConstant = 0.1;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-
-      // 2. Real-time Vocal Energy Sampling Loop (ultra-low latency & minimal processing)
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      animFrameRef.current = setInterval(() => {
-        if (!analyserRef.current) return;
-        analyserRef.current.getByteFrequencyData(dataArray);
-
-        // Instantaneous peak energy across active speech frequencies
-        let peak = 0;
-        for (let i = 1; i < dataArray.length; i++) {
-          if (dataArray[i] > peak) peak = dataArray[i];
+      if (AudioCtxClass) {
+        const clonedStream = typeof stream.clone === "function" ? stream.clone() : stream;
+        if (clonedStream !== stream) {
+          analyserStreamRef.current = clonedStream;
         }
+        const audioCtx = new AudioCtxClass();
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume().catch(() => {});
+        }
+        audioCtxRef.current = audioCtx;
 
-        // Direct proportional mapping with minimal processing:
-        // Baseline 6% on quiet, raising instantly to 100% when voice detected
-        const normalized = Math.min(100, Math.max(6, Math.round((peak / 255) * 100)));
+        const source = audioCtx.createMediaStreamSource(clonedStream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 128;
+        analyser.smoothingTimeConstant = 0.25;
+        source.connect(analyser);
+        analyserRef.current = analyser;
 
-        waveformAccumulatorRef.current.push(normalized);
-        setLiveWaveform((prev) => {
-          const next = [...prev, normalized];
-          return next.slice(-36); // keep latest 36 bars visible in UI
-        });
-      }, 115); // Calmer ~8.7 bars/sec sampling for smooth, non-rushed UX propagation
+        // 2. Real-time Vocal Energy Sampling Loop
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        animFrameRef.current = setInterval(() => {
+          if (!analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(dataArray);
 
-      // 3. MediaRecorder Audio Compression
+          let peak = 0;
+          for (let i = 1; i < dataArray.length; i++) {
+            if (dataArray[i] > peak) peak = dataArray[i];
+          }
+
+          const normalized = Math.min(100, Math.max(6, Math.round((peak / 255) * 100)));
+
+          waveformAccumulatorRef.current.push(normalized);
+          setLiveWaveform((prev) => {
+            const next = [...prev, normalized];
+            return next.slice(-36);
+          });
+        }, 160);
+      }
+
+      // 3. MediaRecorder High-Fidelity Audio Encoding (128 kbps, continuous stream without 100ms chunk slicing)
       const preferredMimes = [
         "audio/webm;codecs=opus",
         "audio/webm",
@@ -127,8 +142,15 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
         selectedMime = preferredMimes.find((m) => MediaRecorder.isTypeSupported(m)) || "";
       }
 
-      const recorderOptions = selectedMime ? { mimeType: selectedMime } : {};
-      const recorder = new MediaRecorder(stream, recorderOptions);
+      const recorderOptions = selectedMime
+        ? { mimeType: selectedMime, audioBitsPerSecond: 128000 }
+        : { audioBitsPerSecond: 128000 };
+      let recorder;
+      try {
+        recorder = new MediaRecorder(stream, recorderOptions);
+      } catch {
+        recorder = selectedMime ? new MediaRecorder(stream, { mimeType: selectedMime }) : new MediaRecorder(stream);
+      }
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
@@ -160,7 +182,8 @@ export function useVoiceRecorder({ onPermissionNeeded } = {}) {
         }
       };
 
-      recorder.start(100); // 100ms slice chunks
+      // Continuous recording without 100ms cluster slicing prevents Opus frame boundary stuttering
+      recorder.start();
       setIsRecording(true);
 
       // 4. Second Counter

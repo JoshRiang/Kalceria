@@ -13,6 +13,73 @@ function getDeterministicBaseColor(user) {
   return resolvePersistentCover(user);
 }
 
+// Sparse scattered tilted CokiEditProfile icons (fewer than Voice Call so UI stays clean & focused)
+const EDIT_PROFILE_COKI_PATTERN = [
+  { top: "14%", left: "3%", rotate: "-16deg", size: 58 },
+  { top: "16%", left: "82%", rotate: "18deg", size: 56 },
+  { top: "38%", left: "86%", rotate: "-14deg", size: 60 },
+  { top: "44%", left: "2%", rotate: "15deg", size: 56 },
+  { top: "66%", left: "84%", rotate: "20deg", size: 58 },
+  { top: "72%", left: "4%", rotate: "-18deg", size: 56 },
+  { top: "88%", left: "46%", rotate: "12deg", size: 54 },
+];
+
+function validateWhatsAppInput(raw) {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return { valid: true, normalized: "" };
+  // Reject letters or invalid characters
+  if (/[^0-9+\-\s()]/.test(trimmed)) {
+    return { valid: false, normalized: trimmed };
+  }
+  const digitsOnly = trimmed.replace(/[\s\-()]/g, "");
+  // Standard Indonesian & international mobile numbers:
+  // 08xxxxxxxx (10-14 digits), +628xxxxxxxx (11-16 chars), 628xxxxxxxx (11-15 digits), or +[country][number] (10-15 digits)
+  const isValidIndoOrIntl =
+    /^(?:08[1-9][0-9]{7,11}|\+?628[1-9][0-9]{7,11}|\+[1-9][0-9]{8,14})$/.test(digitsOnly);
+  if (!isValidIndoOrIntl) {
+    return { valid: false, normalized: trimmed };
+  }
+  return { valid: true, normalized: digitsOnly };
+}
+
+function validateInstagramInput(raw) {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return { valid: true, normalized: "" };
+
+  let handle = trimmed;
+  if (/^https?:\/\//i.test(handle) || /^www\.instagram\.com/i.test(handle) || /^instagram\.com/i.test(handle)) {
+    try {
+      const withProto = /^https?:\/\//i.test(handle) ? handle : `https://${handle}`;
+      const url = new URL(withProto);
+      const host = url.hostname.toLowerCase();
+      if (host !== "instagram.com" && host !== "www.instagram.com") {
+        return { valid: false, normalized: trimmed };
+      }
+      const segs = url.pathname.split("/").filter(Boolean);
+      if (segs.length === 0 || ["p", "reel", "reels", "stories", "explore"].includes(segs[0].toLowerCase())) {
+        return { valid: false, normalized: trimmed };
+      }
+      handle = segs[0];
+    } catch {
+      return { valid: false, normalized: trimmed };
+    }
+  }
+
+  handle = handle.replace(/^@/, "");
+  if (
+    handle.length < 1 ||
+    handle.length > 30 ||
+    !/^[a-zA-Z0-9._]+$/.test(handle) ||
+    handle.startsWith(".") ||
+    handle.endsWith(".") ||
+    handle.includes("..")
+  ) {
+    return { valid: false, normalized: handle };
+  }
+
+  return { valid: true, normalized: handle };
+}
+
 export function EditProfileModal({
   show,
   onClose,
@@ -114,12 +181,17 @@ export function EditProfileModal({
     e.target.value = "";
   };
 
+  const waValidation = validateWhatsAppInput(phone);
+  const igValidation = validateInstagramInput(instagram);
+  const isFormValid = Boolean(displayName.trim()) && waValidation.valid && igValidation.valid;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isFormValid) return;
     setIsSaving(true);
     try {
-      const cleanPhone = phone.trim();
-      const cleanIg = instagram.trim().replace(/^@/, "");
+      const cleanPhone = waValidation.normalized;
+      const cleanIg = igValidation.normalized;
       const finalCover = coverImage || defaultBaseColor;
       const finalAvatar = profilePicture || resolvePersistentAvatarUrl(currentUser);
       persistProfileIdentityCache(currentUser, {
@@ -162,13 +234,50 @@ export function EditProfileModal({
           transition={{ duration: 0.2 }}
           className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden transition-colors duration-300 ${
             isModalDark
-              ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"
+              ? "bg-[#0d1117] border border-[#30363d] text-[#f0f6fc]"
               : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header - No dividing line underneath (vanished) */}
-          <div className="shrink-0 flex justify-between items-center px-5 sm:px-6 pt-4 pb-2 border-none">
+          {/* Smooth-trimmed Sparse CokiEditProfile Wallpaper (Below Solid Header, Light & Dark Mode High Visibility) */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-[54px] bottom-0 z-0 pointer-events-none select-none overflow-hidden"
+            style={{
+              maskImage: "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.5) 14px, black 30px)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.5) 14px, black 30px)",
+            }}
+          >
+            {EDIT_PROFILE_COKI_PATTERN.map((item, idx) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={idx}
+                src="/BG_IMPROVE_FOR_MAP/CokiEditProfile.png"
+                alt=""
+                draggable={false}
+                style={{
+                  position: "absolute",
+                  top: item.top,
+                  left: item.left,
+                  width: `${item.size}px`,
+                  height: `${item.size}px`,
+                  transform: `rotate(${item.rotate})`,
+                }}
+                className={`object-contain transition-opacity duration-300 ${
+                  isModalDark
+                    ? "opacity-[0.36] invert brightness-115 contrast-125"
+                    : "opacity-[0.38] contrast-125"
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Header - Solid Base Color so top header is never cut by background icons */}
+          <div
+            className={`relative z-10 shrink-0 flex justify-between items-center px-5 sm:px-6 pt-4 pb-2 border-none ${
+              isModalDark ? "bg-[#0d1117]" : "bg-[#ffffff]"
+            }`}
+          >
             <h2 className="font-sans font-bold text-base sm:text-lg tracking-tight">
               Edit @{cleanUsername} Profile
             </h2>
@@ -185,7 +294,7 @@ export function EditProfileModal({
           </div>
 
           {/* Form Body - Scrollable */}
-          <form onSubmit={handleSubmit} className="px-5 sm:px-6 pb-6 pt-1 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 font-sans text-xs">
+          <form onSubmit={handleSubmit} className="relative z-10 px-5 sm:px-6 pb-6 pt-1 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 font-sans text-xs">
             {/* 1. Cover BG & Overlapping Half-Circle Profile Picture (Left Side, Z-Layered Above Cover BG) */}
             <div
               className="relative shrink-0"
@@ -479,6 +588,11 @@ export function EditProfileModal({
                 placeholder="Add WhatsApp Number"
                 className={`w-full border rounded-lg px-3 py-2 text-xs sm:text-[13px] outline-none transition-all ${inputBgClass}`}
               />
+              {!waValidation.valid && (
+                <p className="text-[10px] text-red-500 mt-1 font-sans">
+                  Nomor tidak valid
+                </p>
+              )}
             </div>
 
             {/* 5. Instagram (Always visible input, 2D IG logo, + or trash button) */}
@@ -538,6 +652,11 @@ export function EditProfileModal({
                   className={`w-full border rounded-lg pl-7 pr-3 py-2 text-xs sm:text-[13px] outline-none transition-all ${inputBgClass}`}
                 />
               </div>
+              {!igValidation.valid && (
+                <p className="text-[10px] text-red-500 mt-1 font-sans">
+                  Username tidak valid
+                </p>
+              )}
             </div>
 
             {/* 6. Danger Zone: Change Password & Delete Account (Red Arial Bold, No Underline, Left Picture 2 & 3 Icons) */}
@@ -598,8 +717,8 @@ export function EditProfileModal({
             {/* Submit Button (Changed from 'Save Changes' to 'Save') */}
             <button
               type="submit"
-              disabled={isSaving}
-              className={`shrink-0 mt-1 w-full font-extrabold text-[13px] py-3 rounded-lg transition-transform active:scale-[0.99] cursor-pointer shadow-md disabled:opacity-50 ${
+              disabled={isSaving || !isFormValid}
+              className={`shrink-0 mt-1 w-full font-extrabold text-[13px] py-3 rounded-lg transition-transform active:scale-[0.99] cursor-pointer shadow-md disabled:opacity-40 disabled:cursor-not-allowed ${
                 isModalDark
                   ? "bg-white text-black hover:bg-neutral-200"
                   : "bg-black text-white hover:bg-neutral-800"

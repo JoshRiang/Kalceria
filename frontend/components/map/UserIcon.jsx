@@ -37,20 +37,28 @@ export function getSafeMapColor(value) {
     : "#ffc300";
 }
 
-export function getUserIconHtml(user) {
-  const displayName = user?.nickname || user?.name || "";
+export function getUserIconHtml(user, isMapDark = false) {
+  const displayName = user?.displayName || user?.nickname || user?.name || "Kalcerian";
   const random = createSeededRandom(`map-user-icon-${user?.id || user?.nickname || user?.name || "anon"}`);
   const randomDelay = (random() * -2).toFixed(2);
   const rawColor = getSafeMapColor(user?.color);
   const cleanColor = (rawColor.toLowerCase() === "#ffd60a" || rawColor.toLowerCase() === "#ffea00") ? "#ffc300" : rawColor;
   const safeName = escapeMapHtml(displayName);
   const safeAvatar = escapeMapHtml(getSafeMapAvatarUrl(user));
+  const avatarBorder = isMapDark ? "#000000" : "#ffffff";
+  const isOnline = user?.isOnline !== false;
+  const statusDot = isOnline
+    ? `<span style="position: absolute; right: 1px; bottom: 1px; width: 9px; height: 9px; border-radius: 50%; background: #10b981; border: 2px solid ${avatarBorder}; z-index: 6;"></span>`
+    : "";
 
   return `
     <div class="radar-node" style="--user-color: ${cleanColor}">
       <div class="radar-nametag">${safeName}</div>
       <div class="radar-float-wrapper" style="animation-delay: ${randomDelay}s">
-        <div class="radar-avatar"><img src="${safeAvatar}" alt="${safeName}"></div>
+        <div class="radar-avatar" style="border: 2px solid ${avatarBorder} !important; filter: none !important; box-shadow: 0 3px 10px rgba(0,0,0,0.35);">
+          <img src="${safeAvatar}" alt="${safeName}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+        </div>
+        ${statusDot}
       </div>
       <div class="radar-droplet" style="animation-delay: ${randomDelay}s"></div>
     </div>
@@ -58,7 +66,7 @@ export function getUserIconHtml(user) {
 }
 
 export function getBroadcastUserIconHtml(user, isMapDark = false) {
-  const displayName = user?.nickname || user?.name || "Kalcerian";
+  const displayName = user?.displayName || user?.nickname || user?.name || "Kalcerian";
   const safeName = escapeMapHtml(displayName);
   const safeAvatar = escapeMapHtml(getSafeMapAvatarUrl(user));
 
@@ -125,7 +133,7 @@ export function createUserIcon(L, user, isMapDark = false) {
 
   return L.divIcon({
     className: "custom-div-icon",
-    html: getUserIconHtml(user),
+    html: getUserIconHtml(user, isMapDark),
     iconSize: [48, 80],
     iconAnchor: [24, 70],
     popupAnchor: [0, -60],

@@ -9,6 +9,7 @@ import {
   fetchMutedUsers,
   muteKalcerian,
   unmuteKalcerian,
+  fetchPersonalChatMessages,
 } from "@/lib/api";
 
 const PERSONAL_CHAT_STORAGE_KEY = "kalceria_personal_chat_meta_v1";
@@ -473,32 +474,90 @@ export function useMapChatAndNotifications({
     };
   }, []);
 
-  // Real-time online peer message trigger for active sessions
+  // Listen for real incoming personal chat events and background-poll for genuine unread peer messages
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleIncomingPersonalMsg = (e) => {
+      const detail = e?.detail;
+      if (!detail || !detail.senderId) return;
+      if (currentUser?.id && String(detail.senderId) === String(currentUser.id)) return;
+      receivePersonalChatMessage({
+        senderId: detail.senderId,
+        message: detail.message || "Pesan baru",
+        timestamp: detail.timestamp || Date.now(),
+      });
+    };
+    window.addEventListener("kalceria:incoming-personal-message", handleIncomingPersonalMsg);
+    return () => {
+      window.removeEventListener("kalceria:incoming-personal-message", handleIncomingPersonalMsg);
+    };
+  }, [currentUser?.id, receivePersonalChatMessage]);
+
   useEffect(() => {
     if (!currentUser?.id || typeof window === "undefined") return;
-
-    // Trigger a real-time incoming connection ping after 22s when user is active online
-    const pingTimer = setTimeout(() => {
-      const onlinePeers = (kalcerians || []).filter(
-        (u) =>
-          u &&
-          String(u.id) !== String(currentUser.id) &&
-          !blockedUserIds.includes(String(u.id))
-      );
-      if (!onlinePeers.length) return;
-
-      const peer = onlinePeers.find((u) => String(u.name || "").includes("Ahmad")) || onlinePeers[0];
-      if (peer?.id) {
-        receivePersonalChatMessage({
-          senderId: peer.id,
-          message: "Bro, posisi aman? Standby di sekitar ya 🚗",
-          timestamp: Date.now(),
-        });
+    let alive = true;
+    const checkUnreadPeers = async () => {
+      const onlinePeers = (kalcerians || [])
+        .filter(
+          (u) =>
+            u?.id &&
+            String(u.id) !== String(currentUser.id) &&
+            !blockedUserIds.includes(String(u.id))
+        )
+        .slice(0, 6);
+      for (const peer of onlinePeers) {
+        if (!alive) return;
+        try {
+          const msgs = await fetchPersonalChatMessages(peer.id, { limit: 5, peek: 1 });
+          if (!alive || !Array.isArray(msgs) || msgs.length === 0) continue;
+          const unreadFromPeer = msgs.filter(
+            (m) => String(m.senderId) === String(peer.id) && m.status !== "read"
+          );
+          if (unreadFromPeer.length > 0) {
+            const latest = unreadFromPeer[unreadFromPeer.length - 1];
+            const latestTs = Number(latest.ts) || Date.now();
+            setPersonalChatMap((prev) => {
+              const existing = prev[peer.id];
+              if (
+                existing &&
+                existing.unreadCount === unreadFromPeer.length &&
+                existing.lastMessageAt >= latestTs
+              ) {
+                return prev;
+              }
+              return {
+                ...prev,
+                [peer.id]: {
+                  unreadCount: unreadFromPeer.length,
+                  lastMessage: existing?.lastMessage || "Pesan baru",
+                  lastMessageAt: Math.max(latestTs, existing?.lastMessageAt || 0),
+                },
+              };
+            });
+          } else {
+            // Clear any stale localStorage unread badge if all messages from peer are read
+            setPersonalChatMap((prev) => {
+              const existing = prev[peer.id];
+              if (!existing || !existing.unreadCount) return prev;
+              return {
+                ...prev,
+                [peer.id]: {
+                  ...existing,
+                  unreadCount: 0,
+                },
+              };
+            });
+          }
+        } catch {}
       }
-    }, 22000);
-
-    return () => clearTimeout(pingTimer);
-  }, [currentUser?.id, kalcerians, blockedUserIds, receivePersonalChatMessage]);
+    };
+    checkUnreadPeers();
+    const pollId = setInterval(checkUnreadPeers, 12000);
+    return () => {
+      alive = false;
+      clearInterval(pollId);
+    };
+  }, [currentUser?.id, kalcerians, blockedUserIds]);
 
   // Unified check: does an event have an unread notification (from Envelope OR Group Chat)?
   const hasEventNotification = useCallback(

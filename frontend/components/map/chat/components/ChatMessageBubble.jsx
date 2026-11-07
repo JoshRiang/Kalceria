@@ -66,20 +66,28 @@ export function ChatMessageBubble({
       : 0
   );
   const audioRef = useRef(null);
+  const audioSrcRef = useRef("");
   const waveformRef = useRef(null);
   const rafRef = useRef(null);
 
   const getFiniteSec = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+  const durationRef = useRef(getFiniteSec(realAudioDuration) || getFiniteSec(item.voiceDuration) || 4);
+  durationRef.current = getFiniteSec(realAudioDuration) || getFiniteSec(item.voiceDuration) || 4;
 
-  // Preload audio duration so time mark immediately shows true duration (e.g. 0:07) rather than 0:01
+  // Sync realAudioDuration if item.voiceDuration prop arrives or updates
+  useEffect(() => {
+    const d = getFiniteSec(item.voiceDuration);
+    if (d > 0 && d !== realAudioDuration) {
+      setRealAudioDuration(d);
+    }
+  }, [item.voiceDuration]);
+
+  // Preload audio duration only when voiceDuration wasn't already supplied, without tearing down active audioRef
   useEffect(() => {
     setAudioError(false);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = "";
-      audioRef.current = null;
-    }
     if (!isVoice || !item.mediaUrl || String(item.mediaUrl).startsWith("blob:")) return;
+    if (getFiniteSec(item.voiceDuration) > 0) return;
+
     const probe = new Audio();
     probe.preload = "metadata";
     probe.onloadedmetadata = () => {
@@ -87,14 +95,14 @@ export function ChatMessageBubble({
         probe.currentTime = 1e101;
         probe.ontimeupdate = () => {
           probe.ontimeupdate = null;
-          if (Number.isFinite(probe.duration) && probe.duration > 0) {
+          if (Number.isFinite(probe.duration) && probe.duration > 0 && probe.duration < 7200) {
             setRealAudioDuration(Math.max(1, Math.round(probe.duration)));
           }
           try {
             probe.currentTime = 0;
           } catch {}
         };
-      } else if (Number.isFinite(probe.duration) && probe.duration > 0) {
+      } else if (Number.isFinite(probe.duration) && probe.duration > 0 && probe.duration < 7200) {
         setRealAudioDuration(Math.max(1, Math.round(probe.duration)));
       }
     };
@@ -103,7 +111,7 @@ export function ChatMessageBubble({
       probe.ontimeupdate = null;
       probe.src = "";
     };
-  }, [isVoice, item.mediaUrl]);
+  }, [isVoice, item.mediaUrl, item.voiceDuration]);
 
   const rawWaveform = Array.isArray(item.voiceWaveform) && item.voiceWaveform.length > 0
     ? item.voiceWaveform
@@ -149,12 +157,25 @@ export function ChatMessageBubble({
 
   // Audio Playback Controller & Instance Management
   const getOrCreateAudio = useCallback(() => {
-    if (!audioRef.current && item.mediaUrl) {
-      const audio = new Audio(item.mediaUrl);
+    if (!item.mediaUrl) return null;
+    if (
+      audioRef.current &&
+      audioSrcRef.current &&
+      (!audioRef.current.paused ||
+        audioSrcRef.current === item.mediaUrl ||
+        audioSrcRef.current.startsWith("blob:"))
+    ) {
+      return audioRef.current;
+    }
+    if (!audioRef.current) {
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.src = item.mediaUrl;
+      audioSrcRef.current = item.mediaUrl;
       audioRef.current = audio;
 
       const updateDuration = () => {
-        if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        if (Number.isFinite(audio.duration) && audio.duration > 0 && audio.duration < 7200) {
           setRealAudioDuration(Math.max(1, Math.round(audio.duration)));
         }
       };
@@ -174,12 +195,26 @@ export function ChatMessageBubble({
       };
 
       audio.onerror = () => {
+        // If optimistic blob URL was revoked after permanent URL arrived, switch seamlessly once
+        if (
+          audioSrcRef.current !== item.mediaUrl &&
+          item.mediaUrl &&
+          !String(item.mediaUrl).startsWith("blob:")
+        ) {
+          audioSrcRef.current = item.mediaUrl;
+          audio.src = item.mediaUrl;
+          audio.load();
+          return;
+        }
         cancelAnimationFrame(rafRef.current);
         setAudioError(true);
         setPlayingVoiceId(null);
         setPlaybackProgress(0);
         setCurrentPlaybackSec(0);
       };
+    } else if (audioSrcRef.current !== item.mediaUrl && audioRef.current.paused) {
+      audioSrcRef.current = item.mediaUrl;
+      audioRef.current.src = item.mediaUrl;
     }
     return audioRef.current;
   }, [item.mediaUrl, setPlayingVoiceId]);
@@ -198,39 +233,46 @@ export function ChatMessageBubble({
     if (isPlaying) {
       const audio = getOrCreateAudio();
       if (audio) {
-        audio.play().catch(() => {
-          setAudioError(true);
-          setPlayingVoiceId(null);
-          setPlaybackProgress(0);
-          setCurrentPlaybackSec(0);
-        });
-
-        // 60fps high-precision requestAnimationFrame loop (zero latency, zero jitter)
-        const loop = () => {
-          if (audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
-            const dur =
-              getFiniteSec(audioRef.current.duration) ||
-              getFiniteSec(realAudioDuration) ||
-              getFiniteSec(item.voiceDuration) ||
-              4;
-            const cur = getFiniteSec(audioRef.current.currentTime);
-            if (dur > 0) {
-              setPlaybackProgress(Math.min(1, Math.max(0, cur / dur)));
-              setCurrentPlaybackSec(Math.floor(cur));
+        const startRafLoop = () => {
+          const loop = () => {
+            if (audioRef.current && !audioRef.current.paused && !audioRef.current.ended) {
+              const dur =
+                getFiniteSec(audioRef.current.duration) ||
+                durationRef.current ||
+                4;
+              const cur = getFiniteSec(audioRef.current.currentTime);
+              if (dur > 0) {
+                setPlaybackProgress(Math.min(1, Math.max(0, cur / dur)));
+                setCurrentPlaybackSec(Math.floor(cur));
+              }
+              rafRef.current = requestAnimationFrame(loop);
             }
-            rafRef.current = requestAnimationFrame(loop);
-          }
+          };
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = requestAnimationFrame(loop);
         };
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(loop);
+
+        if (audio.paused) {
+          audio
+            .play()
+            .then(startRafLoop)
+            .catch(() => {
+              setAudioError(true);
+              setPlayingVoiceId(null);
+              setPlaybackProgress(0);
+              setCurrentPlaybackSec(0);
+            });
+        } else {
+          startRafLoop();
+        }
       }
     } else {
       cancelAnimationFrame(rafRef.current);
-      if (audioRef.current) {
+      if (audioRef.current && !audioRef.current.paused) {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, isVoice, item.mediaUrl, setPlayingVoiceId, getOrCreateAudio, realAudioDuration, item.voiceDuration]);
+  }, [isPlaying, isVoice, Boolean(item.mediaUrl), setPlayingVoiceId, getOrCreateAudio]);
 
   useEffect(() => {
     return () => {

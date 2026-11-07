@@ -517,18 +517,44 @@ export function KalceriansPanel({
         style={{
           pointerEvents: isKalceriansHiddenForChat ? "none" : "auto",
         }}
-        className={`fixed z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col overflow-hidden font-sans select-none backdrop-blur-[28px] max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[46vh] max-[860px]:max-h-[385px] max-[860px]:min-h-[340px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
+        className={`fixed z-[1000] left-4 bottom-4 w-[340px] sm:w-[360px] h-[580px] max-h-[calc(100vh-120px)] rounded-2xl flex flex-col overflow-hidden font-sans select-none max-[860px]:left-0 max-[860px]:right-0 max-[860px]:bottom-0 max-[860px]:w-full max-[860px]:h-[46vh] max-[860px]:max-h-[385px] max-[860px]:min-h-[340px] max-[860px]:rounded-b-none max-[860px]:rounded-t-2xl ${
           isMapDark
-            ? "bg-[#161b22]/85 border border-[#30363d]/90 text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.15),inset_-1px_-1.5px_2px_rgba(0,0,0,0.7),0_14px_36px_rgba(0,0,0,0.8)]"
-            : "bg-white/80 border border-[#c4cbd4] text-[#1f2328] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.95),inset_-1px_-1.5px_2px_rgba(160,174,192,0.35),0_12px_36px_rgba(0,0,0,0.12)]"
+            ? "bg-[#0f1014] border border-[#2a2d37] text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.12),inset_-1px_-1.5px_2px_rgba(0,0,0,0.8),0_14px_36px_rgba(0,0,0,0.85)]"
+            : "bg-[#ffffff] border border-[#c4cbd4] text-[#1f2328] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.95),inset_-1px_-1.5px_2px_rgba(160,174,192,0.35),0_12px_36px_rgba(0,0,0,0.12)]"
         }`}
       >
-      {/* 1. Top Scroll Bar / Pull Handle */}
+      {/* Smooth-trimmed BGOtherKalcerian Background cut strictly at the top boundary of the Search box */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-[74px] bottom-0 z-0 pointer-events-none select-none overflow-hidden"
+        style={{
+          backgroundColor: isMapDark ? "#0f1014" : "#ffffff",
+          maskImage: "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.5) 12px, black 26px)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.5) 12px, black 26px)",
+        }}
+      >
+        <div
+          className="w-full h-full"
+          style={{
+            backgroundImage: isMapDark
+              ? "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Dark.jpg')"
+              : "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Light.jpg')",
+            backgroundSize: "cover",
+            backgroundPosition: "top center",
+            backgroundRepeat: "no-repeat",
+            opacity: isMapDark ? 0.45 : 0.58,
+          }}
+        />
+      </div>
+
+      {/* 1. Top Scroll Bar / Pull Handle (Solid Base #0f1014 / #ffffff) */}
       <button
         type="button"
         aria-label="Toggle panel"
         onClick={() => setDrawerOpen((prev) => !prev)}
-        className="w-full pt-2.5 pb-1 flex justify-center cursor-pointer select-none outline-none group"
+        className={`relative z-10 w-full pt-2.5 pb-1 flex justify-center cursor-pointer select-none outline-none group ${
+          isMapDark ? "bg-[#0f1014]" : "bg-[#ffffff]"
+        }`}
       >
         <span
           className={`w-11 sm:w-12 h-1 rounded-full transition-colors ${
@@ -539,11 +565,11 @@ export function KalceriansPanel({
         />
       </button>
 
-      {/* 2. Header: "Find other Kalcerians" with left wave-in animation */}
+      {/* 2. Header: "Find other Kalcerians" with left wave-in animation (Solid Base #0f1014 / #ffffff) */}
       <div
         onClick={() => setDrawerOpen((prev) => !prev)}
-        className={`px-4 pb-2.5 pt-0.5 cursor-pointer flex justify-between items-center transition-colors select-none ${
-          isMapDark ? "hover:bg-[#21262d]/40" : "hover:bg-[#f6f8fa]/60"
+        className={`relative z-10 px-4 pb-2.5 pt-0.5 cursor-pointer flex justify-between items-center transition-colors select-none ${
+          isMapDark ? "bg-[#0f1014] hover:bg-[#181a20]" : "bg-[#ffffff] hover:bg-[#f6f8fa]/60"
         }`}
       >
         <motion.h2
@@ -569,17 +595,17 @@ export function KalceriansPanel({
       </div>
 
       {/* 3. Search Bar - Modern GitHub Style */}
-      <div className="px-3 pb-2.5">
+      <div className="relative z-10 px-3 pb-2.5">
         <div className="relative flex items-center">
           <input
             type="text"
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full border rounded-xl py-1.5 pl-8 pr-3 text-[12px] font-sans outline-none transition-all ${
+            className={`w-full border rounded-xl py-1.5 pl-8 pr-3 text-[12px] font-sans outline-none transition-all backdrop-blur-sm ${
               isMapDark
-                ? "bg-[#21262d]/45 border-[#38404a] text-[#f0f6fc] placeholder:text-[#8b949e] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_2px_6px_rgba(0,0,0,0.3)] focus:border-[#58a6ff]"
-                : "bg-white/60 border-[#d1d5db] text-[#1f2328] placeholder:text-[#656d76] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] focus:border-[#0969da]"
+                ? "bg-[#0f1014]/85 border-[#2e323d] text-[#f0f6fc] placeholder:text-[#8b949e] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.1),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)] focus:border-[#58a6ff]"
+                : "bg-white/85 border-[#d1d5db] text-[#1f2328] placeholder:text-[#656d76] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] focus:border-[#0969da]"
             }`}
           />
           <svg
@@ -600,7 +626,7 @@ export function KalceriansPanel({
       {/* 4. Content List: Unified Kalcerians list */}
       <div
         ref={listContainerRef}
-        className="flex-1 flex flex-col min-h-0 overflow-y-auto px-2.5 pt-2 pb-3.5 modern-kalcerian-scrollbar overscroll-contain"
+        className="relative z-10 flex-1 flex flex-col min-h-0 overflow-y-auto px-2.5 pt-2 pb-3.5 modern-kalcerian-scrollbar overscroll-contain"
       >
         {isDataLoading ? (
           <div className="flex flex-col">

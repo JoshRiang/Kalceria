@@ -161,13 +161,8 @@ export function usePersonalCallState({
     };
 
     async function initCall() {
-      // 1. Play Outgoing Ringtone if initiating call
-      if (!isIncomingAnswer) {
-        setStatus("calling");
-        startOutgoingRingtone();
-      }
-
-      // 2. Safe Hardware Acquisition (Mic only for voice, Mic + Camera for video)
+      // 1. Safe Hardware Acquisition FIRST (Mic only for voice, Mic + Camera for video)
+      // Do NOT start outgoing ringtone before hardware permission is confirmed!
       let stream = null;
       try {
         if (mode === "video") {
@@ -192,6 +187,12 @@ export function usePersonalCallState({
       if (cancelled) {
         if (stream) stopMediaStream(stream);
         return;
+      }
+
+      // 2. Hardware acquired cleanly — now start Outgoing Ringtone if initiating call
+      if (!isIncomingAnswer) {
+        setStatus("calling");
+        startOutgoingRingtone();
       }
 
       if (stream) {

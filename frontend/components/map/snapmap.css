@@ -106,32 +106,44 @@
   cursor: pointer;
 }
 
-/* username tooltip */
+/* username tooltip matching "Chat Coki" hover box style */
 .radar-nametag {
   position: absolute;
   top: -8px;
   left: 50%;
   transform: translateX(-50%) translateY(-100%);
   white-space: nowrap;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 6px;
-  background: rgba(10, 14, 39, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  background: #ffffff;
+  border: 1px solid #000000;
+  color: #000000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: normal;
   opacity: 0;
   pointer-events: none;
   transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
-  z-index: 20;
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  z-index: 40;
+}
+
+.snap-tactical-map.dark-theme .radar-nametag,
+.dark-theme .radar-nametag {
+  background: #000000;
+  border: 1px solid #ffffff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
 }
 
 .radar-node:hover .radar-nametag,
-.broadcast-map-node:hover .radar-nametag {
+.radar-node.is-nametag-open .radar-nametag,
+.broadcast-map-node:hover .radar-nametag,
+.broadcast-map-node.is-nametag-open .radar-nametag {
   opacity: 1;
   transform: translateX(-50%) translateY(-100%) translateY(-4px);
 }

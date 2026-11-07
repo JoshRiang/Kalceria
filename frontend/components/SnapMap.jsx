@@ -176,12 +176,47 @@ export default function SnapMap({
     window.__kalceriaCollaboratorUpload = (id) => {
       onCollaboratorUpload?.(id);
     };
+    window.__kalceriaSwitchEventMedia = (safeId, targetIdx) => {
+      if (typeof document === "undefined") return;
+      const container = document.getElementById(`event-carousel-${safeId}`);
+      if (!container) return;
+      const slides = container.querySelectorAll("[data-carousel-slide]");
+      const fills = container.querySelectorAll("[data-carousel-fill]");
+      slides.forEach((slide, idx) => {
+        slide.style.animation = "none";
+        slide.style.opacity = idx === Number(targetIdx) ? "1" : "0";
+        slide.style.zIndex = idx === Number(targetIdx) ? "5" : "1";
+        const vid = slide.querySelector("video");
+        if (vid) {
+          if (idx === Number(targetIdx)) {
+            vid.currentTime = 0;
+            vid.play().catch(() => {});
+          } else {
+            vid.pause();
+          }
+        }
+      });
+      fills.forEach((fill, idx) => {
+        fill.style.animation = "none";
+        if (idx < Number(targetIdx)) {
+          fill.style.width = "100%";
+          fill.style.opacity = "1";
+        } else if (idx === Number(targetIdx)) {
+          fill.style.width = "100%";
+          fill.style.opacity = "1";
+        } else {
+          fill.style.width = "0%";
+          fill.style.opacity = "0.35";
+        }
+      });
+    };
     return () => {
       delete window.__kalceriaEditEvent;
       delete window.__kalceriaRequestCollab;
       delete window.__kalceriaPromptCancelRequest;
       delete window.__kalceriaOpenRequests;
       delete window.__kalceriaCollaboratorUpload;
+      delete window.__kalceriaSwitchEventMedia;
     };
   }, [events, onEditEvent, onRequestCollab, onPromptCancelRequest, onOpenRequests, onCollaboratorUpload]);
 
@@ -436,8 +471,21 @@ export default function SnapMap({
           marker._lastPopupContent = null;
         }
 
-        // When tapping an avatar marker on the map, trigger inline profile animation in the scroll bar
+        // When tapping an avatar marker on the map, show username tooltip box AND trigger inline profile animation in the scroll bar
         marker.on("click", () => {
+          if (typeof document !== "undefined") {
+            document.querySelectorAll(".radar-node.is-nametag-open, .broadcast-map-node.is-nametag-open").forEach((el) => {
+              el.classList.remove("is-nametag-open");
+            });
+            const iconEl = marker.getElement?.();
+            const nodeEl = iconEl?.querySelector?.(".radar-node, .broadcast-map-node");
+            if (nodeEl) {
+              nodeEl.classList.add("is-nametag-open");
+              setTimeout(() => {
+                nodeEl.classList.remove("is-nametag-open");
+              }, 3500);
+            }
+          }
           if (typeof window !== "undefined") {
             window.dispatchEvent(
               new CustomEvent("kalceria:expand-kalcerian-profile", {

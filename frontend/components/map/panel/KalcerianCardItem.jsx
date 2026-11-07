@@ -69,16 +69,16 @@ export function KalcerianCardItem({
         mass: 0.8,
       }}
       key={user.id}
-      className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-colors duration-200 ${
+      className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-colors duration-200 backdrop-blur-[2px] ${
         isExpanded ? "overflow-hidden" : "overflow-visible"
       } ${
         isBlocked
           ? isMapDark
-            ? "bg-[#161b22]/30 border-[#30363d]/40 opacity-40 select-none shadow-none"
-            : "bg-white/30 border-[#e5e7eb]/60 opacity-40 select-none shadow-none"
+            ? "bg-[#0f1014]/50 border-[#2a2d37]/40 opacity-40 select-none shadow-none"
+            : "bg-white/50 border-[#e5e7eb]/60 opacity-40 select-none shadow-none"
           : isMapDark
-          ? "bg-[#21262d]/40 border-[#38404a] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.5),0_2px_6px_rgba(0,0,0,0.3)] hover:border-[#4d5663] hover:bg-[#21262d]/60"
-          : "bg-white/55 border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] hover:border-[#b0b8c2] hover:bg-white/75"
+          ? "bg-[#0f1014]/75 border-[#2e323d] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.1),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)] hover:border-[#4d5663] hover:bg-[#0f1014]/88"
+          : "bg-white/80 border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] hover:border-[#b0b8c2] hover:bg-white/92"
       }`}
     >
       <div
@@ -503,7 +503,7 @@ export function KalcerianCardItem({
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className={`overflow-hidden border-t ${
-              isMapDark ? "border-[#38404a] bg-[#161b22]" : "border-[#d1d5db] bg-white"
+              isMapDark ? "border-[#2e323d] bg-[#0f1014]" : "border-[#d1d5db] bg-white"
             } -mt-[1px]`}
           >
             <KalcerianProfileCard

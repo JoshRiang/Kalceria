@@ -3,7 +3,7 @@ import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cur
 import { resolveIndonesianReverseGeo } from './geoController.js';
 import { ensurePersistentUserProfile } from '../utils/profileDefaults.js';
 
-const MINI_EVENT_TTL_MS = 7 * 60 * 60 * 1000;
+const MINI_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
 
 const MINOR_TITLE_WORDS = new Set([
   "dan", "atau", "serta", "tetapi", "tapi", "namun", "melainkan", "padahal", "sedangkan",
@@ -83,10 +83,19 @@ function formatMiniEvent(ev) {
   };
 }
 
+function stripEncodedTags(raw) {
+  return String(raw || "")
+    .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+    .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+    .replace(/\[LOC:[^\]]+\]\s*/gi, "")
+    .trim();
+}
+
 function validateMiniEvent({ title, description, lat, lng }) {
   if (!title) return "Title is required.";
   if (title.length > 80) return "Title must be 80 characters or less.";
-  if (description.length > 600)
+  const plainDesc = stripEncodedTags(description);
+  if (plainDesc.length > 600)
     return "Description must be 600 characters or less.";
   if (lat === null || lng === null) return "Valid lat and lng are required.";
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180)
@@ -165,7 +174,7 @@ export async function createMiniEvent(req, res, next) {
       event.creator = await ensurePersistentUserProfile(event.creator);
     }
 
-    res.status(201).json({ event });
+    res.status(201).json({ event: formatMiniEvent(event) });
   } catch (err) {
     next(err);
   }
@@ -291,7 +300,7 @@ export async function updateMiniEvent(req, res, next) {
       event.creator = await ensurePersistentUserProfile(event.creator);
     }
 
-    res.json({ event });
+    res.json({ event: formatMiniEvent(event) });
   } catch (err) {
     next(err);
   }

@@ -45,8 +45,12 @@ export async function acquireMicrophoneStream(customConstraints = {}) {
 
   try {
     return await navigator.mediaDevices.getUserMedia(constraints);
-  } catch (err) {
-    throw translateMediaHardwareError(err, "mic");
+  } catch {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch (fallbackErr) {
+      throw translateMediaHardwareError(fallbackErr, "mic");
+    }
   }
 }
 

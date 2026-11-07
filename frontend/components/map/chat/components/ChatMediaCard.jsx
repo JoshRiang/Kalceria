@@ -262,28 +262,38 @@ export function ChatMediaCard({
         e.stopPropagation();
         onOpenContextMenu?.(e, item);
       }}
-      className={`relative rounded-xl select-none w-[125px] sm:w-[135px] aspect-[4/5] shadow-md transition-transform ${
-        isOnceOpened ? "cursor-not-allowed" : "cursor-pointer active:scale-[0.98]"
+      className={`relative rounded-xl select-none w-[125px] sm:w-[135px] aspect-[4/5] shadow-md ${
+        isOnceOpened ? "cursor-not-allowed" : "cursor-pointer"
       }`}
-      style={{ perspective: 1000 }}
+      style={{ perspective: "1200px" }}
     >
       <motion.div
         animate={{ rotateY: isFlipped ? 180 : 0 }}
-        transition={{ duration: 0.45, ease: "easeInOut" }}
-        style={{ transformStyle: "preserve-3d" }}
+        transition={{ duration: 0.65, ease: [0.45, 0.05, 0.55, 0.95] }}
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "relative",
+          transformStyle: "preserve-3d",
+          willChange: "transform",
+          transform: "translateZ(0)",
+        }}
         className="relative w-full h-full"
       >
-        {/* FRONT SIDE (DEFAULT): Blurred card with centered typing animation */}
+        {/* FRONT SIDE (DEFAULT): Card with centered typing animation */}
         <div
           style={{
+            position: "absolute",
+            inset: 0,
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
-            visibility: isFlipped ? "hidden" : "visible",
+            pointerEvents: isFlipped ? "none" : "auto",
+            transform: "rotateY(0deg) translateZ(0)",
           }}
-          className={`relative w-full h-full rounded-xl overflow-hidden flex flex-col justify-between p-2.5 transition-colors duration-200 ${
+          className={`w-full h-full rounded-xl overflow-hidden flex flex-col justify-between p-2.5 ${
             isMapDark
-              ? "bg-black/95 backdrop-blur-md border border-white/20 text-white shadow-md"
-              : "bg-white/85 backdrop-blur-md border border-black/15 text-black shadow-xs"
+              ? "bg-[#0d1117] border border-white/20 text-white shadow-md"
+              : "bg-white border border-black/15 text-black shadow-xs"
           }`}
         >
           {/* Once Seen Badge (Top Right): Persists even after viewing */}
@@ -342,12 +352,14 @@ export function ChatMediaCard({
         {/* BACK SIDE (FLIPPED): Photo or Video View */}
         <div
           style={{
+            position: "absolute",
+            inset: 0,
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
-            transform: "rotateY(180deg)",
-            visibility: isFlipped ? "visible" : "hidden",
+            transform: "rotateY(180deg) translateZ(0)",
+            pointerEvents: isFlipped ? "auto" : "none",
           }}
-          className="absolute inset-0 z-10 w-full h-full rounded-xl overflow-hidden bg-black flex flex-col justify-between"
+          className="z-10 w-full h-full rounded-xl overflow-hidden bg-black flex flex-col justify-between"
         >
           {/* Media View */}
           <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
@@ -370,8 +382,8 @@ export function ChatMediaCard({
                   ref={videoRef}
                   src={item.mediaUrl}
                   playsInline
-                  autoPlay
-                  muted={false}
+                  autoPlay={isFlipped}
+                  muted={!isFlipped}
                   loop
                   onLoadedMetadata={(e) => {
                     if (e.currentTarget.duration && Number.isFinite(e.currentTarget.duration) && e.currentTarget.duration > 0) {

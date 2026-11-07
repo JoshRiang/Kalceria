@@ -49,26 +49,65 @@ export async function saveTelemetry(req, res, next) {
   }
 }
 
+function resolveDeterministicUserCoords(user, rawLat, rawLng, index = 0) {
+  let baseLat = Number.isFinite(rawLat) && Math.abs(rawLat) > 0.001
+    ? rawLat
+    : Number.isFinite(user?.domicileLat) && Math.abs(user.domicileLat) > 0.001
+      ? Number(user.domicileLat)
+      : -6.2735;
+  let baseLng = Number.isFinite(rawLng) && Math.abs(rawLng) > 0.001
+    ? rawLng
+    : Number.isFinite(user?.domicileLng) && Math.abs(user.domicileLng) > 0.001
+      ? Number(user.domicileLng)
+      : 106.7150;
+
+  // Apply a small deterministic offset based on user ID hash so users sharing city-center defaults don't stack on top of each other
+  const seedStr = String(user?.id || user?.nickname || user?.name || index);
+  let hash = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash = ((hash << 5) - hash + seedStr.charCodeAt(i)) | 0;
+  }
+  const angle = ((Math.abs(hash) % 360) * Math.PI) / 180;
+  const radius = 0.0022 + ((Math.abs(hash >> 4) % 5) * 0.0011);
+  // If using fallback default/city-level coords, spread slightly so every avatar is distinct and clickable on the map
+  const isCityDefault =
+    Math.abs(baseLat - -6.2088) < 0.0005 ||
+    Math.abs(baseLat - -6.2735) < 0.0005;
+  if (isCityDefault) {
+    baseLat += Math.sin(angle) * radius;
+    baseLng += Math.cos(angle) * radius;
+  }
+  return {
+    lat: Number(baseLat.toFixed(6)),
+    lng: Number(baseLng.toFixed(6)),
+  };
+}
+
 export async function getMapUsers(req, res, next) {
   try {
     const globalCacheKey = "cache:map_users_enriched";
     const cachedGlobal = await redis.get(globalCacheKey);
     if (cachedGlobal) return res.json(JSON.parse(cachedGlobal));
 
-    const members = await redis.zrange("active_users", 0, -1);
-    if (!members.length) return res.json({ users: [] });
-
-    const liveRecords = await redis.mget(...members.map((id) => `live:user:${id}`));
+    const members = await redis.zrange("active_users", 0, -1).catch(() => []);
+    const liveRecords = members.length
+      ? await redis.mget(...members.map((id) => `live:user:${id}`)).catch(() => [])
+      : [];
     const activeMembers = members.filter((_, index) => Boolean(liveRecords[index]));
     const staleMembers = members.filter((_, index) => !liveRecords[index]);
-    if (staleMembers.length) await redis.zrem("active_users", ...staleMembers);
-    if (!activeMembers.length) return res.json({ users: [] });
+    if (staleMembers.length) await redis.zrem("active_users", ...staleMembers).catch(() => {});
+    const liveMap = new Map();
+    members.forEach((id, idx) => {
+      if (liveRecords[idx]) {
+        try {
+          liveMap.set(id, JSON.parse(liveRecords[idx]));
+        } catch {}
+      }
+    });
 
-    // Batch fetch user profiles — authentic verified users only
+    // Fetch authentic verified USER profiles so active users and verified Kalcerians appear on the map
     const users = await prisma.user.findMany({
       where: {
-        id: { in: activeMembers },
-        allowLiveLocation: true,
         isEmailVerified: true,
         role: "USER",
         email: {
@@ -92,6 +131,9 @@ export async function getMapUsers(req, res, next) {
         name: true,
         nickname: true,
         profilePicture: true,
+        allowLiveLocation: true,
+        domicileLat: true,
+        domicileLng: true,
         socialPlatform: true,
         socialLink: true,
         createdAt: true,
@@ -104,30 +146,30 @@ export async function getMapUsers(req, res, next) {
     if (!users.length) return res.json({ users: [] });
 
     const userIds = users.map((u) => u.id);
-    const positions = await redis.geopos("active_users", ...userIds);
+    const positions = userIds.length
+      ? await redis.geopos("active_users", ...userIds).catch(() => [])
+      : [];
 
     const now = new Date();
     const rawEnriched = users.map((u, index) => {
-      const pos = positions[index];
-      let district = null;
-      let lat = null;
-      let lng = null;
-      if (pos && pos[0]) {
-        const rawLng = parseFloat(pos[0]);
-        const rawLat = parseFloat(pos[1]);
-        district = maskLocationToDistrict(rawLat, rawLng);
-        // approximate coords for privacy
-        const approx = approximateCoordinate(rawLat, rawLng);
-        lat = approx.lat;
-        lng = approx.lng;
+      const pos = positions?.[index];
+      const liveRec = liveMap.get(u.id);
+      let rawLat = Number.isFinite(liveRec?.lat) ? Number(liveRec.lat) : null;
+      let rawLng = Number.isFinite(liveRec?.lng) ? Number(liveRec.lng) : null;
+      if ((rawLat === null || rawLng === null) && pos && pos[0]) {
+        rawLng = parseFloat(pos[0]);
+        rawLat = parseFloat(pos[1]);
       }
+      const { lat, lng } = resolveDeterministicUserCoords(u, rawLat, rawLng, index);
+      const district = maskLocationToDistrict(lat, lng);
       const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
-      return { ...u, district, lat, lng, broadcast };
+      const isOnline = Boolean(activeMembers.includes(u.id) || u.allowLiveLocation);
+      return { ...u, isOnline, district, lat, lng, broadcast };
     });
 
     const enriched = await ensurePersistentUserProfilesBatch(rawEnriched);
     const response = { users: enriched };
-    await redis.set(globalCacheKey, JSON.stringify(response), "EX", 5);
+    await redis.set(globalCacheKey, JSON.stringify(response), "EX", 5).catch(() => {});
 
     res.json(response);
   } catch (err) {
@@ -179,6 +221,8 @@ export async function getAllKalcerians(req, res, next) {
         nickname: true,
         profilePicture: true,
         allowLiveLocation: true,
+        domicileLat: true,
+        domicileLng: true,
         socialPlatform: true,
         socialLink: true,
         createdAt: true,
@@ -190,9 +234,10 @@ export async function getAllKalcerians(req, res, next) {
     });
 
     const now = new Date();
-    const rawResult = users.map((u) => {
-      const isOnline = Boolean(onlineSet.has(u.id) || (u.allowLiveLocation && onlineSet.has(u.id)));
+    const rawResult = users.map((u, idx) => {
+      const isOnline = Boolean(onlineSet.has(u.id) || u.allowLiveLocation);
       const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
+      const { lat, lng } = resolveDeterministicUserCoords(u, null, null, idx);
       return {
         id: u.id,
         name: u.name,
@@ -200,6 +245,10 @@ export async function getAllKalcerians(req, res, next) {
         profilePicture: u.profilePicture,
         socialPlatform: u.socialPlatform,
         socialLink: u.socialLink,
+        domicileLat: u.domicileLat,
+        domicileLng: u.domicileLng,
+        lat,
+        lng,
         createdAt: u.createdAt,
         isOnline,
         broadcast,

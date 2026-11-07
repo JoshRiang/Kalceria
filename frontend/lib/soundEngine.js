@@ -184,7 +184,8 @@ export function stopCallRingtone() {
 }
 
 /**
- * Plays the outgoing ringback tone ("tuuut... tuuut...") while waiting for peer to pick up.
+ * Plays a smooth, modern open-source-style ambient outgoing ringback chime
+ * (warm low-pass filtered sine+triangle fifth intervals, soft attack & decay).
  */
 export function startOutgoingRingtone() {
   stopCallRingtone();
@@ -194,36 +195,54 @@ export function startOutgoingRingtone() {
   if (!ctx || ctx.state === "closed") return;
 
   const subTimers = [];
+  const chordNotes = [
+    { freq: 523.25, time: 0.0, dur: 0.65, gain: 0.16 }, // C5
+    { freq: 783.99, time: 0.24, dur: 0.85, gain: 0.14 }, // G5
+  ];
 
   function playToneBurst() {
     if (isSoundMuted()) return;
     try {
       const now = ctx.currentTime;
       const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.001, now);
-      masterGain.gain.linearRampToValueAtTime(0.2, now + 0.05);
-      masterGain.gain.setValueAtTime(0.2, now + 1.2);
-      masterGain.gain.linearRampToValueAtTime(0.001, now + 1.28);
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(1350, now);
+
+      masterGain.gain.setValueAtTime(0.45, now);
+      filter.connect(masterGain);
       masterGain.connect(ctx.destination);
 
-      // Standard dual dialing frequencies: 440 Hz + 480 Hz
-      const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      osc1.type = "sine";
-      osc2.type = "sine";
-      osc1.frequency.setValueAtTime(440, now);
-      osc2.frequency.setValueAtTime(480, now);
+      chordNotes.forEach(({ freq, time, dur, gain }) => {
+        const oscMain = ctx.createOscillator();
+        const oscWarm = ctx.createOscillator();
+        const noteGain = ctx.createGain();
 
-      osc1.connect(masterGain);
-      osc2.connect(masterGain);
+        oscMain.type = "sine";
+        oscWarm.type = "triangle";
+        oscMain.frequency.setValueAtTime(freq, now + time);
+        oscWarm.frequency.setValueAtTime(freq * 0.5, now + time);
 
-      osc1.start(now);
-      osc2.start(now);
-      osc1.stop(now + 1.35);
-      osc2.stop(now + 1.35);
+        noteGain.gain.setValueAtTime(0.0001, now + time);
+        noteGain.gain.linearRampToValueAtTime(gain, now + time + 0.06);
+        noteGain.gain.exponentialRampToValueAtTime(0.0001, now + time + dur);
+
+        oscMain.connect(noteGain);
+        oscWarm.connect(noteGain);
+        noteGain.connect(filter);
+
+        oscMain.start(now + time);
+        oscWarm.start(now + time);
+        oscMain.stop(now + time + dur + 0.04);
+        oscWarm.stop(now + time + dur + 0.04);
+
+        if (activeCallRingtone) {
+          activeCallRingtone.nodes.push(oscMain, oscWarm, noteGain);
+        }
+      });
 
       if (activeCallRingtone) {
-        activeCallRingtone.nodes.push(osc1, osc2, masterGain);
+        activeCallRingtone.nodes.push(filter, masterGain);
       }
     } catch {}
   }
@@ -236,11 +255,12 @@ export function startOutgoingRingtone() {
   };
 
   playToneBurst();
-  activeCallRingtone.timer = setInterval(playToneBurst, 3600);
+  activeCallRingtone.timer = setInterval(playToneBurst, 2800);
 }
 
 /**
- * Plays the melodic incoming call ringtone when receiving a call.
+ * Plays a smooth, warm modern open-source-style ambient incoming call chime
+ * synced with the 3-second heartbeat animation.
  */
 export function startIncomingRingtone() {
   stopCallRingtone();
@@ -251,14 +271,13 @@ export function startIncomingRingtone() {
 
   const subTimers = [];
 
-  // Elegant pentatonic chime melody: E5 (659Hz), G#5 (831Hz), B5 (988Hz), E6 (1319Hz), B5 (988Hz)
+  // Warm ambient marimba/bell progression: G4 -> B4 -> D5 -> F#5 -> D5
   const notes = [
-    { freq: 659.25, time: 0.0, dur: 0.22, gain: 0.38 },
-    { freq: 830.61, time: 0.16, dur: 0.22, gain: 0.4 },
-    { freq: 987.77, time: 0.32, dur: 0.28, gain: 0.45 },
-    { freq: 1318.51, time: 0.5, dur: 0.4, gain: 0.5 },
-    { freq: 987.77, time: 0.85, dur: 0.3, gain: 0.38 },
-    { freq: 830.61, time: 1.05, dur: 0.35, gain: 0.35 },
+    { freq: 392.0, time: 0.0, dur: 0.48, gain: 0.22 },
+    { freq: 493.88, time: 0.18, dur: 0.48, gain: 0.24 },
+    { freq: 587.33, time: 0.36, dur: 0.54, gain: 0.26 },
+    { freq: 739.99, time: 0.56, dur: 0.78, gain: 0.24 },
+    { freq: 587.33, time: 0.92, dur: 0.65, gain: 0.18 },
   ];
 
   function playMelodicPhrase() {
@@ -266,32 +285,43 @@ export function startIncomingRingtone() {
     try {
       const now = ctx.currentTime;
       const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.35, now);
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(1600, now);
+
+      masterGain.gain.setValueAtTime(0.45, now);
+      filter.connect(masterGain);
       masterGain.connect(ctx.destination);
 
       notes.forEach(({ freq, time, dur, gain }) => {
         const osc = ctx.createOscillator();
+        const oscSub = ctx.createOscillator();
         const noteGain = ctx.createGain();
         osc.type = "sine";
+        oscSub.type = "triangle";
         osc.frequency.setValueAtTime(freq, now + time);
+        oscSub.frequency.setValueAtTime(freq * 0.5, now + time);
 
-        noteGain.gain.setValueAtTime(0.001, now + time);
-        noteGain.gain.exponentialRampToValueAtTime(gain, now + time + 0.02);
-        noteGain.gain.exponentialRampToValueAtTime(0.001, now + time + dur);
+        noteGain.gain.setValueAtTime(0.0001, now + time);
+        noteGain.gain.linearRampToValueAtTime(gain, now + time + 0.045);
+        noteGain.gain.exponentialRampToValueAtTime(0.0001, now + time + dur);
 
         osc.connect(noteGain);
-        noteGain.connect(masterGain);
+        oscSub.connect(noteGain);
+        noteGain.connect(filter);
 
         osc.start(now + time);
-        osc.stop(now + time + dur + 0.05);
+        oscSub.start(now + time);
+        osc.stop(now + time + dur + 0.04);
+        oscSub.stop(now + time + dur + 0.04);
 
         if (activeCallRingtone) {
-          activeCallRingtone.nodes.push(osc, noteGain);
+          activeCallRingtone.nodes.push(osc, oscSub, noteGain);
         }
       });
 
       if (activeCallRingtone) {
-        activeCallRingtone.nodes.push(masterGain);
+        activeCallRingtone.nodes.push(filter, masterGain);
       }
     } catch {}
   }
@@ -304,7 +334,7 @@ export function startIncomingRingtone() {
   };
 
   playMelodicPhrase();
-  activeCallRingtone.timer = setInterval(playMelodicPhrase, 2400);
+  activeCallRingtone.timer = setInterval(playMelodicPhrase, 3000);
 }
 
 // ─── Central Notification Dispatcher ───

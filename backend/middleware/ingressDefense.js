@@ -226,12 +226,24 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
     if (key.startsWith('$') || key.includes('.')) {
       return { safe: false, reason: 'Operator injection attempt detected.' };
     }
-    const isLargeMediaField = key === 'ciphertext' || key === 'mediaUrl' || key === 'encryptedPayload';
+    const isLargeMediaField =
+      key === 'ciphertext' ||
+      key === 'mediaUrl' ||
+      key === 'encryptedPayload' ||
+      key === 'description' ||
+      key === 'profilePicture' ||
+      key === 'coverImage' ||
+      key === 'coverUrl';
     const isOpaqueCryptoField =
-      key === 'ciphertext' || key === 'iv' || key === 'sig' || key === 'nonce' || key === 'encryptedPayload';
+      key === 'ciphertext' ||
+      key === 'iv' ||
+      key === 'sig' ||
+      key === 'nonce' ||
+      key === 'encryptedPayload' ||
+      key === 'mediaUrl';
     const childState = {
       ...state,
-      maxStringLen: isLargeMediaField ? 500_000 : state.maxStringLen,
+      maxStringLen: isLargeMediaField ? 16_000_000 : state.maxStringLen,
       skipPatternRegex: isOpaqueCryptoField ? true : state.skipPatternRegex,
     };
     const check = inspectPayloadSafety(obj[key], depth + 1, childState);

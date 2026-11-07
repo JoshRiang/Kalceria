@@ -120,11 +120,13 @@ export function IncomingCallModal({
           ${
             isVideo
               ? "bg-[#0d1418]/90 text-white backdrop-blur-xl border border-white/10"
+              : isMapDark
+              ? "bg-[#0f1014] text-white shadow-[0_20px_50px_rgba(0,0,0,0.75)] border border-white/15"
               : "bg-white text-black shadow-[0_20px_50px_rgba(0,0,0,0.22)] border border-black/10"
           }`}
       >
         {/* Background Layer:
-            - Voice Call: Pure White with static mini Coki faces, naturally trimmed around top header
+            - Voice Call: Pure White (Light Mode) or Obsidian Dark (Dark Mode) with static mini Coki faces, naturally trimmed around top header
             - Video Call: Heavy backdrop blur over caller visual */}
         {isVideo ? (
           <div className="absolute inset-0 z-0 overflow-hidden bg-black/60 backdrop-blur-xl">
@@ -140,10 +142,14 @@ export function IncomingCallModal({
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
           </div>
         ) : (
-          /* Voice Call: Solid 100% Opaque White Base Layer + Coki Faces Pattern trimmed naturally around top header */
+          /* Voice Call: Solid 100% Opaque Base Layer + Coki Faces Pattern trimmed naturally around top header */
           <>
-            {/* 1. Pure Opaque White Base: Absolutely zero leakage from chat/map underneath */}
-            <div className="absolute inset-0 z-0 pointer-events-none bg-white" />
+            {/* 1. Pure Opaque Base: Absolutely zero leakage from chat/map underneath */}
+            <div
+              className={`absolute inset-0 z-0 pointer-events-none ${
+                isMapDark ? "bg-[#0f1014]" : "bg-white"
+              }`}
+            />
 
             {/* 2. Pattern Layer: Mini Coki faces masked away cleanly from top header */}
             <div
@@ -164,7 +170,11 @@ export function IncomingCallModal({
                     left: pos.left,
                     transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
                   }}
-                  className="w-10 h-13 pointer-events-none opacity-25 select-none"
+                  className={`w-10 h-13 pointer-events-none select-none ${
+                    isMapDark
+                      ? "opacity-[0.38] invert brightness-115 contrast-125"
+                      : "opacity-[0.42] contrast-125"
+                  }`}
                 >
                   <Image
                     src="/ForChat/BackgroundVoiceTrimmed.png"
@@ -181,10 +191,14 @@ export function IncomingCallModal({
         )}
 
         {/* TOP BAR: Caller Display Name Mid-Center & Calling Status */}
-        <div className="relative z-10 pt-7 px-4 flex flex-col items-center text-center">
+        <div
+          className={`relative z-10 pt-5 pb-3 px-4 flex flex-col items-center text-center ${
+            !isVideo ? (isMapDark ? "bg-[#0f1014]" : "bg-white") : ""
+          }`}
+        >
           <h3
             className={`font-sans font-bold text-lg sm:text-xl tracking-tight truncate max-w-[260px] ${
-              isVideo ? "text-white drop-shadow" : "text-black"
+              isVideo ? "text-white drop-shadow" : isMapDark ? "text-white" : "text-black"
             }`}
           >
             {displayName}
@@ -193,7 +207,7 @@ export function IncomingCallModal({
           <p
             style={{ fontFamily: "Arial, sans-serif" }}
             className={`font-bold text-[9.5px] sm:text-[10px] tracking-tight mt-1 ${
-              isVideo ? "text-white/80 drop-shadow" : "text-black/80"
+              isVideo ? "text-white/80 drop-shadow" : isMapDark ? "text-white/85" : "text-black/80"
             }`}
           >
             {isVideo ? "Video Call Ringing..." : "Ringing..."}
@@ -216,7 +230,7 @@ export function IncomingCallModal({
                 ease: "easeInOut",
               }}
               className={`absolute w-36 h-36 sm:w-40 sm:h-40 rounded-full border ${
-                isVideo ? "border-white/40" : "border-black/30"
+                isVideo || isMapDark ? "border-white/40" : "border-black/30"
               }`}
             />
 
@@ -234,7 +248,7 @@ export function IncomingCallModal({
                 ease: "easeInOut",
               }}
               className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 shadow-2xl ${
-                isVideo
+                isVideo || isMapDark
                   ? "border-white bg-[#161b22]"
                   : "border-black bg-white"
               }`}
@@ -250,11 +264,7 @@ export function IncomingCallModal({
           </div>
         </div>
 
-        {/* BOTTOM CONTROLS: Accept (✓) and Decline (✕)
-            - Font type & style identical to YES and NO from ConfirmationPromptModal
-            - Strictly NO GLOW, no outer boxes
-            - Default: pure black (or white in dark/video)
-            - Decline turns RED when pressed (active/pointerdown) */}
+        {/* BOTTOM CONTROLS: Accept (✓) and Decline (✕) */}
         <div className="relative z-10 pb-9 px-8 flex items-center justify-around">
           {/* Decline Button: Cross Icon (✕) */}
           <button
@@ -270,7 +280,7 @@ export function IncomingCallModal({
               className={`block font-sans text-3xl sm:text-4xl font-normal select-none transition-colors duration-150 ${
                 isDeclinePressed
                   ? "text-[#ef4444]"
-                  : isVideo
+                  : isVideo || isMapDark
                   ? "text-white/80 group-hover:text-white active:text-[#ef4444]"
                   : "text-black/80 group-hover:text-black active:text-[#ef4444]"
               }`}
@@ -288,7 +298,7 @@ export function IncomingCallModal({
           >
             <span
               className={`block font-sans text-3xl sm:text-4xl font-normal select-none transition-colors duration-150 ${
-                isVideo
+                isVideo || isMapDark
                   ? "text-white/80 group-hover:text-white"
                   : "text-black/80 group-hover:text-black"
               }`}

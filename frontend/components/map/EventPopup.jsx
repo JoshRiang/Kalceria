@@ -1,6 +1,6 @@
 // EventPopup.jsx
 // Stateless utility for generating event popup HTML for Leaflet
-import { getEventCategory } from "./EventIcon";
+import { getSafeMapAvatarUrl } from "./UserIcon";
 import { toSmartTitleCase } from "@/lib/titleCase";
 
 function esc(value) {
@@ -34,41 +34,61 @@ function extractLocation(item) {
   return null;
 }
 
+function isMockOrDummyMedia(url) {
+  const s = String(url || "").trim();
+  if (!s) return true;
+  if (/\/media\/gifs\//i.test(s)) return true;
+  return false;
+}
+
 function extractMediaList(item) {
+  let rawList = [];
   if (Array.isArray(item.mediaUrls) && item.mediaUrls.length > 0) {
-    return item.mediaUrls.filter(Boolean);
-  }
-  if (item.mediaUrl) {
-    if (item.mediaUrl.includes(",")) {
-      return item.mediaUrl.split(",").map((s) => s.trim()).filter(Boolean);
+    rawList = item.mediaUrls.filter(Boolean);
+  } else if (item.mediaUrl) {
+    if (item.mediaUrl.includes(",") && !item.mediaUrl.startsWith("data:")) {
+      rawList = item.mediaUrl.split(",").map((s) => s.trim()).filter(Boolean);
+    } else if (item.mediaUrl.includes(", data:") || item.mediaUrl.includes(", http") || item.mediaUrl.includes(", /")) {
+      rawList = item.mediaUrl.split(/,\s*(?=(?:data:|https?:\/\/|\/))/i).map((s) => s.trim()).filter(Boolean);
+    } else {
+      rawList = [item.mediaUrl.trim()];
     }
-    return [item.mediaUrl];
-  }
-  if (item.videoUrl) return [item.videoUrl];
-  if (item.gifUrl) return [item.gifUrl];
-  const match = String(item.description || "").match(/\[MEDIA:([^\]]+)\]/i);
-  if (match) {
-    const raw = match[1];
-    if (raw.includes(",")) {
-      return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  } else if (item.videoUrl) {
+    rawList = [item.videoUrl];
+  } else if (item.gifUrl) {
+    rawList = [item.gifUrl];
+  } else {
+    const match = String(item.description || "").match(/\[MEDIA:([^\]]+)\]/i);
+    if (match && match[1]) {
+      const raw = match[1].trim();
+      if (raw.includes(", data:") || raw.includes(", http") || raw.includes(", /")) {
+        rawList = raw.split(/,\s*(?=(?:data:|https?:\/\/|\/))/i).map((s) => s.trim()).filter(Boolean);
+      } else if (raw.includes(",") && !raw.startsWith("data:")) {
+        rawList = raw.split(",").map((s) => s.trim()).filter(Boolean);
+      } else {
+        rawList = [raw];
+      }
     }
-    return [raw];
   }
 
-  // Fallback videos (transcoded from GIFs for 94% network reduction) based on category
-  const categoryId = getEventCategory(item);
-  switch (categoryId) {
-    case "cafe":
-      return ["/media/gifs/event_cafe_1.mp4", "/media/gifs/event_cafe_2.mp4"];
-    case "special":
-      return ["/media/gifs/event_spec_1.mp4", "/media/gifs/event_spec_2.mp4", "/media/gifs/event_spec_3.mp4"];
-    case "eat":
-      return ["/media/gifs/event_eat_1.mp4", "/media/gifs/event_eat_2.mp4"];
-    case "discuss":
-      return ["/media/gifs/event_disc_1.mp4", "/media/gifs/event_disc_2.mp4"];
-    default:
-      return ["/media/gifs/the-office.mp4"];
-  }
+  // Strictly filter out any mock/dummy GIFs — never return fallback dummy media
+  return rawList.filter((u) => !isMockOrDummyMedia(u));
+}
+
+function renderEmptyMediaPlaceholder(isMapDark, creatorAvatarUrl, creatorName) {
+  const screenBg = isMapDark ? "#000000" : "#ffffff";
+  const ringColor = isMapDark ? "#ffffff" : "#000000";
+  return `
+    <div style="width: 100%; height: 100%; background: ${screenBg}; display: flex; align-items: center; justify-content: center; position: relative;">
+      <div style="width: 58px; height: 58px; border-radius: 9999px; overflow: hidden; border: 2px solid ${ringColor}; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28); background: ${screenBg}; flex-shrink: 0;">
+        <img
+          src="${esc(creatorAvatarUrl)}"
+          alt="${esc(creatorName)}"
+          style="width: 100%; height: 100%; object-fit: cover; display: block;"
+        />
+      </div>
+    </div>
+  `;
 }
 
 function renderSingleMedia(url) {
@@ -97,13 +117,13 @@ function renderSingleMedia(url) {
   `;
 }
 
-function renderMediaCarousel(mediaList) {
+function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, creatorName, safeId) {
   const list = Array.isArray(mediaList)
     ? mediaList.filter(Boolean)
     : (mediaList ? [mediaList] : []);
 
   if (list.length === 0) {
-    return renderSingleMedia("/media/gifs/event_cafe_1.mp4");
+    return renderEmptyMediaPlaceholder(isMapDark, creatorAvatarUrl, creatorName);
   }
   if (list.length === 1) {
     return renderSingleMedia(list[0]);
@@ -113,13 +133,14 @@ function renderMediaCarousel(mediaList) {
   const period = N * 4;
   const activePercent = Math.max(1, Math.floor(90 / N));
   const fullPercent = Math.max(2, Math.floor(100 / N));
-  const animName = `eventCarouselFade${N}`;
+  const animName = `eventCarouselFade_${safeId}_${N}`;
+  const indAnimName = `eventIndicatorRoll_${safeId}_${N}`;
 
   const slidesHtml = list
     .map((url, i) => {
       const delay = i * 4;
       return `
-        <div style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; animation: ${animName} ${period}s infinite; animation-delay: ${delay}s;">
+        <div data-carousel-slide="${i}" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: ${i === 0 ? 1 : 0}; animation: ${animName} ${period}s infinite; animation-delay: ${delay}s; transition: opacity 0.22s ease;">
           ${renderSingleMedia(url)}
         </div>
       `;
@@ -130,9 +151,17 @@ function renderMediaCarousel(mediaList) {
     .map((_, i) => {
       const delay = i * 4;
       return `
-        <div style="flex: 1; height: 2px; border-radius: 2px; background: rgba(255, 255, 255, 0.25); overflow: hidden;">
-          <div style="height: 100%; background: #ffffff; width: 0%; animation: eventIndicatorRoll${N} ${period}s infinite; animation-delay: ${delay}s;"></div>
-        </div>
+        <button
+          type="button"
+          data-carousel-indicator="${i}"
+          title="Video ${i + 1}"
+          onclick="event.stopPropagation(); window.__kalceriaSwitchEventMedia?.('${esc(safeId)}', ${i});"
+          style="flex: 1; padding: 6px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
+        >
+          <span style="display: block; width: 100%; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.32); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.45);">
+            <span data-carousel-fill="${i}" style="display: block; height: 100%; background: #ffffff; width: 0%; animation: ${indAnimName} ${period}s infinite; animation-delay: ${delay}s;"></span>
+          </span>
+        </button>
       `;
     })
     .join("");
@@ -146,7 +175,7 @@ function renderMediaCarousel(mediaList) {
         ${fullPercent}% { opacity: 0; }
         100% { opacity: 0; }
       }
-      @keyframes eventIndicatorRoll${N} {
+      @keyframes ${indAnimName} {
         0% { width: 0%; opacity: 0.4; }
         1.5% { opacity: 1; }
         ${activePercent}% { width: 100%; opacity: 1; }
@@ -154,9 +183,9 @@ function renderMediaCarousel(mediaList) {
         100% { width: 0%; opacity: 0.3; }
       }
     </style>
-    <div class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden;">
+    <div id="event-carousel-${esc(safeId)}" class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden;">
       ${slidesHtml}
-      <div style="position: absolute; top: 8px; left: 10px; right: 10px; z-index: 10; display: flex; gap: 4px; pointer-events: none;">
+      <div style="position: absolute; top: 4px; left: 10px; right: 10px; z-index: 15; display: flex; gap: 5px; pointer-events: auto;">
         ${indicatorsHtml}
       </div>
     </div>
@@ -215,13 +244,19 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
   const hasRequestedThisEvent = Boolean(requestedEventId && String(requestedEventId) === String(item.id));
   const hasActiveRequestElsewhere = Boolean(requestedEventId && String(requestedEventId) !== String(item.id));
 
-  // BGCard subtle transparency wash for extreme text firmness
-  const bgImage = isMapDark ? "/jpeg/BGCard_Dark.jpeg" : "/jpeg/BGCard_Light.jpeg";
-  const bgOverlay = isMapDark ? "rgba(14, 18, 28, 0.85)" : "rgba(255, 255, 255, 0.86)";
-  const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.12)";
+  // BG_EventCardLight.jpg (#ffffff) / BG_EventCardDark.jpg (#1b1c1e) with ChatBox-matched opacity
+  const bgImage = isMapDark
+    ? "/BG_IMPROVE_FOR_MAP/BG_EventCardDark.jpg"
+    : "/BG_IMPROVE_FOR_MAP/BG_EventCardLight.jpg";
+  const cardBaseBg = isMapDark ? "#1b1c1e" : "#ffffff";
+  const bgOpacity = isMapDark ? 0.45 : 0.58;
+  const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.14)";
   const cardShadow = isMapDark
-    ? "0 18px 46px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.2)"
+    ? "0 18px 46px rgba(0, 0, 0, 0.78), inset 0 1px 1px rgba(255, 255, 255, 0.16)"
     : "0 16px 40px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.1)";
+
+  const creatorUserObj = isOwner && currentUser ? currentUser : (item.creator || { name: rawCreatorDisplayName });
+  const creatorAvatarUrl = getSafeMapAvatarUrl(creatorUserObj);
 
   // Strict User Requirement: Light mode = Black bold, Dark mode = White bold
   const titleColor = isMapDark ? "#ffffff" : "#000000";
@@ -473,11 +508,16 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     </div>
   `;
 
+  const videoFrameBorder = isMapDark ? "1px solid rgba(255, 255, 255, 0.14)" : "1px solid rgba(0, 0, 0, 0.1)";
+
   return `
-    <div class="tactical-card event-card ${isMapDark ? 'event-card-dark' : 'event-card-light'}" style="position: relative; overflow: hidden; width: 280px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: linear-gradient(${bgOverlay}, ${bgOverlay}), url('${bgImage}') center/cover no-repeat !important; box-shadow: ${cardShadow} !important;">
-      <!-- Upper Space: Title, Declarer & Action Icons (All 3 on one line!) -->
-      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; border: none !important;">
-        <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 155px; min-width: 0; flex: 1;">
+    <div class="tactical-card event-card ${isMapDark ? 'event-card-dark' : 'event-card-light'}" style="position: relative; overflow: hidden; width: 292px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
+      <!-- Main Box Background Image Layer (Visible around header, left/right of video frame, and description) -->
+      <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; background-image: url('${bgImage}'); background-size: cover; background-position: center; background-repeat: no-repeat; opacity: ${bgOpacity};"></div>
+
+      <!-- Upper Space: Header with blur (not dimmed!) -->
+      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; background: transparent !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; border: none !important;">
+        <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 165px; min-width: 0; flex: 1;">
           <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${esc(displayTitle)}</strong>
           <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 400; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">by <strong style="font-weight: 700;">${esc(creatorDisplayName)}</strong></span>
         </div>
@@ -488,14 +528,14 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
         </div>
       </div>
 
-      <!-- Dynamic Rolling Media Carousel (No excess border/line on top/bottom) -->
-      <div class="popup-video" style="position: relative; z-index: 2; width: 100%; height: 120px; overflow: hidden; border: none !important; margin: 0; padding: 0;">
-        ${renderMediaCarousel(mediaList)}
+      <!-- Framed Media Screen: Left & Right Space so Main Box Background shows on both sides -->
+      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: 134px; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${isMapDark ? '#000000' : '#ffffff'}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
+        ${renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId)}
       </div>
 
       <!-- Lower Space: Description (NOT italic, NO line above footer) -->
       <div class="popup-lower-space" style="position: relative; z-index: 2; border: none !important;">
-        <div class="popup-status active" style="padding: 10px 14px 9px 14px; border: none !important;">
+        <div class="popup-status active" style="padding: 10px 14px 9px 14px; background: transparent !important; border: none !important;">
           <p style="font-style: normal; color: ${descColor}; margin: 0; font-size: 12.5px; line-height: 1.45; font-weight: 500; font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${esc(displayDesc)}</p>
         </div>
       </div>
