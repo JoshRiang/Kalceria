@@ -1,8 +1,18 @@
 "use client";
 
-import { memo, useState, useEffect, useRef, useCallback, Component } from "react";
+import { memo, useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { KalcerianCardItem } from "./panel/KalcerianCardItem";
+import { ChatErrorBoundary } from "./panel/ChatErrorBoundary";
+import { KalceriansHeader } from "./panel/KalceriansHeader";
+import { KalceriansSkeletonList } from "./panel/KalceriansSkeletonList";
+import {
+  avatarUrl,
+  cleanDesc,
+  FAMILY_LIMITS,
+  truncateWithEllipsis,
+  getActiveBroadcast,
+} from "./panel/kalceriansHelpers";
 import { PersonalChatPanel } from "./chat/PersonalChatPanel";
 import { IncomingCallModal } from "./chat/components/IncomingCallModal";
 import { fetchCallSignals, postCallSignal } from "@/lib/api";
@@ -14,145 +24,6 @@ import {
   doesEventBelongToUser,
   getEventPendingRequests,
 } from "./hooks/useMapChatAndNotifications";
-import { resolvePersistentAvatarUrl } from "@/lib/profileIdentity";
-
-class ChatErrorBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error, errorInfo) {
-    console.error("PersonalChat error caught by boundary:", error, errorInfo);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div
-          className={`fixed z-[1005] left-4 bottom-4 w-[340px] sm:w-[360px] p-4 rounded-2xl flex flex-col gap-3 shadow-2xl border ${
-            this.props.isMapDark
-              ? "bg-[#111b21] border-white/20 text-white"
-              : "bg-white border-black text-black"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-sm">Personal Chat</span>
-            <button
-              type="button"
-              onClick={() => {
-                this.setState({ hasError: false, error: null });
-                this.props.onCloseChat?.();
-              }}
-              className="text-xs px-2.5 py-1 rounded-md bg-[#ef4444] text-white font-medium cursor-pointer"
-            >
-              Close
-            </button>
-          </div>
-          <p className="text-xs opacity-75">
-            Unable to load conversation. Please try reloading the chat.
-          </p>
-          <button
-            type="button"
-            onClick={() => this.setState({ hasError: false, error: null })}
-            className={`w-full py-2 rounded-lg text-xs font-semibold cursor-pointer ${
-              this.props.isMapDark ? "bg-white text-black" : "bg-black text-white"
-            }`}
-          >
-            Retry
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-const avatarUrl = (user) => resolvePersistentAvatarUrl(user);
-
-const FIND_TITLE_LETTERS = "Find other Kalcerians".split("");
-
-const titleWaveContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.022,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const titleLetterVariant = {
-  hidden: {
-    opacity: 0,
-    x: -14,
-    scale: 0.9,
-  },
-  visible: {
-    opacity: 1,
-    x: 0,
-    scale: 1,
-    transition: {
-      type: "spring",
-      damping: 15,
-      stiffness: 160,
-    },
-  },
-};
-
-function cleanDesc(value) {
-  return String(value || "")
-    .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
-    .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
-    .trim();
-}
-
-// Device Family Character Limits for Name, Username, and Broadcast Status
-const FAMILY_LIMITS = {
-  hp: {
-    name: 12,        // e.g. "Alwahib Raf..."
-    username: 13,    // e.g. "alwahib_raf..."
-    broadcast: 36,   // 2 compact lines
-  },
-  tab: {
-    name: 20,
-    username: 22,
-    broadcast: 65,
-  },
-  ipad: {
-    name: 13,        // fixed width sidebar (340px)
-    username: 14,
-    broadcast: 38,
-  },
-  desktop: {
-    name: 16,        // fixed width sidebar (360px)
-    username: 17,
-    broadcast: 48,
-  },
-};
-
-function truncateWithEllipsis(str, maxLen) {
-  if (!str) return "";
-  const s = String(str).trim();
-  if (s.length <= maxLen) return s;
-  return s.slice(0, maxLen).trimEnd() + "...";
-}
-
-// 24-hour broadcast freshness check
-function getActiveBroadcast(user) {
-  const b = user?.broadcast;
-  if (!b) return null;
-  const msg = typeof b === "string" ? b.trim() : (b.message || "").trim();
-  if (!msg) return null;
-  if (b.expiresAt && new Date(b.expiresAt).getTime() < Date.now()) return null;
-  if (b.createdAt) {
-    const age = Date.now() - new Date(b.createdAt).getTime();
-    if (age > 24 * 60 * 60 * 1000) return null;
-  }
-  return msg;
-}
 
 export const KalceriansPanel = memo(function KalceriansPanel({
   scheduleTimeout,
@@ -600,81 +471,14 @@ export const KalceriansPanel = memo(function KalceriansPanel({
         />
       </div>
 
-      {/* 1. Top Scroll Bar / Pull Handle (Solid Base #0f1014 / #ffffff) */}
-      <button
-        type="button"
-        aria-label="Toggle panel"
-        onClick={() => setDrawerOpen((prev) => !prev)}
-        className={`relative z-10 w-full pt-2.5 pb-1 flex justify-center cursor-pointer select-none outline-none group ${
-          isMapDark ? "bg-[#0f1014]" : "bg-[#ffffff]"
-        }`}
-      >
-        <span
-          className={`w-11 sm:w-12 h-1 rounded-full transition-colors ${
-            isMapDark
-              ? "bg-[#30363d] group-hover:bg-[#8b949e]"
-              : "bg-[#d0d7de] group-hover:bg-[#656d76]"
-          }`}
-        />
-      </button>
-
-      {/* 2. Header: "Find other Kalcerians" with left wave-in animation (Solid Base #0f1014 / #ffffff) */}
-      <div
-        onClick={() => setDrawerOpen((prev) => !prev)}
-        className={`relative z-10 px-4 pb-2.5 pt-0.5 cursor-pointer flex justify-between items-center transition-colors select-none ${
-          isMapDark ? "bg-[#0f1014] hover:bg-[#181a20]" : "bg-[#ffffff] hover:bg-[#f6f8fa]/60"
-        }`}
-      >
-        <motion.h2
-          key={drawerOpen ? "drawer-open" : "drawer-closed"}
-          variants={titleWaveContainer}
-          initial={drawerOpen ? "hidden" : "visible"}
-          animate="visible"
-          className={`font-sans font-bold text-base sm:text-lg tracking-tight select-none flex flex-wrap items-center ${
-            isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-          }`}
-        >
-          {FIND_TITLE_LETTERS.map((char, index) => (
-            <motion.span
-              key={index}
-              variants={titleLetterVariant}
-              className="inline-block will-change-transform"
-              style={{ whiteSpace: char === " " ? "pre" : "normal" }}
-            >
-              {char === " " ? "\u00A0" : char}
-            </motion.span>
-          ))}
-        </motion.h2>
-      </div>
-
-      {/* 3. Search Bar - Modern GitHub Style */}
-      <div className="relative z-10 px-3 pb-2.5">
-        <div className="relative flex items-center">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full border rounded-xl py-1.5 pl-8 pr-3 text-[12px] font-sans outline-none transition-colors ${
-              isMapDark
-                ? "bg-[#0f1014]/92 border-[#2e323d] text-[#f0f6fc] placeholder:text-[#8b949e] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.1),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)] focus:border-[#58a6ff]"
-                : "bg-white/92 border-[#d1d5db] text-[#1f2328] placeholder:text-[#656d76] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] focus:border-[#0969da]"
-            }`}
-          />
-          <svg
-            className={`absolute left-2.5 w-3.5 h-3.5 pointer-events-none ${
-              isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-            }`}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
-        </div>
-      </div>
+      {/* 1-3. Pull Handle, Wave Title Header & Search Bar (Modularized Package Component) */}
+      <KalceriansHeader
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        isMapDark={isMapDark}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
 
       {/* 4. Content List: Unified Kalcerians list */}
       <div
@@ -682,36 +486,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
         className="relative z-10 flex-1 flex flex-col min-h-0 overflow-y-auto px-2.5 pt-2 pb-3.5 modern-kalcerian-scrollbar overscroll-contain"
       >
         {isDataLoading ? (
-          <div className="flex flex-col">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className={`shrink-0 min-h-[66px] my-1 rounded-xl border grid grid-cols-[64px_1fr] items-center gap-3 px-3.5 py-3 animate-pulse ${
-                  isMapDark ? "border-[#30363d]/60 bg-[#21262d]/30" : "border-[#d0d7de]/70 bg-white/40"
-                }`}
-              >
-                <div className="flex justify-center">
-                  <div
-                    className={`w-11 h-11 rounded-full ${
-                      isMapDark ? "bg-[#21262d]" : "bg-[#eaecf0]"
-                    }`}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div
-                    className={`h-3.5 w-[130px] rounded ${
-                      isMapDark ? "bg-[#21262d]" : "bg-[#eaecf0]"
-                    }`}
-                  />
-                  <div
-                    className={`h-2.5 w-[180px] rounded ${
-                      isMapDark ? "bg-[#21262d]" : "bg-[#eaecf0]"
-                    }`}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          <KalceriansSkeletonList isMapDark={isMapDark} />
         ) : sidebarKalcerians.length > 0 ? (
           sidebarKalcerians.map((user) => {
             const isBlocked = blockedUserIds.includes(user.id);

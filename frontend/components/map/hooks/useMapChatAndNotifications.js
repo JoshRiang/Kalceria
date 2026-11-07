@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { playNotificationSound } from "@/lib/soundEngine";
 import {
   fetchFavouriteUsers,
@@ -9,114 +9,33 @@ import {
   fetchMutedUsers,
   muteKalcerian,
   unmuteKalcerian,
-  fetchPersonalChatInboxSummary,
 } from "@/lib/api";
 
-const PERSONAL_CHAT_STORAGE_KEY = "kalceria_personal_chat_meta_v1";
-const EVENT_GROUP_CHAT_STORAGE_KEY = "kalceria_event_group_chat_meta_v1";
-const FAVOURITES_STORAGE_KEY = "kalceria_favourite_users_v1";
-const MUTED_STORAGE_KEY = "kalceria_muted_users_v1";
+import {
+  PERSONAL_CHAT_STORAGE_KEY,
+  EVENT_GROUP_CHAT_STORAGE_KEY,
+  FAVOURITES_STORAGE_KEY,
+  MUTED_STORAGE_KEY,
+  isEventOwner,
+  doesEventBelongToUser,
+  isEventCollaborator,
+  isUserInEvent,
+  getEventPendingRequests,
+} from "./mapChat/eventChatHelpers";
+import { useRankedDynamicEvents } from "./mapChat/useRankedDynamicEvents";
+import { useInboxSummarySync } from "./mapChat/useInboxSummarySync";
 
-export function isEventOwner(eventItem, currentUser) {
-  if (!eventItem || !currentUser) return false;
-  if (eventItem.id === "own" || eventItem.isOwn) return true;
-
-  const curId = currentUser.id ? String(currentUser.id) : null;
-  const eventCreatorId =
-    eventItem.creator?.id || eventItem.creatorId || eventItem.userId || null;
-
-  // When both unique IDs exist, compare strictly by ID so shared display names never false-match
-  if (curId && eventCreatorId) {
-    return String(eventCreatorId) === curId;
-  }
-
-  const curNick = currentUser.nickname
-    ? String(currentUser.nickname).trim().replace(/^@/, "").toLowerCase()
-    : null;
-  const creatorNick = eventItem.creator?.nickname
-    ? String(eventItem.creator.nickname).trim().replace(/^@/, "").toLowerCase()
-    : null;
-
-  return Boolean(curNick && creatorNick && curNick === creatorNick);
-}
-
-export function doesEventBelongToUser(eventItem, targetUser, currentUserId = null) {
-  if (!eventItem || !targetUser) return false;
-
-  const targetId = targetUser.id ? String(targetUser.id) : null;
-  const curId = currentUserId ? String(currentUserId) : null;
-  const eventCreatorId =
-    eventItem.creator?.id || eventItem.creatorId || eventItem.userId || null;
-
-  // Never attribute the logged-in user's own event to another user's card in "Find other Kalcerians"
-  if (curId && targetId !== curId) {
-    if (
-      eventItem.id === "own" ||
-      eventItem.isOwn ||
-      (eventCreatorId && String(eventCreatorId) === curId)
-    ) {
-      return false;
-    }
-  }
-
-  // Strictly match by unique creator ID whenever available (never match by shared display name)
-  if (eventCreatorId && targetId) {
-    return String(eventCreatorId) === targetId;
-  }
-
-  // Fallback only when creator ID is absent: match exact unique @nickname (never display name)
-  if (!eventCreatorId) {
-    const targetNick = targetUser.nickname
-      ? String(targetUser.nickname).trim().replace(/^@/, "").toLowerCase()
-      : "";
-    const creatorNick = eventItem.creator?.nickname
-      ? String(eventItem.creator.nickname).trim().replace(/^@/, "").toLowerCase()
-      : "";
-    if (targetNick && creatorNick) {
-      return targetNick === creatorNick;
-    }
-  }
-
-  return false;
-}
-
-export function isEventCollaborator(eventItem, currentUser, acceptedCollabsMap = {}) {
-  if (!eventItem || !currentUser) return false;
-  const curId = currentUser.id ? String(currentUser.id) : null;
-  const curNick = currentUser.nickname ? String(currentUser.nickname).toLowerCase() : null;
-
-  const list = Array.isArray(acceptedCollabsMap?.[eventItem.id]) ? acceptedCollabsMap[eventItem.id] : [];
-  const inAcceptedMap = list.some((entry) => {
-    const val = String(entry || "");
-    if (!val || val === "own") return false;
-    return (curId && val === curId) || (curNick && val.toLowerCase() === curNick);
-  });
-
-  const inEventArray =
-    Array.isArray(eventItem.collaboratorIds) &&
-    curId &&
-    eventItem.collaboratorIds.some((id) => String(id) === curId);
-
-  return Boolean(inAcceptedMap || inEventArray || eventItem.isCollaborator);
-}
-
-export function isUserInEvent(eventItem, currentUser, acceptedCollabsMap = {}, requestedEventId = null) {
-  if (!eventItem || !currentUser) return false;
-  if (isEventOwner(eventItem, currentUser)) return true;
-  if (isEventCollaborator(eventItem, currentUser, acceptedCollabsMap)) return true;
-  if (requestedEventId && String(requestedEventId) === String(eventItem.id)) return true;
-  return false;
-}
-
-export function getEventPendingRequests(eventItem, currentUser, eventRequestsMap = {}) {
-  if (!eventItem || !eventRequestsMap) return [];
-  const direct = eventRequestsMap[eventItem.id];
-  if (Array.isArray(direct)) return direct;
-  if (isEventOwner(eventItem, currentUser) && Array.isArray(eventRequestsMap["own"])) {
-    return eventRequestsMap["own"];
-  }
-  return [];
-}
+export {
+  PERSONAL_CHAT_STORAGE_KEY,
+  EVENT_GROUP_CHAT_STORAGE_KEY,
+  FAVOURITES_STORAGE_KEY,
+  MUTED_STORAGE_KEY,
+  isEventOwner,
+  doesEventBelongToUser,
+  isEventCollaborator,
+  isUserInEvent,
+  getEventPendingRequests,
+};
 
 export function useMapChatAndNotifications({
   events = [],
@@ -542,145 +461,16 @@ export function useMapChatAndNotifications({
     };
   }, [currentUser?.id, receivePersonalChatMessage]);
 
-  // O(1) Global Unread Inbox Watermark Sync (Scales to 100,000+ users with 1 single Redis key check instead of polling N peers)
-  useEffect(() => {
-    if (!currentUser?.id || typeof window === "undefined") return;
-    let alive = true;
-    let timerId = null;
-    let lastVer = "";
-    let isFirstSync = true;
-
-    const syncInboxSummary = async () => {
-      if (!alive) return;
-      try {
-        const res = await fetchPersonalChatInboxSummary(
-          lastVer ? { sinceVer: lastVer } : {}
-        );
-        if (!alive || !res?.ok) return;
-
-        if (!res.unchanged) {
-          lastVer = String(res.ver || "0");
-          const serverPeers = res.peers || {};
-          const newlyNotifiedPeers = [];
-
-          setPersonalChatMap((prev) => {
-            let changed = false;
-            const next = { ...prev };
-
-            for (const [peerId, info] of Object.entries(serverPeers)) {
-              if (
-                !peerId ||
-                String(peerId) === String(currentUser.id) ||
-                blockedUserIds.includes(String(peerId))
-              ) {
-                continue;
-              }
-              const count = Math.max(0, Number(info?.unreadCount) || 0);
-              const ts = Number(info?.lastTs) || Date.now();
-              const prevEntry = prev[peerId];
-              const prevCount = Number(prevEntry?.unreadCount || 0);
-              const prevTs = Number(prevEntry?.lastMessageAt || 0);
-
-              if (count > 0) {
-                if (prevCount !== count || prevTs < ts) {
-                  changed = true;
-                  const labelText =
-                    info?.msgType === "voice"
-                      ? "🎤 Voice note"
-                      : info?.msgType === "video" || info?.msgType === "media"
-                      ? "📷 Media"
-                      : info?.msgType === "call"
-                      ? "📞 Panggilan"
-                      : prevEntry?.lastMessageText || "Pesan baru";
-
-                  next[peerId] = {
-                    ...prevEntry,
-                    unreadCount: count,
-                    lastMessageText: labelText,
-                    lastMessageAt: Math.max(ts, prevTs),
-                  };
-
-                  if (!isFirstSync && (count > prevCount || ts > prevTs)) {
-                    newlyNotifiedPeers.push({ peerId, ts });
-                  }
-                }
-              } else if (prevCount > 0) {
-                changed = true;
-                next[peerId] = {
-                  ...prevEntry,
-                  unreadCount: 0,
-                };
-              }
-            }
-
-            // Clear any stale local unread badges for peers no longer present in server unread hash
-            for (const [localPeerId, localEntry] of Object.entries(prev)) {
-              if (localEntry?.unreadCount > 0 && !serverPeers[localPeerId]) {
-                changed = true;
-                next[localPeerId] = {
-                  ...localEntry,
-                  unreadCount: 0,
-                };
-              }
-            }
-
-            if (changed) {
-              try {
-                sessionStorage.setItem(PERSONAL_CHAT_STORAGE_KEY, JSON.stringify(next));
-              } catch {}
-              return next;
-            }
-            return prev;
-          });
-
-          isFirstSync = false;
-
-          // Trigger notification chime & roll-to-top highlight for genuinely new incoming messages (silent when offline)
-          for (const item of newlyNotifiedPeers) {
-            if (!isSelfOfflineRef.current && !mutedUserIds.includes(String(item.peerId))) {
-              playNotificationSound("personal_chat");
-            }
-            setRecentlyMessagedUserIds((prev) => ({ ...prev, [item.peerId]: true }));
-            if (highlightTimersRef.current[item.peerId]) {
-              clearTimeout(highlightTimersRef.current[item.peerId]);
-            }
-            highlightTimersRef.current[item.peerId] = setTimeout(() => {
-              setRecentlyMessagedUserIds((prev) => {
-                const copy = { ...prev };
-                delete copy[item.peerId];
-                return copy;
-              });
-            }, 2800);
-          }
-        } else {
-          isFirstSync = false;
-        }
-      } catch {}
-
-      if (alive) {
-        const isHidden = typeof document !== "undefined" && document.hidden;
-        timerId = setTimeout(syncInboxSummary, isHidden ? 8000 : 1800);
-      }
-    };
-
-    syncInboxSummary();
-
-    const onWake = () => {
-      if (alive && typeof document !== "undefined" && !document.hidden) {
-        if (timerId) clearTimeout(timerId);
-        syncInboxSummary();
-      }
-    };
-    document.addEventListener("visibilitychange", onWake);
-    window.addEventListener("focus", onWake);
-
-    return () => {
-      alive = false;
-      if (timerId) clearTimeout(timerId);
-      document.removeEventListener("visibilitychange", onWake);
-      window.removeEventListener("focus", onWake);
-    };
-  }, [currentUser?.id, blockedUserIds, mutedUserIds]);
+  // O(1) Global Unread Inbox Watermark Sync (Modularized Package Hook)
+  useInboxSummarySync({
+    currentUser,
+    blockedUserIds,
+    mutedUserIds,
+    isSelfOfflineRef,
+    setPersonalChatMap,
+    setRecentlyMessagedUserIds,
+    highlightTimersRef,
+  });
 
   // Unified check: does an event have an unread notification (from Envelope OR Group Chat)?
   const hasEventNotification = useCallback(
@@ -700,110 +490,24 @@ export function useMapChatAndNotifications({
     [currentUser, acceptedCollabsMap, eventRequestsMap, eventGroupChatMap]
   );
 
-  // Compute user's active events (created or registered/collaborating) and rank by newest notification / activity
-  const userRankedEvents = useMemo(() => {
-    if (!currentUser || !Array.isArray(events)) return [];
-
-    const matching = events.filter((ev) =>
-      isUserInEvent(ev, currentUser, acceptedCollabsMap, requestedEventId)
-    );
-
-    const enriched = matching.map((ev) => {
-      const isOwner = isEventOwner(ev, currentUser);
-      const isCollab = isEventCollaborator(ev, currentUser, acceptedCollabsMap);
-
-      const pendingReqs = isOwner ? getEventPendingRequests(ev, currentUser, eventRequestsMap) : [];
-      const latestEnvelopeAt =
-        pendingReqs.length > 0
-          ? Math.max(
-              ...pendingReqs.map((r) => {
-                const t = r?.createdAt ? new Date(r.createdAt).getTime() : 0;
-                return Number.isFinite(t) && t > 0 ? t : 1;
-              })
-            )
-          : 0;
-
-      const groupChatEntry = (isOwner || isCollab) ? eventGroupChatMap[ev.id] : null;
-      const latestGroupChatAt =
-        groupChatEntry && groupChatEntry.unreadCount > 0
-          ? Number(groupChatEntry.lastMessageAt) || 1
-          : 0;
-
-      const hasNotif = latestEnvelopeAt > 0 || latestGroupChatAt > 0;
-      const latestNotifAt = Math.max(latestEnvelopeAt, latestGroupChatAt);
-      const latestNotifType =
-        latestGroupChatAt > latestEnvelopeAt
-          ? "group_chat"
-          : latestEnvelopeAt > 0
-          ? "envelope"
-          : "event_card";
-
-      const createdOrUpdated = new Date(ev.updatedAt || ev.createdAt || 0).getTime();
-      const baseEventTime = Number.isFinite(createdOrUpdated) ? createdOrUpdated : 0;
-
-      return {
-        event: ev,
-        isOwner,
-        isCollab,
-        hasNotif,
-        latestEnvelopeAt,
-        latestGroupChatAt,
-        latestNotifAt,
-        latestNotifType,
-        baseEventTime,
-      };
-    });
-
-    // Sort:
-    // 1. Events with active unread notification first (ordered by newest notification timestamp)
-    // 2. Owned events before joined events
-    // 3. Newest event timestamp
-    enriched.sort((a, b) => {
-      if (a.hasNotif !== b.hasNotif) return a.hasNotif ? -1 : 1;
-      if (a.latestNotifAt !== b.latestNotifAt) return b.latestNotifAt - a.latestNotifAt;
-      if (a.isOwner !== b.isOwner) return a.isOwner ? -1 : 1;
-      return b.baseEventTime - a.baseEventTime;
-    });
-
-    return enriched;
-  }, [events, currentUser, acceptedCollabsMap, requestedEventId, eventRequestsMap, eventGroupChatMap]);
-
-  const topDynamicEvent = userRankedEvents[0]?.event || null;
-  const hasTopDynamicEventNotif = userRankedEvents.some((entry) => entry.hasNotif);
-
-  // Direct Icon Tap Algorithm for Top Bar Dynamic Event Icon:
-  // Opens the newest notification box (Envelope vs. Group Chat) or falls back safely to opening the newest Event Card on the map
-  const handleTopDynamicEventClick = useCallback(() => {
-    const best = userRankedEvents[0];
-    if (!best || !best.event) return;
-
-    const targetEvent = best.event;
-
-    if (best.latestNotifType === "envelope") {
-      // Envelope notification is the newest -> focus event on map and directly open the Envelope CollabRequestsModal box
-      focusUser?.(targetEvent);
-      handleOpenItemOnMap?.(targetEvent, "event");
-      handleOpenRequests?.(targetEvent.id);
-      return;
-    }
-
-    if (best.latestNotifType === "group_chat") {
-      // Group chat notification is the newest -> mark read, dispatch group chat open event, and open the Event Card on map (safe fallback before chat UI is mounted)
-      markEventGroupChatRead(targetEvent.id);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("kalceria:open-event-group-chat", {
-            detail: { eventId: targetEvent.id, event: targetEvent },
-          })
-        );
-      }
-      handleOpenItemOnMap?.(targetEvent, "event");
-      return;
-    }
-
-    // Default (no pending notifications, or as current fallback before chat UI): directly open the newest Event Card on the map
-    handleOpenItemOnMap?.(targetEvent, "event");
-  }, [userRankedEvents, focusUser, handleOpenItemOnMap, handleOpenRequests, markEventGroupChatRead]);
+  // Compute user's active events and rank by newest notification (Modularized Package Hook)
+  const {
+    userRankedEvents,
+    topDynamicEvent,
+    hasTopDynamicEventNotif,
+    handleTopDynamicEventClick,
+  } = useRankedDynamicEvents({
+    events,
+    currentUser,
+    acceptedCollabsMap,
+    requestedEventId,
+    eventRequestsMap,
+    eventGroupChatMap,
+    focusUser,
+    handleOpenItemOnMap,
+    handleOpenRequests,
+    markEventGroupChatRead,
+  });
 
   return {
     personalChatMap,
