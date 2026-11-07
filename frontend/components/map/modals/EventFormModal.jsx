@@ -1,78 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { uploadBlobMedia } from "@/lib/api";
-import { validateAndNormalizeMediaUrlClient } from "@/lib/urlSecurity";
 import { toSmartTitleCase } from "@/lib/titleCase";
 import { LocationAutocomplete } from "@/components/service-request/LocationAutocomplete";
 
-export const EVENT_CATEGORIES_GRID = [
-  {
-    id: "cafe",
-    label: "Cafe Meeting",
-    renderIcon: (isSelected, isModalDark) => (
-      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-        <path d="M10 2c-.8 1.5.8 2.6 0 4.2" stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")} strokeWidth="1.4" strokeLinecap="round" />
-        <path d="M13.5 1.5c-.9 1.6.9 2.8 0 4.5" stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")} strokeWidth="1.4" strokeLinecap="round" />
-        <path d="M4 9.5h13c0 5-3 7.8-6.5 7.8S4 14.5 4 9.5z" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="0.75" />
-        <ellipse cx="10.5" cy="9.5" rx="6" ry="1.6" fill={isModalDark ? "#000000" : "#ffffff"} stroke={isModalDark ? "#ffffff" : "#000000"} strokeWidth="0.6" />
-        <path d="M5.5 11c-.2 1.8 1.2 4 2.8 4.8" stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="1.3" strokeLinecap="round" />
-        <path d="M17 10.5c2 0 3.5 1.2 3.5 2.8s-1.5 2.8-3.5 2.8" stroke={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")} strokeWidth="1.8" strokeLinecap="round" />
-        <ellipse cx="10.5" cy="19.2" rx="8.5" ry="1.7" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="0.6" />
-        <ellipse cx="10.5" cy="18.8" rx="6" ry="1" fill={isModalDark ? "#000000" : "#ffffff"} />
-      </svg>
-    ),
-  },
-  {
-    id: "eat",
-    label: "Eat Together",
-    renderIcon: (isSelected, isModalDark) => (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 overflow-visible" fill="none">
-        <path
-          d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-7v8h2.5V22H21V2c-2.76 0-5 2.24-5 5z"
-          fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
-          stroke={isModalDark ? "#000000" : "#ffffff"}
-          strokeWidth="1.4"
-          strokeLinejoin="round"
-          style={{ paintOrder: "stroke fill" }}
-        />
-      </svg>
-    ),
-  },
-  {
-    id: "special",
-    label: "Something Special",
-    renderIcon: (isSelected, isModalDark) => (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 overflow-visible" fill="none">
-        <path
-          d="M9.8 2.5h4.4l-.9 12h-2.6L9.8 2.5zM12 16.3a2.2 2.2 0 1 1 0 4.4 2.2 2.2 0 0 1 0-4.4z"
-          fill={isSelected ? (isModalDark ? "#ffffff" : "#000000") : (isModalDark ? "#8b949e" : "#57606a")}
-          stroke={isModalDark ? "#000000" : "#ffffff"}
-          strokeWidth="1.4"
-          strokeLinejoin="round"
-          style={{ paintOrder: "stroke fill" }}
-        />
-      </svg>
-    ),
-  },
-  {
-    id: "discuss",
-    label: "Discuss More",
-    renderIcon: (isSelected, isModalDark) => (
-      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-        <path d="M9 2.5h6c1.8 0 3.2 1.2 3.2 2.8s-1.4 2.8-3.2 2.8h-1.5l-2.5 2.5v-2.5H9c-1.8 0-3.2-1.2-3.2-2.8S7.2 2.5 9 2.5z" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="0.8" />
-        <circle cx="10.5" cy="5.3" r="0.7" fill={isModalDark ? "#000000" : "#ffffff"} />
-        <circle cx="12" cy="5.3" r="0.7" fill={isModalDark ? "#000000" : "#ffffff"} />
-        <circle cx="13.5" cy="5.3" r="0.7" fill={isModalDark ? "#000000" : "#ffffff"} />
-        <circle cx="7.5" cy="13" r="2.5" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="1" />
-        <path d="M3 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={isModalDark ? "#ffffff" : "#000000"} stroke={isModalDark ? "#000000" : "#ffffff"} strokeWidth="1" />
-        <circle cx="16.5" cy="13" r="2.5" fill={isModalDark ? "#000000" : "#ffffff"} stroke={isModalDark ? "#ffffff" : "#000000"} strokeWidth="1.2" />
-        <path d="M12 21c0-2.6 2-4.8 4.5-4.8s4.5 2.2 4.5 4.8" fill={isModalDark ? "#000000" : "#ffffff"} stroke={isModalDark ? "#ffffff" : "#000000"} strokeWidth="1.2" />
-      </svg>
-    ),
-  },
-];
+import { EVENT_CATEGORIES_GRID } from "./eventForm/eventCategories";
+import { EventMediaSection } from "./eventForm/EventMediaSection";
+import { EventFormActions } from "./eventForm/EventFormActions";
+
+export { EVENT_CATEGORIES_GRID };
 
 export function EventFormModal({
   show,
@@ -86,53 +23,9 @@ export function EventFormModal({
   busy,
   onPromptDeleteConfirm,
 }) {
-  const fileInputRef = useRef(null);
-  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
-  const [uploadError, setUploadError] = useState("");
   const [isLocationVerified, setIsLocationVerified] = useState(false);
 
   if (!show) return null;
-
-  const handleMediaUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-    const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
-      setUploadError("Only .png, .jpeg, and .mp4 files are allowed");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-    setIsUploadingMedia(true);
-    setUploadError("");
-    try {
-      const res = await uploadBlobMedia(file);
-      if (res.url) {
-        setEventForm((f) => {
-          const current = (f.mediaUrl || "").trim();
-          const next = current ? `${current}, ${res.url}` : res.url;
-          return { ...f, mediaUrl: next };
-        });
-      }
-    } catch (err) {
-      setUploadError(err.message || "Failed to upload media");
-    } finally {
-      setIsUploadingMedia(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const handleRemoveCarouselMedia = (indexToRemove) => {
-    setEventForm((f) => {
-      const urls = (f.mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
-      const updated = urls.filter((_, idx) => idx !== indexToRemove).join(", ");
-      return { ...f, mediaUrl: updated };
-    });
-  };
 
   const isEventFormValid = Boolean(
     (eventForm.category || "cafe").trim() &&
@@ -140,6 +33,8 @@ export function EventFormModal({
     (eventForm.location || "").trim() &&
     (eventForm.description || "").trim()
   );
+
+  const isEditing = Boolean(editingEventId || activeOwnEvent);
 
   return (
     <div
@@ -193,7 +88,7 @@ export function EventFormModal({
               isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
             }`}
           >
-            {editingEventId || activeOwnEvent ? "Edit Event" : "Create Your Own Event"}
+            {isEditing ? "Edit Event" : "Create Your Own Event"}
           </h2>
           <button
             type="button"
@@ -353,212 +248,22 @@ export function EventFormModal({
           </div>
 
           {/* Video / GIF Live Feed Attachment */}
-          <div className="flex flex-col gap-1.5 sm:gap-2">
-            <div className="flex items-center justify-between">
-              <label
-                className={`text-[11px] sm:text-xs font-semibold tracking-wider flex items-center gap-1.5 ${
-                  isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-                }`}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-3.5 h-3.5"
-                >
-                  <polygon points="23 7 16 12 23 17 23 7" />
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                </svg>
-                Live Media Feed {eventForm.mediaUrl && eventForm.mediaUrl.includes(",") ? `(${eventForm.mediaUrl.split(",").filter((s) => s.trim()).length} clips)` : ""}
-              </label>
-              {eventForm.mediaUrl && (
-                <button
-                  type="button"
-                  onClick={() => setEventForm((f) => ({ ...f, mediaUrl: "" }))}
-                  className={`text-[10px] font-bold hover:underline cursor-pointer ${
-                    isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
-                  }`}
-                >
-                  Clear All
-                </button>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all ${
-                  isModalDark
-                    ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff]"
-                    : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da]"
-                }`}
-                value={eventForm.mediaUrl || ""}
-                onChange={(e) => { setEventForm((f) => ({ ...f, mediaUrl: e.target.value })); setUploadError(""); }}
-                onBlur={() => {
-                  const raw = (eventForm.mediaUrl || "").trim();
-                  if (raw) {
-                    const check = validateAndNormalizeMediaUrlClient(raw);
-                    if (!check.valid) {
-                      setUploadError(check.error || "Format URL media tidak valid.");
-                    } else if (check.normalized && check.normalized !== eventForm.mediaUrl) {
-                      setEventForm((f) => ({ ...f, mediaUrl: check.normalized }));
-                    }
-                  }
-                }}
-                placeholder="Paste Video / GIF URL or choose file"
-              />
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4"
-                className="hidden"
-                onChange={handleMediaUpload}
-              />
-              <button
-                type="button"
-                disabled={isUploadingMedia || busy}
-                onClick={() => fileInputRef.current?.click()}
-                className={`px-3 py-2 border rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-                  isModalDark
-                    ? "border-[#30363d] bg-[#21262d] text-[#f0f6fc] hover:bg-[#30363d]"
-                    : "border-[#d0d7de] bg-[#eaeef2] text-[#1f2328] hover:bg-[#d0d7de]"
-                }`}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-3.5 h-3.5"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                {isUploadingMedia ? "Uploading..." : "Upload"}
-              </button>
-            </div>
-
-            {uploadError && (
-              <p
-                style={{ fontFamily: "Consolas, monospace" }}
-                className={`text-xs font-normal mt-1 animate-in fade-in leading-relaxed ${
-                  isModalDark ? "text-[#ff4d4f]" : "text-[#cf222e]"
-                }`}
-              >
-                {uploadError}
-              </p>
-            )}
-
-            {/* IN OWNER SIDE ONLY: Event Media Thumbnails (Picture 4) with Picture 5 delete (X) badge */}
-            {(editingEventId || activeOwnEvent) && (() => {
-              const urls = (eventForm.mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
-              if (urls.length === 0) return null;
-              return (
-                <div className={`mt-2 p-2.5 rounded-2xl border-2 border-dashed flex flex-col gap-1.5 ${
-                  isModalDark ? "border-[#30363d] bg-[#0d1117]/60" : "border-[#d0d7de] bg-[#f6f8fa]/80"
-                }`}>
-                  <div className="flex items-center gap-2.5 overflow-x-auto py-1 custom-scrollbar">
-                    {urls.map((url, idx) => {
-                      const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
-                      return (
-                        <div key={idx} className="relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm border border-black/10 dark:border-white/10 group">
-                          {isVideo ? (
-                            <video src={url} muted autoPlay loop playsInline className="w-full h-full object-cover" />
-                          ) : (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover" />
-                          )}
-                          {/* Picture 5: white circular button with X to remove media */}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCarouselMedia(idx)}
-                            title="Remove this media"
-                            className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
+          <EventMediaSection
+            eventForm={eventForm}
+            setEventForm={setEventForm}
+            isModalDark={isModalDark}
+            busy={busy}
+            isOwner={isEditing}
+          />
 
           {/* Action Buttons */}
-          {(editingEventId || activeOwnEvent) ? (
-            <div className="flex items-center justify-between mt-auto pt-3 shrink-0 px-1">
-              {/* Left: Red Trashcan Icon Button with truly hollow/transparent interior cutouts (bolong & tidak berwarna) */}
-              <button
-                type="button"
-                onClick={onPromptDeleteConfirm}
-                disabled={busy}
-                title="Delete Event"
-                aria-label="Delete Event"
-                className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer group flex items-center justify-center"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="w-5 h-5">
-                  <defs>
-                    <mask id="hollow-trashcan-mask">
-                      <rect x="0" y="0" width="24" height="24" fill="#ffffff" />
-                      {/* Hollow handle opening */}
-                      <rect x="9.6" y="4.2" width="4.8" height="1.8" rx="0.6" fill="#000000" />
-                      {/* Hollow lid separation line */}
-                      <line x1="5" y1="6.4" x2="19" y2="6.4" stroke="#000000" strokeWidth="1.2" strokeLinecap="round" />
-                      {/* Hollow interior vertical slits */}
-                      <line x1="9.5" y1="9.5" x2="9.5" y2="17" stroke="#000000" strokeWidth="1.7" strokeLinecap="round" />
-                      <line x1="14.5" y1="9.5" x2="14.5" y2="17" stroke="#000000" strokeWidth="1.7" strokeLinecap="round" />
-                    </mask>
-                  </defs>
-                  <g mask="url(#hollow-trashcan-mask)">
-                    <path
-                      d="M 19 6 L 18.1 19.3 C 18 20.3 17.2 21 16.2 21 H 7.8 C 6.8 21 6 20.3 5.9 19.3 L 5 6 Z"
-                      fill="#ef4444"
-                    />
-                    <path
-                      d="M 8 6 V 3.8 C 8 3.1 8.5 2.6 9.2 2.6 H 14.8 C 15.5 2.6 16 3.1 16 3.8 V 6 Z"
-                      fill="#ef4444"
-                    />
-                    <path d="M 3 5.4 H 21" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
-                  </g>
-                </svg>
-              </button>
-
-              {/* Right: Box button with Update font, dimmed until required * fields are filled */}
-              <button
-                type="submit"
-                disabled={busy || !isEventFormValid}
-                className={`px-6 py-2.5 sm:py-3 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
-                  isModalDark
-                    ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
-                    : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
-                }`}
-              >
-                {busy ? "Updating..." : "Update"}
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
-              <button
-                type="submit"
-                disabled={busy || !isEventFormValid}
-                className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
-                  isModalDark
-                    ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
-                    : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
-                }`}
-              >
-                {busy ? "Creating..." : "Create"}
-              </button>
-            </div>
-          )}
+          <EventFormActions
+            isEditing={isEditing}
+            onPromptDeleteConfirm={onPromptDeleteConfirm}
+            busy={busy}
+            isEventFormValid={isEventFormValid}
+            isModalDark={isModalDark}
+          />
         </form>
       </motion.div>
     </div>
