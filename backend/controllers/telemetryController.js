@@ -105,9 +105,17 @@ export async function getMapUsers(req, res, next) {
       }
     });
 
-    // Fetch authentic verified USER profiles so active users and verified Kalcerians appear on the map
+    // Strict Online Rule: Only users actively present in Redis `active_users` with live telemetry AND `allowLiveLocation: true` appear on the map
+    if (!activeMembers.length) {
+      const emptyResponse = { users: [] };
+      await redis.set(globalCacheKey, JSON.stringify(emptyResponse), "EX", 3).catch(() => {});
+      return res.json(emptyResponse);
+    }
+
     const users = await prisma.user.findMany({
       where: {
+        id: { in: activeMembers },
+        allowLiveLocation: true,
         isEmailVerified: true,
         role: "USER",
         email: {
@@ -132,8 +140,6 @@ export async function getMapUsers(req, res, next) {
         nickname: true,
         profilePicture: true,
         allowLiveLocation: true,
-        domicileLat: true,
-        domicileLng: true,
         socialPlatform: true,
         socialLink: true,
         createdAt: true,
@@ -143,7 +149,11 @@ export async function getMapUsers(req, res, next) {
       },
     });
 
-    if (!users.length) return res.json({ users: [] });
+    if (!users.length) {
+      const emptyResponse = { users: [] };
+      await redis.set(globalCacheKey, JSON.stringify(emptyResponse), "EX", 3).catch(() => {});
+      return res.json(emptyResponse);
+    }
 
     const userIds = users.map((u) => u.id);
     const positions = userIds.length
@@ -151,7 +161,8 @@ export async function getMapUsers(req, res, next) {
       : [];
 
     const now = new Date();
-    const rawEnriched = users.map((u, index) => {
+    const rawEnriched = [];
+    users.forEach((u, index) => {
       const pos = positions?.[index];
       const liveRec = liveMap.get(u.id);
       let rawLat = Number.isFinite(liveRec?.lat) ? Number(liveRec.lat) : null;
@@ -160,11 +171,27 @@ export async function getMapUsers(req, res, next) {
         rawLng = parseFloat(pos[0]);
         rawLat = parseFloat(pos[1]);
       }
-      const { lat, lng } = resolveDeterministicUserCoords(u, rawLat, rawLng, index);
+      // Never invent mock coordinates if real live coordinates are missing
+      if (!Number.isFinite(rawLat) || !Number.isFinite(rawLng)) return;
+
+      const { lat, lng } = approximateCoordinate(rawLat, rawLng);
       const district = maskLocationToDistrict(lat, lng);
       const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
-      const isOnline = Boolean(activeMembers.includes(u.id) || u.allowLiveLocation);
-      return { ...u, isOnline, district, lat, lng, broadcast };
+      rawEnriched.push({
+        id: u.id,
+        name: u.name,
+        nickname: u.nickname,
+        profilePicture: u.profilePicture,
+        allowLiveLocation: true,
+        socialPlatform: u.socialPlatform,
+        socialLink: u.socialLink,
+        createdAt: u.createdAt,
+        isOnline: true,
+        district,
+        lat,
+        lng,
+        broadcast,
+      });
     });
 
     const enriched = await ensurePersistentUserProfilesBatch(rawEnriched);
@@ -193,6 +220,14 @@ export async function getAllKalcerians(req, res, next) {
     const staleIds = onlineIds.filter((_, index) => !liveRecords[index]);
     if (staleIds.length) await redis.zrem("active_users", ...staleIds);
     const onlineSet = new Set(activeIds);
+    const liveMap = new Map();
+    onlineIds.forEach((id, idx) => {
+      if (liveRecords[idx]) {
+        try {
+          liveMap.set(id, JSON.parse(liveRecords[idx]));
+        } catch {}
+      }
+    });
 
     // fetch authentic verified public users only — strictly omitting admin credentials and unverified accounts
     const users = await prisma.user.findMany({
@@ -221,8 +256,6 @@ export async function getAllKalcerians(req, res, next) {
         nickname: true,
         profilePicture: true,
         allowLiveLocation: true,
-        domicileLat: true,
-        domicileLng: true,
         socialPlatform: true,
         socialLink: true,
         createdAt: true,
@@ -234,10 +267,15 @@ export async function getAllKalcerians(req, res, next) {
     });
 
     const now = new Date();
-    const rawResult = users.map((u, idx) => {
-      const isOnline = Boolean(onlineSet.has(u.id) || u.allowLiveLocation);
+    const rawResult = users.map((u) => {
+      // Strictly online ONLY when present in Redis active_users AND allowLiveLocation is enabled
+      const isOnline = Boolean(onlineSet.has(u.id) && u.allowLiveLocation);
       const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
-      const { lat, lng } = resolveDeterministicUserCoords(u, null, null, idx);
+      const liveRec = isOnline ? liveMap.get(u.id) : null;
+      const coords =
+        isOnline && Number.isFinite(liveRec?.lat) && Number.isFinite(liveRec?.lng)
+          ? approximateCoordinate(Number(liveRec.lat), Number(liveRec.lng))
+          : { lat: null, lng: null };
       return {
         id: u.id,
         name: u.name,
@@ -245,10 +283,8 @@ export async function getAllKalcerians(req, res, next) {
         profilePicture: u.profilePicture,
         socialPlatform: u.socialPlatform,
         socialLink: u.socialLink,
-        domicileLat: u.domicileLat,
-        domicileLng: u.domicileLng,
-        lat,
-        lng,
+        lat: coords.lat,
+        lng: coords.lng,
         createdAt: u.createdAt,
         isOnline,
         broadcast,

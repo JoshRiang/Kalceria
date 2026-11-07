@@ -6,26 +6,67 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const blobUrl = searchParams.get("url");
+    const rawBlobUrl = searchParams.get("url");
+    const isDownload = searchParams.get("download") === "1";
+    const rawFilename = searchParams.get("filename") || "";
 
-    if (!blobUrl) {
+    if (!rawBlobUrl) {
       return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });
     }
+
+    // Strip any client-side #t=start,end media fragments so blob lookup never 404s
+    const blobUrl = rawBlobUrl.split("#")[0];
+    const safeFilename = rawFilename
+      ? rawFilename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120)
+      : "";
 
     const options: { access: "private"; token?: string } = { access: "private" };
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       options.token = process.env.BLOB_READ_WRITE_TOKEN;
     }
 
-    const result = await get(blobUrl, options);
+    let result: Awaited<ReturnType<typeof get>> | null = null;
+    try {
+      result = await get(blobUrl, options);
+    } catch {
+      result = null;
+    }
+
+    // Safe fallback for public Vercel Blob URLs (strictly allowlisted to *.blob.vercel-storage.com)
     if (!result || !result.stream) {
+      let parsedHost = "";
+      try {
+        parsedHost = new URL(blobUrl).hostname.toLowerCase();
+      } catch {
+        parsedHost = "";
+      }
+      if (parsedHost.endsWith(".blob.vercel-storage.com")) {
+        const upstream = await fetch(blobUrl);
+        if (upstream.ok && upstream.body) {
+          const upstreamHeaders: Record<string, string> = {
+            "Content-Type": upstream.headers.get("content-type") || "application/octet-stream",
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "Accept-Ranges": "bytes",
+          };
+          const upstreamLen = upstream.headers.get("content-length");
+          if (upstreamLen) upstreamHeaders["Content-Length"] = upstreamLen;
+          if (isDownload) {
+            const dlName = safeFilename || "kalceria-media";
+            upstreamHeaders["Content-Disposition"] = `attachment; filename="${dlName}"`;
+          }
+          return new NextResponse(upstream.body, {
+            status: 200,
+            headers: upstreamHeaders,
+          });
+        }
+      }
       return NextResponse.json({ error: "Blob not found" }, { status: 404 });
     }
 
     const totalSize = Number(result.blob.size) || 0;
     const rangeHeader = req.headers.get("range");
 
-    if (rangeHeader && totalSize > 0) {
+    if (!isDownload && rangeHeader && totalSize > 0) {
       const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
       if (match) {
         const fullBuffer = new Uint8Array(await new Response(result.stream as ReadableStream).arrayBuffer());
@@ -56,6 +97,10 @@ export async function GET(req: NextRequest) {
     };
     if (totalSize) {
       headers["Content-Length"] = String(totalSize);
+    }
+    if (isDownload) {
+      const dlName = safeFilename || "kalceria-media";
+      headers["Content-Disposition"] = `attachment; filename="${dlName}"`;
     }
 
     return new NextResponse(result.stream as ReadableStream, {

@@ -11,6 +11,7 @@ import { generateCryptoNonce } from "@/lib/chatCrypto";
 import {
   isEventOwner,
   isEventCollaborator,
+  doesEventBelongToUser,
   getEventPendingRequests,
 } from "./hooks/useMapChatAndNotifications";
 import { resolvePersistentAvatarUrl } from "@/lib/profileIdentity";
@@ -174,6 +175,7 @@ export function KalceriansPanel({
   onUnblockUser,
   onOpenItemOnMap,
   currentUser = null,
+  isSelfOffline = false,
   requestedEventId = null,
   eventRequestsMap = {},
   acceptedCollabsMap = {},
@@ -209,12 +211,29 @@ export function KalceriansPanel({
   const activeChatUserIdRef = useRef(activeChatUserId);
   const activeChatUserSnapshotRef = useRef(activeChatUserSnapshot);
   const incomingCallInitialStateRef = useRef(incomingCallInitialState);
+  const isSelfOfflineRef = useRef(Boolean(isSelfOffline));
   incomingCallRef.current = incomingCall;
   sidebarKalceriansRef.current = sidebarKalcerians;
   mapUsersDataRef.current = mapUsersData;
   activeChatUserIdRef.current = activeChatUserId;
   activeChatUserSnapshotRef.current = activeChatUserSnapshot;
   incomingCallInitialStateRef.current = incomingCallInitialState;
+  isSelfOfflineRef.current = Boolean(isSelfOffline);
+
+  // When switching into Offline / Stealth ("Sniffer") mode, close active personal chat & suppress incoming call alerts
+  useEffect(() => {
+    if (!isSelfOffline) return;
+    if (incomingCallRef.current) {
+      stopCallRingtone();
+      setIncomingCall(null);
+    }
+    if (activeChatUserIdRef.current) {
+      setIncomingCallInitialState(null);
+      setActiveChatUserId(null);
+      setActiveChatUserSnapshot(null);
+      setIsClosingForChat(false);
+    }
+  }, [isSelfOffline]);
 
   // Poll for incoming call signals across devices (event-driven, visibility-adaptive)
   useEffect(() => {
@@ -226,6 +245,13 @@ export function KalceriansPanel({
     const checkSignals = async () => {
       if (!active) return;
       try {
+        // When user intentionally toggles Offline (Eye shut), incoming calls are naturally not received
+        if (isSelfOfflineRef.current) {
+          if (active) {
+            timerId = setTimeout(checkSignals, 3200);
+          }
+          return;
+        }
         const res = await fetchCallSignals();
         const signals = res?.signals || [];
 
@@ -413,6 +439,7 @@ export function KalceriansPanel({
 
   useEffect(() => {
     const handleRemoteChatOpen = (e) => {
+      if (isSelfOfflineRef.current) return;
       const targetUser = e.detail?.user;
       if (targetUser) {
         if (currentUser?.id && String(targetUser.id) === String(currentUser.id)) return;
@@ -436,7 +463,7 @@ export function KalceriansPanel({
   }, []);
 
   const handleOpenChatWithTransition = (user) => {
-    if (!user) return;
+    if (!user || isSelfOfflineRef.current) return;
     // Strict guard: Cannot chat with oneself
     if (currentUser?.id && String(user.id) === String(currentUser.id)) return;
     setActiveChatUserSnapshot(user);
@@ -559,8 +586,8 @@ export function KalceriansPanel({
           className="w-full h-full"
           style={{
             backgroundImage: isMapDark
-              ? "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Dark.jpg')"
-              : "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Light.jpg')",
+              ? "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Dark.webp')"
+              : "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Light.webp')",
             backgroundSize: "cover",
             backgroundPosition: "top center",
             backgroundRepeat: "no-repeat",
@@ -691,12 +718,10 @@ export function KalceriansPanel({
             const rawUsername = user.nickname || user.username || (user.name ? user.name.toLowerCase().replace(/\s+/g, '_') : "kalcerian");
             const cleanUsername = String(rawUsername).replace(/^@/, '');
 
-            const userEvent = events.find(
-              (e) =>
-                e.creator?.id === user.id ||
-                e.creator?.nickname?.toLowerCase() === user.nickname?.toLowerCase() ||
-                e.creator?.name?.toLowerCase() === user.name?.toLowerCase()
-            );
+            const userEvent =
+              user.event && doesEventBelongToUser(user.event, user, currentUser?.id)
+                ? user.event
+                : events.find((e) => doesEventBelongToUser(e, user, currentUser?.id));
             const isOwnEvent = Boolean(userEvent && isEventOwner(userEvent, currentUser));
             const isCollaboratorEvent = Boolean(userEvent && isEventCollaborator(userEvent, currentUser, acceptedCollabsMap));
             const eventPendingRequests = userEvent && isOwnEvent ? getEventPendingRequests(userEvent, currentUser, eventRequestsMap) : [];
@@ -728,6 +753,7 @@ export function KalceriansPanel({
                 isRecentlyMessaged={isRecentlyMessaged}
                 isFavourite={isFavourite}
                 isMuted={isMuted}
+                isSelfOffline={isSelfOffline}
                 onPersonalChatOpen={handleOpenChatWithTransition}
                 isOtherEventDisabled={isOtherEventDisabled}
                 displayName={displayName}

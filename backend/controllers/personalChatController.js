@@ -868,6 +868,19 @@ export async function sendCallSignal(req, res, next) {
       ts: Date.now(),
     };
 
+    // If callee intentionally set status to Offline (Stealth Mode), naturally do not deliver incoming call offers
+    if (signalType === 'offer') {
+      const calleeRecord = await prisma.user
+        .findUnique({
+          where: { id: String(targetId) },
+          select: { allowLiveLocation: true },
+        })
+        .catch(() => null);
+      if (calleeRecord && calleeRecord.allowLiveLocation === false) {
+        return res.json({ ok: true, packet });
+      }
+    }
+
     const sigPipe = redis.pipeline();
 
     // Single-Call Concurrency Lock enforcement (prevents call flooding & multiple simultaneous calls)

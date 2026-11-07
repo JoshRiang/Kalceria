@@ -44,7 +44,7 @@ export async function updateLiveLocation(req, res, next) {
     });
 
     if (!user?.allowLiveLocation) {
-      await prisma.user.update({ where: { id: userId }, data: { allowLiveLocation: true } }).catch(() => {});
+      return res.status(403).json({ error: 'Live location is disabled for this account.' });
     }
 
     const cooldownKey = `live:cooldown:${userId}`;
@@ -89,15 +89,58 @@ export async function setLiveLocationPreference(req, res, next) {
     const user = await prisma.user.update({
       where: { id: userId },
       data: { allowLiveLocation },
-      select: { id: true, allowLiveLocation: true },
+      select: { id: true, allowLiveLocation: true, domicileLat: true, domicileLng: true },
     });
 
     if (!allowLiveLocation) {
-      await redis.zrem('active_users', userId);
-      await redis.del(`live:user:${userId}`);
+      await Promise.all([
+        redis.zrem('active_users', userId).catch(() => {}),
+        redis
+          .del(
+            `live:user:${userId}`,
+            `live:cooldown:${userId}`,
+            `chat:call:${userId}`,
+            `call:lock:${userId}`
+          )
+          .catch(() => {}),
+      ]);
+    } else {
+      await redis.del(`live:cooldown:${userId}`).catch(() => {});
+      if (
+        Number.isFinite(user.domicileLat) &&
+        Number.isFinite(user.domicileLng) &&
+        isValidLatLng(user.domicileLat, user.domicileLng)
+      ) {
+        const existingLive = await redis.get(`live:user:${userId}`).catch(() => null);
+        if (!existingLive) {
+          const district = maskLocationToDistrict(user.domicileLat, user.domicileLng);
+          await Promise.all([
+            redis.geoadd('active_users', user.domicileLng, user.domicileLat, userId).catch(() => {}),
+            redis
+              .setex(
+                `live:user:${userId}`,
+                LIVE_TTL_SECONDS,
+                JSON.stringify({
+                  userId,
+                  lat: user.domicileLat,
+                  lng: user.domicileLng,
+                  district,
+                  timestamp: Date.now(),
+                  pollingCount: 1,
+                  isStale: false,
+                })
+              )
+              .catch(() => {}),
+          ]);
+        }
+      }
     }
 
-    res.json({ user });
+    await redis
+      .del('cache:all_kalcerians', 'cache:map_users:global', 'cache:map_users_enriched')
+      .catch(() => {});
+
+    res.json({ user: { id: user.id, allowLiveLocation: user.allowLiveLocation } });
   } catch (err) {
     next(err);
   }

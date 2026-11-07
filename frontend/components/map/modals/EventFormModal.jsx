@@ -172,8 +172,8 @@ export function EventFormModal({
             className="w-full h-full"
             style={{
               backgroundImage: isModalDark
-                ? "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.jpg')"
-                : "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.jpg')",
+                ? "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp')"
+                : "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.webp')",
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",

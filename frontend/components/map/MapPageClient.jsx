@@ -26,7 +26,11 @@ import {
   persistProfileIdentityCache,
 } from "@/lib/profileIdentity";
 import { toSmartTitleCase } from "@/lib/titleCase";
-import { useMapChatAndNotifications } from "@/components/map/hooks/useMapChatAndNotifications";
+import { prewarmOsmTiles } from "@/lib/osmTilePrewarmer";
+import {
+  useMapChatAndNotifications,
+  doesEventBelongToUser,
+} from "@/components/map/hooks/useMapChatAndNotifications";
 import api, {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents,
   postBroadcast, putBroadcast, postLocation, patchVisibility,
@@ -39,19 +43,50 @@ const SnapMap = dynamic(() => import("@/components/SnapMap"), {
   loading: () => <div className="fixed inset-0 bg-[#050a14] z-[10]" />,
 });
 
+// Eager 0ms decoded texture cache for all BG_IMPROVE_FOR_MAP WebP backgrounds
+const MAP_BG_WEBP_ASSETS = [
+  "/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Dark.webp",
+  "/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Light.webp",
+  "/BG_IMPROVE_FOR_MAP/BG_BroadscastBoxDark.webp",
+  "/BG_IMPROVE_FOR_MAP/BG_BroadcastBoxLight.webp",
+  "/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp",
+  "/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.webp",
+  "/BG_IMPROVE_FOR_MAP/BG_EventCardDark.webp",
+  "/BG_IMPROVE_FOR_MAP/BG_EventCardLight.webp",
+  "/BG_IMPROVE_FOR_MAP/CokiEditProfile.webp",
+];
+
+const DECODED_MAP_BG_CACHE = [];
+
+function preloadAllMapBackgrounds() {
+  if (typeof window === "undefined" || DECODED_MAP_BG_CACHE.length > 0) return;
+  MAP_BG_WEBP_ASSETS.forEach((url) => {
+    const img = new window.Image();
+    img.decoding = "sync";
+    if ("fetchPriority" in img) {
+      img.fetchPriority = "high";
+    }
+    img.src = url;
+    if (typeof img.decode === "function") {
+      img.decode().catch(() => {});
+    }
+    DECODED_MAP_BG_CACHE.push(img);
+  });
+}
+
 // Helpers
 const avatarUrl = (user) => resolvePersistentAvatarUrl(user);
-
-
 
 export default function MapPage() {
   const scheduleTimeout = useTimeoutRegistry();
   // State
   const [currentUser, setCurrentUser] = useState(null);
+  const [selfLiveCoords, setSelfLiveCoords] = useState(null);
   const [mapUsersData, setMapUsersData] = useState([]);
   const [kalcerians, setKalcerians] = useState([]);
   const [events, setEvents] = useState(() => INITIAL_MOCK_MINI_EVENTS.map(cleanEventDesc));
   const [presence, setPresence] = useState("online");
+  const isSelfOffline = presence !== "online";
   const [, setNotice] = useState("");
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
@@ -181,6 +216,11 @@ export default function MapPage() {
     }));
   }, []);
 
+  // Eagerly preload & decode all 9 BG_IMPROVE_FOR_MAP WebP backgrounds immediately on map entry
+  useEffect(() => {
+    preloadAllMapBackgrounds();
+  }, []);
+
   // Login gate + fetch user profile
   useEffect(() => {
     if (!hasUserSession()) {
@@ -200,28 +240,43 @@ export default function MapPage() {
         setCurrentUser(enrichedUser);
         setPresence(user.allowLiveLocation ? "online" : "invisible");
         if (user.broadcast?.message) setStatusText(user.broadcast.message);
+        if (Number.isFinite(Number(user.domicileLat)) && Number.isFinite(Number(user.domicileLng))) {
+          prewarmOsmTiles(Number(user.domicileLat), Number(user.domicileLng), 15);
+        }
       })
       .catch(() => setNotLoggedIn(true));
   }, []);
 
-  // Prompt location permission and sync live coordinates with backend on entry
+  // Sync live coordinates with backend ONLY when online (plus 4-min keepalive to refresh 30m Redis TTL)
   useEffect(() => {
-    if (typeof window === "undefined" || !navigator.geolocation || !currentUser) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        postLocation(pos.coords.latitude, pos.coords.longitude)
-          .then(() => {
-            fetchMapUsers().then((u) => setMapUsersData(u || []));
-            fetchKalcerians().then((k) => setKalcerians(k || []));
-          })
-          .catch(() => {});
-      },
-      (err) => {
-        console.warn("[Map] Location permission skipped or denied:", err.message);
-      },
-      { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 }
-    );
-  }, [currentUser?.id]);
+    if (typeof window === "undefined" || !navigator.geolocation || !currentUser?.id) return;
+    if (presence !== "online") return;
+
+    const syncLivePosition = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setSelfLiveCoords({ lat, lng });
+          prewarmOsmTiles(lat, lng, 15);
+          postLocation(lat, lng)
+            .then(() => {
+              fetchMapUsers().then((u) => setMapUsersData(u || []));
+              fetchKalcerians().then((k) => setKalcerians(k || []));
+            })
+            .catch(() => {});
+        },
+        (err) => {
+          console.warn("[Map] Location permission skipped or denied:", err.message);
+        },
+        { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 }
+      );
+    };
+
+    syncLivePosition();
+    const keepaliveId = setInterval(syncLivePosition, 4 * 60 * 1000);
+    return () => clearInterval(keepaliveId);
+  }, [currentUser?.id, presence]);
 
   // fetch map users + kalcerians (poll every 10s)
   useEffect(() => {
@@ -256,12 +311,41 @@ export default function MapPage() {
     if (!mapRef.current) return;
     setIsRecentering(true);
     const me = mapUsersData.find((u) => u.id === currentUser?.id);
-    if (me && me.lat && me.lng) {
-      mapRef.current.flyTo([me.lat, me.lng], 15);
+    if (me && Number.isFinite(Number(me.lat)) && Number.isFinite(Number(me.lng))) {
+      prewarmOsmTiles(me.lat, me.lng, 15);
+      mapRef.current.flyTo([me.lat, me.lng], 15, {
+        animate: true,
+        duration: 0.5,
+        easeLinearity: 0.25,
+      });
+    } else if (selfLiveCoords && Number.isFinite(selfLiveCoords.lat) && Number.isFinite(selfLiveCoords.lng)) {
+      prewarmOsmTiles(selfLiveCoords.lat, selfLiveCoords.lng, 15);
+      mapRef.current.flyTo([selfLiveCoords.lat, selfLiveCoords.lng], 15, {
+        animate: true,
+        duration: 0.5,
+        easeLinearity: 0.25,
+      });
+    } else if (
+      Number.isFinite(Number(currentUser?.domicileLat)) &&
+      Number.isFinite(Number(currentUser?.domicileLng))
+    ) {
+      const dLat = Number(currentUser.domicileLat);
+      const dLng = Number(currentUser.domicileLng);
+      prewarmOsmTiles(dLat, dLng, 15);
+      mapRef.current.flyTo([dLat, dLng], 15, {
+        animate: true,
+        duration: 0.5,
+        easeLinearity: 0.25,
+      });
     } else {
-      mapRef.current.flyTo([-6.2735, 106.7150], 14);
+      prewarmOsmTiles(-6.2735, 106.715, 14);
+      mapRef.current.flyTo([-6.2735, 106.7150], 14, {
+        animate: true,
+        duration: 0.5,
+        easeLinearity: 0.25,
+      });
     }
-  }, [mapUsersData, currentUser]);
+  }, [mapUsersData, currentUser, selfLiveCoords]);
 
   const [mapCenter, setMapCenter] = useState({ lat: -6.2735, lng: 106.7150 });
   const [mapZoom, setMapZoom] = useState(14);
@@ -356,36 +440,25 @@ export default function MapPage() {
     } catch {}
   }, []);
 
-  // derived: users and events for the map (merging mapUsersData + kalcerians + currentUser so profile markers always render on map)
+  // derived: ONLY online & live-location-enabled users with real finite coordinates render on the map (zero mock coordinates, zero offline avatars)
   const visibleMapUsers = useMemo(() => {
     const mergedMap = new Map();
 
-    const resolveFallbackCoords = (u) => {
-      if (Number.isFinite(Number(u?.lat)) && Number.isFinite(Number(u?.lng))) {
-        return { lat: Number(u.lat), lng: Number(u.lng) };
-      }
-      if (Number.isFinite(Number(u?.domicileLat)) && Number.isFinite(Number(u?.domicileLng))) {
-        return { lat: Number(u.domicileLat), lng: Number(u.domicileLng) };
-      }
-      const rng = createSeededRandom(`map-coords-${u?.id || u?.nickname || u?.name || "user"}`);
-      const dLat = (rng() - 0.5) * 0.016;
-      const dLng = (rng() - 0.5) * 0.016;
-      return {
-        lat: Number((-6.2735 + dLat).toFixed(6)),
-        lng: Number((106.7150 + dLng).toFixed(6)),
-      };
-    };
-
     (mapUsersData || []).forEach((u) => {
       if (!u?.id || blockedUserIds.includes(u.id)) return;
-      const coords = resolveFallbackCoords(u);
+      if (u.isOnline === false || u.allowLiveLocation === false) return;
+      const lat = Number(u.lat);
+      const lng = Number(u.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
       mergedMap.set(String(u.id), {
         ...u,
         displayName: u.displayName || u.name || u.nickname || "Kalcerian",
         nickname: u.nickname || u.name || "Kalcerian",
         profilePicture: resolvePersistentAvatarUrl(u),
-        lat: coords.lat,
-        lng: coords.lng,
+        isOnline: true,
+        allowLiveLocation: true,
+        lat,
+        lng,
       });
     });
 
@@ -393,17 +466,24 @@ export default function MapPage() {
       if (!u?.id || blockedUserIds.includes(u.id)) return;
       const key = String(u.id);
       const existing = mergedMap.get(key);
-      const coords = existing
-        ? { lat: existing.lat, lng: existing.lng }
-        : resolveFallbackCoords(u);
+      // Strictly skip offline users from appearing on the map
+      if (!u.isOnline || u.allowLiveLocation === false) {
+        mergedMap.delete(key);
+        return;
+      }
+      const lat = existing ? existing.lat : Number(u.lat);
+      const lng = existing ? existing.lng : Number(u.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
       mergedMap.set(key, {
         ...(existing || {}),
         ...u,
         displayName: u.displayName || existing?.displayName || u.name || u.nickname || "Kalcerian",
         nickname: u.nickname || existing?.nickname || u.name || "Kalcerian",
         profilePicture: resolvePersistentAvatarUrl(u),
-        lat: coords.lat,
-        lng: coords.lng,
+        isOnline: true,
+        allowLiveLocation: true,
+        lat,
+        lng,
       });
     });
 
@@ -411,26 +491,43 @@ export default function MapPage() {
       const selfKey = String(currentUser.id);
       if (presence === "online") {
         const existingSelf = mergedMap.get(selfKey);
-        const coords = existingSelf
-          ? { lat: existingSelf.lat, lng: existingSelf.lng }
-          : resolveFallbackCoords(currentUser);
-        mergedMap.set(selfKey, {
-          ...(existingSelf || {}),
-          ...currentUser,
-          displayName: currentUser.displayName || currentUser.name || currentUser.nickname || "Kalcerian",
-          nickname: currentUser.nickname || currentUser.name || "Kalcerian",
-          profilePicture: resolvePersistentAvatarUrl(currentUser),
-          isOnline: true,
-          lat: coords.lat,
-          lng: coords.lng,
-        });
+        let selfCoords = null;
+        if (existingSelf && Number.isFinite(existingSelf.lat) && Number.isFinite(existingSelf.lng)) {
+          selfCoords = { lat: existingSelf.lat, lng: existingSelf.lng };
+        } else if (selfLiveCoords && Number.isFinite(selfLiveCoords.lat) && Number.isFinite(selfLiveCoords.lng)) {
+          selfCoords = { lat: selfLiveCoords.lat, lng: selfLiveCoords.lng };
+        } else if (
+          Number.isFinite(Number(currentUser.domicileLat)) &&
+          Number.isFinite(Number(currentUser.domicileLng))
+        ) {
+          selfCoords = {
+            lat: Number(currentUser.domicileLat),
+            lng: Number(currentUser.domicileLng),
+          };
+        }
+
+        if (selfCoords) {
+          mergedMap.set(selfKey, {
+            ...(existingSelf || {}),
+            ...currentUser,
+            displayName: currentUser.displayName || currentUser.name || currentUser.nickname || "Kalcerian",
+            nickname: currentUser.nickname || currentUser.name || "Kalcerian",
+            profilePicture: resolvePersistentAvatarUrl(currentUser),
+            isOnline: true,
+            allowLiveLocation: true,
+            lat: selfCoords.lat,
+            lng: selfCoords.lng,
+          });
+        } else {
+          mergedMap.delete(selfKey);
+        }
       } else {
         mergedMap.delete(selfKey);
       }
     }
 
     return Array.from(mergedMap.values());
-  }, [mapUsersData, kalcerians, currentUser, presence, blockedUserIds]);
+  }, [mapUsersData, kalcerians, currentUser, selfLiveCoords, presence, blockedUserIds]);
 
   const visibleEvents = useMemo(() => {
     const now = Date.now();
@@ -444,15 +541,23 @@ export default function MapPage() {
     if (!mapRef.current || !user) return;
     let target = user;
     // if coming from sidebar kalcerians, lat/lng might be missing. Look up in mapUsersData
-    if (!target.lat || !target.lng) {
+    if (!Number.isFinite(Number(target.lat)) || !Number.isFinite(Number(target.lng))) {
       target = mapUsersData.find((u) => u.id === user.id) || target;
     }
-    if (!target.lat || !target.lng) return;
-    mapRef.current.flyTo([target.lat, target.lng], 16);
+    if (!Number.isFinite(Number(target.lat)) || !Number.isFinite(Number(target.lng))) return;
+    prewarmOsmTiles(Number(target.lat), Number(target.lng), 16);
+    mapRef.current.flyTo([Number(target.lat), Number(target.lng)], 16, {
+      animate: true,
+      duration: 0.48,
+      easeLinearity: 0.25,
+    });
   }, [mapUsersData]);
 
   const handleOpenItemOnMap = useCallback((item, type = "user") => {
     if (!item) return;
+    if (Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng))) {
+      prewarmOsmTiles(Number(item.lat), Number(item.lng), 16);
+    }
     setFocusTarget({
       id: item.id || item.name || item.nickname,
       type,
@@ -486,10 +591,11 @@ export default function MapPage() {
     focusUser,
     handleOpenItemOnMap,
     handleOpenRequests,
+    isSelfOffline,
   });
 
   const handlePersonalChatOpen = useCallback((user) => {
-    if (!user) return;
+    if (!user || isSelfOffline) return;
     markPersonalChatRead(user.id);
     if (typeof window !== "undefined") {
       window.dispatchEvent(
@@ -498,7 +604,7 @@ export default function MapPage() {
         })
       );
     }
-  }, [markPersonalChatRead]);
+  }, [markPersonalChatRead, isSelfOffline]);
 
   // derived: kalcerians for the sidebar (only real registered users, strictly omitting dummy mock profiles and admin test credentials)
   const sidebarKalcerians = useMemo(() => {
@@ -525,13 +631,13 @@ export default function MapPage() {
     // 1. Add registered kalcerians (real verified users from database)
     (kalcerians || []).forEach((u) => {
       if (!u.id || isExcludedUser(u)) return;
-      map.set(u.id, {
+      map.set(String(u.id), {
         id: u.id,
         name: u.name || u.nickname || "Kalcerian",
         displayName: u.displayName || u.name || u.nickname || "Kalcerian",
         nickname: u.nickname || u.name || "Kalcerian",
         profilePicture: u.profilePicture || null,
-        isOnline: u.isOnline,
+        isOnline: Boolean(u.isOnline && u.allowLiveLocation !== false),
         broadcast: u.broadcast || null,
         lat: u.lat,
         lng: u.lng,
@@ -547,24 +653,30 @@ export default function MapPage() {
       });
     });
 
-    // 2. Attach any event created by a registered user to their profile
+    // 2. Attach any event STRICTLY created by that exact user (never by shared name and never self's event)
     (events || []).forEach((ev) => {
-      if (!ev.creator || isExcludedUser(ev.creator)) return;
-      if (ev.creator?.id && map.has(ev.creator.id)) {
-        const existing = map.get(ev.creator.id);
-        existing.event = ev;
-      } else if (ev.creator && !isExcludedUser(ev.creator)) {
-        const creatorId = ev.creator.id;
-        map.set(creatorId, {
+      if (!ev || ev.id === "own" || !ev.creator || isExcludedUser(ev.creator)) return;
+      const creatorId = ev.creator?.id || ev.creatorId;
+      if (!creatorId) return;
+      const creatorKey = String(creatorId);
+      if (currentUser?.id && creatorKey === String(currentUser.id)) return;
+
+      if (map.has(creatorKey)) {
+        const existing = map.get(creatorKey);
+        if (doesEventBelongToUser(ev, existing, currentUser?.id)) {
+          existing.event = ev;
+        }
+      } else if (doesEventBelongToUser(ev, ev.creator, currentUser?.id)) {
+        map.set(creatorKey, {
           id: creatorId,
           name: ev.creator.name || ev.creator.nickname || "Kalcerian",
           displayName: ev.creator.displayName || ev.creator.name || ev.creator.nickname || "Kalcerian",
           nickname: ev.creator.nickname || ev.creator.name || "Kalcerian",
           profilePicture: ev.creator.profilePicture || null,
-          isOnline: true,
+          isOnline: Boolean(ev.creator.isOnline && ev.creator.allowLiveLocation !== false),
           broadcast: ev.creator.broadcast || null,
-          lat: ev.lat,
-          lng: ev.lng,
+          lat: ev.creator.isOnline ? ev.lat : null,
+          lng: ev.creator.isOnline ? ev.lng : null,
           event: ev,
           coverType: ev.creator.coverType || null,
           coverImage: ev.creator.coverImage || null,
@@ -581,7 +693,7 @@ export default function MapPage() {
 
     // 3. Ensure current logged-in user is strictly excluded from "Find other Kalcerians" sidebar list
     if (currentUser?.id) {
-      map.delete(currentUser.id);
+      map.delete(String(currentUser.id));
     }
 
     let list = Array.from(map.values());
@@ -634,19 +746,21 @@ export default function MapPage() {
     handleOpenItemOnMap(activeOwnEvent, "event");
   }, [activeOwnEvent, handleOpenItemOnMap]);
 
-  // real broadcast save
+  // real broadcast save (disabled when self is offline)
   async function saveBroadcast(e) {
     e.preventDefault();
-    if (!statusText.trim()) return;
+    if (isSelfOffline || !statusText.trim()) return;
     setBusy(true);
     try {
       // update location first if browser supports it
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (pos) =>
+          (pos) => {
+            setSelfLiveCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
             postLocation(pos.coords.latitude, pos.coords.longitude).catch(
               () => {},
-            ),
+            );
+          },
           () => {},
         );
       }
@@ -675,11 +789,19 @@ export default function MapPage() {
     setIsStatusBusy(true);
     setPresence(mode);
     setMenuOpen(false);
+    if (!isOnline) {
+      setActionMenuOpen(false);
+      setShowStatusModal(false);
+      setShowEventModal(false);
+      setShowRequestsModal(false);
+      setShowCancelRequestModal(false);
+    }
     try {
       await patchVisibility(isOnline);
       if (isOnline && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
+            setSelfLiveCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
             postLocation(pos.coords.latitude, pos.coords.longitude)
               .then(() => {
                 fetchMapUsers().then((u) => setMapUsersData(u || []));
@@ -713,7 +835,7 @@ export default function MapPage() {
   }
 
   const handleOpenEditEvent = useCallback((eventItem) => {
-    if (!eventItem) return;
+    if (!eventItem || isSelfOffline) return;
     const rawDesc = eventItem.description || "";
     const catMatch = rawDesc.match(/\[CAT:([a-z_]+)\]/i);
     const mediaMatch = rawDesc.match(/\[MEDIA:([^\]]+)\]/i);
@@ -738,10 +860,11 @@ export default function MapPage() {
     });
     setEditingEventId(eventItem.id);
     setShowEventModal(true);
-  }, []);
+  }, [isSelfOffline]);
 
   async function saveMiniEvent(e) {
     e.preventDefault();
+    if (isSelfOffline) return;
     setBusy(true);
     try {
       const me = mapUsersData.find((u) => u.id === currentUser?.id);
@@ -899,6 +1022,7 @@ export default function MapPage() {
   }
 
   const handleOpenEventModal = useCallback((open = true) => {
+    if (open && isSelfOffline) return;
     if (open) {
       if (!editingEventId) {
         const own = events.find((ev) => ev.creator?.id === currentUser?.id || ev.id === "own");
@@ -914,7 +1038,27 @@ export default function MapPage() {
       setEditingEventId(null);
     }
     setShowEventModal(open);
-  }, [events, currentUser, editingEventId, handleOpenEditEvent]);
+  }, [events, currentUser, editingEventId, handleOpenEditEvent, isSelfOffline]);
+
+  const guardedRequestCollab = useCallback((id) => {
+    if (isSelfOffline) return;
+    handleRequestCollab?.(id);
+  }, [isSelfOffline, handleRequestCollab]);
+
+  const guardedPromptCancelRequest = useCallback((id, title) => {
+    if (isSelfOffline) return;
+    handlePromptCancelRequest?.(id, title);
+  }, [isSelfOffline, handlePromptCancelRequest]);
+
+  const guardedOpenRequests = useCallback((id) => {
+    if (isSelfOffline) return;
+    handleOpenRequests?.(id);
+  }, [isSelfOffline, handleOpenRequests]);
+
+  const guardedCollaboratorUpload = useCallback((id) => {
+    if (isSelfOffline) return;
+    handleCollaboratorUpload?.(id);
+  }, [isSelfOffline, handleCollaboratorUpload]);
 
   async function deleteMiniEvent(targetId) {
     setBusy(true);
@@ -1067,6 +1211,23 @@ export default function MapPage() {
         transition: "filter 1.2s ease-in-out"
       }}
     >
+      {/* Persistent 1x1 GPU-pinned WebP texture layer so all 9 BG_IMPROVE_FOR_MAP assets render in 0ms without lazy/event-driven decode delay */}
+      <div
+        aria-hidden="true"
+        className="fixed -left-[9999px] -top-[9999px] w-px h-px overflow-hidden opacity-[0.001] pointer-events-none select-none"
+      >
+        {MAP_BG_WEBP_ASSETS.map((assetUrl) => (
+          <div
+            key={assetUrl}
+            style={{
+              width: 1,
+              height: 1,
+              backgroundImage: `url('${assetUrl}')`,
+            }}
+          />
+        ))}
+      </div>
+
       {/* 🌌 Atmospheric Tactical Background (Behind Map) */}
       <AtmosphericBackground
         showStartup={showStartup}
@@ -1090,9 +1251,10 @@ export default function MapPage() {
           currentUser={currentUser} onEditEvent={handleOpenEditEvent} requestedEventId={requestedEventId}
           eventRequestsMap={eventRequestsMap} acceptedCollabsMap={acceptedCollabsMap}
           eventGroupChatMap={eventGroupChatMap}
-          onRequestCollab={handleRequestCollab}
-          onPromptCancelRequest={handlePromptCancelRequest} onOpenRequests={handleOpenRequests}
-          onCollaboratorUpload={handleCollaboratorUpload}
+          onRequestCollab={guardedRequestCollab}
+          onPromptCancelRequest={guardedPromptCancelRequest} onOpenRequests={guardedOpenRequests}
+          onCollaboratorUpload={guardedCollaboratorUpload}
+          isSelfOffline={isSelfOffline}
         />
       </motion.div>
 
@@ -1156,7 +1318,8 @@ export default function MapPage() {
             onToggleFavourite={toggleFavouriteUser} onToggleMute={toggleMuteUser}
             onOutgoingMessageUpdate={recordOutgoingPersonalMessage}
             onPersonalChatOpen={handlePersonalChatOpen}
-            onPromptCancelRequest={handlePromptCancelRequest} onOpenRequests={handleOpenRequests}
+            onPromptCancelRequest={guardedPromptCancelRequest} onOpenRequests={guardedOpenRequests}
+            isSelfOffline={isSelfOffline}
           />
 
           <OwnProfileDrawer

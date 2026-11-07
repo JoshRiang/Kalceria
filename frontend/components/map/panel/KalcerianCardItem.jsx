@@ -30,6 +30,7 @@ export function KalcerianCardItem({
   isRecentlyMessaged = false,
   isFavourite = false,
   isMuted = false,
+  isSelfOffline = false,
   onPersonalChatOpen,
   isOtherEventDisabled,
   displayName,
@@ -161,10 +162,10 @@ export function KalcerianCardItem({
               )}
             </div>
 
-            {/* Bottom-right Avatar Badges: Favourite (Smooth Tiny Red Love) & Mute (Tiny Speaker + 1 Cross) Stacked Horizontally with Half-Body Overlap, or Online Dot */}
+            {/* Bottom-right Avatar Badges: Favourite (Love) & Mute (Speaker + Cross) Stacked Horizontally, with Active Green Dot at Lowest Stack Layer (z-[5]) */}
             {!isExpanded && (
               !isBlocked && (isFavourite || isMuted) ? (
-                <div className="absolute -bottom-0.5 -right-1 z-20 flex items-center pointer-events-none">
+                <div className="absolute -bottom-0.5 -right-1.5 z-20 flex items-center pointer-events-none">
                   {isFavourite && (
                     <span
                       className={`relative z-10 w-[14px] h-[14px] rounded-full flex items-center justify-center shadow-xs ${
@@ -213,6 +214,13 @@ export function KalcerianCardItem({
                         />
                       </svg>
                     </span>
+                  )}
+                  {user.isOnline && (
+                    <span
+                      className={`relative z-[5] -ml-[5px] w-3 h-3 border-2 rounded-full bg-[#3fb950] ${
+                        isMapDark ? "border-[#161b22]" : "border-white"
+                      }`}
+                    />
                   )}
                 </div>
               ) : (
@@ -288,14 +296,18 @@ export function KalcerianCardItem({
                     {isRequestedByMe ? (
                       <button
                         type="button"
+                        disabled={isSelfOffline}
                         onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
                         onMouseLeave={() => setHoveredEventIconId(null)}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (isSelfOffline) return;
                           onPromptCancelRequest?.(userEvent.id, userEvent.title);
                         }}
-                        className="w-full h-full flex items-center justify-center rounded-full outline-none cursor-pointer"
-                        title={`Cancel request: ${userEvent.title}`}
+                        className={`w-full h-full flex items-center justify-center rounded-full outline-none ${
+                          isSelfOffline ? "opacity-35 grayscale cursor-not-allowed" : "cursor-pointer"
+                        }`}
+                        title={isSelfOffline ? "Offline (Stealth Mode)" : `Cancel request: ${userEvent.title}`}
                       >
                         <div className="filter grayscale opacity-45 flex items-center justify-center scale-90">
                           <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
@@ -425,28 +437,34 @@ export function KalcerianCardItem({
 
           {/* Bottom Row: Chat Button + Block/Restore Button */}
           <div className="grid grid-cols-2 gap-1.5 items-center justify-items-center w-[54px] mt-1.5">
-            {/* Slot 1: Chat Button */}
+            {/* Slot 1: Chat Button (Dimmed & Disabled in Offline / Sniffer Mode) */}
             {!isBlocked ? (
               <div className="relative flex items-center justify-center w-6 h-6">
                 <button
                   type="button"
-                  onMouseEnter={() => setHoveredChatIconId?.(user.id)}
+                  disabled={isSelfOffline}
+                  onMouseEnter={() => !isSelfOffline && setHoveredChatIconId?.(user.id)}
                   onMouseLeave={() => setHoveredChatIconId?.(null)}
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (isSelfOffline) return;
                     onPersonalChatOpen?.(user);
                   }}
-                  className="relative z-20 w-7 h-7 -m-0.5 flex items-center justify-center rounded-md transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                  title={`Chat ${displayName}`}
+                  className={`relative z-20 w-7 h-7 -m-0.5 flex items-center justify-center rounded-md outline-none transition-all ${
+                    isSelfOffline
+                      ? "opacity-30 grayscale cursor-not-allowed"
+                      : "hover:scale-115 active:scale-95 cursor-pointer"
+                  }`}
+                  title={isSelfOffline ? "Mode Offline (aktifkan mata untuk chat)" : `Chat ${displayName}`}
                 >
                   <ChatButtonIcon isMapDark={isMapDark} />
-                  {unreadPersonalChatCount > 0 && (
+                  {!isSelfOffline && unreadPersonalChatCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#ef4444] rounded-full shadow-sm pointer-events-none animate-pulse ring-1 ring-white/20" />
                   )}
                 </button>
 
                 {/* Hover Tooltip Box: "Chat <Display Name>" */}
-                {hoveredChatIconId === user.id && (
+                {!isSelfOffline && hoveredChatIconId === user.id && (
                   <div
                     className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-md shadow-2xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
                       isMapDark

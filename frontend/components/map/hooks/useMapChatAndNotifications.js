@@ -19,23 +19,65 @@ const MUTED_STORAGE_KEY = "kalceria_muted_users_v1";
 
 export function isEventOwner(eventItem, currentUser) {
   if (!eventItem || !currentUser) return false;
+  if (eventItem.id === "own" || eventItem.isOwn) return true;
+
   const curId = currentUser.id ? String(currentUser.id) : null;
-  const curNick = currentUser.nickname ? String(currentUser.nickname).toLowerCase() : null;
-  const curName = currentUser.name ? String(currentUser.name).toLowerCase() : null;
+  const eventCreatorId =
+    eventItem.creator?.id || eventItem.creatorId || eventItem.userId || null;
 
-  const creatorId = eventItem.creator?.id ? String(eventItem.creator.id) : null;
-  const directCreatorId = eventItem.creatorId ? String(eventItem.creatorId) : null;
-  const directUserId = eventItem.userId ? String(eventItem.userId) : null;
-  const creatorNick = eventItem.creator?.nickname ? String(eventItem.creator.nickname).toLowerCase() : null;
-  const creatorName = eventItem.creator?.name ? String(eventItem.creator.name).toLowerCase() : null;
+  // When both unique IDs exist, compare strictly by ID so shared display names never false-match
+  if (curId && eventCreatorId) {
+    return String(eventCreatorId) === curId;
+  }
 
-  return Boolean(
-    (curId && (creatorId === curId || directCreatorId === curId || directUserId === curId)) ||
-    (curNick && (creatorNick === curNick || creatorName === curNick)) ||
-    (curName && (creatorName === curName || creatorNick === curName)) ||
-    eventItem.id === "own" ||
-    eventItem.isOwn
-  );
+  const curNick = currentUser.nickname
+    ? String(currentUser.nickname).trim().replace(/^@/, "").toLowerCase()
+    : null;
+  const creatorNick = eventItem.creator?.nickname
+    ? String(eventItem.creator.nickname).trim().replace(/^@/, "").toLowerCase()
+    : null;
+
+  return Boolean(curNick && creatorNick && curNick === creatorNick);
+}
+
+export function doesEventBelongToUser(eventItem, targetUser, currentUserId = null) {
+  if (!eventItem || !targetUser) return false;
+
+  const targetId = targetUser.id ? String(targetUser.id) : null;
+  const curId = currentUserId ? String(currentUserId) : null;
+  const eventCreatorId =
+    eventItem.creator?.id || eventItem.creatorId || eventItem.userId || null;
+
+  // Never attribute the logged-in user's own event to another user's card in "Find other Kalcerians"
+  if (curId && targetId !== curId) {
+    if (
+      eventItem.id === "own" ||
+      eventItem.isOwn ||
+      (eventCreatorId && String(eventCreatorId) === curId)
+    ) {
+      return false;
+    }
+  }
+
+  // Strictly match by unique creator ID whenever available (never match by shared display name)
+  if (eventCreatorId && targetId) {
+    return String(eventCreatorId) === targetId;
+  }
+
+  // Fallback only when creator ID is absent: match exact unique @nickname (never display name)
+  if (!eventCreatorId) {
+    const targetNick = targetUser.nickname
+      ? String(targetUser.nickname).trim().replace(/^@/, "").toLowerCase()
+      : "";
+    const creatorNick = eventItem.creator?.nickname
+      ? String(eventItem.creator.nickname).trim().replace(/^@/, "").toLowerCase()
+      : "";
+    if (targetNick && creatorNick) {
+      return targetNick === creatorNick;
+    }
+  }
+
+  return false;
 }
 
 export function isEventCollaborator(eventItem, currentUser, acceptedCollabsMap = {}) {
@@ -80,6 +122,7 @@ export function useMapChatAndNotifications({
   events = [],
   kalcerians = [],
   currentUser = null,
+  isSelfOffline = false,
   blockedUserIds = [],
   eventRequestsMap = {},
   setEventRequestsMap,
@@ -89,6 +132,8 @@ export function useMapChatAndNotifications({
   handleOpenItemOnMap,
   handleOpenRequests,
 }) {
+  const isSelfOfflineRef = useRef(Boolean(isSelfOffline));
+  isSelfOfflineRef.current = Boolean(isSelfOffline);
   // 1. Personal Chat Metadata: { [userId]: { lastMessageAt, unreadCount, lastMessageText } }
   const [personalChatMap, setPersonalChatMap] = useState(() => {
     if (typeof window !== "undefined") {
@@ -249,8 +294,8 @@ export function useMapChatAndNotifications({
       const ts = Number(payload.timestamp) || Date.now();
       const messageText = String(payload.message || payload.text || "").trim();
 
-      // Play personal chat notification chime ONLY if this sender is NOT muted
-      if (!mutedUserIds.includes(String(resolvedUserId))) {
+      // Play personal chat notification chime ONLY if online and this sender is NOT muted
+      if (!isSelfOfflineRef.current && !mutedUserIds.includes(String(resolvedUserId))) {
         playNotificationSound("personal_chat");
       }
 
@@ -356,7 +401,9 @@ export function useMapChatAndNotifications({
       const ts = Number(payload.timestamp) || Date.now();
       const messageText = String(payload.message || payload.text || "").trim();
 
-      playNotificationSound("group_chat", { isMember: true });
+      if (!isSelfOfflineRef.current) {
+        playNotificationSound("group_chat", { isMember: true });
+      }
 
       setEventGroupChatMap((prev) => {
         const existing = prev[targetEvent.id] || { unreadCount: 0, lastMessageAt: 0 };
@@ -406,7 +453,9 @@ export function useMapChatAndNotifications({
       const isOwner = targetEvent ? isEventOwner(targetEvent, currentUser) : true;
       if (!isOwner) return;
 
-      playNotificationSound("envelope");
+      if (!isSelfOfflineRef.current) {
+        playNotificationSound("envelope");
+      }
 
       if (payload.request && typeof setEventRequestsMap === "function") {
         const reqObj = {
@@ -586,9 +635,9 @@ export function useMapChatAndNotifications({
 
           isFirstSync = false;
 
-          // Trigger notification chime & roll-to-top highlight for genuinely new incoming messages
+          // Trigger notification chime & roll-to-top highlight for genuinely new incoming messages (silent when offline)
           for (const item of newlyNotifiedPeers) {
-            if (!mutedUserIds.includes(String(item.peerId))) {
+            if (!isSelfOfflineRef.current && !mutedUserIds.includes(String(item.peerId))) {
               playNotificationSound("personal_chat");
             }
             setRecentlyMessagedUserIds((prev) => ({ ...prev, [item.peerId]: true }));

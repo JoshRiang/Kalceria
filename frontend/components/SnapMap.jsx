@@ -11,6 +11,8 @@ import {
   getEventPendingRequests,
 } from "./map/hooks/useMapChatAndNotifications";
 
+import { OSM_SUBDOMAINS, prewarmOsmTiles } from "@/lib/osmTilePrewarmer";
+
 import "leaflet/dist/leaflet.css";
 import "./map/snapmap.css";
 import "./map/map-card.css";
@@ -69,6 +71,7 @@ export default function SnapMap({
   onPromptCancelRequest,
   onOpenRequests,
   onCollaboratorUpload,
+  isSelfOffline = false,
 }) {
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -158,22 +161,27 @@ export default function SnapMap({
     return () => clearInterval(intervalId);
   }, []);
 
-  // Wire global event popup callbacks (edit, collab request, cancel request, open requests)
+  // Wire global event popup callbacks (edit, collab request, cancel request, open requests — suppressed when self is offline)
   useEffect(() => {
     window.__kalceriaEditEvent = (id) => {
+      if (isSelfOffline) return;
       const target = (events || []).find((e) => String(e.id) === String(id));
       if (target && onEditEvent) onEditEvent(target);
     };
     window.__kalceriaRequestCollab = (id) => {
+      if (isSelfOffline) return;
       onRequestCollab?.(id);
     };
     window.__kalceriaPromptCancelRequest = (id, title) => {
+      if (isSelfOffline) return;
       onPromptCancelRequest?.(id, title);
     };
     window.__kalceriaOpenRequests = (id) => {
+      if (isSelfOffline) return;
       onOpenRequests?.(id);
     };
     window.__kalceriaCollaboratorUpload = (id) => {
+      if (isSelfOffline) return;
       onCollaboratorUpload?.(id);
     };
     window.__kalceriaSwitchEventMedia = (safeId, targetIdx) => {
@@ -218,7 +226,7 @@ export default function SnapMap({
       delete window.__kalceriaCollaboratorUpload;
       delete window.__kalceriaSwitchEventMedia;
     };
-  }, [events, onEditEvent, onRequestCollab, onPromptCancelRequest, onOpenRequests, onCollaboratorUpload]);
+  }, [events, onEditEvent, onRequestCollab, onPromptCancelRequest, onOpenRequests, onCollaboratorUpload, isSelfOffline]);
 
   // Invalidate map size on theme toggle
   useEffect(() => {
@@ -321,9 +329,14 @@ export default function SnapMap({
           timer = setTimeout(() => {
             map.off("moveend", onMoveEnd);
             if (openPopup) openPopupSafe();
-          }, 650);
+          }, 720);
 
-          map.flyTo(latLng, 16, { animate: true, duration: 0.5 });
+          prewarmOsmTiles(latLng.lat, latLng.lng, 16);
+          map.flyTo(latLng, 16, {
+            animate: true,
+            duration: dist > 4500 ? 0.62 : 0.45,
+            easeLinearity: 0.25,
+          });
 
           return () => {
             map.off("moveend", onMoveEnd);
@@ -339,7 +352,12 @@ export default function SnapMap({
       const marker = markerRefs.current[markerId];
       if (marker && mapRef.current) {
         const latLng = marker.getLatLng();
-        mapRef.current.flyTo(latLng, 16, { animate: true, duration: 0.5 });
+        prewarmOsmTiles(latLng.lat, latLng.lng, 16);
+        mapRef.current.flyTo(latLng, 16, {
+          animate: true,
+          duration: 0.48,
+          easeLinearity: 0.25,
+        });
       }
     }
   }, [focusUserId, focusTarget, isReady]);
@@ -354,32 +372,46 @@ export default function SnapMap({
         attributionControl: false,
         center: DEFAULT_CENTER,
         zoom: 14,
+        preferCanvas: true,
+        zoomAnimation: true,
+        fadeAnimation: true,
+        markerZoomAnimation: true,
+        wheelDebounceTime: 35,
         closePopupOnClick: false,
       });
 
-      map.on("popupopen", (e) => {
+      map.on("popupopen", () => {
         tickAllEventUptimeElements();
         resetIdleTimer();
       });
 
-      // Standard OpenStreetMap tiles - matching Picture 3 and late October commits
+      // Keyless multi-shard OpenStreetMap CDN with deep keepBuffer + continuous mid-pan tile streaming
       const tileLayer = L.tileLayer(
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
+          subdomains: OSM_SUBDOMAINS,
           maxZoom: 19,
-          attribution: '&copy; OpenStreetMap contributors',
+          maxNativeZoom: 19,
+          keepBuffer: 8,
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          updateInterval: 80,
+          attribution: "&copy; OpenStreetMap contributors",
         }
       ).addTo(map);
 
-      // Multi-shard fallback in case of regional edge timeout
+      // Dual keyless OpenStreetMap fallback in case a single regional edge shard times out
       tileLayer.on("tileerror", function (error) {
-        if (error.tile && !error.tile._hasFallenBack) {
-          error.tile._hasFallenBack = true;
-          const coords = error.coords;
-          if (coords) {
-            const shard = ["a", "b", "c"][Math.abs(coords.x + coords.y) % 3];
-            error.tile.src = `https://${shard}.tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
-          }
+        const tile = error?.tile;
+        const coords = error?.coords;
+        if (!tile || !coords) return;
+        if (!tile._hasFallenBackPrimary) {
+          tile._hasFallenBackPrimary = true;
+          tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
+        } else if (!tile._hasFallenBackAltShard) {
+          tile._hasFallenBackAltShard = true;
+          const altShard = OSM_SUBDOMAINS[(Math.abs(coords.x + coords.y) + 1) % OSM_SUBDOMAINS.length];
+          tile.src = `https://${altShard}.tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
         }
       });
 
@@ -411,9 +443,10 @@ export default function SnapMap({
 
     if (!markerRefs.current) markerRefs.current = {};
 
-    // 1. Reconcile Users
+    // 1. Reconcile Users (strictly online & live-location-enabled users only; offline users never render on map)
     const currentUserIds = new Set();
     (users || []).forEach((user) => {
+      if (!user?.isOnline || user.allowLiveLocation === false) return;
       if (!Number.isFinite(user.lat) || !Number.isFinite(user.lng)) return;
       const markerId = `user_${user.id}`;
       currentUserIds.add(markerId);
@@ -531,7 +564,8 @@ export default function SnapMap({
           requestedEventId,
           pendingCount,
           isCollaborator,
-          unreadGroupChatCount
+          unreadGroupChatCount,
+          isSelfOffline
         );
         const newSig = stripDynamicUptime(newPopupContent);
         if (marker.getPopup()) {
@@ -552,7 +586,8 @@ export default function SnapMap({
           requestedEventId,
           pendingCount,
           isCollaborator,
-          unreadGroupChatCount
+          unreadGroupChatCount,
+          isSelfOffline
         );
         const marker = L.marker([item.lat, item.lng], {
           icon: createEventIcon(L, item, isMapDark, hasEventNotif),
@@ -583,7 +618,7 @@ export default function SnapMap({
         delete markerRefs.current[id];
       }
     });
-  }, [users, events, isReady, isMapDark, currentUser, requestedEventId, eventRequestsMap, acceptedCollabsMap, eventGroupChatMap]);
+  }, [users, events, isReady, isMapDark, currentUser, requestedEventId, eventRequestsMap, acceptedCollabsMap, eventGroupChatMap, isSelfOffline]);
 
   return (
     <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>

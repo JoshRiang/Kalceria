@@ -33,6 +33,13 @@ export const MapHeaderHud = memo(function MapHeaderHud({
   onGoToOwnEvent,
 }) {
   const [soundMuted, setSoundMuted] = useState(false);
+  const isSelfOffline = presence !== "online";
+
+  useEffect(() => {
+    if (isSelfOffline && actionMenuOpen) {
+      setActionMenuOpen(false);
+    }
+  }, [isSelfOffline, actionMenuOpen, setActionMenuOpen]);
 
   useEffect(() => {
     setSoundMuted(isSoundMuted());
@@ -260,16 +267,23 @@ export const MapHeaderHud = memo(function MapHeaderHud({
           )}
         </button>
 
-        {/* 3. Create Mini Event (+) Button - Bolded & Determined 2D Plus */}
+        {/* 3. Create Mini Event (+) Button - Bolded & Determined 2D Plus (Dimmed & Disabled when Offline) */}
         <div className="relative flex items-center justify-center">
           <button
             type="button"
-            aria-label="Quick Actions Menu"
-            aria-expanded={actionMenuOpen}
+            disabled={isSelfOffline}
+            aria-label={isSelfOffline ? "Offline - Quick Actions Disabled" : "Quick Actions Menu"}
+            title={isSelfOffline ? "Offline (Stealth Mode)" : "Quick Actions"}
+            aria-expanded={!isSelfOffline && actionMenuOpen}
             aria-haspopup="true"
-            className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 cursor-pointer group"
+            className={`p-1.5 transition-all outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
+              isSelfOffline
+                ? "opacity-35 grayscale cursor-not-allowed"
+                : "hover:scale-110 active:scale-95 cursor-pointer group"
+            }`}
             onClick={(e) => {
               e.stopPropagation();
+              if (isSelfOffline) return;
               setActionMenuOpen((prev) => !prev);
               setMenuOpen(false);
             }}
@@ -279,9 +293,11 @@ export const MapHeaderHud = memo(function MapHeaderHud({
               height="26"
               viewBox="0 0 24 24"
               className={`w-6 h-6 sm:w-7 sm:h-7 transition-transform duration-300 ${
-                actionMenuOpen
+                !isSelfOffline && actionMenuOpen
                   ? "rotate-45 scale-110"
-                  : "group-hover:rotate-90 group-hover:scale-110"
+                  : !isSelfOffline
+                  ? "group-hover:rotate-90 group-hover:scale-110"
+                  : ""
               }`}
             >
               <path
@@ -307,7 +323,7 @@ export const MapHeaderHud = memo(function MapHeaderHud({
                 ? "bg-[#000000] border border-[#30363d]/90 text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.15),inset_-1px_-1.5px_2px_rgba(0,0,0,0.8),0_14px_36px_rgba(0,0,0,0.85)]"
                 : "bg-[#ffffff] border border-[#c4cbd4] text-[#1f2328] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.95),inset_-1px_-1.5px_2px_rgba(160,174,192,0.3),0_12px_32px_rgba(0,0,0,0.1)]"
             } ${
-              actionMenuOpen
+              !isSelfOffline && actionMenuOpen
                 ? "opacity-100 translate-y-0 pointer-events-auto"
                 : "opacity-0 -translate-y-1.5 pointer-events-none"
             }`}
@@ -318,8 +334,8 @@ export const MapHeaderHud = memo(function MapHeaderHud({
               className="absolute inset-0 z-0 pointer-events-none select-none"
               style={{
                 backgroundImage: isMapDark
-                  ? "url('/BG_IMPROVE_FOR_MAP/BG_BroadscastBoxDark.jpg')"
-                  : "url('/BG_IMPROVE_FOR_MAP/BG_BroadcastBoxLight.jpg')",
+                  ? "url('/BG_IMPROVE_FOR_MAP/BG_BroadscastBoxDark.webp')"
+                  : "url('/BG_IMPROVE_FOR_MAP/BG_BroadcastBoxLight.webp')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
@@ -330,12 +346,14 @@ export const MapHeaderHud = memo(function MapHeaderHud({
             {/* Item 1: Broadcast - Inner Box */}
             <button
               type="button"
+              disabled={isSelfOffline}
               className={`group relative z-10 w-full flex flex-col px-3.5 py-2.5 text-left rounded-xl transition-all duration-200 cursor-pointer overflow-hidden outline-none hover:scale-[1.02] active:scale-[0.98] origin-center my-0.5 backdrop-blur-[2px] ${
                 isMapDark
                   ? "bg-[#090a0f]/82 border border-[#38404a] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)]"
                   : "bg-white/84 border border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)]"
               }`}
               onClick={() => {
+                if (isSelfOffline) return;
                 setShowStatusModal(true);
                 setActionMenuOpen(false);
               }}
@@ -376,12 +394,14 @@ export const MapHeaderHud = memo(function MapHeaderHud({
             {/* Item 2: Mini event OR Go To Event (1-event-per-user rule) */}
             <button
               type="button"
+              disabled={isSelfOffline}
               className={`group relative z-10 w-full flex flex-col px-3.5 py-2.5 text-left rounded-xl transition-all duration-200 cursor-pointer overflow-hidden outline-none hover:scale-[1.02] active:scale-[0.98] origin-center my-0.5 backdrop-blur-[2px] ${
                 isMapDark
                   ? "bg-[#090a0f]/82 border border-[#38404a] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.12),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)]"
                   : "bg-white/84 border border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)]"
               }`}
               onClick={() => {
+                if (isSelfOffline) return;
                 setActionMenuOpen(false);
                 if (hasActiveOwnEvent) {
                   if (onGoToOwnEvent) {

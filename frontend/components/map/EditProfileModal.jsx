@@ -252,8 +252,9 @@ export function EditProfileModal({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 key={idx}
-                src="/BG_IMPROVE_FOR_MAP/CokiEditProfile.png"
+                src="/BG_IMPROVE_FOR_MAP/CokiEditProfile.webp"
                 alt=""
+                decoding="sync"
                 draggable={false}
                 style={{
                   position: "absolute",

@@ -1,9 +1,9 @@
 /* ─── LIGHT MODE ─── */
 .snap-tactical-map.light-theme {
-  background: #e2e8f0 !important;
+  background: #f2efe9 !important;
 }
 .snap-tactical-map.light-theme .leaflet-container {
-  background: transparent !important;
+  background: #f2efe9 !important;
 }
 .snap-tactical-map.light-theme .leaflet-tile {
   filter: none !important;
@@ -11,15 +11,18 @@
   opacity: 1 !important;
   max-width: none !important;
   max-height: none !important;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* ─── DARK MODE ─── */
 .snap-tactical-map.dark-theme {
-  background: #09090c !important;
+  background: #2b2c30 !important;
 }
-/* CRITICAL: leaflet-container must be transparent so tiles show through */
+/* Base matches filtered OSM land tone so tile transitions never flash black/blank */
 .snap-tactical-map.dark-theme .leaflet-container {
-  background: transparent !important;
+  background: #2b2c30 !important;
 }
 
 .snap-tactical-map.dark-theme .leaflet-tile {
@@ -28,6 +31,9 @@
   opacity: 1 !important;
   max-width: none !important;
   max-height: none !important;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* ─── Ultra-clean Floating Scrollbar for Kalcerians and Panels ─── */
@@ -89,6 +95,9 @@
 
 .snap-tactical-map .leaflet-tile-container {
   background: transparent !important;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* Marker Styles */

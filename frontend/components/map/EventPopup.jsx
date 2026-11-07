@@ -216,20 +216,33 @@ function formatCreatorDisplayName(rawName, maxChars = 10) {
   return `${cleaned.slice(0, 9).trimEnd()}...`;
 }
 
-export function eventPopup(item, isMapDark = false, currentUser = null, requestedEventId = null, pendingRequestsCount = 0, isCollaborator = false, unreadGroupChatCount = 0) {
+export function eventPopup(
+  item,
+  isMapDark = false,
+  currentUser = null,
+  requestedEventId = null,
+  pendingRequestsCount = 0,
+  isCollaborator = false,
+  unreadGroupChatCount = 0,
+  isSelfOffline = false
+) {
   const displayDesc = cleanDesc(item.description);
   const mediaList = extractMediaList(item);
 
+  const curId = currentUser?.id ? String(currentUser.id) : null;
+  const eventCreatorId =
+    item.creator?.id || item.creatorId || item.userId || null;
+
   const isOwner = Boolean(
-    currentUser && (
-      (item.creator?.id && String(item.creator.id) === String(currentUser.id)) ||
-      (item.creatorId && String(item.creatorId) === String(currentUser.id)) ||
-      (item.userId && String(item.userId) === String(currentUser.id)) ||
-      (currentUser.nickname && (item.creator?.nickname === currentUser.nickname || item.creator?.name === currentUser.nickname)) ||
-      (currentUser.name && (item.creator?.name === currentUser.name || item.creator?.nickname === currentUser.name)) ||
-      item.id === "own" ||
-      item.isOwn
-    )
+    currentUser &&
+      (item.id === "own" ||
+        item.isOwn ||
+        (curId && eventCreatorId
+          ? String(eventCreatorId) === curId
+          : currentUser.nickname &&
+            item.creator?.nickname &&
+            String(item.creator.nickname).trim().toLowerCase() ===
+              String(currentUser.nickname).trim().toLowerCase()))
   );
 
   // Prioritize creator's Display Name (displayName / name) over username (nickname)
@@ -244,10 +257,10 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
   const hasRequestedThisEvent = Boolean(requestedEventId && String(requestedEventId) === String(item.id));
   const hasActiveRequestElsewhere = Boolean(requestedEventId && String(requestedEventId) !== String(item.id));
 
-  // BG_EventCardLight.jpg (#ffffff) / BG_EventCardDark.jpg (#1b1c1e) with ChatBox-matched opacity
+  // BG_EventCardLight.webp (#ffffff) / BG_EventCardDark.webp (#1b1c1e) with ChatBox-matched opacity
   const bgImage = isMapDark
-    ? "/BG_IMPROVE_FOR_MAP/BG_EventCardDark.jpg"
-    : "/BG_IMPROVE_FOR_MAP/BG_EventCardLight.jpg";
+    ? "/BG_IMPROVE_FOR_MAP/BG_EventCardDark.webp"
+    : "/BG_IMPROVE_FOR_MAP/BG_EventCardLight.webp";
   const cardBaseBg = isMapDark ? "#1b1c1e" : "#ffffff";
   const bgOpacity = isMapDark ? 0.45 : 0.58;
   const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.14)";
@@ -350,9 +363,13 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     </svg>
   `;
 
+  const offlineBtnLockStyle = isSelfOffline
+    ? "opacity: 0.32; filter: grayscale(100%); cursor: not-allowed; pointer-events: none;"
+    : "";
+
   let requestOrEnvelopeIconHtml = "";
   if (isOwner) {
-    const hasRedDot = pendingRequestsCount > 0;
+    const hasRedDot = !isSelfOffline && pendingRequestsCount > 0;
     const redDotHtml = hasRedDot
       ? `<span style="position: absolute; top: -1px; right: -1px; width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%; border: none !important; box-shadow: none !important; pointer-events: none;"></span>`
       : "";
@@ -360,11 +377,10 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaOpenRequests?.('${esc(item.id)}')"
-        title="Collab Requests"
-        style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
-        onmouseover="this.style.transform='scale(1.12)'"
-        onmouseout="this.style.transform='scale(1)'"
+        ${isSelfOffline ? "disabled" : `onclick="window.__kalceriaOpenRequests?.('${esc(item.id)}')"`}
+        title="${isSelfOffline ? "Offline (Stealth Mode)" : "Collab Requests"}"
+        style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0; ${offlineBtnLockStyle}"
+        ${isSelfOffline ? "" : `onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'"`}
       >
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" style="display: block;">
           <rect x="2.5" y="4.5" width="19" height="15" rx="3" fill="${iconFg}" stroke="${iconStroke}" stroke-width="1.3" />
@@ -378,11 +394,10 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaCollaboratorUpload?.('${esc(item.id)}')"
-        title="Upload Media (Collaborator)"
-        style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
-        onmouseover="this.style.transform='scale(1.15)'"
-        onmouseout="this.style.transform='scale(1)'"
+        ${isSelfOffline ? "disabled" : `onclick="window.__kalceriaCollaboratorUpload?.('${esc(item.id)}')"`}
+        title="${isSelfOffline ? "Offline (Stealth Mode)" : "Upload Media (Collaborator)"}"
+        style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0; ${offlineBtnLockStyle}"
+        ${isSelfOffline ? "" : `onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"`}
       >
         ${pureUploadSvg}
       </button>
@@ -392,11 +407,10 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaPromptCancelRequest?.('${esc(item.id)}', '${esc(item.title)}')"
-        title="Remove Request from ${esc(item.title)}"
-        style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
-        onmouseover="this.style.transform='scale(1.12)'"
-        onmouseout="this.style.transform='scale(1)'"
+        ${isSelfOffline ? "disabled" : `onclick="window.__kalceriaPromptCancelRequest?.('${esc(item.id)}', '${esc(item.title)}')"`}
+        title="${isSelfOffline ? "Offline (Stealth Mode)" : `Remove Request from ${esc(item.title)}`}"
+        style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0; ${offlineBtnLockStyle}"
+        ${isSelfOffline ? "" : `onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'"`}
       >
         <div style="filter: grayscale(100%) opacity(0.45); display: flex; align-items: center; justify-content: center;">
           ${pureHandSvg}
@@ -410,11 +424,10 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaPromptCancelRequest?.('${esc(requestedEventId)}', 'active event')"
-        title="Active request exists on another event (Click to cancel)"
-        style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); flex-shrink: 0;"
-        onmouseover="this.style.transform='scale(1.08)'"
-        onmouseout="this.style.transform='scale(1)'"
+        ${isSelfOffline ? "disabled" : `onclick="window.__kalceriaPromptCancelRequest?.('${esc(requestedEventId)}', 'active event')"`}
+        title="${isSelfOffline ? "Offline (Stealth Mode)" : "Active request exists on another event (Click to cancel)"}"
+        style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); flex-shrink: 0; ${offlineBtnLockStyle}"
+        ${isSelfOffline ? "" : `onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'"`}
       >
         ${pureHandSvg}
       </button>
@@ -423,11 +436,10 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     requestOrEnvelopeIconHtml = `
       <button
         type="button"
-        onclick="window.__kalceriaRequestCollab?.('${esc(item.id)}')"
-        title="Request Collab"
-        style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
-        onmouseover="this.style.transform='scale(1.12)'"
-        onmouseout="this.style.transform='scale(1)'"
+        ${isSelfOffline ? "disabled" : `onclick="window.__kalceriaRequestCollab?.('${esc(item.id)}')"`}
+        title="${isSelfOffline ? "Offline (Stealth Mode)" : "Request Collab"}"
+        style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0; ${offlineBtnLockStyle}"
+        ${isSelfOffline ? "" : `onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'"`}
       >
         ${pureHandSvg}
       </button>
@@ -439,11 +451,10 @@ export function eventPopup(item, isMapDark = false, currentUser = null, requeste
     ? `
       <button
         type="button"
-        onclick="window.__kalceriaEditEvent?.('${esc(item.id)}')"
-        title="Edit Event"
-        style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
-        onmouseover="this.style.transform='scale(1.12)'"
-        onmouseout="this.style.transform='scale(1)'"
+        ${isSelfOffline ? "disabled" : `onclick="window.__kalceriaEditEvent?.('${esc(item.id)}')"`}
+        title="${isSelfOffline ? "Offline (Stealth Mode)" : "Edit Event"}"
+        style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0; ${offlineBtnLockStyle}"
+        ${isSelfOffline ? "" : `onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'"`}
       >
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
           <path
