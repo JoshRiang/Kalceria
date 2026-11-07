@@ -235,6 +235,10 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
       key === 'profilePicture' ||
       key === 'coverImage' ||
       key === 'coverUrl';
+    const isBase64MediaDataUrl =
+      (key === 'profilePicture' || key === 'coverImage' || key === 'coverUrl') &&
+      typeof obj[key] === 'string' &&
+      /^data:(?:image|video)\/(?:webp|png|jpeg|jpg|gif|mp4|webm);base64,[A-Za-z0-9+/=\s]+$/i.test(obj[key]);
     const isOpaqueCryptoField =
       key === 'ciphertext' ||
       key === 'iv' ||
@@ -242,7 +246,8 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
       key === 'nonce' ||
       key === 'encryptedPayload' ||
       key === 'rtcPayload' ||
-      key === 'mediaUrl';
+      key === 'mediaUrl' ||
+      isBase64MediaDataUrl;
     const childState = {
       ...state,
       maxStringLen: isLargeMediaField ? 16_000_000 : state.maxStringLen,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AuthField from "@/components/auth/AuthField";
 import { INDONESIAN_CITIES } from "@/lib/indonesianCities";
 import {
@@ -11,6 +11,7 @@ import {
 export default function RegisterForm({
   form,
   setField,
+  isActive = true,
   PUBLIC_SIGNUP_ENABLED,
   // Validation flags
   nameValid,
@@ -37,19 +38,23 @@ export default function RegisterForm({
   const [recommendedPassword, setRecommendedPassword] = useState(initialPassword);
   const [showRecommendation, setShowRecommendation] = useState(true);
   const [recommendationDismissed, setRecommendationDismissed] = useState(false);
+  const isActiveRef = useRef(isActive);
+  isActiveRef.current = isActive;
 
-  // Auto-fill the first password input box on mount and show recommendation popup
+  // Auto-fill the first password input box strictly when RegisterForm is active
   useEffect(() => {
+    if (!isActive) return;
     if (PUBLIC_SIGNUP_ENABLED && !recommendationDismissed && !form.password) {
       setField("password", initialPassword);
       setShowRecommendation(true);
     }
-  }, [PUBLIC_SIGNUP_ENABLED, initialPassword, recommendationDismissed, form.password, setField]);
+  }, [isActive, PUBLIC_SIGNUP_ENABLED, initialPassword, recommendationDismissed, form.password, setField]);
 
   useEffect(() => {
+    if (!isActive) return;
     let active = true;
     fetchRecommendedPassword({ email: form.email || "" }).then((pwd) => {
-      if (active && pwd) {
+      if (active && isActiveRef.current && pwd) {
         setRecommendedPassword(pwd);
         // Automatically sync initial auto-fill if user hasn't typed their own yet
         if (!recommendationDismissed && (!form.password || form.password === initialPassword)) {
@@ -60,7 +65,7 @@ export default function RegisterForm({
     return () => {
       active = false;
     };
-  }, [form.email, initialPassword, recommendationDismissed, form.password, setField]);
+  }, [isActive, form.email, initialPassword, recommendationDismissed, form.password, setField]);
 
   const handlePasswordChange = (id, value) => {
     setField(id, value);
@@ -118,15 +123,29 @@ export default function RegisterForm({
               : "border-slate-800 hover:border-slate-700"
           }`}
         >
-          <span className="text-[13px] font-sans truncate text-slate-400">
-            {croppedAvatar ? "Photo chosen & cropped" : "No file chosen"}
-          </span>
+          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+            {croppedAvatar && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={croppedAvatar}
+                alt="Profile preview"
+                className="w-6 h-6 rounded-full object-cover border border-emerald-400/70 shrink-0"
+              />
+            )}
+            <span
+              className={`text-[13px] font-sans truncate ${
+                croppedAvatar ? "text-emerald-300 font-medium" : "text-slate-400"
+              }`}
+            >
+              {croppedAvatar ? "Photo chosen & cropped" : "No file chosen"}
+            </span>
+          </div>
           <div className="flex items-center gap-2 shrink-0">
             <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white font-sans text-xs font-bold py-1.5 px-3 rounded transition-colors inline-block select-none">
               {croppedAvatar ? "Change File" : "Choose File"}
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/jpg"
+                accept="image/*"
                 onChange={handlePhotoSelect}
                 className="hidden"
                 disabled={!PUBLIC_SIGNUP_ENABLED}
@@ -205,6 +224,7 @@ export default function RegisterForm({
       {/* 5. Password * (With 2D Eye toggle & Natural Strong Password Recommendation) */}
       <AuthField
         id="password"
+        inputId="register-password"
         label="Password"
         type="password"
         placeholder={PUBLIC_SIGNUP_ENABLED ? "••••••••" : "Not Ready Yet"}
@@ -260,6 +280,7 @@ export default function RegisterForm({
       {/* 6. Confirm Password * (Below password with 2D Eye toggle) */}
       <AuthField
         id="confirmPassword"
+        inputId="register-confirm-password"
         label="Confirm Password"
         type="password"
         placeholder={PUBLIC_SIGNUP_ENABLED ? "••••••••" : "Not Ready Yet"}

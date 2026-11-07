@@ -6,23 +6,17 @@ import Image from "next/image";
 import ContentImage from "@/components/ui/ContentImage";
 import { formatCallDuration } from "../hooks/usePersonalCallState";
 
-// Static distributed mini Coki faces with fixed random tilt angles (constant across all calls)
-// Positioned strictly below the sleek solid white top header so zero faces are ever cut in half.
+// Sparse (~45% reduced) organically distributed mini Coki faces across the stage
+// Positioned strictly below the sleek solid top header so zero faces are ever cut in half.
 const STATIC_COKI_VOICE_BG = [
-  { top: "24%", left: "16%", rotate: -14 },
-  { top: "25%", left: "50%", rotate: 10 },
-  { top: "24%", left: "84%", rotate: -8 },
-  { top: "40%", left: "26%", rotate: 22 },
-  { top: "41%", left: "74%", rotate: -18 },
-  { top: "55%", left: "12%", rotate: 12 },
-  { top: "56%", left: "86%", rotate: -15 },
-  { top: "68%", left: "24%", rotate: -20 },
-  { top: "69%", left: "74%", rotate: 18 },
-  { top: "80%", left: "14%", rotate: 10 },
-  { top: "81%", left: "50%", rotate: -12 },
-  { top: "80%", left: "84%", rotate: 24 },
-  { top: "92%", left: "30%", rotate: -6 },
-  { top: "92%", left: "70%", rotate: 15 },
+  { top: "23%", left: "20%", rotate: -15 },
+  { top: "27%", left: "78%", rotate: 14 },
+  { top: "41%", left: "52%", rotate: -9 },
+  { top: "49%", left: "16%", rotate: 18 },
+  { top: "56%", left: "83%", rotate: -16 },
+  { top: "69%", left: "34%", rotate: 11 },
+  { top: "78%", left: "74%", rotate: -12 },
+  { top: "88%", left: "22%", rotate: 16 },
 ];
 
 export function CallMediaStage({
@@ -131,7 +125,7 @@ export function CallMediaStage({
             }`}
           />
 
-          {/* 2. Pattern Layer: Intact Mini Coki faces without any half-cut mask, clearly visible in both Light & Dark Mode */}
+          {/* 2. Pattern Layer: Organically distributed Mini Coki faces — natural face preserved in Dark Mode (never inverted!) */}
           <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             {STATIC_COKI_VOICE_BG.map((pos, idx) => (
               <div
@@ -141,11 +135,12 @@ export function CallMediaStage({
                   top: pos.top,
                   left: pos.left,
                   transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
+                  filter: isMapDark
+                    ? "brightness(1.08) drop-shadow(0 0 1.2px rgba(255,255,255,0.62)) drop-shadow(0 0 9px rgba(255,255,255,0.15))"
+                    : "contrast(1.18)",
                 }}
                 className={`w-10 h-13 pointer-events-none select-none ${
-                  isMapDark
-                    ? "opacity-[0.38] invert brightness-115 contrast-125"
-                    : "opacity-[0.42] contrast-125"
+                  isMapDark ? "opacity-[0.36]" : "opacity-[0.42]"
                 }`}
               >
                 <Image

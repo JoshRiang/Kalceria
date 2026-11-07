@@ -42,6 +42,12 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: '/BG_IMPROVE_FOR_MAP/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
         source: '/:path*',
       headers: [
         { key: 'X-Content-Type-Options', value: 'nosniff' },

@@ -12,6 +12,7 @@ export default function LoginForm({
     <>
       <AuthField
         id="email"
+        inputId="login-email"
         label="Email Address"
         type="email"
         placeholder="user@domain.com"
@@ -22,6 +23,7 @@ export default function LoginForm({
       />
       <AuthField
         id="password"
+        inputId="login-password"
         label="Password"
         type="password"
         placeholder="••••••••"

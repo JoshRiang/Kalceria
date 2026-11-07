@@ -308,6 +308,7 @@ export async function login(req, res, next) {
       userId: user.id,
       username: user.nickname || (user.email ? user.email.split('@')[0] : 'User'),
       role: user.role,
+      profilePicture: user.profilePicture || null,
       csrfToken,
     });
   } catch (err) {
@@ -380,7 +381,7 @@ export async function verifyOtp(req, res, next) {
 // ─── Complete Registration (Choose Username & Commit to Postgres) ─────────────
 export async function completeRegistration(req, res, next) {
   try {
-    const { email, username } = req.body || {};
+    const { email, username, profilePicture: fallbackRawAvatar } = req.body || {};
     if (
       typeof email !== 'string' || !email.trim()
       || typeof username !== 'string' || !username.trim()
@@ -391,6 +392,7 @@ export async function completeRegistration(req, res, next) {
 
     const normalizedEmail = email.trim().toLowerCase();
     const cleanUsername = username.trim();
+    const fallbackAvatar = sanitizeProfilePicture(fallbackRawAvatar);
 
     // Verify OTP was passed for this email
     const isVerified = await redis.get(`pending:verified:${normalizedEmail}`);
@@ -422,6 +424,7 @@ export async function completeRegistration(req, res, next) {
       const data = JSON.parse(pendingJson);
       const initialAvatar =
         data.profilePicture ||
+        fallbackAvatar ||
         getDeterministicAvatarUrl({ nickname: cleanUsername, name: data.name });
       // Atomically commit the user record to PostgreSQL now that username is finalized
       user = await prisma.user.create({
@@ -447,11 +450,13 @@ export async function completeRegistration(req, res, next) {
         redis.del(`otp:${normalizedEmail}`),
         redis.del('cache:all_kalcerians'),
         redis.del('cache:map_users_enriched'),
+        redis.del('cache:map_users:global'),
         ensurePersistentUserProfile(user),
       ]);
     } else if (existingUser) {
       const initialAvatar =
         existingUser.profilePicture ||
+        fallbackAvatar ||
         getDeterministicAvatarUrl({ id: existingUser.id, nickname: cleanUsername, name: existingUser.name });
       user = await prisma.user.update({
         where: { id: existingUser.id },
@@ -465,6 +470,7 @@ export async function completeRegistration(req, res, next) {
         redis.del(`pending:verified:${normalizedEmail}`),
         redis.del('cache:all_kalcerians'),
         redis.del('cache:map_users_enriched'),
+        redis.del('cache:map_users:global'),
         ensurePersistentUserProfile(user),
       ]);
     } else {
@@ -505,6 +511,7 @@ export async function completeRegistration(req, res, next) {
         nickname: user.nickname,
         email: user.email,
         role: user.role,
+        profilePicture: user.profilePicture || null,
       },
       csrfToken,
     });

@@ -2,6 +2,11 @@
 // Stateless utility for generating event popup HTML for Leaflet
 import { getSafeMapAvatarUrl } from "./UserIcon";
 import { toSmartTitleCase } from "@/lib/titleCase";
+import {
+  EVENT_CARD_BG_DARK,
+  EVENT_CARD_BG_LIGHT,
+  getInstantMapBgUrl,
+} from "@/lib/mapBgCache";
 
 function esc(value) {
   return String(value || "")
@@ -258,9 +263,10 @@ export function eventPopup(
   const hasActiveRequestElsewhere = Boolean(requestedEventId && String(requestedEventId) !== String(item.id));
 
   // BG_EventCardLight.webp (#ffffff) / BG_EventCardDark.webp (#1b1c1e) with ChatBox-matched opacity
-  const bgImage = isMapDark
-    ? "/BG_IMPROVE_FOR_MAP/BG_EventCardDark.webp"
-    : "/BG_IMPROVE_FOR_MAP/BG_EventCardLight.webp";
+  // Uses pre-decoded RAM blob: URL + :root CSS custom property so Leaflet popup opens in 0.0ms without HTTP revalidation
+  const rawBgImage = isMapDark ? EVENT_CARD_BG_DARK : EVENT_CARD_BG_LIGHT;
+  const bgImage = getInstantMapBgUrl(rawBgImage);
+  const bgCssVar = isMapDark ? "--kalceria-event-bg-dark" : "--kalceria-event-bg-light";
   const cardBaseBg = isMapDark ? "#1b1c1e" : "#ffffff";
   const bgOpacity = isMapDark ? 0.45 : 0.58;
   const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.14)";
@@ -524,7 +530,7 @@ export function eventPopup(
   return `
     <div class="tactical-card event-card ${isMapDark ? 'event-card-dark' : 'event-card-light'}" style="position: relative; overflow: hidden; width: 292px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
       <!-- Main Box Background Image Layer (Visible around header, left/right of video frame, and description) -->
-      <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; background-image: url('${bgImage}'); background-size: cover; background-position: center; background-repeat: no-repeat; opacity: ${bgOpacity};"></div>
+      <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat; opacity: ${bgOpacity}; transform: translateZ(0);"></div>
 
       <!-- Upper Space: Header with blur (not dimmed!) -->
       <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; background: transparent !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; border: none !important;">

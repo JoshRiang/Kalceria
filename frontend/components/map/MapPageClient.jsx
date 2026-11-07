@@ -38,41 +38,17 @@ import api, {
   fetchBlockedUsers, blockKalcerian, unblockKalcerian,
 } from "@/lib/api";
 
+import {
+  EVENT_CARD_BG_DARK,
+  EVENT_CARD_BG_LIGHT,
+  MAP_BG_WEBP_ASSETS,
+  preloadAllMapBackgrounds,
+} from "@/lib/mapBgCache";
+
 const SnapMap = dynamic(() => import("@/components/SnapMap"), {
   ssr: false,
   loading: () => <div className="fixed inset-0 bg-[#050a14] z-[10]" />,
 });
-
-// Eager 0ms decoded texture cache for all BG_IMPROVE_FOR_MAP WebP backgrounds
-const MAP_BG_WEBP_ASSETS = [
-  "/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Dark.webp",
-  "/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Light.webp",
-  "/BG_IMPROVE_FOR_MAP/BG_BroadscastBoxDark.webp",
-  "/BG_IMPROVE_FOR_MAP/BG_BroadcastBoxLight.webp",
-  "/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp",
-  "/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.webp",
-  "/BG_IMPROVE_FOR_MAP/BG_EventCardDark.webp",
-  "/BG_IMPROVE_FOR_MAP/BG_EventCardLight.webp",
-  "/BG_IMPROVE_FOR_MAP/CokiEditProfile.webp",
-];
-
-const DECODED_MAP_BG_CACHE = [];
-
-function preloadAllMapBackgrounds() {
-  if (typeof window === "undefined" || DECODED_MAP_BG_CACHE.length > 0) return;
-  MAP_BG_WEBP_ASSETS.forEach((url) => {
-    const img = new window.Image();
-    img.decoding = "sync";
-    if ("fetchPriority" in img) {
-      img.fetchPriority = "high";
-    }
-    img.src = url;
-    if (typeof img.decode === "function") {
-      img.decode().catch(() => {});
-    }
-    DECODED_MAP_BG_CACHE.push(img);
-  });
-}
 
 // Helpers
 const avatarUrl = (user) => resolvePersistentAvatarUrl(user);
@@ -1211,11 +1187,25 @@ export default function MapPage() {
         transition: "filter 1.2s ease-in-out"
       }}
     >
-      {/* Persistent 1x1 GPU-pinned WebP texture layer so all 9 BG_IMPROVE_FOR_MAP assets render in 0ms without lazy/event-driven decode delay */}
+      {/* Persistent in-viewport GPU-pinned WebP texture layer so all 9 BG_IMPROVE_FOR_MAP assets + RAM blob: Event Card textures render in 0ms */}
       <div
         aria-hidden="true"
-        className="fixed -left-[9999px] -top-[9999px] w-px h-px overflow-hidden opacity-[0.001] pointer-events-none select-none"
+        className="fixed bottom-0 left-0 w-1 h-1 overflow-hidden opacity-[0.002] pointer-events-none select-none z-0"
       >
+        <div
+          style={{
+            width: 1,
+            height: 1,
+            backgroundImage: `var(--kalceria-event-bg-light, url("${EVENT_CARD_BG_LIGHT}"))`,
+          }}
+        />
+        <div
+          style={{
+            width: 1,
+            height: 1,
+            backgroundImage: `var(--kalceria-event-bg-dark, url("${EVENT_CARD_BG_DARK}"))`,
+          }}
+        />
         {MAP_BG_WEBP_ASSETS.map((assetUrl) => (
           <div
             key={assetUrl}

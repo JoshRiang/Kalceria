@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import api from "@/lib/api";
 import { EMAIL_AUTH_ENABLED, PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
 import { establishSession } from "@/lib/session";
+import { persistProfileIdentityCache } from "@/lib/profileIdentity";
 import { PhotoCropEditorModal } from "@/components/map/modals/PhotoCropEditorModal";
 import { isIndonesianCity } from "@/lib/indonesianCities";
 
@@ -95,8 +96,16 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const [resendCooldown, setResendCooldown] = useState(60); // 1 minute max OTP
   const [isOtpExpired, setIsOtpExpired] = useState(false);
 
-  // Registered credentials saved for auto-login after OTP
-  const registeredCredsRef = useRef({ email: "", password: "", name: "", dob: "" });
+  // Registered credentials saved for auto-login & profile photo persistence until Choose Username Done
+  const registeredCredsRef = useRef({
+    email: "",
+    password: "",
+    name: "",
+    dob: "",
+    profilePicture: null,
+  });
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   // Suggested username for Choose Username step
   const [suggestedUsername, setSuggestedUsername] = useState("");
@@ -194,45 +203,118 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     return () => clearInterval(timer);
   }, [mode, resendCooldown]);
 
-  const setField = (key, val) => {
+  const setField = useCallback((key, val) => {
     setForm((prev) => ({ ...prev, [key]: val }));
     setError("");
-  };
+  }, []);
+
+  const setLoginField = useCallback((key, val) => {
+    if (modeRef.current !== "login") return;
+    setForm((prev) => ({ ...prev, [key]: val }));
+    setError("");
+  }, []);
+
+  const setRegisterField = useCallback((key, val) => {
+    if (modeRef.current !== "register") return;
+    setForm((prev) => ({ ...prev, [key]: val }));
+    setError("");
+  }, []);
 
   const switchMode = (newMode) => {
+    if (newMode === modeRef.current) return;
+    modeRef.current = newMode;
     setError("");
     setSuccess("");
-    if (newMode === "register") {
-      setForm((prev) => ({
-        ...prev,
-        password: "",
-        confirmPassword: "",
-      }));
-    }
+    // Always flush password & confirmPassword on form switch so built-in/recommended passwords never leak across forms
+    setForm((prev) => ({
+      ...prev,
+      password: "",
+      confirmPassword: "",
+    }));
     setMode(newMode);
   };
 
-  // ── Profile Photo Selection ──
+  // ── Profile Photo Selection (Mobile & Desktop Hardware-Safe) ──
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!["image/jpeg", "image/png", "image/webp", "image/jpg"].includes(file.type)) {
+    const mime = String(file.type || "").toLowerCase();
+    const ext = (String(file.name || "").split(".").pop() || "").toLowerCase();
+    const isDisallowedMedia =
+      mime.startsWith("video/") ||
+      mime === "image/gif" ||
+      mime === "image/svg+xml" ||
+      ["mp4", "webm", "mov", "avi", "mkv", "gif", "svg"].includes(ext);
+    const isAllowedImage =
+      !isDisallowedMedia &&
+      (mime.startsWith("image/") ||
+        ["jpg", "jpeg", "png", "webp", "heic", "heif"].includes(ext));
+
+    if (!isAllowedImage) {
       setPhotoError("Only JPG, PNG or WEBP images allowed");
+      e.target.value = "";
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      setPhotoError("File size exceeds 8MB limit");
+    if (file.size > 25 * 1024 * 1024) {
+      setPhotoError("File size exceeds 25MB limit");
+      e.target.value = "";
       return;
     }
 
     setPhotoError("");
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setRawImageForCrop(event.target.result);
-      setShowCropModal(true);
+
+    const openWithFileReader = () => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (typeof event.target?.result === "string") {
+          setRawImageForCrop(event.target.result);
+          setShowCropModal(true);
+        } else {
+          setPhotoError("Could not read selected photo");
+        }
+      };
+      reader.onerror = () => setPhotoError("Could not read selected photo");
+      reader.readAsDataURL(file);
     };
-    reader.readAsDataURL(file);
+
+    // Pre-normalize large mobile camera photos via ObjectURL -> Canvas so 12MP-48MP phone photos open smoothly
+    if (typeof window !== "undefined" && typeof URL !== "undefined" && URL.createObjectURL) {
+      const tempObjUrl = URL.createObjectURL(file);
+      const probeImg = new window.Image();
+      probeImg.onload = () => {
+        try {
+          const nw = probeImg.naturalWidth || 800;
+          const nh = probeImg.naturalHeight || 800;
+          const maxDim = 1600;
+          const scale = Math.min(1, maxDim / Math.max(nw, nh));
+          const targetW = Math.max(64, Math.round(nw * scale));
+          const targetH = Math.max(64, Math.round(nh * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(probeImg, 0, 0, targetW, targetH);
+            const normalizedDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+            URL.revokeObjectURL(tempObjUrl);
+            setRawImageForCrop(normalizedDataUrl);
+            setShowCropModal(true);
+            return;
+          }
+        } catch {}
+        URL.revokeObjectURL(tempObjUrl);
+        openWithFileReader();
+      };
+      probeImg.onerror = () => {
+        URL.revokeObjectURL(tempObjUrl);
+        openWithFileReader();
+      };
+      probeImg.src = tempObjUrl;
+    } else {
+      openWithFileReader();
+    }
+
     e.target.value = "";
   };
 
@@ -334,16 +416,26 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     setError("");
     try {
       const creds = registeredCredsRef.current;
-      // Atomically commit user to database and issue authenticated session
+      // Atomically commit user (including confirmed cropped profile photo) to database and issue authenticated session
       const res = await api.post("/auth/register/complete", {
         email: creds.email || otpEmail,
         username: chosenUsername,
+        profilePicture: creds.profilePicture || undefined,
       });
 
       if (res.data?.user) {
-        establishSession(res.data.user);
-        activeSessionRef.current = res.data;
+        const confirmedAvatar = res.data.user.profilePicture || creds.profilePicture || null;
+        const hydratedUser = confirmedAvatar
+          ? { ...res.data.user, profilePicture: confirmedAvatar }
+          : res.data.user;
+        if (confirmedAvatar) {
+          persistProfileIdentityCache(hydratedUser, { profilePicture: confirmedAvatar });
+          persistProfileIdentityCache({ nickname: chosenUsername }, { profilePicture: confirmedAvatar });
+        }
+        establishSession(hydratedUser);
+        activeSessionRef.current = { ...res.data, user: hydratedUser };
       }
+      setCroppedAvatar(null);
 
       // Transition directly to Welcome greeting while buffer stays rock-solid in dead center
       setTimeout(() => {
@@ -520,12 +612,13 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         const profilePicture = await optimizeAvatarForBackend(croppedAvatar);
         const birthDateIso = `${String(form.dob).trim()}-01-01`;
 
-        // Store credentials in ref for auto-login after OTP
+        // Store credentials & cropped profile photo in ref until registration completes at Choose Username Done
         registeredCredsRef.current = {
           email: registeredEmail,
           password: registeredPassword,
           name: registeredName,
           dob: String(form.dob).trim(),
+          profilePicture: profilePicture || null,
         };
 
         const regRes = await api.post("/auth/register", {
@@ -539,13 +632,13 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         });
 
         if (EMAIL_AUTH_ENABLED && regRes.data?.emailVerificationRequired) {
+          modeRef.current = "verify";
           setOtpEmail(registeredEmail);
           setOtp(["", "", "", "", "", ""]);
           setResendCooldown(60); // 1 minute max OTP
           setIsOtpExpired(false);
           setMode("verify");
           setForm({});
-          setCroppedAvatar(null);
           setSuccess("Kode OTP telah dikirim ke email kamu.");
         } else {
           // Direct login if OTP disabled
@@ -554,12 +647,21 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
               email: registeredEmail,
               password: registeredPassword,
             });
+            if (profilePicture && loginRes.data?.userId) {
+              persistProfileIdentityCache(
+                { id: loginRes.data.userId, nickname: loginRes.data.username },
+                { profilePicture }
+              );
+            }
+            setCroppedAvatar(null);
             establishSession(loginRes.data);
             setSuccess("Account created! Signing you in...");
             setTimeout(() => onAuthSuccess?.(loginRes.data), 800);
           } catch {
+            modeRef.current = "login";
+            setCroppedAvatar(null);
             setMode("login");
-            setForm({ email: registeredEmail });
+            setForm({ email: registeredEmail, password: "", confirmPassword: "" });
             setSuccess("Registration successful! Please sign in.");
           }
         }
@@ -794,14 +896,15 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             {mode === "login" ? (
                               <LoginForm
                                 form={form}
-                                setField={setField}
+                                setField={setLoginField}
                                 loading={loading}
                                 isEmailValid={isEmailValid}
                               />
                             ) : (
                               <RegisterForm
                                 form={form}
-                                setField={setField}
+                                setField={setRegisterField}
+                                isActive={mode === "register"}
                                 PUBLIC_SIGNUP_ENABLED={PUBLIC_SIGNUP_ENABLED}
                                 nameValid={nameValid}
                                 isDobValid={isDobValid}
@@ -915,8 +1018,10 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                             onSubmit={handleForgotPasswordSubmit}
                             onSuccessComplete={handleCrossTabResetSuccess}
                             onBackToLogin={() => {
+                              modeRef.current = "login";
                               setError("");
                               setSuccess("");
+                              setForm((prev) => ({ ...prev, password: "", confirmPassword: "" }));
                               setMode("login");
                             }}
                             loading={loading}
@@ -984,9 +1089,11 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
         {isBuffering && <AuthBufferOverlay />}
       </AnimatePresence>
 
-      {/* ── WhatsApp-style Photo Cropper Modal ── */}
+      {/* ── Camera-Consistent Interactive Photo Cropper Modal ── */}
       <PhotoCropEditorModal
+        show={showCropModal}
         isOpen={showCropModal}
+        rawImage={rawImageForCrop}
         imageSrc={rawImageForCrop}
         onCancel={() => {
           setShowCropModal(false);

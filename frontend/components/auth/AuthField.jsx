@@ -5,6 +5,7 @@ import RecommendedPasswordPopup from "@/components/auth/RecommendedPasswordPopup
 
 export default function AuthField({
   id,
+  inputId,
   label,
   type = "text",
   placeholder,
@@ -76,6 +77,7 @@ export default function AuthField({
     onChange(id, nextVal);
   };
 
+  const domId = inputId || id;
   const computedInputType = isPassword
     ? showPassword
       ? "text"
@@ -86,7 +88,7 @@ export default function AuthField({
     <div className="flex flex-col mb-4">
       {/* Label: Normal casing with red asterisk for required fields */}
       <label
-        htmlFor={id}
+        htmlFor={domId}
         className="mb-1.5 flex items-center justify-between font-sans text-xs font-semibold text-slate-300 tracking-normal select-none cursor-pointer"
       >
         <span>
@@ -110,7 +112,7 @@ export default function AuthField({
 
       {disabled && (type === "date" || type === "file") ? (
         <div
-          id={id}
+          id={domId}
           aria-disabled="true"
           className="w-full bg-[#0c1528] border border-slate-800 rounded-md px-3 py-2.5 font-sans text-[13px] text-slate-600 cursor-not-allowed"
         >
@@ -118,7 +120,8 @@ export default function AuthField({
         </div>
       ) : isSelect ? (
         <select
-          id={id}
+          id={domId}
+          name={domId}
           value={val}
           onChange={handleChange}
           disabled={disabled}
@@ -155,7 +158,8 @@ export default function AuthField({
           </div>
           <input
             ref={inputRef}
-            id={id}
+            id={domId}
+            name={domId}
             type="tel"
             inputMode="numeric"
             placeholder={placeholder || "81234567890"}
@@ -177,7 +181,8 @@ export default function AuthField({
         >
           <input
             ref={inputRef}
-            id={id}
+            id={domId}
+            name={domId}
             type={computedInputType}
             placeholder={placeholder}
             value={val}
@@ -253,7 +258,8 @@ export default function AuthField({
         </div>
       ) : (
         <input
-          id={id}
+          id={domId}
+          name={domId}
           type={type}
           placeholder={placeholder}
           value={type === "file" ? undefined : val}

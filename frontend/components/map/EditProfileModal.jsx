@@ -13,15 +13,16 @@ function getDeterministicBaseColor(user) {
   return resolvePersistentCover(user);
 }
 
-// Sparse scattered tilted CokiEditProfile icons (fewer than Voice Call so UI stays clean & focused)
+// Evenly distributed sparse CokiEditProfile icons across full 2D modal surface (no edge-line clustering)
 const EDIT_PROFILE_COKI_PATTERN = [
-  { top: "14%", left: "3%", rotate: "-16deg", size: 58 },
-  { top: "16%", left: "82%", rotate: "18deg", size: 56 },
-  { top: "38%", left: "86%", rotate: "-14deg", size: 60 },
-  { top: "44%", left: "2%", rotate: "15deg", size: 56 },
-  { top: "66%", left: "84%", rotate: "20deg", size: 58 },
-  { top: "72%", left: "4%", rotate: "-18deg", size: 56 },
-  { top: "88%", left: "46%", rotate: "12deg", size: 54 },
+  { top: "12%", left: "10%", rotate: "-15deg", size: 54 },
+  { top: "16%", left: "76%", rotate: "16deg", size: 52 },
+  { top: "31%", left: "44%", rotate: "-10deg", size: 54 },
+  { top: "44%", left: "82%", rotate: "-16deg", size: 56 },
+  { top: "50%", left: "16%", rotate: "14deg", size: 52 },
+  { top: "65%", left: "58%", rotate: "18deg", size: 54 },
+  { top: "76%", left: "28%", rotate: "-13deg", size: 52 },
+  { top: "86%", left: "79%", rotate: "12deg", size: 54 },
 ];
 
 function validateWhatsAppInput(raw) {
@@ -144,8 +145,17 @@ export function EditProfileModal({
   const handleAvatarFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const mime = String(file.type || "").toLowerCase();
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "webp"].includes(ext)) {
+    const isDisallowed =
+      mime.startsWith("video/") ||
+      mime === "image/gif" ||
+      mime === "image/svg+xml" ||
+      ["mp4", "webm", "mov", "gif", "svg"].includes(ext);
+    const isAllowed =
+      !isDisallowed &&
+      (mime.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "heic", "heif"].includes(ext));
+    if (!isAllowed) {
       setFileError("Only .png, .jpeg, and .webp image files are allowed for profile picture (no video)");
       e.target.value = "";
       return;
@@ -154,7 +164,6 @@ export function EditProfileModal({
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result;
-      // Open WhatsApp-style Crop & Rotate editor (Picture 2)
       setCropSourceImage(dataUrl);
     };
     reader.readAsDataURL(file);
@@ -263,11 +272,12 @@ export function EditProfileModal({
                   width: `${item.size}px`,
                   height: `${item.size}px`,
                   transform: `rotate(${item.rotate})`,
+                  filter: isModalDark
+                    ? "brightness(1.08) drop-shadow(0 0 1.2px rgba(255,255,255,0.62)) drop-shadow(0 0 9px rgba(255,255,255,0.15))"
+                    : "contrast(1.18)",
                 }}
                 className={`object-contain transition-opacity duration-300 ${
-                  isModalDark
-                    ? "opacity-[0.36] invert brightness-115 contrast-125"
-                    : "opacity-[0.38] contrast-125"
+                  isModalDark ? "opacity-[0.34]" : "opacity-[0.38]"
                 }`}
               />
             ))}

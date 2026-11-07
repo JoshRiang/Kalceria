@@ -73,7 +73,7 @@ export function ChatMediaCard({
   const [videoProgress, setVideoProgress] = useState(0); // 0 to 1
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubSeconds, setScrubSeconds] = useState(0);
-  const [isPlayingVideo, setIsPlayingVideo] = useState(true);
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [realVideoDuration, setRealVideoDuration] = useState(item.videoDuration || 0);
   const [mediaLoadError, setMediaLoadError] = useState(false);
   const videoRafRef = useRef(null);
@@ -385,15 +385,49 @@ export function ChatMediaCard({
     const activeEl = getActiveVideoEl();
     if (!activeEl) return;
     if (activeEl.paused) {
-      activeEl.play().catch(() => {});
-      setIsPlayingVideo(true);
-      startVideoLoop();
+      activeEl
+        .play()
+        .then(() => {
+          setIsPlayingVideo(true);
+          startVideoLoop();
+        })
+        .catch(() => {
+          setIsPlayingVideo(false);
+        });
     } else {
       activeEl.pause();
       setIsPlayingVideo(false);
       cancelAnimationFrame(videoRafRef.current);
     }
   };
+
+  // Sync card video playback & dimmed Play/Pause indicator cleanly on flip/zoom state changes
+  useEffect(() => {
+    if (!isVideo) return;
+    const vid = videoRef.current;
+    if (!vid) return;
+    if (!isFlipped) {
+      if (!vid.paused) {
+        try {
+          vid.pause();
+        } catch {}
+      }
+      setIsPlayingVideo(false);
+      cancelAnimationFrame(videoRafRef.current);
+      return;
+    }
+    if (!isZoomOpen) {
+      vid
+        .play()
+        .then(() => {
+          setIsPlayingVideo(true);
+          startVideoLoop();
+        })
+        .catch(() => {
+          setIsPlayingVideo(false);
+        });
+    }
+  }, [isFlipped, isZoomOpen, isVideo, item.mediaUrl, startVideoLoop]);
 
   useEffect(() => {
     return () => {
@@ -647,14 +681,14 @@ export function ChatMediaCard({
                     className="w-full h-full object-cover"
                   />
 
-                  {/* Center Play/Pause Overlay Button */}
+                  {/* Center Play/Pause Overlay Button (Both Pause & Play dimmed consistently; never included in downloads) */}
                   <div
                     onClick={togglePlayVideo}
                     className="absolute inset-0 z-20 flex items-center justify-center cursor-pointer select-none"
                   >
                     <div
                       className={`transition-opacity duration-300 ${
-                        isPlayingVideo ? "opacity-35 hover:opacity-75" : "opacity-95"
+                        isPlayingVideo ? "opacity-35 hover:opacity-75" : "opacity-40 hover:opacity-80"
                       }`}
                     >
                       {isPlayingVideo ? (
@@ -854,14 +888,14 @@ export function ChatMediaCard({
                           className="w-full h-full object-contain bg-black"
                         />
 
-                        {/* Enlarged Center Play/Pause Overlay */}
+                        {/* Enlarged Center Play/Pause Overlay (Dimmed Pause & Play) */}
                         <div
                           onClick={togglePlayVideo}
                           className="absolute inset-0 z-20 flex items-center justify-center cursor-pointer select-none"
                         >
                           <div
                             className={`transition-opacity duration-300 ${
-                              isPlayingVideo ? "opacity-30 hover:opacity-75" : "opacity-95"
+                              isPlayingVideo ? "opacity-35 hover:opacity-75" : "opacity-40 hover:opacity-80"
                             }`}
                           >
                             {isPlayingVideo ? (
