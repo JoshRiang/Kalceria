@@ -2,70 +2,24 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
-import api from "@/lib/api";
-import { EMAIL_AUTH_ENABLED, PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
-import { establishSession } from "@/lib/session";
-import { persistProfileIdentityCache } from "@/lib/profileIdentity";
+import { PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
 import { PhotoCropEditorModal } from "@/components/map/modals/PhotoCropEditorModal";
-import { isIndonesianCity, isKnownCity } from "@/lib/indonesianCities";
 
-// Modular Subcomponents
-import LoginForm from "@/components/auth/LoginForm";
-import RegisterForm from "@/components/auth/RegisterForm";
+// Modular Subcomponents & Hooks
 import VerifyOtpStep from "@/components/auth/VerifyOtpStep";
 import ChooseUsernameStep from "@/components/auth/ChooseUsernameStep";
 import ForgotPasswordStep from "@/components/auth/ForgotPasswordStep";
 import ChooseNewPasswordStep from "@/components/auth/ChooseNewPasswordStep";
 import AuthBufferOverlay from "@/components/auth/AuthBufferOverlay";
-import {
-  generateUsernameCandidates,
-  findFirstAvailableUsername,
-} from "@/components/auth/usernameAlgorithm";
-
-const PASSWORD_CHECK_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-
-// Client-side born year validation (YEAR ONLY): must be 18+ years old
-function checkBornYear(yearVal) {
-  if (!yearVal) return { valid: false, empty: true, message: "" };
-  const str = String(yearVal).trim();
-  if (str.length < 4) return { valid: false, empty: false, message: "" };
-  const y = parseInt(str, 10);
-  const currentYear = new Date().getFullYear();
-  if (isNaN(y) || str.length !== 4) {
-    return { valid: false, empty: false, message: "Enter 4-digit year" };
-  }
-  if (y > currentYear - 18) {
-    return { valid: false, empty: false, message: "Must be 18 or older" };
-  }
-  if (y < 1920) {
-    return { valid: false, empty: false, message: "Enter valid year" };
-  }
-  return { valid: true, empty: false, message: "" };
-}
-
-// Ensure avatar base64 string does not exceed backend limits (max 180KB)
-async function optimizeAvatarForBackend(dataUrl) {
-  if (!dataUrl) return undefined;
-  if (dataUrl.length <= 180_000) return dataUrl;
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 320;
-      canvas.height = 320;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        resolve(dataUrl);
-        return;
-      }
-      ctx.drawImage(img, 0, 0, 320, 320);
-      resolve(canvas.toDataURL("image/jpeg", 0.85));
-    };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
-}
+import { AuthPageHeader } from "@/components/auth/AuthPageHeader";
+import { AuthPageFooter } from "@/components/auth/AuthPageFooter";
+import { AuthFormBody } from "@/components/auth/AuthFormBody";
+import { useGoogleOAuth } from "@/components/auth/useGoogleOAuth";
+import { useOtpVerification } from "@/components/auth/useOtpVerification";
+import { usePhotoCropHandler } from "@/components/auth/usePhotoCropHandler";
+import { usePasswordResetFlow } from "@/components/auth/usePasswordResetFlow";
+import { useUsernameSetup } from "@/components/auth/useUsernameSetup";
+import { useAuthSubmit } from "@/components/auth/useAuthSubmit";
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AuthPage({ onAuthSuccess, onBack }) {
@@ -83,10 +37,6 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   });
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [isGooglePrefill, setIsGooglePrefill] = useState(false);
-  const [verifiedCitiesMap, setVerifiedCitiesMap] = useState({});
-  const [extraCitiesList, setExtraCitiesList] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -94,84 +44,135 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   // Buffer Overlay (inherit from logging out buffer with no words)
   const [isBuffering, setIsBuffering] = useState(false);
 
-  // OTP State
-  const [otpEmail, setOtpEmail] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [resendCooldown, setResendCooldown] = useState(60); // 1 minute max OTP
-  const [isOtpExpired, setIsOtpExpired] = useState(false);
-
-  // Registered credentials saved for auto-login & profile photo persistence until Choose Username Done
-  const registeredCredsRef = useRef({
-    email: "",
-    password: "",
-    name: "",
-    dob: "",
-    profilePicture: null,
-  });
   const modeRef = useRef(mode);
   modeRef.current = mode;
-
-  // Suggested username for Choose Username step
-  const [suggestedUsername, setSuggestedUsername] = useState("");
-  const activeSessionRef = useRef(null);
-
-  // Forgot Password / Reset Password states
-  const [forgotEmail, setForgotEmail] = useState(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get("email") || "";
-    }
-    return "";
-  });
-  const [resetToken, setResetToken] = useState(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get("token") || urlParams.get("reset_token") || "";
-    }
-    return "";
-  });
-
-  // Check URL token for magic link password reset OR forgot-password initial state from map
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get("token") || urlParams.get("reset_token");
-      const urlMode = urlParams.get("mode");
-      const isSent = urlParams.get("sent") === "true";
-      const paramEmail = urlParams.get("email");
-
-      const isFromMap = urlParams.get("from") === "map";
-      if (isFromMap) {
-        try {
-          localStorage.setItem("kalceria_auth_return", "/map");
-          localStorage.setItem("kalceria_password_reset_from_map", "true");
-          sessionStorage.setItem("kalceria_password_reset_from_map", "true");
-        } catch {}
-      }
-
-      if (token) {
-        setResetToken(token);
-        setMode("choose-new-password");
-      } else if (urlMode === "forgot-password" && isSent) {
-        if (paramEmail) setForgotEmail(paramEmail);
-        setMode("forgot-password");
-        setSuccess("Verifikasi Link sudah terkirim ke email kamu.");
-        setResendCooldown(60);
-      } else if (urlParams.get("reset_success") === "true") {
-        window.location.replace("/map?skip_intro=true");
-      }
-    }
-  }, []);
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
   const [mobileVideo, setMobileVideo] = useState("/hp/vid_login_hp.mp4");
 
-  // Profile Photo state
-  const [rawImageForCrop, setRawImageForCrop] = useState(null);
-  const [showCropModal, setShowCropModal] = useState(false);
-  const [croppedAvatar, setCroppedAvatar] = useState(null);
-  const [photoError, setPhotoError] = useState("");
+  // Profile Photo state hook
+  const {
+    rawImageForCrop,
+    setRawImageForCrop,
+    showCropModal,
+    setShowCropModal,
+    croppedAvatar,
+    setCroppedAvatar,
+    photoError,
+    setPhotoError,
+    handlePhotoSelect,
+    handleCropComplete,
+  } = usePhotoCropHandler();
+
+  // Google OAuth Hook
+  const {
+    googleLoading,
+    isGooglePrefill,
+    verifiedCitiesMap,
+    extraCitiesList,
+    handleCityInput,
+    handleGoogleSignIn,
+  } = useGoogleOAuth({
+    setError,
+    setSuccess,
+    onAuthSuccess,
+    setForm,
+    setMode,
+    setCroppedAvatar,
+    modeRef,
+  });
+
+  // OTP Hook
+  const {
+    otpEmail,
+    setOtpEmail,
+    otp,
+    setOtp,
+    resendCooldown,
+    setResendCooldown,
+    isOtpExpired,
+    setIsOtpExpired,
+    handleOtpInput,
+    handleOtpKeyDown,
+    handleOtpPaste,
+    handleResendOtp,
+  } = useOtpVerification({
+    mode,
+    setError,
+    setSuccess,
+    setLoading,
+  });
+
+  // Password Reset Flow Hook
+  const {
+    forgotEmail,
+    setForgotEmail,
+    resetToken,
+    handleForgotPasswordSubmit,
+    handleResetPasswordDone,
+    handleCrossTabResetSuccess,
+  } = usePasswordResetFlow({
+    setMode,
+    setIsBuffering,
+    setError,
+    setSuccess,
+    setForm,
+    setResendCooldown,
+  });
+
+  // Username Setup Hook
+  const {
+    registeredCredsRef,
+    suggestedUsername,
+    handleVerifyOtp,
+    handleUsernameDone,
+  } = useUsernameSetup({
+    otp,
+    otpEmail,
+    setError,
+    setSuccess,
+    setIsBuffering,
+    setMode,
+    setCroppedAvatar,
+    onAuthSuccess,
+  });
+
+  // Form Submit & Validation Hook
+  const {
+    nameValid,
+    yearCheck,
+    isDobValid,
+    isDobError,
+    isEmailValid,
+    isEmailError,
+    cityValid,
+    isCityError,
+    passwordValid,
+    isPasswordError,
+    isConfirmValid,
+    isConfirmError,
+    confirmMessage,
+    handleSubmit,
+  } = useAuthSubmit({
+    form,
+    mode,
+    modeRef,
+    verifiedCitiesMap,
+    croppedAvatar,
+    setCroppedAvatar,
+    registeredCredsRef,
+    setLoading,
+    setError,
+    setSuccess,
+    setMode,
+    setOtpEmail,
+    setOtp,
+    setResendCooldown,
+    setIsOtpExpired,
+    setForm,
+    onAuthSuccess,
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -186,30 +187,6 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  // OTP 60-second Countdown Timer
-  useEffect(() => {
-    if (mode !== "verify") return;
-    if (resendCooldown <= 0) {
-      setIsOtpExpired(true);
-      return;
-    }
-    const timer = setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) {
-          setIsOtpExpired(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [mode, resendCooldown]);
-
-  const setField = useCallback((key, val) => {
-    setForm((prev) => ({ ...prev, [key]: val }));
-    setError("");
   }, []);
 
   const setLoginField = useCallback((key, val) => {
@@ -229,7 +206,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     modeRef.current = newMode;
     setError("");
     setSuccess("");
-    // Always flush password & confirmPassword on form switch so built-in/recommended passwords never leak across forms
+    // Always flush password & confirmPassword on form switch so passwords never leak across forms
     setForm((prev) => ({
       ...prev,
       password: "",
@@ -237,688 +214,6 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
     }));
     setMode(newMode);
   };
-
-  const citySearchTimeoutRef = useRef(null);
-  const handleCityInput = useCallback((query) => {
-    if (citySearchTimeoutRef.current) clearTimeout(citySearchTimeoutRef.current);
-    const q = String(query || "").trim();
-    if (q.length < 2) return;
-    citySearchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await api.get(`/location/cities?q=${encodeURIComponent(q)}`);
-        const found = res.data?.cities || [];
-        if (found.length > 0) {
-          setVerifiedCitiesMap((prev) => {
-            const next = { ...prev };
-            found.forEach((c) => {
-              const k1 = String(c.name || "").toLowerCase().trim();
-              const k2 = String(c.label || "").toLowerCase().trim();
-              if (k1) next[k1] = c;
-              if (k2) next[k2] = c;
-            });
-            return next;
-          });
-          setExtraCitiesList((prev) => {
-            const set = new Set([...prev, ...found.map((c) => c.label || c.name)]);
-            return Array.from(set).slice(0, 30);
-          });
-        }
-      } catch {}
-    }, 220);
-  }, []);
-
-  const applyGoogleOAuthResult = useCallback((result) => {
-    setGoogleLoading(false);
-    if (!result) return;
-    if (!result.ok) {
-      setError(result.error || "Google Sign-In failed.");
-      return;
-    }
-
-    const payload = result.payload || {};
-    if (payload.status === "EXISTING_USER") {
-      if (payload.csrfToken) sessionStorage.setItem("kalceriaCsrfToken", payload.csrfToken);
-      establishSession(payload.user || payload);
-      setSuccess("Authentication successful.");
-      setTimeout(() => {
-        onAuthSuccess?.({ ...payload, isNewUser: false, isRegister: false });
-      }, 600);
-      return;
-    }
-
-    if (payload.status === "NEW_USER") {
-      const gp = payload.googleProfile || {};
-      setIsGooglePrefill(true);
-
-      if (gp.city) {
-        const cityKey = String(gp.city).toLowerCase().trim();
-        const cityObj = {
-          name: gp.city,
-          label: gp.cityLabel || gp.city,
-          lat: gp.domicileLat,
-          lng: gp.domicileLng,
-          cityToken: gp.cityToken,
-        };
-        setVerifiedCitiesMap((prev) => ({ ...prev, [cityKey]: cityObj }));
-        setExtraCitiesList((prev) => Array.from(new Set([gp.cityLabel || gp.city, ...prev])));
-      }
-
-      modeRef.current = "register";
-      setForm({
-        name: gp.name || "",
-        email: gp.email || "",
-        dob: gp.birthYear ? String(gp.birthYear) : "",
-        domicile: gp.city || "",
-        domicileLat: gp.domicileLat ?? undefined,
-        domicileLng: gp.domicileLng ?? undefined,
-        cityToken: gp.cityToken || undefined,
-        password: "",
-        confirmPassword: "",
-      });
-
-      setCroppedAvatar(null);
-      setError("");
-      setSuccess("");
-      setMode("register");
-    }
-  }, [onAuthSuccess]);
-
-  // Google OAuth Listener & Handoff Consumer
-  useEffect(() => {
-    try {
-      const handoffRaw = localStorage.getItem("kalceria_google_oauth_handoff");
-      if (handoffRaw) {
-        localStorage.removeItem("kalceria_google_oauth_handoff");
-        const handoff = JSON.parse(handoffRaw);
-        if (Date.now() - (handoff.ts || 0) < 60_000) {
-          applyGoogleOAuthResult(handoff);
-        }
-      }
-    } catch {}
-
-    let bc;
-    try {
-      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-        bc = new BroadcastChannel("kalceria_google_oauth");
-        bc.onmessage = (event) => {
-          if (event.data?.type === "KALCERIA_GOOGLE_OAUTH_RESULT") {
-            applyGoogleOAuthResult(event.data);
-          }
-        };
-      }
-    } catch {}
-
-    const handlePostMessage = (event) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data?.type === "KALCERIA_GOOGLE_OAUTH_RESULT") {
-        applyGoogleOAuthResult(event.data);
-      }
-    };
-    window.addEventListener("message", handlePostMessage);
-
-    return () => {
-      if (bc) bc.close();
-      window.removeEventListener("message", handlePostMessage);
-    };
-  }, [applyGoogleOAuthResult]);
-
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const redirectUri = `${window.location.origin}/auth/google/callback`;
-      const res = await api.get(`/auth/google/start?redirectUri=${encodeURIComponent(redirectUri)}&mode=popup`);
-      const { authUrl } = res.data || {};
-
-      if (!authUrl) {
-        throw new Error("Unable to obtain Google sign-in URL.");
-      }
-
-      const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
-      if (isMobileDevice) {
-        window.location.href = authUrl;
-        return;
-      }
-
-      const width = 500;
-      const height = 620;
-      const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2);
-      const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
-      const popup = window.open(
-        authUrl,
-        "kalceria_google_oauth",
-        `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
-      );
-
-      if (!popup || popup.closed || typeof popup.closed === "undefined") {
-        window.location.href = authUrl;
-        return;
-      }
-
-      const checkTimer = setInterval(() => {
-        if (!popup || popup.closed) {
-          clearInterval(checkTimer);
-          setGoogleLoading(false);
-        }
-      }, 1000);
-    } catch (err) {
-      setGoogleLoading(false);
-      const msg = err.response?.data?.error || err.message || "Failed to start Google sign-in.";
-      setError(msg);
-    }
-  };
-
-  // ── Profile Photo Selection (Mobile & Desktop Hardware-Safe) ──
-  const handlePhotoSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const mime = String(file.type || "").toLowerCase();
-    const ext = (String(file.name || "").split(".").pop() || "").toLowerCase();
-    const isDisallowedMedia =
-      mime.startsWith("video/") ||
-      mime === "image/gif" ||
-      mime === "image/svg+xml" ||
-      ["mp4", "webm", "mov", "avi", "mkv", "gif", "svg"].includes(ext);
-    const isAllowedImage =
-      !isDisallowedMedia &&
-      (mime.startsWith("image/") ||
-        ["jpg", "jpeg", "png", "webp", "heic", "heif"].includes(ext));
-
-    if (!isAllowedImage) {
-      setPhotoError("Only JPG, PNG or WEBP images allowed");
-      e.target.value = "";
-      return;
-    }
-    if (file.size > 25 * 1024 * 1024) {
-      setPhotoError("File size exceeds 25MB limit");
-      e.target.value = "";
-      return;
-    }
-
-    setPhotoError("");
-
-    const openWithFileReader = () => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (typeof event.target?.result === "string") {
-          setRawImageForCrop(event.target.result);
-          setShowCropModal(true);
-        } else {
-          setPhotoError("Could not read selected photo");
-        }
-      };
-      reader.onerror = () => setPhotoError("Could not read selected photo");
-      reader.readAsDataURL(file);
-    };
-
-    // Pre-normalize large mobile camera photos via ObjectURL -> Canvas so 12MP-48MP phone photos open smoothly
-    if (typeof window !== "undefined" && typeof URL !== "undefined" && URL.createObjectURL) {
-      const tempObjUrl = URL.createObjectURL(file);
-      const probeImg = new window.Image();
-      probeImg.onload = () => {
-        try {
-          const nw = probeImg.naturalWidth || 800;
-          const nh = probeImg.naturalHeight || 800;
-          const maxDim = 1600;
-          const scale = Math.min(1, maxDim / Math.max(nw, nh));
-          const targetW = Math.max(64, Math.round(nw * scale));
-          const targetH = Math.max(64, Math.round(nh * scale));
-          const canvas = document.createElement("canvas");
-          canvas.width = targetW;
-          canvas.height = targetH;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(probeImg, 0, 0, targetW, targetH);
-            const normalizedDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-            URL.revokeObjectURL(tempObjUrl);
-            setRawImageForCrop(normalizedDataUrl);
-            setShowCropModal(true);
-            return;
-          }
-        } catch {}
-        URL.revokeObjectURL(tempObjUrl);
-        openWithFileReader();
-      };
-      probeImg.onerror = () => {
-        URL.revokeObjectURL(tempObjUrl);
-        openWithFileReader();
-      };
-      probeImg.src = tempObjUrl;
-    } else {
-      openWithFileReader();
-    }
-
-    e.target.value = "";
-  };
-
-  const handleCropComplete = (croppedDataUrl) => {
-    setCroppedAvatar(croppedDataUrl);
-    setShowCropModal(false);
-    setRawImageForCrop(null);
-  };
-
-  // ── OTP Handlers ──
-  const handleOtpInput = (index, value) => {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    const next = [...otp];
-    next[index] = digit;
-    setOtp(next);
-    setError("");
-    if (digit && index < 5) {
-      document.getElementById(`otp-${index + 1}`)?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      document.getElementById(`otp-${index - 1}`)?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (!pasted) return;
-    const next = [...otp];
-    for (let i = 0; i < pasted.length; i++) {
-      next[i] = pasted[i];
-    }
-    setOtp(next);
-    const focusIdx = Math.min(pasted.length, 5);
-    document.getElementById(`otp-${focusIdx}`)?.focus();
-  };
-
-  const handleResendOtp = async () => {
-    if (resendCooldown > 0) return;
-    setLoading(true);
-    setError("");
-    setSuccess("");
-    try {
-      await api.post("/auth/otp/request", { email: otpEmail });
-      setResendCooldown(60);
-      setIsOtpExpired(false);
-      setOtp(["", "", "", "", "", ""]);
-      setSuccess("Kode OTP baru telah dikirim.");
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || "Failed to resend OTP.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ── Verify OTP -> Screen Blur + Loading Buffer -> Choose Username ──
-  async function handleVerifyOtp() {
-    const code = otp.join("");
-    if (code.length < 6) {
-      setError("Masukkan 6 digit kode OTP.");
-      return;
-    }
-    setError("");
-    setSuccess("");
-
-    // Start background process with loading buffer & blur
-    setIsBuffering(true);
-    try {
-      // 1. Verify OTP with backend (marks pending registration as verified)
-      await api.post("/auth/otp/verify", { email: otpEmail, otp: code });
-
-      // 2. Run Username Suggestion Algorithm based on name + email
-      const creds = registeredCredsRef.current;
-      const candidates = generateUsernameCandidates(creds.name, creds.email, creds.dob);
-      const chosen = await findFirstAvailableUsername(candidates, async (cand) => {
-        const checkRes = await api.get(`/auth/check-username/${encodeURIComponent(cand)}`);
-        return !checkRes.data?.exists;
-      });
-
-      setSuggestedUsername(chosen);
-
-      // Brief transition before showing Choose Username modal
-      setTimeout(() => {
-        setIsBuffering(false);
-        setMode("choose-username");
-      }, 700);
-    } catch (err) {
-      setIsBuffering(false);
-      setError(err.response?.data?.error || err.message || "OTP salah atau kedaluwarsa.");
-    }
-  }
-
-  // ── Post-Username Submission -> Loading Buffer -> Welcome Back -> Landing ──
-  async function handleUsernameDone(chosenUsername) {
-    setIsBuffering(true);
-    setError("");
-    try {
-      const creds = registeredCredsRef.current;
-      // Atomically commit user (including confirmed cropped profile photo) to database and issue authenticated session
-      const res = await api.post("/auth/register/complete", {
-        email: creds.email || otpEmail,
-        username: chosenUsername,
-        profilePicture: creds.profilePicture || undefined,
-      });
-
-      if (res.data?.user) {
-        const confirmedAvatar = res.data.user.profilePicture || creds.profilePicture || null;
-        const hydratedUser = confirmedAvatar
-          ? { ...res.data.user, profilePicture: confirmedAvatar }
-          : res.data.user;
-        if (confirmedAvatar) {
-          persistProfileIdentityCache(hydratedUser, { profilePicture: confirmedAvatar });
-          persistProfileIdentityCache({ nickname: chosenUsername }, { profilePicture: confirmedAvatar });
-        }
-        establishSession(hydratedUser);
-        activeSessionRef.current = { ...res.data, user: hydratedUser };
-      }
-      setCroppedAvatar(null);
-
-      // Transition directly to Welcome greeting while buffer stays rock-solid in dead center
-      setTimeout(() => {
-        onAuthSuccess?.({
-          ...res.data,
-          isRegister: true,
-          isNewUser: true,
-          username: chosenUsername,
-        });
-        setTimeout(() => {
-          setIsBuffering(false);
-        }, 350);
-      }, 700);
-    } catch (err) {
-      setIsBuffering(false);
-      setError(err.response?.data?.error || "Gagal menyimpan username. Coba lagi.");
-    }
-  }
-
-  // ── Forgot Password Magic Link Request ──
-  async function handleForgotPasswordSubmit(emailToReset) {
-    setLoading(true);
-    setError("");
-    setSuccess("");
-    try {
-      const res = await api.post("/auth/password/reset-request", { email: emailToReset });
-      setSuccess(res.data?.message || "Verifikasi Link sudah terkirim ke email kamu.");
-    } catch (err) {
-      setError(err.response?.data?.error || "Gagal mengirim link reset password.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // ── Reset Password Submission -> Buffer -> Route to Login page for login ulang -> Welcome Back ──
-  async function handleResetPasswordDone(newPassword) {
-    setIsBuffering(true);
-    setError("");
-    try {
-      const urlParams =
-        typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-      const fromMapParam = Boolean(
-        urlParams?.get("from") === "map" ||
-        (typeof window !== "undefined" && localStorage.getItem("kalceria_auth_return") === "/map")
-      );
-
-      const res = await api.post("/auth/password/reset", {
-        token: resetToken,
-        newPassword,
-        fromMap: fromMapParam,
-      });
-
-      const userEmail = res.data?.user?.email || forgotEmail || "";
-      const isFromMap = Boolean(fromMapParam || res.data?.fromMap);
-
-      if (isFromMap) {
-        try {
-          localStorage.setItem("kalceria_auth_return", "/map");
-          localStorage.setItem("kalceria_password_reset_from_map", "true");
-          sessionStorage.setItem("kalceria_password_reset_from_map", "true");
-        } catch {}
-      }
-
-      // Broadcast to other open tabs on this device (e.g. original forgot password tab)
-      try {
-        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-          const authChannel = new BroadcastChannel("kalceria_auth_channel");
-          authChannel.postMessage({
-            type: "RESET_PASSWORD_COMPLETE",
-            email: userEmail,
-            username: res.data?.username || res.data?.user?.nickname || res.data?.user?.name,
-            fromMap: isFromMap,
-          });
-          authChannel.close();
-        }
-      } catch {}
-
-      setTimeout(() => {
-        setIsBuffering(false);
-        if (typeof window !== "undefined" && window.history.replaceState) {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        // Seamlessly route to Login mode so user logs in with their newly chosen password
-        setMode("login");
-        setForm((prev) => ({ ...prev, email: userEmail, password: "" }));
-        setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
-        setError("");
-      }, 700);
-    } catch (err) {
-      setIsBuffering(false);
-      setError(err.response?.data?.error || "Gagal mengubah password. Link mungkin kedaluwarsa.");
-    }
-  }
-
-  // ── Cross-Device / Cross-Tab Sync for Forgot Password Tab -> Route to Login page ──
-  const handleCrossTabResetSuccess = (data) => {
-    const userEmail = data?.email || forgotEmail || "";
-    if (data?.fromMap) {
-      try {
-        localStorage.setItem("kalceria_auth_return", "/map");
-        localStorage.setItem("kalceria_password_reset_from_map", "true");
-        sessionStorage.setItem("kalceria_password_reset_from_map", "true");
-      } catch {}
-    }
-    setIsBuffering(false);
-    if (typeof window !== "undefined" && window.history.replaceState) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    setMode("login");
-    setForm((prev) => ({ ...prev, email: userEmail, password: "" }));
-    setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
-    setError("");
-  };
-
-  // ── Form Submit: Login or Register ──
-  async function handleSubmit(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
-    if (mode !== "login" && mode !== "register") return;
-    setError("");
-    setSuccess("");
-
-    if (mode === "login") {
-      if (!form.email?.trim() || !form.password) {
-        setError("Please enter your email and password.");
-        return;
-      }
-    } else if (mode === "register") {
-      if (!PUBLIC_SIGNUP_ENABLED) {
-        setError("Public registration is currently disabled.");
-        return;
-      }
-
-      // 1. Born year validation (18+ years old)
-      const yearResult = checkBornYear(form.dob);
-      if (!yearResult.valid) {
-        setError(yearResult.message || "You must be at least 18 years old to register.");
-        return;
-      }
-
-      // 2. City validation: must be in the known cities list (Indonesia priority + dynamic worldwide)
-      let currentCityValid = isKnownCity(form.domicile, verifiedCitiesMap);
-      let matchedCoord = null;
-      let matchedToken = null;
-
-      if (!currentCityValid && form.domicile && form.domicile.trim().length >= 2) {
-        try {
-          const res = await api.get(`/location/cities?q=${encodeURIComponent(form.domicile.trim())}`);
-          const found = res.data?.cities || [];
-          const matched = found.find((c) => {
-            const cName = String(c.name || "").toLowerCase().trim();
-            const cLabel = String(c.label || "").toLowerCase().trim();
-            const q = form.domicile.trim().toLowerCase();
-            return cName === q || cLabel === q || (q.length >= 4 && cName.startsWith(q));
-          });
-          if (matched) {
-            currentCityValid = true;
-            matchedCoord = [matched.lat, matched.lng];
-            matchedToken = matched.cityToken;
-          }
-        } catch {}
-      }
-
-      if (!currentCityValid) {
-        setError("City is not in the list.");
-        return;
-      }
-
-      // 3. Password validation: 4 strict criteria
-      if (!PASSWORD_CHECK_REGEX.test(form.password)) {
-        setError("Password must meet all 4 requirements below.");
-        return;
-      }
-
-      // 4. Confirm Password validation
-      if (form.password !== form.confirmPassword) {
-        setError("Passwords do not match.");
-        return;
-      }
-    }
-
-    setLoading(true);
-    try {
-      if (mode === "login") {
-        const res = await api.post("/auth/login", {
-          email: form.email.trim(),
-          password: form.password,
-        });
-        establishSession(res.data);
-        setSuccess("Authentication successful.");
-        setTimeout(() => onAuthSuccess?.(res.data), 800);
-      } else {
-        const registeredEmail = form.email.trim();
-        const registeredPassword = form.password;
-        const registeredName = form.name.trim();
-        const profilePicture = await optimizeAvatarForBackend(croppedAvatar);
-        const birthDateIso = `${String(form.dob).trim()}-01-01`;
-
-        // Store credentials & cropped profile photo in ref until registration completes at Choose Username Done
-        registeredCredsRef.current = {
-          email: registeredEmail,
-          password: registeredPassword,
-          name: registeredName,
-          dob: String(form.dob).trim(),
-          profilePicture: profilePicture || null,
-        };
-
-        const domicileLatToSend = matchedCoord ? matchedCoord[0] : form.domicileLat;
-        const domicileLngToSend = matchedCoord ? matchedCoord[1] : form.domicileLng;
-        const cityTokenToSend = matchedToken || form.cityToken;
-
-        const regRes = await api.post("/auth/register", {
-          name: registeredName,
-          dob: birthDateIso,
-          email: registeredEmail,
-          domicile: form.domicile?.trim() || undefined,
-          domicileLat: domicileLatToSend,
-          domicileLng: domicileLngToSend,
-          cityToken: cityTokenToSend,
-          gender: "OTHER",
-          password: registeredPassword,
-          profilePicture,
-        });
-
-        if (EMAIL_AUTH_ENABLED && regRes.data?.emailVerificationRequired) {
-          modeRef.current = "verify";
-          setOtpEmail(registeredEmail);
-          setOtp(["", "", "", "", "", ""]);
-          setResendCooldown(60); // 1 minute max OTP
-          setIsOtpExpired(false);
-          setMode("verify");
-          setForm({});
-          setSuccess("Kode OTP telah dikirim ke email kamu.");
-        } else {
-          // Direct login if OTP disabled
-          try {
-            const loginRes = await api.post("/auth/login", {
-              email: registeredEmail,
-              password: registeredPassword,
-            });
-            if (profilePicture && loginRes.data?.userId) {
-              persistProfileIdentityCache(
-                { id: loginRes.data.userId, nickname: loginRes.data.username },
-                { profilePicture }
-              );
-            }
-            setCroppedAvatar(null);
-            establishSession(loginRes.data);
-            setSuccess("Account created! Signing you in...");
-            setTimeout(() => onAuthSuccess?.(loginRes.data), 800);
-          } catch {
-            modeRef.current = "login";
-            setCroppedAvatar(null);
-            setMode("login");
-            setForm({ email: registeredEmail, password: "", confirmPassword: "" });
-            setSuccess("Registration successful! Please sign in.");
-          }
-        }
-      }
-    } catch (err) {
-      let msg = err.response?.data?.error || err.message || "An error occurred.";
-      if (msg.includes("prisma")) {
-        if (msg.includes("dob") || msg.includes("Invalid Date")) {
-          msg = "Format tahun lahir tidak valid.";
-        } else if (msg.includes("Unique constraint failed")) {
-          msg = "Email sudah terdaftar.";
-        } else {
-          msg = "Terjadi kesalahan pada sistem registrasi. Coba lagi.";
-        }
-      }
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // ── Live validation flags ──
-  const nameValid = Boolean(form.name && form.name.trim().length >= 2);
-
-  const yearCheck = checkBornYear(form.dob);
-  const isDobValid = yearCheck.valid;
-  const isDobError = !yearCheck.valid && !yearCheck.empty;
-
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,12}$/;
-  const isEmailValid = emailRegex.test(form.email || "");
-  const isEmailError = Boolean(form.email && !isEmailValid);
-
-  const cityValid = isKnownCity(form.domicile, verifiedCitiesMap);
-  const isCityError = Boolean(form.domicile && form.domicile.trim().length >= 3 && !cityValid);
-
-  const passwordValid = PASSWORD_CHECK_REGEX.test(form.password || "");
-  const isPasswordError = Boolean(form.password && form.password.length > 0 && !passwordValid);
-
-  const isConfirmValid = Boolean(
-    form.confirmPassword &&
-      form.confirmPassword === form.password &&
-      passwordValid
-  );
-  const isConfirmError = Boolean(
-    form.confirmPassword &&
-      form.confirmPassword !== form.password
-  );
-  const confirmMessage = isConfirmError
-    ? "Passwords do not match"
-    : isConfirmValid
-    ? "Matches"
-    : "";
 
   return (
     <>
@@ -1013,204 +308,48 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                 {/* Inner Content Box */}
                 <div className="relative z-10 w-full bg-[#070d1a]/40 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden flex flex-col max-h-[88vh]">
                   <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar px-8 py-10 md:px-10">
-                    {/* Logo & Back */}
-                    <div className="text-center mb-8 relative flex items-center justify-center">
-                      {(onBack || mode === "forgot-password") && (
-                        <button
-                          type="button"
-                          onClick={mode === "forgot-password" ? () => switchMode("login") : onBack}
-                          className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors flex items-center gap-1.5 z-10 cursor-pointer"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-                          </svg>
-                        </button>
-                      )}
-                      <Image
-                        src="/logologin.webp"
-                        alt="Kalceria"
-                        width={1874}
-                        height={560}
-                        unoptimized
-                        loading="eager"
-                        className="h-10 w-auto object-contain inline-block"
-                        draggable={false}
-                      />
-                    </div>
-
-                    {/* Mode toggle (hidden in verify and forgot-password) */}
-                    {mode !== "verify" && mode !== "forgot-password" && (
-                      <div className="flex mb-8 bg-[#040810]/80 rounded-lg border border-slate-800/60 p-1 relative">
-                        <motion.div
-                          className="absolute inset-y-1 bg-[#1e293b]/80 rounded-md shadow-sm"
-                          initial={false}
-                          animate={{
-                            left: mode === "login" ? "4px" : "calc(50% + 2px)",
-                            width: "calc(50% - 6px)",
-                          }}
-                          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => switchMode("login")}
-                          className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
-                            mode === "login" ? "text-white" : "text-slate-500 hover:text-slate-300"
-                          }`}
-                        >
-                          Login
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => switchMode("register")}
-                          className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors z-10 cursor-pointer ${
-                            mode === "register" ? "text-white" : "text-slate-500 hover:text-slate-300"
-                          }`}
-                        >
-                          Register
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Section heading (hidden in verify and forgot-password) */}
-                    {mode !== "verify" && mode !== "forgot-password" && (
-                      <div className="mb-6">
-                        <h1 className="font-sans text-2xl font-extrabold text-white tracking-tight">
-                          {mode === "login" ? "Welcome Back" : "Create Account"}
-                        </h1>
-                        <p className="font-mono text-xs sm:text-sm text-slate-400 mt-1">
-                          {mode === "login"
-                            ? "Enter your credentials to access the portal."
-                            : !PUBLIC_SIGNUP_ENABLED
-                            ? "Registration is currently disabled."
-                            : "Complete all fields to register."}
-                        </p>
-                      </div>
-                    )}
+                    <AuthPageHeader
+                      mode={mode}
+                      onBack={onBack}
+                      switchMode={switchMode}
+                    />
 
                     {/* Form Body */}
                     {mode === "login" || mode === "register" ? (
-                      <form onSubmit={handleSubmit} noValidate className="flex flex-col relative">
-                        <AnimatePresence mode="wait">
-                          <motion.div
-                            key={mode}
-                            initial={{ opacity: 0, x: mode === "login" ? -10 : 10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: mode === "login" ? 10 : -10 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            {mode === "login" ? (
-                              <LoginForm
-                                form={form}
-                                setField={setLoginField}
-                                loading={loading}
-                                isEmailValid={isEmailValid}
-                              />
-                            ) : (
-                              <RegisterForm
-                                form={form}
-                                setField={setRegisterField}
-                                isActive={mode === "register"}
-                                isGooglePrefill={isGooglePrefill}
-                                PUBLIC_SIGNUP_ENABLED={PUBLIC_SIGNUP_ENABLED}
-                                nameValid={nameValid}
-                                isDobValid={isDobValid}
-                                isDobError={isDobError}
-                                dobMessage={yearCheck.message}
-                                cityValid={cityValid}
-                                isCityError={isCityError}
-                                isEmailValid={isEmailValid}
-                                isEmailError={isEmailError}
-                                passwordValid={passwordValid}
-                                isPasswordError={isPasswordError}
-                                isConfirmValid={isConfirmValid}
-                                isConfirmError={isConfirmError}
-                                confirmMessage={confirmMessage}
-                                croppedAvatar={croppedAvatar}
-                                setCroppedAvatar={setCroppedAvatar}
-                                photoError={photoError}
-                                setPhotoError={setPhotoError}
-                                handlePhotoSelect={handlePhotoSelect}
-                                extraCities={extraCitiesList}
-                                onCityInput={handleCityInput}
-                              />
-                            )}
-                          </motion.div>
-                        </AnimatePresence>
-
-                        {/* Error / Success Display (Consolas font, no outer box) */}
-                        <AnimatePresence>
-                          {error && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="overflow-hidden mb-3"
-                            >
-                              <div
-                                style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-                                className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
-                              >
-                                {error}
-                              </div>
-                            </motion.div>
-                          )}
-                          {success && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="overflow-hidden mb-3"
-                            >
-                              <div
-                                style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-                                className="text-emerald-400 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none text-left"
-                              >
-                                {success}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
-                        {/* Submit Button */}
-                        <button
-                          type="submit"
-                          disabled={loading || (mode === "register" && !PUBLIC_SIGNUP_ENABLED)}
-                          className="mt-2 w-full py-3.5 bg-white hover:bg-slate-200 text-black font-extrabold text-[13px] tracking-wider uppercase rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                        >
-                          {loading
-                            ? "Processing…"
-                            : mode === "register" && !PUBLIC_SIGNUP_ENABLED
-                            ? "Not Ready Yet"
-                            : mode === "login"
-                            ? "Sign In"
-                            : "Register Account"}
-                        </button>
-
-                        {/* Sign in with Google (Balanced Gap) */}
-                        {mode === "login" && (
-                          <div className="mt-5 mb-0 sm:mt-6 sm:mb-0 flex items-center justify-center">
-                            <button
-                              type="button"
-                              onClick={handleGoogleSignIn}
-                              disabled={loading || googleLoading}
-                              className="inline-flex items-center justify-center gap-2 cursor-pointer group disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src="/Google_Loginn.png"
-                                alt="Google"
-                                width={16}
-                                height={16}
-                                className="w-[15px] h-[15px] sm:w-4 sm:h-4 object-contain shrink-0 select-none"
-                                draggable={false}
-                              />
-                              <span className="font-sans font-bold text-xs text-white group-hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4">
-                                {googleLoading ? "Connecting to Google…" : "Sign in with Google"}
-                              </span>
-                            </button>
-                          </div>
-                        )}
-                      </form>
+                      <AuthFormBody
+                        mode={mode}
+                        handleSubmit={handleSubmit}
+                        loading={loading}
+                        form={form}
+                        setLoginField={setLoginField}
+                        setRegisterField={setRegisterField}
+                        isEmailValid={isEmailValid}
+                        isGooglePrefill={isGooglePrefill}
+                        PUBLIC_SIGNUP_ENABLED={PUBLIC_SIGNUP_ENABLED}
+                        nameValid={nameValid}
+                        isDobValid={isDobValid}
+                        isDobError={isDobError}
+                        dobMessage={yearCheck.message}
+                        cityValid={cityValid}
+                        isCityError={isCityError}
+                        isEmailError={isEmailError}
+                        passwordValid={passwordValid}
+                        isPasswordError={isPasswordError}
+                        isConfirmValid={isConfirmValid}
+                        isConfirmError={isConfirmError}
+                        confirmMessage={confirmMessage}
+                        croppedAvatar={croppedAvatar}
+                        setCroppedAvatar={setCroppedAvatar}
+                        photoError={photoError}
+                        setPhotoError={setPhotoError}
+                        handlePhotoSelect={handlePhotoSelect}
+                        extraCitiesList={extraCitiesList}
+                        handleCityInput={handleCityInput}
+                        error={error}
+                        success={success}
+                        handleGoogleSignIn={handleGoogleSignIn}
+                        googleLoading={googleLoading}
+                      />
                     ) : mode === "verify" ? (
                       <AnimatePresence mode="wait">
                         <motion.div
@@ -1248,7 +387,7 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                           <ForgotPasswordStep
                             email={forgotEmail}
                             setEmail={setForgotEmail}
-                            onSubmit={handleForgotPasswordSubmit}
+                            onSubmit={(e) => handleForgotPasswordSubmit(e, setLoading)}
                             onSuccessComplete={handleCrossTabResetSuccess}
                             onBackToLogin={() => {
                               modeRef.current = "login";
@@ -1266,49 +405,13 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
                     ) : null}
 
                     {/* ── Footer ── */}
-                    {mode !== "verify" && mode !== "forgot-password" && (
-                      <div className={mode === "login" ? "mt-5 sm:mt-6 pb-4 sm:pb-6 text-center" : "mt-8 pb-3 text-center"}>
-                        <p className="font-mono text-xs text-slate-500">
-                          {mode === "login" ? "Don't have an account? " : "Already have an account? "}
-                          <button
-                            type="button"
-                            onClick={() => switchMode(mode === "login" ? "register" : "login")}
-                            className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"
-                          >
-                            {mode === "login" ? "Register now" : "Sign in"}
-                          </button>
-                        </p>
-                        {mode === "login" && (
-                          <p className="mt-2 text-center">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setError("");
-                                setSuccess("");
-                                setMode("forgot-password");
-                              }}
-                              className="font-sans font-bold text-xs text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"
-                            >
-                              Forgot Password
-                            </button>
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    {mode === "verify" && (
-                      <div className="mt-8 text-center">
-                        <p className="font-mono text-xs text-slate-500">
-                          Sudah verifikasi?{" "}
-                          <button
-                            type="button"
-                            onClick={() => switchMode("login")}
-                            className="font-sans font-bold text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"
-                          >
-                            Sign in
-                          </button>
-                        </p>
-                      </div>
-                    )}
+                    <AuthPageFooter
+                      mode={mode}
+                      switchMode={switchMode}
+                      setMode={setMode}
+                      setError={setError}
+                      setSuccess={setSuccess}
+                    />
                   </div>
                 </div>
               </motion.div>

@@ -1,23 +1,47 @@
 "use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import Image from "next/image";
-import Link from "next/link";
 import dynamic from "next/dynamic";
-import { Typewriter, FilmLane, FilmStrip, EventSlider, useMerchRandomizer, MerchCard, FindMoreSlider } from "./landing/showcase";
-import { GoldenDust, StarDust, FloatingSpareParts, TropicalParticles, DynamicCollage, PrinceRupertDrop } from "./landing/particles";
-import { SupportUsBackground } from "./landing/backgrounds";
+import { useMerchRandomizer } from "./landing/showcase";
 import { ClosingSections } from "./landing/ClosingSections";
+import {
+  LandingHeroSection,
+  LandingEventsSection,
+  LandingAboutSection,
+  LandingSupportSection,
+  LandingFindMoreSection,
+  LandingNeedHelpSection,
+} from "./landing/sections";
 import { useViewportActivity } from "@/hooks/useViewportActivity";
-
-const ServiceRequestModal = dynamic(() => import("./ServiceRequestModal"), { ssr: false });
-const LogoutConfirmModal = dynamic(() => import("./landing/modals/LogoutConfirmModal").then(m => m.LogoutConfirmModal), { ssr: false });
-const IdeaCommentModal = dynamic(() => import("./landing/modals/IdeaCommentModal").then(m => m.IdeaCommentModal), { ssr: false });
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { useIsMobileViewport, useIsMobileOrTabletViewport } from "@/hooks/useIsMobileViewport";
 import api from "@/lib/api";
 import { clearSession, establishSession, hasUserSession } from "@/lib/session";
 import { useAuthStore } from "@/stores/useAuthStore";
+
+const ServiceRequestModal = dynamic(() => import("./ServiceRequestModal"), { ssr: false });
+const LogoutConfirmModal = dynamic(() => import("./landing/modals/LogoutConfirmModal").then(m => m.LogoutConfirmModal), { ssr: false });
+const IdeaCommentModal = dynamic(() => import("./landing/modals/IdeaCommentModal").then(m => m.IdeaCommentModal), { ssr: false });
+
+const ABOUT_IMAGES = [
+  { src: "/aboutus_bg1.webp", width: 1358, height: 768 },
+  { src: "/aboutus_bg2.webp", width: 1317, height: 800 },
+  { src: "/aboutus_bg3.webp", width: 1317, height: 800 },
+  { src: "/aboutus_bg4.webp", width: 1253, height: 832 }
+];
+
+const ABOUT_IMAGES_HP = [
+  { src: "/hp/abt_landing_hp1.webp", width: 720, height: 540 },
+  { src: "/hp/abt_landing_hp2.webp", width: 1000, height: 701 },
+  { src: "/hp/abt_landing_hp3.webp", width: 500, height: 333 }
+];
+
+const slideVariants = {
+  enter: { x: "100%", opacity: 0 },
+  center: { x: "0%", opacity: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+  exit: { x: "-100%", opacity: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
+};
 
 export default function LandingPage({ onNavigateAuth }) {
   const mounted = useHasMounted();
@@ -45,6 +69,7 @@ export default function LandingPage({ onNavigateAuth }) {
       );
     }
   };
+
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showIdeaModal, setShowIdeaModal] = useState(false);
   const openIdeaModal = useCallback(() => setShowIdeaModal(true), []);
@@ -78,19 +103,6 @@ export default function LandingPage({ onNavigateAuth }) {
     }
   }, [isHeroActive]);
 
-  const ABOUT_IMAGES = [
-    { src: "/aboutus_bg1.webp", width: 1358, height: 768 },
-    { src: "/aboutus_bg2.webp", width: 1317, height: 800 },
-    { src: "/aboutus_bg3.webp", width: 1317, height: 800 },
-    { src: "/aboutus_bg4.webp", width: 1253, height: 832 }
-  ];
-
-  const ABOUT_IMAGES_HP = [
-    { src: "/hp/abt_landing_hp1.webp", width: 720, height: 540 },
-    { src: "/hp/abt_landing_hp2.webp", width: 1000, height: 701 },
-    { src: "/hp/abt_landing_hp3.webp", width: 500, height: 333 }
-  ];
-
   const currentAboutImages = isMobileOrTablet ? ABOUT_IMAGES_HP : ABOUT_IMAGES;
   const currentAboutImage = currentAboutImages[aboutIndex % currentAboutImages.length];
 
@@ -99,6 +111,7 @@ export default function LandingPage({ onNavigateAuth }) {
     const gateTimer = setTimeout(() => {
       setAmbientGated(false);
     }, 1800);
+
     // Check login status & heal session if cookie exists
     api.get("/users/me").then((res) => {
       if (res.data?.user) {
@@ -195,12 +208,6 @@ export default function LandingPage({ onNavigateAuth }) {
     return () => clearInterval(mascotInterval);
   }, []);
 
-  const slideVariants = {
-    enter: { x: "100%", opacity: 0 },
-    center: { x: "0%", opacity: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
-    exit: { x: "-100%", opacity: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
-  };
-
   return (
     <motion.div
       initial={{ opacity: skipAnim ? 1 : 0 }}
@@ -209,707 +216,45 @@ export default function LandingPage({ onNavigateAuth }) {
       className="relative w-full bg-[#050a14] text-white font-mono overflow-x-hidden selection:bg-[#FF00FF] selection:text-white"
     >
       {/* ── Section 1: Hero ── */}
-      <section ref={heroSectionRef} className="relative w-full min-h-[85vh] flex flex-col items-center justify-center overflow-hidden py-24 z-10">
-        <DynamicCollage isGated={ambientGated} />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050a14]/50 via-[#050a14]/10 to-[#050a14] z-0" />
-
-        {/* Video Container */}
-        <div className="relative w-[88%] md:w-[72%] max-w-4xl aspect-square md:aspect-video rounded-lg overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.8)] border border-white/10 bg-[#050a14]/90 flex flex-col items-center justify-center z-10">
-          <video ref={heroVideoRef} autoPlay loop muted playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover bg-[#000000]/60">
-            <source src="/video_landingatas.mp4" type="video/mp4" />
-          </video>
-
-          <div className="absolute inset-0 bg-black/50 pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col items-center gap-6 md:gap-10 px-4 w-full">
-            <motion.img
-              src="/logo_landing.webp"
-              alt="Kalceria"
-              className="w-[85%] md:w-[70%] max-w-3xl h-auto object-contain drop-shadow-2xl"
-              draggable={false}
-              animate={{ y: [-6, 6, -6] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            />
-
-            {isLoggedIn ? (
-              <button
-                onClick={() => setShowLogoutConfirm(true)}
-                className="relative z-10 font-sans font-black text-white uppercase tracking-widest text-[13px] md:text-[15px] hover:text-red-400 transition-colors duration-300 py-2 px-4 focus:outline-none"
-              >
-                LOGOUT
-              </button>
-            ) : (
-              <button
-                onClick={onNavigateAuth}
-                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
-                style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
-              >
-                <span className="relative z-10">LOGIN / REGISTER</span>
-                <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
+      <LandingHeroSection
+        heroSectionRef={heroSectionRef}
+        heroVideoRef={heroVideoRef}
+        ambientGated={ambientGated}
+        isLoggedIn={isLoggedIn}
+        onOpenLogoutConfirm={() => setShowLogoutConfirm(true)}
+        onNavigateAuth={onNavigateAuth}
+      />
 
       {/* ── Section 2: Events ── */}
-      <section id="section-events" className="relative w-full min-h-[70vh] flex flex-col xl:flex-row items-center justify-center xl:justify-between overflow-hidden bg-[#050a14] z-20 px-6 sm:px-8 xl:px-24 py-16 xl:py-20 gap-8 sm:gap-10 xl:gap-16" style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}>
-        <StarDust />
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen">
-          <motion.div
-            animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.3, 0.15] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[5%] left-[15%] w-[52vw] h-[52vw] rounded-full will-change-transform"
-            style={{ background: "radial-gradient(circle closest-side, rgba(255,0,255,0.9) 0%, rgba(255,0,255,0.38) 45%, transparent 100%)" }}
-          />
-          <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            className="absolute bottom-[-8%] right-[4%] w-[62vw] h-[62vw] rounded-full will-change-transform"
-            style={{ background: "radial-gradient(circle closest-side, rgba(255,215,0,0.9) 0%, rgba(255,215,0,0.38) 45%, transparent 100%)" }}
-          />
-          <motion.div
-            animate={{ scale: [1, 1.05, 1], opacity: [0.1, 0.2, 0.1] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            className="absolute top-[25%] left-[44%] w-[40vw] h-[40vw] rounded-full will-change-transform"
-            style={{ background: "radial-gradient(circle closest-side, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.32) 45%, transparent 100%)" }}
-          />
-          <motion.div
-            animate={{ scale: [1, 1.15, 1], opacity: [0.1, 0.2, 0.1] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 3 }}
-            className="absolute bottom-[-16%] left-[0%] w-[52vw] h-[52vw] rounded-full will-change-transform"
-            style={{ background: "radial-gradient(circle closest-side, rgba(255,0,0,0.85) 0%, rgba(255,0,0,0.35) 45%, transparent 100%)" }}
-          />
-          <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.25, 0.1] }}
-            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-            className="absolute top-[14%] right-[-16%] w-[56vw] h-[56vw] rounded-full will-change-transform"
-            style={{ background: "radial-gradient(circle closest-side, rgba(255,140,0,0.9) 0%, rgba(255,140,0,0.38) 45%, transparent 100%)" }}
-          />
-        </div>
-
-        {/* Mobile Silhouette: grup_hp.webp (strictly mobile screens < 768px; purged on iPad, Mini, Pro, Surface) */}
-        <div className="absolute bottom-0 left-0 w-full h-[360px] xs:h-[400px] sm:h-[450px] pointer-events-none z-[1] overflow-hidden md:hidden flex justify-center items-end">
-          <Image 
-            src="/hp/grup_hp.webp" 
-            alt="Group Mobile" 
-            width={2304} 
-            height={1848} 
-            loading="lazy" 
-            decoding="async" 
-            className="h-full w-auto object-contain opacity-50 translate-y-[65%] xs:translate-y-[68%] sm:translate-y-[70%]" 
-          />
-        </div>
-
-        {/* Header: Title above carousel for Mobile and iPad family; hidden on desktop widescreen */}
-        <div className="relative z-20 flex flex-col items-center gap-2 mb-2 sm:mb-4 xl:hidden">
-          <h2 className="text-center text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
-            <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={false} />
-          </h2>
-        </div>
-
-        {/* Center: Event Slider Card (Relative on Mobile & iPad, Absolutely Centered on Desktop Widescreen) */}
-        <div
-          className="relative xl:absolute xl:left-1/2 xl:top-1/2 xl:-translate-x-1/2 xl:-translate-y-1/2 z-10 w-full max-w-[190px] xs:max-w-[205px] sm:max-w-[225px] md:max-w-[250px] xl:max-w-[320px] aspect-[4/5] rounded-xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-sm"
-          style={{ clipPath: "polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px)" }}
-        >
-          <EventSlider />
-        </div>
-
-        {/* Explore Button: Underneath carousel on Mobile & iPad, on Left on Desktop Widescreen */}
-        <div className="relative xl:absolute left-0 xl:left-24 bottom-0 xl:top-1/2 xl:-translate-y-1/2 z-20 flex flex-col items-center xl:items-start gap-4 xl:gap-6 mt-4 sm:mt-6 xl:mt-0">
-          <h2 className="hidden xl:block text-center xl:text-left text-5xl xl:text-6xl font-black uppercase tracking-tighter" style={{ textShadow: "4px 4px 0 rgba(255,0,255,0.15)" }}>
-            <Typewriter text="SEE EVENT" mode="letter" delay={0} skipAnim={false} />
-          </h2>
-          <Link href="/events" onClick={() => {
-            sessionStorage.setItem("landingScrollTarget", "section-events");
-            sessionStorage.setItem("landingScrollY", window.scrollY);
-          }}>
-            <button
-              className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
-              style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
-            >
-              <span className="relative z-10">EXPLORE</span>
-              <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
-            </button>
-          </Link>
-        </div>
-
-        {/* Floating Crystal 2 (Meteors) - Dynamically framed around Event Card on Mobile with zero cutoffs */}
-        <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-          {/* Meteor 1: Upper Left */}
-          <motion.img
-            src="/crystal_2.webp"
-            className="absolute h-[22px] xs:h-[26px] md:h-[36px] object-contain opacity-85 left-[calc(50%-115px)] top-[18%] md:left-[calc(50%-260px)] md:top-[55%] filter drop-shadow-[0_0_12px_rgba(255,0,255,0.7)]"
-            animate={{ y: [0, -14, 0], x: [0, 5, 0], rotate: [-35, -15, -35], scale: [1, 1.1, 1] }}
-            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-          />
-          {/* Meteor 2: Right Center */}
-          <motion.img
-            src="/crystal_2.webp"
-            className="absolute h-[26px] xs:h-[30px] md:h-[47px] object-contain opacity-85 left-[calc(50%+92px)] top-[27%] md:left-[calc(50%+175px)] md:top-[18%] filter drop-shadow-[0_0_15px_rgba(255,215,0,0.7)]"
-            animate={{ y: [0, -16, 0], x: [0, -6, 0], rotate: [25, 45, 25], scale: [1, 1.12, 1] }}
-            transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-          />
-          {/* Meteor 3: Lower Left */}
-          <motion.img
-            src="/crystal_2.webp"
-            className="absolute h-[18px] xs:h-[22px] md:h-[28px] object-contain opacity-85 left-[calc(50%-105px)] top-[42%] md:left-[35%] md:bottom-[5%] md:top-auto filter drop-shadow-[0_0_10px_rgba(255,140,0,0.6)]"
-            animate={{ y: [0, -10, 0], x: [0, 4, 0], rotate: [50, 70, 50], scale: [1, 1.08, 1] }}
-            transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-          />
-          {/* Meteor 4: Desktop Only */}
-          <motion.img
-            src="/crystal_2.webp"
-            className="hidden md:block absolute h-[45px] md:h-[63px] object-contain opacity-70 md:left-[calc(50%+200px)] md:top-[50%]"
-            animate={{ y: [0, -18, 0], rotate: [0, 10, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          />
-        </div>
-
-        {/* Silhouettes - Static Background */}
-        <div className="absolute bottom-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden px-8 md:px-24">
-
-          {/* Crystal 3 Top Right (Truncated at Top) */}
-          <div className="absolute top-[-20px] md:top-[-40px] right-12 md:right-40 hidden md:flex flex-col items-center pointer-events-none opacity-80">
-            <Image src="/crystal_3.webp" alt="Crystal 3" width={2480} height={1728} loading="lazy" decoding="async" className="h-[75px] md:h-[120px] w-auto object-contain rotate-180" />
-          </div>
-
-          {/* Crystal 1 Bottom Left (Truncated at Bottom) */}
-          <Image src="/crystal_1.webp" alt="Crystal 1" width={2016} height={2120} loading="lazy" decoding="async" className="absolute bottom-[-20px] md:bottom-[-30px] left-0 md:left-2 xl:left-4 h-[80px] md:h-[120px] xl:h-[130px] w-auto object-contain opacity-80 z-[15] hidden md:block" />
-
-          {/* Group Silhouette: Preserved for iPad Family (md/lg, shifted flush to left) & Desktop Widescreen (xl:left-40) */}
-          <div className="absolute bottom-0 left-0 md:-left-16 lg:-left-12 xl:left-40 hidden md:flex items-end z-10">
-            <Image src="/grup.webp" alt="Group" width={2064} height={1655} loading="lazy" decoding="async" className="relative z-10 h-[180px] md:h-[220px] lg:h-[250px] xl:h-[280px] w-auto object-contain translate-y-[2.5px] opacity-35" />
-          </div>
-
-          <div className="absolute bottom-0 right-4 md:right-2 lg:right-6 xl:right-10 opacity-50 hidden md:flex flex-col items-center pointer-events-none">
-            {/* Magenta Tapakan (Base) - Wedge Shape from Sketch */}
-            <div
-              className="absolute bottom-[-5px] right-[-20%] w-[150%] h-[75px] md:h-[80px] lg:h-[110px] xl:h-[140px] bg-gradient-to-r from-[#D946EF] to-[#FACC15] blur-[16px] md:blur-[18px] xl:blur-[22px] z-0 opacity-80"
-              style={{ clipPath: "polygon(0 100%, 100% 0, 100% 100%, 0 100%)" }}
-            />
-            <Image src="/brio_black.webp" alt="Brio" width={2226} height={1207} loading="lazy" decoding="async" className="relative z-10 h-[120px] md:h-[125px] lg:h-[175px] xl:h-[240px] w-auto object-contain translate-y-[2.5px]" />
-          </div>
-        </div>
-      </section>
+      <LandingEventsSection />
 
       {/* ── Section 3: About Us ── */}
-      <section id="section-about" className="relative w-full h-[70vh] overflow-hidden bg-black flex items-center justify-center border-t border-slate-900 z-30">
-        <AnimatePresence initial={false} custom={aboutIndex}>
-          <motion.div key={aboutIndex} variants={slideVariants} initial="enter" animate="center" exit="exit" className="absolute inset-0 w-full h-full">
-            <Image src={currentAboutImage.src} alt="About Us BG" width={currentAboutImage.width} height={currentAboutImage.height} loading="lazy" decoding="async" className="w-full h-full object-cover opacity-70 grayscale xl:grayscale-0" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#050a14] via-[#050a14]/60 to-transparent z-[1]" />
-            {/* Warm Peach & Gold & Magenta Master overlay on mobile & tablet */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#ffd700]/35 via-[#ffaa66]/30 to-[#ff00ff]/25 mix-blend-color xl:hidden z-[2]" />
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#ff00ff]/20 via-[#ffaa66]/20 to-[#ffd700]/15 mix-blend-overlay xl:hidden z-[3]" />
-          </motion.div>
-        </AnimatePresence>
-
-        <div className="relative z-20 w-full max-w-6xl px-8 flex justify-center md:justify-start">
-          <div className="flex flex-col items-center md:items-start gap-6 border-l-0 md:border-l-2 pl-0 md:pl-8">
-            <h2 className="text-center md:text-left text-5xl md:text-7xl font-black uppercase tracking-tighter text-white">
-              <Typewriter text="ABOUT US" mode="word" delay={3000} skipAnim={false} />
-            </h2>
-            <Link href="/about" onClick={() => {
-              sessionStorage.setItem("landingScrollTarget", "section-about");
-              sessionStorage.setItem("landingScrollY", window.scrollY);
-            }}>
-              <button
-                className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
-                style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
-              >
-                <span className="relative z-10">Get to Know More</span>
-                <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
-              </button>
-            </Link>
-          </div>
-        </div>
-      </section>
+      <LandingAboutSection
+        aboutIndex={aboutIndex}
+        currentAboutImage={currentAboutImage}
+        slideVariants={slideVariants}
+      />
 
       {/* ── Section 4: Merchandise / Support Us ── */}
-      <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center py-20 z-40 border-t border-white/10 bg-transparent isolate overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }}>
-        {/* Golden Glow Border Aura - Aggressive */}
-        <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_50px_rgba(251,191,36,0.7)] z-50 pointer-events-none" />
-
-        {/* The Ultimate Background */}
-        <SupportUsBackground />
-
-        {/* Altar Border Element (Reversed 180, Truncated at Border) */}
-        <div className="absolute top-[-60px] md:top-[-220px] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-5 opacity-80">
-          <Image
-            src={isMobileOrTablet ? "/hp/altar_hp.webp" : "/altar.webp"}
-            alt="Altar"
-            width={isMobileOrTablet ? 2048 : 2400}
-            height={isMobileOrTablet ? 2048 : 1589}
-            unoptimized
-            loading="lazy"
-            decoding="async"
-            className={`h-[192px] md:h-[540px] w-auto object-contain drop-shadow-[0_10px_70px_rgba(255,255,255,0.05)] ${isMobile ? "" : "rotate-180"}`}
-          />
-        </div>
-
-        {/* Architectural Wall Backgrounds */}
-        <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
-          <Image src="/wall_2.webp" alt="Wall 2" width={1888} height={2244} loading="lazy" decoding="async" className="absolute bottom-0 right-0 h-[215px] md:h-[377px] w-auto object-contain opacity-90 brightness-110" />
-          <Image src="/wall_1.webp" alt="Wall 1" width={2400} height={1603} loading="lazy" decoding="async" className="absolute bottom-0 left-[-2%] md:left-[9%] h-[175px] md:h-[304px] w-auto object-contain opacity-90 brightness-110" />
-        </div>
-
-
-        <div className="relative z-10 mb-24 flex justify-center w-full px-4">
-          <h2 className="relative text-5xl sm:text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter text-white text-center select-none">
-            <Typewriter text="SUPPORT US" mode="none" delay={400} skipAnim={false} />
-          </h2>
-        </div>
-
-        <div className="relative z-10 w-full max-w-6xl px-4 mb-20 flex justify-center">
-          <StarDust />
-          <div className={`grid gap-4 sm:gap-6 md:gap-3.5 lg:gap-8 justify-items-center w-full ${isMobile ? "grid-cols-1 max-w-[280px]" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-4"}`}>
-            {(isMobile ? displayedMerch.slice(0, 1) : displayedMerch).map((item, idx) => (
-              <MerchCard key={idx} item={item} isInitial={merchInitial} index={idx} isMobile={isMobile} />
-            ))}
-            {!displayedMerch.length && (
-              <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-3xl w-full">
-                <p className="font-mono text-slate-500 uppercase tracking-widest text-sm">Synchronizing Inventory...</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bush Footer Decoration (Colliding in Middle, Truncated at Border) */}
-        <div className="absolute bottom-[-75px] md:bottom-[-125px] left-1/2 -translate-x-1/2 flex items-end justify-center pointer-events-none z-5 w-screen overflow-hidden opacity-90">
-          <TropicalParticles />
-          <Image src="/bush_1.webp" alt="Bush 1" width={3178} height={1129} loading="lazy" decoding="async" className="h-[180px] md:h-[320px] w-auto object-contain -mr-16 md:-mr-28 -translate-y-6 md:-translate-y-10" />
-          <Image src="/bush_2.webp" alt="Bush 2" width={3172} height={1139} loading="lazy" decoding="async" className="h-[180px] md:h-[320px] w-auto object-contain -ml-16 md:-ml-28" />
-        </div>
-
-        {/* Marketplace Links */}
-        <div className="relative z-20 flex gap-6 md:gap-16 items-center justify-center mb-24">
-          <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
-            <div className="relative w-32 md:w-64 h-[42px] md:h-[72px] block">
-              <Image src="/logo_tokpedgray.webp" alt="Tokopedia" width={992} height={1070} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
-              <Image src="/logo_tokped.webp" alt="Tokopedia Colored" width={1008} height={1049} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(3,172,14,0.6)]" draggable={false} />
-            </div>
-            <span className="font-sans text-[12px] md:text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center">Tokopedia - Kalceros</span>
-          </a>
-          <a href="#" className="flex flex-col items-center gap-4 group transition-transform hover:scale-105">
-            <div className="relative w-32 md:w-64 h-[42px] md:h-[72px] block">
-              <Image src="/logo_shopeegray.webp" alt="Shopee" width={1008} height={1043} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0" draggable={false} />
-              <Image src="/logo_shopee.webp" alt="Shopee Colored" width={1053} height={1024} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(238,77,45,0.6)]" draggable={false} />
-            </div>
-            <span className="font-sans text-[12px] md:text-[17px] text-white font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-center">Shopee - Kalcres</span>
-          </a>
-        </div>
-      </section>
+      <LandingSupportSection
+        isMobile={isMobile}
+        isMobileOrTablet={isMobileOrTablet}
+        displayedMerch={displayedMerch}
+        merchInitial={merchInitial}
+      />
 
       {/* ── Section 5: Find More ── */}
-      <section className="relative w-full min-h-[1080px] md:min-h-[90vh] bg-[#050a14] flex flex-col items-center justify-center py-16 md:py-20 z-50 border-t border-slate-900 overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}>
-
-        {/* Ambient Blobs (GPU-Accelerated Radial Gradients) */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-50 mix-blend-screen">
-          <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[12%] left-[22%] w-[44vw] h-[44vw] rounded-full will-change-transform"
-            style={{ background: "radial-gradient(circle closest-side, rgba(0,255,255,0.9) 0%, rgba(0,255,255,0.38) 45%, transparent 100%)" }}
-          />
-          <motion.div
-            animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.25, 0.1] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            className="absolute bottom-[12%] right-[22%] w-[54vw] h-[54vw] rounded-full will-change-transform"
-            style={{ background: "radial-gradient(circle closest-side, rgba(255,0,255,0.9) 0%, rgba(255,0,255,0.38) 45%, transparent 100%)" }}
-          />
-        </div>
-
-        {/* Prince Rupert's Drop Assembly */}
-        <PrinceRupertDrop />
-
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 flex flex-col xl:grid xl:grid-cols-2 items-center gap-6 xl:gap-10">
-
-          {/* Typography: Top center on mobile & iPad, Column 1 on desktop widescreen */}
-          <div className="relative flex flex-col items-center xl:items-start justify-center text-center xl:text-left p-2 md:p-4 order-1 w-full">
-            <GoldenDust />
-            <div className="relative z-10 flex flex-col items-center xl:items-start w-full">
-              {/* 1. Title: Top center on mobile and iPad */}
-              <motion.h2
-                animate={isMobile ? { opacity: 1 } : { opacity: [0.3, 1, 0.3] }}
-                transition={isMobile ? { duration: 0 } : { repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] mb-3 xl:mb-6 font-mono text-center xl:text-left"
-              >
-                FIND MORE
-              </motion.h2>
-
-              {/* 2. Description: Sub description right below title on mobile & iPad */}
-              <p className="font-sans text-gray-300 text-sm sm:text-base md:text-lg max-w-md md:max-w-xl xl:max-w-md text-center xl:text-left leading-relaxed px-4 xl:px-0">
-                Wahib embut keren banget wowowowow. Kalceria is the ultimate destination for automotive euphoria.
-              </p>
-
-              {/* 3. Social Media Icon List: Shown in left column on desktop widescreen */}
-              <div className="hidden xl:flex flex-col gap-6 mt-8 items-start w-full">
-                {/* Instagram Icon */}
-                <a
-                  href="https://www.instagram.com/kalceria_?exln=cHBnaW5qOWs0czFj"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-row items-center gap-4 group cursor-pointer"
-                >
-                  <div className="relative shrink-0 flex items-center justify-center w-8 md:w-10 h-8 md:h-10">
-                    <Image
-                      src="/ig_gray.webp"
-                      alt="Instagram"
-                      width={1077}
-                      height={976}
-                      unoptimized
-                      loading="lazy"
-                      decoding="async"
-                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.4]"
-                      draggable={false}
-                    />
-                    <Image
-                      src="/ig.webp"
-                      alt="Instagram Colored"
-                      width={1077}
-                      height={976}
-                      unoptimized
-                      loading="lazy"
-                      decoding="async"
-                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.4]"
-                      draggable={false}
-                    />
-                  </div>
-                  <span className="font-sans text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-left text-sm">
-                    Instagram - kalceria
-                  </span>
-                </a>
-
-                {/* TikTok Icon */}
-                <a
-                  href="https://www.tiktok.com/@gallerykalceria"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-row items-center gap-4 group cursor-pointer"
-                >
-                  <div className="relative shrink-0 w-8 md:w-10 h-8 md:h-10">
-                    <Image
-                      src="/tiktok_gray.webp"
-                      alt="TikTok"
-                      width={944}
-                      height={1117}
-                      unoptimized
-                      loading="lazy"
-                      decoding="async"
-                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0"
-                      draggable={false}
-                    />
-                    <Image
-                      src="/tiktok.webp"
-                      alt="TikTok Colored"
-                      width={944}
-                      height={1117}
-                      unoptimized
-                      loading="lazy"
-                      decoding="async"
-                      className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
-                      draggable={false}
-                    />
-                  </div>
-                  <span className="font-sans text-gray-400 font-semibold tracking-wide transition-all duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-[#FFD700] group-hover:to-[#FF00FF] text-left text-sm">
-                    tiktok kalceria
-                  </span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* TikTok Feed Container: Center middle on mobile & iPad, Column 2 on desktop widescreen */}
-          <div className="relative flex items-center justify-center xl:justify-start ml-0 xl:-ml-[20%] py-4 md:py-6 lg:py-10 order-2 w-full">
-            <GoldenDust />
-            {/* Clean, minimalist video container */}
-            <div className={`relative w-full ${isMobile ? "max-w-[210px] aspect-[9/16]" : "max-w-[270px] md:max-w-[290px] aspect-[340/680]"} group z-10 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 bg-black shadow-2xl mx-auto xl:mx-0`}>
-              <FindMoreSlider />
-            </div>
-          </div>
-
-          {/* Flying & Floating Coki Mascot (Mobile Phone & Tablet Family Only) - Placed in between video and TikTok/IG logo */}
-          <div className="flex xl:hidden items-center justify-center w-full order-3 z-20 my-4 sm:my-6 md:my-8 pointer-events-none">
-            <motion.div
-              animate={{
-                y: [-12, 12, -12],
-                x: [-5, 5, -5],
-                rotate: [-3, 3, -3]
-              }}
-              transition={{
-                duration: 5.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              className="relative w-44 xs:w-48 sm:w-56 md:w-64 max-w-[75vw] h-auto drop-shadow-[0_10px_35px_rgba(255,0,255,0.35)]"
-            >
-              <Image
-                src="/hp/kalcer_man_hp.webp"
-                alt="Coki Flying Mascot"
-                width={2048}
-                height={2048}
-                priority
-                className="w-full h-auto object-contain select-none"
-              />
-            </motion.div>
-          </div>
-
-          {/* Social Media Icon List: Below Coki Mascot on mobile & tablet */}
-          <div className="flex xl:hidden flex-row gap-6 mt-2 mb-4 items-center justify-center w-full order-4 z-20">
-            {/* Instagram Icon */}
-            <a
-              href="https://www.instagram.com/kalceria_?exln=cHBnaW5qOWs0czFj"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col sm:flex-row items-center gap-2 group cursor-pointer"
-            >
-              <div className="relative shrink-0 flex items-center justify-center w-8 h-8">
-                <Image
-                  src="/ig_gray.webp"
-                  alt="Instagram"
-                  width={1077}
-                  height={976}
-                  unoptimized
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0 scale-[1.3]"
-                  draggable={false}
-                />
-                <Image
-                  src="/ig.webp"
-                  alt="Instagram Colored"
-                  width={1077}
-                  height={976}
-                  unoptimized
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(225,48,108,0.3)] scale-[1.3]"
-                  draggable={false}
-                />
-              </div>
-              <span className="font-sans text-gray-400 font-semibold tracking-wide text-xs sm:text-sm">
-                Instagram - kalceria
-              </span>
-            </a>
-
-            {/* TikTok Icon */}
-            <a
-              href="https://www.tiktok.com/@gallerykalceria"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col sm:flex-row items-center gap-2 group cursor-pointer"
-            >
-              <div className="relative shrink-0 w-8 h-8">
-                <Image
-                  src="/tiktok_gray.webp"
-                  alt="TikTok"
-                  width={944}
-                  height={1117}
-                  unoptimized
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-100 group-hover:opacity-0"
-                  draggable={false}
-                />
-                <Image
-                  src="/tiktok.webp"
-                  alt="TikTok Colored"
-                  width={944}
-                  height={1117}
-                  unoptimized
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
-                  draggable={false}
-                />
-              </div>
-              <span className="font-sans text-gray-400 font-semibold tracking-wide text-xs sm:text-sm">
-                tiktok kalceria
-              </span>
-            </a>
-          </div>
-
-        </div>
-
-
-        {/* Looping 8-Bit Mascot (Fixed Corner Position: Desktop Widescreen Only) */}
-        <div className="hidden xl:block absolute bottom-0 right-0 xl:w-72 2xl:w-80 z-20 pointer-events-none">
-          {/* Hat placed above the head */}
-          <Image
-            src="/kalcer_hat.webp"
-            alt="Kalcer Hat"
-            width={1408}
-            height={768}
-            unoptimized
-            loading="lazy"
-            decoding="async"
-            className="absolute top-[-30%] left-1/2 -translate-x-[56%] w-[185%] h-auto z-30 drop-shadow-[0_15px_10px_rgba(0,0,0,0.5)]"
-          />
-
-          <Image
-            src={mascotFrame === 1 ? "/kalcer_man.webp" : "/kalcer_man2.webp"}
-            alt="Kalcer Mascot"
-            width={912}
-            height={1181}
-            unoptimized
-            loading="lazy"
-            decoding="async"
-            className="relative z-10 w-full h-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,255,0.3)]"
-          />
-
-          {/* Static Favicon Overlay to cover Gemini Logo in the absolute corner */}
-          <Image
-            src="/favicon.webp"
-            alt="Favicon"
-            width={771}
-            height={681}
-            unoptimized
-            loading="lazy"
-            decoding="async"
-            className="absolute bottom-1 right-1 w-6 md:w-8 h-auto z-50 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
-          />
-        </div>
-      </section>
+      <LandingFindMoreSection
+        isMobile={isMobile}
+        mascotFrame={mascotFrame}
+      />
 
       {/* ── Section 6: Need Help? ── */}
-      <section className="relative w-full min-h-[100vh] lg:min-h-[107vh] bg-white flex flex-col items-center justify-center py-20 sm:py-24 z-50 overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}>
-
-        {/* Solid Section Divider */}
-        <div className="absolute top-0 left-0 w-full h-[2px] bg-[#050a14] z-[70]" />
-
-        {/* Layer 1: Subtle geometry background (Dark dots for white base) */}
-        <div className="absolute inset-0 opacity-[0.15] pointer-events-none z-0">
-          <div className="absolute inset-0" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, rgba(0,0,0,0.1) 1px, transparent 0)`, backgroundSize: '40px 40px' }} />
-        </div>
-
-        {/* Dynamic Aggressive Blobs (Magenta & Gold - GPU Radial Gradients) */}
-        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          <motion.div
-            animate={{
-              scale: [1, 1.4, 1],
-              x: ["-15%", "25%", "-15%"],
-              y: ["-10%", "15%", "-10%"]
-            }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[-10%] left-[-10%] w-[85vw] h-[85vw] rounded-full opacity-45 mix-blend-multiply will-change-transform"
-            style={{ background: "radial-gradient(circle closest-side, rgba(217,70,239,0.92) 0%, rgba(217,70,239,0.42) 45%, transparent 100%)" }}
-          />
-          <motion.div
-            animate={{
-              scale: [1.2, 1.6, 1.2],
-              x: ["20%", "-20%", "20%"],
-              y: ["20%", "-5%", "20%"]
-            }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-            className="absolute bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] rounded-full opacity-45 mix-blend-multiply will-change-transform"
-            style={{ background: "radial-gradient(circle closest-side, rgba(250,204,21,0.92) 0%, rgba(250,204,21,0.42) 45%, transparent 100%)" }}
-          />
-        </div>
-
-        {/* Layer 2: Rolling Film Rolls (Strict Global Layering to prevent any cutting) */}
-        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          {/* Bottom Layer: All White Lanes */}
-          <div className="absolute inset-0 z-10">
-            <FilmLane rotation={15} top="15%" left="-10%" />
-            <FilmLane rotation={-3} top="48%" left="-10%" />
-            <FilmLane rotation={6} top="75%" left="-10%" />
-            <FilmLane rotation={-55} top="100%" left="15%" height="h-20 md:h-32" />
-          </div>
-
-          {/* Top Layer: All Scrolling Film Strips */}
-          <div className="absolute inset-0 z-20">
-            <FilmStrip rotation={15} top="15%" left="-10%" speed={50} />
-            <FilmStrip rotation={-3} top="48%" left="-10%" speed={60} />
-            <FilmStrip rotation={6} top="75%" left="-10%" speed={45} />
-            <FilmStrip rotation={-55} top="100%" left="15%" speed={55} height="h-20 md:h-32" />
-          </div>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="relative z-20 flex flex-col items-center justify-center w-full px-4 text-center my-auto pb-20 xs:pb-24 sm:pb-28 md:pb-16 lg:pb-0"
-        >
-          {/* Title Area with Mobile & Half-Desktop Cokineed Face ABOVE "NEED OUR HELP?" */}
-          <div className="relative flex flex-col items-center justify-center mb-8 sm:mb-10 md:mb-12 w-full">
-            {/* Cokineed face above NEED OUR HELP? on mobile & half desktop, bigger and non-overlapping */}
-            {isMobileOrTablet && (
-              <motion.div
-                className="relative -mb-2 xs:-mb-3 sm:-mb-4 z-20 flex justify-center items-center pointer-events-none select-none"
-                animate={{
-                  rotate: [-8, 8, -8],
-                  y: [0, -6, 0],
-                }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <Image
-                  src="/hp/cokineed_hp.webp"
-                  alt="Cokineed HP"
-                  width={300}
-                  height={300}
-                  unoptimized
-                  loading="lazy"
-                  decoding="async"
-                  className="w-24 xs:w-28 sm:w-32 md:w-36 h-auto object-contain select-none filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)]"
-                  draggable={false}
-                />
-              </motion.div>
-            )}
-
-            <h2 className="relative text-4xl xs:text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-mono font-black uppercase tracking-tighter text-black text-center select-none leading-none">
-              <Typewriter text="NEED OUR HELP?" mode="none" delay={400} skipAnim={false} />
-            </h2>
-          </div>
-
-          {/* Apply A Request Button - Unified with SEE THE JOURNEY Typography & Proportion (Inverted: Black BG, White Text) */}
-          <button
-            type="button"
-            onClick={handleApplyRequest}
-            className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-white bg-black transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_6px_28px_rgba(0,0,0,0.16)] focus-polygon focus-visible:outline-none cursor-pointer z-20"
-            style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
-          >
-            <span className="relative z-10">APPLY A REQUEST</span>
-            <div className="absolute inset-0 bg-[#FF00FF] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
-          </button>
-        </motion.div>
-
-        {/* Mobile & Half-Desktop / Tab Family: Bounded responsive camera hands at bottom middle */}
-        {isMobile && (
-          <div className="absolute bottom-0 left-0 w-full pointer-events-none z-10 overflow-hidden flex justify-center items-end">
-            <Image
-              src="/hp/camera_hp.webp"
-              alt="Camera HP"
-              width={1210}
-              height={864}
-              unoptimized
-              loading="lazy"
-              decoding="async"
-              className="w-[180px] xs:w-[200px] sm:w-[230px] max-w-[60vw] max-h-[13vh] xs:max-h-[15vh] sm:max-h-[17vh] h-auto object-contain select-none translate-y-[2px]"
-              draggable={false}
-            />
-          </div>
-        )}
-
-        {/* Desktop & iPad Family: Subtitute_NeedOurHelp.webp tight to bottom middle, scaled responsibly without overlapping button */}
-        {!isMobile && (
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none z-10 flex justify-center items-end overflow-hidden">
-            <Image
-              src="/Subtitute_NeedOurHelp.webp"
-              alt="Photographers"
-              width={1680}
-              height={938}
-              unoptimized
-              loading="lazy"
-              decoding="async"
-              className="w-[380px] sm:w-[460px] md:w-[480px] lg:w-[780px] xl:w-[880px] 2xl:w-[940px] max-h-[20vh] sm:max-h-[22vh] md:max-h-[24vh] lg:max-h-[42vh] xl:max-h-[45vh] h-auto object-contain select-none translate-y-[2px] filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.15)]"
-              draggable={false}
-            />
-          </div>
-        )}
-      </section>
+      <LandingNeedHelpSection
+        isMobile={isMobile}
+        isMobileOrTablet={isMobileOrTablet}
+        onApplyRequest={handleApplyRequest}
+      />
 
       <ClosingSections isMobile={isMobile} onOpenIdeaModal={openIdeaModal} />
 
@@ -937,7 +282,6 @@ export default function LandingPage({ onNavigateAuth }) {
           <IdeaCommentModal onClose={closeIdeaModal} />
         )}
       </AnimatePresence>
-
     </motion.div>
   );
 }
