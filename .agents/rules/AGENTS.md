@@ -19,6 +19,9 @@ Setiap agen yang terburu-buru akan langsung dieliminasi ("OUT") tanpa kompromi j
    - Menggunakan `setTimeout(..., 500)`, `!important` berantai, `try-catch` kosong, atau mock palsu untuk menyembunyikan kegagalan logika fundamental.
 5. **Deployment Buta (Blind Deployment Disaster)**:
    - DILARANG KERAS menjalankan `cd backend; npx vercel`! Vercel backend project sudah memiliki setting `Root Directory: backend`. Masuk ke folder `backend/` lalu deploy akan mengunggah folder kosong `backend/backend` yang menghancurkan seluruh routing API ke status 404!
+6. **Pembuatan User Dummy / Mock Tanpa Izin (Unauthorized Mock Users)**:
+   - DILARANG KERAS membuat, men-seed, menginjeksi, atau meninggalkan akun user dummy / mock di database (Postgres/Redis) maupun UI publik (e.g. akun "HP Mobile User", "Tester", dsb), KECUALI dengan perizinan eksplisit dan tertulis dari programmer.
+   - Setiap automated test dilarang keras mengotori database produksi. Jika pengujian membutuhkan entitas, gunakan mock in-memory, transaction rollback, atau wajib teardown & hard purge instan hingga 100% bersih tanpa residu.
 
 ---
 
@@ -132,6 +135,9 @@ Sebelum mengeluarkan kata "sudah" atau melapor ke user, jalankan pipeline valida
    - Hapus semua file log dan scratch sebelum pekerjaan dinyatakan selesai. `git status` wajib *clean*.
 3. **Perlindungan Secrets**:
    - Jangan pernah membaca, menampilkan, atau membocorkan isi file `.env` atau token privat ke dalam chat/log.
+4. **Proteksi Integritas Data Publik (Zero Dummy Accounts)**:
+   - Database publik, cache Kalcerians (`cache:all_kalcerians`), dan map feed WAJIB steril dari akun buatan/dummy.
+   - Pembuatan akun uji coba di database produksi tanpa izin eksplisit programmer adalah pelanggaran fatal integritas data.
 
 ---
 
@@ -140,6 +146,7 @@ Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyat
 - Mengeluarkan sintaks error atau import patah yang tidak terdeteksi sebelum melapor.
 - Menerapkan mock dangkal alih-alih hardware/storage pipeline riil.
 - Menjalankan `cd backend; npx vercel` yang membunuh API production.
+- Membuat atau meninggalkan user dummy/mock di database atau UI publik tanpa izin programmer.
 - Butuh perulangan lebih dari 2 kali untuk memperbaiki bug yang sama karena kegagalan analisis di awal.
 - Merusak orientasi layar HP atau memicu regresi pada fitur yang sebelumnya stabil di older commits.
 - Menulis kode monolitik yang melanggar prinsip modularitas.
