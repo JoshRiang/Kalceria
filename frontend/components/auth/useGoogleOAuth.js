@@ -19,6 +19,7 @@ export function useGoogleOAuth({
   const [extraCitiesList, setExtraCitiesList] = useState([]);
 
   const citySearchTimeoutRef = useRef(null);
+  const popupRef = useRef(null);
   const handleCityInput = useCallback((query) => {
     if (citySearchTimeoutRef.current) clearTimeout(citySearchTimeoutRef.current);
     const q = String(query || "").trim();
@@ -49,6 +50,11 @@ export function useGoogleOAuth({
 
   const applyGoogleOAuthResult = useCallback((result) => {
     setGoogleLoading(false);
+    if (popupRef.current && !popupRef.current.closed) {
+      try {
+        popupRef.current.close();
+      } catch {}
+    }
     if (!result) return;
     if (!result.ok) {
       setError(result.error || "Google Sign-In failed.");
@@ -171,6 +177,7 @@ export function useGoogleOAuth({
         "kalceria_google_oauth",
         `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
       );
+      popupRef.current = popup;
 
       if (!popup || popup.closed || typeof popup.closed === "undefined") {
         window.location.href = authUrl;

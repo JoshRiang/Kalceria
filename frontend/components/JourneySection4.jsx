@@ -118,11 +118,11 @@ export default function JourneySection4() {
         {/* Left Half: Title & Description */}
         <div className="w-full md:w-1/2 flex flex-col justify-center text-left py-8 md:py-0">
           <div className="relative mb-6 w-full flex flex-col items-start group">
-            {/* Surfer Image Floating above Title on Mobile, above Title on Desktop */}
+            {/* Surfer Image Floating above Title on Mobile, Compact & Lowered for iPad Mini/Tablet, above Title on Desktop */}
             <motion.img
               src="/surfer.webp"
               alt="Surfer"
-              className="relative md:absolute mx-auto md:mx-0 w-[180px] sm:w-[220px] md:w-auto h-[130px] sm:h-[160px] md:h-[244%] z-30 object-contain drop-shadow-[0_10px_30px_rgba(34,211,238,0.4)] pointer-events-none mb-4 md:mb-0 md:-top-[230%] md:left-[5%] md:right-auto"
+              className="relative md:absolute mx-auto md:mx-0 w-[180px] sm:w-[220px] md:w-auto h-[130px] sm:h-[160px] md:h-[125%] xl:h-[244%] z-30 object-contain drop-shadow-[0_10px_30px_rgba(34,211,238,0.4)] pointer-events-none mb-4 md:mb-0 md:-top-[110%] xl:-top-[230%] md:left-[4%] xl:left-[5%] md:right-auto"
               animate={{ y: [0, -15, 0], rotate: [-2, 2, -2] }}
               transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
             />
