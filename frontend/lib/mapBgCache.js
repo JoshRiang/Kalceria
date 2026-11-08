@@ -52,9 +52,20 @@ function decodeIntoMemory(url, isHighPriority = false) {
   img.src = url;
   DECODED_IMAGE_REFS.push(img);
   if (typeof img.decode === "function") {
-    return img.decode().catch(() => {});
+    return img.decode().then(() => img).catch(() => img);
   }
-  return Promise.resolve();
+  return Promise.resolve(img);
+}
+
+// The Event Card strips three mirrored copies of the artwork, so the tile aspect must be exact.
+function syncEventBgAspectVar(assetPath, img) {
+  if (typeof document === "undefined" || !document.documentElement || !img) return;
+  if (assetPath !== EVENT_CARD_BG_LIGHT && assetPath !== EVENT_CARD_BG_DARK) return;
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  if (w > 0 && h > 0) {
+    document.documentElement.style.setProperty("--kalceria-event-bg-aspect", String(w / h));
+  }
 }
 
 function warmSingleMapBg(assetPath, isHighPriority = false) {
@@ -77,9 +88,10 @@ function warmSingleMapBg(assetPath, isHighPriority = false) {
     .then(async (blob) => {
       if (!blob || blob.size === 0) throw new Error("Empty blob");
       const blobUrl = URL.createObjectURL(blob);
-      await decodeIntoMemory(blobUrl, isHighPriority);
+      const decodedImg = await decodeIntoMemory(blobUrl, isHighPriority);
       BLOB_URL_MAP.set(assetPath, blobUrl);
       syncRootCssVar(assetPath, blobUrl);
+      syncEventBgAspectVar(assetPath, decodedImg);
       return blobUrl;
     })
     .catch(async () => {

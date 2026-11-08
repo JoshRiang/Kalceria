@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import prisma from '../../lib/prisma.js';
-import { redis } from '../../lib/redis.js';
 import { sanitizeAndNormalizeMediaUrl } from '../../utils/urlSecurity.js';
 import {
   MINI_EVENT_CLIP_TTL_MS,
@@ -8,8 +7,17 @@ import {
   extractEncodedTags,
   extractUrlsFromLegacyMediaString,
 } from './eventFormatting.js';
+import {
+  deleteLegacyEventClips,
+  purgeAllEventClips,
+  readEventClips,
+  readLegacyEventClips,
+  removeEventClipIds,
+  writeEventClips,
+} from './eventMediaPersistence.js';
 
-const mediaKey = (eventId) => `mini_event:media:${eventId}`;
+export const MAX_ACTIVE_EVENT_CLIPS = 100;
+export const IMAGE_CLIP_DURATION_SECONDS = 3;
 
 const SAFE_LOCAL_MEDIA_DATA_RE =
   /^data:(?:image|video)\/(?:png|jpeg|jpg|webp|mp4|webm);base64,[A-Za-z0-9+/=\s]+$/i;
@@ -51,7 +59,15 @@ function normalizeDuration(val) {
   return Number.isFinite(num) && num > 0 && num <= 600 ? Number(num.toFixed(3)) : null;
 }
 
-function buildClipRecord({
+export function classifyClipOrientation(width, height) {
+  if (!width || !height) return null;
+  const ratio = width / height;
+  if (ratio >= 1.15) return 'landscape';
+  if (ratio < 0.92) return 'portrait';
+  return 'square';
+}
+
+export function buildClipRecord({
   url,
   width = null,
   height = null,
@@ -61,13 +77,18 @@ function buildClipRecord({
   uploadedAt = Date.now(),
 }) {
   const ts = Number.isFinite(uploadedAt) && uploadedAt > 0 ? uploadedAt : Date.now();
+  const isVideo = inferIsVideoUrl(url);
+  const safeWidth = normalizeDimension(width);
+  const safeHeight = normalizeDimension(height);
   return {
     id: crypto.randomUUID(),
     url,
-    isVideo: inferIsVideoUrl(url),
-    width: normalizeDimension(width),
-    height: normalizeDimension(height),
-    duration: normalizeDuration(duration),
+    isVideo,
+    width: safeWidth,
+    height: safeHeight,
+    aspectRatio: safeWidth && safeHeight ? Number((safeWidth / safeHeight).toFixed(4)) : null,
+    orientation: classifyClipOrientation(safeWidth, safeHeight),
+    duration: isVideo ? normalizeDuration(duration) : IMAGE_CLIP_DURATION_SECONDS,
     authorId: authorId || null,
     authorName: authorName || null,
     uploadedAt: ts,
@@ -85,7 +106,7 @@ export function parseSubmittedMediaItems({
   const now = Date.now();
 
   if (Array.isArray(mediaItems) && mediaItems.length > 0) {
-    for (const entry of mediaItems.slice(0, 24)) {
+    for (const entry of mediaItems.slice(0, MAX_ACTIVE_EVENT_CLIPS)) {
       const candidateUrl = typeof entry === 'string' ? entry : entry?.url;
       if (!candidateUrl || typeof candidateUrl !== 'string') continue;
       const check = validateEventMediaUrl(candidateUrl);
@@ -106,7 +127,7 @@ export function parseSubmittedMediaItems({
         );
       }
     }
-    return { valid: true, clips: parsedClips };
+    return { valid: true, clips: parsedClips.slice(0, MAX_ACTIVE_EVENT_CLIPS) };
   }
 
   if (typeof mediaUrl === 'string' && mediaUrl.trim()) {
@@ -114,7 +135,7 @@ export function parseSubmittedMediaItems({
     if (!check.valid) return { valid: false, error: check.error, clips: [] };
     if (check.normalized) {
       const parts = extractUrlsFromLegacyMediaString(check.normalized);
-      for (const part of parts.slice(0, 24)) {
+      for (const part of parts.slice(0, MAX_ACTIVE_EVENT_CLIPS)) {
         parsedClips.push(
           buildClipRecord({
             url: part.url,
@@ -130,15 +151,29 @@ export function parseSubmittedMediaItems({
   return { valid: true, clips: parsedClips };
 }
 
+function toMediaResult(clips) {
+  return {
+    mediaItems: clips,
+    mediaUrl: clips.length > 0 ? clips.map((c) => c.url).join(', ') : null,
+  };
+}
+
+function clipExpiryMs(clip, fallbackBaseMs) {
+  return Number(clip?.expiresAt) || Number(clip?.uploadedAt || fallbackBaseMs) + MINI_EVENT_CLIP_TTL_MS;
+}
+
 export async function saveEventMediaItems(eventId, clips) {
   const safeClips = Array.isArray(clips) ? clips.filter((c) => c && c.url) : [];
-  try {
-    if (safeClips.length === 0) {
-      await redis.del(mediaKey(eventId));
-    } else {
-      await redis.set(mediaKey(eventId), JSON.stringify(safeClips));
-    }
-  } catch {}
+  const keepIds = new Set(safeClips.map((c) => c.id));
+  const stored = await readEventClips(eventId).catch(() => null);
+  if (stored) {
+    const staleIds = [
+      ...stored.clips.filter((c) => !keepIds.has(c.id)).map((c) => c.id),
+      ...stored.orphanIds,
+    ];
+    await removeEventClipIds(eventId, staleIds);
+  }
+  await writeEventClips(eventId, safeClips);
   return safeClips;
 }
 
@@ -161,90 +196,171 @@ export async function syncEventDescriptionMedia(event, activeUrls) {
   return nextDesc;
 }
 
-export async function hydrateAndPruneEventMedia(ev, creatorName = null) {
-  const now = Date.now();
-  const createdMs = ev?.createdAt ? new Date(ev.createdAt).getTime() : now;
-  const tags = extractEncodedTags(ev?.description);
-  let storedClips = null;
-
-  try {
-    const raw = await redis.get(mediaKey(ev.id));
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) storedClips = parsed;
+function deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, now) {
+  const clips = [];
+  let droppedExpired = false;
+  const entries = extractUrlsFromLegacyMediaString(tags.mediaStr || ev.mediaUrl || '');
+  for (const entry of entries) {
+    const uploadedAt = entry.uploadedAt || createdMs;
+    const expiresAt = uploadedAt + MINI_EVENT_CLIP_TTL_MS;
+    if (now >= expiresAt) {
+      droppedExpired = true;
+      continue;
     }
+    clips.push({
+      ...buildClipRecord({
+        url: entry.url,
+        authorId: ev.creatorId,
+        authorName: creatorName || null,
+        uploadedAt,
+      }),
+      expiresAt,
+    });
+  }
+  return { clips, droppedExpired };
+}
+
+async function initializeFromLegacySources(ev, tags, createdMs, creatorName, now) {
+  let legacy = null;
+  try {
+    legacy = await readLegacyEventClips(ev.id);
   } catch {
-    storedClips = null;
+    legacy = null;
   }
 
-  let didPruneOrMigrate = false;
-  let clips = [];
-
-  if (Array.isArray(storedClips)) {
-    clips = storedClips.filter((clip) => {
+  let clips;
+  let dropped = false;
+  if (Array.isArray(legacy)) {
+    clips = legacy.filter((clip) => {
       if (!clip || !clip.url) {
-        didPruneOrMigrate = true;
+        dropped = true;
         return false;
       }
-      const exp = Number(clip.expiresAt) || Number(clip.uploadedAt || createdMs) + MINI_EVENT_CLIP_TTL_MS;
-      if (now >= exp) {
-        didPruneOrMigrate = true;
+      if (now >= clipExpiryMs(clip, createdMs)) {
+        dropped = true;
         return false;
       }
       return true;
     });
+    clips = clips.map((clip) => ({ ...clip, id: clip.id || crypto.randomUUID() }));
   } else {
-    const fallbackEntries = extractUrlsFromLegacyMediaString(tags.mediaStr || ev.mediaUrl || '');
-    for (const entry of fallbackEntries) {
-      const uploadedAt = entry.uploadedAt || createdMs;
-      const expiresAt = uploadedAt + MINI_EVENT_CLIP_TTL_MS;
-      if (now < expiresAt) {
-        clips.push({
-          ...buildClipRecord({
-            url: entry.url,
-            authorId: ev.creatorId,
-            authorName: creatorName || null,
-            uploadedAt,
-          }),
-          expiresAt,
-        });
-      } else {
-        didPruneOrMigrate = true;
-      }
-    }
-    if (clips.length > 0) {
-      await saveEventMediaItems(ev.id, clips);
-    }
+    const derived = deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, now);
+    clips = derived.clips;
+    dropped = derived.droppedExpired;
   }
 
-  if (didPruneOrMigrate) {
-    await saveEventMediaItems(ev.id, clips);
+  try {
+    await writeEventClips(ev.id, clips, now);
+    if (Array.isArray(legacy)) await deleteLegacyEventClips(ev.id);
+  } catch {}
+  if (dropped) {
     await syncEventDescriptionMedia(ev, clips.map((c) => c.url));
   }
+  return clips;
+}
 
-  return {
-    mediaItems: clips,
-    mediaUrl: clips.length > 0 ? clips.map((c) => c.url).join(', ') : null,
-  };
+export async function hydrateAndPruneEventMedia(ev, creatorName = null) {
+  const now = Date.now();
+  const createdMs = ev?.createdAt ? new Date(ev.createdAt).getTime() : now;
+  const tags = extractEncodedTags(ev?.description);
+
+  let stored = null;
+  try {
+    stored = await readEventClips(ev.id);
+  } catch {
+    stored = null;
+  }
+
+  // Storage unreachable: serve what the description records, never mutate anything.
+  if (stored === null) {
+    return toMediaResult(deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, now).clips);
+  }
+
+  if (!stored.initialized) {
+    return toMediaResult(await initializeFromLegacySources(ev, tags, createdMs, creatorName, now));
+  }
+
+  const active = [];
+  const expiredIds = [];
+  for (const clip of stored.clips) {
+    if (now >= clipExpiryMs(clip, createdMs)) {
+      expiredIds.push(clip.id);
+    } else {
+      active.push(clip);
+    }
+  }
+
+  const idsToRemove = [...expiredIds, ...stored.orphanIds];
+  if (idsToRemove.length > 0) {
+    await removeEventClipIds(ev.id, idsToRemove).catch(() => {});
+    await syncEventDescriptionMedia(ev, active.map((c) => c.url));
+  }
+
+  return toMediaResult(active);
+}
+
+/**
+ * Pure planner for an owner edit: which clips remain, which are removed.
+ * Clips another collaborator attached after the editor was opened (`syncedAt`) are preserved.
+ */
+export function planEventMediaSelection(currentClips, submittedClips, syncedAt = null) {
+  const currentByUrl = new Map(currentClips.map((c) => [c.url, c]));
+  const seenUrls = new Set();
+  const finalClips = [];
+
+  for (const clip of submittedClips) {
+    if (!clip?.url || seenUrls.has(clip.url)) continue;
+    seenUrls.add(clip.url);
+    finalClips.push(currentByUrl.get(clip.url) || clip);
+  }
+
+  const syncedAtMs = Number(syncedAt);
+  if (Number.isFinite(syncedAtMs) && syncedAtMs > 0) {
+    for (const clip of currentClips) {
+      if (!seenUrls.has(clip.url) && Number(clip.uploadedAt) > syncedAtMs) {
+        seenUrls.add(clip.url);
+        finalClips.push(clip);
+      }
+    }
+  }
+
+  const ordered = [...finalClips]
+    .sort((a, b) => (Number(a.uploadedAt) || 0) - (Number(b.uploadedAt) || 0))
+    .slice(-MAX_ACTIVE_EVENT_CLIPS);
+  const keptIds = new Set(ordered.map((c) => c.id));
+  const removedIds = currentClips.filter((c) => !keptIds.has(c.id)).map((c) => c.id);
+
+  return { finalClips: ordered, removedIds };
+}
+
+export async function persistEventMediaSelection(eventId, plan) {
+  await removeEventClipIds(eventId, plan.removedIds);
+  await writeEventClips(eventId, plan.finalClips);
+  return plan.finalClips;
 }
 
 export async function appendClipsToEventMedia(ev, newClips, fallbackCreatorName = null) {
   const current = await hydrateAndPruneEventMedia(ev, fallbackCreatorName);
   const existingUrls = new Set(current.mediaItems.map((c) => c.url));
-  const combined = [...current.mediaItems];
+  const accepted = [];
   for (const clip of newClips) {
-    if (!clip?.url) continue;
-    if (!existingUrls.has(clip.url) || combined.length < 24) {
-      combined.push(clip);
-      existingUrls.add(clip.url);
-    }
-    if (combined.length >= 24) break;
+    if (!clip?.url || existingUrls.has(clip.url)) continue;
+    if (current.mediaItems.length + accepted.length >= MAX_ACTIVE_EVENT_CLIPS) break;
+    existingUrls.add(clip.url);
+    accepted.push(clip);
   }
-  await saveEventMediaItems(ev.id, combined);
+
+  // Only the new clips are written; existing clips are never rewritten, so concurrent uploads coexist.
+  if (accepted.length > 0) {
+    await writeEventClips(ev.id, accepted);
+  }
+
+  const combined = [...current.mediaItems, ...accepted].sort(
+    (a, b) => (Number(a.uploadedAt) || 0) - (Number(b.uploadedAt) || 0)
+  );
   const updatedDesc = await syncEventDescriptionMedia(ev, combined.map((c) => c.url));
   return {
-    mediaItems: combined,
-    mediaUrl: combined.length > 0 ? combined.map((c) => c.url).join(', ') : null,
+    ...toMediaResult(combined),
     updatedDescription: updatedDesc,
   };
 }
@@ -253,39 +369,36 @@ export async function removeClipFromEventMedia(ev, { clipId, url }, userId) {
   const current = await hydrateAndPruneEventMedia(ev);
   const isOwner = String(ev.creatorId) === String(userId);
   const remaining = [];
-  let removed = false;
+  let removedClip = null;
 
   for (const clip of current.mediaItems) {
     const matches =
       (clipId && String(clip.id) === String(clipId)) ||
       (url && String(clip.url) === String(url));
-    if (matches && !removed) {
+    if (matches && !removedClip) {
       const isAuthor = clip.authorId && String(clip.authorId) === String(userId);
       if (!isOwner && !isAuthor) {
         return { forbidden: true, mediaItems: current.mediaItems };
       }
-      removed = true;
+      removedClip = clip;
       continue;
     }
     remaining.push(clip);
   }
 
-  if (!removed) {
+  if (!removedClip) {
     return { notFound: true, mediaItems: current.mediaItems };
   }
 
-  await saveEventMediaItems(ev.id, remaining);
+  await removeEventClipIds(ev.id, [removedClip.id]);
   const updatedDesc = await syncEventDescriptionMedia(ev, remaining.map((c) => c.url));
   return {
     removed: true,
-    mediaItems: remaining,
-    mediaUrl: remaining.length > 0 ? remaining.map((c) => c.url).join(', ') : null,
+    ...toMediaResult(remaining),
     updatedDescription: updatedDesc,
   };
 }
 
 export async function purgeEventMediaByIds(eventIds) {
-  if (!Array.isArray(eventIds) || eventIds.length === 0) return;
-  await Promise.allSettled(eventIds.map((id) => redis.del(mediaKey(id))));
+  await purgeAllEventClips(eventIds);
 }
-

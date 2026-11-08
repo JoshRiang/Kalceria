@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "crons": [
+    { "path": "/api/cron/event-clip-reaper", "schedule": "0 3 * * *" }
+  ],
   "headers": [
     {
       "source": "/_next/static/(.*)",

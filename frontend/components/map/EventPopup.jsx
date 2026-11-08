@@ -22,6 +22,11 @@ import {
   renderByAuthorLine,
 } from "./eventPopup/popupMediaMetadata";
 import { computeCardGeometryForMedia } from "./eventPopup/popupCarouselController";
+import {
+  GEOMETRY_TRANSITION_EASING,
+  GEOMETRY_TRANSITION_MS,
+  computeEmptyCardGeometry,
+} from "./eventPopup/popupGeometry";
 import { renderMediaCarousel } from "./eventPopup/popupMediaRenderer";
 import {
   renderDoubleMessageIconButton,
@@ -152,14 +157,9 @@ export function eventPopup(
   const firstMedia = mediaItems[0] || null;
   const initialGeometry =
     mediaItems.length === 0
-      ? {
-          cardWidth:
-            typeof window !== "undefined"
-              ? Math.min(292, Math.max(248, window.innerWidth - 32))
-              : 292,
-          frameHeight: 134,
-        }
+      ? computeEmptyCardGeometry()
       : computeCardGeometryForMedia(firstMedia?.width, firstMedia?.height);
+  const geometryTransition = `${GEOMETRY_TRANSITION_MS}ms ${GEOMETRY_TRANSITION_EASING}`;
 
   // Device-aware Navigation Link & Indonesian Location
   const rawLoc = extractLocation(item) || "Bintaro Jaya, Tangerang Selatan";
@@ -194,12 +194,12 @@ export function eventPopup(
   const videoFrameBg = mediaItems.length === 0 ? (isMapDark ? "#000000" : "#ffffff") : "#0b0d14";
 
   return `
-    <div class="tactical-card event-card ${isMapDark ? "event-card-dark" : "event-card-light"}" data-event-card-id="${esc(safeId)}" style="position: relative; overflow: hidden; width: ${initialGeometry.cardWidth}px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
-      <!-- 3x Concatenated Horizontal Background Tiles -->
-      <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; display: flex; flex-direction: row; width: 100%; height: 100%; opacity: ${bgOpacity}; transform: translateZ(0);">
-        <div style="flex: 1 1 33.3334%; height: 100%; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
-        <div style="flex: 1 1 33.3334%; height: 100%; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
-        <div style="flex: 1 1 33.3334%; height: 100%; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
+    <div class="tactical-card event-card ${isMapDark ? "event-card-dark" : "event-card-light"}" data-event-card-id="${esc(safeId)}" data-feed-orientation="${esc(initialGeometry.orientation || "unknown")}" style="position: relative; overflow: hidden; width: ${initialGeometry.cardWidth}px; transition: width ${geometryTransition}; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
+      <!-- Seamless background strip: mirrored tiles share edges, so the portrait artwork extends to any card width without gaps -->
+      <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; display: flex; flex-direction: row; justify-content: center; align-items: stretch; overflow: hidden; opacity: ${bgOpacity}; transform: translateZ(0);">
+        <div style="flex: 0 0 auto; height: 100%; aspect-ratio: var(--kalceria-event-bg-aspect, 0.5578); transform: scaleX(-1); background-image: var(${bgCssVar}, url('${bgImage}')); background-size: 100% 100%; background-repeat: no-repeat;"></div>
+        <div style="flex: 0 0 auto; height: 100%; aspect-ratio: var(--kalceria-event-bg-aspect, 0.5578); background-image: var(${bgCssVar}, url('${bgImage}')); background-size: 100% 100%; background-repeat: no-repeat;"></div>
+        <div style="flex: 0 0 auto; height: 100%; aspect-ratio: var(--kalceria-event-bg-aspect, 0.5578); transform: scaleX(-1); background-image: var(${bgCssVar}, url('${bgImage}')); background-size: 100% 100%; background-repeat: no-repeat;"></div>
       </div>
 
       <!-- Upper Space: Header with blur -->
@@ -215,8 +215,8 @@ export function eventPopup(
         </div>
       </div>
 
-      <!-- Framed Media Screen (Adaptive 9:16 portrait vs 16:9 landscape, zero white flash) -->
-      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
+      <!-- Framed Media Screen: width/height follow the real clip aspect ratio (portrait ↔ 16:9 landscape), dark backdrop so no white flash -->
+      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; transition: height ${geometryTransition}; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
         ${renderMediaCarousel(mediaItems, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId)}
       </div>
 

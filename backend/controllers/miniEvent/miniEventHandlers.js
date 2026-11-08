@@ -16,6 +16,8 @@ import {
   appendClipsToEventMedia,
   hydrateAndPruneEventMedia,
   parseSubmittedMediaItems,
+  persistEventMediaSelection,
+  planEventMediaSelection,
   purgeEventMediaByIds,
   removeClipFromEventMedia,
   saveEventMediaItems,
@@ -234,9 +236,11 @@ export async function updateMiniEvent(req, res, next) {
     }
 
     let finalClips;
+    let mediaPlan = null;
     const hasExplicitMediaField =
       req.body.mediaUrl !== undefined || req.body.mediaItems !== undefined;
 
+    const currentHydrated = await hydrateAndPruneEventMedia(existing, existing.creator?.name || null);
     if (hasExplicitMediaField) {
       const parsedMedia = parseSubmittedMediaItems({
         mediaUrl: req.body.mediaUrl,
@@ -247,11 +251,13 @@ export async function updateMiniEvent(req, res, next) {
       if (!parsedMedia.valid) {
         return res.status(400).json({ error: parsedMedia.error || 'Format URL media tidak valid.' });
       }
-      const currentHydrated = await hydrateAndPruneEventMedia(existing, existing.creator?.name || null);
-      const existingByUrl = new Map(currentHydrated.mediaItems.map((c) => [c.url, c]));
-      finalClips = parsedMedia.clips.map((clip) => existingByUrl.get(clip.url) || clip);
+      mediaPlan = planEventMediaSelection(
+        currentHydrated.mediaItems,
+        parsedMedia.clips,
+        req.body.mediaSyncedAt
+      );
+      finalClips = mediaPlan.finalClips;
     } else {
-      const currentHydrated = await hydrateAndPruneEventMedia(existing, existing.creator?.name || null);
       finalClips = currentHydrated.mediaItems;
     }
 
@@ -277,7 +283,9 @@ export async function updateMiniEvent(req, res, next) {
       include: { creator: { select: CREATOR_SELECT } },
     });
 
-    await saveEventMediaItems(id, finalClips);
+    if (mediaPlan) {
+      await persistEventMediaSelection(id, mediaPlan);
+    }
 
     const formatted = await hydrateFullMiniEvent(event);
     return res.json({ event: formatted });

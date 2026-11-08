@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { optimizeUploadMedia } from "@/lib/mediaOptimizer";
+import { EVENT_CLIP_PREFIX, EVENT_CLIP_PURPOSE } from "@/lib/eventClipStorage";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,14 @@ export async function POST(req: NextRequest) {
     // Server-side normalization & compression preserving 100% visual fidelity
     const optimized = await optimizeUploadMedia(rawBuffer, filename, declaredMimeType);
 
-    const safeFilename = `events/${Date.now()}-${optimized.filename.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    // Event Live Media Feed clips live in their own dated prefix so the 24h reaper can only ever
+    // touch clips; every other upload (avatars, covers, chat media) keeps the long-lived prefix.
+    const purpose = String(formData.get("purpose") || "").trim().toLowerCase();
+    const storedName = optimized.filename.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const safeFilename =
+      purpose === EVENT_CLIP_PURPOSE
+        ? `${EVENT_CLIP_PREFIX}${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${storedName}`
+        : `events/${Date.now()}-${storedName}`;
 
     // Support both modern Vercel OIDC (BLOB_STORE_ID / Vercel runtime) and static BLOB_READ_WRITE_TOKEN
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
@@ -61,9 +69,15 @@ export async function POST(req: NextRequest) {
 
     if (blobToken || blobStoreId || isVercel) {
       try {
-        const options: { access: "public" | "private"; token?: string; contentType?: string } = {
+        const options: {
+          access: "public" | "private";
+          token?: string;
+          contentType?: string;
+          addRandomSuffix: boolean;
+        } = {
           access: "public",
           contentType: optimized.contentType,
+          addRandomSuffix: true,
         };
         if (blobToken) {
           options.token = blobToken;

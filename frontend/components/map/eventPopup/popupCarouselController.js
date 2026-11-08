@@ -1,48 +1,35 @@
-// Imperative controller for Event Card popups:
-// - Adaptive 9:16 portrait vs 16:9 landscape framing (zero cropping, object-fit: contain)
-// - Full natural video duration playback (never cut off early on initial open or indicator tap)
-// - Smooth X-axis slide transitions without white screen flashes
+// Imperative controller for Event Card popups (Live Media Feed):
+// - every clip plays for its own real duration (photos default to 3s) and drives its own progress line
+// - natural advance slides in from the right once the next clip is decoded (no blank/white flash);
+//   a user tap/jump goes straight to the chosen clip
+// - the card elongates / narrows to the clip's real aspect ratio (see popupGeometry.js)
+// - Instagram-Story gestures: left third = previous, middle/right = next, hold = pause
+// - the feed reports when it has finished so the idle auto-close only fires after the last clip
 
-const IMAGE_SLIDE_DURATION_MS = 3200;
-const SLIDE_TRANSITION_MS = 280;
+import {
+  applyCardGeometry,
+  cancelPopupLayoutTracking,
+  computeCardGeometryForMedia,
+} from "./popupGeometry";
+import { attachFeedGestures } from "./popupGestures";
+
+export { computeCardGeometryForMedia };
+
+export const FEED_ENDED_EVENT = "kalceria:event-feed-ended";
+export const FEED_INTERACTION_EVENT = "kalceria:event-feed-interaction";
+
+const DEFAULT_IMAGE_SECONDS = 3;
+const SLIDE_TRANSITION_MS = 320;
+const READY_WAIT_MAX_MS = 1500;
+const STALL_SKIP_MS = 7000;
+const RESUME_MAX_AGE_MS = 4000;
 
 const activeCarousels = new Map();
+const resumeSnapshots = new Map();
 
-export function computeCardGeometryForMedia(width, height) {
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1024;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 768;
-
-  const w = Number(width);
-  const h = Number(height);
-  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
-    const defaultW = Math.min(292, Math.max(248, vw - 32));
-    return { cardWidth: defaultW, frameHeight: 158, orientation: "default" };
-  }
-
-  const ratio = w / h;
-
-  // Landscape (e.g. 16:9) -> widen card smoothly and match horizontal frame ratio
-  if (ratio >= 1.15) {
-    const cardWidth = Math.min(392, Math.max(292, vw - 32));
-    const innerW = Math.max(240, cardWidth - 24);
-    const clampedRatio = Math.min(2.05, Math.max(1.15, ratio));
-    const maxFrameH = Math.min(246, Math.max(150, Math.round(vh * 0.35)));
-    const frameHeight = Math.max(154, Math.min(maxFrameH, Math.round(innerW / clampedRatio)));
-    return { cardWidth, frameHeight, orientation: "landscape" };
-  }
-
-  // Portrait (e.g. 9:16) -> compact width + tall viewport-bounded frame
-  if (ratio < 0.92) {
-    const cardWidth = Math.min(292, Math.max(248, vw - 32));
-    const frameHeight = Math.min(365, Math.max(228, Math.round(vh * 0.42)));
-    return { cardWidth, frameHeight, orientation: "portrait" };
-  }
-
-  // Square (~1:1)
-  const cardWidth = Math.min(292, Math.max(248, vw - 32));
-  const innerW = Math.max(220, cardWidth - 24);
-  const frameHeight = Math.min(280, Math.max(200, Math.round(innerW)));
-  return { cardWidth, frameHeight, orientation: "square" };
+function readNumberAttr(el, name) {
+  const value = Number(el?.getAttribute?.(name));
+  return Number.isFinite(value) && value > 0 ? value : null;
 }
 
 function getSlideNaturalDimensions(slideEl) {
@@ -55,315 +42,449 @@ function getSlideNaturalDimensions(slideEl) {
   if (img && img.naturalWidth > 0 && img.naturalHeight > 0) {
     return { width: img.naturalWidth, height: img.naturalHeight };
   }
-  const attrW = Number(slideEl.getAttribute("data-media-w"));
-  const attrH = Number(slideEl.getAttribute("data-media-h"));
-  if (Number.isFinite(attrW) && attrW > 0 && Number.isFinite(attrH) && attrH > 0) {
-    return { width: attrW, height: attrH };
-  }
-  return { width: null, height: null };
+  return {
+    width: readNumberAttr(slideEl, "data-media-w"),
+    height: readNumberAttr(slideEl, "data-media-h"),
+  };
 }
 
-function applyOrientationSizing(state, slideEl) {
-  if (!state || state.destroyed || !state.cardEl || !state.frameEl) return;
+function syncGeometry(state, slideEl) {
+  if (!state || state.destroyed || !slideEl) return;
   const { width, height } = getSlideNaturalDimensions(slideEl);
   if (!width || !height) return;
-
-  const { cardWidth, frameHeight } = computeCardGeometryForMedia(width, height);
-  const prevCardW = parseInt(state.cardEl.style.width || "0", 10);
-  const prevFrameH = parseInt(state.frameEl.style.height || "0", 10);
-
-  if (Math.abs(prevCardW - cardWidth) >= 2 || Math.abs(prevFrameH - frameHeight) >= 2) {
-    state.cardEl.style.width = `${cardWidth}px`;
-    state.frameEl.style.height = `${frameHeight}px`;
-
-    if (state.popupInstance && typeof state.popupInstance.update === "function") {
-      if (state.popupUpdateRaf) cancelAnimationFrame(state.popupUpdateRaf);
-      state.popupUpdateRaf = requestAnimationFrame(() => {
-        state.popupUpdateRaf = null;
-        if (!state.destroyed) {
-          try {
-            state.popupInstance.update();
-          } catch {}
-        }
-      });
-    }
-  }
+  applyCardGeometry(state, computeCardGeometryForMedia(width, height));
 }
 
-function clearPlaybackTimers(state) {
+function setFeedState(state, value) {
+  if (!state) return;
+  state.feedState = value;
+  if (state.containerEl) state.containerEl.dataset.feedState = value;
+}
+
+function emitWindowEvent(name, detail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
+function clearClipRuntime(state) {
   if (!state) return;
   if (state.rafId) {
     cancelAnimationFrame(state.rafId);
     state.rafId = null;
   }
-  if (state.slideTimerId) {
-    clearTimeout(state.slideTimerId);
-    state.slideTimerId = null;
-  }
-  if (state.hideOutgoingTimerId) {
-    clearTimeout(state.hideOutgoingTimerId);
-    state.hideOutgoingTimerId = null;
-  }
-  if (state.fallbackTimerId) {
-    clearTimeout(state.fallbackTimerId);
-    state.fallbackTimerId = null;
-  }
-}
-
-function destroyCarouselState(safeId) {
-  const existing = activeCarousels.get(safeId);
-  if (!existing) return;
-  existing.destroyed = true;
-  existing.genId += 1;
-  clearPlaybackTimers(existing);
-  if (existing.popupUpdateRaf) {
-    cancelAnimationFrame(existing.popupUpdateRaf);
-    existing.popupUpdateRaf = null;
-  }
-  existing.cleanupCallbacks.forEach((fn) => {
+  [state.hideOutgoingTimerId, state.skipTimerId].forEach((id) => id && clearTimeout(id));
+  state.hideOutgoingTimerId = null;
+  state.skipTimerId = null;
+  state.clipCleanup.forEach((fn) => {
     try {
       fn();
     } catch {}
   });
-  existing.cleanupCallbacks = [];
+  state.clipCleanup = [];
+}
+
+function snapshotForResume(state) {
+  if (!state || state.activeIdx === null) return null;
+  return {
+    sig: state.sig,
+    idx: state.activeIdx,
+    seconds: state.currentSeconds || 0,
+    feedEnded: state.feedEnded,
+    at: performance.now(),
+  };
+}
+
+function destroyCarouselState(safeId, { keepSnapshot = false } = {}) {
+  const existing = activeCarousels.get(safeId);
+  if (!existing) return;
+  if (keepSnapshot) {
+    const snap = snapshotForResume(existing);
+    if (snap) resumeSnapshots.set(safeId, snap);
+  } else {
+    resumeSnapshots.delete(safeId);
+  }
+  existing.destroyed = true;
+  existing.genId += 1;
+  clearClipRuntime(existing);
+  cancelPopupLayoutTracking(existing);
+  existing.persistentCleanup.forEach((fn) => {
+    try {
+      fn();
+    } catch {}
+  });
+  existing.persistentCleanup = [];
   existing.slides.forEach((slideEl) => {
     const vid = slideEl.querySelector("video");
     if (vid) {
       try {
         vid.pause();
+        vid.onended = null;
+        vid.onerror = null;
       } catch {}
     }
   });
+  setFeedState(existing, "closed");
   activeCarousels.delete(safeId);
 }
 
-function setIndicatorStates(state, activeIdx) {
+function paintIndicators(state, activeIdx, activeProgress = 0) {
   state.fills.forEach((fill, idx) => {
     fill.style.transition = "none";
-    fill.style.animation = "none";
     if (idx < activeIdx) {
-      fill.style.width = "100%";
-      fill.style.opacity = "1";
+      fill.style.transform = "scaleX(1)";
     } else if (idx === activeIdx) {
-      fill.style.width = "0%";
-      fill.style.opacity = "1";
+      fill.style.transform = `scaleX(${Math.min(1, Math.max(0, activeProgress))})`;
     } else {
-      fill.style.width = "0%";
-      fill.style.opacity = "0.35";
+      fill.style.transform = "scaleX(0)";
     }
   });
 }
 
-function runSlide(state, targetIdx, direction = "next", immediate = false) {
-  if (!state || state.destroyed || !state.slides.length) return;
-  const N = state.slides.length;
-  const normalizedIdx = ((Number(targetIdx) % N) + N) % N;
-  const gen = ++state.genId;
+function setFillProgress(state, idx, progress) {
+  const fill = state.fills[idx];
+  if (fill) fill.style.transform = `scaleX(${Math.min(1, Math.max(0, progress)).toFixed(4)})`;
+}
 
-  clearPlaybackTimers(state);
+function isSlideReady(slideEl) {
+  const vid = slideEl.querySelector("video");
+  if (vid) return vid.readyState >= 2;
+  const img = slideEl.querySelector("img");
+  if (img) return img.complete;
+  return true;
+}
 
-  const prevIdx = state.activeIdx;
-  const incomingEl = state.slides[normalizedIdx];
-  const outgoingEl =
-    prevIdx !== null && prevIdx !== normalizedIdx ? state.slides[prevIdx] : null;
-  state.activeIdx = normalizedIdx;
-
-  // Pause non-active videos first
-  state.slides.forEach((slideEl, idx) => {
-    const v = slideEl.querySelector("video");
-    if (v && idx !== normalizedIdx) {
-      try {
-        v.pause();
-        v.onended = null;
-        v.onerror = null;
-      } catch {}
-    }
+function whenSlideReady(state, slideEl, gen, callback) {
+  if (isSlideReady(slideEl)) {
+    callback();
+    return;
+  }
+  const target = slideEl.querySelector("video") || slideEl.querySelector("img");
+  if (!target) {
+    callback();
+    return;
+  }
+  const events = target.tagName === "VIDEO" ? ["loadeddata", "canplay", "error"] : ["load", "error"];
+  let done = false;
+  let timer = null;
+  const detach = () => {
+    events.forEach((name) => target.removeEventListener(name, finish));
+    if (timer) clearTimeout(timer);
+  };
+  function finish() {
+    if (done) return;
+    done = true;
+    detach();
+    if (!state.destroyed && state.genId === gen) callback();
+  }
+  events.forEach((name) => target.addEventListener(name, finish, { once: true }));
+  timer = setTimeout(finish, READY_WAIT_MAX_MS);
+  state.clipCleanup.push(() => {
+    done = true;
+    detach();
   });
+}
 
-  // Slide-right / slide-left positioning without white flash
-  if (immediate || !outgoingEl) {
-    state.slides.forEach((slideEl, idx) => {
-      slideEl.style.transition = "none";
-      if (idx === normalizedIdx) {
+function preloadNeighbor(state, idx) {
+  const slideEl = state.slides[idx];
+  const vid = slideEl?.querySelector("video");
+  if (vid && vid.preload !== "auto") vid.preload = "auto";
+  if (vid && vid.readyState === 0 && vid.networkState === 0) {
+    try {
+      vid.load();
+    } catch {}
+  }
+}
+
+function positionSlides(state, incomingEl, outgoingEl, { animate, direction }) {
+  const hideSlide = (el) => {
+    el.style.transition = "none";
+    el.style.visibility = "hidden";
+    el.style.zIndex = "1";
+    el.style.transform = "translateX(100%)";
+    el.style.pointerEvents = "none";
+  };
+
+  if (!animate || !outgoingEl) {
+    state.slides.forEach((slideEl) => {
+      if (slideEl === incomingEl) {
+        slideEl.style.transition = "none";
         slideEl.style.visibility = "visible";
         slideEl.style.zIndex = "4";
         slideEl.style.transform = "translateX(0%)";
         slideEl.style.pointerEvents = "auto";
       } else {
-        slideEl.style.visibility = "hidden";
-        slideEl.style.zIndex = "1";
-        slideEl.style.transform = "translateX(100%)";
-        slideEl.style.pointerEvents = "none";
+        hideSlide(slideEl);
       }
     });
-  } else {
-    const enterFrom = direction === "prev" ? "-100%" : "100%";
-    const exitTo = direction === "prev" ? "100%" : "-100%";
-
-    state.slides.forEach((slideEl, idx) => {
-      if (idx !== normalizedIdx && idx !== prevIdx) {
-        slideEl.style.transition = "none";
-        slideEl.style.visibility = "hidden";
-        slideEl.style.zIndex = "1";
-        slideEl.style.transform = "translateX(100%)";
-        slideEl.style.pointerEvents = "none";
-      }
-    });
-
-    outgoingEl.style.transition = "none";
-    outgoingEl.style.visibility = "visible";
-    outgoingEl.style.zIndex = "3";
-    outgoingEl.style.transform = "translateX(0%)";
-
-    incomingEl.style.transition = "none";
-    incomingEl.style.visibility = "visible";
-    incomingEl.style.zIndex = "4";
-    incomingEl.style.transform = `translateX(${enterFrom})`;
-    incomingEl.style.pointerEvents = "auto";
-
-    // Commit starting transform before animating
-    void incomingEl.offsetWidth;
-
-    const ease = `transform ${SLIDE_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-    outgoingEl.style.transition = ease;
-    incomingEl.style.transition = ease;
-    outgoingEl.style.transform = `translateX(${exitTo})`;
-    incomingEl.style.transform = "translateX(0%)";
-
-    state.hideOutgoingTimerId = setTimeout(() => {
-      if (state.destroyed || state.genId !== gen) return;
-      outgoingEl.style.transition = "none";
-      outgoingEl.style.visibility = "hidden";
-      outgoingEl.style.zIndex = "1";
-      outgoingEl.style.pointerEvents = "none";
-    }, SLIDE_TRANSITION_MS + 20);
-  }
-
-  setIndicatorStates(state, normalizedIdx);
-  applyOrientationSizing(state, incomingEl);
-
-  const activeFill = state.fills[normalizedIdx] || null;
-  const vid = incomingEl.querySelector("video");
-
-  if (vid) {
-    if (N > 1) {
-      vid.removeAttribute("loop");
-      vid.loop = false;
-    } else {
-      vid.loop = true;
-    }
-    vid.muted = true;
-    vid.playsInline = true;
-    vid.dataset.completedOnePass = "0";
-
-    const hintedDur = Number(incomingEl.getAttribute("data-media-duration"));
-    const onMeta = () => {
-      if (state.destroyed || state.genId !== gen) return;
-      applyOrientationSizing(state, incomingEl);
-    };
-    vid.addEventListener("loadedmetadata", onMeta, { once: true });
-    state.cleanupCallbacks.push(() => vid.removeEventListener("loadedmetadata", onMeta));
-
-    try {
-      vid.currentTime = 0;
-    } catch {}
-
-    const startedAt = performance.now();
-
-    const tickVideoProgress = () => {
-      if (state.destroyed || state.genId !== gen) return;
-      if (activeFill) {
-        const dur =
-          Number.isFinite(vid.duration) && vid.duration > 0
-            ? vid.duration
-            : Number.isFinite(hintedDur) && hintedDur > 0
-            ? hintedDur
-            : 0;
-        if (dur > 0) {
-          const pct = Math.min(100, Math.max(0, (vid.currentTime / dur) * 100));
-          activeFill.style.width = `${pct.toFixed(2)}%`;
-        } else if (!vid.paused && !vid.ended) {
-          const elapsedSec = (performance.now() - startedAt) / 1000;
-          const approxPct = Math.min(92, (elapsedSec / (elapsedSec + 4)) * 96);
-          activeFill.style.width = `${approxPct.toFixed(2)}%`;
-        }
-      }
-      if (!vid.ended && !state.destroyed && state.genId === gen) {
-        state.rafId = requestAnimationFrame(tickVideoProgress);
-      }
-    };
-
-    vid.onended = () => {
-      if (state.destroyed || state.genId !== gen) return;
-      vid.dataset.completedOnePass = "1";
-      if (activeFill) activeFill.style.width = "100%";
-      if (N > 1) {
-        runSlide(state, normalizedIdx + 1, "next", false);
-      } else {
-        try {
-          vid.currentTime = 0;
-          vid.play().catch(() => {});
-          state.rafId = requestAnimationFrame(tickVideoProgress);
-        } catch {}
-      }
-    };
-
-    vid.onerror = () => {
-      if (state.destroyed || state.genId !== gen) return;
-      vid.dataset.completedOnePass = "1";
-      if (N > 1) {
-        state.fallbackTimerId = setTimeout(() => {
-          if (!state.destroyed && state.genId === gen) {
-            runSlide(state, normalizedIdx + 1, "next", false);
-          }
-        }, 2500);
-      }
-    };
-
-    vid.play().catch(() => {
-      if (N > 1) {
-        state.fallbackTimerId = setTimeout(() => {
-          if (!state.destroyed && state.genId === gen && vid.paused) {
-            runSlide(state, normalizedIdx + 1, "next", false);
-          }
-        }, 3500);
-      }
-    });
-
-    state.rafId = requestAnimationFrame(tickVideoProgress);
     return;
   }
 
-  // Image / GIF slide
-  const img = incomingEl.querySelector("img");
-  if (img && !img.complete) {
-    const onImgLoad = () => {
-      if (!state.destroyed && state.genId === gen) {
-        applyOrientationSizing(state, incomingEl);
-      }
-    };
-    img.addEventListener("load", onImgLoad, { once: true });
-    state.cleanupCallbacks.push(() => img.removeEventListener("load", onImgLoad));
+  const enterFrom = direction === "prev" ? "-100%" : "100%";
+  const exitTo = direction === "prev" ? "100%" : "-100%";
+
+  state.slides.forEach((slideEl) => {
+    if (slideEl !== incomingEl && slideEl !== outgoingEl) hideSlide(slideEl);
+  });
+
+  outgoingEl.style.transition = "none";
+  outgoingEl.style.visibility = "visible";
+  outgoingEl.style.zIndex = "3";
+  outgoingEl.style.transform = "translateX(0%)";
+
+  incomingEl.style.transition = "none";
+  incomingEl.style.visibility = "visible";
+  incomingEl.style.zIndex = "4";
+  incomingEl.style.transform = `translateX(${enterFrom})`;
+  incomingEl.style.pointerEvents = "auto";
+
+  void incomingEl.offsetWidth;
+
+  const ease = `transform ${SLIDE_TRANSITION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+  outgoingEl.style.transition = ease;
+  incomingEl.style.transition = ease;
+  outgoingEl.style.transform = `translateX(${exitTo})`;
+  incomingEl.style.transform = "translateX(0%)";
+
+  state.hideOutgoingTimerId = setTimeout(() => {
+    if (state.destroyed) return;
+    hideSlide(outgoingEl);
+  }, SLIDE_TRANSITION_MS + 30);
+}
+
+function finishFeed(state) {
+  if (state.destroyed) return;
+  state.feedEnded = true;
+  paintIndicators(state, state.slides.length, 1);
+  setFeedState(state, "ended");
+  const vid = state.slides[state.activeIdx]?.querySelector("video");
+  if (vid) {
+    try {
+      vid.pause();
+    } catch {}
+  }
+  emitWindowEvent(FEED_ENDED_EVENT, { safeId: state.safeId });
+}
+
+function completeClip(state, gen) {
+  if (state.destroyed || state.genId !== gen) return;
+  const lastIdx = state.slides.length - 1;
+  setFillProgress(state, state.activeIdx, 1);
+  if (state.activeIdx < lastIdx) {
+    startClip(state, state.activeIdx + 1, { trigger: "natural", direction: "next" });
+  } else {
+    finishFeed(state);
+  }
+}
+
+function startVideoClip(state, gen, slideEl, vid, idx, resumeSeconds) {
+  vid.loop = false;
+  vid.removeAttribute("loop");
+  vid.muted = true;
+  vid.playsInline = true;
+
+  const hintedDuration = readNumberAttr(slideEl, "data-media-duration");
+  const onMeta = () => {
+    if (state.destroyed || state.genId !== gen) return;
+    syncGeometry(state, slideEl);
+  };
+  vid.addEventListener("loadedmetadata", onMeta);
+  vid.addEventListener("resize", onMeta);
+  state.clipCleanup.push(() => {
+    vid.removeEventListener("loadedmetadata", onMeta);
+    vid.removeEventListener("resize", onMeta);
+  });
+
+  try {
+    vid.currentTime = Math.max(0, resumeSeconds || 0);
+  } catch {}
+
+  vid.onended = () => completeClip(state, gen);
+  vid.onerror = () => {
+    if (state.destroyed || state.genId !== gen) return;
+    state.skipTimerId = setTimeout(() => completeClip(state, gen), 800);
+  };
+
+  const playPromise = vid.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {
+      if (!state.destroyed && state.genId === gen) setFeedState(state, "stalled");
+    });
   }
 
-  if (N === 1) return;
+  let lastTime = vid.currentTime;
+  let lastAdvanceAt = performance.now();
+  const startedAt = performance.now();
 
-  const startMs = performance.now();
-  const tickImage = (nowMs) => {
+  const tick = (now) => {
     if (state.destroyed || state.genId !== gen) return;
-    const elapsed = nowMs - startMs;
-    const pct = Math.min(100, Math.max(0, (elapsed / IMAGE_SLIDE_DURATION_MS) * 100));
-    if (activeFill) {
-      activeFill.style.width = `${pct.toFixed(2)}%`;
+    state.rafId = requestAnimationFrame(tick);
+
+    const current = vid.currentTime;
+    state.currentSeconds = current;
+
+    const realDuration = Number.isFinite(vid.duration) && vid.duration > 0 ? vid.duration : 0;
+    const duration = realDuration || hintedDuration || 0;
+    let progress;
+    if (duration > 0) {
+      progress = current / duration;
+      if (!vid.ended) progress = Math.min(progress, 0.995);
+    } else {
+      const elapsed = (now - startedAt) / 1000;
+      progress = Math.min(0.92, (elapsed / (elapsed + 4)) * 0.96);
     }
-    if (elapsed >= IMAGE_SLIDE_DURATION_MS) {
-      if (activeFill) activeFill.style.width = "100%";
-      runSlide(state, normalizedIdx + 1, "next", false);
-      return;
+    setFillProgress(state, idx, progress);
+
+    if (current !== lastTime) {
+      lastTime = current;
+      lastAdvanceAt = now;
+      if (state.feedState !== "playing" && !state.holdPaused && !vid.paused) {
+        setFeedState(state, "playing");
+      }
+    } else if (!state.holdPaused && now - lastAdvanceAt > STALL_SKIP_MS) {
+      completeClip(state, gen);
     }
-    state.rafId = requestAnimationFrame(tickImage);
   };
-  state.rafId = requestAnimationFrame(tickImage);
+  state.rafId = requestAnimationFrame(tick);
+}
+
+function startImageClip(state, gen, slideEl, idx, resumeSeconds) {
+  const img = slideEl.querySelector("img");
+  const durationMs = (readNumberAttr(slideEl, "data-media-duration") || DEFAULT_IMAGE_SECONDS) * 1000;
+  let elapsedMs = Math.max(0, (resumeSeconds || 0) * 1000);
+  let lastTick = performance.now();
+
+  if (img && !img.complete) {
+    const onLoad = () => {
+      if (state.destroyed || state.genId !== gen) return;
+      syncGeometry(state, slideEl);
+    };
+    img.addEventListener("load", onLoad, { once: true });
+    state.clipCleanup.push(() => img.removeEventListener("load", onLoad));
+  }
+
+  const tick = (now) => {
+    if (state.destroyed || state.genId !== gen) return;
+    state.rafId = requestAnimationFrame(tick);
+
+    const dt = Math.min(100, now - lastTick);
+    lastTick = now;
+    const loaded = !img || img.complete;
+    if (loaded && !state.holdPaused) {
+      elapsedMs += dt;
+      if (state.feedState !== "playing") setFeedState(state, "playing");
+    }
+    state.currentSeconds = elapsedMs / 1000;
+    setFillProgress(state, idx, elapsedMs / durationMs);
+    if (elapsedMs >= durationMs) completeClip(state, gen);
+  };
+  state.rafId = requestAnimationFrame(tick);
+}
+
+function startClip(state, targetIdx, { trigger = "user", direction = "next", resumeSeconds = 0 } = {}) {
+  if (!state || state.destroyed || !state.slides.length) return;
+  const total = state.slides.length;
+  const idx = ((Number(targetIdx) % total) + total) % total;
+  const gen = ++state.genId;
+
+  clearClipRuntime(state);
+
+  const previousIdx = state.activeIdx;
+  const incomingEl = state.slides[idx];
+  const outgoingEl = previousIdx !== null && previousIdx !== idx ? state.slides[previousIdx] : null;
+
+  state.holdPaused = false;
+  state.feedEnded = false;
+  state.currentSeconds = resumeSeconds || 0;
+
+  state.slides.forEach((slideEl, slideIdx) => {
+    const vid = slideEl.querySelector("video");
+    if (vid && slideIdx !== idx) {
+      try {
+        vid.pause();
+        vid.onended = null;
+        vid.onerror = null;
+      } catch {}
+    }
+  });
+
+  const begin = () => {
+    if (state.destroyed || state.genId !== gen) return;
+    const animate = trigger === "natural" && Boolean(outgoingEl);
+    state.activeIdx = idx;
+    positionSlides(state, incomingEl, outgoingEl, { animate, direction });
+    paintIndicators(state, idx, 0);
+    setFeedState(state, "playing");
+    syncGeometry(state, incomingEl);
+    preloadNeighbor(state, idx + 1);
+
+    const vid = incomingEl.querySelector("video");
+    if (vid) {
+      startVideoClip(state, gen, incomingEl, vid, idx, resumeSeconds);
+    } else {
+      startImageClip(state, gen, incomingEl, idx, resumeSeconds);
+    }
+  };
+
+  if (trigger === "natural" && outgoingEl) {
+    whenSlideReady(state, incomingEl, gen, begin);
+  } else {
+    begin();
+  }
+}
+
+function holdPause(state) {
+  if (!state || state.destroyed || state.feedEnded) return;
+  state.holdPaused = true;
+  setFeedState(state, "paused");
+  const vid = state.slides[state.activeIdx]?.querySelector("video");
+  if (vid) {
+    try {
+      vid.pause();
+    } catch {}
+  }
+  emitWindowEvent(FEED_INTERACTION_EVENT, { safeId: state.safeId });
+}
+
+function holdResume(state) {
+  if (!state || state.destroyed || !state.holdPaused) return;
+  state.holdPaused = false;
+  setFeedState(state, "playing");
+  const vid = state.slides[state.activeIdx]?.querySelector("video");
+  if (vid) {
+    const result = vid.play();
+    if (result && typeof result.catch === "function") result.catch(() => {});
+  }
+  emitWindowEvent(FEED_INTERACTION_EVENT, { safeId: state.safeId });
+}
+
+function stepFeed(state, delta) {
+  if (!state || state.destroyed) return;
+  const total = state.slides.length;
+  const current = state.activeIdx ?? 0;
+  emitWindowEvent(FEED_INTERACTION_EVENT, { safeId: state.safeId });
+
+  if (delta > 0) {
+    const next = current + 1 < total ? current + 1 : 0;
+    startClip(state, next, { trigger: "user", direction: "next" });
+    return;
+  }
+  const prev = current - 1 >= 0 ? current - 1 : 0;
+  startClip(state, prev, { trigger: "user", direction: "prev" });
+}
+
+function jumpToClip(state, targetIdx) {
+  if (!state || state.destroyed) return;
+  emitWindowEvent(FEED_INTERACTION_EVENT, { safeId: state.safeId });
+  const total = state.slides.length;
+  const normalized = ((Number(targetIdx) % total) + total) % total;
+  startClip(state, normalized, {
+    trigger: "user",
+    direction: normalized < (state.activeIdx ?? 0) ? "prev" : "next",
+  });
+}
+
+function buildFeedSignature(slides) {
+  return slides.map((slideEl) => slideEl.getAttribute("data-media-url") || "").join("|");
 }
 
 export function initEventPopupCarouselsFromRoot(rootEl, popupInstance = null) {
@@ -373,36 +494,83 @@ export function initEventPopupCarouselsFromRoot(rootEl, popupInstance = null) {
     const safeId = containerEl.getAttribute("data-carousel-container");
     if (!safeId) return;
 
-    destroyCarouselState(safeId);
+    // Re-initialisation after a content refresh keeps the viewer on the clip they were watching.
+    destroyCarouselState(safeId, { keepSnapshot: true });
 
     const cardEl = containerEl.closest(".event-card");
     const frameEl = containerEl.closest(".popup-video");
     const slides = Array.from(containerEl.querySelectorAll("[data-carousel-slide]"));
     const fills = Array.from(containerEl.querySelectorAll("[data-carousel-fill]"));
+    const tapLayerEl = containerEl.querySelector("[data-carousel-tap-layer]");
 
     if (slides.length === 0) return;
 
     const state = {
       safeId,
+      sig: buildFeedSignature(slides),
       genId: 0,
       rafId: null,
-      slideTimerId: null,
       hideOutgoingTimerId: null,
-      fallbackTimerId: null,
-      popupUpdateRaf: null,
+      skipTimerId: null,
+      layoutTrackRaf: null,
+      layoutTrackUntil: 0,
+      geometryKey: null,
       activeIdx: null,
+      currentSeconds: 0,
+      holdPaused: false,
+      feedEnded: false,
       slides,
       fills,
+      containerEl,
       cardEl,
       frameEl,
       popupInstance,
-      cleanupCallbacks: [],
+      clipCleanup: [],
+      persistentCleanup: [],
       destroyed: false,
     };
 
     activeCarousels.set(safeId, state);
-    runSlide(state, 0, "next", true);
+
+    if (tapLayerEl) {
+      state.persistentCleanup.push(
+        attachFeedGestures(tapLayerEl, {
+          onTap: (zone) => stepFeed(state, zone === "prev" ? -1 : 1),
+          onHoldStart: () => holdPause(state),
+          onHoldEnd: () => holdResume(state),
+        })
+      );
+    }
+
+    const handleWindowResize = () => syncGeometry(state, state.slides[state.activeIdx ?? 0]);
+    window.addEventListener("resize", handleWindowResize);
+    state.persistentCleanup.push(() => window.removeEventListener("resize", handleWindowResize));
+
+    const snapshot = resumeSnapshots.get(safeId);
+    resumeSnapshots.delete(safeId);
+    const canResume =
+      snapshot &&
+      snapshot.sig === state.sig &&
+      performance.now() - snapshot.at < RESUME_MAX_AGE_MS &&
+      snapshot.idx < slides.length;
+
+    if (canResume && snapshot.feedEnded) {
+      state.activeIdx = snapshot.idx;
+      positionSlides(state, slides[snapshot.idx], null, { animate: false, direction: "next" });
+      syncGeometry(state, slides[snapshot.idx]);
+      finishFeedSilently(state);
+    } else if (canResume) {
+      startClip(state, snapshot.idx, { trigger: "resume", resumeSeconds: snapshot.seconds });
+    } else {
+      startClip(state, 0, { trigger: "init" });
+    }
   });
+}
+
+function finishFeedSilently(state) {
+  state.feedEnded = true;
+  paintIndicators(state, state.slides.length, 1);
+  setFeedState(state, "ended");
 }
 
 export function cleanupEventPopupCarouselsFromRoot(rootEl) {
@@ -416,29 +584,17 @@ export function cleanupEventPopupCarouselsFromRoot(rootEl) {
 
 export function switchEventCarouselSlide(safeId, targetIdx) {
   const state = activeCarousels.get(safeId);
-  if (!state || state.destroyed) {
-    const fallbackEl =
-      typeof document !== "undefined"
-        ? document.getElementById(`event-carousel-${safeId}`)
-        : null;
-    if (fallbackEl) {
-      initEventPopupCarouselsFromRoot(fallbackEl.parentElement || fallbackEl);
-      const initialized = activeCarousels.get(safeId);
-      if (initialized) {
-        const dir =
-          initialized.activeIdx !== null && Number(targetIdx) < initialized.activeIdx
-            ? "prev"
-            : "next";
-        runSlide(initialized, Number(targetIdx), dir, false);
-      }
-    }
+  if (state && !state.destroyed) {
+    jumpToClip(state, targetIdx);
     return;
   }
-  const N = state.slides.length;
-  const normTarget = ((Number(targetIdx) % N) + N) % N;
-  const direction =
-    state.activeIdx !== null && normTarget < state.activeIdx ? "prev" : "next";
-  runSlide(state, normTarget, direction, false);
+  const fallbackEl =
+    typeof document !== "undefined" ? document.getElementById(`event-carousel-${safeId}`) : null;
+  if (fallbackEl) {
+    initEventPopupCarouselsFromRoot(fallbackEl.parentElement || fallbackEl);
+    const initialized = activeCarousels.get(safeId);
+    if (initialized) jumpToClip(initialized, targetIdx);
+  }
 }
 
 export function stepEventCarouselSlide(safeId, delta) {
@@ -447,11 +603,5 @@ export function stepEventCarouselSlide(safeId, delta) {
     switchEventCarouselSlide(safeId, Number(delta) > 0 ? 1 : 0);
     return;
   }
-  const N = state.slides.length;
-  if (N <= 1) return;
-  const cur = state.activeIdx ?? 0;
-  const next = (((cur + Number(delta)) % N) + N) % N;
-  const direction = Number(delta) < 0 ? "prev" : "next";
-  runSlide(state, next, direction, false);
+  stepFeed(state, Number(delta));
 }
-

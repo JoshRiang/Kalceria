@@ -1,6 +1,8 @@
 // Safe Hardware Pipeline for Microphone & Camera operations.
 // Protects hardware from dangling locks, OS device contention, and memory leaks.
 
+import { alignStreamOrientation, buildCameraConstraintTiers } from "./cameraConstraints";
+
 export const DESKTOP_FLAG = false;
 
 /**
@@ -66,53 +68,32 @@ export async function acquireCameraStream(customVideoConstraints = {}, includeAu
     ? {
         echoCancellation: true,
         noiseSuppression: true,
+        autoGainControl: true,
       }
     : false;
 
-  // Determine native viewport orientation for proper aspect ratio capture without sensor cropping
-  const isPortrait =
-    typeof window !== "undefined" &&
-    window.innerWidth < window.innerHeight &&
-    (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768);
+  let lastError = null;
 
-  const idealWidth = isPortrait ? 720 : 1280;
-  const idealHeight = isPortrait ? 1280 : 720;
-
-  const constraintsWithFacing = {
-    video: {
-      facingMode: "user",
-      width: { ideal: idealWidth, max: 1920 },
-      height: { ideal: idealHeight, max: 1920 },
-      frameRate: { ideal: 30, min: 20 },
-      ...customVideoConstraints,
-    },
-    audio: baseAudio,
-  };
-
-  try {
-    return await navigator.mediaDevices.getUserMedia(constraintsWithFacing);
-  } catch {
-    // Desktop / Laptop Fallback: many USB or integrated webcams fail on facingMode: "user".
+  // Tiered acquisition: every tier keeps the viewport-aware portrait/landscape hints.
+  for (const tier of buildCameraConstraintTiers(customVideoConstraints, baseAudio)) {
     try {
-      const relaxedConstraints = {
-        video: {
-          width: { ideal: idealWidth },
-          height: { ideal: idealHeight },
-          frameRate: { ideal: 30 },
-          ...customVideoConstraints,
-        },
-        audio: baseAudio,
-      };
-      if (relaxedConstraints.video && typeof relaxedConstraints.video === "object") {
-        delete relaxedConstraints.video.facingMode;
+      const stream = await navigator.mediaDevices.getUserMedia(tier);
+      return await alignStreamOrientation(stream);
+    } catch (err) {
+      lastError = err;
+      if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
+        break;
       }
-      return await navigator.mediaDevices.getUserMedia(relaxedConstraints);
-    } catch {
-      // Sequential track fallback: Some mobile drivers reject simultaneous audio+video acquisition
+    }
+  }
+
+  // Sequential track fallback: some mobile drivers reject simultaneous audio+video acquisition.
+  // The video track keeps the size hints; the microphone is attached separately when available.
+  if (lastError?.name !== "NotAllowedError" && lastError?.name !== "PermissionDeniedError") {
+    const videoOnlyTiers = buildCameraConstraintTiers(customVideoConstraints, false);
+    for (const tier of videoOnlyTiers) {
       try {
-        const vStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", ...customVideoConstraints },
-        });
+        const vStream = await navigator.mediaDevices.getUserMedia(tier);
         let aStream = null;
         if (includeAudio) {
           try {
@@ -123,20 +104,14 @@ export async function acquireCameraStream(customVideoConstraints = {}, includeAu
           ...vStream.getVideoTracks(),
           ...(aStream ? aStream.getAudioTracks() : []),
         ];
-        return new MediaStream(tracks);
-      } catch {
-        // Final attempt: plain video: true, audio: baseAudio
-        try {
-          return await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: baseAudio,
-          });
-        } catch (finalErr) {
-          throw translateMediaHardwareError(finalErr, "camera");
-        }
+        return await alignStreamOrientation(new MediaStream(tracks));
+      } catch (err) {
+        lastError = err;
       }
     }
   }
+
+  throw translateMediaHardwareError(lastError, "camera");
 }
 
 /**

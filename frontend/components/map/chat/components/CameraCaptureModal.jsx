@@ -4,9 +4,11 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   acquireCameraStream,
+  acquireMicrophoneStream,
   stopMediaStream,
   probeVideoDeviceCapabilities,
   applyCameraTorch,
+  pickSupportedVideoRecordingMime,
 } from "@/lib/mediaHardware";
 import {
   CameraBottomControls,
@@ -173,7 +175,24 @@ export function CameraCaptureModal({
     setHasFlash(false);
 
     try {
-      const stream = await acquireCameraStream({ facingMode: facing }, false);
+      const stream = await acquireCameraStream({ facingMode: facing }, true);
+
+      // Guarantee an audio track so recorded videos always carry sound.
+      if (stream.getAudioTracks().length === 0) {
+        try {
+          const mic = await acquireMicrophoneStream({
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          });
+          mic.getAudioTracks().forEach((track) => stream.addTrack(track));
+        } catch (micErr) {
+          if (micErr?.code === "PERMISSION_DENIED" && onPermissionNeededRef.current) {
+            onPermissionNeededRef.current("mic");
+          }
+        }
+      }
+
       streamRef.current = stream;
       activeStreamFacingRef.current = facing;
       setHasStream(true);
@@ -272,20 +291,20 @@ export function CameraCaptureModal({
     setIsRecordingVideo(true);
 
     try {
-      const mime =
-        typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-          ? "video/webm;codecs=vp9"
-          : typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("video/webm")
-          ? "video/webm"
-          : "video/mp4";
+      const mime = pickSupportedVideoRecordingMime();
+      const hasAudioTrack = streamRef.current.getAudioTracks().length > 0;
+      const recorderOptions = {
+        ...(mime ? { mimeType: mime } : {}),
+        videoBitsPerSecond: 1200000,
+        ...(hasAudioTrack ? { audioBitsPerSecond: 128000 } : {}),
+      };
       let recorder;
       try {
-        recorder = new MediaRecorder(streamRef.current, {
-          mimeType: mime,
-          videoBitsPerSecond: 1200000,
-        });
+        recorder = new MediaRecorder(streamRef.current, recorderOptions);
       } catch {
-        recorder = new MediaRecorder(streamRef.current, { mimeType: mime });
+        recorder = mime
+          ? new MediaRecorder(streamRef.current, { mimeType: mime })
+          : new MediaRecorder(streamRef.current);
       }
       mediaRecorderRef.current = recorder;
 
@@ -304,7 +323,9 @@ export function CameraCaptureModal({
           applyCameraTorch(streamRef.current, false).catch(() => {});
           setIsFlashOn(false);
         }
-        const blob = new Blob(recordedChunksRef.current, { type: mime });
+        const blob = new Blob(recordedChunksRef.current, {
+          type: recorder.mimeType || mime || "video/webm",
+        });
         const url = URL.createObjectURL(blob);
         const elapsedSec = videoStartTimeRef.current
           ? Math.max(1, Math.round((Date.now() - videoStartTimeRef.current) / 1000))

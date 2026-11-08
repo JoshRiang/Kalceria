@@ -304,7 +304,7 @@ export function useEventCollab({ events, setEvents, setNotice }) {
             height: null,
             duration: null,
           }));
-          const uploadRes = await uploadBlobMedia(file);
+          const uploadRes = await uploadBlobMedia(file, { purpose: "event-clip" });
           if (!uploadRes?.url) {
             setNotice?.(uploadRes?.error || "Upload failed");
             return;

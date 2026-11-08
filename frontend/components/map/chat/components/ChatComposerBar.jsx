@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { SmoothWaveform } from "./composer/SmoothWaveform";
 
 export function ChatComposerBar({
   isMapDark,
@@ -111,21 +112,12 @@ export function ChatComposerBar({
               0:{String(recordingSeconds).padStart(2, "0")}
             </span>
 
-            {/* Dynamic waveform vertical lines CENTERED in the middle */}
-            <div className="flex-1 flex items-center justify-center gap-[2.5px] h-6 overflow-hidden px-1">
-              {(liveWaveform && liveWaveform.length > 0
-                ? liveWaveform.slice(-32)
-                : Array(24).fill(6)
-              ).map((val, idx) => (
-                <span
-                  key={idx}
-                  style={{ height: `${Math.max(3, Math.min(22, (val / 100) * 22))}px` }}
-                  className={`w-[1.5px] rounded-full transition-all duration-100 shrink-0 ${
-                    isMapDark ? "bg-white/80" : "bg-black/80"
-                  }`}
-                />
-              ))}
-            </div>
+            {/* Dynamic waveform: continuously scrolling, eased canvas bars CENTERED in the middle */}
+            <SmoothWaveform
+              samples={liveWaveform}
+              isMapDark={isMapDark}
+              className="flex-1 h-6 px-1"
+            />
 
             {/* Action Buttons: Cancel is black 'X', Send is black triangle icon */}
             <div className="flex items-center gap-2 shrink-0 pl-2">

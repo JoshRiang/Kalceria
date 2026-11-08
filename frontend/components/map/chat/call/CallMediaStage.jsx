@@ -41,6 +41,16 @@ export function CallMediaStage({
   remoteStreamRef,
 }) {
   const [isLocalLandscape, setIsLocalLandscape] = useState(false);
+  const [isRemotePortrait, setIsRemotePortrait] = useState(false);
+
+  // Portrait peer frames fill the stage; landscape peer frames stay fully visible (letterboxed).
+  const syncRemoteOrientation = useCallback((e) => {
+    const vw = e.currentTarget?.videoWidth || 0;
+    const vh = e.currentTarget?.videoHeight || 0;
+    if (vw > 0 && vh > 0) {
+      setIsRemotePortrait(vh > vw);
+    }
+  }, []);
 
   const attachRemoteAudioRef = useCallback(
     (el) => {
@@ -116,7 +126,11 @@ export function CallMediaStage({
             autoPlay
             playsInline
             muted
-            className={`w-full h-full object-contain bg-black transition-opacity duration-300 ${
+            onLoadedMetadata={syncRemoteOrientation}
+            onResize={syncRemoteOrientation}
+            className={`w-full h-full ${
+              isRemotePortrait ? "object-cover" : "object-contain"
+            } bg-black transition-opacity duration-300 ${
               showRemoteLiveVideo ? "opacity-100" : "opacity-0 pointer-events-none"
             } ${isBadConnection ? "filter blur-[12px] scale-105" : ""}`}
           />
@@ -390,7 +404,14 @@ export function CallMediaStage({
                     setIsLocalLandscape(vw > vh);
                   }
                 }}
-                className="w-full h-full object-contain scale-x-[-1]"
+                onResize={(e) => {
+                  const vw = e.currentTarget?.videoWidth || 0;
+                  const vh = e.currentTarget?.videoHeight || 0;
+                  if (vw > 0 && vh > 0) {
+                    setIsLocalLandscape(vw > vh);
+                  }
+                }}
+                className="w-full h-full object-cover scale-x-[-1]"
               />
             ) : (
               <div className="flex items-center justify-center p-2 text-center">

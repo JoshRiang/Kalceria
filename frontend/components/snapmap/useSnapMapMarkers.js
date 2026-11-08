@@ -236,6 +236,8 @@ export function useSnapMapMarkers({
         }).bindPopup(newPopupContent, {
           className: "tactical-popup event-tactical-popup",
           offset: [0, -34],
+          maxWidth: 480,
+          minWidth: 0,
           autoClose: false,
           closeOnClick: false,
           closeButton: false,

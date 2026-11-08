@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { tickAllEventUptimeElements } from "./snapMapHelpers";
+import {
+  FEED_ENDED_EVENT,
+  FEED_INTERACTION_EVENT,
+} from "../map/eventPopup/popupCarouselController";
 
 export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
   const idleTimerRef = useRef(null);
@@ -15,12 +19,12 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
     idleTimerRef.current = setTimeout(() => {
       const activeEventPopups = document.querySelectorAll(".event-tactical-popup");
       if (!activeEventPopups.length) return;
-      const hasActivePlayingVideo = Array.from(activeEventPopups).some((el) =>
-        Array.from(el.querySelectorAll("video")).some(
-          (vid) => !vid.paused && !vid.ended && vid.dataset.completedOnePass !== "1"
-        )
+      // The card never closes while its Live Media Feed is still playing; it closes once the
+      // feed reaches its end (or when there is nothing playing and the viewer has gone idle).
+      const hasActivePlayingFeed = Array.from(activeEventPopups).some((el) =>
+        Boolean(el.querySelector('[data-feed-state="playing"], [data-feed-state="paused"]'))
       );
-      if (hasActivePlayingVideo) {
+      if (hasActivePlayingFeed) {
         resetIdleTimer(3500);
         return;
       }
@@ -71,9 +75,19 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
       }
     };
 
+    const handleFeedEnded = () => {
+      resetIdleTimer(3500);
+    };
+
+    const handleFeedInteraction = () => {
+      resetIdleTimer(5000);
+    };
+
     window.addEventListener("pointerdown", handleMapMove, { passive: true });
     window.addEventListener("touchstart", handleMapMove, { passive: true });
     window.addEventListener("keydown", handleMapMove, { passive: true });
+    window.addEventListener(FEED_ENDED_EVENT, handleFeedEnded);
+    window.addEventListener(FEED_INTERACTION_EVENT, handleFeedInteraction);
     document.addEventListener("mouseover", handlePopupMouseEnter, { passive: true });
     document.addEventListener("mouseout", handlePopupMouseLeave, { passive: true });
 
@@ -82,6 +96,8 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
       window.removeEventListener("pointerdown", handleMapMove);
       window.removeEventListener("touchstart", handleMapMove);
       window.removeEventListener("keydown", handleMapMove);
+      window.removeEventListener(FEED_ENDED_EVENT, handleFeedEnded);
+      window.removeEventListener(FEED_INTERACTION_EVENT, handleFeedInteraction);
       document.removeEventListener("mouseover", handlePopupMouseEnter);
       document.removeEventListener("mouseout", handlePopupMouseLeave);
     };

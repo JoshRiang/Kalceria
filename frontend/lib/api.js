@@ -217,7 +217,7 @@ const MIME_EXT_MAP = {
   "audio/mp3": "mp3",
 };
 
-export const uploadBlobMedia = async (file) => {
+export const uploadBlobMedia = async (file, { purpose } = {}) => {
   if (file && file.size > MAX_UPLOAD_BYTES) {
     throw new Error("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
   }
@@ -229,6 +229,7 @@ export const uploadBlobMedia = async (file) => {
     filename = `upload-${Date.now()}.${ext}`;
   }
   formData.append("file", file, filename);
+  if (purpose) formData.append("purpose", purpose);
   const res = await fetch("/api/blob/upload", {
     method: "POST",
     body: formData,

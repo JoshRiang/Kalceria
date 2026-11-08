@@ -24,7 +24,7 @@ const BLOCKED_HOST_PATTERNS = [
 ];
 
 const VALID_MEDIA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.mp4', '.webm'];
-const MAX_MEDIA_URLS = 24;
+const MAX_MEDIA_URLS = 100;
 const MAX_SINGLE_URL_LENGTH = 2048;
 const MAX_TOTAL_URL_LIST_LENGTH = 32768;
 

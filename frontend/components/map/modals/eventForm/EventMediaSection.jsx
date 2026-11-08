@@ -45,7 +45,7 @@ export function EventMediaSection({
         height: null,
         duration: null,
       }));
-      const res = await uploadBlobMedia(file);
+      const res = await uploadBlobMedia(file, { purpose: "event-clip" });
       if (res?.url) {
         setEventForm((f) => {
           const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
