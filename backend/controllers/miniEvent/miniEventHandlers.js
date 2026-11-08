@@ -1,4 +1,5 @@
 import prisma from '../../lib/prisma.js';
+import { redis } from '../../lib/redis.js';
 import { decodePageCursor, encodePageCursor, parsePageLimit } from '../../utils/cursorPagination.js';
 import { resolveIndonesianReverseGeo } from '../geoController.js';
 import { ensurePersistentUserProfile } from '../../utils/profileDefaults.js';
@@ -40,6 +41,12 @@ const CREATOR_SELECT = {
   nickname: true,
   profilePicture: true,
 };
+
+export async function invalidateMiniEventsCache() {
+  try {
+    await redis.del('cache:mini_events:active_list:v1');
+  } catch {}
+}
 
 async function hydrateFullMiniEvent(ev) {
   if (!ev) return null;
@@ -139,6 +146,7 @@ export async function createMiniEvent(req, res, next) {
       await saveEventMediaItems(event.id, parsedMedia.clips);
     }
 
+    await invalidateMiniEventsCache();
     const formatted = await hydrateFullMiniEvent(event);
     return res.status(201).json({ event: formatted });
   } catch (err) {
@@ -154,41 +162,63 @@ export async function getActiveMiniEvents(req, res, next) {
       return res.status(400).json({ error: 'Pagination limit or cursor is invalid.' });
     }
 
-    const events = await prisma.miniEvent.findMany({
-      where: {
-        isActive: true,
-        expiresAt: { gt: new Date() },
-        creator: {
-          isEmailVerified: true,
-          role: 'USER',
-          email: {
-            notIn: [
-              'admin1@gmail.com',
-              'admin2@gmail.com',
-              'admin3@gmail.com',
-              'admin4@gmail.com',
-            ],
-          },
-        },
-        ...(cursor && {
-          OR: [
-            { createdAt: { lt: cursor.at } },
-            { createdAt: cursor.at, id: { lt: cursor.id } },
-          ],
-        }),
-      },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: limit + 1,
-      include: { creator: { select: CREATOR_SELECT } },
-    });
+    const isDefaultFirstPage = limit === 100 && !cursor;
+    const cacheKey = 'cache:mini_events:active_list:v1';
+    let hydratedEvents = null;
+    let nextCursor = null;
 
-    const hasMore = events.length > limit;
-    const rawPage = events.slice(0, limit);
-    const hydratedEvents = await Promise.all(rawPage.map((ev) => hydrateFullMiniEvent(ev)));
-    const lastEvent = rawPage.at(-1);
-    const nextCursor = hasMore && lastEvent
-      ? encodePageCursor({ id: lastEvent.id, at: lastEvent.createdAt })
-      : null;
+    if (isDefaultFirstPage) {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          hydratedEvents = parsed.events;
+          nextCursor = parsed.nextCursor;
+        }
+      } catch {}
+    }
+
+    if (!hydratedEvents) {
+      const events = await prisma.miniEvent.findMany({
+        where: {
+          isActive: true,
+          expiresAt: { gt: new Date() },
+          creator: {
+            isEmailVerified: true,
+            role: 'USER',
+            email: {
+              notIn: [
+                'admin1@gmail.com',
+                'admin2@gmail.com',
+                'admin3@gmail.com',
+                'admin4@gmail.com',
+              ],
+            },
+          },
+          ...(cursor && {
+            OR: [
+              { createdAt: { lt: cursor.at } },
+              { createdAt: cursor.at, id: { lt: cursor.id } },
+            ],
+          }),
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: limit + 1,
+        include: { creator: { select: CREATOR_SELECT } },
+      });
+
+      const hasMore = events.length > limit;
+      const rawPage = events.slice(0, limit);
+      hydratedEvents = await Promise.all(rawPage.map((ev) => hydrateFullMiniEvent(ev)));
+      const lastEvent = rawPage.at(-1);
+      nextCursor = hasMore && lastEvent
+        ? encodePageCursor({ id: lastEvent.id, at: lastEvent.createdAt })
+        : null;
+
+      if (isDefaultFirstPage) {
+        await redis.set(cacheKey, JSON.stringify({ events: hydratedEvents, nextCursor }), 'EX', 4).catch(() => {});
+      }
+    }
 
     const myActiveReq = req.user?.userId
       ? await getUserActiveCollabRequest(req.user.userId)
@@ -287,6 +317,7 @@ export async function updateMiniEvent(req, res, next) {
       await persistEventMediaSelection(id, mediaPlan);
     }
 
+    await invalidateMiniEventsCache();
     const formatted = await hydrateFullMiniEvent(event);
     return res.json({ event: formatted });
   } catch (err) {
@@ -312,6 +343,7 @@ export async function deleteMiniEvent(req, res, next) {
     await Promise.allSettled([
       purgeEventMediaByIds([id]),
       purgeEventCollabByIds([id]),
+      invalidateMiniEventsCache(),
     ]);
 
     return res.json({ message: 'Mini event deleted.' });
@@ -375,6 +407,7 @@ export async function addMiniEventMedia(req, res, next) {
     );
     event.description = result.updatedDescription;
 
+    await invalidateMiniEventsCache();
     const formatted = await hydrateFullMiniEvent(event);
     return res.json({ event: formatted });
   } catch (err) {
@@ -409,6 +442,7 @@ export async function deleteMiniEventMedia(req, res, next) {
     }
 
     event.description = removal.updatedDescription;
+    await invalidateMiniEventsCache();
     const formatted = await hydrateFullMiniEvent(event);
     return res.json({ event: formatted });
   } catch (err) {
@@ -434,6 +468,7 @@ export async function addMiniEventCollaborator(req, res, next) {
     }
 
     await addAcceptedCollaboratorId(id, collaboratorId);
+    await invalidateMiniEventsCache();
     const formatted = await hydrateFullMiniEvent(event);
     return res.json({ event: formatted });
   } catch (err) {
@@ -557,6 +592,7 @@ export async function declineMiniEventCollab(req, res, next) {
       return res.status(404).json({ error: 'Collaboration request not found.' });
     }
 
+    await invalidateMiniEventsCache();
     const formatted = await hydrateFullMiniEvent(event);
     return res.json({ event: formatted });
   } catch (err) {

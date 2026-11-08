@@ -74,6 +74,31 @@ export async function GET(req: NextRequest) {
     const rangeHeader = req.headers.get("range");
 
     if (!isDownload && rangeHeader && totalSize > 0) {
+      // Stream directly via upstream downloadUrl if available to avoid buffering in serverless memory
+      const directDownloadUrl = (result.blob as { downloadUrl?: string })?.downloadUrl;
+      if (directDownloadUrl) {
+        try {
+          const upstream = await fetch(directDownloadUrl, {
+            headers: { Range: rangeHeader },
+          });
+          if ((upstream.ok || upstream.status === 206) && upstream.body) {
+            const streamHeaders: Record<string, string> = {
+              "Content-Type": upstream.headers.get("content-type") || result.blob.contentType || "application/octet-stream",
+              "Cache-Control": "public, max-age=31536000, immutable",
+              "Accept-Ranges": "bytes",
+            };
+            const uLen = upstream.headers.get("content-length");
+            if (uLen) streamHeaders["Content-Length"] = uLen;
+            const cRange = upstream.headers.get("content-range");
+            if (cRange) streamHeaders["Content-Range"] = cRange;
+            return new NextResponse(upstream.body, {
+              status: upstream.status,
+              headers: streamHeaders,
+            });
+          }
+        } catch {}
+      }
+
       const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
       if (match) {
         const fullBuffer = new Uint8Array(await new Response(result.stream as ReadableStream).arrayBuffer());

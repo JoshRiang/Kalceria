@@ -44,7 +44,7 @@ import {
   EVENT_CARD_BG_LIGHT,
   preloadAllMapBackgrounds,
 } from "@/lib/mapBgCache";
-import { prewarmVideoBatch } from "@/lib/videoPrewarmer";
+import { prewarmVideoBatch, sortItemsByProximity } from "@/lib/videoPrewarmer";
 
 const SnapMap = dynamic(() => import("@/components/SnapMap"), {
   ssr: false,
@@ -275,21 +275,33 @@ export default function MapPage() {
         syncCollabStateFromServer(mergedEvents, eventMeta?.requestedEventId ?? null);
         setIsDataLoading(false);
 
-        // Pre-warm event clips and profile video covers in background for ~0 latency
+        // Pre-warm event clips and profile video covers prioritized by geographic proximity
+        const centerCoords =
+          selfLiveCoords?.lat && selfLiveCoords?.lng
+            ? selfLiveCoords
+            : currentUser?.domicileLat && currentUser?.domicileLng
+            ? { lat: Number(currentUser.domicileLat), lng: Number(currentUser.domicileLng) }
+            : null;
+
         const videoUrls = [];
-        mergedEvents.forEach((ev) => {
+        if (currentUser?.coverImage && currentUser?.coverType === "video") {
+          videoUrls.push(currentUser.coverImage);
+        }
+
+        const sortedEvents = sortItemsByProximity(mergedEvents, centerCoords);
+        sortedEvents.forEach((ev) => {
           if (ev.mediaUrl) {
             splitMediaUrlListClient(ev.mediaUrl).forEach((u) => videoUrls.push(u));
           }
         });
-        (kals || []).forEach((u) => {
+
+        const sortedKals = sortItemsByProximity(kals || [], centerCoords);
+        sortedKals.forEach((u) => {
           if (u.coverImage && (u.coverType === "video" || u.coverImage.includes(".mp4") || u.coverImage.includes("/api/blob/raw"))) {
             videoUrls.push(u.coverImage);
           }
         });
-        if (currentUser?.coverImage && currentUser?.coverType === "video") {
-          videoUrls.push(currentUser.coverImage);
-        }
+
         prewarmVideoBatch(videoUrls);
       } catch (err) {
         console.error("[Map] fetch error", err);
