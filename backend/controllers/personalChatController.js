@@ -1,120 +1,34 @@
 import crypto from 'node:crypto';
 import { redis } from '../lib/redis.js';
 import prisma from '../lib/prisma.js';
+import {
+  MAX_CIPHERTEXT_LENGTH,
+  HOT_RING_BUFFER_SIZE,
+  COLD_ARCHIVE_MAX_SIZE,
+  HOT_TTL_SECONDS,
+  COLD_TTL_SECONDS,
+  NONCE_TTL_SECONDS,
+  unwrapPipeResult,
+  sanitizeTargetId,
+  getConversationHash,
+  getMetaConversationKey,
+  getChatRtcSignalKey,
+  packEnvelope,
+  unpackEnvelope,
+  sendChatRtcSignal,
+  getChatRtcSignals,
+  sendCallSignal,
+  getCallSignals,
+  clearCallSignals,
+} from './personalChat/index.js';
 
-const MAX_CIPHERTEXT_LENGTH = 400000;
-const HOT_RING_BUFFER_SIZE = 50; // Hot tier: latest 50 messages in fast Redis list
-const COLD_ARCHIVE_MAX_SIZE = 500; // Cold overflow tier for older history pages
-const HOT_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days hot cache TTL (backed by permanent PostgreSQL)
-const COLD_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days cold archive TTL
-const NONCE_TTL_SECONDS = 10 * 60; // 10 minutes anti-replay window
-const CALL_LOCK_TTL_SECONDS = 60; // 60s single-call concurrency lock TTL
-const CALL_SIGNAL_TTL_SECONDS = 60; // 60s ephemeral WebRTC signaling TTL
-const CHAT_RTC_TTL_SECONDS = 45; // 45s ephemeral P2P DataChannel signaling TTL
-
-function unwrapPipeResult(tuple, onErrFallback = null) {
-  if (!Array.isArray(tuple) || tuple[0]) return onErrFallback;
-  return tuple[1];
-}
-
-function sanitizeTargetId(raw) {
-  if (!raw || typeof raw !== 'string') return null;
-  const trimmed = raw.trim();
-  if (!trimmed || trimmed.length > 128) return null;
-  if (!/^[a-zA-Z0-9_@.-]+$/.test(trimmed)) return null;
-  return trimmed;
-}
-
-function getConversationHash(userA, userB) {
-  const sorted = [String(userA), String(userB)].sort();
-  return crypto
-    .createHash('sha256')
-    .update(`kalceria_e2ee_conv:${sorted[0]}:${sorted[1]}`)
-    .digest('hex')
-    .slice(0, 40);
-}
-
-function getHotConversationKey(userA, userB) {
-  return `chat:conv:${getConversationHash(userA, userB)}`;
-}
-
-function getColdConversationKey(userA, userB) {
-  return `chat:cold:${getConversationHash(userA, userB)}`;
-}
-
-function getMetaConversationKey(convHash) {
-  return `chat:meta:${convHash}`;
-}
-
-function getChatRtcSignalKey(recipientId, senderId) {
-  return `chat:rtc:${recipientId}:${senderId}`;
-}
-
-// Compact storage representation (~42% smaller in Redis RAM)
-function packEnvelope(env) {
-  const compact = {
-    i: env.id,
-    s: env.senderId,
-    r: env.recipientId,
-    v: env.iv,
-    c: env.ciphertext,
-    g: env.sig,
-    n: env.nonce,
-    t: env.msgType || 'text',
-    u: env.ts,
-    st: env.status || 'sent',
-  };
-  if (env.mediaUrl) compact.m = env.mediaUrl;
-  if (env.voiceDuration) compact.d = env.voiceDuration;
-  if (Array.isArray(env.voiceWaveform) && env.voiceWaveform.length > 0) compact.w = env.voiceWaveform;
-  if (env.videoDuration) compact.vd = env.videoDuration;
-  if (env.isViewOnce) compact.vo = 1;
-  if (env.isOnceOpened) compact.oo = 1;
-  if (env.callMode) compact.cm = env.callMode;
-  if (env.callDuration !== undefined && env.callDuration !== null) compact.cd = Number(env.callDuration) || 0;
-  return JSON.stringify(compact);
-}
-
-// Restores compact or legacy JSON record to full client E2EE envelope
-function unpackEnvelope(raw) {
-  if (!raw) return null;
-  try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (!parsed || typeof parsed !== 'object') return null;
-    if (parsed.ciphertext && parsed.id) {
-      return {
-        ...parsed,
-        status: parsed.status || 'sent',
-      };
-    }
-    if (parsed.c && parsed.i) {
-      return {
-        id: parsed.i,
-        senderId: parsed.s,
-        recipientId: parsed.r,
-        alg: 'AES-256-GCM',
-        iv: parsed.v,
-        ciphertext: parsed.c,
-        sig: parsed.g,
-        nonce: parsed.n,
-        msgType: parsed.t || 'text',
-        mediaUrl: parsed.m || null,
-        voiceDuration: parsed.d || null,
-        voiceWaveform: parsed.w || null,
-        videoDuration: parsed.vd || null,
-        isViewOnce: Boolean(parsed.vo),
-        isOnceOpened: Boolean(parsed.oo),
-        callMode: parsed.cm || null,
-        callDuration: parsed.cd !== undefined && parsed.cd !== null ? Number(parsed.cd) : null,
-        ts: Number(parsed.u) || Date.now(),
-        status: parsed.st || 'sent',
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+export {
+  sendChatRtcSignal,
+  getChatRtcSignals,
+  sendCallSignal,
+  getCallSignals,
+  clearCallSignals,
+};
 
 export async function getPersonalChatMessages(req, res, next) {
   try {
@@ -660,83 +574,6 @@ export async function getPersonalChatInboxSummary(req, res, next) {
   }
 }
 
-export async function sendChatRtcSignal(req, res, next) {
-  try {
-    const userId = req.user?.userId || req.user?.id;
-    const targetId = sanitizeTargetId(req.params?.targetId);
-    if (!userId || !targetId || String(userId) === String(targetId)) {
-      return res.status(400).json({ error: 'Invalid chat RTC target.' });
-    }
-
-    const { signalType, encryptedPayload, payload, sessionId } = req.body || {};
-    const rawSignalPayload = typeof encryptedPayload === 'string' ? encryptedPayload : payload;
-    const validTypes = ['rtc-offer', 'rtc-answer', 'rtc-ice', 'rtc-renegotiate'];
-    if (!validTypes.includes(signalType) || typeof rawSignalPayload !== 'string' || rawSignalPayload.length > 24000) {
-      return res.status(400).json({ error: 'Invalid chat RTC signal.' });
-    }
-
-    const rtcKey = getChatRtcSignalKey(targetId, userId);
-    const packet = JSON.stringify({
-      fromUserId: String(userId),
-      toUserId: String(targetId),
-      sessionId: typeof sessionId === 'string' ? sessionId.slice(0, 48) : null,
-      signalType,
-      payload: rawSignalPayload,
-      ts: Date.now(),
-    });
-
-    const pipe = redis.pipeline();
-    pipe.sismember(`blocked:${userId}`, targetId);
-    pipe.sismember(`blocked:${targetId}`, userId);
-    const blockRes = await pipe.exec().catch(() => null);
-    if (Number(unwrapPipeResult(blockRes?.[0], 0)) || Number(unwrapPipeResult(blockRes?.[1], 0))) {
-      return res.status(403).json({ error: 'Blocked user.' });
-    }
-
-    const writePipe = redis.pipeline();
-    writePipe.lpush(rtcKey, packet);
-    writePipe.ltrim(rtcKey, 0, 39);
-    writePipe.expire(rtcKey, CHAT_RTC_TTL_SECONDS);
-    await writePipe.exec().catch(() => {});
-
-    res.json({ ok: true });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function getChatRtcSignals(req, res, next) {
-  try {
-    const userId = req.user?.userId || req.user?.id;
-    const targetId = sanitizeTargetId(req.params?.targetId);
-    if (!userId || !targetId) {
-      return res.status(400).json({ error: 'Invalid chat RTC target.' });
-    }
-
-    const rtcKey = getChatRtcSignalKey(userId, targetId);
-    const pipe = redis.pipeline();
-    pipe.lrange(rtcKey, 0, -1);
-    pipe.del(rtcKey);
-    const pipeRes = await pipe.exec().catch(() => null);
-    const rawList = unwrapPipeResult(pipeRes?.[0], []);
-
-    const signals = (Array.isArray(rawList) ? rawList : [])
-      .map((item) => {
-        try {
-          return typeof item === 'string' ? JSON.parse(item) : item;
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean)
-      .reverse();
-
-    res.json({ ok: true, signals });
-  } catch (err) {
-    next(err);
-  }
-}
-
 export async function deletePersonalChatMessages(req, res, next) {
   try {
     const userId = req.user?.userId || req.user?.id;
@@ -813,186 +650,6 @@ export async function deletePersonalChatMessages(req, res, next) {
     }
 
     res.json({ ok: true });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function sendCallSignal(req, res, next) {
-  try {
-    const userId = req.user?.userId || req.user?.id;
-    const targetId = sanitizeTargetId(req.params?.targetId);
-    if (!userId || !targetId) {
-      return res.status(400).json({ error: 'Invalid call target.' });
-    }
-
-    const { callId, callMode, signalType, encryptedPayload, nonce, sig } = req.body || {};
-    const validSignalTypes = ['offer', 'answer', 'ice', 'ringing', 'hangup', 'cam_state'];
-    if (!validSignalTypes.includes(signalType) || !nonce || typeof nonce !== 'string') {
-      return res.status(400).json({ error: 'Invalid E2EE call signal.' });
-    }
-
-    const safeCallId = typeof callId === 'string' && callId.trim()
-      ? callId.trim().slice(0, 64)
-      : `call_${Date.now()}`;
-
-    const nonceKey = `call:nonce:${nonce.slice(0, 96)}`;
-    const callerLockKey = `call:lock:${userId}`;
-    const targetLockKey = `call:lock:${targetId}`;
-    const signalKey = `chat:call:${targetId}`;
-
-    const checkLockNeeded =
-      signalType === 'offer' || signalType === 'ringing' || signalType === 'answer';
-
-    const prePipe = redis.pipeline();
-    prePipe.set(nonceKey, '1', 'EX', 120, 'NX');
-    if (checkLockNeeded) {
-      prePipe.get(targetLockKey);
-    }
-    const preRes = await prePipe.exec().catch(() => null);
-    const nonceReply = preRes ? unwrapPipeResult(preRes[0], 'OK') : 'OK';
-    const existingTargetLock = checkLockNeeded ? unwrapPipeResult(preRes?.[1], null) : null;
-
-    if (nonceReply !== 'OK') {
-      return res.status(409).json({ error: 'Duplicate call signal nonce rejected.' });
-    }
-
-    const packet = {
-      callId: safeCallId,
-      fromUserId: String(userId),
-      toUserId: String(targetId),
-      callMode: callMode === 'video' ? 'video' : 'voice',
-      signalType,
-      encryptedPayload: typeof encryptedPayload === 'string' ? encryptedPayload.slice(0, 16000) : null,
-      sig: typeof sig === 'string' ? sig.slice(0, 256) : null,
-      ts: Date.now(),
-    };
-
-    // If callee intentionally set status to Offline (Stealth Mode), naturally do not deliver incoming call offers
-    if (signalType === 'offer') {
-      const calleeRecord = await prisma.user
-        .findUnique({
-          where: { id: String(targetId) },
-          select: { allowLiveLocation: true },
-        })
-        .catch(() => null);
-      if (calleeRecord && calleeRecord.allowLiveLocation === false) {
-        return res.json({ ok: true, packet });
-      }
-    }
-
-    const sigPipe = redis.pipeline();
-
-    // Single-Call Concurrency Lock enforcement (prevents call flooding & multiple simultaneous calls)
-    if (signalType === 'hangup') {
-      sigPipe.del(callerLockKey);
-      sigPipe.del(targetLockKey);
-      sigPipe.del(signalKey);
-      // Push the hangup packet so the peer device immediately receives the hangup signal on its next poll
-      sigPipe.lpush(signalKey, JSON.stringify(packet));
-      sigPipe.expire(signalKey, 30);
-      await sigPipe.exec().catch(() => {});
-      return res.json({ ok: true, packet });
-    }
-
-    if (checkLockNeeded) {
-      if (existingTargetLock) {
-        try {
-          const parsedLock = JSON.parse(existingTargetLock);
-          const isSameCall = parsedLock.callId === safeCallId;
-          const isSamePeer =
-            (String(parsedLock.callerId) === String(userId) && String(parsedLock.calleeId) === String(targetId)) ||
-            (String(parsedLock.callerId) === String(targetId) && String(parsedLock.calleeId) === String(userId));
-          if (!isSameCall && !isSamePeer) {
-            return res.status(409).json({
-              ok: false,
-              busy: true,
-              error: 'User is currently in another call.',
-            });
-          }
-        } catch {}
-      }
-
-      const lockPayload = JSON.stringify({
-        callId: safeCallId,
-        callerId: String(userId),
-        calleeId: String(targetId),
-        mode: callMode === 'video' ? 'video' : 'voice',
-        ts: Date.now(),
-      });
-      sigPipe.set(callerLockKey, lockPayload, 'EX', CALL_LOCK_TTL_SECONDS);
-      sigPipe.set(targetLockKey, lockPayload, 'EX', CALL_LOCK_TTL_SECONDS);
-    }
-
-    sigPipe.lpush(signalKey, JSON.stringify(packet));
-    sigPipe.ltrim(signalKey, 0, 49);
-    sigPipe.expire(signalKey, CALL_SIGNAL_TTL_SECONDS);
-    await sigPipe.exec().catch(() => {});
-
-    res.json({ ok: true, packet });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function getCallSignals(req, res, next) {
-  try {
-    const userId = req.user?.userId || req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const signalKey = `chat:call:${userId}`;
-    const targetLockKey = `call:lock:${userId}`;
-    const shouldClear = req.query?.clear === 'true';
-
-    const pipe = redis.pipeline();
-    pipe.lrange(signalKey, 0, -1);
-    pipe.get(targetLockKey);
-    if (shouldClear) {
-      pipe.del(signalKey);
-    }
-    const pipeRes = await pipe.exec().catch(() => null);
-    const rawSignals = unwrapPipeResult(pipeRes?.[0], []);
-    const activeLockRaw = unwrapPipeResult(pipeRes?.[1], null);
-
-    const signals = (Array.isArray(rawSignals) ? rawSignals : [])
-      .map((item) => {
-        try {
-          return typeof item === 'string' ? JSON.parse(item) : item;
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean)
-      .reverse();
-
-    let activeLock = null;
-    if (activeLockRaw) {
-      try {
-        activeLock = JSON.parse(activeLockRaw);
-      } catch {}
-    }
-
-    res.json({
-      ok: true,
-      signals,
-      activeLock,
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function clearCallSignals(req, res, next) {
-  try {
-    const userId = req.user?.userId || req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const signalKey = `chat:call:${userId}`;
-    await redis.del(signalKey).catch(() => {});
-    res.json({ ok: true, cleared: true });
   } catch (err) {
     next(err);
   }
