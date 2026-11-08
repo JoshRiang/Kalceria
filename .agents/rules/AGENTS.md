@@ -1,22 +1,24 @@
 # AGENTS.MD — THE ONE-SHOT FRONTIER PROTOCOL (KALCERIA CORE)
 **Target Execution Level**: Claude Opus 5.5 / Sonnet 5.5 & Gemini 4 Argon Tier  
-**Fundamental Doctrine**: ONE-SHOT COMPLETION. Eksekusi liar, terburu-buru, reaktif, dan pola trial-and-error adalah PELANGGARAN FATAL ("OUT").
+**Fundamental Doctrine**: ONE-SHOT COMPLETION. Eksekusi liar, terburu-buru, reaktif, dan pola trial-and-error adalah PELANGGARAN FATAL ("OUT"). Dilarang goblok, dilarang ceroboh, dilarang nambal sulam!
 
 ---
 
 ## 1. Patologi yang Dilarang Keras (The "Rushed & Reckless" Anti-Patterns)
-Setiap agen yang terburu-buru akan langsung dieliminasi jika melakukan:
-1. **Incremental Patching (Nambal Sulam)**:
+Setiap agen yang terburu-buru akan langsung dieliminasi ("OUT") tanpa kompromi jika melakukan:
+1. **Incremental Patching (Nambal Sulam Tolol)**:
    - Mengedit 1 file, melihat error, mengedit file ke-2, melihat error lagi, dst.
-   - *Standar One-Shot*: Pahami seluruh graf ketergantungan (dependency graph) terlebih dahulu, petakan semua file yang terdampak, lalu ubah secara sinkron dan utuh dalam satu putaran.
-2. **Guess & Check / Hallucinated Signatures**:
-   - Menebak nama prop, signature controller, atau skema return tanpa membaca file aslinya terlebih dahulu.
-   - Wajib membaca kode target dan semua pemanggilnya (consumers) sebelum menulis implementasi.
+   - *Standar One-Shot*: Pahami seluruh graf ketergantungan (dependency graph) terlebih dahulu, petakan semua file yang terdampak, lalu ubah secara sinkron dan utuh dalam satu putaran bersih.
+2. **Guess & Check / Hallucinated Signatures (Asal Tebak / Halusinasi)**:
+   - Memanggil fungsi atau prop tanpa import yang nyata (e.g. memanggil `inferIsVideoMediaUrl` tanpa import hingga bikin Error Boundary meledak).
+   - Wajib membaca kode target dan semua pemanggilnya (*consumers*) sebelum menulis implementasi.
 3. **Premature Hand-Off / Laporan Palsu**:
-   - Memberi tahu pengguna "sedang berjalan", "sudah selesai", atau "hampir siap" padahal build/test belum terbukti 100% lulus secara diam-diam (silent verification).
+   - Memberi tahu pengguna "sedang berjalan", "sudah selesai", atau "hampir siap" padahal build/test belum terbukti 100% lulus secara diam-diam (*silent verification*).
    - Jangan pernah menggantung perintah di latar belakang tanpa timeout terukur.
 4. **Symptomatic Band-Aids**:
    - Menggunakan `setTimeout(..., 500)`, `!important` berantai, `try-catch` kosong, atau mock palsu untuk menyembunyikan kegagalan logika fundamental.
+5. **Deployment Buta (Blind Deployment Disaster)**:
+   - DILARANG KERAS menjalankan `cd backend; npx vercel`! Vercel backend project sudah memiliki setting `Root Directory: backend`. Masuk ke folder `backend/` lalu deploy akan mengunggah folder kosong `backend/backend` yang menghancurkan seluruh routing API ke status 404!
 
 ---
 
@@ -59,7 +61,7 @@ Sebelum memanggil alat edit/write apa pun:
 2. Identifikasi potensi **Race Condition**:
    - Sinkronisasi manipulasi imperatif DOM (Leaflet popups, canvas 60fps) dengan siklus hidup deklaratif React.
    - Penumpukan history browser (`popstate` / `history.back()`) pada modal bertingkat.
-   - Tabrakan penulisan konkuren (concurrent writes) pada Redis atau Vercel Blob.
+   - Tabrakan penulisan konkuren (*concurrent writes*) pada Redis atau Vercel Blob.
 
 ### Tahap 2: Mental Dry-Run (Simulasi Multi-Environment)
 Uji rancangan kode di kepala terhadap 4 skenario kritis:
@@ -90,7 +92,7 @@ Sebelum mengeluarkan kata "sudah" atau melapor ke user, jalankan pipeline valida
    ```
 3. **Automated Unit & Regression Suites**:
    ```powershell
-   npm --prefix backend test
+   node --test backend/tests/ingress_security_defense.test.mjs backend/tests/event_media_clips.test.mjs backend/tests/google_oauth_and_city_resolution.test.mjs backend/tests/service_location_validation.test.mjs
    ```
    *(Wajib 100% pass: ingress defense, spatial validation, media clips, oauth, event store).*
 4. **Next.js Production Build Gate**:
@@ -98,9 +100,26 @@ Sebelum mengeluarkan kata "sudah" atau melapor ke user, jalankan pipeline valida
    npm --prefix frontend run build
    ```
 5. **Deployment & Live Smoke Probe (Jika Deploying)**:
-   - Deploy backend HANYA dari root dengan credentials dari `backend/.vercel/project.json`.
-   - Probe endpoint `/api/health` sebelum mempromosikan build ke production.
-   - Verifikasi status HTTP 200 OK via native `curl.exe` (bukan PowerShell web-request yang rentan hang).
+   - Deploy backend HANYA dari root dengan credentials dari `backend/.vercel/project.json` (JANGAN PERNAH `cd backend`!):
+     ```powershell
+     $beProj = Get-Content backend\.vercel\project.json | ConvertFrom-Json
+     $env:VERCEL_ORG_ID = $beProj.orgId
+     $env:VERCEL_PROJECT_ID = $beProj.projectId
+     npx vercel --prod --yes
+     ```
+   - Deploy frontend dari root:
+     ```powershell
+     $feProj = Get-Content .vercel\project.json | ConvertFrom-Json
+     $env:VERCEL_ORG_ID = $feProj.orgId
+     $env:VERCEL_PROJECT_ID = $feProj.projectId
+     npx vercel --prod --yes
+     ```
+   - Verifikasi status live via native `curl.exe` (Wajib lulus ketiganya):
+     1. `curl.exe -i -s https://api.kalceria.id/api/health` ➔ WAJIB HTTP 200 OK + `db:connected, redis:PONG`.
+     2. `curl.exe -i -s https://www.kalceria.id/api/auth/csrf` ➔ WAJIB HTTP 200 OK + valid csrfToken.
+     3. `curl.exe -i -s https://www.kalceria.id/api/users/me` ➔ WAJIB HTTP 401 Unauthorized (bukan 404!).
+     4. `curl.exe -I -s https://www.kalceria.id/` ➔ WAJIB HTTP 200 OK.
+     5. `curl.exe -I -s https://www.kalceria.id/map` ➔ WAJIB HTTP 200 OK.
 
 ---
 
@@ -120,6 +139,7 @@ Sebelum mengeluarkan kata "sudah" atau melapor ke user, jalankan pipeline valida
 Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyatakan "OUT":
 - Mengeluarkan sintaks error atau import patah yang tidak terdeteksi sebelum melapor.
 - Menerapkan mock dangkal alih-alih hardware/storage pipeline riil.
+- Menjalankan `cd backend; npx vercel` yang membunuh API production.
 - Butuh perulangan lebih dari 2 kali untuk memperbaiki bug yang sama karena kegagalan analisis di awal.
 - Merusak orientasi layar HP atau memicu regresi pada fitur yang sebelumnya stabil di older commits.
 - Menulis kode monolitik yang melanggar prinsip modularitas.

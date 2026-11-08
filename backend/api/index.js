@@ -62,7 +62,7 @@ app.use(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 100
 app.use(csrfProtection);
 
 // ─── Health ───────────────────────────────────────────────────────────────────
-app.get(["/health", "/api/health"], async (_req, res) => {
+app.get("/api/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     const redisPing = await redis.ping();
@@ -81,8 +81,8 @@ app.get(["/health", "/api/health"], async (_req, res) => {
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use(["/", "/api"], globalPayloadDefense);
-app.use(["/", "/api"], router);
+app.use("/api", globalPayloadDefense);
+app.use("/api", router);
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {
