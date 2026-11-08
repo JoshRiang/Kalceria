@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toSmartTitleCase } from "@/lib/titleCase";
 import { LocationAutocomplete } from "@/components/service-request/LocationAutocomplete";
@@ -29,13 +29,27 @@ export function EventFormModal({
   onPromptDeleteConfirm,
 }) {
   const [isLocationVerified, setIsLocationVerified] = useState(false);
+  const [formError, setFormError] = useState(null);
   useModalBackClose(Boolean(show), onClose);
+
+  useEffect(() => {
+    setFormError(null);
+  }, [eventForm.title, eventForm.description, eventForm.location]);
+
+  const isDescriptionValid = Boolean(
+    (eventForm.description || "").trim() &&
+    (eventForm.description || "").length <= 240
+  );
+  const isTitleValid = Boolean(
+    (eventForm.title || "").trim() &&
+    (eventForm.title || "").length <= 80
+  );
 
   const isEventFormValid = Boolean(
     (eventForm.category || "cafe").trim() &&
-    (eventForm.title || "").trim() &&
+    isTitleValid &&
     (eventForm.location || "").trim() &&
-    (eventForm.description || "").trim()
+    isDescriptionValid
   );
 
   const isEditing = Boolean(editingEventId || activeOwnEvent);
@@ -113,12 +127,26 @@ export function EventFormModal({
 
         {/* Form */}
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setFormError(null);
             if (!isEventFormValid) {
-              e.preventDefault();
+              if ((eventForm.description || "").length > 240) {
+                setFormError("Batas maksimal 240 karakter untuk briefing.");
+              } else if ((eventForm.title || "").length > 80) {
+                setFormError("Batas maksimal 80 karakter untuk judul event.");
+              }
               return;
             }
-            saveMiniEvent(e);
+            try {
+              await saveMiniEvent(e);
+            } catch (err) {
+              const msg =
+                err?.response?.data?.error ||
+                err?.message ||
+                "Failed to save mini event.";
+              setFormError(msg);
+            }
           }}
           className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3 sm:gap-4 custom-scrollbar"
         >
@@ -181,34 +209,50 @@ export function EventFormModal({
 
           {/* Event Title */}
           <div className="flex flex-col gap-1.5 sm:gap-2">
-            <label
-              className={`text-[11px] sm:text-xs font-semibold tracking-wider ${
-                isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-              }`}
-            >
-              Event Title <span className="text-[#ef4444]">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label
+                className={`text-[11px] sm:text-xs font-semibold tracking-wider ${
+                  isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                }`}
+              >
+                Event Title <span className="text-[#ef4444]">*</span>
+              </label>
+              <span
+                style={{ fontFamily: "Arial, sans-serif" }}
+                className={`text-[10.5px] ${(eventForm.title || "").length >= 80 ? "text-red-500 font-bold" : "text-neutral-400"}`}
+              >
+                {(eventForm.title || "").length}/80
+              </span>
+            </div>
             <input
+              maxLength={80}
               className={`w-full border rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm outline-none transition-all ${
-                isModalDark
+                (eventForm.title || "").length >= 80
+                  ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  : isModalDark
                   ? "bg-[#0a0c10]/92 border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
                   : "bg-[#f6f8fa]/95 border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
               }`}
-              value={eventForm.title}
+              value={eventForm.title || ""}
               onChange={(e) =>
                 setEventForm((f) => ({
                   ...f,
-                  title: toSmartTitleCase(e.target.value, { preserveSpaces: true }),
+                  title: toSmartTitleCase(e.target.value.slice(0, 80), { preserveSpaces: true }),
                 }))
               }
               onBlur={() =>
                 setEventForm((f) => ({
                   ...f,
-                  title: toSmartTitleCase(f.title || "", { preserveSpaces: false }),
+                  title: toSmartTitleCase((f.title || "").slice(0, 80), { preserveSpaces: false }),
                 }))
               }
               placeholder="Nongs FM Sini"
             />
+            {(eventForm.title || "").length >= 80 && (
+              <p className="text-[10px] text-red-500 mt-1 font-sans">
+                Batas maksimal 80 karakter
+              </p>
+            )}
           </div>
 
           {/* Location & Venue Segment (Modularized from LocationAutocomplete) */}
@@ -234,25 +278,41 @@ export function EventFormModal({
 
           {/* Briefing */}
           <div className="flex flex-col gap-1.5 sm:gap-2">
-            <label
-              className={`text-[11px] sm:text-xs font-semibold tracking-wider ${
-                isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-              }`}
-            >
-              Briefing <span className="text-[#ef4444]">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label
+                className={`text-[11px] sm:text-xs font-semibold tracking-wider ${
+                  isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                }`}
+              >
+                Briefing <span className="text-[#ef4444]">*</span>
+              </label>
+              <span
+                style={{ fontFamily: "Arial, sans-serif" }}
+                className={`text-[10.5px] ${(eventForm.description || "").length >= 240 ? "text-red-500 font-bold" : "text-neutral-400"}`}
+              >
+                {(eventForm.description || "").length}/240
+              </span>
+            </div>
             <textarea
+              maxLength={240}
               className={`w-full border rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm outline-none min-h-[75px] sm:min-h-[100px] resize-y transition-all ${
-                isModalDark
+                (eventForm.description || "").length >= 240
+                  ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  : isModalDark
                   ? "bg-[#0a0c10]/92 border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
                   : "bg-[#f6f8fa]/95 border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
               }`}
-              value={eventForm.description}
+              value={eventForm.description || ""}
               onChange={(e) =>
-                setEventForm((f) => ({ ...f, description: e.target.value }))
+                setEventForm((f) => ({ ...f, description: e.target.value.slice(0, 240) }))
               }
               placeholder="Agenda details"
             />
+            {(eventForm.description || "").length >= 240 && (
+              <p className="text-[10px] text-red-500 mt-1 font-sans">
+                Batas maksimal 240 karakter
+              </p>
+            )}
           </div>
 
           {/* Video / GIF Live Feed Attachment */}
@@ -265,6 +325,11 @@ export function EventFormModal({
           />
 
           {/* Action Buttons */}
+          {formError && (
+            <p className="text-[10px] text-red-500 mt-1 font-sans text-center">
+              {formError}
+            </p>
+          )}
           <EventFormActions
             isEditing={isEditing}
             onPromptDeleteConfirm={onPromptDeleteConfirm}

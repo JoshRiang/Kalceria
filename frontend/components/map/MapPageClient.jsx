@@ -956,7 +956,7 @@ export default function MapPage() {
       }
 
       if (eventIdToUpdate) {
-        const updatedRes = await putMiniEvent(eventIdToUpdate, payload).catch(() => null);
+        const updatedRes = await putMiniEvent(eventIdToUpdate, payload);
         const updatedEvent = updatedRes?.data?.event || updatedRes?.data || updatedRes;
         savedEventObj = cleanEventDesc({
           ...payload,
@@ -1003,7 +1003,10 @@ export default function MapPage() {
         }, 120);
       }
     } catch (err) {
-      setNotice(err.message || "Failed to save mini event.");
+      const errorMsg = err?.response?.data?.error || err?.message || "Failed to save mini event.";
+      setNotice(errorMsg);
+      setBusy(false);
+      throw err;
     }
     setBusy(false);
   }
