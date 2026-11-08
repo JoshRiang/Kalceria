@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { generateSafetyCode, generateCryptoNonce } from "@/lib/chatCrypto";
-import { postCallSignal, fetchCallSignals } from "@/lib/api";
+import { postCallSignal, fetchCallSignals, fetchLiveKitCallToken } from "@/lib/api";
 import { startOutgoingRingtone, stopCallRingtone } from "@/lib/soundEngine";
 import { RTC_CONFIG } from "./callHelpers";
 
@@ -33,6 +33,7 @@ export function useCallSession({
   const isHungUpRef = useRef(false);
   const statusRef = useRef(status);
   const camMountSyncedRef = useRef(false);
+  const livekitSessionRef = useRef(null);
   statusRef.current = status;
 
   const hardwareRef = useRef(hardware);
@@ -71,6 +72,7 @@ export function useCallSession({
 
     hardwareRef.current?.teardownHardware?.();
     setIsRemoteCamOff(false);
+    livekitSessionRef.current = null;
   }, []);
 
   // Connected Call Timer
@@ -121,6 +123,12 @@ export function useCallSession({
       if (isIncomingAnswer && callId) {
         activeCallIdRef.current = callId;
       }
+
+      fetchLiveKitCallToken(targetUserId, { callId: activeCallIdRef.current }).then((res) => {
+        if (res?.livekitEnabled && !cancelled) {
+          livekitSessionRef.current = res;
+        }
+      }).catch(() => {});
 
       // 1. Safe Hardware Acquisition FIRST
       let stream = null;
@@ -297,6 +305,10 @@ export function useCallSession({
               signalType: "answer",
               nonce: generateCryptoNonce(),
               encryptedPayload: JSON.stringify(answer),
+            }).then((res) => {
+              if (res?.livekit && !cancelled) {
+                livekitSessionRef.current = res.livekit;
+              }
             }).catch(() => {});
 
             if (hardwareRef.current.isCamOffRef.current && mode === "video") {
@@ -331,6 +343,10 @@ export function useCallSession({
           signalType: "offer",
           nonce: generateCryptoNonce(),
           encryptedPayload: offerSdpString || btoa(JSON.stringify({ sdpType: "e2ee_offer", mode, ts: Date.now() })),
+        }).then((res) => {
+          if (res?.livekit && !cancelled) {
+            livekitSessionRef.current = res.livekit;
+          }
         }).catch(() => {});
 
         // Transition from Calling to Ringing once offer is dispatched
@@ -351,6 +367,10 @@ export function useCallSession({
 
           for (const sig of signals) {
             if (sig.callId && sig.callId !== activeCallIdRef.current) continue;
+
+            if (sig.livekit && !cancelled) {
+              livekitSessionRef.current = sig.livekit;
+            }
 
             if (sig.signalType === "hangup") {
               stopCallRingtone();
@@ -532,5 +552,6 @@ export function useCallSession({
     setShowSafetyTooltip,
     handleHangup,
     teardownCall,
+    livekitSession: livekitSessionRef.current,
   };
 }

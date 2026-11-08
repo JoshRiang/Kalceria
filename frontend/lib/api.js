@@ -190,6 +190,8 @@ export const deletePersonalChatMessages = (targetId, payload) => api.delete(`/ma
 export const postCallSignal = (targetId, payload) => api.post(`/map/call/${targetId}/signal`, payload).then(r => r.data);
 export const fetchCallSignals = (params = {}) => api.get('/map/call/signals', { params }).then(r => r.data || { ok: false, signals: [] }).catch(() => ({ ok: false, signals: [] }));
 export const clearCallSignals = () => api.delete('/map/call/signals').then(r => r.data || { ok: false }).catch(() => ({ ok: false }));
+export const fetchLiveKitCallToken = (targetId, params = {}) =>
+  api.get(`/map/call/${targetId}/livekit-token`, { params }).then(r => r.data || { ok: false }).catch(() => ({ ok: false }));
 export const postBroadcast = (message) => api.post('/broadcast', { message });
 export const putBroadcast = (message) => api.put('/broadcast', { message });
 export const delBroadcast = () => api.delete('/broadcast');

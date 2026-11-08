@@ -20,6 +20,8 @@ import {
   sendCallSignal,
   getCallSignals,
   clearCallSignals,
+  getLiveKitCallToken,
+  generateLiveKitToken,
 } from './personalChat/index.js';
 
 export {
@@ -28,6 +30,8 @@ export {
   sendCallSignal,
   getCallSignals,
   clearCallSignals,
+  getLiveKitCallToken,
+  generateLiveKitToken,
 };
 
 export async function getPersonalChatMessages(req, res, next) {

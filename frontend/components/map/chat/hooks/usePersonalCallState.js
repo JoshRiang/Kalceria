@@ -63,5 +63,6 @@ export function usePersonalCallState({
     remoteAudioRef: hardware.remoteAudioRef,
     remoteStreamRef: hardware.remoteStreamRef,
     handleHangup: session.handleHangup,
+    livekitSession: session.livekitSession,
   };
 }
