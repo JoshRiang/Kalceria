@@ -20,7 +20,31 @@ Setiap agen yang terburu-buru akan langsung dieliminasi jika melakukan:
 
 ---
 
-## 2. Siklus Eksekusi One-Shot (Wajib Dilalui Setiap Tugas)
+## 2. Hukum Anti-Regresi & Standar Best Practices (Core Mandates)
+
+### A. Zero Regression on Older Commits (Analisis Adalah Titik Berat)
+1. **Analisis Komparatif Sebelum Menyentuh Kode**:
+   - Jangan pernah mengubah logika yang sudah bekerja di commit sebelumnya (khususnya `BaselineNovember#2` dan commit-commit historis stabil).
+   - Analisis mendalam adalah titik berat: Teliti *mengapa* kode lama bekerja, apa asumsi dasarnya, parameter apa yang dipakai, dan pastikan fitur baru tidak merusak atau mengurangi kapabilitas yang sudah ada.
+2. **Preservasi Kontrak & Side-Effect Safety**:
+   - Jika melakukan refactoring, pastikan semua pemanggil lama (*callers*) tetap menerima signature dan perilaku yang identik tanpa degradasi UX.
+
+### B. Arsitektur Wajib Modular (Untuk Semua Kode Saat Ini & Masa Depan)
+1. **Single Responsibility Principle (SRP)**:
+   - Dilarang keras membuat komponen monolitik atau fungsi raksasa ("god objects").
+   - Kode baru dan masa depan WAJIB dipecah ke modul-modul independen dan terisolasi:
+     - Geometri, kalkulasi rasio, dan transformasi ➔ Helper modular (e.g. `popupGeometry.js`).
+     - Gesture, swipe, hold-to-pause, drag ➔ Helper interaksi modular (e.g. `popupGestures.js`).
+     - Hardware stream, constraints, MIME codec ➔ Modul hardware terpisah (e.g. `cameraConstraints.js`, `recordingMime.js`).
+     - Storage, persistence, Redis multi-clip ➔ Modul domain store (e.g. `eventMediaPersistence.js`).
+2. **Kerapian & Kepatuhan Standar Proyek (Clean Code)**:
+   - Ikuti konvensi penamaan, struktur direktori, dan pola arsitektur yang sudah ada di Kalceria.
+   - Bersihkan dead code, jangan tinggalkan comment hacking atau kode usang.
+   - Penanganan error harus eksplisit dan memberikan feedback terukur, bukan silent failure.
+
+---
+
+## 3. Siklus Eksekusi One-Shot (Wajib Dilalui Setiap Tugas)
 
 ### Tahap 0: Deep Architectural Pause & Full Dependency Trace
 Sebelum memanggil alat edit/write apa pun:
@@ -49,9 +73,8 @@ Uji rancangan kode di kepala terhadap 4 skenario kritis:
    - Pastikan elongasi dinamis mempertahankan proporsi elemen interior tanpa distorsi visual.
 
 ### Tahap 3: Unified, Decisive Implementation
-1. Tulis kode dengan struktur bersih, modular, dan terisolasi.
-2. Pisahkan logika kompleks ke helper modular (misal: `popupGeometry.js`, `popupGestures.js`, `cameraConstraints.js`, `recordingMime.js`, `eventMediaPersistence.js`).
-3. Pertahankan Kalceria Design DNA:
+1. Tulis kode dengan struktur bersih, modular, dan terisolasi sesuai standar Kalceria.
+2. Pertahankan Kalceria Design DNA:
    - Obsidian Black (`#0a0e27`), Deep Black (`#000000`), Neon Magenta (`#ff006e`), Golden Yellow (`#ffd60a`), Dark Gray (`#2a2d42`).
    - Sudut sharp-cut tajam, cyber grid motif, glassmorphism halus, dan GPU-accelerated motion (hanya `transform` & `opacity`).
 
@@ -81,7 +104,7 @@ Sebelum mengeluarkan kata "sudah" atau melapor ke user, jalankan pipeline valida
 
 ---
 
-## 3. Disiplin Keamanan & Git (Non-Negotiable)
+## 4. Disiplin Keamanan & Git (Non-Negotiable)
 1. **BaselineNovember#2 Adalah Sakral**:
    - Commit `6673153952b91b3053f5bead5863aad36fa9c80e` adalah Golden Baseline yang **BEKU**.
    - DILARANG KERAS checkout, rebase, merge, atau push ke `BaselineNovember#2`.
@@ -93,10 +116,11 @@ Sebelum mengeluarkan kata "sudah" atau melapor ke user, jalankan pipeline valida
 
 ---
 
-## 4. Failure Verdict ("OUT" Trigger)
+## 5. Failure Verdict ("OUT" Trigger)
 Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyatakan "OUT":
 - Mengeluarkan sintaks error atau import patah yang tidak terdeteksi sebelum melapor.
 - Menerapkan mock dangkal alih-alih hardware/storage pipeline riil.
 - Butuh perulangan lebih dari 2 kali untuk memperbaiki bug yang sama karena kegagalan analisis di awal.
-- Merusak orientasi layar HP atau memicu regresi pada fitur yang sebelumnya stabil.
+- Merusak orientasi layar HP atau memicu regresi pada fitur yang sebelumnya stabil di older commits.
+- Menulis kode monolitik yang melanggar prinsip modularitas.
 - Melanggar proteksi `BaselineNovember#2`.
