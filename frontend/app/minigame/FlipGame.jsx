@@ -10,7 +10,7 @@ import {
   FlipGameQuitModal,
   FlipGameSaveModal,
   FlipGameSubmittingOverlay,
-} from "./flipGame";
+} from "./flipGame/index";
 
 export default function FlipGame({ seed, onQuit, onFinish }) {
   const [cards, setCards] = useState(() => makeCards(`${seed}:opening`));

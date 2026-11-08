@@ -12,7 +12,7 @@ import { RegistrationsPanel } from './registrations';
 import { INITIAL_DUMMIES, ProductsPanel } from './products';
 import { SystemHealth } from './system';
 import { CommentsPanel } from './comments';
-import { BookingsPanel } from './bookings';
+import { BookingsPanel } from './bookings.jsx';
 import { EarningsPanel } from './earnings';
 import { UsersPanel } from './users';
 import { useHasMounted } from "@/hooks/useHasMounted";

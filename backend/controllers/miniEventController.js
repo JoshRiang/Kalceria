@@ -79,7 +79,9 @@ function formatMiniEvent(ev) {
 
   // 24-hour expiration check for individual media items (video & photos)
   const rawMediaStr = mediaMatch ? mediaMatch[1] : (ev.mediaUrl || "");
-  const rawMediaList = rawMediaStr ? rawMediaStr.split(",") : [];
+  const rawMediaList = rawMediaStr
+    ? rawMediaStr.split(/,\s*(?=(?:data:|https?:\/\/|\/))/i)
+    : [];
   const now = Date.now();
   const eventCreatedAtMs = ev.createdAt ? new Date(ev.createdAt).getTime() : now;
 
@@ -156,7 +158,7 @@ export async function createMiniEvent(req, res, next) {
     }
     if (mediaUrl && !description.includes("[MEDIA:")) {
       const stampedMedia = mediaUrl
-        .split(",")
+        .split(/,\s*(?=(?:data:|https?:\/\/|\/))/i)
         .map((u) => {
           const trimmed = u.trim();
           return trimmed.includes("|") ? trimmed : `${trimmed}|${Date.now()}`;
@@ -314,7 +316,7 @@ export async function updateMiniEvent(req, res, next) {
 
     if (mediaUrl && !description.includes("[MEDIA:")) {
       const stampedMedia = mediaUrl
-        .split(",")
+        .split(/,\s*(?=(?:data:|https?:\/\/|\/))/i)
         .map((u) => {
           const trimmed = u.trim();
           return trimmed.includes("|") ? trimmed : `${trimmed}|${Date.now()}`;
@@ -403,7 +405,7 @@ export async function addMiniEventMedia(req, res, next) {
 
     const now = Date.now();
     const newMediaStamped = rawMediaUrl
-      .split(",")
+      .split(/,\s*(?=(?:data:|https?:\/\/|\/))/i)
       .map((u) => {
         const trimmed = u.trim();
         return trimmed.includes("|") ? trimmed : `${trimmed}|${now}`;

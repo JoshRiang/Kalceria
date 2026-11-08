@@ -8,7 +8,7 @@ import {
   AcceptBookingModal,
   BookingCalendarView,
   BookingCardItem,
-} from "./bookings";
+} from "./bookings/index";
 
 export { AcceptBookingModal };
 

@@ -76,8 +76,13 @@ export function extractMediaList(item) {
     }
   }
 
-  // Strictly filter out any mock/dummy GIFs — never return fallback dummy media
-  return rawList.filter((u) => !isMockOrDummyMedia(u));
+  // Strictly strip internal |timestamp metadata and filter out mock/dummy media
+  return rawList
+    .map((u) => {
+      const s = String(u || "").trim();
+      return s.includes("|") ? s.split("|")[0].trim() : s;
+    })
+    .filter((u) => u && !isMockOrDummyMedia(u));
 }
 
 export function calculateUptime(createdAt) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { uploadBlobMedia } from "@/lib/api";
 import { PhotoCropEditorModal } from "./modals/PhotoCropEditorModal";
 import {
   resolvePersistentAvatarUrl,
@@ -130,6 +131,22 @@ export function EditProfileModal({
   const igValidation = validateInstagramInput(instagram);
   const isFormValid = Boolean(displayName.trim()) && waValidation.valid && igValidation.valid;
 
+  const ensureUploadedMedia = async (urlOrDataUrl, prefix) => {
+    if (!urlOrDataUrl || typeof urlOrDataUrl !== "string") return urlOrDataUrl;
+    if (!urlOrDataUrl.startsWith("data:")) return urlOrDataUrl;
+    try {
+      const res = await fetch(urlOrDataUrl);
+      const blob = await res.blob();
+      const rawExt = blob.type.includes("png") ? "png" : blob.type.includes("webp") ? "webp" : blob.type.includes("mp4") ? "mp4" : "jpg";
+      const file = new File([blob], `${prefix}-${Date.now()}.${rawExt}`, { type: blob.type });
+      const uploaded = await uploadBlobMedia(file);
+      return uploaded.url || urlOrDataUrl;
+    } catch (err) {
+      console.warn("Media upload failed, using fallback:", err);
+      return urlOrDataUrl;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid) return;
@@ -137,8 +154,16 @@ export function EditProfileModal({
     try {
       const cleanPhone = waValidation.normalized;
       const cleanIg = igValidation.normalized;
-      const finalCover = coverImage || defaultBaseColor;
-      const finalAvatar = profilePicture || resolvePersistentAvatarUrl(currentUser);
+      let finalCover = coverImage || defaultBaseColor;
+      let finalAvatar = profilePicture || resolvePersistentAvatarUrl(currentUser);
+
+      if (finalCover && finalCover.startsWith("data:")) {
+        finalCover = await ensureUploadedMedia(finalCover, "profile-cover");
+      }
+      if (finalAvatar && finalAvatar.startsWith("data:")) {
+        finalAvatar = await ensureUploadedMedia(finalAvatar, "profile-avatar");
+      }
+
       persistProfileIdentityCache(currentUser, {
         profilePicture: finalAvatar,
         coverImage: finalCover,
