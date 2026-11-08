@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 import {
@@ -28,6 +28,10 @@ export default function KalcerianProfileCard({
   inline = false,
 }) {
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.id, user?.coverImage, user?.coverUrl]);
   const displayName = user?.displayName || user?.name || user?.nickname || "Kalcerian";
   const rawUsername = user?.nickname || user?.username || (user?.name ? user.name.toLowerCase().replace(/\s+/g, '_') : "kalcerian");
   const cleanUsername = String(rawUsername).replace(/^@/, '');
@@ -119,12 +123,18 @@ export default function KalcerianProfileCard({
       style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}
     >
       {/* 1. Square 1:1 Cover Banner Background (Normalized Video, GIF, and Photo pipeline) */}
-      <div className="relative w-full aspect-square max-h-[250px] sm:max-h-[270px] mx-auto overflow-hidden bg-[#121624]">
+      <div className={`relative w-full aspect-square max-h-[250px] sm:max-h-[270px] mx-auto overflow-hidden ${
+        isMapDark ? "bg-[#0a0e27]" : "bg-[#f3f4f6]"
+      }`}>
         <NormalizedMediaCover
           media={normalizedMedia}
           altText={`${displayName} cover`}
           onError={() => setImgError(true)}
-          fallbackColor={fallbackCover}
+          fallbackColor={
+            typeof fallbackCover === "string" && (fallbackCover.startsWith("#") || fallbackCover.startsWith("rgb"))
+              ? fallbackCover
+              : (user?.coverColor || null)
+          }
         />
         {/* Subtle top/bottom vignette to enhance depth */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />

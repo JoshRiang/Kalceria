@@ -3,6 +3,16 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { inferIsVideoMediaUrl } from "../eventPopup/popupMediaMetadata";
+import { BASE_PROFILE_COLORS } from "@/lib/profileIdentity";
+
+function resolveSafeFallbackBg(colorOrUrl, seedText = "") {
+  if (typeof colorOrUrl === "string" && (colorOrUrl.startsWith("#") || colorOrUrl.startsWith("rgb"))) {
+    return colorOrUrl;
+  }
+  const idStr = String(seedText || "kalcerian");
+  const num = Math.abs(idStr.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % BASE_PROFILE_COLORS.length;
+  return BASE_PROFILE_COLORS[num];
+}
 
 // ─── Media Normalization Engine (Video, Photo, GIF) ───────────────────────────
 export function normalizeMediaConfig(
@@ -70,13 +80,26 @@ export function NormalizedMediaCover({
   onError,
   fallbackColor,
 }) {
+  const safeBgColor = resolveSafeFallbackBg(fallbackColor, altText || media?.url);
   const [useFallback, setUseFallback] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const videoRef = useRef(null);
 
   useEffect(() => {
-    if (videoRef.current && videoRef.current.readyState >= 2) {
-      setIsLoaded(true);
+    setUseFallback(false);
+    const vid = videoRef.current;
+    if (vid) {
+      if (vid.readyState >= 1) {
+        setIsLoaded(true);
+      } else {
+        setIsLoaded(false);
+      }
+      const playPromise = vid.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    } else {
+      setIsLoaded(false);
     }
   }, [media?.url]);
 
@@ -93,24 +116,29 @@ export function NormalizedMediaCover({
     return (
       <div
         className="w-full h-full"
-        style={{ backgroundColor: fallbackColor || "#121624" }}
+        style={{
+          backgroundColor: safeBgColor,
+          backgroundImage: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12) 0%, transparent 80%)",
+        }}
       />
     );
   }
 
   if (media.type === "video") {
     return (
-      <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: fallbackColor || "#121624" }}>
-        {/* Placeholder / Shimmer while video frame is decoding */}
+      <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: safeBgColor }}>
+        {/* Sleek cyber shimmer placeholder while first frame is decoding */}
         <div
           className={`absolute inset-0 transition-opacity duration-300 pointer-events-none ${
             isLoaded ? "opacity-0" : "opacity-100"
           }`}
           style={{
-            backgroundColor: fallbackColor || "#121624",
-            backgroundImage: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.06) 0%, transparent 70%)",
+            backgroundColor: safeBgColor,
+            backgroundImage: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.15) 0%, rgba(10,14,39,0.35) 100%)",
           }}
-        />
+        >
+          <div className="w-full h-full animate-pulse bg-white/10" />
+        </div>
         <video
           ref={videoRef}
           key={media.url}
@@ -122,16 +150,20 @@ export function NormalizedMediaCover({
           preload="auto"
           disablePictureInPicture
           disableRemotePlayback
+          onLoadedMetadata={() => setIsLoaded(true)}
           onLoadedData={() => setIsLoaded(true)}
           onCanPlay={() => setIsLoaded(true)}
           onPlaying={() => setIsLoaded(true)}
-          onError={() => setUseFallback(true)}
-          className={`w-full h-full object-cover object-center pointer-events-none transition-all duration-300 ${
-            isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-[1.02]"
-          }`}
+          onError={() => {
+            if (onError) onError();
+            setUseFallback(true);
+          }}
+          className="w-full h-full object-cover object-center pointer-events-none"
           style={{
             transform: "translateZ(0)",
             willChange: "transform, opacity",
+            opacity: isLoaded ? 1 : 0.01,
+            transition: "opacity 180ms cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         />
       </div>

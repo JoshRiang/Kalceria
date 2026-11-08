@@ -224,7 +224,7 @@ export function eventPopup(
       <div class="popup-footer" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 10px 14px; background: ${footerBg} !important; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; border: none !important;">
         ${displayDesc ? `
           <div class="popup-briefing" style="margin: 0 0 3px 0; line-height: 1.4; word-break: break-word;">
-            <p style="margin: 0; font-size: 12px; line-height: 1.42; font-weight: 600; color: ${footerTextColor}; font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.01em;">${esc(displayDesc)}</p>
+            <p style="margin: 0; font-size: 12px; line-height: 1.42; font-weight: 400; color: ${footerTextColor}; font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.01em;">${esc(displayDesc)}</p>
           </div>
         ` : ""}
         ${locationHtml}

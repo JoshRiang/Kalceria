@@ -1,7 +1,8 @@
 import { esc } from "./popupHelpers";
 import { inferIsVideoMediaUrl } from "./popupMediaMetadata";
 
-const FEED_FRAME_BG = "#0b0d14";
+const FEED_FRAME_BG = "#0a0e27";
+const FEED_GRADIENT_BG = "background: #0a0e27; background-image: radial-gradient(circle at 50% 50%, rgba(255, 214, 10, 0.05) 0%, rgba(10, 14, 39, 0.95) 75%, #060812 100%);";
 
 export function renderEmptyMediaPlaceholder(isMapDark, creatorAvatarUrl, creatorName) {
   const screenBg = isMapDark ? "#000000" : "#ffffff";
@@ -90,7 +91,7 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
           data-media-w="${esc(wAttr)}"
           data-media-h="${esc(hAttr)}"
           data-media-duration="${esc(dAttr)}"
-          style="position: absolute; inset: 0; width: 100%; height: 100%; background: ${FEED_FRAME_BG}; transform: ${initialTransform}; visibility: ${initialVisibility}; z-index: ${initialZ}; pointer-events: none; will-change: transform;"
+          style="position: absolute; inset: 0; width: 100%; height: 100%; ${FEED_GRADIENT_BG} transform: ${initialTransform}; visibility: ${initialVisibility}; z-index: ${initialZ}; pointer-events: none; will-change: transform;"
         >
           ${renderSingleMedia(entry, { index: i })}
         </div>
@@ -135,7 +136,7 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
       data-slide-count="${N}"
       data-feed-state="idle"
       class="popup-carousel-container"
-      style="position: relative; width: 100%; height: 100%; overflow: hidden; background: ${FEED_FRAME_BG};"
+      style="position: relative; width: 100%; height: 100%; overflow: hidden; ${FEED_GRADIENT_BG}"
     >
       ${slidesHtml}
       ${tapLayerHtml}

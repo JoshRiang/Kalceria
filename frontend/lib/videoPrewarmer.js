@@ -1,34 +1,63 @@
 "use client";
 
-// videoPrewarmer.js — Scalable Zero-Latency Video Prewarming & Hardware Decoder Pool
+// videoPrewarmer.js — Scalable Zero-Latency Video Prewarming & Edge CDN Priming
 // Designed for 10,000+ Concurrent Active Users with constant latency and zero degradation.
-// 1. Manages a capped pool of active GPU video decoders (max 6) to prevent Chromium/WebKit decoder exhaustion.
-// 2. Prefetches first 256KB moov atom byte-range slices into the browser HTTP cache.
-// 3. Implements network-aware adaptive throttling (Network Information API) and distance-based LOD.
+// 1. Eliminates dummy background <video> elements that exhausted GPU hardware decoders on Desktop/Laptop.
+// 2. Prefetches initial 320KB moov atom byte-range slices via HTTP cache into Cloudflare CDN & disk cache.
+// 3. Implements network-aware adaptive throttling (Network Information API) and concurrency-capped queue.
 
 const prewarmedRangeSet = new Set();
-const videoElementPool = new Map();
-const MAX_RANGE_CACHE = 100;
-const MAX_HARDWARE_DECODERS = 6;
+const inFlightRequests = new Set();
+const prewarmQueue = [];
+let activePrewarmCount = 0;
+const MAX_RANGE_CACHE = 200;
+const MAX_CONCURRENT_PREWARMS = 2; // Polite queue prevents choking network pipes for active clicks
 
-function getAdaptiveDecoderLimit() {
-  if (typeof navigator === "undefined") return MAX_HARDWARE_DECODERS;
+function isNetworkConstrained() {
+  if (typeof navigator === "undefined") return false;
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  if (!conn) return MAX_HARDWARE_DECODERS;
-  if (conn.saveData) return 0; // Skip video decoder allocation when Save-Data is active
-  if (conn.effectiveType === "2g" || conn.effectiveType === "slow-2g") return 0;
-  if (conn.effectiveType === "3g") return 2;
-  return MAX_HARDWARE_DECODERS;
+  if (!conn) return false;
+  if (conn.saveData) return true; // Respect Save-Data
+  if (conn.effectiveType === "2g" || conn.effectiveType === "slow-2g") return true;
+  return false;
 }
 
-function disposePooledVideo(vid) {
-  if (!vid) return;
-  try {
-    vid.pause();
-    vid.removeAttribute("src");
-    vid.load();
-    vid.remove();
-  } catch {}
+function processNextInQueue() {
+  if (activePrewarmCount >= MAX_CONCURRENT_PREWARMS || prewarmQueue.length === 0) return;
+  if (isNetworkConstrained()) {
+    prewarmQueue.length = 0;
+    return;
+  }
+
+  const nextUrl = prewarmQueue.shift();
+  if (!nextUrl || inFlightRequests.has(nextUrl)) {
+    processNextInQueue();
+    return;
+  }
+
+  inFlightRequests.add(nextUrl);
+  activePrewarmCount++;
+
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutId = setTimeout(() => {
+    try {
+      controller?.abort();
+    } catch {}
+  }, 4500);
+
+  fetch(nextUrl, {
+    headers: { Range: "bytes=0-327679" },
+    cache: "force-cache",
+    mode: "cors",
+    signal: controller?.signal,
+  })
+    .catch(() => {})
+    .finally(() => {
+      clearTimeout(timeoutId);
+      inFlightRequests.delete(nextUrl);
+      activePrewarmCount--;
+      processNextInQueue();
+    });
 }
 
 export function prewarmVideoUrl(rawUrl) {
@@ -39,12 +68,12 @@ export function prewarmVideoUrl(rawUrl) {
     url.startsWith("#") ||
     url.startsWith("rgb") ||
     url.startsWith("blob:") ||
-    prewarmedRangeSet.has(url)
+    prewarmedRangeSet.has(url) ||
+    inFlightRequests.has(url)
   ) {
     return;
   }
 
-  // Only prewarm video URLs
   const isVideo =
     /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(url) ||
     url.includes("/api/blob/raw") ||
@@ -58,54 +87,24 @@ export function prewarmVideoUrl(rawUrl) {
   }
   prewarmedRangeSet.add(url);
 
-  const doPrewarm = () => {
-    try {
-      // 1. Preload first 256KB chunk via byte-range fetch to prime HTTP cache & Edge CDN
-      fetch(url, {
-        headers: { Range: "bytes=0-262143" },
-        cache: "force-cache",
-        mode: "cors",
-      }).catch(() => {});
+  if (isNetworkConstrained()) return;
 
-      // 2. Prime Hardware Video Decoder if within adaptive hardware limit
-      const decoderLimit = getAdaptiveDecoderLimit();
-      if (decoderLimit > 0 && typeof document !== "undefined") {
-        if (videoElementPool.size >= decoderLimit) {
-          const oldestUrl = videoElementPool.keys().next().value;
-          if (oldestUrl) {
-            const oldVid = videoElementPool.get(oldestUrl);
-            disposePooledVideo(oldVid);
-            videoElementPool.delete(oldestUrl);
-          }
-        }
-
-        const vid = document.createElement("video");
-        vid.preload = "auto";
-        vid.muted = true;
-        vid.playsInline = true;
-        vid.style.position = "fixed";
-        vid.style.width = "1px";
-        vid.style.height = "1px";
-        vid.style.opacity = "0.001";
-        vid.style.pointerEvents = "none";
-        vid.style.zIndex = "-9999";
-        vid.src = url;
-        vid.load();
-        videoElementPool.set(url, vid);
-      }
-    } catch {}
-  };
+  if (!prewarmQueue.includes(url)) {
+    prewarmQueue.push(url);
+  }
 
   if ("requestIdleCallback" in window) {
-    window.requestIdleCallback(doPrewarm, { timeout: 1500 });
+    window.requestIdleCallback(processNextInQueue, { timeout: 1500 });
   } else {
-    setTimeout(doPrewarm, 80);
+    setTimeout(processNextInQueue, 80);
   }
 }
 
 export function prewarmVideoBatch(urls) {
   if (!Array.isArray(urls) || urls.length === 0) return;
-  const maxToProcess = Math.min(urls.length, 24);
+  if (isNetworkConstrained()) return;
+  // Cap batch prewarming to top 8 items per cycle to avoid queue bloat
+  const maxToProcess = Math.min(urls.length, 8);
   for (let i = 0; i < maxToProcess; i++) {
     const u = urls[i];
     if (typeof u === "string") {

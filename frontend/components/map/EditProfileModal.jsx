@@ -24,6 +24,7 @@ import {
   MODAL_GENIE_SURFACE,
   useModalBackClose,
 } from "./modals/modalMotion";
+import { prewarmVideoUrl } from "@/lib/videoPrewarmer";
 
 async function uploadDataUrlViaBlob(dataUrl, fallbackName) {
   const response = await fetch(dataUrl);
@@ -234,14 +235,17 @@ export function EditProfileModal({
         }
         finalCover = uploadedCover.url;
         setCoverImage(finalCover);
-        setCoverPreview(finalCover);
+        // CRITICAL: Keep coverPreview holding the local preview during Genie exit animation
+        // so the card never flashes green before unmounting.
       } else if (finalCover && String(finalCover).startsWith("data:")) {
         finalCover = await uploadDataUrlViaBlob(finalCover, `cover-${cleanUsername}`);
         setCoverImage(finalCover);
-        setCoverPreview(finalCover);
       }
 
       const coverType = isCoverVideo ? "video" : "image";
+      if (coverType === "video" && finalCover && !finalCover.startsWith("#") && !finalCover.startsWith("data:")) {
+        prewarmVideoUrl(finalCover);
+      }
 
       persistProfileIdentityCache(currentUser, {
         profilePicture: finalAvatar,
