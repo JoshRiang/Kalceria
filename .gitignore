@@ -38,6 +38,8 @@ coverage/
 # Local audit and guidance notes (Markdown)
 **/*[Aa][Uu][Dd][Ii][Tt]*.md
 **/*[Gg][Uu][Ii][Dd][Aa][Nn][Cc][Ee]*.md
+AGENT.md
+AGENT*.md
 
 # OS files
 Thumbs.db
