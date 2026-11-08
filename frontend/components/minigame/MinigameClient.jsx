@@ -1,186 +1,19 @@
 "use client";
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image, { getImageProps } from "next/image";
 import dynamic from "next/dynamic";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
-import { createSeededRandom } from "@/lib/seededRandom";
 import api from "@/lib/api";
+import {
+  MicroParticles,
+  DecorativeCard,
+  ResetTimer,
+  MinigameTrailerModal,
+  MinigameRulesModal,
+} from "./client";
 
 const FlipGame = dynamic(() => import("@/app/minigame/FlipGame"), { ssr: false });
-
-const LINE_PARTICLE_COLORS = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3", "#D946EF", "#00FFFF"];
-const DECORATIVE_COLORS = ["#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316"];
-const DECORATIVE_SHAPES = ["●", "■", "▲", "◆", "▼", "✖"];
-
-function generateDecorativeContent(random) {
-  const type = Math.floor(random() * 3);
-  const color = DECORATIVE_COLORS[Math.floor(random() * DECORATIVE_COLORS.length)];
-  let char = "";
-
-  if (type === 0) char = Math.floor(random() * 10);
-  else if (type === 1) char = String.fromCharCode(65 + Math.floor(random() * 26));
-  else char = DECORATIVE_SHAPES[Math.floor(random() * DECORATIVE_SHAPES.length)];
-
-  return { char, color };
-}
-
-function MicroParticles({ active, stopping }) {
-  const particles = useMemo(() => {
-    const random = createSeededRandom("minigame-micro-particles-v1");
-    return Array.from({ length: 24 }, (_, id) => ({
-      id,
-      size: random() * 4 + 2,
-      left: random() * 100,
-      delay: random() * 5,
-      duration: random() * 5 + 3.5,
-      isGold: random() > 0.5,
-      xDrift: (random() - 0.5) * 100,
-      exitDuration: random() * 2 + 1,
-    }));
-  }, []);
-
-  return (
-    <div className="absolute inset-0 z-[10] pointer-events-none overflow-hidden">
-      <AnimatePresence>
-        {(active && !stopping) && (
-          <div className="absolute inset-0">
-            {particles.map((p) => (
-              <motion.div
-                key={p.id}
-                initial={{ y: "110vh", opacity: 0 }}
-                animate={{ y: "-10vh", opacity: [0, 1, 0], x: [0, p.xDrift, 0] }}
-                exit={{ opacity: 0, scale: 0, transition: { duration: p.exitDuration } }}
-                transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: "linear" }}
-                className="absolute rounded-full"
-                style={{
-                  width: p.size, height: p.size, left: `${p.left}%`,
-                  backgroundColor: p.isGold ? "#fbbf24" : "#22c55e",
-                  boxShadow: `0 0 10px ${p.isGold ? "#fbbf24" : "#22c55e"}`
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function getResetCountdown() {
-  const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(now.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
-  return Math.floor((tomorrow - now) / 1000);
-}
-
-function ResetTimer() {
-  const [secs, setSecs] = useState(getResetCountdown);
-  useEffect(() => {
-    const t = setInterval(() => setSecs(s => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const h = String(Math.floor(secs / 3600)).padStart(2, "0");
-  const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
-  const s = String(secs % 60).padStart(2, "0");
-  return <span className="text-white font-sans tracking-tighter underline underline-offset-4 decoration-white/20">{h}h {m}m {s}s</span>;
-}
-
-function LineParticles() {
-  const particles = useMemo(() => {
-    const random = createSeededRandom("minigame-line-particles-v1");
-    return Array.from({ length: 16 }, () => ({
-      x: random() * 100,
-      y: random() * 100,
-      color: LINE_PARTICLE_COLORS[Math.floor(random() * LINE_PARTICLE_COLORS.length)],
-      size: random() * 5 + 3,
-      duration: 2 + random() * 2,
-      delay: random() * 2,
-      xDrift: (random() - 0.5) * 120,
-      yDrift: (random() - 0.5) * 120
-    }));
-  }, []);
-
-  return (
-    <div className="hidden md:block absolute inset-0 pointer-events-none overflow-visible z-0 transform-gpu">
-      {particles.map((p, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full will-change-transform"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: p.size,
-            height: p.size,
-            backgroundColor: p.color,
-            boxShadow: `0 0 10px ${p.color}`
-          }}
-          animate={{
-            x: [0, p.xDrift],
-            y: [0, p.yDrift],
-            opacity: [0, 0.8, 0],
-            scale: [0.6, 1.2, 0.6]
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            ease: "easeOut",
-            delay: p.delay
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function DecorativeCard({ seed }) {
-  const scheduleTimeout = useTimeoutRegistry();
-  const random = useRef(createSeededRandom(`minigame-decorative-card-${seed}-updates`));
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [content, setContent] = useState(() => generateDecorativeContent(createSeededRandom(`minigame-decorative-card-${seed}-initial`)));
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsFlipped(f => {
-        if (f) scheduleTimeout(() => setContent(generateDecorativeContent(random.current)), 400);
-        return !f;
-      });
-    }, 2000 + random.current() * 2000);
-    return () => clearInterval(interval);
-  }, [scheduleTimeout]);
-
-  return (
-    <div className="relative w-14 h-16" style={{ perspective: "1000px" }}>
-      <motion.div
-        animate={{ rotateY: isFlipped ? 180 : 0 }}
-        transition={{ duration: 0.8, ease: "easeInOut" }}
-        style={{ width: "100%", height: "100%", position: "relative", transformStyle: "preserve-3d" }}
-      >
-        <div className="absolute inset-0 bg-white rounded-xl flex items-center justify-center p-2 shadow-xl border border-black/5" style={{ backfaceVisibility: "hidden" }}>
-          <Image src="/favicon.webp" alt="" width={771} height={681} sizes="32px" quality={75} loading="eager" decoding="async" className="w-8 h-8 opacity-70 object-contain" />
-        </div>
-        <div className="absolute inset-0 bg-white rounded-xl flex items-center justify-center p-2 shadow-xl border border-black/5" style={{ transform: "rotateY(180deg)", backfaceVisibility: "hidden" }}>
-          <span className="font-black text-3xl select-none" style={{
-            color: content.color,
-            textShadow: `
-              0 1px 0 rgba(0,0,0,0.1),
-              0 2px 0 rgba(0,0,0,0.1),
-              0 3px 0 rgba(0,0,0,0.1),
-              0 4px 0 rgba(0,0,0,0.1),
-              0 5px 0 rgba(0,0,0,0.2),
-              0 6px 1px rgba(0,0,0,0.1),
-              0 0 5px rgba(0,0,0,0.1)
-            `,
-            transform: "translateY(-2px)"
-          }}>
-            {content.char}
-          </span>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 export default function MinigamePage() {
   const [showInfo, setShowInfo] = useState(false);
@@ -470,121 +303,19 @@ export default function MinigamePage() {
       </motion.div>
 
       {/* Trailer Modal */}
-      <AnimatePresence>
-        {showTrailer && (
-      <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4 overflow-y-auto bg-black/90">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5 }} onClick={() => setShowTrailer(false)} className="absolute inset-0 cursor-pointer" />
-        <div className="relative flex flex-col items-center py-6 sm:py-12 min-h-full justify-center">
-          <motion.div initial={{ opacity: 0, y: 10, filter: "blur(20px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: 20, filter: "blur(40px)", transition: { duration: 0.8 } }} transition={{ duration: 1.5 }} className="text-center mb-6 sm:mb-8 w-full max-w-[340px] xs:max-w-[370px] sm:max-w-md px-2 relative">
-            <div className="flex items-center justify-center gap-4 mb-2">
-              <h2 className="text-4xl font-black italic tracking-tighter text-white" style={{ textShadow: "3px 3px 0px #d946ef" }}>SOCIAL CULT</h2>
-              <button aria-label="Close trailer" onClick={() => setShowTrailer(false)} className="p-2 flex items-center justify-center text-white/90 hover:text-white hover:scale-110 transition-all group translate-x-2">
-                <svg className="w-5 h-5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <p className="text-xs font-sans text-white/80 leading-relaxed text-center px-2 mt-2">A revolutionary fusion of high-performance automotive engineering and urban street culture. Join the collective as we redefine the boundaries of style and speed.</p>
-          </motion.div>
-
-          <div className="relative">
-            {/* Corner framing stickers - Spread outward for phone, tab & iPad family to completely clear play/pause controls */}
-            {[
-              { src: "/ge_1.webp", pos: isMobile ? "-top-6 -left-10" : isTablet ? "-top-8 -left-14" : "-top-24 -left-40", rot: -15 },
-              { src: "/ge_2.webp", pos: isMobile ? "-top-6 -right-10" : isTablet ? "-top-8 -right-14" : "-top-20 -right-36", rot: 20 },
-              { src: "/ge_3.webp", pos: isMobile ? "-bottom-8 -left-12" : isTablet ? "-bottom-10 -left-16" : "bottom-[5%] -left-48", rot: 10 },
-              { src: "/ge_4.webp", pos: isMobile ? "-bottom-8 -right-12" : isTablet ? "-bottom-10 -right-14" : "bottom-[7%] -right-44", rot: -10 },
-            ].map((ge, idx) => (
-              <motion.img
-                key={idx}
-                src={ge.src}
-                alt=""
-                aria-hidden="true"
-                loading="eager"
-                decoding="async"
-                initial={{ opacity: 0, scale: 0.6, rotate: ge.rot }}
-                animate={{
-                  opacity: 1,
-                  scale: 1,
-                  rotate: ge.rot
-                }}
-                exit={{ opacity: 0, scale: 0.6 }}
-                transition={{
-                  duration: 0.5,
-                  delay: 0.15 + idx * 0.08,
-                  ease: "easeOut"
-                }}
-                className={`absolute ${ge.pos} ${isMobile ? "w-14" : isTablet ? "w-16 md:w-20" : "w-24 md:w-36"} h-auto object-contain z-20 drop-shadow-xl pointer-events-none transform-gpu will-change-transform`}
-              />
-            ))}
-
-            {/* Video Card - Rock-solid static presentation while playing with zero layout repainting */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="relative w-[220px] xs:w-[240px] md:w-[320px] aspect-[9/16] rounded-3xl md:rounded-[2.5rem] border border-yellow-500/50 shadow-[0_0_35px_rgba(251,191,36,0.35)] bg-black mt-0 sm:mt-[-1rem] overflow-visible transform-gpu will-change-transform"
-            >
-              {/* Golden Glow Accent - Static GPU accelerated glow without CPU blur recalculation */}
-              <div
-                className="absolute inset-[-6%] bg-yellow-500/20 blur-[25px] rounded-[3rem] z-0 pointer-events-none transform-gpu"
-              />
-
-              {/* Rainbow Particles (Desktop Only) */}
-              <LineParticles />
-
-              <div className="relative w-full h-full z-10 overflow-hidden rounded-3xl md:rounded-[2.5rem] border border-white/10 transform-gpu">
-                <video 
-                  ref={videoRef} 
-                  src="/trailer.mp4" 
-                  controls 
-                  autoPlay 
-                  playsInline 
-                  webkit-playsinline="true"
-                  preload="metadata"
-                  controlsList="nodownload"
-                  className="w-full h-full object-cover transform-gpu will-change-transform" 
-                  style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
-                />
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-    )
-}
-      </AnimatePresence >
+      <MinigameTrailerModal
+        showTrailer={showTrailer}
+        onClose={() => setShowTrailer(false)}
+        isMobile={isMobile}
+        isTablet={isTablet}
+        videoRef={videoRef}
+      />
 
       {/* Rules Modal */}
-      <AnimatePresence>
-      {showInfo && (
-        <div className="fixed inset-0 z-[3000] flex items-center justify-center p-6">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowInfo(false)} className="absolute inset-0 bg-black/80 cursor-pointer" />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            style={{ clipPath: "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)" }}
-            className="relative w-full max-w-lg p-10 overflow-hidden border border-white/20 shadow-[0_30px_100px_rgba(0,0,0,0.8)]"
-          >
-            <div className="absolute inset-0 z-0 bg-black/95" />
-            <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
-              <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }} className="absolute -top-[40%] -left-[20%] w-[120%] h-[120%] bg-indigo-900 rounded-full blur-[80px]" />
-              <motion.div animate={{ scale: [1.2, 1, 1.2], opacity: [0.4, 0.7, 0.4] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute -bottom-[40%] -right-[20%] w-[120%] h-[120%] bg-purple-800 rounded-full blur-[80px]" />
-            </div>
-            <div className="relative z-10">
-              <h3 className="text-3xl font-rog font-black text-white mb-8 tracking-tighter uppercase">Game Rules</h3>
-              <div className="space-y-6 text-white font-sans text-sm leading-relaxed">
-                <div className="flex gap-4"><span className="font-bold">1.</span><p>Every registered user is granted 1 (one) attempt daily until the day before the event (H-1).</p></div>
-                <div className="flex gap-4"><span className="font-bold">2.</span><p>The score achieved in the first attempt will be saved automatically.</p></div>
-                <div className="flex gap-4"><span className="font-bold">3.</span><p>During the second attempt, users can choose whether to keep the newest score or retain their previous one.</p></div>
-                <div className="flex gap-4"><span className="font-bold">4.</span><p>Users compete for the top leaderboard spots until H-1; those with the highest scores will be selected to win an <span className="italic underline decoration-purple-400 underline-offset-4">Event Voucher</span>.</p></div>
-              </div>
-              <button onClick={() => setShowInfo(false)} className="mt-10 w-full py-4 font-sans font-black uppercase text-xs tracking-widest text-white hover:opacity-80 transition-all active:scale-95 cursor-pointer">Understood</button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-      </AnimatePresence>
+      <MinigameRulesModal
+        showInfo={showInfo}
+        onClose={() => setShowInfo(false)}
+      />
 
       {/* Initial Blackout */}
       <motion.div initial={{ opacity: 0.92 }} animate={{ opacity: 0 }} transition={{ duration: 0.9, ease: "easeOut" }} className="fixed inset-0 z-[2000] bg-black pointer-events-none" />

@@ -1,49 +1,16 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { useTimeoutRegistry } from "../../hooks/useTimeoutRegistry";
-import { createSeededRandom } from "@/lib/seededRandom";
 import api from "@/lib/api";
-
-const CARD_IMAGES = ["/ge_1.webp", "/ge_2.webp", "/ge_3.webp", "/ge_4.webp"];
-
-function shuffleArray(arr, seed) {
-  const a = [...arr];
-  const random = createSeededRandom(seed);
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function makeCards(seed) {
-  const pairs = [...CARD_IMAGES, ...CARD_IMAGES];
-  const shuffled = shuffleArray(pairs, seed);
-  return shuffled.map((img, i) => ({
-    id: i, 
-    img, 
-    flipped: false, 
-    matched: false,
-    gridX: i % 4,
-    gridY: Math.floor(i / 4)
-  }));
-}
-
-function Timer({ ms }) {
-  const m = String(Math.floor(ms / 6000)).padStart(2, "0");
-  const s = String(Math.floor((ms % 6000) / 100)).padStart(2, "0");
-  const mil = String(ms % 100).padStart(2, "0");
-  return (
-    <div className="flex items-baseline justify-center gap-1 font-sans font-black text-white tracking-tighter leading-none tabular-nums" style={{
-      textShadow: "0 0 30px rgba(255,255,255,0.4), 0 0 60px rgba(0,0,0,0.5)"
-    }}>
-      <span className="text-4xl sm:text-6xl md:text-[5rem]">{m}:{s}</span>
-      <span className="text-xl sm:text-2xl md:text-[2rem] opacity-60">:{mil}</span>
-    </div>
-  );
-}
+import {
+  makeCards,
+  Timer,
+  FlipGameCard,
+  FlipGameQuitModal,
+  FlipGameSaveModal,
+  FlipGameSubmittingOverlay,
+} from "./flipGame";
 
 export default function FlipGame({ seed, onQuit, onFinish }) {
   const [cards, setCards] = useState(() => makeCards(`${seed}:opening`));
@@ -175,14 +142,14 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
   };
 
   const handleQuitYes = () => {
-    setQuitChoice('yes');
+    setQuitChoice("yes");
     scheduleTimeout(() => {
       onQuit();
     }, 180);
   };
 
   const handleQuitNo = () => {
-    setQuitChoice('no');
+    setQuitChoice("no");
     scheduleTimeout(() => {
       setShowQuit(false);
       setQuitChoice(null);
@@ -190,14 +157,14 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
   };
 
   const handleSaveYesClick = () => {
-    setSaveChoice('yes');
+    setSaveChoice("yes");
     scheduleTimeout(() => {
       handleSaveYes();
     }, 180);
   };
 
   const handleSaveNoClick = () => {
-    setSaveChoice('no');
+    setSaveChoice("no");
     scheduleTimeout(() => {
       handleSaveNo();
     }, 180);
@@ -294,247 +261,38 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
           const isFlipped = card.flipped || card.matched;
 
           return (
-            <motion.div
+            <FlipGameCard
               key={card.id}
-              initial={{ opacity: 0, scale: 0.5, y: 20 }}
-              animate={{ 
-                opacity: 1,
-                scale: (phase === "playing" && !isFlipped) ? [1, 0.95, 1] : 1,
-                y: 0,
-                ...getCardTransform(card)
-              }}
-              transition={{ 
-                opacity: { delay: phase === "intro" ? card.id * 0.15 : 0, duration: 0.4 },
-                scale: (phase === "playing" && !isFlipped) 
-                  ? { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                  : { delay: phase === "intro" ? card.id * 0.15 : 0, duration: 0.4 },
-                y: { delay: phase === "intro" ? card.id * 0.15 : 0, duration: 0.4 },
-                x: { duration: 0.5 }, // For absorb
-                rotate: { duration: 0.5 } // For absorb
-              }}
+              card={card}
+              phase={phase}
+              isFlipped={isFlipped}
+              getCardTransform={getCardTransform}
               onClick={() => handleCardClick(card.id)}
-              className="relative w-[70px] h-[92px] xs:w-[90px] xs:h-[118px] sm:w-[120px] sm:h-[155px] md:w-[145px] md:h-[180px] cursor-pointer"
-              style={{ perspective: "1000px" }}
-            >
-              <motion.div
-                animate={{ rotateY: isFlipped ? 180 : 0 }}
-                transition={{ duration: 0.6, ease: [0.45, 0.05, 0.55, 0.95] }}
-                style={{ width: "100%", height: "100%", position: "relative", transformStyle: "preserve-3d" }}
-              >
-                {/* Back (White with Stretched Logo) */}
-                <div style={{
-                  position: "absolute", inset: 0, backfaceVisibility: "hidden",
-                  background: "#ffffff", borderRadius: "1.25rem",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: "0 15px 35px rgba(0,0,0,0.4)",
-                  border: "1px solid rgba(0,0,0,0.05)",
-                  padding: "10px"
-                }}>
-                   <Image src="/favicon.webp" alt="Logo" width={771} height={681} unoptimized loading="eager" decoding="auto" className="w-[45px] h-[45px] sm:w-[80px] sm:h-[80px] opacity-40 object-contain" />
-                </div>
-                {/* Front (Face Image) */}
-                <div style={{
-                  position: "absolute", inset: 0, backfaceVisibility: "hidden",
-                  transform: "rotateY(180deg)",
-                  background: "#ffffff", borderRadius: "1.25rem",
-                  overflow: "hidden",
-                  border: card.matched ? "4px solid #22c55e" : "none",
-                  boxShadow: card.matched ? "0 0 40px rgba(34,197,94,0.6)" : "0 15px 35px rgba(0,0,0,0.4)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  padding: "15%"
-                }}>
-                  <Image src={card.img} alt="Card" width={512} height={512} unoptimized loading="lazy" className="w-full h-full object-contain" />
-                </div>
-              </motion.div>
-            </motion.div>
+            />
           );
         })}
       </div>
 
       {/* Quit Modal */}
+      <FlipGameQuitModal
+        showQuit={showQuit}
+        quitChoice={quitChoice}
+        onQuitYes={handleQuitYes}
+        onQuitNo={handleQuitNo}
+      />
+
+      {/* Save Modal */}
+      <FlipGameSaveModal
+        showSave={showSave}
+        ms={ms}
+        saveChoice={saveChoice}
+        onSaveYes={handleSaveYesClick}
+        onSaveNo={handleSaveNoClick}
+      />
+
+      {/* Submitting Score Overlay */}
       <AnimatePresence>
-        {showQuit && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-2xl" 
-              onClick={handleQuitNo} 
-            />
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} 
-              animate={{ 
-                scale: 1, 
-                opacity: 1,
-                y: [0, -5, 0]
-              }} 
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{
-                opacity: { duration: 0.25 },
-                scale: { duration: 0.25 },
-                y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
-              }} 
-              className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
-            >
-              <h3 
-                className="relative z-10 text-2xl sm:text-3xl md:text-4xl font-sans font-bold text-white mb-8 sm:mb-10 tracking-tighter"
-                style={{ textShadow: "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)" }}
-              >
-                Quit the game?
-              </h3>
-              <div className="relative z-10 flex items-center justify-center gap-10 sm:gap-16">
-                <button 
-                  type="button"
-                  onClick={handleQuitYes} 
-                  className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 ${
-                    quitChoice === 'yes' ? 'text-red-600 scale-110' : 'text-white hover:text-red-500 active:text-red-600'
-                  }`}
-                  style={{
-                    fontFamily: "Arial, sans-serif",
-                    fontWeight: "normal",
-                    textTransform: "none",
-                    textShadow: quitChoice === 'yes' 
-                      ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
-                      : "0 2px 12px rgba(0,0,0,0.8)"
-                  }}
-                >
-                  Yes
-                </button>
-                <button 
-                  type="button"
-                  onClick={handleQuitNo} 
-                  className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 text-white hover:text-white active:text-white ${
-                    quitChoice === 'no' ? 'scale-110 text-white' : ''
-                  }`}
-                  style={{
-                    fontFamily: "Arial, sans-serif",
-                    fontWeight: "normal",
-                    textTransform: "none",
-                    textShadow: quitChoice === 'no' 
-                      ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
-                      : "0 2px 12px rgba(0,0,0,0.8)"
-                  }}
-                >
-                  No
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {showSave && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-2xl" 
-            />
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} 
-              animate={{ 
-                scale: 1, 
-                opacity: 1,
-                y: [0, -5, 0]
-              }} 
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{
-                opacity: { duration: 0.25 },
-                scale: { duration: 0.25 },
-                y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
-              }} 
-              className="relative z-10 flex flex-col items-center justify-center p-6 text-center select-none"
-            >
-              <p 
-                className="text-white font-sans text-lg sm:text-xl md:text-2xl tracking-tight mb-3 sm:mb-4 opacity-90"
-                style={{ textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}
-              >
-                Final Time
-              </p>
-              <Timer ms={ms} />
-              <h3 
-                className="text-xl sm:text-2xl md:text-3xl font-sans font-bold text-white mt-8 sm:mt-10 mb-8 sm:mb-10 tracking-tight"
-                style={{ textShadow: "0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8)" }}
-              >
-                Save this score?
-              </h3>
-              <div className="flex items-center justify-center gap-10 sm:gap-16">
-                <button 
-                  type="button"
-                  onClick={handleSaveYesClick} 
-                  className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 ${
-                    saveChoice === 'yes' ? 'text-red-600 scale-110' : 'text-white hover:text-red-500 active:text-red-600'
-                  }`}
-                  style={{
-                    fontFamily: "Arial, sans-serif",
-                    fontWeight: "normal",
-                    textTransform: "none",
-                    textShadow: saveChoice === 'yes' 
-                      ? "0 0 20px rgba(220,38,38,0.9), 0 2px 10px rgba(0,0,0,0.8)" 
-                      : "0 2px 12px rgba(0,0,0,0.8)"
-                  }}
-                >
-                  Yes
-                </button>
-                <button 
-                  type="button"
-                  onClick={handleSaveNoClick} 
-                  className={`transition-all duration-200 outline-none border-none bg-transparent cursor-pointer p-0 select-none text-xl sm:text-2xl md:text-3xl hover:scale-110 active:scale-115 focus:scale-110 text-white hover:text-white active:text-white ${
-                    saveChoice === 'no' ? 'scale-110 text-white' : ''
-                  }`}
-                  style={{
-                    fontFamily: "Arial, sans-serif",
-                    fontWeight: "normal",
-                    textTransform: "none",
-                    textShadow: saveChoice === 'no' 
-                      ? "0 0 2px #ffffff, 0 0 10px rgba(255,255,255,0.95)" 
-                      : "0 2px 12px rgba(0,0,0,0.8)"
-                  }}
-                >
-                  No
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {submissionPhase !== "idle" && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0, scale: 0.95, filter: "blur(20px)" }}
-            transition={{ duration: 0.5 }}
-            className="fixed inset-0 z-[700] flex flex-col items-center justify-center p-6 text-center select-none"
-          >
-            {/* Preserved blurred BG behind */}
-            <div className="absolute inset-0 bg-black/85 backdrop-blur-2xl" />
-
-            <div className="relative z-10 flex flex-col items-center justify-center px-4">
-              {/* BIG Responsive Arc Spinner matching LOGGING OUT */}
-              <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 mb-6 sm:mb-8">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
-                    <circle 
-                      cx="50" cy="50" r="45" 
-                      fill="none" 
-                      stroke="white" 
-                      strokeWidth="4" 
-                      strokeDasharray="70 200" 
-                      strokeLinecap="round"
-                      className="opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.6)]"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-white font-sans font-black uppercase tracking-[0.4em] text-lg sm:text-2xl md:text-3xl opacity-90 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
-                SUBMITTING SCORE
-              </p>
-            </div>
-          </motion.div>
-        )}
+        <FlipGameSubmittingOverlay submissionPhase={submissionPhase} />
       </AnimatePresence>
     </motion.div>
   );
