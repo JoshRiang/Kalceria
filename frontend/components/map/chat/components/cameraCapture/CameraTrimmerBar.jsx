@@ -11,10 +11,56 @@ export function CameraTrimmerBar({
   trimmerTrackRef,
   getActiveVideoDur,
   activeTrimHandle,
+  setActiveTrimHandle,
   trimStart,
+  setTrimStart,
   trimEnd,
-  handleTrimmerPointerDown,
+  setTrimEnd,
+  previewVideoRef,
+  handleTrimmerPointerDown: externalHandleTrimmerPointerDown,
 }) {
+  const handleTrimmerPointerDown =
+    externalHandleTrimmerPointerDown ||
+    ((e, handleType) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (!trimmerTrackRef?.current) return;
+      setActiveTrimHandle?.(handleType);
+      const trackRect = trimmerTrackRef.current.getBoundingClientRect();
+      const dur = getActiveVideoDur();
+
+      const onPointerMove = (ev) => {
+        const clientX = ev.clientX;
+        const ratio = Math.max(0, Math.min(1, (clientX - trackRect.left) / trackRect.width));
+        if (handleType === "start") {
+          setTrimStart?.(() => {
+            const nextStart = Math.max(0, Math.min(ratio, trimEnd - 0.05));
+            if (previewVideoRef?.current && Number.isFinite(nextStart * dur)) {
+              previewVideoRef.current.currentTime = nextStart * dur;
+            }
+            return nextStart;
+          });
+        } else {
+          setTrimEnd?.(() => {
+            const nextEnd = Math.min(1, Math.max(ratio, trimStart + 0.05));
+            if (previewVideoRef?.current && Number.isFinite(nextEnd * dur)) {
+              previewVideoRef.current.currentTime = nextEnd * dur;
+            }
+            return nextEnd;
+          });
+        }
+      };
+
+      const onPointerUp = () => {
+        setActiveTrimHandle?.(null);
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+      };
+
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    });
+
   return (
     <div className="absolute bottom-2 inset-x-3 z-25 flex flex-col gap-1 select-none pointer-events-auto">
       {/* Trimmer Track Container */}
@@ -26,7 +72,6 @@ export function CameraTrimmerBar({
         {(() => {
           const dur = getActiveVideoDur();
           const showStartBadge = activeTrimHandle === "start" || (!activeTrimHandle && trimStart > 0.005);
-          const showEndBadge = activeTrimHandle === "end" || (!activeTrimHandle && trimStart <= 0.005);
           const badgeRatio = showStartBadge ? trimStart : trimEnd;
           const badgeSeconds = badgeRatio * dur;
           const clampedPercent = Math.min(92, Math.max(8, badgeRatio * 100));
@@ -70,28 +115,36 @@ export function CameraTrimmerBar({
           />
         </div>
 
-        {/* Left Vertical Boundary Handle: Thin, small, white non-glow, rounded edge */}
+        {/* Left Drag Handle: Start Boundary Pin */}
         <div
           onPointerDown={(e) => handleTrimmerPointerDown(e, "start")}
           style={{
             left: `${trimStart * 100}%`,
+            transform: "translateX(-50%)",
           }}
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-6 flex items-center justify-center cursor-ew-resize z-10"
-          title="Batas awal"
+          className="absolute w-4 h-5 flex items-center justify-center cursor-ew-resize z-20 touch-none group"
         >
-          <span className="w-[3px] h-4 bg-white rounded-full block shadow-md hover:scale-110 active:scale-95 transition-transform" />
+          <div
+            className={`w-[4.5px] h-3.5 rounded-full transition-transform ${
+              activeTrimHandle === "start" ? "scale-125 bg-white shadow-md" : "bg-white group-hover:scale-110 shadow-xs"
+            }`}
+          />
         </div>
 
-        {/* Right Vertical Boundary Handle: Thin, small, white non-glow, rounded edge */}
+        {/* Right Drag Handle: End Boundary Pin */}
         <div
           onPointerDown={(e) => handleTrimmerPointerDown(e, "end")}
           style={{
             left: `${trimEnd * 100}%`,
+            transform: "translateX(-50%)",
           }}
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-6 flex items-center justify-center cursor-ew-resize z-10"
-          title="Batas akhir"
+          className="absolute w-4 h-5 flex items-center justify-center cursor-ew-resize z-20 touch-none group"
         >
-          <span className="w-[3px] h-4 bg-white rounded-full block shadow-md hover:scale-110 active:scale-95 transition-transform" />
+          <div
+            className={`w-[4.5px] h-3.5 rounded-full transition-transform ${
+              activeTrimHandle === "end" ? "scale-125 bg-white shadow-md" : "bg-white group-hover:scale-110 shadow-xs"
+            }`}
+          />
         </div>
       </div>
     </div>

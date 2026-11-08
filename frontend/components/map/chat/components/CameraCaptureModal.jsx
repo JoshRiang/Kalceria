@@ -3,8 +3,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { acquireCameraStream, stopMediaStream } from "@/lib/mediaHardware";
-import { CameraCropOverlay } from "./cameraCapture/CameraCropOverlay";
-import { CameraTrimmerBar } from "./cameraCapture/CameraTrimmerBar";
+import {
+  CameraBottomControls,
+  CameraCaptionBox,
+  CameraViewport,
+  bakePhotoCropAndRotation,
+  computeVideoTrimFragment,
+} from "./cameraCapture";
 
 export function CameraCaptureModal({
   isOpen,
@@ -397,59 +402,6 @@ export function CameraCaptureModal({
     setPhotoRotation((prev) => (prev + 90) % 360);
   };
 
-  // Interactive Photo Crop Drag (Move / Resize Corners & Edges)
-  const handleCropPointerDown = (e, mode) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!previewViewportRef.current) return;
-    const rect = previewViewportRef.current.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const initial = { ...cropRect };
-    const minSize = 0.18;
-
-    const onPointerMove = (ev) => {
-      const dx = (ev.clientX - startX) / rect.width;
-      const dy = (ev.clientY - startY) / rect.height;
-
-      setCropRect(() => {
-        let { left, top, right, bottom } = initial;
-        if (mode === "move") {
-          const w = right - left;
-          const h = bottom - top;
-          left = Math.max(0, Math.min(1 - w, left + dx));
-          top = Math.max(0, Math.min(1 - h, top + dy));
-          right = left + w;
-          bottom = top + h;
-        } else {
-          if (mode.includes("w")) {
-            left = Math.max(0, Math.min(right - minSize, left + dx));
-          }
-          if (mode.includes("e")) {
-            right = Math.min(1, Math.max(left + minSize, right + dx));
-          }
-          if (mode.includes("n")) {
-            top = Math.max(0, Math.min(bottom - minSize, top + dy));
-          }
-          if (mode.includes("s")) {
-            bottom = Math.min(1, Math.max(top + minSize, bottom + dy));
-          }
-        }
-        return { left, top, right, bottom };
-      });
-    };
-
-    const onPointerUp = () => {
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    };
-
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-  };
-
   // Retake photo / video
   const handleRetake = () => {
     if (previewMedia?.url) {
@@ -479,54 +431,6 @@ export function CameraCaptureModal({
     return 1;
   };
 
-  const formatTrimTime = (totalSec) => {
-    const validSec = Number.isFinite(totalSec) && totalSec >= 0 ? Math.floor(totalSec) : 0;
-    const m = Math.floor(validSec / 60);
-    const s = Math.floor(validSec % 60);
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
-
-  // Video Duration Trimming Handle Drag with zero latency
-  const handleTrimmerPointerDown = (e, handleType) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!trimmerTrackRef.current) return;
-    setActiveTrimHandle(handleType);
-    const trackRect = trimmerTrackRef.current.getBoundingClientRect();
-    const dur = getActiveVideoDur();
-
-    const onPointerMove = (ev) => {
-      const clientX = ev.clientX;
-      const ratio = Math.max(0, Math.min(1, (clientX - trackRect.left) / trackRect.width));
-      if (handleType === "start") {
-        setTrimStart(() => {
-          const nextStart = Math.max(0, Math.min(ratio, trimEnd - 0.05));
-          if (previewVideoRef.current && Number.isFinite(nextStart * dur)) {
-            previewVideoRef.current.currentTime = nextStart * dur;
-          }
-          return nextStart;
-        });
-      } else {
-        setTrimEnd(() => {
-          const nextEnd = Math.min(1, Math.max(ratio, trimStart + 0.05));
-          if (previewVideoRef.current && Number.isFinite(nextEnd * dur)) {
-            previewVideoRef.current.currentTime = nextEnd * dur;
-          }
-          return nextEnd;
-        });
-      }
-    };
-
-    const onPointerUp = () => {
-      setActiveTrimHandle(null);
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    };
-
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-  };
-
   // Video preview playback looping between [trimStart, trimEnd]
   const handlePreviewVideoTimeUpdate = () => {
     if (!previewVideoRef.current) return;
@@ -550,79 +454,19 @@ export function CameraCaptureModal({
     let finalUrl = previewMedia.url;
     let trimFragment = "";
 
-    const hasCustomCrop =
-      cropRect.left > 0.005 ||
-      cropRect.top > 0.005 ||
-      cropRect.right < 0.995 ||
-      cropRect.bottom < 0.995;
-
-    if (previewMedia.type === "photo" && (photoRotation !== 0 || hasCustomCrop) && previewMedia.url) {
-      try {
-        const baked = await new Promise((resolve) => {
-          const img = new window.Image();
-          img.onload = () => {
-            const srcW = img.naturalWidth || 640;
-            const srcH = img.naturalHeight || 480;
-
-            // 1. Rotate source onto an intermediate canvas matching the 3:4 preview viewport
-            const vpRect = previewViewportRef.current?.getBoundingClientRect();
-            const vpW = Math.round(vpRect?.width || 360) * 2;
-            const vpH = Math.round(vpRect?.height || 480) * 2;
-            const stageCanvas = document.createElement("canvas");
-            stageCanvas.width = vpW;
-            stageCanvas.height = vpH;
-            const stageCtx = stageCanvas.getContext("2d");
-
-            const rad = ((photoRotation % 360) * Math.PI) / 180;
-            stageCtx.save();
-            stageCtx.translate(vpW / 2, vpH / 2);
-            stageCtx.rotate(rad);
-
-            // Replicate CSS object-cover inside the viewport
-            const scale = Math.max(vpW / srcW, vpH / srcH);
-            const drawW = srcW * scale;
-            const drawH = srcH * scale;
-            stageCtx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-            stageCtx.restore();
-
-            // 2. Extract exact user-dragged cropRect from the stage canvas
-            const cropX = Math.round(vpW * cropRect.left);
-            const cropY = Math.round(vpH * cropRect.top);
-            const cropW = Math.max(32, Math.round(vpW * (cropRect.right - cropRect.left)));
-            const cropH = Math.max(32, Math.round(vpH * (cropRect.bottom - cropRect.top)));
-
-            const outCanvas = document.createElement("canvas");
-            outCanvas.width = cropW;
-            outCanvas.height = cropH;
-            const outCtx = outCanvas.getContext("2d");
-            outCtx.drawImage(stageCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-            outCanvas.toBlob(
-              (b) => {
-                if (b) {
-                  resolve({ blob: b, url: URL.createObjectURL(b) });
-                } else {
-                  resolve(null);
-                }
-              },
-              "image/jpeg",
-              0.92
-            );
-          };
-          img.onerror = () => resolve(null);
-          img.src = previewMedia.url;
-        });
-        if (baked?.blob) {
-          finalBlob = baked.blob;
-          finalUrl = baked.url;
-        }
-      } catch {}
-    } else if (previewMedia.type === "video" && (trimStart > 0.005 || trimEnd < 0.995)) {
-      const startSec = Number((trimStart * dur).toFixed(2));
-      const endSec = Number((trimEnd * dur).toFixed(2));
-      if (endSec > startSec) {
-        trimFragment = `#t=${startSec},${endSec}`;
+    if (previewMedia.type === "photo") {
+      const baked = await bakePhotoCropAndRotation(
+        previewMedia,
+        photoRotation,
+        cropRect,
+        previewViewportRef
+      );
+      if (baked?.blob) {
+        finalBlob = baked.blob;
+        finalUrl = baked.url;
       }
+    } else if (previewMedia.type === "video") {
+      trimFragment = computeVideoTrimFragment(trimStart, trimEnd, dur);
     }
 
     onSendMedia({
@@ -672,350 +516,64 @@ export function CameraCaptureModal({
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-black shadow-2xl flex flex-col justify-between select-none"
           >
-            {/* Optional Camera Error Alert */}
-            {cameraError && (
-              <div
-                style={{ fontFamily: "Arial, sans-serif" }}
-                className="absolute top-12 left-3 right-3 z-30 p-2 rounded-lg bg-red-600/90 text-white text-[11px] leading-tight text-center shadow"
-              >
-                {cameraError}
-              </div>
-            )}
-
-            {/* MAIN VIEWPORT: Live Viewfinder or Captured Photo/Video Preview */}
-            <div className="relative w-full flex-1 overflow-hidden bg-black flex items-center justify-center">
-              {previewMedia ? (
-                // Clean photo/video preview box
-                <div
-                  ref={previewViewportRef}
-                  className="relative w-full h-full flex items-center justify-center overflow-hidden"
-                >
-                  {/* Rotating Photo / Video Layer: Always 100% bright inside the crop area */}
-                  <div
-                    style={{
-                      transform: `rotate(${photoRotation}deg)`,
-                      transition: "transform 0.25s ease-out",
-                    }}
-                    className="w-full h-full flex items-center justify-center transition-all duration-200 opacity-100"
-                  >
-                    {previewMedia.type === "video" ? (
-                      <video
-                        ref={previewVideoRef}
-                        src={previewMedia.url}
-                        autoPlay
-                        loop
-                        playsInline
-                        onLoadedMetadata={(e) => {
-                          const v = e.currentTarget;
-                          if (v.duration === Infinity) {
-                            v.currentTime = 1e101;
-                            const handleDurationFix = () => {
-                              v.removeEventListener("timeupdate", handleDurationFix);
-                              if (Number.isFinite(v.duration) && v.duration > 0) {
-                                setVideoTrueDuration(v.duration);
-                              }
-                              try {
-                                v.currentTime = 0;
-                              } catch {}
-                            };
-                            v.addEventListener("timeupdate", handleDurationFix);
-                          } else if (v.duration && Number.isFinite(v.duration) && v.duration > 0) {
-                            setVideoTrueDuration(v.duration);
-                          }
-                        }}
-                        onTimeUpdate={handlePreviewVideoTimeUpdate}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={previewMedia.url}
-                        alt="Captured"
-                        className="w-full h-full object-cover pointer-events-none"
-                      />
-                    )}
-                  </div>
-
-                  {/* Interactive 3x3 Cropping Grid Overlay */}
-                  {isCropping && (
-                    <CameraCropOverlay
-                      cropRect={cropRect}
-                      handleCropPointerDown={handleCropPointerDown}
-                      isMapDark={isMapDark}
-                    />
-                  )}
-
-                  {/* Video Duration Trimming Panel: Located below video crop layer */}
-                  {previewMedia.type === "video" && (
-                    <CameraTrimmerBar
-                      trimmerTrackRef={trimmerTrackRef}
-                      getActiveVideoDur={getActiveVideoDur}
-                      activeTrimHandle={activeTrimHandle}
-                      trimStart={trimStart}
-                      trimEnd={trimEnd}
-                      handleTrimmerPointerDown={handleTrimmerPointerDown}
-                    />
-                  )}
-                </div>
-              ) : hasStream ? (
-              <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{
-                    transform: `${facingMode === "user" ? "scaleX(-1)" : "scaleX(1)"} ${
-                      zoomLevel === 2 ? "scale(1.4)" : "scale(1)"
-                    }`,
-                    transition: "transform 0.25s ease-out",
-                  }}
-                  className="w-full h-full object-cover"
-                />
-
-                {/* Centered Camera Open Prompt: Arial non-bold, firm, auto fades out after 2s or on shutter press */}
-                <AnimatePresence>
-                  {showCameraGuide && !isRecordingVideo && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.35, ease: "easeOut" }}
-                      className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 px-4"
-                    >
-                      <p
-                        style={{ fontFamily: "Arial, sans-serif" }}
-                        className="font-normal text-xs sm:text-[13px] text-center leading-relaxed select-none text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
-                      >
-                        Tap to Take Photo or<br />Hold to Take Video
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center p-4 text-center">
-                <span className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin mb-3" />
-                <p className="text-xs text-white/75 font-sans">Mempersiapkan kamera...</p>
-              </div>
-            )}
-          </div>
+            {/* VIEWPORT & ERROR ALERT */}
+            <CameraViewport
+              cameraError={cameraError}
+              previewMedia={previewMedia}
+              previewViewportRef={previewViewportRef}
+              photoRotation={photoRotation}
+              previewVideoRef={previewVideoRef}
+              setVideoTrueDuration={setVideoTrueDuration}
+              handlePreviewVideoTimeUpdate={handlePreviewVideoTimeUpdate}
+              isCropping={isCropping}
+              cropRect={cropRect}
+              setCropRect={setCropRect}
+              isMapDark={isMapDark}
+              trimmerTrackRef={trimmerTrackRef}
+              getActiveVideoDur={getActiveVideoDur}
+              activeTrimHandle={activeTrimHandle}
+              setActiveTrimHandle={setActiveTrimHandle}
+              trimStart={trimStart}
+              setTrimStart={setTrimStart}
+              trimEnd={trimEnd}
+              setTrimEnd={setTrimEnd}
+              hasStream={hasStream}
+              videoRef={videoRef}
+              facingMode={facingMode}
+              zoomLevel={zoomLevel}
+              showCameraGuide={showCameraGuide}
+              isRecordingVideo={isRecordingVideo}
+            />
 
           {/* BOTTOM CONTROLS FOOTER: Height adjusted to 66px, semi-shadow rather than pitch black */}
-          <div className="relative z-20 w-full h-[66px] sm:h-[70px] bg-black/45 backdrop-blur-md shadow-[0_-8px_24px_rgba(0,0,0,0.35)] flex items-center justify-between px-6">
-            {previewMedia ? (
-              /* PART 2 FOOTER: Ulang, Edit/Rotate, Once Icon */
-              <>
-                {/* ULANG: reload icon only, full white, no outer box, no text */}
-                <button
-                  type="button"
-                  onClick={handleRetake}
-                  className="p-2 text-white hover:text-white/80 transition-transform active:scale-90 cursor-pointer"
-                  title="Ulangi"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="1 4 1 10 7 10" />
-                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-                  </svg>
-                </button>
-
-                {/* EDIT / ROTATE ICON: Tapping toggles crop grid & switches to rotate icon without outer box */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isCropping) {
-                      setIsCropping(true);
-                    } else {
-                      handleRotatePhoto();
-                    }
-                  }}
-                  className="p-2 text-white hover:text-white/80 transition-transform active:scale-90 cursor-pointer"
-                  title={isCropping ? "Putar Foto 90°" : "Edit / Crop Foto"}
-                >
-                  {isCropping ? (
-                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      {/* Clean circular rotation arc without messy overlap */}
-                      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.57L21 8" />
-                      <polyline points="21 3 21 8 16 8" />
-                      {/* Centered photo frame that indicates rotating photo */}
-                      <rect x="8.5" y="8.5" width="7" height="7" rx="1.5" strokeWidth="1.8" />
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                    </svg>
-                  )}
-                </button>
-
-                {/* VIEW ONCE (PART 2 ONLY): Flat full white, no glow, no outer box */}
-                <button
-                  type="button"
-                  onClick={() => setIsViewOnce((v) => !v)}
-                  className={`p-2 transition-opacity cursor-pointer select-none ${
-                    isViewOnce ? "opacity-100 text-white" : "opacity-45 hover:opacity-75 text-white"
-                  }`}
-                  title={isViewOnce ? "Lihat Sekali Aktif" : "Aktifkan Lihat Sekali"}
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M 12 3 A 9 9 0 0 0 12 21" strokeLinecap="round" />
-                    <path d="M 12 3 A 9 9 0 0 1 12 21" strokeDasharray="2 3.5" strokeLinecap="round" />
-                    <text x="12" y="16" textAnchor="middle" fill="currentColor" stroke="none" fontSize="10" fontWeight="bold">1</text>
-                  </svg>
-                </button>
-              </>
-            ) : (
-              /* PART 1 FOOTER: Live Viewfinder (Zoom, Shutter [tap photo / hold video], Flip Camera) */
-              <>
-                {/* ZOOM CONTROL: flat white text 1x/2x, no outer box */}
-                <button
-                  type="button"
-                  onClick={handleToggleZoom}
-                  title={`Zoom ${zoomLevel === 1 ? "2x" : "1x"}`}
-                  className="p-2 text-white font-sans font-bold text-xs cursor-pointer select-none transition-transform active:scale-90"
-                >
-                  {zoomLevel}x
-                </button>
-
-                {/* SHUTTER BUTTON: Tap for Photo, Hold for Video (Cyan-Magenta Gradient Progress) */}
-                <div className="relative flex items-center justify-center">
-                  <button
-                    type="button"
-                    onPointerDown={handleShutterPointerDown}
-                    onPointerUp={handleShutterPointerUp}
-                    onLostPointerCapture={handleShutterPointerUp}
-                    onContextMenu={(e) => e.preventDefault()}
-                    onDragStart={(e) => e.preventDefault()}
-                    title="Ketuk untuk Foto, Tahan untuk Video"
-                    className="relative w-[52px] h-[52px] flex items-center justify-center p-1 cursor-pointer select-none transition-transform active:scale-95 touch-none"
-                  >
-                    {/* Outer Circular Ring with Cyan-to-Magenta gradient stroke on video hold */}
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none -rotate-90" viewBox="0 0 52 52">
-                      <defs>
-                        <linearGradient id="shutter-hold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#00f5d4" />
-                          <stop offset="100%" stopColor="#ff006e" />
-                        </linearGradient>
-                      </defs>
-                      {isRecordingVideo ? (
-                        <circle
-                          cx="26"
-                          cy="26"
-                          r="23"
-                          fill="none"
-                          stroke="url(#shutter-hold-gradient)"
-                          strokeWidth="3.5"
-                          strokeDasharray={2 * Math.PI * 23}
-                          strokeDashoffset={2 * Math.PI * 23 * (1 - Math.min(1, recordingSeconds / 60))}
-                          strokeLinecap="round"
-                          style={{ transition: "stroke-dashoffset 0.1s linear" }}
-                        />
-                      ) : (
-                        <circle
-                          cx="26"
-                          cy="26"
-                          r="23"
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="2.5"
-                        />
-                      )}
-                    </svg>
-
-                    {/* Inner White Circle (shrinks slightly when held/recording) */}
-                    <span
-                      className={`w-9 h-9 rounded-full block bg-white transition-all duration-200 ${
-                        isRecordingVideo ? "scale-[0.76] shadow-md" : "scale-100"
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* TURN CAMERA (FLIP): flat white icon, no outer box */}
-                <motion.button
-                  type="button"
-                  disabled={!canFlipCamera}
-                  onClick={handleFlipCamera}
-                  animate={isSpinningFlip ? { rotate: 360 } : { rotate: 0 }}
-                  transition={{ duration: 0.36, ease: "easeOut" }}
-                  className={`p-2 transition-all ${
-                    canFlipCamera
-                      ? "text-white opacity-100 hover:opacity-80 active:scale-90 cursor-pointer"
-                      : "text-white opacity-25 cursor-not-allowed pointer-events-none"
-                  }`}
-                  title={canFlipCamera ? "Ganti Kamera" : "Kamera belakang tidak tersedia"}
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-5 h-5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M20 12a8 8 0 0 1-13.66 5.66L4 15" />
-                    <polyline points="4 20 4 15 9 15" />
-                    <path d="M4 12A8 8 0 0 1 17.66 6.34L20 9" />
-                    <polyline points="20 4 20 9 15 9" />
-                  </svg>
-                </motion.button>
-              </>
-            )}
-          </div>
+          <CameraBottomControls
+            previewMedia={previewMedia}
+            handleRetake={handleRetake}
+            isCropping={isCropping}
+            setIsCropping={setIsCropping}
+            handleRotatePhoto={handleRotatePhoto}
+            isViewOnce={isViewOnce}
+            setIsViewOnce={setIsViewOnce}
+            zoomLevel={zoomLevel}
+            handleToggleZoom={handleToggleZoom}
+            handleShutterPointerDown={handleShutterPointerDown}
+            handleShutterPointerUp={handleShutterPointerUp}
+            isRecordingVideo={isRecordingVideo}
+            recordingSeconds={recordingSeconds}
+            canFlipCamera={canFlipCamera}
+            handleFlipCamera={handleFlipCamera}
+            isSpinningFlip={isSpinningFlip}
+          />
         </motion.div>
       </div>
 
         {/* BOX 2: SEPARATE FILL INPUT BOX DIRECTLY BELOW MEDIA BOX (PART 2 ONLY) */}
         {previewMedia && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.2 }}
-            className="w-full max-w-[340px] sm:max-w-[360px] mt-2.5 flex items-center gap-2 px-3.5 py-2 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-white shadow-xl z-30"
-          >
-            {/* Smiley Emoji Icon */}
-            <span className="text-white/80 select-none shrink-0">
-              <svg viewBox="0 0 24 24" className="w-[17px] h-[17px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                <line x1="9" y1="9" x2="9.01" y2="9" />
-                <line x1="15" y1="9" x2="15.01" y2="9" />
-              </svg>
-            </span>
-
-            {/* Caption Input Field */}
-            <input
-              type="text"
-              value={caption}
-              maxLength={50}
-              onChange={(e) => setCaption(e.target.value.slice(0, 50))}
-              placeholder="Ketik deskripsi..."
-              style={{ fontFamily: "Arial, sans-serif" }}
-              className="flex-1 bg-transparent text-xs text-white placeholder:text-white/50 outline-none min-w-0"
-            />
-
-            {/* 0/50 Character Counter: Arial non-bold, mini, consistent */}
-            <span
-              style={{ fontFamily: "Arial, sans-serif" }}
-              className="text-[10px] font-normal text-white/70 shrink-0 select-none"
-            >
-              {caption.length}/50
-            </span>
-
-            {/* Send Button */}
-            <button
-              type="button"
-              onClick={handleConfirmSend}
-              className="p-1 text-white hover:text-white/80 transition-transform active:scale-90 cursor-pointer shrink-0"
-              title="Kirim Foto / Video"
-            >
-              <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] fill-current">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-            </button>
-          </motion.div>
+          <CameraCaptionBox
+            caption={caption}
+            setCaption={setCaption}
+            handleConfirmSend={handleConfirmSend}
+          />
         )}
       </motion.div>
     </AnimatePresence>

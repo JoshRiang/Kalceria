@@ -2,9 +2,65 @@
 
 export function CameraCropOverlay({
   cropRect,
-  handleCropPointerDown,
+  setCropRect,
+  previewViewportRef,
+  handleCropPointerDown: externalHandleCropPointerDown,
   isMapDark,
 }) {
+  const handleCropPointerDown =
+    externalHandleCropPointerDown ||
+    ((e, mode) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (!previewViewportRef?.current) return;
+      const rect = previewViewportRef.current.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const initial = { ...cropRect };
+      const minSize = 0.18;
+
+      const onPointerMove = (ev) => {
+        const dx = (ev.clientX - startX) / rect.width;
+        const dy = (ev.clientY - startY) / rect.height;
+
+        setCropRect?.(() => {
+          let { left, top, right, bottom } = initial;
+          if (mode === "move") {
+            const w = right - left;
+            const h = bottom - top;
+            left = Math.max(0, Math.min(1 - w, left + dx));
+            top = Math.max(0, Math.min(1 - h, top + dy));
+            right = left + w;
+            bottom = top + h;
+          } else {
+            if (mode.includes("w")) {
+              left = Math.max(0, Math.min(right - minSize, left + dx));
+            }
+            if (mode.includes("e")) {
+              right = Math.min(1, Math.max(left + minSize, right + dx));
+            }
+            if (mode.includes("n")) {
+              top = Math.max(0, Math.min(bottom - minSize, top + dy));
+            }
+            if (mode.includes("s")) {
+              bottom = Math.min(1, Math.max(top + minSize, bottom + dy));
+            }
+          }
+          return { left, top, right, bottom };
+        });
+      };
+
+      const onPointerUp = () => {
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+      };
+
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    });
+
   return (
     <div className="absolute inset-0 z-15 pointer-events-none select-none touch-none">
       {/* Dimmed Surrounding Mask */}
@@ -101,19 +157,19 @@ export function CameraCropOverlay({
             cropRect.top < 0.02 && cropRect.right > 0.98 ? "rounded-tr-2xl" : "rounded-tr-md"
           } ${isMapDark ? "border-white" : "border-black"}`}
         />
-        {/* Bottom-Left Corner Bracket & Drag Handle: Sharp Edge */}
+        {/* Bottom-Left Corner Bracket & Drag Handle: Round Bevel */}
         <div
           onPointerDown={(e) => handleCropPointerDown(e, "sw")}
-          className={`absolute bottom-0 left-0 w-7 h-7 border-b-[4px] border-l-[4px] rounded-none cursor-nesw-resize z-30 ${
-            isMapDark ? "border-white" : "border-black"
-          }`}
+          className={`absolute bottom-0 left-0 w-7 h-7 border-b-[4px] border-l-[4px] cursor-nesw-resize z-30 ${
+            cropRect.bottom > 0.98 && cropRect.left < 0.02 ? "rounded-bl-2xl" : "rounded-bl-md"
+          } ${isMapDark ? "border-white" : "border-black"}`}
         />
-        {/* Bottom-Right Corner Bracket & Drag Handle: Sharp Edge */}
+        {/* Bottom-Right Corner Bracket & Drag Handle: Round Bevel */}
         <div
           onPointerDown={(e) => handleCropPointerDown(e, "se")}
-          className={`absolute bottom-0 right-0 w-7 h-7 border-b-[4px] border-r-[4px] rounded-none cursor-nwse-resize z-30 ${
-            isMapDark ? "border-white" : "border-black"
-          }`}
+          className={`absolute bottom-0 right-0 w-7 h-7 border-b-[4px] border-r-[4px] cursor-nwse-resize z-30 ${
+            cropRect.bottom > 0.98 && cropRect.right > 0.98 ? "rounded-br-2xl" : "rounded-br-md"
+          } ${isMapDark ? "border-white" : "border-black"}`}
         />
       </div>
     </div>

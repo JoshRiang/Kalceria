@@ -2,17 +2,13 @@
 
 import { memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import ContentImage from "@/components/ui/ContentImage";
-import { getEventCategory } from "../EventIcon";
 import KalcerianProfileCard from "../KalcerianProfileCard";
-import {
-  CategoryIcon,
-  BroadcastLineIcon,
-  ChatButtonIcon,
-  BlockButtonIcon,
-  RestoreButtonIcon,
-} from "./PanelIcons";
 import { BlockConfirmModal } from "./BlockConfirmModal";
+import {
+  KalcerianCardAvatar,
+  KalcerianCardFlankActions,
+  KalcerianCardHoverFlyout,
+} from "./kalcerianCard/index.js";
 
 export const KalcerianCardItem = memo(function KalcerianCardItem({
   user,
@@ -124,118 +120,16 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
         )}
 
         {/* LEFT 1/3: Photo Profile Circle with Online/Offline Indicator */}
-        <div className="relative z-10 flex justify-center items-center">
-          <div
-            className="relative cursor-pointer group/avatar"
-            onClick={(e) => handleAvatarClick(e, user)}
-            title={isExpanded ? "Close profile" : `View ${user.name}'s profile`}
-          >
-            <div
-              className={`w-11 h-11 sm:w-12 sm:h-12 border overflow-hidden rounded-full transition-all relative ${
-                isBlocked
-                  ? "grayscale-[80%] border-[#8b949e]/40"
-                  : isExpanded
-                  ? "border-white ring-2 ring-white/50"
-                  : user.isOnline
-                  ? isMapDark
-                    ? "border-[#3fb950] group-hover/avatar:scale-105"
-                    : "border-[#1a7f37] group-hover/avatar:scale-105"
-                  : isMapDark
-                  ? "border-[#30363d] opacity-50 group-hover/avatar:scale-105"
-                  : "border-[#d0d7de] opacity-60 group-hover/avatar:scale-105"
-              }`}
-            >
-              <ContentImage
-                className={`w-full h-full object-cover transition-all ${
-                  isExpanded ? "blur-[2.5px] brightness-50" : ""
-                }`}
-                src={avatarUrl(user)}
-                alt={user.nickname || user.name}
-                width={64}
-                height={64}
-              />
-
-              {/* When Expanded (Desktop/iPad): profile picture blurs and gets redup with thin white X */}
-              {isExpanded && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-white stroke-white" fill="none" strokeWidth="1.5">
-                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-              )}
-            </div>
-
-            {/* Bottom-right Avatar Badges: Favourite (Love) & Mute (Speaker + Cross) Stacked Horizontally, with Active Green Dot at Lowest Stack Layer (z-[5]) */}
-            {!isExpanded && (
-              !isBlocked && (isFavourite || isMuted) ? (
-                <div className="absolute -bottom-0.5 -right-1.5 z-20 flex items-center pointer-events-none">
-                  {isFavourite && (
-                    <span
-                      className={`relative z-10 w-[14px] h-[14px] rounded-full flex items-center justify-center shadow-xs ${
-                        isMapDark
-                          ? "bg-[#161b22] ring-1 ring-[#161b22]"
-                          : "bg-white ring-1 ring-white"
-                      }`}
-                    >
-                      <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]" fill="#ef4444">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                      </svg>
-                    </span>
-                  )}
-                  {isMuted && (
-                    <span
-                      className={`relative z-20 w-[14px] h-[14px] rounded-full flex items-center justify-center shadow-xs ${
-                        isFavourite ? "-ml-[6px]" : ""
-                      } ${
-                        isMapDark
-                          ? "bg-[#161b22] ring-1 ring-[#161b22]"
-                          : "bg-white ring-1 ring-white"
-                      }`}
-                    >
-                      <svg viewBox="0 0 24 24" className="w-[11px] h-[11px] overflow-visible">
-                        <path
-                          d="M 3 8.5 h 4 l 5.2 -4.5 v 16 l -5.2 -4.5 h -4 a 1 1 0 0 1 -1 -1 v -5 a 1 1 0 0 1 1 -1 z"
-                          fill="#ef4444"
-                        />
-                        <line
-                          x1="15.5"
-                          y1="8.5"
-                          x2="21.5"
-                          y2="15.5"
-                          stroke="#ef4444"
-                          strokeWidth="3.2"
-                          strokeLinecap="round"
-                        />
-                        <line
-                          x1="21.5"
-                          y1="8.5"
-                          x2="15.5"
-                          y2="15.5"
-                          stroke="#ef4444"
-                          strokeWidth="3.2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </span>
-                  )}
-                  {user.isOnline && (
-                    <span
-                      className={`relative z-[5] -ml-[5px] w-3 h-3 border-2 rounded-full bg-[#3fb950] ${
-                        isMapDark ? "border-[#161b22]" : "border-white"
-                      }`}
-                    />
-                  )}
-                </div>
-              ) : (
-                <span
-                  className={`absolute bottom-0 right-0 w-3 h-3 border-2 rounded-full ${
-                    isMapDark ? "border-[#161b22]" : "border-white"
-                  } ${isBlocked ? "bg-[#8b949e]/50" : user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
-                />
-              )
-            )}
-          </div>
-        </div>
+        <KalcerianCardAvatar
+          user={user}
+          isBlocked={isBlocked}
+          isExpanded={isExpanded}
+          isMapDark={isMapDark}
+          isFavourite={isFavourite}
+          isMuted={isMuted}
+          avatarUrl={avatarUrl}
+          handleAvatarClick={handleAvatarClick}
+        />
 
         {/* MIDDLE: Display Name, Real Username (@handle), and 24h Broadcast Status */}
         <div className="relative z-10 min-w-0 flex flex-col justify-center pr-1 overflow-hidden">
@@ -282,241 +176,32 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
         </div>
 
         {/* RIGHT: Synchronized 2x2 Grid Flank */}
-        <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch py-0.5 pointer-events-auto">
-          {/* Top Row: Dynamic Category Event & Broadcast Badges (Stacked with circle texture) */}
-          <div className="flex items-center justify-end w-[54px] h-6">
-            {!isBlocked && (userEvent || activeBroadcastMsg) ? (
-              <div className="flex items-center justify-end">
-                {/* Dynamic Slot 1: Category Event Icon */}
-                {userEvent && (
-                  <div
-                    className={`relative z-10 w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 ${
-                      isMapDark
-                        ? "bg-[#161b22] border border-white/25 shadow-[inset_0_1px_2px_rgba(255,255,255,0.15),0_1px_4px_rgba(0,0,0,0.7)]"
-                        : "bg-[#ffffff] border border-black/25 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08),0_1px_4px_rgba(0,0,0,0.12)]"
-                    }`}
-                  >
-                    {isRequestedByMe ? (
-                      <button
-                        type="button"
-                        disabled={isSelfOffline}
-                        onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                        onMouseLeave={() => setHoveredEventIconId(null)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isSelfOffline) return;
-                          onPromptCancelRequest?.(userEvent.id, userEvent.title);
-                        }}
-                        className={`w-full h-full flex items-center justify-center rounded-full outline-none ${
-                          isSelfOffline ? "opacity-35 grayscale cursor-not-allowed" : "cursor-pointer"
-                        }`}
-                        title={isSelfOffline ? "Offline (Stealth Mode)" : `Cancel request: ${userEvent.title}`}
-                      >
-                        <div className="filter grayscale opacity-45 flex items-center justify-center scale-90">
-                          <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                        </div>
-                        <svg viewBox="0 0 24 24" className="absolute inset-0 w-6 h-6 pointer-events-none overflow-visible">
-                          <line x1="4.5" y1="4.5" x2="19.5" y2="19.5" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" />
-                        </svg>
-                      </button>
-                    ) : hasPendingRequests ? (
-                      <button
-                        type="button"
-                        onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                        onMouseLeave={() => setHoveredEventIconId(null)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onOpenItemOnMap) {
-                            onOpenItemOnMap(userEvent, "event");
-                          } else {
-                            focusUser(userEvent);
-                          }
-                          if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
-                        }}
-                        className="w-full h-full flex items-center justify-center rounded-full outline-none cursor-pointer"
-                        title={
-                          eventPendingRequests.length > 0
-                            ? `${userEvent.title} (${eventPendingRequests.length} collab request${eventPendingRequests.length > 1 ? "s" : ""})`
-                            : `${userEvent.title} (${unreadGroupChatCount} new group message${unreadGroupChatCount > 1 ? "s" : ""})`
-                        }
-                      >
-                        <div className="scale-90 flex items-center justify-center">
-                          <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                        </div>
-                        <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-[#ef4444] rounded-full pointer-events-none" />
-                      </button>
-                    ) : isOtherEventDisabled ? (
-                      <button
-                        type="button"
-                        disabled
-                        onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                        onMouseLeave={() => setHoveredEventIconId(null)}
-                        className="w-full h-full flex items-center justify-center rounded-full opacity-40 grayscale cursor-not-allowed outline-none"
-                        title={`${userEvent.title} (Active request pending on another event)`}
-                      >
-                        <div className="scale-90 flex items-center justify-center">
-                          <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                        </div>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onMouseEnter={() => setHoveredEventIconId(userEvent.id)}
-                        onMouseLeave={() => setHoveredEventIconId(null)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onOpenItemOnMap) {
-                            onOpenItemOnMap(userEvent, "event");
-                          } else {
-                            focusUser(userEvent);
-                          }
-                          if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
-                        }}
-                        className="w-full h-full flex items-center justify-center rounded-full outline-none cursor-pointer"
-                        title={userEvent.title}
-                      >
-                        <div className="scale-90 flex items-center justify-center">
-                          <CategoryIcon category={getEventCategory(userEvent)} isMapDark={isMapDark} />
-                        </div>
-                      </button>
-                    )}
-
-                    {/* Hover Tooltip Box */}
-                    {hoveredEventIconId === userEvent.id && (
-                      <div
-                        className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-md shadow-2xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
-                          isMapDark
-                            ? "bg-black border border-white text-white shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
-                            : "bg-white border border-black text-black shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
-                        }`}
-                        style={{ fontFamily: "Arial, sans-serif" }}
-                      >
-                        {isRequestedByMe
-                          ? `Cancel Request: ${userEvent.title}`
-                          : hasPendingRequests
-                          ? eventPendingRequests.length > 0
-                            ? `${userEvent.title} (${eventPendingRequests.length} Collab Request${eventPendingRequests.length > 1 ? "s" : ""})`
-                            : `${userEvent.title} (${unreadGroupChatCount} Group Message${unreadGroupChatCount > 1 ? "s" : ""})`
-                          : isOtherEventDisabled
-                          ? `${userEvent.title} (Request active elsewhere)`
-                          : userEvent.title}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Dynamic Slot 2: Broadcast Message Icon (Stacked horizontally on top with textured circle) */}
-                {activeBroadcastMsg && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const isUserActivelyOnline = Boolean(user?.isOnline && user?.allowLiveLocation !== false);
-                      if (isUserActivelyOnline) {
-                        if (onOpenItemOnMap) {
-                          onOpenItemOnMap(user, "user");
-                        } else {
-                          focusUser(user);
-                        }
-                        if (typeof window !== "undefined" && window.innerWidth < 860) setDrawerOpen(false);
-                      } else {
-                        setExpandedUserId((prev) => (prev === user.id ? null : user.id));
-                      }
-                    }}
-                    className={`relative z-20 w-6 h-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 outline-none cursor-pointer ${
-                      userEvent ? "-ml-2.5" : ""
-                    } ${
-                      isMapDark
-                        ? "bg-[#161b22] border border-white/25 shadow-[inset_0_1px_2px_rgba(255,255,255,0.15),0_1px_4px_rgba(0,0,0,0.7)]"
-                        : "bg-[#ffffff] border border-black/25 shadow-[inset_0_1px_2px_rgba(0,0,0,0.08),0_1px_4px_rgba(0,0,0,0.12)]"
-                    }`}
-                    title="Open broadcast on map"
-                  >
-                    <div className="scale-85 flex items-center justify-center">
-                      <BroadcastLineIcon isMapDark={isMapDark} />
-                    </div>
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="w-6 h-6" />
-            )}
-          </div>
-
-          {/* Bottom Row: Chat Button + Block/Restore Button */}
-          <div className="grid grid-cols-2 gap-1.5 items-center justify-items-center w-[54px] mt-1.5">
-            {/* Slot 1: Chat Button (Dimmed & Disabled in Offline / Sniffer Mode) */}
-            {!isBlocked ? (
-              <div className="relative flex items-center justify-center w-6 h-6">
-                <button
-                  type="button"
-                  disabled={isSelfOffline}
-                  onMouseEnter={() => !isSelfOffline && setHoveredChatIconId?.(user.id)}
-                  onMouseLeave={() => setHoveredChatIconId?.(null)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isSelfOffline) return;
-                    onPersonalChatOpen?.(user);
-                  }}
-                  className={`relative z-20 w-7 h-7 -m-0.5 flex items-center justify-center rounded-md outline-none transition-all ${
-                    isSelfOffline
-                      ? "opacity-30 grayscale cursor-not-allowed"
-                      : "hover:scale-115 active:scale-95 cursor-pointer"
-                  }`}
-                  title={isSelfOffline ? "Mode Offline (aktifkan mata untuk chat)" : `Chat ${displayName}`}
-                >
-                  <ChatButtonIcon isMapDark={isMapDark} />
-                  {!isSelfOffline && unreadPersonalChatCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#ef4444] rounded-full shadow-sm pointer-events-none animate-pulse ring-1 ring-white/20" />
-                  )}
-                </button>
-
-                {/* Hover Tooltip Box: "Chat <Display Name>" */}
-                {!isSelfOffline && hoveredChatIconId === user.id && (
-                  <div
-                    className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-md shadow-2xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
-                      isMapDark
-                        ? "bg-black border border-white text-white shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
-                        : "bg-white border border-black text-black shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
-                    }`}
-                    style={{ fontFamily: "Arial, sans-serif" }}
-                  >
-                    Chat {displayName}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="w-6 h-6" />
-            )}
-
-            {/* Slot 2: Block Button or Restore Button */}
-            {!isBlocked ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirmingAction({ userId: user.id, type: "block" });
-                }}
-                className="w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                title={`Block ${user.name}`}
-              >
-                <BlockButtonIcon isMapDark={isMapDark} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirmingAction({ userId: user.id, type: "unblock" });
-                }}
-                className="w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-                title={`Unblock ${user.name}`}
-              >
-                <RestoreButtonIcon isMapDark={isMapDark} />
-              </button>
-            )}
-          </div>
-        </div>
+        <KalcerianCardFlankActions
+          user={user}
+          userEvent={userEvent}
+          isBlocked={isBlocked}
+          isMapDark={isMapDark}
+          isSelfOffline={isSelfOffline}
+          isRequestedByMe={isRequestedByMe}
+          hasPendingRequests={hasPendingRequests}
+          eventPendingRequests={eventPendingRequests}
+          isOtherEventDisabled={isOtherEventDisabled}
+          unreadGroupChatCount={unreadGroupChatCount}
+          unreadPersonalChatCount={unreadPersonalChatCount}
+          activeBroadcastMsg={activeBroadcastMsg}
+          displayName={displayName}
+          hoveredEventIconId={hoveredEventIconId}
+          setHoveredEventIconId={setHoveredEventIconId}
+          hoveredChatIconId={hoveredChatIconId}
+          setHoveredChatIconId={setHoveredChatIconId}
+          onPromptCancelRequest={onPromptCancelRequest}
+          onOpenItemOnMap={onOpenItemOnMap}
+          focusUser={focusUser}
+          setDrawerOpen={setDrawerOpen}
+          setExpandedUserId={setExpandedUserId}
+          onPersonalChatOpen={onPersonalChatOpen}
+          setConfirmingAction={setConfirmingAction}
+        />
       </div>
 
       {/* Desktop & iPad Inline Profile Card Elongation */}
@@ -562,90 +247,16 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
 
       {/* 6. Desktop Hover Card (Only for non-blocked users) */}
       {(isHovered || (hoveredKalcerian !== undefined && hoveredKalcerian === user.id)) && !isBlocked && (
-        <div
-          className={`absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 w-[220px] border rounded-lg shadow-xl p-3 flex flex-col gap-2.5 pointer-events-auto hidden md:flex font-sans backdrop-blur-md ${
-            isMapDark
-              ? "bg-[#161b22]/95 border-[#30363d] text-[#f0f6fc]"
-              : "bg-[#ffffff]/95 border-[#d0d7de] text-[#1f2328]"
-          }`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`w-9 h-9 rounded-full overflow-hidden border flex-shrink-0 ${
-                isMapDark ? "border-[#30363d]" : "border-[#d0d7de]"
-              }`}
-            >
-              <ContentImage
-                src={avatarUrl(user)}
-                alt=""
-                className="w-full h-full object-cover"
-                width={64}
-                height={64}
-              />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[12.5px] font-semibold truncate leading-tight">
-                {user.name}
-              </p>
-              {user.nickname && (
-                <p
-                  className={`text-[10.5px] truncate mt-0.5 ${
-                    isMapDark ? "text-[#8b949e]" : "text-[#656d76]"
-                  }`}
-                >
-                  @{user.nickname}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {(userEvent?.description || user.broadcast?.message) && (
-            <p
-              className={`text-[11px] border-l-2 pl-2 line-clamp-2 ${
-                isMapDark
-                  ? "text-[#8b949e] border-[#ffd60a]/40"
-                  : "text-[#656d76] border-[#d97706]"
-              }`}
-            >
-              &quot;{cleanDesc(userEvent?.description || user.broadcast?.message)}&quot;
-            </p>
-          )}
-
-          <div className="flex gap-2 mt-1">
-            <a
-              href={`/user/${user.id}`}
-              className={`flex-1 py-1.5 text-center text-[10.5px] font-medium border rounded transition-colors ${
-                isMapDark
-                  ? "bg-[#21262d] border-[#30363d] text-[#f0f6fc] hover:bg-[#30363d]"
-                  : "bg-[#f6f8fa] border-[#d0d7de] text-[#1f2328] hover:bg-[#f3f4f6]"
-              }`}
-            >
-              Profile
-            </a>
-            {Boolean(user?.isOnline && user?.allowLiveLocation !== false) && (
-              <button
-                type="button"
-                className={`flex-1 py-1.5 text-center text-[10.5px] font-medium border rounded transition-colors cursor-pointer ${
-                  isMapDark
-                    ? "bg-[#238636] border-[#2ea043] text-white hover:bg-[#2ea043]"
-                    : "bg-[#1f883d] border-[#1a7f37] text-white hover:bg-[#1a7f37]"
-                }`}
-                onClick={() => {
-                  if (userEvent) {
-                    focusUser(userEvent);
-                  } else {
-                    setFocusedUserId(user.id);
-                    focusUser(user);
-                    scheduleTimeout(() => setFocusedUserId(null), 100);
-                  }
-                }}
-              >
-                Focus
-              </button>
-            )}
-          </div>
-        </div>
+        <KalcerianCardHoverFlyout
+          user={user}
+          userEvent={userEvent}
+          isMapDark={isMapDark}
+          avatarUrl={avatarUrl}
+          cleanDesc={cleanDesc}
+          focusUser={focusUser}
+          setFocusedUserId={setFocusedUserId}
+          scheduleTimeout={scheduleTimeout}
+        />
       )}
     </motion.div>
   );

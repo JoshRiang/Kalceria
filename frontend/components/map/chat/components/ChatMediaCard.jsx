@@ -8,8 +8,10 @@ import {
   VIEW_ONCE_OPENED_STORAGE_KEY,
   readViewOnceOpened,
   persistViewOnceOpened,
-} from "./mediaCard/mediaCardHelpers";
-import { MediaCardZoomModal } from "./mediaCard/MediaCardZoomModal";
+  MediaCardZoomModal,
+  CardFront,
+  CardBack,
+} from "./mediaCard";
 
 export function ChatMediaCard({
   item,
@@ -521,253 +523,48 @@ export function ChatMediaCard({
           className="relative w-full h-full"
         >
           {/* FRONT SIDE (DEFAULT): Card with centered typing animation */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              pointerEvents: isFlipped ? "none" : "auto",
-              transform: "rotateY(0deg) translateZ(0)",
-            }}
-            className={`w-full h-full rounded-xl overflow-hidden flex flex-col justify-between p-2.5 ${
-              isMapDark
-                ? "bg-[#0d1117] border border-white/20 text-white shadow-md"
-                : "bg-white border border-black/15 text-black shadow-xs"
-            }`}
-          >
-            {/* Once Seen Badge (Top Right): Persists even after viewing */}
-            {isViewOnce && (
-              <div
-                className={`absolute top-2 right-2 z-20 flex items-center justify-center ${
-                  isMapDark ? "text-white" : "text-black"
-                }`}
-              >
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.4">
-                  <path d="M 12 3 A 9 9 0 0 0 12 21" strokeLinecap="round" />
-                  <path d="M 12 3 A 9 9 0 0 1 12 21" strokeDasharray="2 3.5" strokeLinecap="round" />
-                  <text x="12" y="16" textAnchor="middle" fill="currentColor" stroke="none" fontSize="10" fontWeight="bold">1</text>
-                </svg>
-              </div>
-            )}
-
-            {/* Centered Caption Text with Typing Animation or Loading Buffer */}
-            <div className="flex-1 w-full h-full flex items-center justify-center text-center px-1">
-              {item.status === "sending" ? (
-                <span
-                  className={`w-4 h-4 rounded-full border-[2.2px] border-current/25 border-t-current animate-spin block ${
-                    isMapDark ? "text-white" : "text-black"
-                  }`}
-                />
-              ) : (
-                <p
-                  className={`${captionFont} ${textSizeClass} select-none break-words max-w-full font-normal ${
-                    isMapDark ? "text-white" : "text-black"
-                  }`}
-                >
-                  {typedText || item.text || (isVideo ? "📹 Video" : "📷 Photo")}
-                  {!hasFinishedTyping && item.text && (
-                    <span
-                      className={`inline-block w-[1.5px] h-3 ml-0.5 align-middle animate-pulse ${
-                        isMapDark ? "bg-white" : "bg-black"
-                      }`}
-                    />
-                  )}
-                </p>
-              )}
-            </div>
-
-            {/* Flip Hint Icon in bottom right: Dimmed & disabled if view-once card was already opened */}
-            <div
-              className={`w-full flex justify-end items-center ${
-                isOnceOpened ? "opacity-20 cursor-not-allowed pointer-events-none" : "opacity-40"
-              }`}
-            >
-              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current">
-                <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
-              </svg>
-            </div>
-          </div>
+          <CardFront
+            isMapDark={isMapDark}
+            isFlipped={isFlipped}
+            isViewOnce={isViewOnce}
+            isOnceOpened={isOnceOpened}
+            item={item}
+            captionFont={captionFont}
+            textSizeClass={textSizeClass}
+            typedText={typedText}
+            hasFinishedTyping={hasFinishedTyping}
+            isVideo={isVideo}
+          />
 
           {/* BACK SIDE (FLIPPED): Photo or Video View */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              backfaceVisibility: "hidden",
-              WebkitBackfaceVisibility: "hidden",
-              transform: "rotateY(180deg) translateZ(0)",
-              pointerEvents: isFlipped ? "auto" : "none",
-            }}
-            className="z-10 w-full h-full rounded-xl overflow-hidden bg-black flex flex-col justify-between"
-          >
-            {/* Media View */}
-            <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
-              {item.status === "sending" && !item.mediaUrl ? (
-                <div className="w-full h-full flex items-center justify-center bg-neutral-900">
-                  <span className="w-5 h-5 rounded-full border-[2.5px] border-white/25 border-t-white animate-spin block" />
-                </div>
-              ) : mediaLoadError || !item.mediaUrl ? (
-                <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-neutral-900 text-white/50 select-none">
-                  <svg viewBox="0 0 24 24" className="w-7 h-7 fill-none stroke-current mb-1.5" strokeWidth="1.5">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
-                  </svg>
-                  <span className="text-[9px] font-sans text-white/60">Media tidak tersedia</span>
-                </div>
-              ) : isVideo ? (
-                <>
-                  <video
-                    ref={videoRef}
-                    src={item.mediaUrl}
-                    playsInline
-                    autoPlay={isFlipped && !isZoomOpen}
-                    muted={!isFlipped || isZoomOpen}
-                    loop
-                    onLoadedMetadata={(e) => {
-                      if (e.currentTarget.duration && Number.isFinite(e.currentTarget.duration) && e.currentTarget.duration > 0) {
-                        setRealVideoDuration(e.currentTarget.duration);
-                      }
-                      if (trimRange && e.currentTarget.currentTime < trimRange.start) {
-                        try {
-                          e.currentTarget.currentTime = trimRange.start;
-                        } catch {}
-                      }
-                    }}
-                    onError={() => setMediaLoadError(true)}
-                    onPlay={() => {
-                      if (!isZoomOpen) {
-                        setIsPlayingVideo(true);
-                        startVideoLoop();
-                      }
-                    }}
-                    onPause={() => {
-                      if (!isZoomOpen) {
-                        setIsPlayingVideo(false);
-                        cancelAnimationFrame(videoRafRef.current);
-                      }
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Center Play/Pause Overlay Button (Both Pause & Play dimmed consistently; never included in downloads) */}
-                  <div
-                    onClick={togglePlayVideo}
-                    className="absolute inset-0 z-20 flex items-center justify-center cursor-pointer select-none"
-                  >
-                    <div
-                      className={`transition-opacity duration-300 ${
-                        isPlayingVideo ? "opacity-35 hover:opacity-75" : "opacity-40 hover:opacity-80"
-                      }`}
-                    >
-                      {isPlayingVideo ? (
-                        <svg viewBox="0 0 24 24" className="w-8 h-8 fill-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
-                          <rect x="6" y="5" width="4" height="14" rx="1" />
-                          <rect x="14" y="5" width="4" height="14" rx="1" />
-                        </svg>
-                      ) : (
-                        <svg viewBox="0 0 24 24" className="w-8 h-8 fill-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)] ml-0.5">
-                          <polygon points="6,4 20,12 6,20" />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={item.mediaUrl}
-                  alt="Captured"
-                  onError={() => setMediaLoadError(true)}
-                  className="w-full h-full object-cover pointer-events-none"
-                />
-              )}
-
-              {/* Video Scrubber Line (60fps propagation) */}
-              {isVideo && item.mediaUrl && !mediaLoadError && (
-                <div
-                  onPointerDown={handleScrubberPointerDown}
-                  className="absolute inset-x-2 bottom-2 z-30 h-5 flex items-center cursor-pointer select-none"
-                >
-                  {isScrubbing && !isZoomOpen && (
-                    <div
-                      style={{
-                        left: `${Math.min(88, Math.max(12, videoProgress * 100))}%`,
-                        transform: "translateX(-50%)",
-                      }}
-                      className="absolute -top-6 px-1.5 py-0.5 rounded-md bg-white border border-black text-black font-sans font-medium text-[9.5px] leading-none shadow-sm select-none pointer-events-none whitespace-nowrap z-30"
-                    >
-                      {formatMinSec(scrubSeconds)}
-                    </div>
-                  )}
-
-                  <div className="relative w-full h-[2.5px] rounded-full bg-white/30 backdrop-blur-sm">
-                    <div
-                      style={{ width: `${videoProgress * 100}%` }}
-                      className="h-full rounded-full bg-white shadow-xs"
-                    />
-                    <div
-                      style={{
-                        left: `${videoProgress * 100}%`,
-                        transform: "translate(-50%, -50%)",
-                      }}
-                      className="absolute top-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md cursor-grab active:cursor-grabbing hover:scale-125 transition-transform"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* TOP-LEFT: Broken-Corner Zoom-In Box Icon ("zoom in box, yang patah patah") */}
-              {item.mediaUrl && !mediaLoadError && (
-                <div className="absolute top-2 left-2 z-35 pointer-events-auto">
-                  <button
-                    type="button"
-                    onClick={handleOpenZoom}
-                    className="p-1 rounded-full text-white/90 hover:text-white transition-transform hover:scale-110 active:scale-90 cursor-pointer drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.85)]"
-                    title="Perbesar media"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="w-3.5 h-3.5 fill-none stroke-current"
-                      strokeWidth="2.35"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9" />
-                      <path d="M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9" />
-                      <path d="M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15" />
-                      <path d="M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-
-              {/* TOP-RIGHT: Download Icon (2nd from right, omitted if View-Once) + Flip Back Icon (far right) */}
-              <div className="absolute top-2 right-2 z-35 flex items-center gap-0.5 pointer-events-auto">
-                {!isViewOnce && item.mediaUrl && !mediaLoadError && (
-                  <button
-                    type="button"
-                    onClick={handleDownload}
-                    disabled={isDownloading}
-                    className="p-1 rounded-full text-white/90 hover:text-white transition-transform hover:scale-110 active:scale-90 cursor-pointer drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.85)] disabled:opacity-60"
-                    title={isVideo ? "Unduh video" : "Unduh foto"}
-                  >
-                    {renderDownloadIconSvg("w-3.5 h-3.5")}
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleFlipBack}
-                  className="p-1 rounded-full text-white/90 hover:text-white transition-transform hover:scale-110 active:scale-90 cursor-pointer drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.85)]"
-                  title="Balikkan kartu"
-                >
-                  {renderFlipIconSvg("w-3.5 h-3.5")}
-                </button>
-              </div>
-            </div>
-          </div>
+          <CardBack
+            isFlipped={isFlipped}
+            item={item}
+            mediaLoadError={mediaLoadError}
+            setMediaLoadError={setMediaLoadError}
+            isVideo={isVideo}
+            videoRef={videoRef}
+            isZoomOpen={isZoomOpen}
+            trimRange={trimRange}
+            setRealVideoDuration={setRealVideoDuration}
+            setIsPlayingVideo={setIsPlayingVideo}
+            isPlayingVideo={isPlayingVideo}
+            startVideoLoop={startVideoLoop}
+            videoRafRef={videoRafRef}
+            togglePlayVideo={togglePlayVideo}
+            handleScrubberPointerDown={handleScrubberPointerDown}
+            isScrubbing={isScrubbing}
+            videoProgress={videoProgress}
+            scrubSeconds={scrubSeconds}
+            formatMinSec={formatMinSec}
+            isViewOnce={isViewOnce}
+            handleOpenZoom={handleOpenZoom}
+            handleDownload={handleDownload}
+            isDownloading={isDownloading}
+            renderDownloadIconSvg={renderDownloadIconSvg}
+            handleFlipBack={handleFlipBack}
+            renderFlipIconSvg={renderFlipIconSvg}
+          />
         </motion.div>
       </div>
 
