@@ -193,7 +193,7 @@ export function EventMediaSection({
         </p>
       )}
 
-      {isOwner && parsedUrls.length > 0 && (
+      {parsedUrls.length > 0 && (
         <div
           className={`mt-2 p-2.5 rounded-2xl border-2 border-dashed flex flex-col gap-1.5 ${
             isModalDark ? "border-[#30363d] bg-[#0d1117]/60" : "border-[#d0d7de] bg-[#f6f8fa]/80"

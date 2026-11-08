@@ -261,7 +261,7 @@ export function EventFormModal({
             setEventForm={setEventForm}
             isModalDark={isModalDark}
             busy={busy}
-            isOwner={isEditing}
+            isOwner={true}
           />
 
           {/* Action Buttons */}

@@ -125,7 +125,7 @@ export async function listEnrichedCollabRequests(eventId) {
 
   const userIds = Array.from(new Set(rawList.map((r) => String(r.userId))));
   const users = await prisma.user.findMany({
-    where: { id: { in: userIds }, isEmailVerified: true },
+    where: { id: { in: userIds } },
     select: {
       id: true,
       name: true,
@@ -203,7 +203,7 @@ export async function hydrateEventCollabSummary(ev, legacyCollabs = []) {
   let collaboratorProfiles = [];
   if (collaborators.length > 0) {
     const users = await prisma.user.findMany({
-      where: { id: { in: collaborators }, isEmailVerified: true },
+      where: { id: { in: collaborators } },
       select: { id: true, name: true, nickname: true, profilePicture: true },
     });
     const enriched = await ensurePersistentUserProfilesBatch(users);

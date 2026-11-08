@@ -48,6 +48,7 @@ export function EditProfileModal({
   const [phone, setPhone] = useState("");
   const [instagram, setInstagram] = useState("");
   const [coverImage, setCoverImage] = useState("");
+  const [isCoverVideo, setIsCoverVideo] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
@@ -106,6 +107,7 @@ export function EditProfileModal({
       const existingCover = resolvePersistentCover(currentUser);
       setCoverImage(existingCover);
       setCoverPreview(existingCover);
+      setIsCoverVideo(Boolean(existingCover && inferIsVideoMediaUrl(existingCover)));
 
       const existingAvatar = resolvePersistentAvatarUrl(currentUser);
       setProfilePicture(existingAvatar);
@@ -179,6 +181,7 @@ export function EditProfileModal({
       const objUrl = URL.createObjectURL(file);
       coverObjectUrlRef.current = objUrl;
       pendingCoverFileRef.current = file;
+      setIsCoverVideo(true);
       setCoverPreview(objUrl);
       setCoverImage(objUrl);
       e.target.value = "";
@@ -343,6 +346,7 @@ export function EditProfileModal({
                 <EditProfileCoverAndAvatar
                   isModalDark={isModalDark}
                   coverPreview={coverPreview}
+                  isCoverVideo={isCoverVideo}
                   defaultBaseColor={defaultBaseColor}
                   bgInputRef={bgInputRef}
                   handleBgFileChange={handleBgFileChange}
@@ -555,6 +559,7 @@ export function EditProfileModal({
         onDone={(processedDataUrl) => {
           if (cropContext?.target === "cover") {
             clearPendingCover();
+            setIsCoverVideo(false);
             setCoverPreview(processedDataUrl);
             setCoverImage(processedDataUrl);
           } else {

@@ -37,7 +37,14 @@ export function normalizeMediaConfig(
     };
   }
   if (!type) {
-    if (inferIsVideoMediaUrl(url) || lowerUrl.includes("video")) {
+    if (
+      inferIsVideoMediaUrl(url) ||
+      lowerUrl.includes("video") ||
+      lowerUrl.endsWith(".mp4") ||
+      lowerUrl.endsWith(".webm") ||
+      lowerUrl.includes(".mp4?") ||
+      lowerUrl.includes(".webm?")
+    ) {
       type = "video";
     } else if (
       lowerUrl.endsWith(".gif") ||
@@ -91,7 +98,7 @@ export function NormalizedMediaCover({
         loop
         muted
         playsInline
-        preload="metadata"
+        preload="auto"
         disablePictureInPicture
         disableRemotePlayback
         onError={() => setUseFallback(true)}

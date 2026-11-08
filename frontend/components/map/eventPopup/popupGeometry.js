@@ -90,31 +90,34 @@ export function computeCardGeometryForMedia(width, height) {
  */
 export function trackPopupLayoutDuringTransition(state, durationMs = GEOMETRY_TRANSITION_MS) {
   const popup = state?.popupInstance;
-  if (!popup || typeof popup.update !== "function" || state.destroyed) return;
+  if (!popup || state.destroyed) return;
 
   state.layoutTrackUntil = performance.now() + durationMs + 80;
   if (state.layoutTrackRaf) return;
 
-  const previousAutoPan = popup.options ? popup.options.autoPan : undefined;
-  if (popup.options) popup.options.autoPan = false;
+  const repositionPopup = () => {
+    try {
+      if (popup._container) {
+        popup._containerWidth = popup._container.offsetWidth;
+      }
+      if (typeof popup._updatePosition === "function") {
+        popup._updatePosition();
+      }
+    } catch {}
+  };
 
   const step = (now) => {
     if (state.destroyed) {
       state.layoutTrackRaf = null;
       return;
     }
-    try {
-      popup.update();
-    } catch {}
+    repositionPopup();
     if (now < state.layoutTrackUntil) {
       state.layoutTrackRaf = requestAnimationFrame(step);
       return;
     }
     state.layoutTrackRaf = null;
-    if (popup.options) popup.options.autoPan = previousAutoPan;
-    try {
-      popup.update();
-    } catch {}
+    repositionPopup();
   };
   state.layoutTrackRaf = requestAnimationFrame(step);
 }

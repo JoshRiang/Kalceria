@@ -28,11 +28,11 @@ export function inferIsVideoMediaUrl(url) {
   const s = String(url || "").trim();
   if (!s) return false;
   if (/^data:video\//i.test(s)) return true;
-  if (/\.(?:mp4|webm|ogg)(?:$|\?|#)/i.test(s)) return true;
+  if (/\.(?:mp4|webm|ogg|mov|m4v)(?:$|\?|#)/i.test(s)) return true;
   if (s.includes("/api/blob/raw")) {
     try {
       const inner = new URL(s, "https://kalceria.internal").searchParams.get("url") || "";
-      if (/\.(?:mp4|webm|ogg)(?:$|\?|#)/i.test(inner)) return true;
+      if (/\.(?:mp4|webm|ogg|mov|m4v)(?:$|\?|#)/i.test(inner)) return true;
     } catch {}
   }
   return false;

@@ -280,7 +280,16 @@ function startVideoClip(state, gen, slideEl, vid, idx, resumeSeconds) {
   vid.loop = false;
   vid.removeAttribute("loop");
   vid.muted = true;
+  vid.defaultMuted = true;
   vid.playsInline = true;
+  vid.setAttribute("muted", "");
+  vid.setAttribute("playsinline", "");
+
+  if (vid.readyState === 0) {
+    try {
+      vid.load();
+    } catch {}
+  }
 
   const hintedDuration = readNumberAttr(slideEl, "data-media-duration");
   const onMeta = () => {

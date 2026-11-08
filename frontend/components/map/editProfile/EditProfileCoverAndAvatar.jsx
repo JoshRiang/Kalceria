@@ -6,6 +6,7 @@ import { inferIsVideoMediaUrl } from "../eventPopup/popupMediaMetadata";
 export function EditProfileCoverAndAvatar({
   isModalDark,
   coverPreview,
+  isCoverVideo: isCoverVideoProp,
   defaultBaseColor,
   bgInputRef,
   handleBgFileChange,
@@ -23,7 +24,13 @@ export function EditProfileCoverAndAvatar({
     activeAvatarSrc && !String(activeAvatarSrc).includes("api.dicebear.com")
   );
   const isCoverColor = Boolean(coverPreview && String(coverPreview).startsWith("#"));
-  const isCoverVideo = Boolean(coverPreview && !isCoverColor && inferIsVideoMediaUrl(coverPreview));
+  const isCoverVideo = Boolean(
+    coverPreview &&
+      !isCoverColor &&
+      (typeof isCoverVideoProp === "boolean"
+        ? isCoverVideoProp
+        : inferIsVideoMediaUrl(coverPreview))
+  );
 
   const defaultDicebearUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
     currentUser?.nickname || currentUser?.username || currentUser?.id || cleanUsername || "anon"
@@ -58,6 +65,7 @@ export function EditProfileCoverAndAvatar({
                   loop
                   muted
                   playsInline
+                  preload="auto"
                   className="w-full h-full object-cover block"
                 />
               ) : (
@@ -65,6 +73,9 @@ export function EditProfileCoverAndAvatar({
                 <img
                   src={coverPreview}
                   alt="Cover preview"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
                   className="w-full h-full object-cover block"
                 />
               )
