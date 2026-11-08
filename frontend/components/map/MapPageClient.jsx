@@ -44,6 +44,7 @@ import {
   EVENT_CARD_BG_LIGHT,
   preloadAllMapBackgrounds,
 } from "@/lib/mapBgCache";
+import { prewarmVideoBatch } from "@/lib/videoPrewarmer";
 
 const SnapMap = dynamic(() => import("@/components/SnapMap"), {
   ssr: false,
@@ -273,6 +274,23 @@ export default function MapPage() {
         setEvents(mergedEvents);
         syncCollabStateFromServer(mergedEvents, eventMeta?.requestedEventId ?? null);
         setIsDataLoading(false);
+
+        // Pre-warm event clips and profile video covers in background for ~0 latency
+        const videoUrls = [];
+        mergedEvents.forEach((ev) => {
+          if (ev.mediaUrl) {
+            splitMediaUrlListClient(ev.mediaUrl).forEach((u) => videoUrls.push(u));
+          }
+        });
+        (kals || []).forEach((u) => {
+          if (u.coverImage && (u.coverType === "video" || u.coverImage.includes(".mp4") || u.coverImage.includes("/api/blob/raw"))) {
+            videoUrls.push(u.coverImage);
+          }
+        });
+        if (currentUser?.coverImage && currentUser?.coverType === "video") {
+          videoUrls.push(currentUser.coverImage);
+        }
+        prewarmVideoBatch(videoUrls);
       } catch (err) {
         console.error("[Map] fetch error", err);
         if (alive) setIsDataLoading(false);

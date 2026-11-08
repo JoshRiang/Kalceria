@@ -93,6 +93,7 @@ export function NormalizedMediaCover({
   if (media.type === "video") {
     return (
       <video
+        key={media.url}
         src={media.url}
         autoPlay
         loop

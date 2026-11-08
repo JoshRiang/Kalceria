@@ -282,8 +282,10 @@ function startVideoClip(state, gen, slideEl, vid, idx, resumeSeconds) {
   vid.muted = true;
   vid.defaultMuted = true;
   vid.playsInline = true;
+  vid.preload = "auto";
   vid.setAttribute("muted", "");
   vid.setAttribute("playsinline", "");
+  vid.setAttribute("webkit-playsinline", "");
 
   if (vid.readyState === 0) {
     try {

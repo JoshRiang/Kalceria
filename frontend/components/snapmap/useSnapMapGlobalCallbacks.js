@@ -15,8 +15,7 @@ export function useSnapMapGlobalCallbacks({
   onCollaboratorUpload,
   isSelfOffline = false,
 }) {
-  const latestRef = useRef({});
-  latestRef.current = {
+  const latestRef = useRef({
     events,
     onEditEvent,
     onRequestCollab,
@@ -24,7 +23,27 @@ export function useSnapMapGlobalCallbacks({
     onOpenRequests,
     onCollaboratorUpload,
     isSelfOffline,
-  };
+  });
+
+  useEffect(() => {
+    latestRef.current = {
+      events,
+      onEditEvent,
+      onRequestCollab,
+      onPromptCancelRequest,
+      onOpenRequests,
+      onCollaboratorUpload,
+      isSelfOffline,
+    };
+  }, [
+    events,
+    onEditEvent,
+    onRequestCollab,
+    onPromptCancelRequest,
+    onOpenRequests,
+    onCollaboratorUpload,
+    isSelfOffline,
+  ]);
 
   // Wire global event popup callbacks with stable window delegation (never unbinds across polling updates)
   useEffect(() => {

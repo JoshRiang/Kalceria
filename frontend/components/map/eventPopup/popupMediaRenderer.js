@@ -31,9 +31,13 @@ export function renderSingleMedia(mediaEntry, { index = 0 } = {}) {
       <video
         src="${esc(url)}"
         ${index === 0 ? "autoplay" : ""}
-        preload="${index <= 1 ? "auto" : "metadata"}"
+        preload="auto"
         muted
         playsinline
+        webkit-playsinline
+        x5-playsinline
+        disablepictureinpicture
+        disableremoteplayback
         style="width: 100%; height: 100%; object-fit: contain; display: block; background: transparent; pointer-events: none;"
       ></video>
     `;

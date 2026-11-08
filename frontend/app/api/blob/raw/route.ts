@@ -41,8 +41,13 @@ export async function GET(req: NextRequest) {
         parsedHost = "";
       }
       if (parsedHost.endsWith(".blob.vercel-storage.com")) {
-        const upstream = await fetch(blobUrl);
-        if (upstream.ok && upstream.body) {
+        const fetchHeaders: Record<string, string> = {};
+        const incomingRange = req.headers.get("range");
+        if (incomingRange) {
+          fetchHeaders["Range"] = incomingRange;
+        }
+        const upstream = await fetch(blobUrl, { headers: fetchHeaders });
+        if ((upstream.ok || upstream.status === 206) && upstream.body) {
           const upstreamHeaders: Record<string, string> = {
             "Content-Type": upstream.headers.get("content-type") || "application/octet-stream",
             "Cache-Control": "public, max-age=31536000, immutable",
@@ -50,12 +55,14 @@ export async function GET(req: NextRequest) {
           };
           const upstreamLen = upstream.headers.get("content-length");
           if (upstreamLen) upstreamHeaders["Content-Length"] = upstreamLen;
+          const contentRange = upstream.headers.get("content-range");
+          if (contentRange) upstreamHeaders["Content-Range"] = contentRange;
           if (isDownload) {
             const dlName = safeFilename || "kalceria-media";
             upstreamHeaders["Content-Disposition"] = `attachment; filename="${dlName}"`;
           }
           return new NextResponse(upstream.body, {
-            status: 200,
+            status: upstream.status,
             headers: upstreamHeaders,
           });
         }

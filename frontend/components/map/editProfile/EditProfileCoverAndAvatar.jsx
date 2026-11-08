@@ -29,7 +29,7 @@ export function EditProfileCoverAndAvatar({
       !isCoverColor &&
       (typeof isCoverVideoProp === "boolean"
         ? isCoverVideoProp
-        : inferIsVideoMediaUrl(coverPreview))
+        : (currentUser?.coverType === "video" || inferIsVideoMediaUrl(coverPreview)))
   );
 
   const defaultDicebearUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
@@ -67,12 +67,16 @@ export function EditProfileCoverAndAvatar({
                   playsInline
                   preload="auto"
                   className="w-full h-full object-cover block"
+                  onError={(e) => {
+                    // Graceful fallback to deterministic base color if video fails to load
+                    e.currentTarget.style.display = "none";
+                  }}
                 />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={coverPreview}
-                  alt="Cover preview"
+                  alt=""
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                   }}

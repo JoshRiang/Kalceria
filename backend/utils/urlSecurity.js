@@ -23,7 +23,7 @@ const BLOCKED_HOST_PATTERNS = [
   /instance-data/i,
 ];
 
-const VALID_MEDIA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.mp4', '.webm'];
+const VALID_MEDIA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.mp4', '.webm', '.mov', '.m4v'];
 const MAX_MEDIA_URLS = 100;
 const MAX_SINGLE_URL_LENGTH = 2048;
 const MAX_TOTAL_URL_LIST_LENGTH = 32768;
@@ -173,8 +173,8 @@ export function sanitizeAndNormalizeMediaUrl(rawInput) {
       return { valid: false, error: 'Terdeteksi upaya path traversal / enumerasi direktori dalam URL.' };
     }
 
-    // Signed/private Vercel Blob proxy endpoint (/api/blob/raw?url=...)
-    if (item.startsWith('/api/blob/raw')) {
+    // Signed/private Vercel Blob proxy endpoint (/api/blob/raw?url=...) (both relative and absolute domain URLs)
+    if (item.startsWith('/api/blob/raw') || item.includes('/api/blob/raw')) {
       const proxyCheck = validatePrivateBlobProxyUrl(item);
       if (!proxyCheck.valid) return proxyCheck;
       normalizedList.push(proxyCheck.normalized);

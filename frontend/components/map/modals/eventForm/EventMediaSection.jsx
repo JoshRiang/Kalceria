@@ -32,11 +32,23 @@ export function EventMediaSection({
       return;
     }
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "webp", "mp4", "webm"].includes(ext)) {
+    if (!["png", "jpg", "jpeg", "webp", "mp4", "webm", "mov", "m4v"].includes(ext)) {
       setUploadError("Only .png, .jpeg, .webp, .mp4, and .webm files are allowed");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+
+    const isVideoFile = file.type.startsWith("video/") || ["mp4", "webm", "mov", "m4v"].includes(ext);
+    // Instant 0ms latency local preview
+    const instantObjUrl = URL.createObjectURL(file);
+    setEventForm((f) => {
+      const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
+      const nextUrls = [...existingUrls, instantObjUrl].join(", ");
+      const nextMeta = { ...(f.mediaMetadataByUrl || {}) };
+      nextMeta[instantObjUrl] = { isVideo: isVideoFile };
+      return { ...f, mediaUrl: nextUrls, mediaMetadataByUrl: nextMeta };
+    });
+
     setIsUploadingMedia(true);
     setUploadError("");
     try {
@@ -49,15 +61,25 @@ export function EventMediaSection({
       if (res?.url) {
         setEventForm((f) => {
           const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
-          const nextUrls = [...existingUrls, res.url].join(", ");
+          const nextUrls = existingUrls.map((u) => (u === instantObjUrl ? res.url : u)).join(", ");
           const nextMeta = { ...(f.mediaMetadataByUrl || {}) };
-          if (meta.width || meta.height || meta.duration) {
-            nextMeta[res.url] = meta;
-          }
+          delete nextMeta[instantObjUrl];
+          nextMeta[res.url] = {
+            ...(meta || {}),
+            isVideo: isVideoFile,
+          };
           return { ...f, mediaUrl: nextUrls, mediaMetadataByUrl: nextMeta };
         });
       }
     } catch (err) {
+      // Revert optimistic local preview if upload permanently fails
+      setEventForm((f) => {
+        const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
+        const nextUrls = existingUrls.filter((u) => u !== instantObjUrl).join(", ");
+        const nextMeta = { ...(f.mediaMetadataByUrl || {}) };
+        delete nextMeta[instantObjUrl];
+        return { ...f, mediaUrl: nextUrls, mediaMetadataByUrl: nextMeta };
+      });
       setUploadError(err.message || "Failed to upload media");
     } finally {
       setIsUploadingMedia(false);
@@ -144,7 +166,7 @@ export function EventMediaSection({
         <input
           type="file"
           ref={fileInputRef}
-          accept=".png,.jpg,.jpeg,.webp,.mp4,.webm,image/png,image/jpeg,image/webp,video/mp4,video/webm"
+          accept=".png,.jpg,.jpeg,.webp,.mp4,.webm,.mov,.m4v,image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime"
           className="hidden"
           onChange={handleMediaUpload}
         />
@@ -201,7 +223,7 @@ export function EventMediaSection({
         >
           <div className="flex items-center gap-2.5 overflow-x-auto py-1 custom-scrollbar">
             {parsedUrls.map((url, idx) => {
-              const isVideo = inferIsVideoMediaUrl(url);
+              const isVideo = inferIsVideoMediaUrl(url, eventForm.mediaMetadataByUrl?.[url]);
               return (
                 <div
                   key={`${idx}-${url.slice(0, 32)}`}

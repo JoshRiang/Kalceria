@@ -24,7 +24,8 @@ const LIGHT_MODE_COUNT_COLORS = [
   "#b91c1c", // Crimson
 ];
 
-export function inferIsVideoMediaUrl(url) {
+export function inferIsVideoMediaUrl(url, metadata = null) {
+  if (metadata && typeof metadata.isVideo === "boolean") return metadata.isVideo;
   const s = String(url || "").trim();
   if (!s) return false;
   if (/^data:video\//i.test(s)) return true;
@@ -35,6 +36,7 @@ export function inferIsVideoMediaUrl(url) {
       if (/\.(?:mp4|webm|ogg|mov|m4v)(?:$|\?|#)/i.test(inner)) return true;
     } catch {}
   }
+  if (s.startsWith("blob:") && (s.includes("video") || metadata?.duration || metadata?.isVideo)) return true;
   return false;
 }
 

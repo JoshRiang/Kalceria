@@ -18,6 +18,7 @@ import {
 import { EditProfileCoverAndAvatar } from "./editProfile/EditProfileCoverAndAvatar";
 import { EditProfileDangerZone } from "./editProfile/EditProfileDangerZone";
 import { ActionArcSpinner } from "./modals/ActionArcSpinner";
+import { inferIsVideoMediaUrl } from "./eventPopup/popupMediaMetadata";
 import {
   MODAL_GENIE_BACKDROP,
   MODAL_GENIE_SURFACE,
@@ -107,7 +108,11 @@ export function EditProfileModal({
       const existingCover = resolvePersistentCover(currentUser);
       setCoverImage(existingCover);
       setCoverPreview(existingCover);
-      setIsCoverVideo(Boolean(existingCover && inferIsVideoMediaUrl(existingCover)));
+      const isVideoCover = Boolean(
+        currentUser?.coverType === "video" ||
+        (existingCover && inferIsVideoMediaUrl(existingCover))
+      );
+      setIsCoverVideo(isVideoCover);
 
       const existingAvatar = resolvePersistentAvatarUrl(currentUser);
       setProfilePicture(existingAvatar);

@@ -9,6 +9,7 @@ import {
 
 export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
   const idleTimerRef = useRef(null);
+  const resetIdleTimerRef = useRef(null);
 
   // Smooth idle auto-collapse timer for event cards on map
   const resetIdleTimer = useCallback((delayMs = 5000) => {
@@ -25,7 +26,7 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
         Boolean(el.querySelector('[data-feed-state="playing"], [data-feed-state="paused"]'))
       );
       if (hasActivePlayingFeed) {
-        resetIdleTimer(3500);
+        resetIdleTimerRef.current?.(3500);
         return;
       }
       activeEventPopups.forEach((el) => {
@@ -53,6 +54,7 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
       }, 300);
     }, delayMs);
   }, [mapRef, markerRefs]);
+  resetIdleTimerRef.current = resetIdleTimer;
 
   // Wire event popup idle collapse listeners
   useEffect(() => {
