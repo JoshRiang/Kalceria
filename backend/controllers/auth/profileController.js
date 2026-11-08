@@ -96,6 +96,7 @@ export async function updateMe(req, res, next) {
       reason,
       coverImage,
       coverUrl,
+      coverType,
       socialPlatform,
       socialLink,
       profilePicture,
@@ -174,6 +175,13 @@ export async function updateMe(req, res, next) {
       const defaultCover = getDeterministicCoverColor(user);
       meta.coverImage = defaultCover;
       meta.coverUrl = defaultCover;
+    }
+
+    if (coverType !== undefined) {
+      meta.coverType = coverType === 'video' ? 'video' : 'image';
+    } else if (meta.coverImage) {
+      const isVid = /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(String(meta.coverImage)) || String(meta.coverImage).includes('/api/blob/raw');
+      meta.coverType = isVid ? 'video' : 'image';
     }
 
     const rawBio = bio !== undefined ? bio : alasanMasuk !== undefined ? alasanMasuk : reason;

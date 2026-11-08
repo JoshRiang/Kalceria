@@ -133,7 +133,7 @@ export function resolvePersistentCover(user) {
 /**
  * Explicitly updates the local persistence cache when the user saves changes in EditProfileModal.
  */
-export function persistProfileIdentityCache(user, { profilePicture, coverImage } = {}) {
+export function persistProfileIdentityCache(user, { profilePicture, coverImage, coverType } = {}) {
   if (typeof window === "undefined" || !user) return;
   const key = getUserIdentityKey(user);
   try {
@@ -142,6 +142,9 @@ export function persistProfileIdentityCache(user, { profilePicture, coverImage }
     }
     if (coverImage) {
       localStorage.setItem(`kalceria_cover_v1:${key}`, coverImage);
+    }
+    if (coverType) {
+      localStorage.setItem(`kalceria_cover_type_v1:${key}`, coverType);
     }
   } catch {}
 }

@@ -1064,6 +1064,7 @@ export default function MapPage() {
       persistProfileIdentityCache(currentUser, {
         profilePicture: patch.profilePicture,
         coverImage: patch.coverImage,
+        coverType: patch.coverType,
       });
       setCurrentUser((prev) => {
         const merged = { ...(prev || {}), ...patch };
@@ -1107,6 +1108,7 @@ export default function MapPage() {
                 displayName: patch.displayName || patch.name || ev.creator?.displayName,
                 profilePicture: patch.profilePicture ?? ev.creator?.profilePicture,
                 coverImage: patch.coverImage ?? ev.creator?.coverImage,
+                coverType: patch.coverType ?? ev.creator?.coverType,
               },
             };
           })

@@ -24,6 +24,7 @@ import {
   doesEventBelongToUser,
   getEventPendingRequests,
 } from "./hooks/useMapChatAndNotifications";
+import { prewarmVideoBatch, prewarmVideoUrl } from "@/lib/videoPrewarmer";
 
 export const KalceriansPanel = memo(function KalceriansPanel({
   scheduleTimeout,
@@ -89,6 +90,17 @@ export const KalceriansPanel = memo(function KalceriansPanel({
   activeChatUserSnapshotRef.current = activeChatUserSnapshot;
   incomingCallInitialStateRef.current = incomingCallInitialState;
   isSelfOfflineRef.current = Boolean(isSelfOffline);
+
+  // Parallel eager prewarming of sidebar Kalcerians' video/media covers to eliminate blank black screens
+  useEffect(() => {
+    if (!Array.isArray(sidebarKalcerians) || sidebarKalcerians.length === 0) return;
+    const covers = sidebarKalcerians
+      .map((u) => u.coverImage || u.coverUrl)
+      .filter((c) => c && typeof c === "string" && !c.startsWith("#"));
+    if (covers.length > 0) {
+      prewarmVideoBatch(covers);
+    }
+  }, [sidebarKalcerians]);
 
   // When switching into Offline / Stealth ("Sniffer") mode, close active personal chat & suppress incoming call alerts
   useEffect(() => {

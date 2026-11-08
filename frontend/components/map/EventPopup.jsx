@@ -216,19 +216,17 @@ export function eventPopup(
       </div>
 
       <!-- Framed Media Screen: width/height follow the real clip aspect ratio (portrait ↔ 16:9 landscape), dark backdrop so no white flash -->
-      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; transition: height ${geometryTransition}; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
+      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; transition: height ${geometryTransition}; margin: 2px 12px 8px 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
         ${renderMediaCarousel(mediaItems, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId)}
       </div>
 
-      <!-- Lower Space: Description -->
-      <div class="popup-lower-space" style="position: relative; z-index: 2; border: none !important;">
-        <div class="popup-status active" style="padding: 10px 14px 9px 14px; background: transparent !important; border: none !important;">
-          <p style="font-style: normal; color: ${descColor}; margin: 0; font-size: 12.5px; line-height: 1.45; font-weight: 500; font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${esc(displayDesc)}</p>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="popup-footer" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 5px; padding: 8px 14px 9px 14px; background: ${footerBg} !important; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; border: none !important;">
+      <!-- Footer: dynamic expanding/contracting white/dark box with user briefing positioned cleanly above the location link -->
+      <div class="popup-footer" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 10px 14px; background: ${footerBg} !important; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; border: none !important;">
+        ${displayDesc ? `
+          <div class="popup-briefing" style="margin: 0 0 3px 0; line-height: 1.4; word-break: break-word;">
+            <p style="margin: 0; font-size: 12px; line-height: 1.42; font-weight: 600; color: ${footerTextColor}; font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.01em;">${esc(displayDesc)}</p>
+          </div>
+        ` : ""}
         ${locationHtml}
 
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">

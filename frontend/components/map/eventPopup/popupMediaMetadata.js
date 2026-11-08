@@ -36,7 +36,10 @@ export function inferIsVideoMediaUrl(url, metadata = null) {
       if (/\.(?:mp4|webm|ogg|mov|m4v)(?:$|\?|#)/i.test(inner)) return true;
     } catch {}
   }
-  if (s.startsWith("blob:") && (s.includes("video") || metadata?.duration || metadata?.isVideo)) return true;
+  if (s.startsWith("blob:")) {
+    if (metadata && metadata.isVideo === false) return false;
+    return true;
+  }
   return false;
 }
 

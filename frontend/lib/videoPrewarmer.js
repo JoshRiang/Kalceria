@@ -2,10 +2,11 @@
 
 // videoPrewarmer.js — Zero-Latency Video Prewarming Engine for Kalceria
 // Pre-fetches video moov atoms & initial frames in background via range fetch
-// so Event Cards and Kalcerian Profile video covers start playing with ~0 latency.
+// and primes browser video decoders so Event Cards and Kalcerian Profile video covers start playing with ~0 latency.
 
 const prewarmedSet = new Set();
-const MAX_PREWARMED_CACHE = 50;
+const videoElementPool = new Map();
+const MAX_PREWARMED_CACHE = 40;
 
 export function prewarmVideoUrl(rawUrl) {
   if (typeof window === "undefined" || !rawUrl) return;
@@ -30,25 +31,50 @@ export function prewarmVideoUrl(rawUrl) {
 
   if (prewarmedSet.size >= MAX_PREWARMED_CACHE) {
     const oldest = prewarmedSet.values().next().value;
-    if (oldest) prewarmedSet.delete(oldest);
+    if (oldest) {
+      prewarmedSet.delete(oldest);
+      const pooledVid = videoElementPool.get(oldest);
+      if (pooledVid) {
+        pooledVid.src = "";
+        pooledVid.remove();
+        videoElementPool.delete(oldest);
+      }
+    }
   }
   prewarmedSet.add(url);
 
   const doPrewarm = () => {
     try {
-      // Preload first 128KB chunk via range request to warm HTTP cache & CDN edge
+      // 1. Preload first 256KB chunk via range request to warm HTTP cache & CDN edge
       fetch(url, {
-        headers: { Range: "bytes=0-131071" },
+        headers: { Range: "bytes=0-262143" },
         cache: "force-cache",
         mode: "cors",
       }).catch(() => {});
+
+      // 2. Hardware Video Decoder priming via headless video element
+      if (typeof document !== "undefined") {
+        const vid = document.createElement("video");
+        vid.preload = "auto";
+        vid.muted = true;
+        vid.playsInline = true;
+        vid.style.position = "fixed";
+        vid.style.width = "1px";
+        vid.style.height = "1px";
+        vid.style.opacity = "0.001";
+        vid.style.pointerEvents = "none";
+        vid.style.zIndex = "-9999";
+        vid.src = url;
+        vid.load();
+        videoElementPool.set(url, vid);
+      }
     } catch {}
   };
 
   if ("requestIdleCallback" in window) {
-    window.requestIdleCallback(doPrewarm, { timeout: 2000 });
+    window.requestIdleCallback(doPrewarm, { timeout: 1200 });
   } else {
-    setTimeout(doPrewarm, 150);
+    setTimeout(doPrewarm, 60);
   }
 }
 

@@ -82,6 +82,8 @@ export function EditProfileModal({
     }
   }, []);
 
+  const prevShowRef = useRef(false);
+
   useEffect(() => {
     return () => {
       clearPendingCover();
@@ -89,7 +91,8 @@ export function EditProfileModal({
   }, [clearPendingCover]);
 
   useEffect(() => {
-    if (currentUser && show) {
+    // Only initialize form fields when the modal opens (show transitions from false to true)
+    if (show && !prevShowRef.current && currentUser) {
       const name = currentUser.displayName || currentUser.name || currentUser.nickname || "";
       setDisplayName(name);
       const desc = currentUser.bio || currentUser.alasanMasuk || currentUser.reason || "";
@@ -119,6 +122,7 @@ export function EditProfileModal({
       setAvatarPreview(existingAvatar);
       setFileError(null);
     }
+    prevShowRef.current = Boolean(show);
   }, [currentUser, show, clearPendingCover]);
 
   useModalBackClose(Boolean(show), onClose);
@@ -229,14 +233,20 @@ export function EditProfileModal({
           throw new Error("Failed to upload cover video.");
         }
         finalCover = uploadedCover.url;
-        clearPendingCover();
+        setCoverImage(finalCover);
+        setCoverPreview(finalCover);
       } else if (finalCover && String(finalCover).startsWith("data:")) {
         finalCover = await uploadDataUrlViaBlob(finalCover, `cover-${cleanUsername}`);
+        setCoverImage(finalCover);
+        setCoverPreview(finalCover);
       }
+
+      const coverType = isCoverVideo ? "video" : "image";
 
       persistProfileIdentityCache(currentUser, {
         profilePicture: finalAvatar,
         coverImage: finalCover,
+        coverType,
       });
 
       const updatedData = {
@@ -252,6 +262,7 @@ export function EditProfileModal({
         socialLink: cleanIg ? cleanIg : cleanPhone ? cleanPhone : null,
         coverImage: finalCover,
         coverUrl: finalCover,
+        coverType,
         profilePicture: finalAvatar,
       };
       await onSaveProfile?.(updatedData);

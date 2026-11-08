@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { inferIsVideoMediaUrl } from "../eventPopup/popupMediaMetadata";
 
@@ -71,6 +71,14 @@ export function NormalizedMediaCover({
   fallbackColor,
 }) {
   const [useFallback, setUseFallback] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (videoRef.current && videoRef.current.readyState >= 2) {
+      setIsLoaded(true);
+    }
+  }, [media?.url]);
 
   if (media?.type === "color" || media?.url?.startsWith?.("#")) {
     return (
@@ -85,30 +93,48 @@ export function NormalizedMediaCover({
     return (
       <div
         className="w-full h-full"
-        style={{ backgroundColor: fallbackColor || "#1b4332" }}
+        style={{ backgroundColor: fallbackColor || "#121624" }}
       />
     );
   }
 
   if (media.type === "video") {
     return (
-      <video
-        key={media.url}
-        src={media.url}
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        disablePictureInPicture
-        disableRemotePlayback
-        onError={() => setUseFallback(true)}
-        className="w-full h-full object-cover object-center pointer-events-none transition-transform duration-500 hover:scale-105"
-        style={{
-          transform: "translateZ(0)",
-          willChange: "transform",
-        }}
-      />
+      <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: fallbackColor || "#121624" }}>
+        {/* Placeholder / Shimmer while video frame is decoding */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-300 pointer-events-none ${
+            isLoaded ? "opacity-0" : "opacity-100"
+          }`}
+          style={{
+            backgroundColor: fallbackColor || "#121624",
+            backgroundImage: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.06) 0%, transparent 70%)",
+          }}
+        />
+        <video
+          ref={videoRef}
+          key={media.url}
+          src={media.url}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          disableRemotePlayback
+          onLoadedData={() => setIsLoaded(true)}
+          onCanPlay={() => setIsLoaded(true)}
+          onPlaying={() => setIsLoaded(true)}
+          onError={() => setUseFallback(true)}
+          className={`w-full h-full object-cover object-center pointer-events-none transition-all duration-300 ${
+            isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-[1.02]"
+          }`}
+          style={{
+            transform: "translateZ(0)",
+            willChange: "transform, opacity",
+          }}
+        />
+      </div>
     );
   }
 
