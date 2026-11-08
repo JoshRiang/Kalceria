@@ -1,5 +1,5 @@
 # AGENTS.MD — KALCERIA FRONTIER EXECUTION & RELIABILITY STANDARD
-**Target Quality Level**: Claude 3.5 Sonnet / Opus 5.5 & Gemini 4 Argon Tier  
+**Target Quality Level**: Claude Opus 5.5 / Sonnet 5.5 & Gemini 4 Argon Tier  
 **Mandate**: ZERO TOLERANCE for implementation defects, shallow assumptions, mock shortcuts, regressions, or unverified claims.
 
 ---
