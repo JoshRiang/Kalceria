@@ -3,7 +3,8 @@ import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cur
 import { resolveIndonesianReverseGeo } from './geoController.js';
 import { ensurePersistentUserProfile } from '../utils/profileDefaults.js';
 
-const MINI_EVENT_TTL_MS = 24 * 60 * 60 * 1000;
+const MINI_EVENT_TTL_MS = 10 * 365 * 24 * 60 * 60 * 1000; // 10 years (unlimited on map until creator deletes)
+const MEDIA_ITEM_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours per uploaded media item
 
 const MINOR_TITLE_WORDS = new Set([
   "dan", "atau", "serta", "tetapi", "tapi", "namun", "melainkan", "padahal", "sedangkan",
@@ -68,16 +69,41 @@ function formatMiniEvent(ev) {
   const catMatch = raw.match(/\[CAT:([a-z_]+)\]/i);
   const mediaMatch = raw.match(/\[MEDIA:([^\]]+)\]/i);
   const locMatch = raw.match(/\[LOC:([^\]]+)\]/i);
+  const collabsMatch = raw.match(/\[COLLABS:([^\]]+)\]/i);
   const cleanDesc = raw
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
     .replace(/\[LOC:[^\]]+\]\s*/gi, "")
+    .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
     .trim();
+
+  // 24-hour expiration check for individual media items (video & photos)
+  const rawMediaStr = mediaMatch ? mediaMatch[1] : (ev.mediaUrl || "");
+  const rawMediaList = rawMediaStr ? rawMediaStr.split(",") : [];
+  const now = Date.now();
+  const eventCreatedAtMs = ev.createdAt ? new Date(ev.createdAt).getTime() : now;
+
+  const validMediaUrls = [];
+  rawMediaList.forEach((item) => {
+    const trimmed = String(item || "").trim();
+    if (!trimmed) return;
+    const parts = trimmed.split("|");
+    const url = parts[0];
+    const ts = parts[1] ? Number(parts[1]) : eventCreatedAtMs;
+    // Check if uploaded within the last 24 hours
+    if (now - ts <= MEDIA_ITEM_TTL_MS) {
+      validMediaUrls.push(url);
+    }
+  });
+
   return {
     ...ev,
     title: ev.title ? toSmartTitleCase(ev.title) : ev.title,
     category: catMatch ? catMatch[1].toLowerCase() : (ev.category || "cafe"),
-    mediaUrl: mediaMatch ? mediaMatch[1] : (ev.mediaUrl || null),
+    mediaUrl: validMediaUrls.length > 0 ? validMediaUrls.join(",") : null,
+    collaborators: collabsMatch
+      ? collabsMatch[1].split(",").map((c) => c.trim()).filter(Boolean)
+      : (ev.collaborators || []),
     location: locMatch ? locMatch[1].trim() : (ev.location || null),
     description: cleanDesc,
   };
@@ -88,6 +114,7 @@ function stripEncodedTags(raw) {
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
     .replace(/\[LOC:[^\]]+\]\s*/gi, "")
+    .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
     .trim();
 }
 
@@ -128,7 +155,14 @@ export async function createMiniEvent(req, res, next) {
       description = `[LOC:${location}] ${description}`;
     }
     if (mediaUrl && !description.includes("[MEDIA:")) {
-      description = `[MEDIA:${mediaUrl}] ${description}`;
+      const stampedMedia = mediaUrl
+        .split(",")
+        .map((u) => {
+          const trimmed = u.trim();
+          return trimmed.includes("|") ? trimmed : `${trimmed}|${Date.now()}`;
+        })
+        .join(",");
+      description = `[MEDIA:${stampedMedia}] ${description}`;
     }
     if (category && !description.includes("[CAT:")) {
       description = `[CAT:${category}] ${description}`;
@@ -253,6 +287,7 @@ export async function updateMiniEvent(req, res, next) {
     const { id } = req.params;
     const title = toSmartTitleCase(cleanText(req.body.title));
     let description = cleanText(req.body.description);
+    const mediaUrl = cleanText(req.body.mediaUrl);
     let location = cleanText(req.body.location);
     const lat = parseCoordinate(req.body.lat);
     const lng = parseCoordinate(req.body.lng);
@@ -270,16 +305,38 @@ export async function updateMiniEvent(req, res, next) {
       description = `[LOC:${location}] ${description}`;
     }
 
-    const error = validateMiniEvent({ title, description, lat, lng });
-
-    if (error) return res.status(400).json({ error });
-
     const existing = await prisma.miniEvent.findFirst({
-      where: { id, creatorId, isActive: true, expiresAt: { gt: new Date() } },
+      where: { id, creatorId, isActive: true },
     });
 
     if (!existing)
       return res.status(404).json({ error: "No active mini event found." });
+
+    if (mediaUrl && !description.includes("[MEDIA:")) {
+      const stampedMedia = mediaUrl
+        .split(",")
+        .map((u) => {
+          const trimmed = u.trim();
+          return trimmed.includes("|") ? trimmed : `${trimmed}|${Date.now()}`;
+        })
+        .join(",");
+      description = `[MEDIA:${stampedMedia}] ${description}`;
+    } else if (!description.includes("[MEDIA:") && existing.description?.includes("[MEDIA:")) {
+      const oldMediaMatch = existing.description.match(/\[MEDIA:([^\]]+)\]/i);
+      if (oldMediaMatch) {
+        description = `[MEDIA:${oldMediaMatch[1]}] ${description}`;
+      }
+    }
+
+    if (!description.includes("[COLLABS:") && existing.description?.includes("[COLLABS:")) {
+      const oldCollabsMatch = existing.description.match(/\[COLLABS:([^\]]+)\]/i);
+      if (oldCollabsMatch) {
+        description = `[COLLABS:${oldCollabsMatch[1]}] ${description}`;
+      }
+    }
+
+    const error = validateMiniEvent({ title, description, lat, lng });
+    if (error) return res.status(400).json({ error });
 
     const event = await prisma.miniEvent.update({
       where: { id },
@@ -301,6 +358,141 @@ export async function updateMiniEvent(req, res, next) {
     }
 
     res.json({ event: formatMiniEvent(event) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function addMiniEventMedia(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const rawMediaUrl = cleanText(req.body.mediaUrl);
+    if (!rawMediaUrl) {
+      return res.status(400).json({ error: "Media URL is required." });
+    }
+
+    const event = await prisma.miniEvent.findFirst({
+      where: { id, isActive: true },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: "Mini event not found." });
+    }
+
+    const collabsMatch = (event.description || "").match(/\[COLLABS:([^\]]+)\]/i);
+    const collaboratorIds = collabsMatch
+      ? collabsMatch[1].split(",").map((s) => s.trim().toLowerCase())
+      : [];
+    const isCreator = event.creatorId === userId;
+    const isCollab = collaboratorIds.includes(String(userId).toLowerCase());
+
+    if (!isCreator && !isCollab) {
+      return res.status(403).json({ error: "Not authorized to add media to this event." });
+    }
+
+    const now = Date.now();
+    const newMediaStamped = rawMediaUrl
+      .split(",")
+      .map((u) => {
+        const trimmed = u.trim();
+        return trimmed.includes("|") ? trimmed : `${trimmed}|${now}`;
+      })
+      .join(",");
+
+    let desc = event.description || "";
+    const mediaMatch = desc.match(/\[MEDIA:([^\]]+)\]/i);
+    if (mediaMatch) {
+      const combined = `${mediaMatch[1]},${newMediaStamped}`;
+      desc = desc.replace(/\[MEDIA:[^\]]+\]/i, `[MEDIA:${combined}]`);
+    } else {
+      desc = `[MEDIA:${newMediaStamped}] ${desc}`;
+    }
+
+    const updated = await prisma.miniEvent.update({
+      where: { id },
+      data: { description: desc },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    if (updated.creator) {
+      updated.creator = await ensurePersistentUserProfile(updated.creator);
+    }
+
+    res.json({ event: formatMiniEvent(updated) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function addMiniEventCollaborator(req, res, next) {
+  try {
+    const creatorId = req.user.userId;
+    const { id } = req.params;
+    const collaboratorId = cleanText(req.body.collaboratorId);
+    if (!collaboratorId) {
+      return res.status(400).json({ error: "Collaborator ID is required." });
+    }
+
+    const event = await prisma.miniEvent.findFirst({
+      where: { id, creatorId, isActive: true },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: "Mini event not found or unauthorized." });
+    }
+
+    let desc = event.description || "";
+    const collabsMatch = desc.match(/\[COLLABS:([^\]]+)\]/i);
+    if (collabsMatch) {
+      const list = collabsMatch[1].split(",").map((s) => s.trim()).filter(Boolean);
+      if (!list.includes(collaboratorId)) {
+        list.push(collaboratorId);
+        desc = desc.replace(/\[COLLABS:[^\]]+\]/i, `[COLLABS:${list.join(",")}]`);
+      }
+    } else {
+      desc = `[COLLABS:${collaboratorId}] ${desc}`;
+    }
+
+    const updated = await prisma.miniEvent.update({
+      where: { id },
+      data: { description: desc },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            profilePicture: true,
+          },
+        },
+      },
+    });
+
+    if (updated.creator) {
+      updated.creator = await ensurePersistentUserProfile(updated.creator);
+    }
+
+    res.json({ event: formatMiniEvent(updated) });
   } catch (err) {
     next(err);
   }

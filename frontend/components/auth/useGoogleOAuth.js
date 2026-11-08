@@ -54,6 +54,18 @@ export function useGoogleOAuth({
       try {
         popupRef.current.close();
       } catch {}
+      const closeInterval = setInterval(() => {
+        try {
+          if (popupRef.current && !popupRef.current.closed) {
+            popupRef.current.close();
+          } else {
+            clearInterval(closeInterval);
+          }
+        } catch {
+          clearInterval(closeInterval);
+        }
+      }, 100);
+      setTimeout(() => clearInterval(closeInterval), 1500);
     }
     if (!result) return;
     if (!result.ok) {

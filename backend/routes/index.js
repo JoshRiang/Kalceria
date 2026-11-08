@@ -9,7 +9,7 @@ import {
 import { updateLiveLocation, getNearbyUsers, setLiveLocationPreference } from "../controllers/locationController.js";
 import { searchIndonesianLocations, reverseGeocodeLocation } from "../controllers/geoController.js";
 import { getMedia, createMedia } from "../controllers/mediaController.js";
-import { createMiniEvent, getActiveMiniEvents, updateMiniEvent, deleteMiniEvent } from "../controllers/miniEventController.js";
+import { createMiniEvent, getActiveMiniEvents, updateMiniEvent, deleteMiniEvent, addMiniEventMedia, addMiniEventCollaborator } from "../controllers/miniEventController.js";
 import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from "../controllers/serviceController.js";
 import {
   saveTelemetry, getMapUsers, getAllKalcerians,
@@ -171,6 +171,8 @@ router.get("/merch", listPublicMerch);
 router.post("/mini-events", requireAuth, miniEventRateLimit, miniEventDefense, createMiniEvent);
 router.get("/mini-events/active", requireAuth, getActiveMiniEvents);
 router.put("/mini-events/:id", requireAuth, miniEventRateLimit, miniEventDefense, updateMiniEvent);
+router.post("/mini-events/:id/media", requireAuth, miniEventRateLimit, addMiniEventMedia);
+router.post("/mini-events/:id/collaborators", requireAuth, miniEventRateLimit, addMiniEventCollaborator);
 router.delete("/mini-events/:id", requireAuth, miniEventRateLimit, deleteMiniEvent);
 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────

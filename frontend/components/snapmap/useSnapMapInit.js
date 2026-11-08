@@ -61,9 +61,19 @@ export function useSnapMapInit({
         closePopupOnClick: false,
       });
 
-      map.on("popupopen", () => {
+      map.on("popupopen", (e) => {
         tickAllEventUptimeElements();
         resetIdleTimer?.();
+        try {
+          const popupEl = e.popup?.getElement?.();
+          if (popupEl) {
+            const carousel = popupEl.querySelector(".popup-carousel-container");
+            if (carousel?.id) {
+              const safeId = carousel.id.replace("event-carousel-", "");
+              window.__kalceriaInitEventCarousel?.(safeId);
+            }
+          }
+        } catch {}
       });
 
       // Keyless multi-shard OpenStreetMap CDN with right-sized viewport keepBuffer so Desktop/iPad never mount 500+ tile bitmaps

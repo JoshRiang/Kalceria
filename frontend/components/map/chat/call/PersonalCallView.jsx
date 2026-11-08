@@ -35,8 +35,10 @@ export function PersonalCallView({
     showSafetyTooltip,
     setShowSafetyTooltip,
     localVideoRef,
+    localStreamRef,
     remoteVideoRef,
     remoteAudioRef,
+    remoteStreamRef,
     handleHangup,
   } = usePersonalCallState({
     callState,
@@ -77,8 +79,10 @@ export function PersonalCallView({
         showSafetyTooltip={showSafetyTooltip}
         setShowSafetyTooltip={setShowSafetyTooltip}
         localVideoRef={localVideoRef}
+        localStreamRef={localStreamRef}
         remoteVideoRef={remoteVideoRef}
         remoteAudioRef={remoteAudioRef}
+        remoteStreamRef={remoteStreamRef}
       />
 
       <CallControlsBar

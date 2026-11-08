@@ -61,6 +61,13 @@ export function eventPopup(
     item.creator?.nickname ||
     "Kalcerian";
   const creatorDisplayName = formatCreatorDisplayName(rawCreatorDisplayName, 10);
+  const collabsCount = Array.isArray(item.collaborators) ? item.collaborators.length : 0;
+  const N_COLORS = ["#ff006e", "#ffd60a", "#38bdf8", "#a855f7", "#ec4899", "#10b981", "#f97316"];
+  const nColorIdx = Math.abs(String(item.id || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % N_COLORS.length;
+  const nColor = N_COLORS[nColorIdx];
+  const authorByText = collabsCount > 0
+    ? `by <strong style="font-weight: 700;">${esc(creatorDisplayName)}</strong> <span style="font-weight: 600; color: ${isMapDark ? '#ffffff' : '#000000'};">& <span style="color: ${nColor}; font-weight: 700;">${collabsCount}</span> lainnya</span>`
+    : `by <strong style="font-weight: 700;">${esc(creatorDisplayName)}</strong>`;
 
   const hasRequestedThisEvent = Boolean(requestedEventId && String(requestedEventId) === String(item.id));
   const hasActiveRequestElsewhere = Boolean(requestedEventId && String(requestedEventId) !== String(item.id));
@@ -167,14 +174,21 @@ export function eventPopup(
 
   return `
     <div class="tactical-card event-card ${isMapDark ? 'event-card-dark' : 'event-card-light'}" style="position: relative; overflow: hidden; width: 292px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
-      <!-- Main Box Background Image Layer (Visible around header, left/right of video frame, and description) -->
-      <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat; opacity: ${bgOpacity}; transform: translateZ(0);"></div>
+      <!-- Main Box Background Image Layers (3-Piece Concatenation) -->
+      <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: 18px;">
+        <!-- Base Underlay: Map Ambience (BGCreateMini_Dark / BGCreateMini_Light) -->
+        <div style="position: absolute; inset: 0; background-image: url('${isMapDark ? '/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp' : '/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.webp'}'); background-size: cover; background-position: center; opacity: ${isMapDark ? 0.32 : 0.38}; filter: blur(3px); transform: scale(1.04);"></div>
+        <!-- Texture Layer: Event Card Pattern -->
+        <div style="position: absolute; inset: 0; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat; opacity: ${bgOpacity};"></div>
+        <!-- Ambient Sheen Layer: Soft radial vignette -->
+        <div style="position: absolute; inset: 0; background: ${isMapDark ? 'radial-gradient(circle at 50% 15%, rgba(255,255,255,0.06) 0%, transparent 75%)' : 'radial-gradient(circle at 50% 15%, rgba(0,0,0,0.03) 0%, transparent 75%)'};"></div>
+      </div>
 
-      <!-- Upper Space: Header with blur (not dimmed!) -->
-      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; background: transparent !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; border: none !important;">
+      <!-- Upper Space: Header with frosted glass blur -->
+      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; background: ${isMapDark ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.3)'} !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-top-left-radius: 17px; border-top-right-radius: 17px; border: none !important;">
         <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 165px; min-width: 0; flex: 1;">
           <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${esc(displayTitle)}</strong>
-          <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 400; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">by <strong style="font-weight: 700;">${esc(creatorDisplayName)}</strong></span>
+          <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 400; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${authorByText}</span>
         </div>
         <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 7px; margin-left: 6px; flex-shrink: 0;">
           ${doubleMessageIconHtml}
@@ -183,8 +197,8 @@ export function eventPopup(
         </div>
       </div>
 
-      <!-- Framed Media Screen: Left & Right Space so Main Box Background shows on both sides -->
-      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: 134px; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${isMapDark ? '#000000' : '#ffffff'}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
+      <!-- Framed Media Screen: Elongated & Flexible Box with Smooth Transition -->
+      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: 134px; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${isMapDark ? '#000000' : '#ffffff'}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16); transition: height 0.32s cubic-bezier(0.4, 0, 0.2, 1);">
         ${renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId)}
       </div>
 

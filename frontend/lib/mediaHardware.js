@@ -69,11 +69,21 @@ export async function acquireCameraStream(customVideoConstraints = {}, includeAu
       }
     : false;
 
+  // Determine native viewport orientation for proper aspect ratio capture without software letterboxing/cropping
+  const isPortrait =
+    typeof window !== "undefined" &&
+    window.innerWidth < window.innerHeight &&
+    (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768);
+
+  const idealWidth = isPortrait ? 720 : 1280;
+  const idealHeight = isPortrait ? 1280 : 720;
+
   const constraintsWithFacing = {
     video: {
       facingMode: "user",
-      width: { ideal: 640 },
-      height: { ideal: 480 },
+      width: { ideal: idealWidth, max: 1920 },
+      height: { ideal: idealHeight, max: 1920 },
+      frameRate: { ideal: 30, min: 20 },
       ...customVideoConstraints,
     },
     audio: baseAudio,
@@ -87,8 +97,9 @@ export async function acquireCameraStream(customVideoConstraints = {}, includeAu
     try {
       const relaxedConstraints = {
         video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
+          width: { ideal: idealWidth },
+          height: { ideal: idealHeight },
+          frameRate: { ideal: 30 },
           ...customVideoConstraints,
         },
         audio: baseAudio,
@@ -99,14 +110,32 @@ export async function acquireCameraStream(customVideoConstraints = {}, includeAu
       }
       return await navigator.mediaDevices.getUserMedia(relaxedConstraints);
     } catch (fallbackErr) {
-      // Final attempt: plain video: true, audio: true
+      // Sequential track fallback: Some mobile device drivers reject simultaneous audio+video acquisition in one call
       try {
-        return await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: baseAudio,
+        const vStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", ...customVideoConstraints },
         });
-      } catch (finalErr) {
-        throw translateMediaHardwareError(finalErr, "camera");
+        let aStream = null;
+        if (includeAudio) {
+          try {
+            aStream = await navigator.mediaDevices.getUserMedia({ audio: baseAudio });
+          } catch {}
+        }
+        const tracks = [
+          ...vStream.getVideoTracks(),
+          ...(aStream ? aStream.getAudioTracks() : []),
+        ];
+        return new MediaStream(tracks);
+      } catch (seqErr) {
+        // Final attempt: plain video: true, audio: baseAudio
+        try {
+          return await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: baseAudio,
+          });
+        } catch (finalErr) {
+          throw translateMediaHardwareError(finalErr, "camera");
+        }
       }
     }
   }

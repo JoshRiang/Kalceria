@@ -35,8 +35,10 @@ export function CallMediaStage({
   hasRemoteStream = false,
   isBadConnection = false,
   localVideoRef,
+  localStreamRef,
   remoteVideoRef,
   remoteAudioRef,
+  remoteStreamRef,
 }) {
   const displayName =
     targetUser?.displayName || targetUser?.name || targetUser?.nickname || "Kalcerian";
@@ -66,7 +68,17 @@ export function CallMediaStage({
         >
           {/* Live Peer WebRTC Video Feed (Muted because remoteAudioRef plays the audio stream cleanly) */}
           <video
-            ref={remoteVideoRef}
+            ref={(el) => {
+              if (typeof remoteVideoRef === "function") {
+                remoteVideoRef(el);
+              } else if (remoteVideoRef) {
+                remoteVideoRef.current = el;
+              }
+              if (el && remoteStreamRef?.current && el.srcObject !== remoteStreamRef.current) {
+                el.srcObject = remoteStreamRef.current;
+                el.play?.().catch(() => {});
+              }
+            }}
             autoPlay
             playsInline
             muted
@@ -329,7 +341,17 @@ export function CallMediaStage({
           >
             {hasLocalStream && !isCamOff ? (
               <video
-                ref={localVideoRef}
+                ref={(el) => {
+                  if (typeof localVideoRef === "function") {
+                    localVideoRef(el);
+                  } else if (localVideoRef) {
+                    localVideoRef.current = el;
+                  }
+                  if (el && localStreamRef?.current && el.srcObject !== localStreamRef.current) {
+                    el.srcObject = localStreamRef.current;
+                    el.play?.().catch(() => {});
+                  }
+                }}
                 autoPlay
                 playsInline
                 muted

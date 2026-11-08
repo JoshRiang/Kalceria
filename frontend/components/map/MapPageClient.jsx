@@ -1004,6 +1004,11 @@ export default function MapPage() {
   }
 
   const handleSaveProfile = useCallback(async (updatedData) => {
+    try {
+      await api.put("/users/me", updatedData);
+    } catch (err) {
+      console.warn("Failed to persist user profile to backend:", err);
+    }
     persistProfileIdentityCache(currentUser, {
       profilePicture: updatedData.profilePicture,
       coverImage: updatedData.coverImage,

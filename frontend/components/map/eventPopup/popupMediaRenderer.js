@@ -50,23 +50,16 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
   if (list.length === 0) {
     return renderEmptyMediaPlaceholder(isMapDark, creatorAvatarUrl, creatorName);
   }
-  if (list.length === 1) {
-    return renderSingleMedia(list[0]);
-  }
-
-  const N = list.length;
-  const period = N * 4;
-  const activePercent = Math.max(1, Math.floor(90 / N));
-  const fullPercent = Math.max(2, Math.floor(100 / N));
-  const animName = `eventCarouselFade_${safeId}_${N}`;
-  const indAnimName = `eventIndicatorRoll_${safeId}_${N}`;
 
   const slidesHtml = list
     .map((url, i) => {
-      const delay = i * 4;
+      const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
+      const mediaTag = isVideo
+        ? `<video src="${esc(url)}" playsinline muted preload="auto" style="width: 100%; height: 100%; object-fit: cover; display: block;"></video>`
+        : `<img src="${esc(url)}" alt="Event Live Feed" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; display: block;" />`;
       return `
-        <div data-carousel-slide="${i}" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: ${i === 0 ? 1 : 0}; animation: ${animName} ${period}s infinite; animation-delay: ${delay}s; transition: opacity 0.22s ease;">
-          ${renderSingleMedia(url)}
+        <div data-carousel-slide="${i}" data-is-video="${isVideo ? 'true' : 'false'}" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: ${i === 0 ? 1 : 0}; z-index: ${i === 0 ? 5 : 1}; transition: opacity 0.28s ease-in-out; pointer-events: none;">
+          ${mediaTag}
         </div>
       `;
     })
@@ -74,17 +67,16 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
 
   const indicatorsHtml = list
     .map((_, i) => {
-      const delay = i * 4;
       return `
         <button
           type="button"
           data-carousel-indicator="${i}"
-          title="Video ${i + 1}"
+          title="Media ${i + 1}"
           onclick="event.stopPropagation(); window.__kalceriaSwitchEventMedia?.('${esc(safeId)}', ${i});"
-          style="flex: 1; padding: 6px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
+          style="flex: 1; padding: 4px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
         >
-          <span style="display: block; width: 100%; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.32); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.45);">
-            <span data-carousel-fill="${i}" style="display: block; height: 100%; background: #ffffff; width: 0%; animation: ${indAnimName} ${period}s infinite; animation-delay: ${delay}s;"></span>
+          <span style="display: block; width: 100%; height: 2.5px; border-radius: 2px; background: rgba(255, 255, 255, 0.35); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.5);">
+            <span data-carousel-fill="${i}" style="display: block; height: 100%; background: #ffffff; width: ${i === 0 ? '0%' : '0%'}; opacity: ${i === 0 ? '1' : '0.35'}; transform: translateZ(0);"></span>
           </span>
         </button>
       `;
@@ -92,27 +84,35 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
     .join("");
 
   return `
-    <style>
-      @keyframes ${animName} {
-        0% { opacity: 0; }
-        1.5% { opacity: 1; }
-        ${activePercent}% { opacity: 1; }
-        ${fullPercent}% { opacity: 0; }
-        100% { opacity: 0; }
-      }
-      @keyframes ${indAnimName} {
-        0% { width: 0%; opacity: 0.4; }
-        1.5% { opacity: 1; }
-        ${activePercent}% { width: 100%; opacity: 1; }
-        ${fullPercent}% { width: 100%; opacity: 0.3; }
-        100% { width: 0%; opacity: 0.3; }
-      }
-    </style>
-    <div id="event-carousel-${esc(safeId)}" class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden;">
+    <div id="event-carousel-${esc(safeId)}" class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 12px; background: ${isMapDark ? '#000000' : '#ffffff'};">
       ${slidesHtml}
-      <div style="position: absolute; top: 4px; left: 10px; right: 10px; z-index: 15; display: flex; gap: 5px; pointer-events: auto;">
+
+      <!-- Story Navigation Tap Zones: Left = Prev (32%), Middle = Next (36%), Right = Next (32%) -->
+      <div style="position: absolute; inset: 0; z-index: 12; display: flex; pointer-events: auto;">
+        <div 
+          title="Previous" 
+          onclick="event.stopPropagation(); window.__kalceriaPrevEventMedia?.('${esc(safeId)}');"
+          style="width: 32%; height: 100%; cursor: pointer;"
+        ></div>
+        <div 
+          title="Next" 
+          onclick="event.stopPropagation(); window.__kalceriaNextEventMedia?.('${esc(safeId)}');"
+          style="width: 36%; height: 100%; cursor: pointer;"
+        ></div>
+        <div 
+          title="Next" 
+          onclick="event.stopPropagation(); window.__kalceriaNextEventMedia?.('${esc(safeId)}');"
+          style="width: 32%; height: 100%; cursor: pointer;"
+        ></div>
+      </div>
+
+      <!-- Story Progress Lines Indicator Bar -->
+      <div style="position: absolute; top: 6px; left: 8px; right: 8px; z-index: 20; display: flex; gap: 4px; pointer-events: auto;">
         ${indicatorsHtml}
       </div>
+
+      <!-- Auto-init Image Trigger (Invokes JS Carousel controller immediately upon DOM injection) -->
+      <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="display:none;" onload="window.__kalceriaInitEventCarousel?.('${esc(safeId)}');" />
     </div>
   `;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import api from "@/lib/api";
 import {
   INITIAL_ACCEPTED_COLLABS,
   INITIAL_EVENT_REQUESTS,
@@ -121,6 +122,9 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
         if (!bucketKey || !prev[bucketKey]) return prev;
         const targetReq = prev[bucketKey].find((r) => r.id === requestId);
         if (targetReq?.user?.id) {
+          try {
+            api.post(`/mini-events/${targetId}/collaborators`, { collaboratorId: targetReq.user.id }).catch(() => {});
+          } catch {}
           setAcceptedCollabsMap((collabs) => {
             const list = collabs[targetId] || [];
             if (!list.includes(targetReq.user.id)) {
@@ -169,15 +173,35 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
           const res = await fetch("/api/blob/upload", { method: "POST", body: fd });
           const json = await res.json();
           if (json.url) {
-            setEvents((prev) =>
-              prev.map((ev) => {
-                if (String(ev.id) === String(eventId)) {
-                  const current = ev.mediaUrl ? ev.mediaUrl.split(",") : [];
-                  return { ...ev, mediaUrl: [...current, json.url].join(",") };
-                }
-                return ev;
-              })
-            );
+            try {
+              const postRes = await api.post(`/mini-events/${eventId}/media`, { mediaUrl: json.url });
+              if (postRes.data?.event) {
+                const updatedEvent = postRes.data.event;
+                setEvents((prev) =>
+                  prev.map((ev) => (String(ev.id) === String(eventId) ? { ...ev, ...updatedEvent } : ev))
+                );
+              } else {
+                setEvents((prev) =>
+                  prev.map((ev) => {
+                    if (String(ev.id) === String(eventId)) {
+                      const current = ev.mediaUrl ? ev.mediaUrl.split(",") : [];
+                      return { ...ev, mediaUrl: [...current, json.url].join(",") };
+                    }
+                    return ev;
+                  })
+                );
+              }
+            } catch {
+              setEvents((prev) =>
+                prev.map((ev) => {
+                  if (String(ev.id) === String(eventId)) {
+                    const current = ev.mediaUrl ? ev.mediaUrl.split(",") : [];
+                    return { ...ev, mediaUrl: [...current, json.url].join(",") };
+                  }
+                  return ev;
+                })
+              );
+            }
             setNotice("Media added to event by collaborator!");
           } else {
             setNotice(json.error || "Upload failed");

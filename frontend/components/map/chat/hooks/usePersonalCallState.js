@@ -56,8 +56,10 @@ export function usePersonalCallState({
     showSafetyTooltip: session.showSafetyTooltip,
     setShowSafetyTooltip: session.setShowSafetyTooltip,
     localVideoRef: hardware.localVideoRef,
+    localStreamRef: hardware.localStreamRef,
     remoteVideoRef: hardware.remoteVideoRef,
     remoteAudioRef: hardware.remoteAudioRef,
+    remoteStreamRef: hardware.remoteStreamRef,
     handleHangup: session.handleHangup,
   };
 }
