@@ -15,17 +15,31 @@ export function escapeMapHtml(value) {
 
 export function getSafeMapAvatarUrl(user) {
   const candidate = resolvePersistentAvatarUrl(user);
-  const fallback = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.nickname || user?.id || user?.name || "anon")}`;
-  if (typeof candidate !== "string" || candidate.startsWith("//") || candidate.includes("\\")) {
+  const seed = String(
+    user?.nickname || user?.username || user?.id || user?.name || "anon"
+  ).replace(/^@/, "");
+  const fallback = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+
+  if (typeof candidate !== "string" || !candidate.trim() || candidate.startsWith("//") || candidate.includes("\\")) {
     return fallback;
   }
-  if (/^data:image\/(?:webp|png|jpeg|jpg|gif);base64,[A-Za-z0-9+/=\s]+$/.test(candidate)) {
-    return candidate;
+  const trimmed = candidate.trim();
+  // Support Base64 & SVG data URIs up to 5MB
+  if (/^data:image\/(?:webp|png|jpeg|jpg|gif|svg\+xml);base64,[A-Za-z0-9+/=\s]+$/i.test(trimmed)) {
+    return trimmed;
   }
-  if (candidate.length > 2048) return fallback;
-  if (candidate.startsWith("/")) return candidate;
+  // Support blob: object URLs
+  if (trimmed.startsWith("blob:")) {
+    return trimmed;
+  }
+  // Support absolute app paths
+  if (trimmed.startsWith("/")) {
+    return trimmed;
+  }
+  // Support remote HTTP/HTTPS URLs
   try {
-    return new URL(candidate).protocol === "https:" ? candidate : fallback;
+    const parsed = new URL(trimmed);
+    return (parsed.protocol === "https:" || parsed.protocol === "http:") ? trimmed : fallback;
   } catch {
     return fallback;
   }

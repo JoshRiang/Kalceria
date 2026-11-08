@@ -128,18 +128,29 @@ export function useSnapMapGlobalCallbacks({
         const img = activeSlide.querySelector("img");
 
         if (vid) {
-          const startVideoProgress = () => {
-            const duration =
-              vid.duration && isFinite(vid.duration) && vid.duration > 0.5
-                ? vid.duration
-                : 4.0;
+          let hasStartedProgress = false;
+
+          const startVideoProgress = (force = false) => {
+            const hasRealDuration = vid.duration && isFinite(vid.duration) && vid.duration > 0.5;
+            if (!hasRealDuration && !force) {
+              return;
+            }
+            if (hasStartedProgress && !force) return;
+            hasStartedProgress = true;
+
+            const duration = hasRealDuration ? vid.duration : 4.0;
 
             if (vid.videoWidth && vid.videoHeight) {
               adaptAspect(vid.videoWidth, vid.videoHeight);
             }
 
-            // Trigger linear CSS fill transition matching actual video duration
+            // Always reset fill to 0% first with transition none to guarantee clean animation restart
+            activeFill.style.transition = "none";
+            activeFill.style.width = "0%";
+            activeFill.style.opacity = "1";
             void activeFill.offsetWidth;
+
+            // Trigger linear CSS fill transition matching actual video duration
             activeFill.style.transition = `width ${duration}s linear`;
             activeFill.style.width = "100%";
 
@@ -154,14 +165,19 @@ export function useSnapMapGlobalCallbacks({
             activeCarouselTimers.set(safeId, timer);
           };
 
-          if (vid.readyState >= 1) {
+          // Attach listeners to catch actual video duration as soon as available
+          vid.onloadedmetadata = () => startVideoProgress();
+          vid.ondurationchange = () => startVideoProgress();
+          vid.oncanplay = () => startVideoProgress();
+          vid.onplaying = () => startVideoProgress();
+
+          if (vid.readyState >= 1 && vid.duration && isFinite(vid.duration) && vid.duration > 0.5) {
             startVideoProgress();
           } else {
-            vid.onloadedmetadata = () => {
-              startVideoProgress();
-            };
             clearTimer();
-            const fallbackTimer = setTimeout(startVideoProgress, 350);
+            const fallbackTimer = setTimeout(() => {
+              startVideoProgress(true);
+            }, 3500);
             activeCarouselTimers.set(safeId, fallbackTimer);
           }
 

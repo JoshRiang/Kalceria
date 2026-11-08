@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { getInstantMapBgUrl } from "@/lib/mapBgCache";
 
 const BROADCAST_FORM_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Dark.webp";
@@ -15,8 +15,6 @@ export function StatusModal({
   setStatusText,
   busy,
 }) {
-  if (!show) return null;
-
   const isBroadcastValid = Boolean((statusText || "").trim());
   const resolvedBgUrl = getInstantMapBgUrl(
     isModalDark ? BROADCAST_FORM_BG_DARK : BROADCAST_FORM_BG_LIGHT
@@ -31,20 +29,37 @@ export function StatusModal({
     "linear-gradient(to bottom, transparent 0%, transparent 16%, black 21%, black 71%, transparent 75%, transparent 79%, black 83%, black 100%)";
 
   return (
-    <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 select-none"
-      onClick={onClose}
-    >
-      <motion.div
-        animate={{ y: [0, -3, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className={`relative w-full max-w-[420px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[24px] shadow-2xl overflow-hidden transition-colors duration-300 ${
-          isModalDark
-            ? "bg-[#010101] border border-[#30363d] text-[#f0f6fc]"
-            : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm select-none"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.88, opacity: 0, y: 15 }}
+            animate={{
+              scale: 1,
+              opacity: 1,
+              y: 0,
+              transition: { duration: 0.42, ease: [0.19, 1, 0.22, 1] },
+            }}
+            exit={{
+              scale: 0.88,
+              opacity: 0,
+              y: 15,
+              transition: { duration: 0.32, ease: [0.32, 0, 0.15, 1] },
+            }}
+            className={`relative w-full max-w-[420px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[24px] shadow-2xl overflow-hidden transition-colors duration-300 ${
+              isModalDark
+                ? "bg-[#010101] border border-[#30363d] text-[#f0f6fc]"
+                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
         {/* 2-Piece (3 : 1) Smooth-Trimmed Broadcast Background Layer */}
         <div
           aria-hidden="true"
@@ -147,7 +162,9 @@ export function StatusModal({
             </button>
           </div>
         </form>
-      </motion.div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

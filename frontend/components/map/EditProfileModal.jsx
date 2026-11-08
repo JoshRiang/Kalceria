@@ -171,19 +171,36 @@ export function EditProfileModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[2100] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm select-none">
+      {show && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.2 }}
-          className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden transition-colors duration-300 ${
-            isModalDark
-              ? "bg-[#0d1117] border border-[#30363d] text-[#f0f6fc]"
-              : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
-          }`}
-          onClick={(e) => e.stopPropagation()}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed inset-0 z-[2100] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm select-none"
+          onClick={onClose}
         >
+          <motion.div
+            initial={{ scale: 0.88, opacity: 0, y: 15 }}
+            animate={{
+              scale: 1,
+              opacity: 1,
+              y: 0,
+              transition: { duration: 0.42, ease: [0.19, 1, 0.22, 1] },
+            }}
+            exit={{
+              scale: 0.88,
+              opacity: 0,
+              y: 15,
+              transition: { duration: 0.32, ease: [0.32, 0, 0.15, 1] },
+            }}
+            className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[22px] sm:rounded-[26px] shadow-2xl overflow-hidden transition-colors duration-300 ${
+              isModalDark
+                ? "bg-[#0d1117] border border-[#30363d] text-[#f0f6fc]"
+                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
           {/* Smooth-trimmed Sparse CokiEditProfile Wallpaper (Below Solid Header, Light & Dark Mode High Visibility) */}
           <div
             aria-hidden="true"
@@ -446,8 +463,9 @@ export function EditProfileModal({
               {isSaving ? "Saving..." : "Save"}
             </button>
           </form>
+          </motion.div>
         </motion.div>
-      </div>
+      )}
 
       {/* Picture 2: WhatsApp-style Crop & Rotate Modal (semi-transparent blur, no outer box) */}
       <PhotoCropEditorModal

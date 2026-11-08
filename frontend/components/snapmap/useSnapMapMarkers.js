@@ -55,15 +55,20 @@ export function useSnapMapMarkers({
       const markerId = `user_${user.id}`;
       currentUserIds.add(markerId);
 
-      const nextUserIcon = createUserIcon(L, user, isMapDark);
+      const isSelf = Boolean(currentUser?.id && String(user.id) === String(currentUser.id));
+      const resolvedUser = isSelf
+        ? { ...user, ...currentUser, profilePicture: currentUser.profilePicture || user.profilePicture }
+        : user;
+
+      const nextUserIcon = createUserIcon(L, resolvedUser, isMapDark);
       const nextUserIconHtml = nextUserIcon?.options?.html || "";
 
       if (markerRefs.current[markerId]) {
         const marker = markerRefs.current[markerId];
 
         const currentLatLng = marker.getLatLng();
-        if (currentLatLng.lat !== user.lat || currentLatLng.lng !== user.lng) {
-          marker.setLatLng([user.lat, user.lng]);
+        if (currentLatLng.lat !== resolvedUser.lat || currentLatLng.lng !== resolvedUser.lng) {
+          marker.setLatLng([resolvedUser.lat, resolvedUser.lng]);
         }
 
         if (marker._lastIconHtml !== nextUserIconHtml) {
@@ -71,7 +76,7 @@ export function useSnapMapMarkers({
           marker._lastIconHtml = nextUserIconHtml;
         }
 
-        const popupContent = userPopup(user, isMapDark);
+        const popupContent = userPopup(resolvedUser, isMapDark);
         if (popupContent) {
           if (!marker.getPopup()) {
             marker.bindPopup(popupContent, {
@@ -94,12 +99,12 @@ export function useSnapMapMarkers({
           marker._lastPopupContent = null;
         }
 
-        marker.options.userData = user;
+        marker.options.userData = resolvedUser;
       } else {
-        const popupContent = userPopup(user, isMapDark);
-        const marker = L.marker([user.lat, user.lng], {
+        const popupContent = userPopup(resolvedUser, isMapDark);
+        const marker = L.marker([resolvedUser.lat, resolvedUser.lng], {
           icon: nextUserIcon,
-          userData: user,
+          userData: resolvedUser,
         });
         marker._lastIconHtml = nextUserIconHtml;
 

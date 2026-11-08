@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toSmartTitleCase } from "@/lib/titleCase";
 import { LocationAutocomplete } from "@/components/service-request/LocationAutocomplete";
 
@@ -25,8 +25,6 @@ export function EventFormModal({
 }) {
   const [isLocationVerified, setIsLocationVerified] = useState(false);
 
-  if (!show) return null;
-
   const isEventFormValid = Boolean(
     (eventForm.category || "cafe").trim() &&
     (eventForm.title || "").trim() &&
@@ -37,20 +35,37 @@ export function EventFormModal({
   const isEditing = Boolean(editingEventId || activeOwnEvent);
 
   return (
-    <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center p-2.5 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 select-none"
-      onClick={onClose}
-    >
-      <motion.div
-        animate={{ y: [0, -3, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[26px] shadow-2xl overflow-hidden transition-colors duration-300 ${
-          isModalDark
-            ? "bg-[#010101] border border-[#30363d] text-[#f0f6fc]"
-            : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-2.5 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm select-none"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.88, opacity: 0, y: 15 }}
+            animate={{
+              scale: 1,
+              opacity: 1,
+              y: 0,
+              transition: { duration: 0.42, ease: [0.19, 1, 0.22, 1] },
+            }}
+            exit={{
+              scale: 0.88,
+              opacity: 0,
+              y: 15,
+              transition: { duration: 0.32, ease: [0.32, 0, 0.15, 1] },
+            }}
+            className={`relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[26px] shadow-2xl overflow-hidden transition-colors duration-300 ${
+              isModalDark
+                ? "bg-[#010101] border border-[#30363d] text-[#f0f6fc]"
+                : "bg-[#ffffff] border border-[#d0d7de] text-[#1f2328]"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
         {/* 3-Piece Smooth-Trimmed Background (BGCreateMini_Light / BGCreateMini_Dark) with clear reading gaps */}
         <div
           aria-hidden="true"
@@ -265,7 +280,9 @@ export function EventFormModal({
             isModalDark={isModalDark}
           />
         </form>
-      </motion.div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

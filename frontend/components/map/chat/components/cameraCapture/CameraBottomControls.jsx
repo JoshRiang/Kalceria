@@ -20,6 +20,9 @@ export const CameraBottomControls = memo(function CameraBottomControls({
   canFlipCamera,
   handleFlipCamera,
   isSpinningFlip,
+  hasFlash = false,
+  isFlashOn = false,
+  handleToggleFlash,
 }) {
   return (
     <div className="relative z-20 w-full h-[66px] sm:h-[70px] bg-black/45 backdrop-blur-md shadow-[0_-8px_24px_rgba(0,0,0,0.35)] flex items-center justify-between px-6">
@@ -149,35 +152,97 @@ export const CameraBottomControls = memo(function CameraBottomControls({
             </button>
           </div>
 
-          {/* TURN CAMERA (FLIP): flat white icon, no outer box */}
-          <motion.button
-            type="button"
-            disabled={!canFlipCamera}
-            onClick={handleFlipCamera}
-            animate={isSpinningFlip ? { rotate: 360 } : { rotate: 0 }}
-            transition={{ duration: 0.36, ease: "easeOut" }}
-            className={`p-2 transition-all ${
-              canFlipCamera
-                ? "text-white opacity-100 hover:opacity-80 active:scale-90 cursor-pointer"
-                : "text-white opacity-25 cursor-not-allowed pointer-events-none"
-            }`}
-            title={canFlipCamera ? "Ganti Kamera" : "Kamera belakang tidak tersedia"}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5 text-white"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {/* RIGHT SIDE CONTROLS: Flashlight (left of flip) + Turn Camera (Flip) */}
+          <div className="flex items-center gap-2 xs:gap-3">
+            {/* FLASHLIGHT / TORCH CONTROL (Picture 2): Flashlight icon with 3 light rays */}
+            <motion.button
+              type="button"
+              disabled={!hasFlash}
+              onClick={handleToggleFlash}
+              className={`p-2 transition-all ${
+                hasFlash
+                  ? isFlashOn
+                    ? "text-yellow-400 opacity-100 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] active:scale-90 cursor-pointer"
+                    : "text-white opacity-100 hover:opacity-80 active:scale-90 cursor-pointer"
+                  : "text-white opacity-25 cursor-not-allowed pointer-events-none"
+              }`}
+              title={
+                hasFlash
+                  ? isFlashOn
+                    ? "Matikan Flash"
+                    : "Nyalakan Flash"
+                  : "Flashlight tidak didukung pada perangkat ini"
+              }
             >
-              <path d="M20 12a8 8 0 0 1-13.66 5.66L4 15" />
-              <polyline points="4 20 4 15 9 15" />
-              <path d="M4 12A8 8 0 0 1 17.66 6.34L20 9" />
-              <polyline points="20 4 20 9 15 9" />
-            </svg>
-          </motion.button>
+              <svg
+                viewBox="0 0 24 24"
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                {/* 3 Radiating Light Rays matching Picture 2 */}
+                <line x1="12" y1="2" x2="12" y2="4.5" />
+                <line x1="6.5" y1="3.5" x2="8" y2="5.5" />
+                <line x1="17.5" y1="3.5" x2="16" y2="5.5" />
+                {/* Flashlight Head */}
+                <path
+                  d="M7.5 7.5 C7.5 7 8 6.5 8.5 6.5 L15.5 6.5 C16 6.5 16.5 7 16.5 7.5 L15.5 10.5 C15.5 11 15 11.5 14.5 11.5 L9.5 11.5 C9 11.5 8.5 11 8.5 10.5 Z"
+                  fill={isFlashOn ? "currentColor" : "none"}
+                />
+                {/* Flashlight Handle Body */}
+                <rect
+                  x="9"
+                  y="11.5"
+                  width="6"
+                  height="9.5"
+                  rx="3"
+                  fill={isFlashOn ? "currentColor" : "none"}
+                />
+                {/* Center Switch Pill */}
+                <line
+                  x1="12"
+                  y1="13.5"
+                  x2="12"
+                  y2="15.5"
+                  stroke={isFlashOn ? "#000000" : "currentColor"}
+                  strokeWidth="1.8"
+                />
+              </svg>
+            </motion.button>
+
+            {/* TURN CAMERA (FLIP): flat white icon, no outer box */}
+            <motion.button
+              type="button"
+              disabled={!canFlipCamera}
+              onClick={handleFlipCamera}
+              animate={isSpinningFlip ? { rotate: 360 } : { rotate: 0 }}
+              transition={{ duration: 0.36, ease: "easeOut" }}
+              className={`p-2 transition-all ${
+                canFlipCamera
+                  ? "text-white opacity-100 hover:opacity-80 active:scale-90 cursor-pointer"
+                  : "text-white opacity-25 cursor-not-allowed pointer-events-none"
+              }`}
+              title={canFlipCamera ? "Ganti Kamera" : "Kamera belakang tidak tersedia"}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 12a8 8 0 0 1-13.66 5.66L4 15" />
+                <polyline points="4 20 4 15 9 15" />
+                <path d="M4 12A8 8 0 0 1 17.66 6.34L20 9" />
+                <polyline points="20 4 20 9 15 9" />
+              </svg>
+            </motion.button>
+          </div>
         </>
       )}
     </div>

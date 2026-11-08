@@ -55,7 +55,7 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
     .map((url, i) => {
       const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
       const mediaTag = isVideo
-        ? `<video src="${esc(url)}" playsinline muted preload="auto" style="width: 100%; height: 100%; object-fit: cover; display: block;"></video>`
+        ? `<video src="${esc(url)}" autoplay playsinline muted loop preload="auto" style="width: 100%; height: 100%; object-fit: cover; display: block;"></video>`
         : `<img src="${esc(url)}" alt="Event Live Feed" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; display: block;" />`;
       return `
         <div data-carousel-slide="${i}" data-is-video="${isVideo ? 'true' : 'false'}" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: ${i === 0 ? 1 : 0}; z-index: ${i === 0 ? 5 : 1}; transition: opacity 0.28s ease-in-out; pointer-events: none;">
@@ -84,7 +84,7 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
     .join("");
 
   return `
-    <div id="event-carousel-${esc(safeId)}" class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 12px; background: ${isMapDark ? '#000000' : '#ffffff'};">
+    <div id="event-carousel-${esc(safeId)}" class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 12px; background: #000000;">
       ${slidesHtml}
 
       <!-- Story Navigation Tap Zones: Left = Prev (32%), Middle = Next (36%), Right = Next (32%) -->

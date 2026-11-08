@@ -198,7 +198,7 @@ export function eventPopup(
       </div>
 
       <!-- Framed Media Screen: Elongated & Flexible Box with Smooth Transition -->
-      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: 134px; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${isMapDark ? '#000000' : '#ffffff'}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16); transition: height 0.32s cubic-bezier(0.4, 0, 0.2, 1);">
+      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: 134px; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: #000000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16); transition: height 0.32s cubic-bezier(0.4, 0, 0.2, 1);">
         ${renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId)}
       </div>
 
