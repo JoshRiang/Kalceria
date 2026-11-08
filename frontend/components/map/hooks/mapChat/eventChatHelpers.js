@@ -81,9 +81,18 @@ export function isEventCollaborator(eventItem, currentUser, acceptedCollabsMap =
   });
 
   const inEventArray =
-    Array.isArray(eventItem.collaboratorIds) &&
-    curId &&
-    eventItem.collaboratorIds.some((id) => String(id) === curId);
+    Boolean(curId) &&
+    ((Array.isArray(eventItem.collaboratorIds) &&
+      eventItem.collaboratorIds.some((id) => String(id) === curId)) ||
+      (Array.isArray(eventItem.collaborators) &&
+        eventItem.collaborators.some((entry) => {
+          const eid = typeof entry === "object" ? entry?.id : entry;
+          return Boolean(eid) && String(eid) === curId;
+        })) ||
+      (Array.isArray(eventItem.collaboratorProfiles) &&
+        eventItem.collaboratorProfiles.some(
+          (profile) => Boolean(profile?.id) && String(profile.id) === curId
+        )));
 
   return Boolean(inAcceptedMap || inEventArray || eventItem.isCollaborator);
 }

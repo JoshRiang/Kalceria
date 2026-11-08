@@ -8,9 +8,8 @@ export const metadata = {
 
 export default function GoogleCallbackLayout({ children }) {
   return (
-    <div className="min-h-screen w-full bg-black/80 backdrop-blur-md">
+    <div className="min-h-screen w-full bg-transparent">
       {children}
     </div>
   );
 }
-

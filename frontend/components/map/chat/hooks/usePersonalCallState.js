@@ -21,6 +21,7 @@ export function usePersonalCallState({
   const mode = callState?.mode || "voice";
   const isIncomingAnswer = Boolean(callState?.isIncoming);
   const incomingOfferSdp = callState?.offerSdp || null;
+  const callId = callState?.callId || null;
 
   // Sub-hook 1: Media hardware & audio/video tracks
   const hardware = useCallHardware();
@@ -31,6 +32,7 @@ export function usePersonalCallState({
     mode,
     isIncomingAnswer,
     incomingOfferSdp,
+    callId,
     currentUser,
     onPermissionNeeded,
     onEndCall,

@@ -342,7 +342,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
     setIsClosingForChat(true);
     onPersonalChatOpen?.(user);
     setHoveredChatIconId(null);
-    setHoveredKalcerian(null);
+    setLocalHoveredKalcerian(null);
   };
 
   const handleClosePersonalChat = () => {
@@ -504,8 +504,11 @@ export const KalceriansPanel = memo(function KalceriansPanel({
             const isOwnEvent = Boolean(userEvent && isEventOwner(userEvent, currentUser));
             const isCollaboratorEvent = Boolean(userEvent && isEventCollaborator(userEvent, currentUser, acceptedCollabsMap));
             const eventPendingRequests = userEvent && isOwnEvent ? getEventPendingRequests(userEvent, currentUser, eventRequestsMap) : [];
+            const effectivePendingReqCount = userEvent && isOwnEvent
+              ? Math.max(eventPendingRequests.length, Number(userEvent.pendingRequestsCount) || 0)
+              : 0;
             const unreadGroupChatCount = userEvent && (isOwnEvent || isCollaboratorEvent) ? (eventGroupChatMap?.[userEvent.id]?.unreadCount || 0) : 0;
-            const hasPendingRequests = eventPendingRequests.length > 0 || unreadGroupChatCount > 0;
+            const hasPendingRequests = effectivePendingReqCount > 0 || unreadGroupChatCount > 0;
             const isRequestedByMe = Boolean(userEvent && requestedEventId && String(requestedEventId) === String(userEvent.id));
             const isOtherEventDisabled = Boolean(userEvent && requestedEventId && String(requestedEventId) !== String(userEvent.id) && !isOwnEvent);
             const unreadPersonalChatCount = personalChatMap?.[user.id]?.unreadCount || 0;

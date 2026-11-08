@@ -54,18 +54,6 @@ export function useGoogleOAuth({
       try {
         popupRef.current.close();
       } catch {}
-      const closeInterval = setInterval(() => {
-        try {
-          if (popupRef.current && !popupRef.current.closed) {
-            popupRef.current.close();
-          } else {
-            clearInterval(closeInterval);
-          }
-        } catch {
-          clearInterval(closeInterval);
-        }
-      }, 100);
-      setTimeout(() => clearInterval(closeInterval), 1500);
     }
     if (!result) return;
     if (!result.ok) {
@@ -121,18 +109,29 @@ export function useGoogleOAuth({
     }
   }, [onAuthSuccess, setError, setSuccess, setForm, setMode, setCroppedAvatar, modeRef]);
 
-  // Google OAuth Listener & Handoff Consumer
+  // Google OAuth Listener & Handoff Consumer (Mount + Storage Event + BroadcastChannel + postMessage)
   useEffect(() => {
-    try {
-      const handoffRaw = localStorage.getItem("kalceria_google_oauth_handoff");
-      if (handoffRaw) {
+    const consumeHandoffValue = (raw) => {
+      if (!raw) return;
+      try {
         localStorage.removeItem("kalceria_google_oauth_handoff");
-        const handoff = JSON.parse(handoffRaw);
-        if (Date.now() - (handoff.ts || 0) < 60_000) {
+        const handoff = JSON.parse(raw);
+        if (handoff && Date.now() - (handoff.ts || 0) < 60_000) {
           applyGoogleOAuthResult(handoff);
         }
-      }
+      } catch {}
+    };
+
+    try {
+      consumeHandoffValue(localStorage.getItem("kalceria_google_oauth_handoff"));
     } catch {}
+
+    const handleStorage = (event) => {
+      if (event.key === "kalceria_google_oauth_handoff" && event.newValue) {
+        consumeHandoffValue(event.newValue);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
 
     let bc;
     try {
@@ -155,6 +154,7 @@ export function useGoogleOAuth({
     window.addEventListener("message", handlePostMessage);
 
     return () => {
+      window.removeEventListener("storage", handleStorage);
       if (bc) bc.close();
       window.removeEventListener("message", handlePostMessage);
     };
@@ -176,9 +176,22 @@ export function useGoogleOAuth({
 
       const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
       if (isMobileDevice) {
+        try {
+          localStorage.setItem(
+            "kalceria_google_oauth_pending",
+            JSON.stringify({ mode: "redirect", ts: Date.now() })
+          );
+        } catch {}
         window.location.href = authUrl;
         return;
       }
+
+      try {
+        localStorage.setItem(
+          "kalceria_google_oauth_pending",
+          JSON.stringify({ mode: "popup", ts: Date.now() })
+        );
+      } catch {}
 
       const width = 500;
       const height = 620;
@@ -192,6 +205,12 @@ export function useGoogleOAuth({
       popupRef.current = popup;
 
       if (!popup || popup.closed || typeof popup.closed === "undefined") {
+        try {
+          localStorage.setItem(
+            "kalceria_google_oauth_pending",
+            JSON.stringify({ mode: "redirect", ts: Date.now() })
+          );
+        } catch {}
         window.location.href = authUrl;
         return;
       }
@@ -201,7 +220,7 @@ export function useGoogleOAuth({
           clearInterval(checkTimer);
           setGoogleLoading(false);
         }
-      }, 1000);
+      }, 600);
     } catch (err) {
       setGoogleLoading(false);
       const msg = err.response?.data?.error || err.message || "Failed to start Google sign-in.";

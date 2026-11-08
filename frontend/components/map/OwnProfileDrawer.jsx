@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import KalcerianProfileCard from "./KalcerianProfileCard";
+import { useModalBackClose } from "./modals/modalMotion";
 
 export function OwnProfileDrawer({
   isOpen,
@@ -10,7 +11,7 @@ export function OwnProfileDrawer({
   isMapDark,
   onEditProfile,
 }) {
-  if (!isOpen) return null;
+  useModalBackClose(Boolean(isOpen), onClose);
 
   const rawUsername = currentUser?.username || currentUser?.nickname || currentUser?.displayName || currentUser?.name || "user";
   const cleanUsername = String(rawUsername).replace(/^@/, "");

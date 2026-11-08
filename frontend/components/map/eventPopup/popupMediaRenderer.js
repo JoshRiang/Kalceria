@@ -1,4 +1,5 @@
 import { esc } from "./popupHelpers";
+import { inferIsVideoMediaUrl } from "./popupMediaMetadata";
 
 export function renderEmptyMediaPlaceholder(isMapDark, creatorAvatarUrl, creatorName) {
   const screenBg = isMapDark ? "#000000" : "#ffffff";
@@ -16,103 +17,126 @@ export function renderEmptyMediaPlaceholder(isMapDark, creatorAvatarUrl, creator
   `;
 }
 
-export function renderSingleMedia(url) {
-  const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
+export function renderSingleMedia(mediaEntry, { isSingle = true, index = 0 } = {}) {
+  const url = typeof mediaEntry === "string" ? mediaEntry : mediaEntry?.url || "";
+  const isVideo =
+    typeof mediaEntry === "object" && typeof mediaEntry?.isVideo === "boolean"
+      ? mediaEntry.isVideo
+      : inferIsVideoMediaUrl(url);
 
   if (isVideo) {
     return `
-      <video 
-        src="${esc(url)}" 
-        autoplay 
-        loop 
-        muted 
-        playsinline 
-        style="width: 100%; height: 100%; object-fit: cover; display: block;"
+      <video
+        src="${esc(url)}"
+        ${index === 0 ? "autoplay" : ""}
+        ${isSingle ? "loop" : ""}
+        preload="auto"
+        muted
+        playsinline
+        style="width: 100%; height: 100%; object-fit: contain; display: block; background: transparent;"
       ></video>
     `;
   }
 
   return `
-    <img 
-      src="${esc(url)}" 
-      alt="Event Live Feed" 
-      loading="lazy" 
-      style="width: 100%; height: 100%; object-fit: cover; display: block;" 
+    <img
+      src="${esc(url)}"
+      alt="Event Live Feed"
+      loading="${index === 0 ? "eager" : "lazy"}"
+      style="width: 100%; height: 100%; object-fit: contain; display: block; background: transparent;"
     />
   `;
 }
 
 export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, creatorName, safeId) {
-  const list = Array.isArray(mediaList)
+  const rawList = Array.isArray(mediaList)
     ? mediaList.filter(Boolean)
     : (mediaList ? [mediaList] : []);
 
-  if (list.length === 0) {
+  if (rawList.length === 0) {
     return renderEmptyMediaPlaceholder(isMapDark, creatorAvatarUrl, creatorName);
   }
 
-  const slidesHtml = list
-    .map((url, i) => {
-      const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
-      const mediaTag = isVideo
-        ? `<video src="${esc(url)}" autoplay playsinline muted loop preload="auto" style="width: 100%; height: 100%; object-fit: cover; display: block;"></video>`
-        : `<img src="${esc(url)}" alt="Event Live Feed" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; display: block;" />`;
+  const N = rawList.length;
+  const isSingle = N === 1;
+
+  const slidesHtml = rawList
+    .map((entry, i) => {
+      const wAttr = typeof entry === "object" && entry?.width ? String(entry.width) : "";
+      const hAttr = typeof entry === "object" && entry?.height ? String(entry.height) : "";
+      const dAttr = typeof entry === "object" && entry?.duration ? String(entry.duration) : "";
+      const initialTransform = i === 0 ? "translateX(0%)" : "translateX(100%)";
+      const initialVisibility = i === 0 ? "visible" : "hidden";
+      const initialZ = i === 0 ? "4" : "1";
+      const initialPointer = i === 0 ? "auto" : "none";
+
       return `
-        <div data-carousel-slide="${i}" data-is-video="${isVideo ? 'true' : 'false'}" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: ${i === 0 ? 1 : 0}; z-index: ${i === 0 ? 5 : 1}; transition: opacity 0.28s ease-in-out; pointer-events: none;">
-          ${mediaTag}
+        <div
+          data-carousel-slide="${i}"
+          data-media-w="${esc(wAttr)}"
+          data-media-h="${esc(hAttr)}"
+          data-media-duration="${esc(dAttr)}"
+          style="position: absolute; inset: 0; width: 100%; height: 100%; background: #0b0d14; transform: ${initialTransform}; visibility: ${initialVisibility}; z-index: ${initialZ}; pointer-events: ${initialPointer}; will-change: transform;"
+        >
+          ${renderSingleMedia(entry, { isSingle, index: i })}
         </div>
       `;
     })
     .join("");
 
-  const indicatorsHtml = list
-    .map((_, i) => {
-      return `
-        <button
-          type="button"
-          data-carousel-indicator="${i}"
-          title="Media ${i + 1}"
-          onclick="event.stopPropagation(); window.__kalceriaSwitchEventMedia?.('${esc(safeId)}', ${i});"
-          style="flex: 1; padding: 4px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
-        >
-          <span style="display: block; width: 100%; height: 2.5px; border-radius: 2px; background: rgba(255, 255, 255, 0.35); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.5);">
-            <span data-carousel-fill="${i}" style="display: block; height: 100%; background: #ffffff; width: ${i === 0 ? '0%' : '0%'}; opacity: ${i === 0 ? '1' : '0.35'}; transform: translateZ(0);"></span>
-          </span>
-        </button>
-      `;
-    })
-    .join("");
+  const tapZonesHtml = !isSingle
+    ? `
+      <button
+        type="button"
+        aria-label="Previous media"
+        onpointerdown="event.stopPropagation();"
+        onclick="event.stopPropagation(); window.__kalceriaStepEventMedia?.('${esc(safeId)}', -1);"
+        style="position: absolute; top: 0; bottom: 0; left: 0; width: 32%; z-index: 12; background: transparent; border: none; padding: 0; margin: 0; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent;"
+      ></button>
+      <button
+        type="button"
+        aria-label="Next media"
+        onpointerdown="event.stopPropagation();"
+        onclick="event.stopPropagation(); window.__kalceriaStepEventMedia?.('${esc(safeId)}', 1);"
+        style="position: absolute; top: 0; bottom: 0; right: 0; width: 68%; z-index: 12; background: transparent; border: none; padding: 0; margin: 0; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent;"
+      ></button>
+    `
+    : "";
+
+  const indicatorsHtml = !isSingle
+    ? `
+      <div style="position: absolute; top: 4px; left: 10px; right: 10px; z-index: 15; display: flex; gap: 5px; pointer-events: auto;">
+        ${rawList
+          .map((_, i) => `
+            <button
+              type="button"
+              data-carousel-indicator="${i}"
+              title="Clip ${i + 1}"
+              onpointerdown="event.stopPropagation();"
+              onclick="event.stopPropagation(); window.__kalceriaSwitchEventMedia?.('${esc(safeId)}', ${i});"
+              style="flex: 1; padding: 6px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
+            >
+              <span style="display: block; width: 100%; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.32); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.45);">
+                <span data-carousel-fill="${i}" style="display: block; height: 100%; background: #ffffff; width: ${i === 0 ? "0%" : "0%"}; opacity: ${i === 0 ? "1" : "0.35"};"></span>
+              </span>
+            </button>
+          `)
+          .join("")}
+      </div>
+    `
+    : "";
 
   return `
-    <div id="event-carousel-${esc(safeId)}" class="popup-carousel-container" style="position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 12px; background: #000000;">
+    <div
+      id="event-carousel-${esc(safeId)}"
+      data-carousel-container="${esc(safeId)}"
+      data-slide-count="${N}"
+      class="popup-carousel-container"
+      style="position: relative; width: 100%; height: 100%; overflow: hidden; background: #0b0d14;"
+    >
       ${slidesHtml}
-
-      <!-- Story Navigation Tap Zones: Left = Prev (32%), Middle = Next (36%), Right = Next (32%) -->
-      <div style="position: absolute; inset: 0; z-index: 12; display: flex; pointer-events: auto;">
-        <div 
-          title="Previous" 
-          onclick="event.stopPropagation(); window.__kalceriaPrevEventMedia?.('${esc(safeId)}');"
-          style="width: 32%; height: 100%; cursor: pointer;"
-        ></div>
-        <div 
-          title="Next" 
-          onclick="event.stopPropagation(); window.__kalceriaNextEventMedia?.('${esc(safeId)}');"
-          style="width: 36%; height: 100%; cursor: pointer;"
-        ></div>
-        <div 
-          title="Next" 
-          onclick="event.stopPropagation(); window.__kalceriaNextEventMedia?.('${esc(safeId)}');"
-          style="width: 32%; height: 100%; cursor: pointer;"
-        ></div>
-      </div>
-
-      <!-- Story Progress Lines Indicator Bar -->
-      <div style="position: absolute; top: 6px; left: 8px; right: 8px; z-index: 20; display: flex; gap: 4px; pointer-events: auto;">
-        ${indicatorsHtml}
-      </div>
-
-      <!-- Auto-init Image Trigger (Invokes JS Carousel controller immediately upon DOM injection) -->
-      <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="display:none;" onload="window.__kalceriaInitEventCarousel?.('${esc(safeId)}');" />
+      ${tapZonesHtml}
+      ${indicatorsHtml}
     </div>
   `;
 }

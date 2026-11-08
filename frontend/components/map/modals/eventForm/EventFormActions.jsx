@@ -1,5 +1,7 @@
 "use client";
 
+import { ActionArcSpinner } from "../ActionArcSpinner";
+
 export function EventFormActions({
   isEditing,
   onPromptDeleteConfirm,
@@ -50,13 +52,13 @@ export function EventFormActions({
         <button
           type="submit"
           disabled={busy || !isEventFormValid}
-          className={`px-6 py-2.5 sm:py-3 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
+          className={`min-w-[96px] min-h-[40px] flex items-center justify-center px-6 py-2.5 sm:py-3 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
             isModalDark
               ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
               : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
           }`}
         >
-          {busy ? "Updating..." : "Update"}
+          {busy ? <ActionArcSpinner className="w-4 h-4" label="Saving event" /> : "Update"}
         </button>
       </div>
     );
@@ -67,13 +69,13 @@ export function EventFormActions({
       <button
         type="submit"
         disabled={busy || !isEventFormValid}
-        className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
+        className={`w-full min-h-[40px] flex items-center justify-center py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
           isModalDark
             ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
             : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
         }`}
       >
-        {busy ? "Creating..." : "Create"}
+        {busy ? <ActionArcSpinner className="w-4 h-4" label="Saving event" /> : "Create"}
       </button>
     </div>
   );

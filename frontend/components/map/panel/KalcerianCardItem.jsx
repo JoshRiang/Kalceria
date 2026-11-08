@@ -183,6 +183,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
           isMapDark={isMapDark}
           isSelfOffline={isSelfOffline}
           isRequestedByMe={isRequestedByMe}
+          isOwnEvent={isOwnEvent}
           hasPendingRequests={hasPendingRequests}
           eventPendingRequests={eventPendingRequests}
           isOtherEventDisabled={isOtherEventDisabled}

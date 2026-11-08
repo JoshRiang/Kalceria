@@ -1,7 +1,13 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { getInstantMapBgUrl } from "@/lib/mapBgCache";
+import { ActionArcSpinner } from "./ActionArcSpinner";
+import {
+  MODAL_GENIE_BACKDROP,
+  MODAL_GENIE_SURFACE,
+  useModalBackClose,
+} from "./modalMotion";
 
 const BROADCAST_FORM_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Dark.webp";
 const BROADCAST_FORM_BG_LIGHT = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Light.webp";
@@ -15,6 +21,8 @@ export function StatusModal({
   setStatusText,
   busy,
 }) {
+  useModalBackClose(Boolean(show), onClose);
+
   const isBroadcastValid = Boolean((statusText || "").trim());
   const resolvedBgUrl = getInstantMapBgUrl(
     isModalDark ? BROADCAST_FORM_BG_DARK : BROADCAST_FORM_BG_LIGHT
@@ -32,27 +40,14 @@ export function StatusModal({
     <AnimatePresence>
       {show && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+          key="status-modal-backdrop"
+          {...MODAL_GENIE_BACKDROP}
           className="fixed inset-0 z-[2000] flex items-center justify-center p-3 xs:p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm select-none"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.88, opacity: 0, y: 15 }}
-            animate={{
-              scale: 1,
-              opacity: 1,
-              y: 0,
-              transition: { duration: 0.42, ease: [0.19, 1, 0.22, 1] },
-            }}
-            exit={{
-              scale: 0.88,
-              opacity: 0,
-              y: 15,
-              transition: { duration: 0.32, ease: [0.32, 0, 0.15, 1] },
-            }}
+            key="status-modal-surface"
+            {...MODAL_GENIE_SURFACE}
             className={`relative w-full max-w-[420px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col rounded-[20px] sm:rounded-[24px] shadow-2xl overflow-hidden transition-colors duration-300 ${
               isModalDark
                 ? "bg-[#010101] border border-[#30363d] text-[#f0f6fc]"
@@ -151,14 +146,18 @@ export function StatusModal({
           <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
             <button
               type="submit"
-              className={`w-full py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
+              className={`w-full min-h-[40px] flex items-center justify-center py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
                 isModalDark
                   ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
                   : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
               }`}
               disabled={busy || !isBroadcastValid}
             >
-              {busy ? "Posting..." : "Post"}
+              {busy ? (
+                <ActionArcSpinner className="w-4 h-4" label="Posting status" />
+              ) : (
+                "Post"
+              )}
             </button>
           </div>
         </form>

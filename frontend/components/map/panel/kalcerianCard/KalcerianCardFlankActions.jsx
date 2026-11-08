@@ -17,6 +17,7 @@ export const KalcerianCardFlankActions = memo(function KalcerianCardFlankActions
   isMapDark,
   isSelfOffline,
   isRequestedByMe,
+  isOwnEvent = false,
   hasPendingRequests,
   eventPendingRequests,
   isOtherEventDisabled,
@@ -36,6 +37,14 @@ export const KalcerianCardFlankActions = memo(function KalcerianCardFlankActions
   onPersonalChatOpen,
   setConfirmingAction,
 }) {
+  const effectivePendingCount = isOwnEvent
+    ? Math.max(
+        Array.isArray(eventPendingRequests) ? eventPendingRequests.length : 0,
+        Number(userEvent?.pendingRequestsCount) || 0
+      )
+    : Array.isArray(eventPendingRequests)
+    ? eventPendingRequests.length
+    : 0;
   return (
     <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch py-0.5 pointer-events-auto">
       {/* Top Row: Dynamic Category Event & Broadcast Badges (Stacked with circle texture) */}
@@ -90,8 +99,8 @@ export const KalcerianCardFlankActions = memo(function KalcerianCardFlankActions
                     }}
                     className="w-full h-full flex items-center justify-center rounded-full outline-none cursor-pointer"
                     title={
-                      eventPendingRequests.length > 0
-                        ? `${userEvent.title} (${eventPendingRequests.length} collab request${eventPendingRequests.length > 1 ? "s" : ""})`
+                      effectivePendingCount > 0
+                        ? `${userEvent.title} (${effectivePendingCount} collab request${effectivePendingCount > 1 ? "s" : ""})`
                         : `${userEvent.title} (${unreadGroupChatCount} new group message${unreadGroupChatCount > 1 ? "s" : ""})`
                     }
                   >
@@ -149,8 +158,8 @@ export const KalcerianCardFlankActions = memo(function KalcerianCardFlankActions
                     {isRequestedByMe
                       ? `Cancel Request: ${userEvent.title}`
                       : hasPendingRequests
-                      ? eventPendingRequests.length > 0
-                        ? `${userEvent.title} (${eventPendingRequests.length} Collab Request${eventPendingRequests.length > 1 ? "s" : ""})`
+                      ? effectivePendingCount > 0
+                        ? `${userEvent.title} (${effectivePendingCount} Collab Request${effectivePendingCount > 1 ? "s" : ""})`
                         : `${userEvent.title} (${unreadGroupChatCount} Group Message${unreadGroupChatCount > 1 ? "s" : ""})`
                       : isOtherEventDisabled
                       ? `${userEvent.title} (Request active elsewhere)`

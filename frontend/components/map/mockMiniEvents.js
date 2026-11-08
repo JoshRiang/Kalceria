@@ -19,13 +19,26 @@ export const cleanEventDesc = (item) => {
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
     .replace(/\[LOC:[^\]]+\]\s*/gi, "")
+    .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
     .trim();
+  const mediaItems = Array.isArray(item.mediaItems) ? item.mediaItems : undefined;
+  const resolvedMediaUrl =
+    mediaItems && mediaItems.length > 0
+      ? mediaItems.map((m) => m.url).join(", ")
+      : mediaMatch
+        ? mediaMatch[1]
+        : (item.mediaUrl || null);
+
   return {
     ...item,
     createdAt: item.createdAt || new Date().toISOString(),
     title: item.title ? toSmartTitleCase(item.title) : item.title,
     category: catMatch ? catMatch[1].toLowerCase() : (item.category || "cafe"),
-    mediaUrl: mediaMatch ? mediaMatch[1] : (item.mediaUrl || null),
+    mediaUrl: resolvedMediaUrl,
+    ...(mediaItems ? { mediaItems } : {}),
+    collaborators: Array.isArray(item.collaborators) ? item.collaborators : [],
+    collaboratorProfiles: Array.isArray(item.collaboratorProfiles) ? item.collaboratorProfiles : [],
+    pendingRequestsCount: Number.isFinite(item.pendingRequestsCount) ? item.pendingRequestsCount : 0,
     location: locMatch ? locMatch[1].trim() : (item.location || null),
     description: cleanDescription,
   };

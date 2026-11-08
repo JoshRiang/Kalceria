@@ -2,7 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { acquireCameraStream, stopMediaStream } from "@/lib/mediaHardware";
+import {
+  acquireCameraStream,
+  stopMediaStream,
+  probeVideoDeviceCapabilities,
+  applyCameraTorch,
+} from "@/lib/mediaHardware";
 import {
   CameraBottomControls,
   CameraCaptionBox,
@@ -59,63 +64,27 @@ export function CameraCaptureModal({
   const recordIntervalRef = useRef(null);
   const isHoldingShutterRef = useRef(false);
 
-  // Hardware Camera & Flash Detection: Pure algorithmic hardware capability inspection
-  const inspectCameraCapabilities = useCallback(async (activeStream) => {
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) {
-      setCanFlipCamera(false);
-      setHasFlash(false);
-      setIsFlashOn(false);
-      return;
-    }
+  // Hardware Camera Detection: inspect dual-camera flip & active track torch capability
+  const syncHardwareCapabilities = useCallback(async (stream) => {
+    const caps = await probeVideoDeviceCapabilities(stream);
+    setCanFlipCamera(caps.canFlipCamera);
+    setHasFlash(caps.hasFlash);
 
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = devices.filter((d) => d.kind === "videoinput");
-
-      const isMobileDevice =
-        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-        (typeof window !== "undefined" && window.innerWidth <= 820 && navigator.maxTouchPoints > 1);
-
-      // On desktop / laptop with a single webcam, both dual flip and physical flashlight are unavailable
-      const isDesktopLaptop = !isMobileDevice && videoInputs.length <= 1;
-
-      // Dual Camera Algorithm: checks if multiple distinct camera sensors exist
-      const hasDualCameras = videoInputs.length >= 2 || (isMobileDevice && videoInputs.length >= 1);
-      setCanFlipCamera(!isDesktopLaptop && hasDualCameras);
-
-      // Flashlight (Torch) Detection Algorithm: checks native camera sensor torch capability
-      let torchAvailable = false;
-      if (activeStream) {
-        const videoTrack = activeStream.getVideoTracks()[0];
-        if (videoTrack?.getCapabilities) {
-          const caps = videoTrack.getCapabilities();
-          if (Boolean(caps.torch) || (caps.fillLightMode && caps.fillLightMode.includes("flash"))) {
-            torchAvailable = true;
-          }
-        }
-      }
-
-      if (isDesktopLaptop) {
-        setHasFlash(false);
-        setIsFlashOn(false);
-      } else {
-        setHasFlash(torchAvailable);
-        if (!torchAvailable) {
-          setIsFlashOn(false);
-        }
-      }
-    } catch {
-      setCanFlipCamera(false);
-      setHasFlash(false);
-      setIsFlashOn(false);
+    if (stream && !caps.hasFlash) {
+      setTimeout(async () => {
+        if (streamRef.current !== stream) return;
+        const retryCaps = await probeVideoDeviceCapabilities(stream);
+        setCanFlipCamera(retryCaps.canFlipCamera);
+        setHasFlash(retryCaps.hasFlash);
+      }, 220);
     }
   }, []);
 
   useEffect(() => {
     if (isOpen) {
-      inspectCameraCapabilities(streamRef.current);
+      syncHardwareCapabilities(streamRef.current);
     }
-  }, [isOpen, inspectCameraCapabilities]);
+  }, [isOpen, syncHardwareCapabilities]);
 
   const cleanupCamera = useCallback(() => {
     if (recordIntervalRef.current) {
@@ -133,19 +102,15 @@ export function CameraCaptureModal({
       mediaRecorderRef.current = null;
     }
     if (streamRef.current) {
-      try {
-        const videoTrack = streamRef.current.getVideoTracks()[0];
-        if (videoTrack?.applyConstraints) {
-          videoTrack.applyConstraints({ advanced: [{ torch: false }] }).catch(() => {});
-        }
-      } catch {}
+      applyCameraTorch(streamRef.current, false).catch(() => {});
       stopMediaStream(streamRef.current);
       streamRef.current = null;
     }
     activeStreamFacingRef.current = null;
     setHasStream(false);
-    setIsRecordingVideo(false);
+    setHasFlash(false);
     setIsFlashOn(false);
+    setIsRecordingVideo(false);
   }, []);
 
   // Teardown when closing modal + auto-fade camera guide after 2s
@@ -198,11 +163,14 @@ export function CameraCaptureModal({
     }
 
     if (streamRef.current) {
+      await applyCameraTorch(streamRef.current, false).catch(() => {});
       stopMediaStream(streamRef.current);
       streamRef.current = null;
     }
     activeStreamFacingRef.current = null;
     setCameraError("");
+    setIsFlashOn(false);
+    setHasFlash(false);
 
     try {
       const stream = await acquireCameraStream({ facingMode: facing }, false);
@@ -213,13 +181,7 @@ export function CameraCaptureModal({
         videoRef.current.srcObject = stream;
         videoRef.current.play?.().catch(() => {});
       }
-      inspectCameraCapabilities(stream);
-      if (isFlashOn) {
-        const videoTrack = stream.getVideoTracks()[0];
-        if (videoTrack?.applyConstraints) {
-          videoTrack.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
-        }
-      }
+      syncHardwareCapabilities(stream);
     } catch (err) {
       setHasStream(false);
       setCameraError(err?.message || "Tidak dapat mengakses kamera.");
@@ -278,6 +240,10 @@ export function CameraCaptureModal({
       canvas.toBlob(
         (blob) => {
           if (!blob) return;
+          if (streamRef.current && isFlashOn) {
+            applyCameraTorch(streamRef.current, false).catch(() => {});
+            setIsFlashOn(false);
+          }
           const url = URL.createObjectURL(blob);
           setPreviewMedia({
             type: "photo",
@@ -294,7 +260,7 @@ export function CameraCaptureModal({
     } catch {
       setCameraError("Gagal mengambil foto.");
     }
-  }, [hasStream, facingMode, zoomLevel]);
+  }, [hasStream, facingMode, zoomLevel, isFlashOn]);
 
   // Start Video Recording on Hold (stable callback, never interrupted by timer ticks)
   const startVideoRecording = useCallback(() => {
@@ -333,6 +299,10 @@ export function CameraCaptureModal({
         if (recordIntervalRef.current) {
           clearInterval(recordIntervalRef.current);
           recordIntervalRef.current = null;
+        }
+        if (streamRef.current) {
+          applyCameraTorch(streamRef.current, false).catch(() => {});
+          setIsFlashOn(false);
         }
         const blob = new Blob(recordedChunksRef.current, { type: mime });
         const url = URL.createObjectURL(blob);
@@ -439,35 +409,18 @@ export function CameraCaptureModal({
     setZoomLevel((prev) => (prev === 1 ? 2 : 1));
   };
 
-  // Toggle Hardware Flashlight / Torch
+  // Toggle Real Hardware Flashlight / Torch
   const handleToggleFlash = useCallback(async () => {
     if (!hasFlash || !streamRef.current) return;
-    const nextFlash = !isFlashOn;
-    setIsFlashOn(nextFlash);
-    try {
-      const videoTrack = streamRef.current.getVideoTracks()[0];
-      if (videoTrack?.applyConstraints) {
-        await videoTrack.applyConstraints({
-          advanced: [{ torch: nextFlash }],
-        });
-      }
-    } catch (err) {
-      console.warn("Failed to toggle flashlight constraint:", err);
-      setIsFlashOn(false);
-    }
+    const nextEnabled = !isFlashOn;
+    const res = await applyCameraTorch(streamRef.current, nextEnabled);
+    setIsFlashOn(res.active);
   }, [hasFlash, isFlashOn]);
 
   // Flip Camera User <-> Environment with 360 Spin Animation
   const handleFlipCamera = () => {
     if (!canFlipCamera) return;
     setIsSpinningFlip(true);
-    if (isFlashOn && streamRef.current) {
-      try {
-        const track = streamRef.current.getVideoTracks()[0];
-        track?.applyConstraints?.({ advanced: [{ torch: false }] }).catch(() => {});
-      } catch {}
-      setIsFlashOn(false);
-    }
     const nextFacing = facingMode === "user" ? "environment" : "user";
     setFacingMode(nextFacing);
     startCamera(nextFacing, true);
@@ -639,12 +592,12 @@ export function CameraCaptureModal({
             handleShutterPointerUp={handleShutterPointerUp}
             isRecordingVideo={isRecordingVideo}
             recordingSeconds={recordingSeconds}
-            canFlipCamera={canFlipCamera}
-            handleFlipCamera={handleFlipCamera}
-            isSpinningFlip={isSpinningFlip}
             hasFlash={hasFlash}
             isFlashOn={isFlashOn}
             handleToggleFlash={handleToggleFlash}
+            canFlipCamera={canFlipCamera}
+            handleFlipCamera={handleFlipCamera}
+            isSpinningFlip={isSpinningFlip}
           />
         </motion.div>
       </div>

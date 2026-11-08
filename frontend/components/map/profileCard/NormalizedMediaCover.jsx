@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { inferIsVideoMediaUrl } from "../eventPopup/popupMediaMetadata";
 
 // ─── Media Normalization Engine (Video, Photo, GIF) ───────────────────────────
 export function normalizeMediaConfig(
@@ -36,12 +37,7 @@ export function normalizeMediaConfig(
     };
   }
   if (!type) {
-    if (
-      lowerUrl.endsWith(".mp4") ||
-      lowerUrl.endsWith(".webm") ||
-      lowerUrl.startsWith("data:video") ||
-      lowerUrl.includes("video")
-    ) {
+    if (inferIsVideoMediaUrl(url) || lowerUrl.includes("video")) {
       type = "video";
     } else if (
       lowerUrl.endsWith(".gif") ||

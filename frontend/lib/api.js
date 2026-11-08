@@ -119,6 +119,50 @@ export const fetchMe = () => api.get('/users/me').then(r => r.data.user);
 export const fetchMapUsers = () => api.get('/map/users').then(r => r.data.users);
 export const fetchKalcerians = () => api.get('/map/kalcerians').then(r => r.data.kalcerians);
 export const fetchMiniEvents = () => fetchAllPages('/mini-events/active', 'events', 100);
+export async function fetchMiniEventsWithMeta() {
+  const items = [];
+  let cursor;
+  let requestedEventId = null;
+  let isFirstPage = true;
+
+  do {
+    const params = { limit: 100 };
+    if (cursor) params.cursor = cursor;
+
+    const response = await api.get('/mini-events/active', { params });
+    if (!response.data || typeof response.data !== 'object') {
+      break;
+    }
+    if (isFirstPage) {
+      requestedEventId = response.data?.requestedEventId || null;
+      isFirstPage = false;
+    }
+    const pageItems = response.data?.events;
+    if (Array.isArray(pageItems)) items.push(...pageItems);
+
+    const nextCursor = response.data?.nextCursor || null;
+    if (nextCursor && nextCursor === cursor) {
+      throw new Error('Pagination cursor did not advance for /mini-events/active.');
+    }
+    cursor = nextCursor;
+  } while (cursor);
+
+  return { events: items, requestedEventId };
+}
+export const requestEventCollab = (eventId) =>
+  api.post(`/mini-events/${eventId}/collab/request`).then((r) => r.data);
+export const cancelEventCollabRequest = (eventId) =>
+  api.delete(`/mini-events/${eventId}/collab/request`).then((r) => r.data);
+export const fetchEventCollabRequests = (eventId) =>
+  api.get(`/mini-events/${eventId}/collab/requests`).then((r) => r.data?.requests || []);
+export const acceptEventCollab = (eventId, requestId) =>
+  api.post(`/mini-events/${eventId}/collab/requests/${requestId}/accept`).then((r) => r.data);
+export const declineEventCollab = (eventId, requestId) =>
+  api.post(`/mini-events/${eventId}/collab/requests/${requestId}/decline`).then((r) => r.data);
+export const addEventMedia = (eventId, payload) =>
+  api.post(`/mini-events/${eventId}/media`, payload).then((r) => r.data);
+export const removeEventMedia = (eventId, payload) =>
+  api.delete(`/mini-events/${eventId}/media`, { data: payload }).then((r) => r.data);
 export const fetchPublicEvents = () => fetchAllPages('/events', 'events', 50);
 export const fetchBlockedUsers = () => api.get('/map/blocked').then(r => r.data?.blockedUsers || []).catch(() => []);
 export const blockKalcerian = (targetId) => api.post(`/map/block/${targetId}`).then(r => r.data);

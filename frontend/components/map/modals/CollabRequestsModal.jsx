@@ -2,6 +2,11 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { toSmartTitleCase } from "@/lib/titleCase";
+import {
+  MODAL_GENIE_BACKDROP,
+  MODAL_GENIE_SURFACE,
+  useModalBackClose,
+} from "./modalMotion";
 
 // Subtle yet pekat/solid fill colors (not semi-hollow)
 export const SUB_BOX_COLORS = [
@@ -25,32 +30,24 @@ export function CollabRequestsModal({
   onAcceptCollabRequest,
   onDeclineCollabRequest,
 }) {
+  useModalBackClose(Boolean(show), onClose);
+
   return (
     <AnimatePresence>
       {show && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-[2000] flex items-center justify-center p-2.5 xs:p-4 select-none bg-black/35 backdrop-blur-sm"
+          key="collab-requests-backdrop"
+          {...MODAL_GENIE_BACKDROP}
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-2.5 xs:p-4 select-none"
           onClick={onClose}
         >
-          {/* Pop-out Box: Jin In / Out smooth spring animated card */}
+          {/* Subtle click-catcher backdrop WITHOUT blur to preserve background sharpness */}
+          <div className="absolute inset-0 bg-black/15" />
+
+          {/* Pop-out Box: compact square-ish width with inner box shifted down from top line X */}
           <motion.div
-            initial={{ scale: 0.88, opacity: 0, y: 15 }}
-            animate={{
-              scale: 1,
-              opacity: 1,
-              y: 0,
-              transition: { duration: 0.42, ease: [0.19, 1, 0.22, 1] },
-            }}
-            exit={{
-              scale: 0.88,
-              opacity: 0,
-              y: 15,
-              transition: { duration: 0.32, ease: [0.32, 0, 0.15, 1] },
-            }}
+            key="collab-requests-surface"
+            {...MODAL_GENIE_SURFACE}
             className={`relative z-10 w-full max-w-[315px] xs:max-w-[335px] sm:max-w-[350px] max-h-[85vh] flex flex-col items-stretch rounded-[22px] shadow-2xl overflow-hidden ${
               isModalDark
                 ? "bg-[#161b22] border border-[#30363d] text-[#f0f6fc]"

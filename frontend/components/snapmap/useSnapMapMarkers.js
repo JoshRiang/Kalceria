@@ -12,6 +12,7 @@ import {
 } from "../map/hooks/useMapChatAndNotifications";
 import { hasValidCoordinates } from "@/lib/osmTilePrewarmer";
 import { stripDynamicUptime, tickAllEventUptimeElements } from "./snapMapHelpers";
+import { initEventPopupCarouselsFromRoot } from "../map/eventPopup/popupCarouselController";
 
 export function useSnapMapMarkers({
   markerRefs: externalMarkerRefs,
@@ -55,20 +56,15 @@ export function useSnapMapMarkers({
       const markerId = `user_${user.id}`;
       currentUserIds.add(markerId);
 
-      const isSelf = Boolean(currentUser?.id && String(user.id) === String(currentUser.id));
-      const resolvedUser = isSelf
-        ? { ...user, ...currentUser, profilePicture: currentUser.profilePicture || user.profilePicture }
-        : user;
-
-      const nextUserIcon = createUserIcon(L, resolvedUser, isMapDark);
+      const nextUserIcon = createUserIcon(L, user, isMapDark);
       const nextUserIconHtml = nextUserIcon?.options?.html || "";
 
       if (markerRefs.current[markerId]) {
         const marker = markerRefs.current[markerId];
 
         const currentLatLng = marker.getLatLng();
-        if (currentLatLng.lat !== resolvedUser.lat || currentLatLng.lng !== resolvedUser.lng) {
-          marker.setLatLng([resolvedUser.lat, resolvedUser.lng]);
+        if (currentLatLng.lat !== user.lat || currentLatLng.lng !== user.lng) {
+          marker.setLatLng([user.lat, user.lng]);
         }
 
         if (marker._lastIconHtml !== nextUserIconHtml) {
@@ -76,7 +72,7 @@ export function useSnapMapMarkers({
           marker._lastIconHtml = nextUserIconHtml;
         }
 
-        const popupContent = userPopup(resolvedUser, isMapDark);
+        const popupContent = userPopup(user, isMapDark);
         if (popupContent) {
           if (!marker.getPopup()) {
             marker.bindPopup(popupContent, {
@@ -99,12 +95,12 @@ export function useSnapMapMarkers({
           marker._lastPopupContent = null;
         }
 
-        marker.options.userData = resolvedUser;
+        marker.options.userData = user;
       } else {
-        const popupContent = userPopup(resolvedUser, isMapDark);
-        const marker = L.marker([resolvedUser.lat, resolvedUser.lng], {
+        const popupContent = userPopup(user, isMapDark);
+        const marker = L.marker([user.lat, user.lng], {
           icon: nextUserIcon,
-          userData: resolvedUser,
+          userData: user,
         });
         marker._lastIconHtml = nextUserIconHtml;
 
@@ -171,7 +167,9 @@ export function useSnapMapMarkers({
       const pendingReqs = isOwner
         ? getEventPendingRequests(item, currentUser, eventRequestsMap)
         : [];
-      const pendingCount = pendingReqs.length;
+      const pendingCount = isOwner
+        ? Math.max(pendingReqs.length, Number(item.pendingRequestsCount) || 0)
+        : 0;
       const unreadGroupChatCount =
         isOwner || isCollaborator
           ? eventGroupChatMap?.[item.id]?.unreadCount || 0
@@ -214,6 +212,12 @@ export function useSnapMapMarkers({
           marker._lastPopupContent = newPopupContent;
           marker._lastPopupSig = newSig;
           tickAllEventUptimeElements();
+          if (marker.isPopupOpen?.()) {
+            const popupEl = marker.getPopup()?.getElement?.();
+            if (popupEl) {
+              initEventPopupCarouselsFromRoot(popupEl, marker.getPopup());
+            }
+          }
         }
       } else {
         const newPopupContent = eventPopup(

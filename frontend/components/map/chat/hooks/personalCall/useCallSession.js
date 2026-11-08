@@ -11,6 +11,7 @@ export function useCallSession({
   mode,
   isIncomingAnswer,
   incomingOfferSdp,
+  callId = null,
   currentUser,
   onPermissionNeeded,
   onEndCall,
@@ -27,19 +28,22 @@ export function useCallSession({
   const callCtrlChannelRef = useRef(null);
   const pendingIceCandidatesRef = useRef([]);
   const secondsRef = useRef(0);
-  const activeCallIdRef = useRef(`call_${Date.now()}`);
+  const activeCallIdRef = useRef(callId || `call_${Date.now()}`);
   const pollTimerRef = useRef(null);
   const isHungUpRef = useRef(false);
   const statusRef = useRef(status);
   const camMountSyncedRef = useRef(false);
   statusRef.current = status;
 
+  const hardwareRef = useRef(hardware);
+  hardwareRef.current = hardware;
+
   const onEndCallRef = useRef(onEndCall);
   const onPermissionNeededRef = useRef(onPermissionNeeded);
   onEndCallRef.current = onEndCall;
   onPermissionNeededRef.current = onPermissionNeeded;
 
-  // Teardown WebRTC and Media Hardware
+  // Teardown WebRTC and Media Hardware (stable ref, never invalidates call lifecycle)
   const teardownCall = useCallback(() => {
     isHungUpRef.current = true;
     stopCallRingtone();
@@ -65,9 +69,9 @@ export function useCallSession({
       pcRef.current = null;
     }
 
-    hardware.teardownHardware();
+    hardwareRef.current?.teardownHardware?.();
     setIsRemoteCamOff(false);
-  }, [hardware]);
+  }, []);
 
   // Connected Call Timer
   useEffect(() => {
@@ -113,10 +117,15 @@ export function useCallSession({
     };
 
     async function initCall() {
+      const hw = hardwareRef.current;
+      if (isIncomingAnswer && callId) {
+        activeCallIdRef.current = callId;
+      }
+
       // 1. Safe Hardware Acquisition FIRST
       let stream = null;
       try {
-        stream = await hardware.acquireHardware(mode);
+        stream = await hw.acquireHardware(mode);
       } catch (hardwareErr) {
         stopCallRingtone();
         if (cancelled) return;
@@ -132,7 +141,7 @@ export function useCallSession({
       }
 
       if (cancelled) {
-        if (stream) hardware.teardownHardware();
+        if (stream) hw.teardownHardware();
         return;
       }
 
@@ -143,10 +152,11 @@ export function useCallSession({
       }
 
       if (stream) {
-        hardware.localStreamRef.current = stream;
-        hardware.setHasLocalStream(true);
-        if (hardware.localVideoRef.current && mode === "video") {
-          hardware.localVideoRef.current.srcObject = stream;
+        hw.localStreamRef.current = stream;
+        hw.setHasLocalStream(true);
+        if (hw.localVideoRef.current && mode === "video") {
+          hw.localVideoRef.current.srcObject = stream;
+          hw.localVideoRef.current.play?.().catch(() => {});
         }
       }
 
@@ -160,7 +170,7 @@ export function useCallSession({
             dc.send(
               JSON.stringify({
                 type: "cam_state",
-                isCamOff: Boolean(hardware.isCamOffRef.current),
+                isCamOff: Boolean(hardwareRef.current.isCamOffRef.current),
                 ts: Date.now(),
               })
             );
@@ -229,26 +239,27 @@ export function useCallSession({
 
           // Remote stream receiver: store & attach live WebRTC media directly to players
           pc.ontrack = (event) => {
+            const activeHw = hardwareRef.current;
             let incomingStream = event.streams?.[0];
             if (!incomingStream) {
-              if (!hardware.remoteStreamRef.current) {
-                hardware.remoteStreamRef.current = new MediaStream();
+              if (!activeHw.remoteStreamRef.current) {
+                activeHw.remoteStreamRef.current = new MediaStream();
               }
-              hardware.remoteStreamRef.current.addTrack(event.track);
-              incomingStream = hardware.remoteStreamRef.current;
+              activeHw.remoteStreamRef.current.addTrack(event.track);
+              incomingStream = activeHw.remoteStreamRef.current;
             } else {
-              hardware.remoteStreamRef.current = incomingStream;
+              activeHw.remoteStreamRef.current = incomingStream;
             }
 
             const hasVideoTrack = incomingStream.getVideoTracks().length > 0;
-            hardware.setHasRemoteStream(mode === "video" ? hasVideoTrack : true);
-            if (hardware.remoteVideoRef.current && mode === "video" && hasVideoTrack) {
-              hardware.remoteVideoRef.current.srcObject = incomingStream;
-              hardware.remoteVideoRef.current.play?.().catch(() => {});
+            activeHw.setHasRemoteStream(mode === "video" ? hasVideoTrack : true);
+            if (activeHw.remoteVideoRef.current && mode === "video" && hasVideoTrack) {
+              activeHw.remoteVideoRef.current.srcObject = incomingStream;
+              activeHw.remoteVideoRef.current.play?.().catch(() => {});
             }
-            if (hardware.remoteAudioRef.current) {
-              hardware.remoteAudioRef.current.srcObject = incomingStream;
-              hardware.remoteAudioRef.current.play?.().catch(() => {});
+            if (activeHw.remoteAudioRef.current) {
+              activeHw.remoteAudioRef.current.srcObject = incomingStream;
+              activeHw.remoteAudioRef.current.play?.().catch(() => {});
             }
           };
 
@@ -288,7 +299,7 @@ export function useCallSession({
               encryptedPayload: JSON.stringify(answer),
             }).catch(() => {});
 
-            if (hardware.isCamOffRef.current && mode === "video") {
+            if (hardwareRef.current.isCamOffRef.current && mode === "video") {
               postCallSignal(targetUserId, {
                 callId: activeCallIdRef.current,
                 callMode: mode,
@@ -301,8 +312,8 @@ export function useCallSession({
         }
       } else {
         // Caller creates and dispatches offer
-        const callId = `call_${generateCryptoNonce().slice(0, 12)}`;
-        activeCallIdRef.current = callId;
+        const generatedCallId = `call_${generateCryptoNonce().slice(0, 12)}`;
+        activeCallIdRef.current = generatedCallId;
 
         let offerSdpString = null;
         if (pc) {
@@ -315,7 +326,7 @@ export function useCallSession({
 
         // Post offer to backend (stores in Redis, event-driven, even if peer is offline)
         postCallSignal(targetUserId, {
-          callId,
+          callId: generatedCallId,
           callMode: mode,
           signalType: "offer",
           nonce: generateCryptoNonce(),
@@ -408,8 +419,8 @@ export function useCallSession({
     mode,
     isIncomingAnswer,
     incomingOfferSdp,
+    callId,
     teardownCall,
-    hardware,
   ]);
 
   // Reactive binding: ensure local & remote media elements play stream as soon as elements mount / status updates

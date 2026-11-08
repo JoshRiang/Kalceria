@@ -24,6 +24,10 @@ import {
   csrfCookieOptions,
 } from './passwordUtils.js';
 import { sanitizeProfilePicture } from './domicileHelpers.js';
+import {
+  cleanupUserDatabaseRecords,
+  purgeUserRedisFootprint,
+} from './cleanupUserFootprint.js';
 
 // get current user profile (for map page etc)
 export async function getMe(req, res, next) {
@@ -191,6 +195,7 @@ export async function updateMe(req, res, next) {
       redis.set(metaKey, JSON.stringify(meta)),
       redis.del('cache:all_kalcerians'),
       redis.del('cache:map_users_enriched'),
+      redis.del('cache:map_users:global'),
     ]);
 
     const enrichedUser = await ensurePersistentUserProfile(user);
@@ -224,73 +229,13 @@ export async function deleteMe(req, res, next) {
     if (token) await revokeAuthSession(token);
     await revokeUserSessions(userId);
 
-    const rawEmail = user.email || '';
-    const normEmail = rawEmail.toLowerCase().trim();
+    // Transactional relational database cleanup across all user entities
+    const { ownedEventIds } = await prisma.$transaction(
+      (tx) => cleanupUserDatabaseRecords(tx, userId),
+      { maxWait: 10000, timeout: 25000 }
+    );
 
-    // 1. Comprehensive Redis Sanitation (Realtime Map, Telemetry, Chat, Auth, Reset & Sessions)
-    await Promise.allSettled([
-      // Realtime Map & Geolocation removal
-      redis.zrem('active_users', userId),
-      redis.del(`live:user:${userId}`),
-      redis.del(`live:cooldown:${userId}`),
-      redis.del(`telemetry:${userId}`),
-      redis.del('cache:all_kalcerians'),
-      redis.del('cache:map_users_enriched'),
-      redis.del('cache:map_users_global'),
-      redis.del('cache:public_bookings'),
-      // Social state, calls & personal chat
-      redis.del(`blocked:${userId}`),
-      redis.del(`favourites:${userId}`),
-      redis.del(`muted:${userId}`),
-      redis.del(`chat:call:${userId}`),
-      redis.del(`chat:unread:${userId}`),
-      redis.del(`chat:inbox:${userId}`),
-      redis.del(`chat:signals:${userId}`),
-      // User identity metadata & cooldowns
-      redis.del(`user:profile_meta:${userId}`),
-      redis.del(`comment_cooldown:${userId}`),
-      redis.del(`minigame_attempt:${userId}`),
-      // OAuth, Reset & Email verification tokens
-      redis.del(`reset_status:${rawEmail}`),
-      redis.del(`reset_status:${normEmail}`),
-      redis.del(`pending:verified:${normEmail}`),
-      redis.del(`pending:register:${normEmail}`),
-      redis.del(`reset_from_map_email:${normEmail}`),
-    ]);
-
-    // 2. Transactional relational database cleanup across all related user entities
-    await prisma.$transaction(async (tx) => {
-      // Clean dependent user records
-      await Promise.all([
-        tx.userBroadcast.deleteMany({ where: { userId } }),
-        tx.eventRegistration.deleteMany({ where: { userId } }),
-        tx.miniEvent.deleteMany({ where: { creatorId: userId } }),
-        tx.booking.deleteMany({ where: { userId } }),
-        tx.comment.deleteMany({ where: { userId } }),
-      ]);
-      const userBookings = await tx.serviceBooking.findMany({
-        where: { requestorId: userId },
-        select: { id: true },
-      });
-      if (userBookings.length > 0) {
-        const bookingIds = userBookings.map((b) => b.id);
-        await tx.serviceBookingSlot.deleteMany({
-          where: { serviceBookingId: { in: bookingIds } },
-        });
-      }
-      await tx.serviceBooking.deleteMany({ where: { requestorId: userId } });
-
-      // Clean personal chat messages where user was sender or recipient
-      try {
-        await tx.personalChatMessage.deleteMany({
-          where: {
-            OR: [{ senderId: userId }, { recipientId: userId }],
-          },
-        });
-      } catch {}
-
-      await tx.user.delete({ where: { id: userId } });
-    }, { maxWait: 10000, timeout: 25000 });
+    await purgeUserRedisFootprint(userId, user.email, ownedEventIds);
 
     clearAuthCookie(res);
     res.clearCookie('csrfToken', csrfCookieOptions());

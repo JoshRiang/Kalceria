@@ -15,6 +15,15 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
     idleTimerRef.current = setTimeout(() => {
       const activeEventPopups = document.querySelectorAll(".event-tactical-popup");
       if (!activeEventPopups.length) return;
+      const hasActivePlayingVideo = Array.from(activeEventPopups).some((el) =>
+        Array.from(el.querySelectorAll("video")).some(
+          (vid) => !vid.paused && !vid.ended && vid.dataset.completedOnePass !== "1"
+        )
+      );
+      if (hasActivePlayingVideo) {
+        resetIdleTimer(3500);
+        return;
+      }
       activeEventPopups.forEach((el) => {
         el.classList.add("popup-shrinking");
       });

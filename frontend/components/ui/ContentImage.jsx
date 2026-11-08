@@ -25,11 +25,21 @@ export default function ContentImage({
   }
 
   const srcStr = typeof props.src === "string" ? props.src : "";
-  const isExternal = srcStr.startsWith("http://") || srcStr.startsWith("https://") || srcStr.startsWith("//");
+  const isExternalOrProxy =
+    srcStr.startsWith("http://") ||
+    srcStr.startsWith("https://") ||
+    srcStr.startsWith("//") ||
+    srcStr.startsWith("/api/") ||
+    srcStr.startsWith("data:") ||
+    srcStr.startsWith("blob:");
   const isSvgOrGif = /\.svg($|\?)/i.test(srcStr) || /\.gif($|\?)/i.test(srcStr);
-  const shouldUnoptimize = unoptimized ?? (isExternal || isSvgOrGif);
+  const shouldUnoptimize = unoptimized ?? (isExternalOrProxy || isSvgOrGif);
 
-  const shouldBlur = !isSvgOrGif && placeholder !== "empty";
+  const shouldBlur =
+    !isSvgOrGif &&
+    !srcStr.startsWith("data:") &&
+    !srcStr.startsWith("blob:") &&
+    placeholder !== "empty";
   const effectiveBlurDataURL = shouldBlur ? (blurDataURL || DEFAULT_BLUR_DATA_URL) : undefined;
   const effectivePlaceholder = shouldBlur ? "blur" : (placeholder || "empty");
 

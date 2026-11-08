@@ -9,7 +9,20 @@ import {
 import { updateLiveLocation, getNearbyUsers, setLiveLocationPreference } from "../controllers/locationController.js";
 import { searchIndonesianLocations, reverseGeocodeLocation } from "../controllers/geoController.js";
 import { getMedia, createMedia } from "../controllers/mediaController.js";
-import { createMiniEvent, getActiveMiniEvents, updateMiniEvent, deleteMiniEvent, addMiniEventMedia, addMiniEventCollaborator } from "../controllers/miniEventController.js";
+import {
+  createMiniEvent,
+  getActiveMiniEvents,
+  updateMiniEvent,
+  deleteMiniEvent,
+  addMiniEventMedia,
+  deleteMiniEventMedia,
+  addMiniEventCollaborator,
+  requestMiniEventCollab,
+  cancelMiniEventCollabRequest,
+  getMiniEventCollabRequests,
+  acceptMiniEventCollab,
+  declineMiniEventCollab,
+} from "../controllers/miniEventController.js";
 import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from "../controllers/serviceController.js";
 import {
   saveTelemetry, getMapUsers, getAllKalcerians,
@@ -171,9 +184,15 @@ router.get("/merch", listPublicMerch);
 router.post("/mini-events", requireAuth, miniEventRateLimit, miniEventDefense, createMiniEvent);
 router.get("/mini-events/active", requireAuth, getActiveMiniEvents);
 router.put("/mini-events/:id", requireAuth, miniEventRateLimit, miniEventDefense, updateMiniEvent);
-router.post("/mini-events/:id/media", requireAuth, miniEventRateLimit, addMiniEventMedia);
-router.post("/mini-events/:id/collaborators", requireAuth, miniEventRateLimit, addMiniEventCollaborator);
 router.delete("/mini-events/:id", requireAuth, miniEventRateLimit, deleteMiniEvent);
+router.post("/mini-events/:id/media", requireAuth, miniEventRateLimit, addMiniEventMedia);
+router.delete("/mini-events/:id/media", requireAuth, miniEventRateLimit, deleteMiniEventMedia);
+router.post("/mini-events/:id/collaborators", requireAuth, miniEventRateLimit, addMiniEventCollaborator);
+router.post("/mini-events/:id/collab/request", requireAuth, miniEventRateLimit, requestMiniEventCollab);
+router.delete("/mini-events/:id/collab/request", requireAuth, miniEventRateLimit, cancelMiniEventCollabRequest);
+router.get("/mini-events/:id/collab/requests", requireAuth, getMiniEventCollabRequests);
+router.post("/mini-events/:id/collab/requests/:requestId/accept", requireAuth, miniEventRateLimit, acceptMiniEventCollab);
+router.post("/mini-events/:id/collab/requests/:requestId/decline", requireAuth, miniEventRateLimit, declineMiniEventCollab);
 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
 router.post("/services/book", requireAuth, bookingRateLimit, checkServiceBookingDefense, createBooking);

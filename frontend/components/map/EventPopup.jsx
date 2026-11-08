@@ -12,11 +12,16 @@ import {
   esc,
   cleanDesc,
   extractLocation,
-  extractMediaList,
   calculateUptime,
   formatReleaseTime,
   formatCreatorDisplayName,
 } from "./eventPopup/popupHelpers";
+import {
+  extractMediaItemsNormalized,
+  getUniqueCollaboratorCount,
+  renderByAuthorLine,
+} from "./eventPopup/popupMediaMetadata";
+import { computeCardGeometryForMedia } from "./eventPopup/popupCarouselController";
 import { renderMediaCarousel } from "./eventPopup/popupMediaRenderer";
 import {
   renderDoubleMessageIconButton,
@@ -35,7 +40,7 @@ export function eventPopup(
   isSelfOffline = false
 ) {
   const displayDesc = cleanDesc(item.description);
-  const mediaList = extractMediaList(item);
+  const mediaItems = extractMediaItemsNormalized(item);
 
   const curId = currentUser?.id ? String(currentUser.id) : null;
   const eventCreatorId =
@@ -61,19 +66,13 @@ export function eventPopup(
     item.creator?.nickname ||
     "Kalcerian";
   const creatorDisplayName = formatCreatorDisplayName(rawCreatorDisplayName, 10);
-  const collabsCount = Array.isArray(item.collaborators) ? item.collaborators.length : 0;
-  const N_COLORS = ["#ff006e", "#ffd60a", "#38bdf8", "#a855f7", "#ec4899", "#10b981", "#f97316"];
-  const nColorIdx = Math.abs(String(item.id || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) % N_COLORS.length;
-  const nColor = N_COLORS[nColorIdx];
-  const authorByText = collabsCount > 0
-    ? `by <strong style="font-weight: 700;">${esc(creatorDisplayName)}</strong> <span style="font-weight: 600; color: ${isMapDark ? '#ffffff' : '#000000'};">& <span style="color: ${nColor}; font-weight: 700;">${collabsCount}</span> lainnya</span>`
-    : `by <strong style="font-weight: 700;">${esc(creatorDisplayName)}</strong>`;
 
+  const othersCount = getUniqueCollaboratorCount(item, eventCreatorId);
   const hasRequestedThisEvent = Boolean(requestedEventId && String(requestedEventId) === String(item.id));
   const hasActiveRequestElsewhere = Boolean(requestedEventId && String(requestedEventId) !== String(item.id));
 
-  // BG_EventCardLight.webp (#ffffff) / BG_EventCardDark.webp (#1b1c1e) with ChatBox-matched opacity
-  // Uses pre-decoded RAM blob: URL + :root CSS custom property so Leaflet popup opens in 0.0ms without HTTP revalidation
+  // BG_EventCardLight.webp (#ffffff) / BG_EventCardDark.webp (#1b1c1e)
+  // Pre-decoded RAM blob: URL + 3 horizontal concatenated panels so background stays crisp
   const rawBgImage = isMapDark ? EVENT_CARD_BG_DARK : EVENT_CARD_BG_LIGHT;
   const bgImage = getInstantMapBgUrl(rawBgImage);
   const bgCssVar = isMapDark ? "--kalceria-event-bg-dark" : "--kalceria-event-bg-light";
@@ -87,18 +86,15 @@ export function eventPopup(
   const creatorUserObj = isOwner && currentUser ? currentUser : (item.creator || { name: rawCreatorDisplayName });
   const creatorAvatarUrl = getSafeMapAvatarUrl(creatorUserObj);
 
-  // Strict User Requirement: Light mode = Black bold, Dark mode = White bold
   const titleColor = isMapDark ? "#ffffff" : "#000000";
   const authorColor = isMapDark ? "#ffffff" : "#000000";
   const descColor = isMapDark ? "#ffffff" : "#0f172a";
   const footerBg = isMapDark ? "#000000" : "#ffffff";
   const footerTextColor = isMapDark ? "#ffffff" : "#000000";
 
-  // Icon theme tokens: Light = black with white border; Dark = white with black border
   const iconFg = isMapDark ? "#ffffff" : "#000000";
   const iconStroke = isMapDark ? "#000000" : "#ffffff";
 
-  // Action Buttons
   const doubleMessageIconHtml = renderDoubleMessageIconButton({
     isOwner,
     isCollaborator,
@@ -111,13 +107,18 @@ export function eventPopup(
     ? "opacity: 0.32; filter: grayscale(100%); cursor: not-allowed; pointer-events: none;"
     : "";
 
+  const effectivePendingCount = Math.max(
+    Number(pendingRequestsCount) || 0,
+    isOwner ? Number(item.pendingRequestsCount) || 0 : 0
+  );
+
   const requestOrEnvelopeIconHtml = renderRequestOrEnvelopeButton({
     isOwner,
     isCollaborator,
     hasRequestedThisEvent,
     hasActiveRequestElsewhere,
     isSelfOffline,
-    pendingRequestsCount,
+    pendingRequestsCount: effectivePendingCount,
     item,
     requestedEventId,
     iconFg,
@@ -141,12 +142,31 @@ export function eventPopup(
   const safeId = String(item.id || "event").replace(/[^a-zA-Z0-9_-]/g, "_");
   const displayTitle = toSmartTitleCase(item.title || "");
 
+  const byAuthorLineHtml = renderByAuthorLine({
+    creatorDisplayName,
+    othersCount,
+    seedKey: item.id || safeId,
+    isMapDark,
+  });
+
+  const firstMedia = mediaItems[0] || null;
+  const initialGeometry =
+    mediaItems.length === 0
+      ? {
+          cardWidth:
+            typeof window !== "undefined"
+              ? Math.min(292, Math.max(248, window.innerWidth - 32))
+              : 292,
+          frameHeight: 134,
+        }
+      : computeCardGeometryForMedia(firstMedia?.width, firstMedia?.height);
+
   // Device-aware Navigation Link & Indonesian Location
   const rawLoc = extractLocation(item) || "Bintaro Jaya, Tangerang Selatan";
   const displayLoc = rawLoc.length > 36 ? rawLoc.slice(0, 33).trim() + "..." : rawLoc;
   const isIOS = typeof navigator !== "undefined" && (
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
   );
   const mapNavUrl = item.lat != null && item.lng != null
     ? (isIOS
@@ -156,7 +176,7 @@ export function eventPopup(
         ? `https://maps.apple.com/?q=${encodeURIComponent(rawLoc)}`
         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawLoc)}`);
 
-  const linkColor = isMapDark ? "#38bdf8" : "#0284c7"; // Blue sky
+  const linkColor = isMapDark ? "#38bdf8" : "#0284c7";
   const locationHtml = `
     <div style="width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25;">
       <a
@@ -171,24 +191,22 @@ export function eventPopup(
   `;
 
   const videoFrameBorder = isMapDark ? "1px solid rgba(255, 255, 255, 0.14)" : "1px solid rgba(0, 0, 0, 0.1)";
+  const videoFrameBg = mediaItems.length === 0 ? (isMapDark ? "#000000" : "#ffffff") : "#0b0d14";
 
   return `
-    <div class="tactical-card event-card ${isMapDark ? 'event-card-dark' : 'event-card-light'}" style="position: relative; overflow: hidden; width: 292px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
-      <!-- Main Box Background Image Layers (3-Piece Concatenation) -->
-      <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: 18px;">
-        <!-- Base Underlay: Map Ambience (BGCreateMini_Dark / BGCreateMini_Light) -->
-        <div style="position: absolute; inset: 0; background-image: url('${isMapDark ? '/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp' : '/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.webp'}'); background-size: cover; background-position: center; opacity: ${isMapDark ? 0.32 : 0.38}; filter: blur(3px); transform: scale(1.04);"></div>
-        <!-- Texture Layer: Event Card Pattern -->
-        <div style="position: absolute; inset: 0; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat; opacity: ${bgOpacity};"></div>
-        <!-- Ambient Sheen Layer: Soft radial vignette -->
-        <div style="position: absolute; inset: 0; background: ${isMapDark ? 'radial-gradient(circle at 50% 15%, rgba(255,255,255,0.06) 0%, transparent 75%)' : 'radial-gradient(circle at 50% 15%, rgba(0,0,0,0.03) 0%, transparent 75%)'};"></div>
+    <div class="tactical-card event-card ${isMapDark ? "event-card-dark" : "event-card-light"}" data-event-card-id="${esc(safeId)}" style="position: relative; overflow: hidden; width: ${initialGeometry.cardWidth}px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
+      <!-- 3x Concatenated Horizontal Background Tiles -->
+      <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; display: flex; flex-direction: row; width: 100%; height: 100%; opacity: ${bgOpacity}; transform: translateZ(0);">
+        <div style="flex: 1 1 33.3334%; height: 100%; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
+        <div style="flex: 1 1 33.3334%; height: 100%; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
+        <div style="flex: 1 1 33.3334%; height: 100%; background-image: var(${bgCssVar}, url('${bgImage}')); background-size: cover; background-position: center; background-repeat: no-repeat;"></div>
       </div>
 
-      <!-- Upper Space: Header with frosted glass blur -->
-      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; background: ${isMapDark ? 'rgba(0,0,0,0.22)' : 'rgba(255,255,255,0.3)'} !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-top-left-radius: 17px; border-top-right-radius: 17px; border: none !important;">
-        <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 165px; min-width: 0; flex: 1;">
+      <!-- Upper Space: Header with blur -->
+      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; background: transparent !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; border: none !important;">
+        <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 0; flex: 1; padding-right: 4px;">
           <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${esc(displayTitle)}</strong>
-          <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 400; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${authorByText}</span>
+          <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 400; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${byAuthorLineHtml}</span>
         </div>
         <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 7px; margin-left: 6px; flex-shrink: 0;">
           ${doubleMessageIconHtml}
@@ -197,39 +215,37 @@ export function eventPopup(
         </div>
       </div>
 
-      <!-- Framed Media Screen: Elongated & Flexible Box with Smooth Transition -->
-      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: 134px; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: #000000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16); transition: height 0.32s cubic-bezier(0.4, 0, 0.2, 1);">
-        ${renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId)}
+      <!-- Framed Media Screen (Adaptive 9:16 portrait vs 16:9 landscape, zero white flash) -->
+      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; margin: 2px 12px 0 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
+        ${renderMediaCarousel(mediaItems, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId)}
       </div>
 
-      <!-- Lower Space: Description (NOT italic, NO line above footer) -->
+      <!-- Lower Space: Description -->
       <div class="popup-lower-space" style="position: relative; z-index: 2; border: none !important;">
         <div class="popup-status active" style="padding: 10px 14px 9px 14px; background: transparent !important; border: none !important;">
           <p style="font-style: normal; color: ${descColor}; margin: 0; font-size: 12.5px; line-height: 1.45; font-weight: 500; font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">${esc(displayDesc)}</p>
         </div>
       </div>
 
-      <!-- Footer: solid white (light) or solid black (dark) BG, slightly elongated with location link -->
+      <!-- Footer -->
       <div class="popup-footer" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 5px; padding: 8px 14px 9px 14px; background: ${footerBg} !important; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; border: none !important;">
-        <!-- Location Link: Arial non-bold, Blue sky color, redirect to Apple Maps (iOS) or Google Maps (Android/Desktop) -->
         ${locationHtml}
 
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-          <!-- Left: Clock Icon + Live Uptime (00:00:00) -->
           <div style="display: flex; align-items: center; gap: 6px;">
             <svg width="15" height="15" viewBox="0 0 24 24" style="overflow: visible; flex-shrink: 0; display: block;">
               <circle
                 cx="12"
                 cy="12"
                 r="9.5"
-                fill="${isMapDark ? '#ffffff' : '#000000'}"
-                stroke="${isMapDark ? '#000000' : '#ffffff'}"
+                fill="${isMapDark ? "#ffffff" : "#000000"}"
+                stroke="${isMapDark ? "#000000" : "#ffffff"}"
                 stroke-width="1.8"
               />
               <path
                 d="M 12 6.5 L 12 12 L 15.5 15.5"
                 fill="none"
-                stroke="${isMapDark ? '#000000' : '#ffffff'}"
+                stroke="${isMapDark ? "#000000" : "#ffffff"}"
                 stroke-width="2.2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -238,7 +254,6 @@ export function eventPopup(
             <span id="event-uptime-${safeId}" data-event-uptime="${createdAtMs}" style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em; font-variant-numeric: tabular-nums;">${uptimeString}</span>
           </div>
 
-          <!-- Right: Release time (e.g. 17.41) -->
           <div style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em;">
             ${releaseTimeString}
           </div>

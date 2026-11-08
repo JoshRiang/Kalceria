@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import api from "@/lib/api";
 import {
-  INITIAL_ACCEPTED_COLLABS,
-  INITIAL_EVENT_REQUESTS,
-} from "../mockMiniEvents";
+  requestEventCollab,
+  cancelEventCollabRequest,
+  fetchEventCollabRequests,
+  acceptEventCollab,
+  declineEventCollab,
+  addEventMedia,
+  uploadBlobMedia,
+} from "@/lib/api";
+import { cleanEventDesc } from "../mockMiniEvents";
+import { probeMediaFileMetadata } from "../eventPopup/popupMediaMetadata";
 
-export function useEventCollab({ events, setEvents, currentUser, setNotice, avatarUrl }) {
+export function useEventCollab({ events, setEvents, setNotice }) {
   const [requestedEventId, setRequestedEventId] = useState(() => {
     if (typeof window !== "undefined") {
       try {
@@ -24,214 +30,305 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
         if (stored) return JSON.parse(stored);
       } catch {}
     }
-    return INITIAL_ACCEPTED_COLLABS;
+    return {};
   });
 
-  const [eventRequestsMap, setEventRequestsMap] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("kalceria_event_collab_requests");
-        if (stored) return JSON.parse(stored);
-      } catch {}
-    }
-    return INITIAL_EVENT_REQUESTS;
-  });
+  const [eventRequestsMap, setEventRequestsMap] = useState({});
 
   const [cancelRequestTarget, setCancelRequestTarget] = useState(null);
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [viewingRequestsEventId, setViewingRequestsEventId] = useState(null);
 
-  const handleRequestCollab = useCallback(
-    (eventId) => {
-      setRequestedEventId(eventId);
-      try {
-        localStorage.setItem("kalceria_requested_event_id", eventId);
-      } catch {}
-      const ev = events.find((e) => String(e.id) === String(eventId));
-      setNotice(`Collab requested for ${ev?.title || "event"}!`);
+  const persistRequestedEventId = useCallback((nextId) => {
+    setRequestedEventId(nextId || null);
+    try {
+      if (nextId) {
+        localStorage.setItem("kalceria_requested_event_id", String(nextId));
+      } else {
+        localStorage.removeItem("kalceria_requested_event_id");
+      }
+    } catch {}
+  }, []);
 
-      if (currentUser) {
-        setEventRequestsMap((prev) => {
-          const existing = prev[eventId] || [];
-          if (existing.some((r) => r.user.id === currentUser.id)) return prev;
-          const newReq = {
-            id: `req_${Date.now()}`,
-            user: {
-              id: currentUser.id,
-              name: currentUser.name || currentUser.nickname || "You",
-              nickname: currentUser.nickname || currentUser.name || "You",
-              profilePicture: currentUser.profilePicture || avatarUrl(currentUser),
-              broadcast: currentUser.broadcast?.message || "Collab requested",
-            },
-            message: "Wants to collaborate on this event",
-            createdAt: new Date().toISOString(),
-          };
-          const updated = { ...prev, [eventId]: [newReq, ...existing] };
-          try {
-            localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated));
-          } catch {}
-          return updated;
+  const syncCollabStateFromServer = useCallback(
+    (activeEvents = [], serverRequestedEventId = undefined) => {
+      if (serverRequestedEventId !== undefined) {
+        persistRequestedEventId(serverRequestedEventId || null);
+      }
+
+      if (Array.isArray(activeEvents)) {
+        const nextCollabs = {};
+        activeEvents.forEach((ev) => {
+          if (!ev?.id) return;
+          const ids = new Set();
+          if (Array.isArray(ev.collaborators)) {
+            ev.collaborators.forEach((entry) => {
+              const cid = typeof entry === "object" ? entry?.id : entry;
+              if (cid) ids.add(String(cid));
+            });
+          }
+          if (Array.isArray(ev.collaboratorIds)) {
+            ev.collaboratorIds.forEach((cid) => {
+              if (cid) ids.add(String(cid));
+            });
+          }
+          if (ids.size > 0) {
+            nextCollabs[ev.id] = Array.from(ids);
+          }
         });
+        setAcceptedCollabsMap(nextCollabs);
+        try {
+          localStorage.setItem("kalceria_accepted_collabs", JSON.stringify(nextCollabs));
+        } catch {}
       }
     },
-    [events, currentUser, avatarUrl, setNotice]
+    [persistRequestedEventId]
+  );
+
+  const handleRequestCollab = useCallback(
+    async (eventId) => {
+      if (!eventId) return;
+      const ev = events.find((e) => String(e.id) === String(eventId));
+      persistRequestedEventId(eventId);
+      try {
+        const res = await requestEventCollab(eventId);
+        if (res?.alreadyCollaborator) {
+          persistRequestedEventId(null);
+          setNotice?.(`You are already a collaborator on ${ev?.title || "this event"}!`);
+          return;
+        }
+        persistRequestedEventId(res?.requestedEventId || eventId);
+        setNotice?.(`Collab requested for ${ev?.title || "event"}!`);
+      } catch (err) {
+        const serverReqId = err?.response?.data?.requestedEventId || null;
+        persistRequestedEventId(serverReqId);
+        setNotice?.(err?.response?.data?.error || err?.message || "Failed to send collab request.");
+      }
+    },
+    [events, persistRequestedEventId, setNotice]
   );
 
   const handlePromptCancelRequest = useCallback(
     (eventId, title) => {
-      const ev = events.find((e) => String(e.id) === String(eventId));
-      setCancelRequestTarget({ id: eventId, title: title || ev?.title || "Event" });
+      const targetId = eventId || requestedEventId;
+      const ev = events.find((e) => String(e.id) === String(targetId));
+      const resolvedTitle =
+        title && title !== "active event" ? title : ev?.title || "Event";
+      setCancelRequestTarget({
+        id: targetId,
+        title: resolvedTitle,
+        eventTitle: resolvedTitle,
+      });
       setShowCancelRequestModal(true);
     },
-    [events]
+    [events, requestedEventId]
   );
 
-  const handleConfirmCancelRequest = useCallback(() => {
+  const handleConfirmCancelRequest = useCallback(async () => {
     const targetId = cancelRequestTarget?.id || requestedEventId;
-    setRequestedEventId(null);
-    try {
-      localStorage.removeItem("kalceria_requested_event_id");
-    } catch {}
-    if (targetId && currentUser) {
-      setEventRequestsMap((prev) => {
-        const existing = prev[targetId] || [];
-        const updated = { ...prev, [targetId]: existing.filter((r) => r.user.id !== currentUser.id) };
-        try {
-          localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-    }
+    persistRequestedEventId(null);
     setShowCancelRequestModal(false);
     setCancelRequestTarget(null);
-    setNotice("Request removed.");
-  }, [cancelRequestTarget, requestedEventId, currentUser, setNotice]);
 
-  const handleOpenRequests = useCallback((eventId) => {
-    setViewingRequestsEventId(eventId);
-    setShowRequestsModal(true);
-  }, []);
+    if (targetId) {
+      try {
+        await cancelEventCollabRequest(targetId);
+      } catch (err) {
+        setNotice?.(err?.response?.data?.error || err?.message || "Failed to remove request.");
+        return;
+      }
+    }
+    setNotice?.("Request removed.");
+  }, [cancelRequestTarget, requestedEventId, persistRequestedEventId, setNotice]);
+
+  const handleOpenRequests = useCallback(
+    async (eventId) => {
+      if (!eventId) return;
+      setViewingRequestsEventId(eventId);
+      setShowRequestsModal(true);
+      try {
+        const requests = await fetchEventCollabRequests(eventId);
+        const list = Array.isArray(requests) ? requests : [];
+        setEventRequestsMap((prev) => ({
+          ...prev,
+          [eventId]: list,
+        }));
+        setEvents((prev) =>
+          prev.map((ev) =>
+            String(ev.id) === String(eventId)
+              ? { ...ev, pendingRequestsCount: list.length }
+              : ev
+          )
+        );
+      } catch (err) {
+        setNotice?.(err?.response?.data?.error || err?.message || "Failed to load requests.");
+      }
+    },
+    [setEvents, setNotice]
+  );
 
   const handleAcceptCollabRequest = useCallback(
-    (requestId, eventId) => {
+    async (requestId, eventId) => {
       const targetId = eventId || viewingRequestsEventId;
-      setEventRequestsMap((prev) => {
-        if (!targetId) return prev;
-        const bucketKey = Array.isArray(prev[targetId]) ? targetId : (Array.isArray(prev["own"]) ? "own" : null);
-        if (!bucketKey || !prev[bucketKey]) return prev;
-        const targetReq = prev[bucketKey].find((r) => r.id === requestId);
-        if (targetReq?.user?.id) {
-          try {
-            api.post(`/mini-events/${targetId}/collaborators`, { collaboratorId: targetReq.user.id }).catch(() => {});
-          } catch {}
-          setAcceptedCollabsMap((collabs) => {
-            const list = collabs[targetId] || [];
-            if (!list.includes(targetReq.user.id)) {
-              const next = { ...collabs, [targetId]: [...list, targetReq.user.id] };
+      if (!targetId || !requestId) return;
+      try {
+        const res = await acceptEventCollab(targetId, requestId);
+
+        let nextPendingCount = 0;
+        setEventRequestsMap((prev) => {
+          const existing = Array.isArray(prev[targetId]) ? prev[targetId] : [];
+          const updatedList = existing.filter((r) => String(r.id) !== String(requestId));
+          nextPendingCount = updatedList.length;
+          return {
+            ...prev,
+            [targetId]: updatedList,
+          };
+        });
+
+        if (res?.event) {
+          const hydrated = cleanEventDesc(res.event);
+          setEvents((prev) =>
+            prev.map((ev) => (String(ev.id) === String(targetId) ? hydrated : ev))
+          );
+          if (Array.isArray(hydrated.collaborators)) {
+            setAcceptedCollabsMap((prev) => {
+              const next = { ...prev, [targetId]: hydrated.collaborators.map(String) };
               try {
                 localStorage.setItem("kalceria_accepted_collabs", JSON.stringify(next));
               } catch {}
               return next;
-            }
-            return collabs;
-          });
+            });
+          }
+        } else {
+          setEvents((prev) =>
+            prev.map((ev) => {
+              if (String(ev.id) !== String(targetId)) return ev;
+              const existingCollabs = Array.isArray(ev.collaborators) ? ev.collaborators.map(String) : [];
+              const acceptedId = res?.acceptedUserId ? String(res.acceptedUserId) : null;
+              const mergedCollabs =
+                acceptedId && !existingCollabs.includes(acceptedId)
+                  ? [...existingCollabs, acceptedId]
+                  : existingCollabs;
+              return {
+                ...ev,
+                collaborators: mergedCollabs,
+                pendingRequestsCount: nextPendingCount,
+              };
+            })
+          );
+          if (res?.acceptedUserId) {
+            setAcceptedCollabsMap((prev) => {
+              const existing = prev[targetId] || [];
+              const acceptedId = String(res.acceptedUserId);
+              if (existing.includes(acceptedId)) return prev;
+              const next = { ...prev, [targetId]: [...existing, acceptedId] };
+              try {
+                localStorage.setItem("kalceria_accepted_collabs", JSON.stringify(next));
+              } catch {}
+              return next;
+            });
+          }
         }
-        const updatedList = prev[bucketKey].filter((r) => r.id !== requestId);
-        const updated = { ...prev, [bucketKey]: updatedList, [targetId]: updatedList };
-        try {
-          localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-      setNotice("Collab request accepted! User is now a collaborator.");
+
+        setNotice?.("Collab request accepted! User is now a collaborator.");
+      } catch (err) {
+        setNotice?.(err?.response?.data?.error || err?.message || "Failed to accept collab request.");
+      }
     },
-    [viewingRequestsEventId, setNotice]
+    [viewingRequestsEventId, setEvents, setNotice]
+  );
+
+  const handleDeclineCollabRequest = useCallback(
+    async (requestId, eventId) => {
+      const targetId = eventId || viewingRequestsEventId;
+      if (!targetId || !requestId) return;
+      try {
+        const res = await declineEventCollab(targetId, requestId);
+
+        let nextPendingCount = 0;
+        setEventRequestsMap((prev) => {
+          const existing = Array.isArray(prev[targetId]) ? prev[targetId] : [];
+          const updatedList = existing.filter((r) => String(r.id) !== String(requestId));
+          nextPendingCount = updatedList.length;
+          return {
+            ...prev,
+            [targetId]: updatedList,
+          };
+        });
+
+        if (res?.event) {
+          const hydrated = cleanEventDesc(res.event);
+          setEvents((prev) =>
+            prev.map((ev) => (String(ev.id) === String(targetId) ? hydrated : ev))
+          );
+        } else {
+          setEvents((prev) =>
+            prev.map((ev) =>
+              String(ev.id) === String(targetId)
+                ? { ...ev, pendingRequestsCount: nextPendingCount }
+                : ev
+            )
+          );
+        }
+
+        setNotice?.("Collab request declined.");
+      } catch (err) {
+        setNotice?.(err?.response?.data?.error || err?.message || "Failed to decline collab request.");
+      }
+    },
+    [viewingRequestsEventId, setEvents, setNotice]
   );
 
   const handleCollaboratorUpload = useCallback(
     (eventId) => {
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = ".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4";
+      input.accept = ".png,.jpg,.jpeg,.webp,.mp4,.webm,image/png,image/jpeg,image/webp,video/mp4,video/webm";
       input.onchange = async (e) => {
         const file = e.target?.files?.[0];
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) {
-          setNotice("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+          setNotice?.("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
           return;
         }
         const ext = (file.name.split(".").pop() || "").toLowerCase();
-        if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
-          setNotice("Only .png, .jpeg, and .mp4 files are allowed");
+        if (!["png", "jpg", "jpeg", "webp", "mp4", "webm"].includes(ext)) {
+          setNotice?.("Only .png, .jpeg, .webp, .mp4, and .webm files are allowed");
           return;
         }
-        setNotice("Uploading media as collaborator...");
+        setNotice?.("Uploading media as collaborator...");
         try {
-          const fd = new FormData();
-          fd.append("file", file);
-          const res = await fetch("/api/blob/upload", { method: "POST", body: fd });
-          const json = await res.json();
-          if (json.url) {
-            try {
-              const postRes = await api.post(`/mini-events/${eventId}/media`, { mediaUrl: json.url });
-              if (postRes.data?.event) {
-                const updatedEvent = postRes.data.event;
-                setEvents((prev) =>
-                  prev.map((ev) => (String(ev.id) === String(eventId) ? { ...ev, ...updatedEvent } : ev))
-                );
-              } else {
-                setEvents((prev) =>
-                  prev.map((ev) => {
-                    if (String(ev.id) === String(eventId)) {
-                      const current = ev.mediaUrl ? ev.mediaUrl.split(",") : [];
-                      return { ...ev, mediaUrl: [...current, json.url].join(",") };
-                    }
-                    return ev;
-                  })
-                );
-              }
-            } catch {
-              setEvents((prev) =>
-                prev.map((ev) => {
-                  if (String(ev.id) === String(eventId)) {
-                    const current = ev.mediaUrl ? ev.mediaUrl.split(",") : [];
-                    return { ...ev, mediaUrl: [...current, json.url].join(",") };
-                  }
-                  return ev;
-                })
-              );
-            }
-            setNotice("Media added to event by collaborator!");
-          } else {
-            setNotice(json.error || "Upload failed");
+          const meta = await probeMediaFileMetadata(file).catch(() => ({
+            width: null,
+            height: null,
+            duration: null,
+          }));
+          const uploadRes = await uploadBlobMedia(file);
+          if (!uploadRes?.url) {
+            setNotice?.(uploadRes?.error || "Upload failed");
+            return;
           }
+          const addRes = await addEventMedia(eventId, {
+            mediaUrl: uploadRes.url,
+            ...(meta.width ? { width: meta.width } : {}),
+            ...(meta.height ? { height: meta.height } : {}),
+            ...(meta.duration ? { duration: meta.duration } : {}),
+          });
+          if (addRes?.event) {
+            const hydrated = cleanEventDesc(addRes.event);
+            setEvents((prev) =>
+              prev.map((ev) => (String(ev.id) === String(eventId) ? hydrated : ev))
+            );
+          }
+          setNotice?.("Media added to event by collaborator!");
         } catch (err) {
-          setNotice(err.message || "Upload error");
+          setNotice?.(err?.response?.data?.error || err?.message || "Upload error");
         }
       };
       input.click();
     },
     [setEvents, setNotice]
-  );
-
-  const handleDeclineCollabRequest = useCallback(
-    (requestId, eventId) => {
-      setEventRequestsMap((prev) => {
-        const targetId = eventId || viewingRequestsEventId;
-        if (!targetId) return prev;
-        const bucketKey = Array.isArray(prev[targetId]) ? targetId : (Array.isArray(prev["own"]) ? "own" : null);
-        if (!bucketKey || !prev[bucketKey]) return prev;
-        const updatedList = prev[bucketKey].filter((r) => r.id !== requestId);
-        const updated = { ...prev, [bucketKey]: updatedList, [targetId]: updatedList };
-        try {
-          localStorage.setItem("kalceria_event_collab_requests", JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-      setNotice("Collab request declined.");
-    },
-    [viewingRequestsEventId, setNotice]
   );
 
   return {
@@ -249,6 +346,7 @@ export function useEventCollab({ events, setEvents, currentUser, setNotice, avat
     setShowRequestsModal,
     viewingRequestsEventId,
     setViewingRequestsEventId,
+    syncCollabStateFromServer,
     handleRequestCollab,
     handlePromptCancelRequest,
     handleConfirmCancelRequest,

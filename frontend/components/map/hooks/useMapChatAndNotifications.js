@@ -480,7 +480,10 @@ export function useMapChatAndNotifications({
       const isCollab = isEventCollaborator(eventItem, currentUser, acceptedCollabsMap);
 
       const pendingReqs = isOwner ? getEventPendingRequests(eventItem, currentUser, eventRequestsMap) : [];
-      const hasEnvelopeNotif = pendingReqs.length > 0;
+      const effectivePendingCount = isOwner
+        ? Math.max(pendingReqs.length, Number(eventItem.pendingRequestsCount) || 0)
+        : 0;
+      const hasEnvelopeNotif = effectivePendingCount > 0;
 
       const groupChatEntry = (isOwner || isCollab) ? eventGroupChatMap[eventItem.id] : null;
       const hasGroupChatNotif = Boolean(groupChatEntry && groupChatEntry.unreadCount > 0);

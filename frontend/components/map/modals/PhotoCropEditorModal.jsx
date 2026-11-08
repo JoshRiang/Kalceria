@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { ActionArcSpinner } from "./ActionArcSpinner";
+import { useModalBackClose } from "./modalMotion";
 
 const INITIAL_CROP_RECT = { left: 0, top: 0, right: 1, bottom: 1 };
 
@@ -23,6 +25,14 @@ export function PhotoCropEditorModal({
   const stageRef = useRef(null);
   const cropRectRef = useRef(INITIAL_CROP_RECT);
   cropRectRef.current = cropRect;
+
+  const handleBackClose = useCallback(() => {
+    if (!isProcessing) {
+      onCancel?.();
+    }
+  }, [isProcessing, onCancel]);
+
+  useModalBackClose(Boolean(isModalOpen && sourceImage), handleBackClose);
 
   // Reset crop & rotation whenever a new photo is opened
   useEffect(() => {
@@ -360,7 +370,11 @@ export function PhotoCropEditorModal({
               disabled={isProcessing}
               className="text-white hover:text-white/80 font-bold text-sm tracking-wider cursor-pointer transition-opacity bg-transparent border-none p-2 outline-none disabled:opacity-50"
             >
-              {isProcessing ? "Processing..." : "Done"}
+              {isProcessing ? (
+                <ActionArcSpinner className="w-4 h-4" label="Processing image" />
+              ) : (
+                "Done"
+              )}
             </button>
           </div>
         </motion.div>

@@ -26,6 +26,7 @@ import {
   persistProfileIdentityCache,
 } from "@/lib/profileIdentity";
 import { toSmartTitleCase } from "@/lib/titleCase";
+import { splitMediaUrlListClient } from "@/lib/urlSecurity";
 import { prewarmOsmTiles, hasValidCoordinates } from "@/lib/osmTilePrewarmer";
 import { useMapBlockedUsers } from "@/components/map/mapPage/useMapBlockedUsers";
 import {
@@ -33,7 +34,7 @@ import {
   doesEventBelongToUser,
 } from "@/components/map/hooks/useMapChatAndNotifications";
 import api, {
-  fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents,
+  fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents, fetchMiniEventsWithMeta,
   postBroadcast, putBroadcast, postLocation, patchVisibility,
   postMiniEvent, putMiniEvent, delMiniEvent,
 } from "@/lib/api";
@@ -67,7 +68,7 @@ export default function MapPage() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusText, setStatusText] = useState("");
-  const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe", mediaUrl: "", location: "", lat: null, lng: null });
+  const [eventForm, setEventForm] = useState({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {}, location: "", lat: null, lng: null });
   const [editingEventId, setEditingEventId] = useState(null);
   const {
     requestedEventId, setRequestedEventId,
@@ -77,6 +78,7 @@ export default function MapPage() {
     showCancelRequestModal, setShowCancelRequestModal,
     showRequestsModal, setShowRequestsModal,
     viewingRequestsEventId, setViewingRequestsEventId,
+    syncCollabStateFromServer,
     handleRequestCollab, handlePromptCancelRequest,
     handleConfirmCancelRequest, handleOpenRequests,
     handleAcceptCollabRequest, handleCollaboratorUpload,
@@ -258,15 +260,18 @@ export default function MapPage() {
     let alive = true;
     const load = async () => {
       try {
-        const [users, kals, activeEvents] = await Promise.all([
+        const [users, kals, eventMeta] = await Promise.all([
           fetchMapUsers(),
           fetchKalcerians(),
-          fetchMiniEvents(),
+          fetchMiniEventsWithMeta(),
         ]);
         if (!alive) return;
+        const activeEvents = eventMeta?.events || [];
+        const mergedEvents = mergeEvents(activeEvents);
         setMapUsersData(users || []);
         setKalcerians(kals || []);
-        setEvents(mergeEvents(activeEvents));
+        setEvents(mergedEvents);
+        syncCollabStateFromServer(mergedEvents, eventMeta?.requestedEventId ?? null);
         setIsDataLoading(false);
       } catch (err) {
         console.error("[Map] fetch error", err);
@@ -279,7 +284,7 @@ export default function MapPage() {
       alive = false;
       clearInterval(interval);
     };
-  }, [notLoggedIn, currentUser]);
+  }, [notLoggedIn, currentUser, syncCollabStateFromServer]);
 
   const recenterMap = useCallback(() => {
     if (!mapRef.current) return;
@@ -770,13 +775,28 @@ export default function MapPage() {
       .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
       .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
       .replace(/\[LOC:[^\]]+\]\s*/gi, "")
+      .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
       .trim();
+
+    const mediaMetadataByUrl = {};
+    if (Array.isArray(eventItem.mediaItems)) {
+      eventItem.mediaItems.forEach((m) => {
+        if (m?.url && (m.width || m.height || m.duration)) {
+          mediaMetadataByUrl[m.url] = {
+            width: m.width || null,
+            height: m.height || null,
+            duration: m.duration || null,
+          };
+        }
+      });
+    }
 
     setEventForm({
       title: eventItem.title || "",
       description: cleanDesc,
       category,
       mediaUrl,
+      mediaMetadataByUrl,
       location,
       lat: eventItem.lat || null,
       lng: eventItem.lng || null,
@@ -793,10 +813,21 @@ export default function MapPage() {
       const me = mapUsersData.find((u) => u.id === currentUser?.id);
       const category = eventForm.category || "cafe";
       const mediaUrl = (eventForm.mediaUrl || "").trim();
+      const clipUrls = splitMediaUrlListClient(mediaUrl);
+      const mediaItemsPayload = clipUrls.map((url) => {
+        const m = eventForm.mediaMetadataByUrl?.[url] || {};
+        return {
+          url,
+          ...(m.width ? { width: m.width } : {}),
+          ...(m.height ? { height: m.height } : {}),
+          ...(m.duration ? { duration: m.duration } : {}),
+        };
+      });
       const cleanDesc = (eventForm.description || "")
         .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
         .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
         .replace(/\[LOC:[^\]]+\]\s*/gi, "")
+        .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
         .trim();
 
       // Prioritize coordinates from LocationAutocomplete if selected, otherwise current GPS / user domicile
@@ -846,6 +877,7 @@ export default function MapPage() {
         description: encodedDesc,
         category,
         mediaUrl,
+        mediaItems: mediaItemsPayload,
         location: locationName,
         lat: currentLat,
         lng: currentLng,
@@ -860,12 +892,11 @@ export default function MapPage() {
           const createdEvent = createdRes?.data?.event || createdRes?.data || createdRes;
           if (createdEvent && typeof createdEvent === "object") {
             savedEventObj = cleanEventDesc({
-              ...createdEvent,
               ...payload,
+              ...createdEvent,
               id: createdEvent.id || `evt_${Date.now()}`,
               lat: Number(createdEvent.lat ?? currentLat),
               lng: Number(createdEvent.lng ?? currentLng),
-              description: encodedDesc,
               creator: {
                 ...(createdEvent.creator || {}),
                 id: currentUser?.id || createdEvent.creator?.id,
@@ -896,13 +927,13 @@ export default function MapPage() {
         const updatedRes = await putMiniEvent(eventIdToUpdate, payload).catch(() => null);
         const updatedEvent = updatedRes?.data?.event || updatedRes?.data || updatedRes;
         savedEventObj = cleanEventDesc({
-          ...(updatedEvent && typeof updatedEvent === "object" ? updatedEvent : {}),
           ...payload,
+          ...(updatedEvent && typeof updatedEvent === "object" ? updatedEvent : {}),
           id: eventIdToUpdate,
-          lat: Number(currentLat),
-          lng: Number(currentLng),
-          description: encodedDesc,
+          lat: Number(updatedEvent?.lat ?? currentLat),
+          lng: Number(updatedEvent?.lng ?? currentLng),
           creator: {
+            ...(updatedEvent?.creator || {}),
             id: currentUser?.id,
             name: currentUser?.displayName || currentUser?.name,
             displayName: currentUser?.displayName || currentUser?.name,
@@ -919,17 +950,18 @@ export default function MapPage() {
         });
       }
 
-      const updatedEvents = await fetchMiniEvents().catch(() => null);
-      if (updatedEvents && updatedEvents.length > 0) {
-        const merged = mergeEvents(updatedEvents);
+      const refreshedMeta = await fetchMiniEventsWithMeta().catch(() => null);
+      if (refreshedMeta?.events && refreshedMeta.events.length > 0) {
+        const merged = mergeEvents(refreshedMeta.events);
         setEvents(merged);
+        syncCollabStateFromServer(merged, refreshedMeta.requestedEventId ?? null);
         if (!savedEventObj && currentUser?.id) {
           savedEventObj = merged.find((ev) => String(ev.creator?.id) === String(currentUser.id)) || null;
         }
       }
       setNotice(eventIdToUpdate ? "Mini event updated." : "Mini event saved.");
       setEditingEventId(null);
-      setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", location: "", lat: null, lng: null });
+      setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {}, location: "", lat: null, lng: null });
       setShowEventModal(false);
 
       // Immediately pan/fly to the created/updated event on the map and open its popup
@@ -954,7 +986,7 @@ export default function MapPage() {
           return;
         } else {
           setEditingEventId(null);
-          setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", location: "", lat: null, lng: null });
+          setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {}, location: "", lat: null, lng: null });
         }
       }
     } else {
@@ -991,9 +1023,13 @@ export default function MapPage() {
         await delMiniEvent(idToDelete).catch(() => {});
         setEvents((prev) => prev.filter((ev) => ev.id !== idToDelete));
       }
-      const updatedEvents = await fetchMiniEvents().catch(() => null);
-      if (updatedEvents) setEvents(mergeEvents(updatedEvents));
-      setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "" });
+      const refreshedMeta = await fetchMiniEventsWithMeta().catch(() => null);
+      if (refreshedMeta?.events) {
+        const merged = mergeEvents(refreshedMeta.events);
+        setEvents(merged);
+        syncCollabStateFromServer(merged, refreshedMeta.requestedEventId ?? null);
+      }
+      setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {} });
       setEditingEventId(null);
       setNotice("Mini event deleted.");
       setShowEventModal(false);
@@ -1004,66 +1040,74 @@ export default function MapPage() {
   }
 
   const handleSaveProfile = useCallback(async (updatedData) => {
-    try {
-      await api.put("/users/me", updatedData);
-    } catch (err) {
-      console.warn("Failed to persist user profile to backend:", err);
-    }
-    persistProfileIdentityCache(currentUser, {
-      profilePicture: updatedData.profilePicture,
-      coverImage: updatedData.coverImage,
-    });
-    setCurrentUser((prev) => {
-      const merged = { ...(prev || {}), ...updatedData };
-      try {
-        localStorage.setItem("kalceria_user", JSON.stringify(merged));
-        const sess = localStorage.getItem("kalceria_user_session");
-        if (sess) {
-          const parsed = JSON.parse(sess);
-          parsed.user = { ...(parsed.user || {}), ...updatedData };
-          localStorage.setItem("kalceria_user_session", JSON.stringify(parsed));
-        }
-      } catch {}
-      return merged;
-    });
-    setKalcerians((prev) =>
-      prev.map((u) =>
-        currentUser?.id && String(u.id) === String(currentUser.id)
-          ? { ...u, ...updatedData }
-          : u
-      )
-    );
-    setMapUsersData((prev) =>
-      prev.map((u) =>
-        currentUser?.id && String(u.id) === String(currentUser.id)
-          ? { ...u, ...updatedData }
-          : u
-      )
-    );
-    if (updatedData.displayName || updatedData.name || updatedData.profilePicture || updatedData.coverImage) {
-      setEvents((prev) =>
-        prev.map((ev) => {
-          const isMine =
-            ev.id === "own" ||
-            (currentUser?.id && String(ev.creator?.id) === String(currentUser.id));
-          if (!isMine) return ev;
-          return {
-            ...ev,
-            creator: {
-              ...(ev.creator || {}),
-              name: updatedData.displayName || updatedData.name || ev.creator?.name,
-              displayName: updatedData.displayName || updatedData.name || ev.creator?.displayName,
-              profilePicture: updatedData.profilePicture ?? ev.creator?.profilePicture,
-              coverImage: updatedData.coverImage ?? ev.creator?.coverImage,
-            },
-          };
-        })
+    const applyProfilePatch = (patch) => {
+      persistProfileIdentityCache(currentUser, {
+        profilePicture: patch.profilePicture,
+        coverImage: patch.coverImage,
+      });
+      setCurrentUser((prev) => {
+        const merged = { ...(prev || {}), ...patch };
+        try {
+          localStorage.setItem("kalceria_user", JSON.stringify(merged));
+          const sess = localStorage.getItem("kalceria_user_session");
+          if (sess) {
+            const parsed = JSON.parse(sess);
+            parsed.user = { ...(parsed.user || {}), ...patch };
+            localStorage.setItem("kalceria_user_session", JSON.stringify(parsed));
+          }
+        } catch {}
+        return merged;
+      });
+      setKalcerians((prev) =>
+        prev.map((u) =>
+          currentUser?.id && String(u.id) === String(currentUser.id)
+            ? { ...u, ...patch }
+            : u
+        )
       );
-    }
+      setMapUsersData((prev) =>
+        prev.map((u) =>
+          currentUser?.id && String(u.id) === String(currentUser.id)
+            ? { ...u, ...patch }
+            : u
+        )
+      );
+      if (patch.displayName || patch.name || patch.profilePicture || patch.coverImage) {
+        setEvents((prev) =>
+          prev.map((ev) => {
+            const isMine =
+              ev.id === "own" ||
+              (currentUser?.id && String(ev.creator?.id) === String(currentUser.id));
+            if (!isMine) return ev;
+            return {
+              ...ev,
+              creator: {
+                ...(ev.creator || {}),
+                name: patch.displayName || patch.name || ev.creator?.name,
+                displayName: patch.displayName || patch.name || ev.creator?.displayName,
+                profilePicture: patch.profilePicture ?? ev.creator?.profilePicture,
+                coverImage: patch.coverImage ?? ev.creator?.coverImage,
+              },
+            };
+          })
+        );
+      }
+    };
+
+    applyProfilePatch(updatedData);
     try {
       const res = await api.put("/users/me", updatedData);
       if (res?.data?.user) {
-        setCurrentUser((prev) => ({ ...(prev || {}), ...res.data.user }));
+        const serverUser = res.data.user;
+        const syncedPatch = {
+          ...updatedData,
+          ...serverUser,
+          displayName: serverUser.displayName || serverUser.name || updatedData.displayName,
+          profilePicture: serverUser.profilePicture || updatedData.profilePicture,
+          coverImage: serverUser.coverImage || serverUser.coverUrl || updatedData.coverImage,
+          coverUrl: serverUser.coverUrl || serverUser.coverImage || updatedData.coverImage,
+        };
+        applyProfilePatch(syncedPatch);
       }
     } catch (e) {
       console.warn("Profile update remote sync deferred:", e?.message);
@@ -1305,7 +1349,7 @@ export default function MapPage() {
         cancelRequestTarget={cancelRequestTarget} handleConfirmCancelRequest={handleConfirmCancelRequest}
         showRequestsModal={showRequestsModal} setShowRequestsModal={setShowRequestsModal}
         viewingRequestsEvent={events.find((e) => String(e.id) === String(viewingRequestsEventId))}
-        currentRequestsList={viewingRequestsEventId ? (eventRequestsMap[viewingRequestsEventId] || (viewingRequestsEventId === activeOwnEvent?.id ? eventRequestsMap["own"] : null) || (viewingRequestsEventId === "mini_spec_3" ? eventRequestsMap["mini_spec_3"] : null) || eventRequestsMap["mini_cafe_1"] || []) : []}
+        currentRequestsList={viewingRequestsEventId ? (eventRequestsMap[viewingRequestsEventId] || []) : []}
         onAcceptCollabRequest={handleAcceptCollabRequest} onDeclineCollabRequest={handleDeclineCollabRequest}
         showDeleteAccountModal={showDeleteAccountModal} setShowDeleteAccountModal={setShowDeleteAccountModal}
         handleConfirmDeleteAccount={handleConfirmDeleteAccount}

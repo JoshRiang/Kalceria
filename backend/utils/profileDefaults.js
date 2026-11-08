@@ -38,7 +38,7 @@ export function getDeterministicAvatarUrl(user) {
 
 export function sanitizeProfilePictureUrl(value) {
   if (value === undefined || value === null || value === '') return null;
-  if (typeof value !== 'string' || value.length > 2_500_000) return null;
+  if (typeof value !== 'string' || value.length > 5_000_000) return null;
   if (/^data:image\/(?:webp|png|jpeg|jpg|gif);base64,[A-Za-z0-9+/=\s]+$/.test(value)) {
     return value;
   }

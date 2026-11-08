@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   acquireMicrophoneStream,
   acquireCameraStream,
@@ -50,6 +50,9 @@ export function useCallHardware() {
       localStreamRef.current = null;
     }
     remoteStreamRef.current = null;
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null;
     }
@@ -88,24 +91,35 @@ export function useCallHardware() {
     }
   }, [isCamOff]);
 
-  return {
-    isMicMuted,
-    setIsMicMuted,
-    isSpeakerOn,
-    setIsSpeakerOn,
-    isCamOff,
-    setIsCamOff,
-    hasLocalStream,
-    setHasLocalStream,
-    hasRemoteStream,
-    setHasRemoteStream,
-    localVideoRef,
-    localStreamRef,
-    remoteVideoRef,
-    remoteAudioRef,
-    remoteStreamRef,
-    isCamOffRef,
-    acquireHardware,
-    teardownHardware,
-  };
+  return useMemo(
+    () => ({
+      isMicMuted,
+      setIsMicMuted,
+      isSpeakerOn,
+      setIsSpeakerOn,
+      isCamOff,
+      setIsCamOff,
+      hasLocalStream,
+      setHasLocalStream,
+      hasRemoteStream,
+      setHasRemoteStream,
+      localVideoRef,
+      localStreamRef,
+      remoteVideoRef,
+      remoteAudioRef,
+      remoteStreamRef,
+      isCamOffRef,
+      acquireHardware,
+      teardownHardware,
+    }),
+    [
+      isMicMuted,
+      isSpeakerOn,
+      isCamOff,
+      hasLocalStream,
+      hasRemoteStream,
+      acquireHardware,
+      teardownHardware,
+    ]
+  );
 }

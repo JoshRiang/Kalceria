@@ -33,15 +33,21 @@ export function useRankedDynamicEvents({
       const isCollab = isEventCollaborator(ev, currentUser, acceptedCollabsMap);
 
       const pendingReqs = isOwner ? getEventPendingRequests(ev, currentUser, eventRequestsMap) : [];
-      const latestEnvelopeAt =
-        pendingReqs.length > 0
-          ? Math.max(
-              ...pendingReqs.map((r) => {
-                const t = r?.createdAt ? new Date(r.createdAt).getTime() : 0;
-                return Number.isFinite(t) && t > 0 ? t : 1;
-              })
-            )
-          : 0;
+      const effectivePendingCount = isOwner
+        ? Math.max(pendingReqs.length, Number(ev.pendingRequestsCount) || 0)
+        : 0;
+      let latestEnvelopeAt = 0;
+      if (pendingReqs.length > 0) {
+        latestEnvelopeAt = Math.max(
+          ...pendingReqs.map((r) => {
+            const t = r?.createdAt ? new Date(r.createdAt).getTime() : 0;
+            return Number.isFinite(t) && t > 0 ? t : 1;
+          })
+        );
+      } else if (effectivePendingCount > 0) {
+        const fallbackTs = new Date(ev.updatedAt || ev.createdAt || 0).getTime();
+        latestEnvelopeAt = Number.isFinite(fallbackTs) && fallbackTs > 0 ? fallbackTs : 1;
+      }
 
       const groupChatEntry = (isOwner || isCollab) ? eventGroupChatMap[ev.id] : null;
       const latestGroupChatAt =

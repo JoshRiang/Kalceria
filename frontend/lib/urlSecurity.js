@@ -1,6 +1,6 @@
 /**
  * Client-Side URL Normalization and Security Sanitizer
- * Mirrors backend defenses against serialization, path enumeration, RFI, SSRF, LFI, and enforces .png, .jpeg, .mp4
+ * Mirrors backend defenses against serialization, path enumeration, RFI, SSRF, LFI, and enforces .png, .jpeg, .webp, .mp4, .webm
  */
 
 const BLOCKED_HOST_PATTERNS = [
@@ -18,7 +18,102 @@ const BLOCKED_HOST_PATTERNS = [
   /instance-data/i,
 ];
 
-const VALID_MEDIA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.mp4'];
+const VALID_MEDIA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.mp4', '.webm'];
+const MAX_MEDIA_URLS = 24;
+const MAX_SINGLE_URL_LENGTH = 2048;
+const MAX_TOTAL_URL_LIST_LENGTH = 32768;
+
+export function splitMediaUrlListClient(rawInput) {
+  if (typeof rawInput !== 'string') return [];
+  const trimmed = rawInput.trim();
+  if (!trimmed) return [];
+  return trimmed
+    .split(/,\s*(?=(?:[a-z][a-z0-9+.-]*:|\/))/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function hasUnsafeQuery(search) {
+  return Boolean(
+    search &&
+      (/[<>'"`\\]/.test(search) || /script|javascript|onerror|onload|eval\(/i.test(search))
+  );
+}
+
+function isTrustedVercelBlobHost(hostname) {
+  const lower = String(hostname || '').toLowerCase();
+  return (
+    lower === 'blob.vercel-storage.com' ||
+    lower.endsWith('.blob.vercel-storage.com')
+  );
+}
+
+function validatePrivateBlobProxyUrlClient(item) {
+  let wrapperParsed;
+  try {
+    wrapperParsed = new URL(item, 'https://kalceria.internal');
+  } catch {
+    return { valid: false, error: 'Format proxy URL Blob tidak valid.' };
+  }
+
+  if (wrapperParsed.pathname !== '/api/blob/raw') {
+    return { valid: false, error: 'Hanya endpoint proxy media resmi yang diizinkan.' };
+  }
+
+  if (hasUnsafeQuery(wrapperParsed.search)) {
+    return { valid: false, error: 'URL mengandung parameter query yang mencurigakan atau berbahaya.' };
+  }
+
+  const rawInner = wrapperParsed.searchParams.get('url');
+  if (!rawInner || rawInner.length > MAX_SINGLE_URL_LENGTH) {
+    return { valid: false, error: 'Parameter url Blob tidak valid atau terlalu panjang.' };
+  }
+
+  if (rawInner.includes('..') || /%2e%2e|\.\.%2f|\.\.%5c/i.test(rawInner)) {
+    return { valid: false, error: 'Terdeteksi upaya path traversal / enumerasi direktori dalam URL.' };
+  }
+
+  const [targetBase] = rawInner.split('#');
+  let targetParsed;
+  try {
+    targetParsed = new URL(targetBase);
+  } catch {
+    return { valid: false, error: 'Target URL Blob tidak valid.' };
+  }
+
+  if (targetParsed.protocol !== 'https:') {
+    return { valid: false, error: 'Hanya protokol HTTPS yang diizinkan untuk Blob storage.' };
+  }
+
+  const hostname = targetParsed.hostname.toLowerCase();
+  for (const pattern of BLOCKED_HOST_PATTERNS) {
+    if (pattern.test(hostname)) {
+      return {
+        valid: false,
+        error: 'Akses ke alamat jaringan internal / privat / localhost dilarang keras demi keamanan.',
+      };
+    }
+  }
+
+  if (!isTrustedVercelBlobHost(hostname)) {
+    return { valid: false, error: 'Proxy Blob hanya diizinkan mengakses host Vercel Blob resmi.' };
+  }
+
+  if (targetParsed.pathname.includes('..') || /%2e/i.test(targetParsed.pathname)) {
+    return { valid: false, error: 'Terdeteksi path traversal dalam URL media.' };
+  }
+
+  const extMatch = targetParsed.pathname.match(/\.([a-z0-9]+)$/i);
+  const ext = extMatch ? `.${extMatch[1].toLowerCase()}` : '';
+  if (!VALID_MEDIA_EXTENSIONS.includes(ext)) {
+    return {
+      valid: false,
+      error: 'Ekstensi file tidak diizinkan. Hanya file .png, .jpeg, .webp, .mp4, dan .webm yang diterima.',
+    };
+  }
+
+  return { valid: true, normalized: item };
+}
 
 export function validateAndNormalizeMediaUrlClient(rawInput) {
   if (rawInput === undefined || rawInput === null || rawInput === '') {
@@ -34,8 +129,8 @@ export function validateAndNormalizeMediaUrlClient(rawInput) {
     return { valid: true, normalized: '' };
   }
 
-  if (trimmed.length > 2048) {
-    return { valid: false, error: 'Panjang URL melebihi batas maksimum 2048 karakter.' };
+  if (trimmed.length > MAX_TOTAL_URL_LIST_LENGTH) {
+    return { valid: false, error: 'Total panjang daftar URL media melebihi batas maksimum.' };
   }
 
   // 1. Control chars & null bytes
@@ -53,25 +148,43 @@ export function validateAndNormalizeMediaUrlClient(rawInput) {
     return { valid: false, error: 'URL mengandung payload prototype yang mencurigakan.' };
   }
 
-  const rawUrls = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+  const rawUrls = splitMediaUrlListClient(trimmed);
   if (rawUrls.length === 0) {
     return { valid: true, normalized: '' };
+  }
+  if (rawUrls.length > MAX_MEDIA_URLS) {
+    return { valid: false, error: `Maksimum ${MAX_MEDIA_URLS} item media diperbolehkan.` };
   }
 
   const normalizedList = [];
 
   for (const item of rawUrls) {
+    if (item.length > MAX_SINGLE_URL_LENGTH) {
+      return { valid: false, error: 'Panjang URL melebihi batas maksimum 2048 karakter.' };
+    }
+
     // Check directory traversal sequences
     if (item.includes('..') || /%2e%2e|\.\.%2f|\.\.%5c/i.test(item)) {
       return { valid: false, error: 'Terdeteksi upaya path traversal / enumerasi direktori dalam URL.' };
     }
 
+    // Signed/private Vercel Blob proxy URL
+    if (item.startsWith('/api/blob/raw')) {
+      const proxyCheck = validatePrivateBlobProxyUrlClient(item);
+      if (!proxyCheck.valid) return proxyCheck;
+      normalizedList.push(proxyCheck.normalized);
+      continue;
+    }
+
     // Relative internal paths (e.g. /media/gifs/...)
     if (item.startsWith('/media/')) {
       const extMatch = item.match(/\.([a-z0-9]+)(?:[\?#]|$)/i);
-      const ext = extMatch ? '.' + extMatch[1].toLowerCase() : '';
+      const ext = extMatch ? `.${extMatch[1].toLowerCase()}` : '';
       if (!VALID_MEDIA_EXTENSIONS.includes(ext)) {
-        return { valid: false, error: 'Format media tidak diizinkan. Hanya .png, .jpeg, dan .mp4 yang diterima.' };
+        return {
+          valid: false,
+          error: 'Format media tidak diizinkan. Hanya .png, .jpeg, .webp, .mp4, dan .webm yang diterima.',
+        };
       }
       normalizedList.push(item);
       continue;
@@ -112,20 +225,17 @@ export function validateAndNormalizeMediaUrlClient(rawInput) {
 
     // Media file extension
     const extMatch = pathname.match(/\.([a-z0-9]+)$/i);
-    const ext = extMatch ? '.' + extMatch[1].toLowerCase() : '';
+    const ext = extMatch ? `.${extMatch[1].toLowerCase()}` : '';
 
     if (!VALID_MEDIA_EXTENSIONS.includes(ext)) {
-      const isTrustedStorage =
-        hostname.endsWith('public.blob.vercel-storage.com') ||
-        hostname.endsWith('blob.vercel-storage.com');
-
-      if (!isTrustedStorage || !VALID_MEDIA_EXTENSIONS.includes(ext)) {
-        return { valid: false, error: 'Ekstensi file tidak diizinkan. Hanya file .png, .jpeg, dan .mp4 yang diterima.' };
-      }
+      return {
+        valid: false,
+        error: 'Ekstensi file tidak diizinkan. Hanya file .png, .jpeg, .webp, .mp4, dan .webm yang diterima.',
+      };
     }
 
     // Disallow dangerous script queries
-    if (parsed.search && (/[<>'"`\\]/.test(parsed.search) || /script|javascript|onerror/i.test(parsed.search))) {
+    if (hasUnsafeQuery(parsed.search)) {
       return { valid: false, error: 'URL mengandung parameter query yang mencurigakan atau berbahaya.' };
     }
 
@@ -134,4 +244,3 @@ export function validateAndNormalizeMediaUrlClient(rawInput) {
 
   return { valid: true, normalized: normalizedList.join(', ') };
 }
-

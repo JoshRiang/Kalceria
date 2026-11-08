@@ -1,3 +1,5 @@
+import { splitMediaUrlListClient } from "@/lib/urlSecurity";
+
 export function esc(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -12,6 +14,7 @@ export function cleanDesc(value) {
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
     .replace(/\[LOC:[^\]]+\]\s*/gi, "")
+    .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
     .trim();
 }
 
@@ -37,24 +40,14 @@ export function isMockOrDummyMedia(url) {
 }
 
 export function extractMediaList(item) {
+  if (!item) return [];
   let rawList = [];
-  if (Array.isArray(item.mediaUrls) && item.mediaUrls.length > 0) {
+  if (Array.isArray(item.mediaItems) && item.mediaItems.length > 0) {
+    rawList = item.mediaItems.map((entry) => entry?.url || entry).filter(Boolean);
+  } else if (Array.isArray(item.mediaUrls) && item.mediaUrls.length > 0) {
     rawList = item.mediaUrls.filter(Boolean);
-  } else if (item.mediaUrl) {
-    if (item.mediaUrl.includes(",") && !item.mediaUrl.startsWith("data:")) {
-      rawList = item.mediaUrl.split(",").map((s) => s.trim()).filter(Boolean);
-    } else if (
-      item.mediaUrl.includes(", data:") ||
-      item.mediaUrl.includes(", http") ||
-      item.mediaUrl.includes(", /")
-    ) {
-      rawList = item.mediaUrl
-        .split(/,\s*(?=(?:data:|https?:\/\/|\/))/i)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    } else {
-      rawList = [item.mediaUrl.trim()];
-    }
+  } else if (item.mediaUrl && typeof item.mediaUrl === "string") {
+    rawList = splitMediaUrlListClient(item.mediaUrl);
   } else if (item.videoUrl) {
     rawList = [item.videoUrl];
   } else if (item.gifUrl) {
@@ -62,27 +55,12 @@ export function extractMediaList(item) {
   } else {
     const match = String(item.description || "").match(/\[MEDIA:([^\]]+)\]/i);
     if (match && match[1]) {
-      const raw = match[1].trim();
-      if (raw.includes(", data:") || raw.includes(", http") || raw.includes(", /")) {
-        rawList = raw
-          .split(/,\s*(?=(?:data:|https?:\/\/|\/))/i)
-          .map((s) => s.trim())
-          .filter(Boolean);
-      } else if (raw.includes(",") && !raw.startsWith("data:")) {
-        rawList = raw.split(",").map((s) => s.trim()).filter(Boolean);
-      } else {
-        rawList = [raw];
-      }
+      rawList = splitMediaUrlListClient(match[1]);
     }
   }
 
-  // Strictly strip internal |timestamp metadata and filter out mock/dummy media
-  return rawList
-    .map((u) => {
-      const s = String(u || "").trim();
-      return s.includes("|") ? s.split("|")[0].trim() : s;
-    })
-    .filter((u) => u && !isMockOrDummyMedia(u));
+  // Strictly filter out any mock/dummy GIFs — never return fallback dummy media
+  return rawList.filter((u) => !isMockOrDummyMedia(u));
 }
 
 export function calculateUptime(createdAt) {

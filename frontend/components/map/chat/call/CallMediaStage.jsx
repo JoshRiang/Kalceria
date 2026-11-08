@@ -40,6 +40,50 @@ export function CallMediaStage({
   remoteAudioRef,
   remoteStreamRef,
 }) {
+  const [isLocalLandscape, setIsLocalLandscape] = useState(false);
+
+  const attachRemoteAudioRef = useCallback(
+    (el) => {
+      if (remoteAudioRef) remoteAudioRef.current = el;
+      if (el && remoteStreamRef?.current) {
+        if (el.srcObject !== remoteStreamRef.current) {
+          el.srcObject = remoteStreamRef.current;
+        }
+        el.muted = !isSpeakerOn;
+        el.play?.().catch(() => {});
+      }
+    },
+    [remoteAudioRef, remoteStreamRef, isSpeakerOn]
+  );
+
+  const attachRemoteVideoRef = useCallback(
+    (el) => {
+      if (remoteVideoRef) remoteVideoRef.current = el;
+      if (el && remoteStreamRef?.current) {
+        if (el.srcObject !== remoteStreamRef.current) {
+          el.srcObject = remoteStreamRef.current;
+        }
+        if (!isRemoteCamOff) {
+          el.play?.().catch(() => {});
+        }
+      }
+    },
+    [remoteVideoRef, remoteStreamRef, isRemoteCamOff]
+  );
+
+  const attachLocalVideoRef = useCallback(
+    (el) => {
+      if (localVideoRef) localVideoRef.current = el;
+      if (el && localStreamRef?.current && !isCamOff) {
+        if (el.srcObject !== localStreamRef.current) {
+          el.srcObject = localStreamRef.current;
+          el.play?.().catch(() => {});
+        }
+      }
+    },
+    [localVideoRef, localStreamRef, isCamOff]
+  );
+
   const displayName =
     targetUser?.displayName || targetUser?.name || targetUser?.nickname || "Kalcerian";
   const showRemoteLiveVideo = status === "connected" && hasRemoteStream && !isRemoteCamOff;
@@ -48,7 +92,7 @@ export function CallMediaStage({
     <>
       {/* Hidden WebRTC Remote Audio Receiver for Voice and Video Calls */}
       <audio
-        ref={remoteAudioRef}
+        ref={attachRemoteAudioRef}
         autoPlay
         playsInline
         muted={!isSpeakerOn}
@@ -66,23 +110,13 @@ export function CallMediaStage({
               : "bg-[#262a33]"
           }`}
         >
-          {/* Live Peer WebRTC Video Feed (Muted because remoteAudioRef plays the audio stream cleanly) */}
+          {/* Live Peer WebRTC Video Feed (Muted because remoteAudioRef plays the audio stream cleanly, object-contain preserves full sensor FoV) */}
           <video
-            ref={(el) => {
-              if (typeof remoteVideoRef === "function") {
-                remoteVideoRef(el);
-              } else if (remoteVideoRef) {
-                remoteVideoRef.current = el;
-              }
-              if (el && remoteStreamRef?.current && el.srcObject !== remoteStreamRef.current) {
-                el.srcObject = remoteStreamRef.current;
-                el.play?.().catch(() => {});
-              }
-            }}
+            ref={attachRemoteVideoRef}
             autoPlay
             playsInline
             muted
-            className={`w-full h-full object-cover transition-opacity duration-300 ${
+            className={`w-full h-full object-contain bg-black transition-opacity duration-300 ${
               showRemoteLiveVideo ? "opacity-100" : "opacity-0 pointer-events-none"
             } ${isBadConnection ? "filter blur-[12px] scale-105" : ""}`}
           />
@@ -328,12 +362,16 @@ export function CallMediaStage({
           </div>
         )}
 
-        {/* Picture-in-Picture (PiP) Self Camera Preview for Video Call — Hitam/Greyish when camera is off, adapted to Light/Dark Mode */}
+        {/* Picture-in-Picture (PiP) Self Camera Preview for Video Call — adapts to landscape/portrait full sensor capture */}
         {mode === "video" && (
           <div
-            className={`absolute bottom-3 right-3 w-[84px] h-[116px] rounded-xl overflow-hidden shadow-2xl flex items-center justify-center transition-colors duration-250 border ${
+            className={`absolute bottom-3 right-3 rounded-xl overflow-hidden shadow-2xl flex items-center justify-center transition-all duration-250 border ${
+              hasLocalStream && !isCamOff && isLocalLandscape
+                ? "w-[116px] h-[72px]"
+                : "w-[84px] h-[116px]"
+            } ${
               hasLocalStream && !isCamOff
-                ? "bg-[#0d0f14] border-white/25"
+                ? "bg-black border-white/25"
                 : isMapDark
                 ? "bg-[#0b0d11] border-white/20"
                 : "bg-[#2a2e36] border-white/35"
@@ -341,21 +379,18 @@ export function CallMediaStage({
           >
             {hasLocalStream && !isCamOff ? (
               <video
-                ref={(el) => {
-                  if (typeof localVideoRef === "function") {
-                    localVideoRef(el);
-                  } else if (localVideoRef) {
-                    localVideoRef.current = el;
-                  }
-                  if (el && localStreamRef?.current && el.srcObject !== localStreamRef.current) {
-                    el.srcObject = localStreamRef.current;
-                    el.play?.().catch(() => {});
-                  }
-                }}
+                ref={attachLocalVideoRef}
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover scale-x-[-1]"
+                onLoadedMetadata={(e) => {
+                  const vw = e.currentTarget?.videoWidth || 0;
+                  const vh = e.currentTarget?.videoHeight || 0;
+                  if (vw > 0 && vh > 0) {
+                    setIsLocalLandscape(vw > vh);
+                  }
+                }}
+                className="w-full h-full object-contain scale-x-[-1]"
               />
             ) : (
               <div className="flex items-center justify-center p-2 text-center">

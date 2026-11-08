@@ -1,6 +1,10 @@
 import prisma from '../lib/prisma.js';
 import { revokeUserSessions } from '../utils/authSession.js';
 import { createLog } from './auditController.js';
+import {
+  cleanupUserDatabaseRecords,
+  purgeUserRedisFootprint,
+} from './auth/cleanupUserFootprint.js';
 
 const ADMIN_MUTATION_LOCK = [130019, 1];
 
@@ -87,37 +91,20 @@ export async function deleteUser(req, res, next) {
     }
     const result = await prisma.$transaction(async (tx) => {
       await lockAdminMutations(tx);
-      const target = await tx.user.findUnique({ where: { id: req.params.id }, select: { id: true, role: true } });
+      const target = await tx.user.findUnique({ where: { id: req.params.id }, select: { id: true, email: true, role: true } });
       if (!target) return { error: 'NOT_FOUND' };
       if (target.role === 'ADMIN') {
         const adminCount = await tx.user.count({ where: { role: 'ADMIN' } });
         if (adminCount <= 1) return { error: 'LAST_ADMIN' };
       }
       await revokeUserSessions(req.params.id);
-      await Promise.all([
-        tx.userBroadcast.deleteMany({ where: { userId: req.params.id } }),
-        tx.eventRegistration.deleteMany({ where: { userId: req.params.id } }),
-        tx.miniEvent.deleteMany({ where: { creatorId: req.params.id } }),
-        tx.booking.deleteMany({ where: { userId: req.params.id } }),
-        tx.comment.deleteMany({ where: { userId: req.params.id } }),
-      ]);
-      const userBookings = await tx.serviceBooking.findMany({
-        where: { requestorId: req.params.id },
-        select: { id: true },
-      });
-      if (userBookings.length > 0) {
-        const bookingIds = userBookings.map((b) => b.id);
-        await tx.serviceBookingSlot.deleteMany({
-          where: { serviceBookingId: { in: bookingIds } },
-        });
-      }
-      await tx.serviceBooking.deleteMany({ where: { requestorId: req.params.id } });
-      await tx.user.delete({ where: { id: req.params.id } });
+      const { ownedEventIds } = await cleanupUserDatabaseRecords(tx, req.params.id);
       await createLog(req.user.email, 'USER_DELETED', `User ${req.params.id} deleted.`, tx);
-      return { deleted: true };
+      return { deleted: true, email: target.email, ownedEventIds };
     }, { maxWait: 10000, timeout: 25000 });
     if (result.error === 'NOT_FOUND') return res.status(404).json({ error: 'User not found.' });
     if (result.error === 'LAST_ADMIN') return res.status(400).json({ error: 'The last admin account cannot be deleted.' });
+    await purgeUserRedisFootprint(req.params.id, result.email, result.ownedEventIds);
     res.json({ message: 'User deleted.' });
   } catch (err) { next(err); }
 }

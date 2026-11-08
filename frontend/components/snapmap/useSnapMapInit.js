@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { OSM_SUBDOMAINS } from "@/lib/osmTilePrewarmer";
 import { DEFAULT_CENTER, loadLeaflet, tickAllEventUptimeElements } from "./snapMapHelpers";
+import {
+  cleanupEventPopupCarouselsFromRoot,
+  initEventPopupCarouselsFromRoot,
+} from "../map/eventPopup/popupCarouselController";
 
 export function useSnapMapInit({
   mapNodeRef,
@@ -64,16 +68,17 @@ export function useSnapMapInit({
       map.on("popupopen", (e) => {
         tickAllEventUptimeElements();
         resetIdleTimer?.();
-        try {
-          const popupEl = e.popup?.getElement?.();
-          if (popupEl) {
-            const carousel = popupEl.querySelector(".popup-carousel-container");
-            if (carousel?.id) {
-              const safeId = carousel.id.replace("event-carousel-", "");
-              window.__kalceriaInitEventCarousel?.(safeId);
-            }
-          }
-        } catch {}
+        const popupEl = e?.popup?.getElement?.();
+        if (popupEl) {
+          initEventPopupCarouselsFromRoot(popupEl, e.popup);
+        }
+      });
+
+      map.on("popupclose", (e) => {
+        const popupEl = e?.popup?.getElement?.();
+        if (popupEl) {
+          cleanupEventPopupCarouselsFromRoot(popupEl);
+        }
       });
 
       // Keyless multi-shard OpenStreetMap CDN with right-sized viewport keepBuffer so Desktop/iPad never mount 500+ tile bitmaps

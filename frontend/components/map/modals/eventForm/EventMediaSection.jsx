@@ -2,7 +2,15 @@
 
 import { useRef, useState } from "react";
 import { uploadBlobMedia } from "@/lib/api";
-import { validateAndNormalizeMediaUrlClient } from "@/lib/urlSecurity";
+import {
+  splitMediaUrlListClient,
+  validateAndNormalizeMediaUrlClient,
+} from "@/lib/urlSecurity";
+import {
+  inferIsVideoMediaUrl,
+  probeMediaFileMetadata,
+} from "../../eventPopup/popupMediaMetadata";
+import { ActionArcSpinner } from "../ActionArcSpinner";
 
 export function EventMediaSection({
   eventForm,
@@ -24,20 +32,29 @@ export function EventMediaSection({
       return;
     }
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "mp4"].includes(ext)) {
-      setUploadError("Only .png, .jpeg, and .mp4 files are allowed");
+    if (!["png", "jpg", "jpeg", "webp", "mp4", "webm"].includes(ext)) {
+      setUploadError("Only .png, .jpeg, .webp, .mp4, and .webm files are allowed");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     setIsUploadingMedia(true);
     setUploadError("");
     try {
+      const meta = await probeMediaFileMetadata(file).catch(() => ({
+        width: null,
+        height: null,
+        duration: null,
+      }));
       const res = await uploadBlobMedia(file);
-      if (res.url) {
+      if (res?.url) {
         setEventForm((f) => {
-          const current = (f.mediaUrl || "").trim();
-          const next = current ? `${current}, ${res.url}` : res.url;
-          return { ...f, mediaUrl: next };
+          const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
+          const nextUrls = [...existingUrls, res.url].join(", ");
+          const nextMeta = { ...(f.mediaMetadataByUrl || {}) };
+          if (meta.width || meta.height || meta.duration) {
+            nextMeta[res.url] = meta;
+          }
+          return { ...f, mediaUrl: nextUrls, mediaMetadataByUrl: nextMeta };
         });
       }
     } catch (err) {
@@ -50,11 +67,18 @@ export function EventMediaSection({
 
   const handleRemoveCarouselMedia = (indexToRemove) => {
     setEventForm((f) => {
-      const urls = (f.mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
+      const urls = splitMediaUrlListClient(f.mediaUrl || "");
+      const removedUrl = urls[indexToRemove];
       const updated = urls.filter((_, idx) => idx !== indexToRemove).join(", ");
-      return { ...f, mediaUrl: updated };
+      const nextMeta = { ...(f.mediaMetadataByUrl || {}) };
+      if (removedUrl && nextMeta[removedUrl]) {
+        delete nextMeta[removedUrl];
+      }
+      return { ...f, mediaUrl: updated, mediaMetadataByUrl: nextMeta };
     });
   };
+
+  const parsedUrls = splitMediaUrlListClient(eventForm.mediaUrl || "");
 
   return (
     <div className="flex flex-col gap-1.5 sm:gap-2">
@@ -76,12 +100,12 @@ export function EventMediaSection({
             <polygon points="23 7 16 12 23 17 23 7" />
             <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
           </svg>
-          Live Media Feed {eventForm.mediaUrl && eventForm.mediaUrl.includes(",") ? `(${eventForm.mediaUrl.split(",").filter((s) => s.trim()).length} clips)` : ""}
+          Live Media Feed {parsedUrls.length > 1 ? `(${parsedUrls.length} clips)` : ""}
         </label>
-        {eventForm.mediaUrl && (
+        {parsedUrls.length > 0 && (
           <button
             type="button"
-            onClick={() => setEventForm((f) => ({ ...f, mediaUrl: "" }))}
+            onClick={() => setEventForm((f) => ({ ...f, mediaUrl: "", mediaMetadataByUrl: {} }))}
             className={`text-[10px] font-bold hover:underline cursor-pointer ${
               isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
             }`}
@@ -100,7 +124,10 @@ export function EventMediaSection({
               : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da]"
           }`}
           value={eventForm.mediaUrl || ""}
-          onChange={(e) => { setEventForm((f) => ({ ...f, mediaUrl: e.target.value })); setUploadError(""); }}
+          onChange={(e) => {
+            setEventForm((f) => ({ ...f, mediaUrl: e.target.value }));
+            setUploadError("");
+          }}
           onBlur={() => {
             const raw = (eventForm.mediaUrl || "").trim();
             if (raw) {
@@ -117,7 +144,7 @@ export function EventMediaSection({
         <input
           type="file"
           ref={fileInputRef}
-          accept=".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4"
+          accept=".png,.jpg,.jpeg,.webp,.mp4,.webm,image/png,image/jpeg,image/webp,video/mp4,video/webm"
           className="hidden"
           onChange={handleMediaUpload}
         />
@@ -125,26 +152,33 @@ export function EventMediaSection({
           type="button"
           disabled={isUploadingMedia || busy}
           onClick={() => fileInputRef.current?.click()}
-          className={`px-3 py-2 border rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+          aria-label={isUploadingMedia ? "Uploading media" : "Upload media"}
+          className={`px-3 py-2 min-w-[82px] border rounded-lg flex items-center justify-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer disabled:opacity-60 ${
             isModalDark
               ? "border-[#30363d] bg-[#21262d] text-[#f0f6fc] hover:bg-[#30363d]"
               : "border-[#d0d7de] bg-[#eaeef2] text-[#1f2328] hover:bg-[#d0d7de]"
           }`}
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-3.5 h-3.5"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
-          {isUploadingMedia ? "Uploading..." : "Upload"}
+          {isUploadingMedia ? (
+            <ActionArcSpinner className="w-3.5 h-3.5" label="Uploading media" />
+          ) : (
+            <>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-3.5 h-3.5"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span>Upload</span>
+            </>
+          )}
         </button>
       </div>
 
@@ -159,41 +193,47 @@ export function EventMediaSection({
         </p>
       )}
 
-      {/* IN OWNER SIDE ONLY: Event Media Thumbnails (Picture 4) with Picture 5 delete (X) badge */}
-      {isOwner && (() => {
-        const urls = (eventForm.mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
-        if (urls.length === 0) return null;
-        return (
-          <div className={`mt-2 p-2.5 rounded-2xl border-2 border-dashed flex flex-col gap-1.5 ${
+      {isOwner && parsedUrls.length > 0 && (
+        <div
+          className={`mt-2 p-2.5 rounded-2xl border-2 border-dashed flex flex-col gap-1.5 ${
             isModalDark ? "border-[#30363d] bg-[#0d1117]/60" : "border-[#d0d7de] bg-[#f6f8fa]/80"
-          }`}>
-            <div className="flex items-center gap-2.5 overflow-x-auto py-1 custom-scrollbar">
-              {urls.map((url, idx) => {
-                const isVideo = /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
-                return (
-                  <div key={idx} className="relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm border border-black/10 dark:border-white/10 group">
-                    {isVideo ? (
-                      <video src={url} muted autoPlay loop playsInline className="w-full h-full object-cover" />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover" />
-                    )}
-                    {/* Picture 5: white circular button with X to remove media */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveCarouselMedia(idx)}
-                      title="Remove this media"
-                      className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+          }`}
+        >
+          <div className="flex items-center gap-2.5 overflow-x-auto py-1 custom-scrollbar">
+            {parsedUrls.map((url, idx) => {
+              const isVideo = inferIsVideoMediaUrl(url);
+              return (
+                <div
+                  key={`${idx}-${url.slice(0, 32)}`}
+                  className="relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm border border-black/10 dark:border-white/10 group"
+                >
+                  {isVideo ? (
+                    <video
+                      src={url}
+                      muted
+                      autoPlay
+                      loop
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCarouselMedia(idx)}
+                    title="Remove this media"
+                    className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        );
-      })()}
+        </div>
+      )}
     </div>
   );
 }
