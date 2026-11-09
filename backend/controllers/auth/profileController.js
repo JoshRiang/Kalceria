@@ -61,19 +61,6 @@ export async function getMe(req, res, next) {
     const broadcast = user.broadcast && user.broadcast.expiresAt > now ? user.broadcast : null;
     const enrichedUser = await ensurePersistentUserProfile({ ...user, broadcast });
 
-    // Keep live presence coherent in Redis whenever authenticated user is active
-    try {
-      const lat = user.domicileLat || -6.2735;
-      const lng = user.domicileLng || 106.7110;
-      await redis.geoadd('active_users', lng, lat, userId);
-      await redis.set(
-        `live:user:${userId}`,
-        JSON.stringify({ lat, lng, updatedAt: Date.now() }),
-        'EX',
-        600
-      );
-    } catch {}
-
     res.json({ user: enrichedUser });
   } catch (err) {
     next(err);

@@ -4,12 +4,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import ContentImage from "@/components/ui/ContentImage";
 import { hasUserSession } from "@/lib/session";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export function DungeonGate() {
   const [isLocked, setIsLocked] = useState(false); // Dummy: Event has started
   const [showPopup, setShowPopup] = useState(false);
   const [, setTimeLeft] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [isNavigating, setIsNavigating] = useState(false);
   const pendingTimeouts = useRef(new Set());
   const router = useRouter();
@@ -25,12 +26,6 @@ export function DungeonGate() {
   useEffect(() => () => {
     pendingTimeouts.current.forEach(clearTimeout);
     pendingTimeouts.current.clear();
-  }, []);
-
-  // Check login status on mount
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Login state is intentionally read from browser storage after hydration.
-    setIsLoggedIn(hasUserSession());
   }, []);
 
   // Dummy target: Past date to keep it unlocked

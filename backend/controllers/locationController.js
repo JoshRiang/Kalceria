@@ -2,8 +2,8 @@ import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { maskLocationToDistrict } from '../utils/privacyMask.js';
 
-const LIVE_TTL_SECONDS = 30 * 60;
-const UPDATE_COOLDOWN_SECONDS = 30;
+const LIVE_TTL_SECONDS = 90;
+const UPDATE_COOLDOWN_SECONDS = 20;
 
 function parseCoordinate(value) {
   if (value === undefined || value === null || value === '') return null;
@@ -141,6 +141,25 @@ export async function setLiveLocationPreference(req, res, next) {
       .catch(() => {});
 
     res.json({ user: { id: user.id, allowLiveLocation: user.allowLiveLocation } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function setOffline(req, res, next) {
+  try {
+    const userId = req.user?.userId;
+    if (userId) {
+      await Promise.allSettled([
+        redis.zrem('active_users', userId),
+        redis.del(`live:user:${userId}`),
+        redis.del(`live:cooldown:${userId}`),
+        redis.del('cache:all_kalcerians'),
+        redis.del('cache:map_users_enriched'),
+        redis.del('cache:map_users:global'),
+      ]);
+    }
+    return res.json({ message: 'Marked offline.' });
   } catch (err) {
     next(err);
   }

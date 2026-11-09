@@ -116,8 +116,14 @@ export default function LandingPage({ onNavigateAuth }) {
     api.get("/users/me").then((res) => {
       if (res.data?.user) {
         establishSession(res.data.user);
+      } else {
+        clearSession();
       }
-    }).catch(() => { });
+    }).catch((err) => {
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        clearSession();
+      }
+    });
 
     // Smooth scroll restoration on fallback navigation
     const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
@@ -186,9 +192,20 @@ export default function LandingPage({ onNavigateAuth }) {
     const handlePageShow = (e) => {
       if (e.persisted || !hasUserSession()) {
         if (!hasUserSession()) {
-          useAuthStore.getState().clearSession();
+          clearSession();
         }
       }
+      api.get("/users/me").then((res) => {
+        if (res.data?.user) {
+          establishSession(res.data.user);
+        } else {
+          clearSession();
+        }
+      }).catch((err) => {
+        if (err?.response?.status === 401 || err?.response?.status === 403) {
+          clearSession();
+        }
+      });
     };
     window.addEventListener("pageshow", handlePageShow);
     return () => window.removeEventListener("pageshow", handlePageShow);

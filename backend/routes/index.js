@@ -6,7 +6,7 @@ import {
   requestPasswordReset, resetPassword, getResetPasswordStatus, recommendStrongPassword, checkUsername, verifyJitPassword, getMe,
   updateMe, deleteMe, changePassword
 } from "../controllers/authController.js";
-import { updateLiveLocation, getNearbyUsers, setLiveLocationPreference } from "../controllers/locationController.js";
+import { updateLiveLocation, getNearbyUsers, setLiveLocationPreference, setOffline } from "../controllers/locationController.js";
 import { searchIndonesianLocations, reverseGeocodeLocation } from "../controllers/geoController.js";
 import { getMedia, createMedia } from "../controllers/mediaController.js";
 import {
@@ -174,6 +174,7 @@ router.get("/location/search", searchIndonesianLocations);
 router.get("/location/reverse", reverseGeocodeLocation);
 router.post("/location/update", requireAuth, updateLiveLocation);
 router.patch("/location/visibility", requireAuth, setLiveLocationPreference);
+router.post("/location/offline", requireAuth, setOffline);
 router.get("/location/nearby", requireAuth, getNearbyUsers);
 
 // ─── Media ───────────────────────────────────────────────────────────────────

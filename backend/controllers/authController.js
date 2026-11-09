@@ -216,25 +216,6 @@ export async function login(req, res, next) {
     setAuthCookie(res, token);
     const csrfToken = issueLoginCsrfToken(res);
 
-    // Auto-mark user active in Redis so online status is immediately coherent
-    try {
-      const lat = user.domicileLat || -6.2735;
-      const lng = user.domicileLng || 106.7110;
-      await redis.geoadd('active_users', lng, lat, user.id);
-      await redis.set(
-        `live:user:${user.id}`,
-        JSON.stringify({ lat, lng, updatedAt: Date.now() }),
-        'EX',
-        600
-      );
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { allowLiveLocation: true },
-      }).catch(() => {});
-      await redis.del('cache:all_kalcerians');
-      await redis.del('cache:map_users:global');
-    } catch {}
-
     res.json({
       userId: user.id,
       username: user.nickname || (user.email ? user.email.split('@')[0] : 'User'),
@@ -351,25 +332,6 @@ export async function completeRegistration(req, res, next) {
     setAuthCookie(res, token);
     const csrfToken = issueLoginCsrfToken(res);
 
-    // Auto-mark user active in Redis so online status is immediately coherent
-    try {
-      const lat = user.domicileLat || -6.2735;
-      const lng = user.domicileLng || 106.7110;
-      await redis.geoadd('active_users', lng, lat, user.id);
-      await redis.set(
-        `live:user:${user.id}`,
-        JSON.stringify({ lat, lng, updatedAt: Date.now() }),
-        'EX',
-        600
-      );
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { allowLiveLocation: true },
-      }).catch(() => {});
-      await redis.del('cache:all_kalcerians');
-      await redis.del('cache:map_users:global');
-    } catch {}
-
     res.status(201).json({
       message: 'Registration completed successfully.',
       userId: user.id,
@@ -412,10 +374,27 @@ export async function checkUsername(req, res, next) {
   }
 }
 
+export async function evictUserPresence(userId) {
+  if (!userId) return;
+  await Promise.allSettled([
+    redis.zrem('active_users', userId),
+    redis.del(`live:user:${userId}`),
+    redis.del(`live:cooldown:${userId}`),
+    redis.del('cache:all_kalcerians'),
+    redis.del('cache:map_users_enriched'),
+    redis.del('cache:map_users:global'),
+  ]);
+}
+
 export async function logout(req, res, next) {
   try {
     const token = getRequestToken(req);
-    if (token) await revokeAuthSession(token);
+    if (token) {
+      const revokedUserId = await revokeAuthSession(token);
+      if (revokedUserId) {
+        await evictUserPresence(revokedUserId);
+      }
+    }
     clearAuthCookie(res);
     res.clearCookie('csrfToken', csrfCookieOptions());
     return res.json({ message: 'Signed out.' });

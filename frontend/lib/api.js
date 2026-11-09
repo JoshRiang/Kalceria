@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clearSession } from './session';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const apiBaseUrl = isProduction
@@ -70,9 +71,7 @@ api.interceptors.response.use(
     const message = err.response?.data?.error || err.message || 'Network Error';
 
     if (status === 401 && typeof window !== 'undefined' && !String(err.config?.url || '').includes('/auth/login')) {
-      localStorage.removeItem('kalceriaSessionActive');
-      localStorage.removeItem('kalceriaAdminSessionActive');
-      sessionStorage.removeItem('kalceriaCsrfToken');
+      clearSession();
     }
 
     // Silently pass JIT and expected authentication rejections.

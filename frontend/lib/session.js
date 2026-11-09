@@ -44,6 +44,7 @@ export function clearSession() {
   localStorage.removeItem(ADMIN_SESSION_KEY);
   localStorage.removeItem("token");
   localStorage.removeItem("adminToken");
+  localStorage.removeItem("user");
   sessionStorage.removeItem("kalceriaCsrfToken");
 
   // Sync with reactive Zustand store

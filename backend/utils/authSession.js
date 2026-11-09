@@ -123,14 +123,16 @@ export async function revokeAuthSession(token) {
       issuer: JWT_ISSUER,
       ignoreExpiration: true,
     });
-    if (!payload.userId || !payload.jti) return;
+    if (!payload.userId || !payload.jti) return null;
     SESSION_MEM_CACHE.delete(payload.jti);
     const pipe = redis.pipeline();
     pipe.del(sessionKey(payload.jti));
     pipe.srem(userSessionsKey(payload.userId), payload.jti);
     await pipe.exec();
+    return payload.userId;
   } catch {
     // Invalid or expired cookies are still cleared by the logout route.
+    return null;
   }
 }
 

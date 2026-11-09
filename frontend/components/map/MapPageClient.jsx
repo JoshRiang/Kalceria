@@ -19,7 +19,7 @@ import { EditProfileModal } from "@/components/map/EditProfileModal";
 const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel").then((m) => m.KalceriansPanel), { ssr: false });
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
-import { hasUserSession } from "@/lib/session";
+import { hasUserSession, clearSession } from "@/lib/session";
 import {
   resolvePersistentAvatarUrl,
   resolvePersistentCover,
@@ -221,10 +221,13 @@ export default function MapPage() {
           prewarmOsmTiles(Number(user.domicileLat), Number(user.domicileLng), 15);
         }
       })
-      .catch(() => setNotLoggedIn(true));
+      .catch(() => {
+        clearSession();
+        setNotLoggedIn(true);
+      });
   }, []);
 
-  // Sync live coordinates with backend ONLY when online (plus 4-min keepalive to refresh 30m Redis TTL)
+  // Sync live coordinates with backend ONLY when online (every 35s keepalive to refresh 90s Redis TTL)
   useEffect(() => {
     if (typeof window === "undefined" || !navigator.geolocation || !currentUser?.id) return;
     if (presence !== "online") return;
@@ -246,14 +249,38 @@ export default function MapPage() {
         (err) => {
           console.warn("[Map] Location permission skipped or denied:", err.message);
         },
-        { timeout: 8000, enableHighAccuracy: true, maximumAge: 30000 }
+        { timeout: 8000, enableHighAccuracy: true, maximumAge: 25000 }
       );
     };
 
     syncLivePosition();
-    const keepaliveId = setInterval(syncLivePosition, 4 * 60 * 1000);
+    const keepaliveId = setInterval(syncLivePosition, 35 * 1000);
     return () => clearInterval(keepaliveId);
   }, [currentUser?.id, presence]);
+
+  // Immediately mark offline in Redis when leaving map or closing tab / laptop
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const markOffline = () => {
+      try {
+        if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+          navigator.sendBeacon("/api/location/offline");
+        } else {
+          api.post("/location/offline").catch(() => {});
+        }
+      } catch {}
+    };
+
+    window.addEventListener("pagehide", markOffline);
+    window.addEventListener("beforeunload", markOffline);
+
+    return () => {
+      window.removeEventListener("pagehide", markOffline);
+      window.removeEventListener("beforeunload", markOffline);
+      markOffline();
+    };
+  }, [currentUser?.id]);
 
   // fetch map users + kalcerians (poll every 10s)
   useEffect(() => {
