@@ -258,6 +258,16 @@ Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyat
      - Seluruh nama prop JSX, state internal, dan handler interaktif komponen anak wajib identik dengan baseline `f1dbb70`.
    - **Penegakan Batas LOC Maksimum (< 450 Baris)**:
      - Seluruh 10 file Tier B yang telah di-refactor wajib tetap berada di bawah batas ratchet ceiling yang didefinisikan dalam `scripts/audit/thresholds.json`. Pembengkakan kembali di atas threshold memicu kegagalan Gate 3c.
+10. **Doktrin Mutlak Penguncian Ratchet & Integrasi CI (Strict Ratchet & 11 KPI — Pelajaran Wave 5)**:
+    - **Mekanisme Strict Ratchet Anti-Bengkak**:
+      - Setiap file Tier A dan Tier B yang telah dimodularisasi terkunci oleh `scripts/audit/thresholds.json`.
+      - Menambahkan kode baru yang menyebabkan file melebihi `ratchetCeiling` adalah PELANGGARAN FATAL. Jika fitur baru membutuhkan logika tambahan, logika tersebut WAJIB dialokasikan ke modul baru atau sub-helper yang relevan, bukan menumpuk kembali di facade / komponen induk.
+    - **Verifikasi Otomatis di CI Pipeline (GitHub Actions)**:
+      - Gate 3b (`npm run test:modularity`) dan Gate 3c (`npm run audit:modularity`) terintegrasi permanen ke dalam `.github/workflows/ci.yml`.
+      - Setiap pull request atau push ke remote otomatis memvalidasi ke-11 KPI arsitektur Kalceria.
+    - **Disiplin Zero-Residue & Clean Workspace**:
+      - Tidak boleh meninggalkan file scratch, log temporer, file cadangan (`.bak`, `.tmp`), atau variabel lingkungan yang belum dibersihkan.
+      - Database PostgreSQL dan Redis wajib 100% steril dari akun dummy pasca testing (§1.6).
 
 ### 6.6 Tambahan Failure Verdict ("OUT")
 - Mengubah urutan efek, memindah assignment ref render-body ke efek, atau memecah efek yang memuat dua concern (pelanggaran IL-1 & IL-3).
@@ -268,6 +278,8 @@ Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyat
 - Mengubah kontrak pemanggil/anak (58 key return `usePersonalChatState`, 9 re-export, prop JSX) tanpa izin eksplisit (pelanggaran IL-9).
 - Merusak signature atau nama ekspor fungsi pada barrel re-export controller backend Tier B.
 - Melanggar batas ratchet LOC Tier B pada `scripts/audit/modularity-audit.mjs` (Gate 3c).
+- Melanggar strict ratchet ceiling di `thresholds.json` atau meloloskan kode yang gagal pada Gate 3b/3c di CI workflow.
+- Menyisakan file scratch atau residu dummy test di repositori atau database produksi (§1.6).
 - Menyentuh Tier C atau `BaselineNovember#2`.
 - Melapor "sudah" sementara Gate 3b/3c (bila sudah aktif), moved-lines diff, atau matriks manual belum dijalankan.
 - Menggabungkan beberapa ekstraksi dalam satu commit sehingga tidak dapat di-`git revert` secara bersih.

@@ -194,6 +194,12 @@ npm --prefix frontend run build
 | `MOD-42` | **Chat Media Card 3D Flip & Preview (`ChatMediaCard.jsx`)** | Photo/video attachments in chat thread | Decoupled into `CardFront.jsx`, `CardBack.jsx`, and `MediaPreviewModal.jsx` (386 LOC, -38%). | GPU-accelerated card flip; 0ms sound toggle latency. |
 | `MOD-43` | **WebRTC Call Session State Machine (`useCallSession.js`)** | 1-on-1 audio/video call lifecycle | Decoupled into `callSignaling.js`, `callHardwareStream.js`, and `callTimer.js` (439 LOC, -21%). | Smooth stream renegotiation; clean track termination. |
 | `MOD-44` | **Camera Capture Hardware Stream & MIME Codec (`CameraCaptureModal.jsx`)** | In-app photo and video recording modal | Decoupled into `cameraConstraints.js`, `recordingMime.js`, and `CameraPreview.jsx` (323 LOC, -49%). | Negotiates supported MIME codecs across iOS Safari & Android. |
+| `MOD-45` | **Strict Ratchet Ceilings Audit Enforcement (`modularity-audit.mjs --check`)** | Line count calculation of all Tier A & B files | Rejects file expansion beyond locked `ratchetCeiling` in `thresholds.json`; exits with code 1 upon violation. | Prevents silent codebase bloating. |
+| `MOD-46` | **Threshold Configuration Integrity (`thresholds.json`)** | Schema validation of `thresholds.json` | Contains strict ceiling LOC for all 2 Tier A facades and 10 Tier B refactored files. | Immutable ratchet configuration. |
+| `MOD-47` | **CI Workflow Automation Integration (`.github/workflows/ci.yml`)** | GitHub Actions runner trigger on push/PR | Executes Gate 3b (`npm run test:modularity`) and Gate 3c (`npm run audit:modularity`) before deployment. | Automated continuous architecture enforcement. |
+| `MOD-48` | **Npm Modularity Scripts Binding (`package.json`)** | Invocation of `npm run test:modularity` and `npm run audit:modularity` | Maps directly to native `node --test` runner and audit CLI. | Portable, deterministic developer workflow. |
+| `MOD-49` | **Clean Working Tree & Zero Scrap Invariant** | Git working tree status inspection | Zero untracked scratch files, `.log`, `.bak`, or temporary artifacts left behind. | Working tree remains pristine. |
+| `MOD-50` | **Comprehensive 11 KPIs Verification** | Full project modularization audit | All 11 KPIs from `docs/KALCERIA_MODULARIZATION_STRATEGY.md §11` evaluated and verified GREEN. | 100% modularization completion. |
 
 ---
 
@@ -232,6 +238,16 @@ npm --prefix frontend run build
 | `TB-04` | **Chat Media Card 3D Flip & Sound Toggle** | Klik kartu media di chat untuk membalik kartu | Animasi flip 3D GPU-accelerated (`transform: rotateY`); ikon download dan audio mute/unmute merespons dalam 0ms; placeholder ikon tema konsisten. | `ChatMediaCard.jsx`, `mediaCard/` |
 | `TB-05` | **Kalcerians Panel Instant Pin & Search** | Ketik nama di search bar / terima notifikasi pesan baru | Kalcerian dengan unread message langsung tersemat di atas; pencarian realtime memfilter tanpa lag; scroll virtual mulus. | `KalceriansPanel.jsx`, `kalceriansPanel/` |
 | `TB-06` | **Edit Profile Modal & Zero DB Pollution** | Edit profil, ganti kata sandi, atau batalkan aksi bahaya | Input tervalidasi; sesi terproteksi; pembatalan menghapus state lokal; dilarang keras meninggalkan user dummy pada DB produksi. | `EditProfileModal.jsx`, `editProfile/` |
+
+---
+
+### Test Suite 14: Wave 5 Ratchet Lock & CI/CD Pipeline Verification
+| Test ID | Skenario CI & Ratchet Lock | Input / Trigger | Hasil yang Diamati (Identik Baseline `f1dbb70`) | Modul & Konfigurasi Terkait |
+|---|---|---|---|---|
+| `CI-01` | **GitHub Actions Modularity Verification** | Trigger workflow `.github/workflows/ci.yml` | Step 4 (Gate 3b) dan Step 5 (Gate 3c) tereksekusi otomatis dan lulus hijau di runner Linux/Node 24. | `.github/workflows/ci.yml` |
+| `CI-02` | **Strict Ratchet Breach Rejection** | Simulasi penambahan baris melebihi ceiling pada file Tier A/B | `modularity-audit.mjs --check` mendeteksi pelanggaran threshold dan mematikan proses dengan exit code 1. | `scripts/audit/modularity-audit.mjs`, `thresholds.json` |
+| `CI-03` | **Zero Database Mock Residuals** | Inspeksi state Redis dan PostgreSQL pasca test suite | 0 akun dummy (e.g. "HP Mobile User", "Tester") dan 0 orphaned session keys tertinggal di database produksi. | `TEST.md §1`, `backend/tests/` |
+| `CI-04` | **Comprehensive 11 KPI Architectural Compliance** | Evaluasi menyeluruh metrik Wave 1 s/d Wave 5 | Seluruh 11 KPI (K1–K11) terbukti hijau: Hook Delta = 0, 58 return keys utuh, 100% golden tests pass, working tree bersih. | `docs/KALCERIA_MODULARIZATION_STRATEGY.md §11` |
 
 ---
 
