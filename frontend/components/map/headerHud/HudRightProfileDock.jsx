@@ -8,8 +8,9 @@ import { HudProfileAvatar } from "./HudProfileAvatar";
  * Generic Profile Icon (Silhouette)
  * Light Mode: fill #000000, border #ffffff
  * Dark Mode: fill #ffffff, border #000000
+ * Scaled down 35% to 12-14px uniform size matching the Tool Perkakas Icon
  */
-function GenericProfileIcon({ isMapDark, className = "w-3.5 h-3.5 sm:w-4 sm:h-4" }) {
+function GenericProfileIcon({ isMapDark, className = "w-3 h-3 sm:w-3.5 sm:h-3.5" }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
   return (
@@ -29,10 +30,10 @@ function GenericProfileIcon({ isMapDark, className = "w-3.5 h-3.5 sm:w-4 sm:h-4"
 /**
  * HudRightProfileDock
  * 
- * Docked on the right screen edge.
- * Features a protruding semi-circle tab on the left with the Generic Profile Icon
- * that toggles the sidebar drawer closed/open (slides into right edge with the tab remaining visible).
- * Houses the circular photo profile in a recessed well ("hole in a stack") that opens the full profile card.
+ * Docked at screen right edge, tightly positioned at top-2 sm:top-2.5.
+ * Features a beveled structured leveled circle (Picture 3 glassmorphism embossed plate)
+ * housing the circular photo avatar, and a 35% scaled-down protruding semi-circle tab
+ * on the left with the Generic Profile Icon that toggles the sidebar drawer closed/open.
  */
 export const HudRightProfileDock = memo(function HudRightProfileDock({
   isMapDark,
@@ -44,19 +45,19 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const boxBg = isMapDark ? "bg-[#000000]" : "bg-[#ffffff]";
-  const boxBorder = isMapDark ? "border-white" : "border-black";
+  const boxBg = isMapDark ? "bg-[#000000]/95" : "bg-[#ffffff]/95";
+  const boxBorder = isMapDark ? "border-white/25" : "border-black/20";
   const shadow = isMapDark
     ? "shadow-[0_4px_20px_rgba(0,0,0,0.85)]"
-    : "shadow-[0_4px_16px_rgba(0,0,0,0.14)]";
+    : "shadow-[0_4px_16px_rgba(0,0,0,0.12)]";
 
   return (
     <motion.aside
-      initial={{ x: 60, opacity: 0 }}
+      initial={{ x: 50, opacity: 0 }}
       animate={{
-        // When collapsed, slides into the right edge by the width of the avatar box (~62px),
-        // leaving the protruding semi-circle tab visible at the right edge
-        x: isCollapsed ? 60 : 0,
+        // When collapsed, slides into the right edge by the width of the avatar box (~48px),
+        // leaving the protruding semi-circle tab neatly accessible at the right edge
+        x: isCollapsed ? 48 : 0,
         opacity: 1,
       }}
       transition={{
@@ -66,15 +67,19 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
         mass: 0.8,
       }}
       aria-label="User Profile Quick Dock"
-      className="fixed right-0 top-20 sm:top-24 z-[1000] pointer-events-auto select-none flex items-center"
+      className="fixed right-0 top-2 sm:top-2.5 z-[1000] pointer-events-auto select-none flex items-center"
     >
-      {/* Protruding Semi-Circle Tab (Jendolan) on the LEFT: Toggles Sidebar Drawer */}
+      {/* Protruding Semi-Circle Tab (Jendolan) on the LEFT: 35% Scaled-Down Toggle Drawer */}
       <button
         type="button"
         onClick={() => setIsCollapsed((prev) => !prev)}
         title={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
         aria-label={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
-        className={`flex items-center justify-center w-6 sm:w-7 h-11 sm:h-12 rounded-l-full ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group z-20 -mr-[1.5px]`}
+        className={`flex items-center justify-center w-5 sm:w-5.5 h-8 sm:h-9 rounded-l-full ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${
+          isMapDark
+            ? "shadow-[inset_1px_1px_1.5px_rgba(255,255,255,0.2),-3px_2px_8px_rgba(0,0,0,0.6)]"
+            : "shadow-[inset_1px_1px_1.5px_rgba(255,255,255,0.95),-3px_2px_8px_rgba(0,0,0,0.1)]"
+        } cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group z-20 -mr-[1px]`}
       >
         <GenericProfileIcon
           isMapDark={isMapDark}
@@ -84,12 +89,18 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
         />
       </button>
 
-      {/* Main Profile Card: Houses Photo Avatar in a Recessed Well (Hole in a Stack) */}
+      {/* Main Profile Card: Houses 1 Beveled Structured Leveled Circle (Picture 3 style) */}
       <div
-        className={`relative flex items-center justify-center rounded-l-xl ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} p-2 z-10`}
+        className={`relative flex items-center justify-center rounded-l-xl ${boxBg} backdrop-blur-md border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} p-1.5 z-10`}
       >
-        {/* Recessed well / hole in a stack for the circular avatar */}
-        <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full p-[2px] bg-black/[0.06] dark:bg-white/[0.08] border-[1.5px] border-black/25 dark:border-white/30 shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] flex items-center justify-center">
+        {/* Beveled Structured Leveled Circle Plate matching Picture 3 glassmorphism */}
+        <div
+          className={`relative w-9.5 h-9.5 sm:w-10 sm:h-10 rounded-full p-[2px] ${
+            isMapDark
+              ? "bg-gradient-to-br from-white/[0.1] via-white/[0.04] to-transparent border border-white/20 shadow-[inset_1.5px_1.5px_2.5px_rgba(255,255,255,0.3),inset_-1.5px_-1.5px_2.5px_rgba(0,0,0,0.7),0_2px_4px_rgba(0,0,0,0.45)]"
+              : "bg-gradient-to-br from-white/95 via-[#f8fafc] to-[#e2e8f0]/85 border border-black/15 shadow-[inset_1.5px_1.5px_2.5px_rgba(255,255,255,0.95),inset_-1.5px_-1.5px_2.5px_rgba(0,0,0,0.14),0_2px_4px_rgba(0,0,0,0.06)]"
+          } flex items-center justify-center transition-transform hover:scale-105`}
+        >
           <HudProfileAvatar
             isMapDark={isMapDark}
             currentUser={currentUser}

@@ -14,8 +14,9 @@ import { HudQuickActionsMenu } from "./HudQuickActionsMenu";
  * Tool Perkakas Icon (Spanner / Wrench)
  * Light Mode: fill #000000, border #ffffff
  * Dark Mode: fill #ffffff, border #000000
+ * Scaled down 15% to 12-14px uniform size
  */
-function ToolPerkakasIcon({ isMapDark, className = "w-3.5 h-3.5 sm:w-4 sm:h-4" }) {
+function ToolPerkakasIcon({ isMapDark, className = "w-3 h-3 sm:w-3.5 sm:h-3.5" }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
   return (
@@ -36,9 +37,9 @@ function ToolPerkakasIcon({ isMapDark, className = "w-3.5 h-3.5 sm:w-4 sm:h-4" }
  * HudFunctionalOuterbox
  * 
  * Houses top functional icons (Event, Recenter, Eye, Plus, Theme, Sound)
- * inside a solid outerbox (white in light mode, deep black in dark mode)
- * with clean 1px seam dividers, decoupled tactile popping buttons on hover/press,
- * and a protruding semi-circle tab with the Tool Perkakas Icon that toggles rolling up/down.
+ * inside a tight outerbox. Each icon slot is an inner beveled structured leveled plate
+ * (Picture 3 glassmorphic embossed styling), with a protruding 15% scaled-down semi-circle tab
+ * containing the Tool Perkakas Icon that toggles rolling up/down.
  */
 export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
   isMapDark,
@@ -78,15 +79,19 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
     });
   }, [setActionMenuOpen, setMenuOpen]);
 
-  const boxBg = isMapDark ? "bg-[#000000]" : "bg-[#ffffff]";
-  const boxBorder = isMapDark ? "border-white" : "border-black";
-  const seamColor = isMapDark ? "bg-white/20" : "bg-black/20";
-  const shadow = isMapDark
+  // Base outerbox styling
+  const boxBg = isMapDark ? "bg-[#000000]/95" : "bg-[#ffffff]/95";
+  const boxBorder = isMapDark ? "border-white/25" : "border-black/20";
+  const boxShadow = isMapDark
     ? "shadow-[0_4px_20px_rgba(0,0,0,0.85)]"
-    : "shadow-[0_4px_16px_rgba(0,0,0,0.14)]";
+    : "shadow-[0_4px_16px_rgba(0,0,0,0.12)]";
 
-  // When collapsed, the whole toolbar scrolls up out of screen while keeping the tool tab reachable
-  const collapseOffset = hasActiveOwnBroadcast ? -108 : -52;
+  // Beveled structured leveled inner tile styling (matching Picture 3)
+  const beveledTileClass = isMapDark
+    ? "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-gradient-to-br from-white/[0.09] via-white/[0.04] to-transparent border border-white/20 shadow-[inset_1px_1px_1.5px_rgba(255,255,255,0.3),inset_-1px_-1px_1.5px_rgba(0,0,0,0.7),0_2px_4px_rgba(0,0,0,0.45)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group"
+    : "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-gradient-to-br from-white/95 via-[#f8fafc] to-[#e2e8f0]/85 border border-black/15 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.95),inset_-1px_-1px_2px_rgba(0,0,0,0.12),0_2px_4px_rgba(0,0,0,0.06)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group";
+
+  const collapseOffset = hasActiveOwnBroadcast ? -104 : -46;
 
   return (
     <motion.div
@@ -101,31 +106,28 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
       }}
       className="relative flex flex-col items-center pointer-events-auto select-none"
     >
-      {/* Main Solid Outerbox */}
+      {/* Main Solid Outerbox Container */}
       <div
-        className={`relative flex flex-col rounded-xl ${boxBg} border-[1.5px] ${boxBorder} ${shadow} overflow-visible`}
+        className={`relative flex flex-col rounded-xl ${boxBg} backdrop-blur-md border-[1.5px] ${boxBorder} ${boxShadow} p-1 overflow-visible`}
       >
-        {/* Row of Functional Icons */}
-        <div className="relative flex items-center h-10 sm:h-11 px-1.5 gap-1">
-          {/* Slot 0: Dynamic Event (if active) */}
+        {/* Row of Beveled Structured Leveled Icon Tiles */}
+        <div className="relative flex items-center gap-1 sm:gap-1.5">
+          {/* Beveled Tile 1: Dynamic Event (if active) */}
           {topDynamicEvent && (
-            <>
-              <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
-                <HudTopDynamicEvent
-                  topDynamicEvent={topDynamicEvent}
-                  hasTopDynamicEventNotif={hasTopDynamicEventNotif}
-                  onTopDynamicEventClick={onTopDynamicEventClick}
-                  setActionMenuOpen={setActionMenuOpen}
-                  setMenuOpen={setMenuOpen}
-                  isMapDark={isMapDark}
-                />
-              </div>
-              <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
-            </>
+            <div className={beveledTileClass}>
+              <HudTopDynamicEvent
+                topDynamicEvent={topDynamicEvent}
+                hasTopDynamicEventNotif={hasTopDynamicEventNotif}
+                onTopDynamicEventClick={onTopDynamicEventClick}
+                setActionMenuOpen={setActionMenuOpen}
+                setMenuOpen={setMenuOpen}
+                isMapDark={isMapDark}
+              />
+            </div>
           )}
 
-          {/* Slot 1: Recenter Button */}
-          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
+          {/* Beveled Tile 2: Recenter Button */}
+          <div className={beveledTileClass}>
             <HudRecenterButton
               isMapDark={isMapDark}
               recenterMap={recenterMap}
@@ -133,10 +135,8 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
             />
           </div>
 
-          <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
-
-          {/* Slot 2: Eye Button */}
-          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
+          {/* Beveled Tile 3: Eye Button */}
+          <div className={beveledTileClass}>
             <HudEyeButton
               isMapDark={isMapDark}
               presence={presence}
@@ -145,10 +145,8 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
             />
           </div>
 
-          <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
-
-          {/* Slot 3: Plus (+) Button with Quick Actions Menu */}
-          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
+          {/* Beveled Tile 4: Plus (+) Button with Quick Actions Menu */}
+          <div className={beveledTileClass}>
             <button
               type="button"
               disabled={isSelfOffline}
@@ -156,7 +154,7 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
               title={isSelfOffline ? "Offline (Stealth Mode)" : "Quick Actions"}
               aria-expanded={!isSelfOffline && actionMenuOpen}
               aria-haspopup="true"
-              className={`p-1.5 transition-all outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
+              className={`p-1 transition-all outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
                 isSelfOffline
                   ? "opacity-35 grayscale cursor-not-allowed"
                   : "cursor-pointer group"
@@ -169,10 +167,10 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
               }}
             >
               <svg
-                width="24"
-                height="24"
+                width="22"
+                height="22"
                 viewBox="0 0 24 24"
-                className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 ${
+                className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform duration-300 ${
                   !isSelfOffline && actionMenuOpen
                     ? "rotate-45 scale-110"
                     : !isSelfOffline
@@ -210,20 +208,16 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
             />
           </div>
 
-          <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
-
-          {/* Slot 4: Theme Button */}
-          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
+          {/* Beveled Tile 5: Theme Button */}
+          <div className={beveledTileClass}>
             <HudThemeButton
               isMapDark={isMapDark}
               setIsMapDark={setIsMapDark}
             />
           </div>
 
-          <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
-
-          {/* Slot 5: Sound Button */}
-          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
+          {/* Beveled Tile 6: Sound Button */}
+          <div className={beveledTileClass}>
             <HudSoundButton
               isMapDark={isMapDark}
               soundMuted={soundMuted}
@@ -232,11 +226,16 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
           </div>
         </div>
 
-        {/* Lower Compartment: Active Broadcast Box */}
+        {/* Beveled Tile +1: Active Broadcast Box (if published) */}
         {hasActiveOwnBroadcast && (
-          <div className="relative flex flex-col w-full">
-            <span aria-hidden="true" className={`h-[1px] w-full ${seamColor}`} />
-            <div className="relative flex items-center justify-center py-1 px-2">
+          <div className="relative flex flex-col w-full mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/15">
+            <div
+              className={`relative flex items-center justify-center py-1 px-2 rounded-lg ${
+                isMapDark
+                  ? "bg-gradient-to-br from-white/[0.08] to-transparent border border-white/20 shadow-[inset_1px_1px_1.5px_rgba(255,255,255,0.25),0_2px_4px_rgba(0,0,0,0.4)]"
+                  : "bg-gradient-to-br from-white/95 to-[#f1f5f9] border border-black/15 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.95),0_2px_4px_rgba(0,0,0,0.05)]"
+              }`}
+            >
               <HudTopDynamicBroadcast
                 hasActiveOwnBroadcast={hasActiveOwnBroadcast}
                 onTopDynamicBroadcastClick={onTopDynamicBroadcastClick}
@@ -249,16 +248,20 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
         )}
       </div>
 
-      {/* Protruding Semi-Circle Tab Housing the Tool Perkakas Icon */}
+      {/* Protruding Beveled Semi-Circle Tab Housing the 15% Scaled-Down Tool Perkakas Icon */}
       <div className="relative z-20 flex justify-center w-full">
         <button
           type="button"
           onClick={toggleCollapse}
           title={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
           aria-label={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
-          className={`flex items-center justify-center h-5 sm:h-5.5 px-3 -mt-[1.5px] ${
-            hasActiveOwnBroadcast ? "w-28 sm:w-36 rounded-b-lg" : "w-11 sm:w-12 rounded-b-full"
-          } ${boxBg} border-b-[1.5px] border-x-[1.5px] ${boxBorder} ${shadow} cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group`}
+          className={`flex items-center justify-center h-4 sm:h-4.5 px-2.5 -mt-[1px] ${
+            hasActiveOwnBroadcast ? "w-24 sm:w-28 rounded-b-lg" : "w-9 sm:w-10 rounded-b-full"
+          } ${boxBg} border-b-[1.5px] border-x-[1.5px] ${boxBorder} ${
+            isMapDark
+              ? "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_3px_8px_rgba(0,0,0,0.6)]"
+              : "shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_3px_8px_rgba(0,0,0,0.1)]"
+          } cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group`}
         >
           <ToolPerkakasIcon
             isMapDark={isMapDark}

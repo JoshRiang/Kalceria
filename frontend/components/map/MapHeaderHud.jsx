@@ -58,19 +58,19 @@ export const MapHeaderHud = memo(function MapHeaderHud({
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-        className="absolute z-[1000] top-4 left-4 right-4 flex justify-between items-start pointer-events-none max-[860px]:top-3 max-[860px]:left-3 max-[860px]:right-3 select-none"
+        className="absolute z-[1000] top-2 sm:top-2.5 left-2 sm:left-3 right-0 flex justify-between items-start pointer-events-none select-none"
       >
-        {/* 2D Back Arrow Button (Picture 2 style) - Outer Box Stripped */}
+        {/* 2D Back Arrow Button on Left - Tight to screen corner */}
         <button
           onClick={() => setShowQuitModal(true)}
           aria-label="Back to home"
-          className="pointer-events-auto p-1.5 transition-transform hover:-translate-x-1 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 group cursor-pointer"
+          className="pointer-events-auto p-1 sm:p-1.5 transition-transform hover:-translate-x-0.5 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 group cursor-pointer"
         >
           <svg
-            width="28"
-            height="28"
+            width="26"
+            height="26"
             viewBox="0 0 24 24"
-            className="w-7 h-7 sm:w-8 sm:h-8 transition-transform group-hover:scale-105"
+            className="w-6.5 h-6.5 sm:w-7 sm:h-7 transition-transform group-hover:scale-105"
           >
             <path
               d="M 3 12 L 9.4 5.6 L 14.8 5.6 L 10.3 10.1 L 21 10.1 L 21 13.9 L 10.3 13.9 L 14.8 18.4 L 9.4 18.4 Z"
@@ -88,35 +88,37 @@ export const MapHeaderHud = memo(function MapHeaderHud({
           </svg>
         </button>
 
-        {/* Top-Right Controls: Functional Icons Enclosed in Outerbox */}
-        <HudFunctionalOuterbox
-          isMapDark={isMapDark}
-          setIsMapDark={setIsMapDark}
-          actionMenuOpen={actionMenuOpen}
-          setActionMenuOpen={setActionMenuOpen}
-          menuOpen={menuOpen}
-          setMenuOpen={setMenuOpen}
-          setShowStatusModal={setShowStatusModal}
-          setShowEventModal={setShowEventModal}
-          isStatusBusy={isStatusBusy}
-          presence={presence}
-          handlePresenceChange={handlePresenceChange}
-          recenterMap={recenterMap}
-          isRecentering={isRecentering}
-          topDynamicEvent={topDynamicEvent}
-          hasTopDynamicEventNotif={hasTopDynamicEventNotif}
-          onTopDynamicEventClick={onTopDynamicEventClick}
-          hasActiveOwnEvent={hasActiveOwnEvent}
-          onGoToOwnEvent={onGoToOwnEvent}
-          hasActiveOwnBroadcast={hasActiveOwnBroadcast}
-          onTopDynamicBroadcastClick={onTopDynamicBroadcastClick}
-          soundMuted={soundMuted}
-          setSoundMuted={setSoundMuted}
-          isSelfOffline={isSelfOffline}
-        />
+        {/* Top-Right Controls: Shifted slightly to left so its right edge stops right at the left tip of Profile Sidebar */}
+        <div className="relative pointer-events-auto mr-[70px] sm:mr-[74px]">
+          <HudFunctionalOuterbox
+            isMapDark={isMapDark}
+            setIsMapDark={setIsMapDark}
+            actionMenuOpen={actionMenuOpen}
+            setActionMenuOpen={setActionMenuOpen}
+            menuOpen={menuOpen}
+            setMenuOpen={setMenuOpen}
+            setShowStatusModal={setShowStatusModal}
+            setShowEventModal={setShowEventModal}
+            isStatusBusy={isStatusBusy}
+            presence={presence}
+            handlePresenceChange={handlePresenceChange}
+            recenterMap={recenterMap}
+            isRecentering={isRecentering}
+            topDynamicEvent={topDynamicEvent}
+            hasTopDynamicEventNotif={hasTopDynamicEventNotif}
+            onTopDynamicEventClick={onTopDynamicEventClick}
+            hasActiveOwnEvent={hasActiveOwnEvent}
+            onGoToOwnEvent={onGoToOwnEvent}
+            hasActiveOwnBroadcast={hasActiveOwnBroadcast}
+            onTopDynamicBroadcastClick={onTopDynamicBroadcastClick}
+            soundMuted={soundMuted}
+            setSoundMuted={setSoundMuted}
+            isSelfOffline={isSelfOffline}
+          />
+        </div>
       </motion.header>
 
-      {/* Right-Side Screen Profile Dock (Picture 5 style) */}
+      {/* Right-Side Screen Profile Dock: Tight to top-2 sm:top-2.5 and right-0 */}
       <HudRightProfileDock
         isMapDark={isMapDark}
         currentUser={currentUser}
