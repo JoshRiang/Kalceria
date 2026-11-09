@@ -41,6 +41,21 @@ coverage/
 AGENT.md
 AGENT*.md
 
+# Agents rules, scratch, and private developer directives (NEVER expose to public)
+.agents/
+.agents/**
+AGENTS.md
+AGENTS*.md
+**/*agent*.md
+**/*agents*.md
+**/*[Aa][Gg][Ee][Nn][Tt]*.md
+**/AGENT*.md
+**/AGENTS*.md
+scratch/
+scratch/**
+scratch/*.md
+scratch/**/*.md
+
 # OS files
 Thumbs.db
 ehthumbs.db
