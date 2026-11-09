@@ -39,12 +39,13 @@ export function ChatMessageThread({
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+      // Wait for smooth scrolling to settle smoothly before initiating the organic nudge
       nudgeTimerRef.current = setTimeout(() => {
         setNudgedMsgId(targetId);
         nudgeTimerRef.current = setTimeout(() => {
           setNudgedMsgId(null);
-        }, 750);
-      }, 200);
+        }, 800);
+      }, 350);
     }
   }, []);
 

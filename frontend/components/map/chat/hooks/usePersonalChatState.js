@@ -1026,6 +1026,10 @@ export function usePersonalChatState({
         lat: currentReply.lat || null,
         lng: currentReply.lng || null,
         userId: currentReply.userId || currentReply.senderId || null,
+        isCall: Boolean(currentReply.isCall),
+        callMode: currentReply.callMode || null,
+        callDuration: currentReply.callDuration !== undefined ? currentReply.callDuration : null,
+        callTimestamp: currentReply.callTimestamp || null,
       };
     }
 
@@ -1257,6 +1261,10 @@ export function usePersonalChatState({
     const videoDuration = msg.videoDuration || null;
     const isMedia = mediaType === "photo" || mediaType === "video";
     const caption = isMedia ? (msg.text || "") : "";
+    const isCall = mediaType === "call" || msg.msgType === "call";
+    const callMode = msg.callMode || (msg.text?.toLowerCase().includes("video") ? "video" : "voice");
+    const callDuration = msg.callDuration !== undefined ? msg.callDuration : null;
+    const callTimestamp = msg.ts || msg.createdAt || Date.now();
 
     setReplyingTo({
       id: msg.id,
@@ -1268,6 +1276,10 @@ export function usePersonalChatState({
       caption,
       senderId: msg.senderId,
       senderName,
+      isCall,
+      callMode,
+      callDuration,
+      callTimestamp,
     });
   };
 

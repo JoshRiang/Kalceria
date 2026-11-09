@@ -174,7 +174,7 @@ router.get("/location/search", searchIndonesianLocations);
 router.get("/location/reverse", reverseGeocodeLocation);
 router.post("/location/update", requireAuth, updateLiveLocation);
 router.patch("/location/visibility", requireAuth, setLiveLocationPreference);
-router.post("/location/offline", requireAuth, setOffline);
+router.post("/location/offline", optionalAuth, setOffline);
 router.get("/location/nearby", requireAuth, getNearbyUsers);
 
 // ─── Media ───────────────────────────────────────────────────────────────────

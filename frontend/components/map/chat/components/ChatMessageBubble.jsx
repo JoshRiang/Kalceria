@@ -93,11 +93,11 @@ export function ChatMessageBubble({
         />
 
         <motion.div
-          animate={isNudged ? { x: [0, 20, -3, 0] } : { x: 0 }}
+          animate={isNudged ? { x: [0, 16, 0] } : { x: 0 }}
           transition={
             isNudged
-              ? { duration: 0.65, ease: [0.22, 1, 0.36, 1], times: [0, 0.35, 0.7, 1] }
-              : { duration: 0.15 }
+              ? { duration: 0.62, ease: [0.33, 1, 0.68, 1] }
+              : { duration: 0.25, ease: "easeOut" }
           }
           className={`transition-all duration-200 ${
             isSelected ? "scale-[1.035] shadow-lg z-10" : "scale-100"
@@ -153,11 +153,11 @@ export function ChatMessageBubble({
       />
 
       <motion.div
-        animate={isNudged ? { x: [0, 20, -3, 0] } : { x: 0 }}
+        animate={isNudged ? { x: [0, 16, 0] } : { x: 0 }}
         transition={
           isNudged
-            ? { duration: 0.65, ease: [0.22, 1, 0.36, 1], times: [0, 0.35, 0.7, 1] }
-            : { duration: 0.15 }
+            ? { duration: 0.62, ease: [0.33, 1, 0.68, 1] }
+            : { duration: 0.25, ease: "easeOut" }
         }
         className="relative max-w-[80%]"
       >
@@ -228,7 +228,15 @@ export function ChatMessageBubble({
                 >
                   {quoteInfo.senderName}
                 </p>
-                {quoteInfo.isBroadcast ? (
+                {quoteInfo.isCall ? (
+                  <p
+                    style={{ fontFamily: "Arial, sans-serif" }}
+                    className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
+                  >
+                    {quoteInfo.callTypePrefix}{" "}
+                    <span className="font-bold">{quoteInfo.callLaunchedTime}</span>
+                  </p>
+                ) : quoteInfo.isBroadcast ? (
                   <p
                     style={{ fontFamily: "Arial, sans-serif" }}
                     className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
@@ -243,14 +251,21 @@ export function ChatMessageBubble({
                     {quoteInfo.typeLabel}
                   </p>
                 )}
-                {quoteInfo.caption && (
+                {quoteInfo.isCall && quoteInfo.callDurationText ? (
+                  <p
+                    style={{ fontFamily: "Arial, sans-serif" }}
+                    className="text-[10px] opacity-85 leading-tight truncate mt-0.5 font-normal not-italic"
+                  >
+                    {quoteInfo.callDurationText}
+                  </p>
+                ) : quoteInfo.caption ? (
                   <p
                     style={{ fontFamily: "Arial, sans-serif" }}
                     className="text-[10px] italic opacity-85 leading-tight truncate mt-0.5 font-normal"
                   >
                     &ldquo;{quoteInfo.caption}&rdquo;
                   </p>
-                )}
+                ) : null}
               </div>
             );
           })()}

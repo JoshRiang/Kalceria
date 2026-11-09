@@ -85,7 +85,15 @@ export function ChatComposerBar({
               >
                 {replyInfo.senderName}
               </p>
-              {replyInfo.isBroadcast ? (
+              {replyInfo.isCall ? (
+                <p
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="text-[10px] opacity-80 truncate leading-tight mt-0.5"
+                >
+                  {replyInfo.callTypePrefix}{" "}
+                  <span className="font-bold">{replyInfo.callLaunchedTime}</span>
+                </p>
+              ) : replyInfo.isBroadcast ? (
                 <p
                   style={{ fontFamily: "Arial, sans-serif" }}
                   className="text-[10px] opacity-80 truncate leading-tight mt-0.5"
@@ -100,14 +108,21 @@ export function ChatComposerBar({
                   {replyInfo.typeLabel}
                 </p>
               )}
-              {replyInfo.caption && (
+              {replyInfo.isCall && replyInfo.callDurationText ? (
+                <p
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="text-[10px] opacity-85 truncate leading-tight mt-0.5 font-normal not-italic"
+                >
+                  {replyInfo.callDurationText}
+                </p>
+              ) : replyInfo.caption ? (
                 <p
                   style={{ fontFamily: "Arial, sans-serif" }}
                   className="text-[10px] italic opacity-85 truncate leading-tight mt-0.5 font-normal"
                 >
                   &ldquo;{replyInfo.caption}&rdquo;
                 </p>
-              )}
+              ) : null}
             </div>
 
             {/* Right: Cancel Button */}

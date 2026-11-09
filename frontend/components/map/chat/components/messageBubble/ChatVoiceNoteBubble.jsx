@@ -322,11 +322,11 @@ export function ChatVoiceNoteBubble({
 
       {/* Compact Voice Note Column (NO outer message box) */}
       <motion.div
-        animate={isNudged ? { x: [0, 20, -3, 0] } : { x: 0 }}
+        animate={isNudged ? { x: [0, 16, 0] } : { x: 0 }}
         transition={
           isNudged
-            ? { duration: 0.65, ease: [0.22, 1, 0.36, 1], times: [0, 0.35, 0.7, 1] }
-            : { duration: 0.15 }
+            ? { duration: 0.62, ease: [0.33, 1, 0.68, 1] }
+            : { duration: 0.25, ease: "easeOut" }
         }
         onContextMenu={(e) => {
           e.preventDefault();

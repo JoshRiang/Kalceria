@@ -15,6 +15,51 @@ export function formatVoiceDuration(sec) {
 }
 
 /**
+ * Format timestamp of call launch into human readable format:
+ * e.g. 2.30 AM 15 November 2026
+ */
+export function formatCallLaunchedTimestamp(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+
+  const day = d.getDate();
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+
+  return `${hours}.${minutes} ${ampm} ${day} ${month} ${year}`;
+}
+
+/**
+ * Format call duration in full unit representation:
+ * e.g. 1h 00m 00s or 0m 51s
+ */
+export function formatCallDurationDetailed(totalSeconds = 0) {
+  const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+
+  if (hours > 0) {
+    return `${hours}h ${mm}m ${ss}s`;
+  }
+  return `${minutes}m ${ss}s`;
+}
+
+/**
  * Infer media type of replied item
  */
 export function inferReplyMediaType(replyObj) {
@@ -26,6 +71,7 @@ export function inferReplyMediaType(replyObj) {
   ) {
     return "broadcast";
   }
+  if (replyObj.msgType === "call" || Boolean(replyObj.isCall)) return "call";
   if (replyObj.msgType === "voice" || Boolean(replyObj.voiceDuration)) return "voice";
   if (
     replyObj.msgType === "video" ||
@@ -44,7 +90,6 @@ export function inferReplyMediaType(replyObj) {
   ) {
     return "photo";
   }
-  if (replyObj.msgType === "call") return "call";
   return "text";
 }
 
@@ -52,15 +97,47 @@ export function inferReplyMediaType(replyObj) {
  * Extract clean display information for reply composer preview and quote bubbles
  * Format:
  * - Line 1: senderName
- * - Line 2: typeLabel (e.g. "Broadcast 15m", "Voice message 00:07", "Photo", "Video", or text message)
- * - Line 3 (if caption): caption in italic with quotes
+ * - Line 2: typeLabel (e.g. "Broadcast 15m", "Voice call 2.30 AM 15 November 2026", "Photo", "Video", or text message)
+ * - Line 3: call duration or caption in italic with quotes
  */
 export function getReplyDisplayInfo(replyObj) {
   if (!replyObj) {
-    return { senderName: "Kalcerian", typeLabel: "", caption: null, isBroadcast: false };
+    return {
+      senderName: "Kalcerian",
+      typeLabel: "",
+      caption: null,
+      isBroadcast: false,
+      isCall: false,
+    };
   }
   const senderName = replyObj.senderName || "Kalcerian";
   const mediaType = inferReplyMediaType(replyObj);
+
+  if (mediaType === "call") {
+    const isVideo =
+      replyObj.callMode === "video" ||
+      /video/i.test(replyObj.text || "") ||
+      replyObj.msgType === "video_call";
+    const callTypePrefix = isVideo ? "Video call" : "Voice call";
+    const rawTs = replyObj.callTimestamp || replyObj.ts || replyObj.createdAt;
+    const launchedTime = formatCallLaunchedTimestamp(rawTs);
+    const durationText = formatCallDurationDetailed(
+      replyObj.callDuration !== undefined && replyObj.callDuration !== null
+        ? replyObj.callDuration
+        : 0
+    );
+
+    return {
+      senderName,
+      typeLabel: launchedTime ? `${callTypePrefix} ${launchedTime}` : callTypePrefix,
+      callTypePrefix,
+      callLaunchedTime: launchedTime,
+      callDurationText: durationText,
+      caption: durationText,
+      isCall: true,
+      isBroadcast: false,
+    };
+  }
 
   if (mediaType === "broadcast") {
     const rawCaption = replyObj.broadcastMessage || replyObj.caption || replyObj.text || "";
@@ -70,6 +147,7 @@ export function getReplyDisplayInfo(replyObj) {
       typeLabel: `Broadcast ${duration}`,
       broadcastDuration: duration,
       isBroadcast: true,
+      isCall: false,
       caption: rawCaption ? String(rawCaption).trim() : null,
     };
   }
@@ -79,7 +157,13 @@ export function getReplyDisplayInfo(replyObj) {
     if (/^voice message\s+\d{1,2}:\d{2}$/i.test(textStr)) {
       const match = textStr.match(/\d{1,2}:\d{2}/);
       const formatted = match ? formatVoiceDuration(match[0]) : "00:07";
-      return { senderName, typeLabel: `Voice message ${formatted}`, caption: null, isBroadcast: false };
+      return {
+        senderName,
+        typeLabel: `Voice message ${formatted}`,
+        caption: null,
+        isBroadcast: false,
+        isCall: false,
+      };
     }
     const durSec = replyObj.voiceDuration || 7;
     return {
@@ -87,6 +171,7 @@ export function getReplyDisplayInfo(replyObj) {
       typeLabel: `Voice message ${formatVoiceDuration(durSec)}`,
       caption: null,
       isBroadcast: false,
+      isCall: false,
     };
   }
 
@@ -100,6 +185,7 @@ export function getReplyDisplayInfo(replyObj) {
       typeLabel: "Video",
       caption: isGenericText ? null : rawCaption.trim(),
       isBroadcast: false,
+      isCall: false,
     };
   }
 
@@ -113,15 +199,7 @@ export function getReplyDisplayInfo(replyObj) {
       typeLabel: "Photo",
       caption: isGenericText ? null : rawCaption.trim(),
       isBroadcast: false,
-    };
-  }
-
-  if (mediaType === "call") {
-    return {
-      senderName,
-      typeLabel: replyObj.text || "Call log",
-      caption: null,
-      isBroadcast: false,
+      isCall: false,
     };
   }
 
@@ -130,5 +208,6 @@ export function getReplyDisplayInfo(replyObj) {
     typeLabel: replyObj.text || "Message",
     caption: null,
     isBroadcast: false,
+    isCall: false,
   };
 }

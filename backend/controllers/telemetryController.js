@@ -200,7 +200,7 @@ export async function getMapUsers(req, res, next) {
 
     const enriched = await ensurePersistentUserProfilesBatch(rawEnriched);
     const response = { users: enriched };
-    await redis.set(globalCacheKey, JSON.stringify(response), "EX", 5).catch(() => {});
+    await redis.set(globalCacheKey, JSON.stringify(response), "EX", 2).catch(() => {});
 
     res.json(response);
   } catch (err) {
@@ -301,7 +301,7 @@ export async function getAllKalcerians(req, res, next) {
 
     const result = await ensurePersistentUserProfilesBatch(rawResult);
     const response = { kalcerians: result };
-    await redis.set(cacheKey, JSON.stringify(response), "EX", 10);
+    await redis.set(cacheKey, JSON.stringify(response), "EX", 2);
 
     res.json(response);
   } catch (err) {

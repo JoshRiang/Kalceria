@@ -229,47 +229,75 @@ export default function MapPage() {
       });
   }, []);
 
-  // Sync live coordinates with backend ONLY when online (every 35s keepalive to refresh 90s Redis TTL)
+  // Sync live coordinates with backend ONLY when online (every 5s keepalive to refresh 15s Redis TTL)
   useEffect(() => {
-    if (typeof window === "undefined" || !navigator.geolocation || !currentUser?.id) return;
+    if (typeof window === "undefined" || !currentUser?.id) return;
     if (presence !== "online") return;
 
-    const syncLivePosition = () => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          setSelfLiveCoords({ lat, lng });
-          prewarmOsmTiles(lat, lng, 15);
-          postLocation(lat, lng)
-            .then(() => {
-              fetchMapUsers().then((u) => setMapUsersData(u || []));
-              fetchKalcerians().then((k) => setKalcerians(k || []));
-            })
-            .catch(() => {});
-        },
-        (err) => {
-          console.warn("[Map] Location permission skipped or denied:", err.message);
-        },
-        { timeout: 8000, enableHighAccuracy: true, maximumAge: 25000 }
-      );
+    let isSubscribed = true;
+
+    const performSync = () => {
+      if (!isSubscribed) return;
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (!isSubscribed) return;
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            setSelfLiveCoords({ lat, lng });
+            prewarmOsmTiles(lat, lng, 15);
+            postLocation(lat, lng).catch(() => {});
+          },
+          (err) => {
+            if (!isSubscribed) return;
+            // Fallback to active coordinates if GPS refresh has momentary delay
+            const fbLat = selfLiveCoords?.lat || Number(currentUser.domicileLat);
+            const fbLng = selfLiveCoords?.lng || Number(currentUser.domicileLng);
+            if (Number.isFinite(fbLat) && Number.isFinite(fbLng)) {
+              postLocation(fbLat, fbLng).catch(() => {});
+            }
+          },
+          { timeout: 4000, enableHighAccuracy: false, maximumAge: 10000 }
+        );
+      } else {
+        const fbLat = selfLiveCoords?.lat || Number(currentUser.domicileLat);
+        const fbLng = selfLiveCoords?.lng || Number(currentUser.domicileLng);
+        if (Number.isFinite(fbLat) && Number.isFinite(fbLng)) {
+          postLocation(fbLat, fbLng).catch(() => {});
+        }
+      }
     };
 
-    syncLivePosition();
-    const keepaliveId = setInterval(syncLivePosition, 35 * 1000);
-    return () => clearInterval(keepaliveId);
-  }, [currentUser?.id, presence]);
+    performSync();
+    const keepaliveId = setInterval(performSync, 5000);
+    return () => {
+      isSubscribed = false;
+      clearInterval(keepaliveId);
+    };
+  }, [currentUser?.id, presence, selfLiveCoords?.lat, selfLiveCoords?.lng, currentUser?.domicileLat, currentUser?.domicileLng]);
 
-  // Immediately mark offline in Redis when leaving map or closing tab / laptop
+  // Immediately mark offline in Redis when leaving map, closing tab, or shutting down laptop
   useEffect(() => {
     if (!currentUser?.id) return;
+    const userId = currentUser.id;
 
     const markOffline = () => {
       try {
+        const payload = JSON.stringify({ userId });
+        // 1. SendBeacon with Blob application/json
         if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-          navigator.sendBeacon("/api/location/offline");
-        } else {
-          api.post("/location/offline").catch(() => {});
+          const blob = new Blob([payload], { type: "application/json" });
+          navigator.sendBeacon("/api/location/offline", blob);
+        }
+        // 2. Fetch with keepalive (standard across desktop Chrome/Edge/Firefox)
+        if (typeof fetch === "function") {
+          fetch("/api/location/offline", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true,
+            credentials: "include",
+          }).catch(() => {});
         }
       } catch {}
     };
