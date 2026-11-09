@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SmoothWaveform } from "./composer/SmoothWaveform";
+import { getReplyDisplayInfo } from "./messageBubble/replyHelpers";
 
 export function ChatComposerBar({
   isMapDark,
@@ -44,53 +45,76 @@ export function ChatComposerBar({
       )}
 
       {/* Reply Banner when user is replying to a message */}
-      {replyingTo && (
-        <div
-          className={`px-3 py-1.5 flex items-center justify-between text-xs select-none border-t transition-all ${
-            isMapDark
-              ? "bg-[#182229] text-white border-white/10"
-              : "bg-[#f4f5f7] text-black border-black/10"
-          }`}
-        >
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {/* Reply curved arrow icon from Picture 3 */}
-            <svg
-              viewBox="0 0 24 24"
-              className="w-4 h-4 shrink-0 opacity-80"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 15L3 9m0 0l6-6M3 9h11a6 6 0 0 1 6 6v3" />
-            </svg>
-            <div className="min-w-0 flex-1 border-l-2 border-current/40 pl-2">
+      {replyingTo && (() => {
+        const replyInfo = getReplyDisplayInfo(replyingTo);
+        return (
+          <div
+            className={`relative flex items-stretch justify-between text-xs select-none border-t border-b transition-all ${
+              isMapDark
+                ? "bg-[#182229] text-white border-white/10"
+                : "bg-[#f4f5f7] text-black border-black/10"
+            }`}
+          >
+            {/* Left: Reply curved arrow icon centered in container, self-stretch */}
+            <div className="flex items-center justify-center pl-3 pr-2.5 self-stretch shrink-0">
+              <svg
+                viewBox="0 0 24 24"
+                className="w-4 h-4 opacity-80"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 15L3 9m0 0l6-6M3 9h11a6 6 0 0 1 6 6v3" />
+              </svg>
+            </div>
+
+            {/* Thin Dashed Vertical Divider: touches top edge & bottom edge completely */}
+            <div
+              className={`w-0 self-stretch border-r border-dashed shrink-0 my-0 ${
+                isMapDark ? "border-white/35" : "border-black/30"
+              }`}
+            />
+
+            {/* Middle: Reply Info */}
+            <div className="min-w-0 flex-1 py-1.5 pl-2.5 pr-2 flex flex-col justify-center">
               <p
                 style={{ fontFamily: "Arial, sans-serif" }}
                 className="font-bold text-[10.5px] leading-tight truncate"
               >
-                {replyingTo.senderName || "Kalcerian"}
+                {replyInfo.senderName}
               </p>
               <p
                 style={{ fontFamily: "Arial, sans-serif" }}
-                className="text-[10px] opacity-75 truncate leading-tight mt-0.5"
+                className="text-[10px] opacity-80 truncate leading-tight mt-0.5"
               >
-                {replyingTo.text || (replyingTo.msgType === "voice" ? "🎤 Voice note" : "📷 Media")}
+                {replyInfo.typeLabel}
               </p>
+              {replyInfo.caption && (
+                <p
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="text-[10px] italic opacity-85 truncate leading-tight mt-0.5 font-normal"
+                >
+                  &ldquo;{replyInfo.caption}&rdquo;
+                </p>
+              )}
+            </div>
+
+            {/* Right: Cancel Button */}
+            <div className="flex items-center pr-3 shrink-0 self-stretch">
+              <button
+                type="button"
+                onClick={onCancelReply}
+                className="p-1 rounded-full hover:bg-current/10 cursor-pointer text-xs opacity-65 hover:opacity-100 transition-opacity"
+                title="Batal balas"
+              >
+                ✕
+              </button>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={onCancelReply}
-            className="p-1 rounded-full hover:bg-current/10 cursor-pointer text-xs ml-2 opacity-65 hover:opacity-100 transition-opacity"
-            title="Batal balas"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Input Form Pill */}
       <form

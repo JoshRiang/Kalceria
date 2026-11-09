@@ -1,5 +1,11 @@
 "use client";
 
+export {
+  formatVoiceDuration,
+  inferReplyMediaType,
+  getReplyDisplayInfo,
+} from "./replyHelpers";
+
 export function getFallbackWaveform(id, duration = 4) {
   const count = 14;
   const bars = [];

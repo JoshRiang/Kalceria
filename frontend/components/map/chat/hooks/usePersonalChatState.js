@@ -30,6 +30,10 @@ import {
   getDateLabel,
   getInitialSeedMessages,
 } from "./personalChat/chatHelpers";
+import {
+  formatVoiceDuration,
+  inferReplyMediaType,
+} from "../components/messageBubble/replyHelpers";
 
 export {
   LOCAL_CHAT_CACHE_PREFIX,
@@ -989,17 +993,25 @@ export function usePersonalChatState({
     const currentReply = replyingTo;
     setReplyingTo(null);
 
+    let replyPayload = null;
+    if (currentReply) {
+      replyPayload = {
+        id: currentReply.id,
+        text: currentReply.text || "",
+        msgType: currentReply.msgType,
+        mediaUrl: currentReply.mediaUrl || null,
+        voiceDuration: currentReply.voiceDuration || null,
+        videoDuration: currentReply.videoDuration || null,
+        caption: currentReply.caption || "",
+        senderId: currentReply.senderId,
+        senderName: currentReply.senderName || "Kalcerian",
+      };
+    }
+
     await appendAndEncryptMessage({
       text: trimmed,
       msgType: "text",
-      replyTo: currentReply
-        ? {
-            id: currentReply.id,
-            text: currentReply.text || (currentReply.msgType === "voice" ? "🎤 Voice note" : "📷 Media"),
-            senderId: currentReply.senderId,
-            senderName: currentReply.senderName || "Kalcerian",
-          }
-        : null,
+      replyTo: replyPayload,
     });
   };
 
@@ -1152,6 +1164,9 @@ export function usePersonalChatState({
     const ids = Array.isArray(customIds) ? customIds : selectedMsgIds;
     if (!ids.length) return;
     const idSet = new Set(ids);
+    if (ids.some((id) => id === playingVoiceId)) {
+      setPlayingVoiceId(null);
+    }
     setMessages((prev) => {
       const next = prev.filter((m) => !idSet.has(m.id));
       persistQuickLocal(next);
@@ -1169,22 +1184,67 @@ export function usePersonalChatState({
   };
 
   const handleCopySingleMessage = (msg) => {
-    const text = typeof msg === "string" ? msg : msg?.text;
-    if (text && typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(text).catch(() => { });
+    if (!msg) return;
+    const textToCopy =
+      typeof msg === "string"
+        ? msg
+        : msg.text ||
+          (msg.msgType === "voice"
+            ? `Voice message ${formatVoiceDuration(msg.voiceDuration || 7)}`
+            : msg.msgType === "call"
+            ? msg.text || "Call log"
+            : msg.mediaUrl || "");
+
+    if (!textToCopy) return;
+
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(textToCopy).catch(() => {
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = textToCopy;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        } catch {}
+      });
+    } else if (typeof document !== "undefined") {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = textToCopy;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch {}
     }
   };
 
   const handleStartReply = (msg) => {
     if (!msg) return;
     const senderName =
-      msg.senderId === myId
+      String(msg.senderId) === String(myId)
         ? "You"
         : activeChatUser?.displayName || activeChatUser?.name || "Kalcerian";
+
+    const mediaType = inferReplyMediaType(msg);
+    const voiceDuration = msg.voiceDuration || msg.duration || null;
+    const videoDuration = msg.videoDuration || null;
+    const isMedia = mediaType === "photo" || mediaType === "video";
+    const caption = isMedia ? (msg.text || "") : "";
+
     setReplyingTo({
       id: msg.id,
-      text: msg.text,
-      msgType: msg.msgType,
+      text: msg.text || "",
+      msgType: mediaType,
+      mediaUrl: msg.mediaUrl || null,
+      voiceDuration,
+      videoDuration,
+      caption,
       senderId: msg.senderId,
       senderName,
     });
@@ -1192,11 +1252,44 @@ export function usePersonalChatState({
 
   const handleCopySelectedMessages = () => {
     const selectedTexts = messages
-      .filter((m) => selectedMsgIds.includes(m.id) && m.text)
-      .map((m) => m.text)
+      .filter((m) => selectedMsgIds.includes(m.id))
+      .map((m) =>
+        m.text ||
+        (m.msgType === "voice"
+          ? `Voice message ${formatVoiceDuration(m.voiceDuration || 7)}`
+          : m.msgType === "call"
+          ? m.text || "Call log"
+          : m.mediaUrl || "")
+      )
+      .filter(Boolean)
       .join("\n");
-    if (selectedTexts && typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(selectedTexts).catch(() => { });
+
+    if (selectedTexts) {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(selectedTexts).catch(() => {
+          try {
+            const ta = document.createElement("textarea");
+            ta.value = selectedTexts;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+          } catch {}
+        });
+      } else if (typeof document !== "undefined") {
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = selectedTexts;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        } catch {}
+      }
     }
     setSelectedMsgIds([]);
     setSelectMode(false);

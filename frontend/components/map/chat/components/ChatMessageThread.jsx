@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { ChatMessageContextMenu } from "./ChatMessageContextMenu";
 
@@ -28,6 +28,31 @@ export function ChatMessageThread({
     position: { x: 0, y: 0 },
     message: null,
   });
+
+  const [nudgedMsgId, setNudgedMsgId] = useState(null);
+  const messageRefs = useRef({});
+  const nudgeTimerRef = useRef(null);
+
+  const handleJumpToMessage = useCallback((targetId) => {
+    if (!targetId) return;
+    const el = messageRefs.current[targetId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+      nudgeTimerRef.current = setTimeout(() => {
+        setNudgedMsgId(targetId);
+        nudgeTimerRef.current = setTimeout(() => {
+          setNudgedMsgId(null);
+        }, 750);
+      }, 200);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+    };
+  }, []);
 
   // Group flat [date_divider, message, ...] list into scoped day sections
   // so each sticky date divider stays strictly inside its own day's scroll boundary and never overlaps.
@@ -130,20 +155,30 @@ export function ChatMessageThread({
             )}
 
             {section.messages.map((item) => (
-              <ChatMessageBubble
+              <div
                 key={item.id}
-                item={item}
-                myId={myId}
-                isMapDark={isMapDark}
-                selectMode={selectMode}
-                selectedMsgIds={selectedMsgIds}
-                handleToggleSelectMsg={handleToggleSelectMsg}
-                playingVoiceId={playingVoiceId}
-                setPlayingVoiceId={setPlayingVoiceId}
-                onResendMessage={onResendMessage}
-                replyingTo={replyingTo}
-                onOpenContextMenu={handleOpenContextMenu}
-              />
+                ref={(el) => {
+                  if (el) messageRefs.current[item.id] = el;
+                  else delete messageRefs.current[item.id];
+                }}
+                className="w-full"
+              >
+                <ChatMessageBubble
+                  item={item}
+                  myId={myId}
+                  isMapDark={isMapDark}
+                  selectMode={selectMode}
+                  selectedMsgIds={selectedMsgIds}
+                  handleToggleSelectMsg={handleToggleSelectMsg}
+                  playingVoiceId={playingVoiceId}
+                  setPlayingVoiceId={setPlayingVoiceId}
+                  onResendMessage={onResendMessage}
+                  replyingTo={replyingTo}
+                  onOpenContextMenu={handleOpenContextMenu}
+                  onJumpToMessage={handleJumpToMessage}
+                  isNudged={nudgedMsgId === item.id}
+                />
+              </div>
             ))}
           </div>
         ))}

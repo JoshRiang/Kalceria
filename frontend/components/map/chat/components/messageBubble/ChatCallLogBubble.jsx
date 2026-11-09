@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { formatCallDurationTwoUnits } from "./bubbleHelpers";
 import { ChatStatusIndicator } from "./ChatStatusIndicator";
 import { ChatMiniCheckbox } from "./ChatMiniCheckbox";
@@ -14,6 +15,7 @@ export function ChatCallLogBubble({
   handleToggleSelectMsg,
   onOpenContextMenu,
   onResendMessage,
+  isNudged = false,
 }) {
   const isVideo = item.callMode === "video";
   const durationText = formatCallDurationTwoUnits(item.callDuration || 0);
@@ -35,7 +37,13 @@ export function ChatCallLogBubble({
       />
 
       {/* Timestamp aligned to the LEFT of the Phone / Video Icon */}
-      <div
+      <motion.div
+        animate={isNudged ? { x: [0, 20, -3, 0] } : { x: 0 }}
+        transition={
+          isNudged
+            ? { duration: 0.65, ease: [0.22, 1, 0.36, 1], times: [0, 0.35, 0.7, 1] }
+            : { duration: 0.15 }
+        }
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -74,7 +82,7 @@ export function ChatCallLogBubble({
             </svg>
           )}
         </div>
-      </div>
+      </motion.div>
 
       <ChatStatusIndicator
         isMe={isMe}

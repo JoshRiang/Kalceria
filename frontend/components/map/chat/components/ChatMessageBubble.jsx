@@ -1,10 +1,12 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { formatMessageTime } from "../hooks/usePersonalChatState";
 import { ChatMediaCard } from "./ChatMediaCard";
 import {
   formatCallDurationTwoUnits,
 } from "./messageBubble/bubbleHelpers";
+import { getReplyDisplayInfo } from "./messageBubble/replyHelpers";
 import { ChatCallLogBubble } from "./messageBubble/ChatCallLogBubble";
 import { ChatVoiceNoteBubble } from "./messageBubble/ChatVoiceNoteBubble";
 import { ChatStatusIndicator } from "./messageBubble/ChatStatusIndicator";
@@ -24,6 +26,8 @@ export function ChatMessageBubble({
   onResendMessage,
   replyingTo,
   onOpenContextMenu,
+  onJumpToMessage,
+  isNudged = false,
 }) {
   const isMe = String(item.senderId) === myId;
   const isSelected = selectedMsgIds.includes(item.id);
@@ -42,6 +46,7 @@ export function ChatMessageBubble({
         handleToggleSelectMsg={handleToggleSelectMsg}
         onOpenContextMenu={onOpenContextMenu}
         onResendMessage={onResendMessage}
+        isNudged={isNudged}
       />
     );
   }
@@ -61,6 +66,7 @@ export function ChatMessageBubble({
         handleToggleSelectMsg={handleToggleSelectMsg}
         onOpenContextMenu={onOpenContextMenu}
         onResendMessage={onResendMessage}
+        isNudged={isNudged}
       />
     );
   }
@@ -86,7 +92,13 @@ export function ChatMessageBubble({
           onToggleSelect={() => handleToggleSelectMsg(item.id)}
         />
 
-        <div
+        <motion.div
+          animate={isNudged ? { x: [0, 20, -3, 0] } : { x: 0 }}
+          transition={
+            isNudged
+              ? { duration: 0.65, ease: [0.22, 1, 0.36, 1], times: [0, 0.35, 0.7, 1] }
+              : { duration: 0.15 }
+          }
           className={`transition-all duration-200 ${
             isSelected ? "scale-[1.035] shadow-lg z-10" : "scale-100"
           } ${isReplyingTarget ? "opacity-50" : "opacity-100"}`}
@@ -111,7 +123,7 @@ export function ChatMessageBubble({
               {formatMessageTime(item.ts)}
             </span>
           </div>
-        </div>
+        </motion.div>
 
         <ChatStatusIndicator
           isMe={isMe}
@@ -140,65 +152,91 @@ export function ChatMessageBubble({
         onToggleSelect={() => handleToggleSelectMsg(item.id)}
       />
 
-      <div
-        onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onOpenContextMenu?.(e, item);
-        }}
-        className={`relative max-w-[80%] rounded-xl px-2.5 py-1.5 text-xs leading-snug shadow-sm border transition-all duration-200 ${
-          isSelected ? "scale-[1.035] shadow-lg z-10" : "scale-100"
-        } ${
-          isMe
-            ? item.status === "failed"
-              ? isMapDark
-                ? "bg-red-700/85 border-red-500 text-white rounded-tr-xs"
-                : "bg-red-600/85 border-red-700 text-black rounded-tr-xs"
-              : isMapDark
-              ? "bg-black border-white/20 text-white rounded-tr-xs"
-              : "bg-white border-black text-black rounded-tr-xs"
-            : isMapDark
-            ? "bg-[#161b22] border-white/15 text-white rounded-tl-xs"
-            : "bg-[#f4f4f5] border-black text-black rounded-tl-xs"
-        } ${isReplyingTarget ? "opacity-50" : "opacity-100"}`}
+      <motion.div
+        animate={isNudged ? { x: [0, 20, -3, 0] } : { x: 0 }}
+        transition={
+          isNudged
+            ? { duration: 0.65, ease: [0.22, 1, 0.36, 1], times: [0, 0.35, 0.7, 1] }
+            : { duration: 0.15 }
+        }
+        className="relative max-w-[80%]"
       >
-        {/* Reply Reference Card (standard Line/WA/IG quote) */}
-        {item.replyTo && (
-          <div
-            className={`mb-1.5 px-2 py-1 rounded-md text-[10.5px] leading-tight select-none border-l-2 ${
-              isMapDark
-                ? "bg-white/10 border-white text-white/90"
-                : "bg-black/5 border-black text-black/90"
+        <div
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onOpenContextMenu?.(e, item);
+          }}
+          className={`relative rounded-xl px-2.5 py-1.5 text-xs leading-snug shadow-sm border transition-all duration-200 ${
+            isSelected ? "scale-[1.035] shadow-lg z-10" : "scale-100"
+          } ${
+            isMe
+              ? item.status === "failed"
+                ? isMapDark
+                  ? "bg-red-700/85 border-red-500 text-white rounded-tr-xs"
+                  : "bg-red-600/85 border-red-700 text-black rounded-tr-xs"
+                : isMapDark
+                ? "bg-black border-white/20 text-white rounded-tr-xs"
+                : "bg-white border-black text-black rounded-tr-xs"
+              : isMapDark
+              ? "bg-[#161b22] border-white/15 text-white rounded-tl-xs"
+              : "bg-[#f4f4f5] border-black text-black rounded-tl-xs"
+          } ${isReplyingTarget ? "opacity-50" : "opacity-100"}`}
+        >
+          {/* Reply Reference Card (standard Line/WA/IG quote) */}
+          {item.replyTo && (() => {
+            const quoteInfo = getReplyDisplayInfo(item.replyTo);
+            return (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onJumpToMessage?.(item.replyTo.id);
+                }}
+                className={`mb-1.5 px-2.5 py-1.5 rounded-md text-[10.5px] leading-tight select-none border-l-2 cursor-pointer transition-opacity hover:opacity-85 ${
+                  isMapDark
+                    ? "bg-white/10 border-white text-white/90"
+                    : "bg-black/5 border-black text-black/90"
+                }`}
+                title="Ketuk untuk menuju pesan asli"
+              >
+                <p
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="font-bold text-[9.5px] opacity-85 leading-tight truncate"
+                >
+                  {quoteInfo.senderName}
+                </p>
+                <p
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
+                >
+                  {quoteInfo.typeLabel}
+                </p>
+                {quoteInfo.caption && (
+                  <p
+                    style={{ fontFamily: "Arial, sans-serif" }}
+                    className="text-[10px] italic opacity-85 leading-tight truncate mt-0.5 font-normal"
+                  >
+                    &ldquo;{quoteInfo.caption}&rdquo;
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Message Text */}
+          <span className="break-words whitespace-pre-wrap pr-12">{item.text}</span>
+
+          {/* Sent Time Mark (Bottom Right inside bubble) */}
+          <span
+            style={{ fontFamily: "Arial, sans-serif" }}
+            className={`float-right ml-2 mt-1 text-[9.5px] font-bold leading-none select-none ${
+              isMapDark ? "text-white/80" : "text-black/80"
             }`}
           >
-            <p
-              style={{ fontFamily: "Arial, sans-serif" }}
-              className="font-bold text-[9.5px] opacity-80"
-            >
-              {item.replyTo.senderName || "Kalcerian"}
-            </p>
-            <p
-              style={{ fontFamily: "Arial, sans-serif" }}
-              className="truncate opacity-75 mt-0.5 text-[10px]"
-            >
-              {item.replyTo.text || "Pesan"}
-            </p>
-          </div>
-        )}
-
-        {/* Message Text */}
-        <span className="break-words whitespace-pre-wrap pr-12">{item.text}</span>
-
-        {/* Sent Time Mark (Bottom Right inside bubble) */}
-        <span
-          style={{ fontFamily: "Arial, sans-serif" }}
-          className={`float-right ml-2 mt-1 text-[9.5px] font-bold leading-none select-none ${
-            isMapDark ? "text-white/80" : "text-black/80"
-          }`}
-        >
-          {formatMessageTime(item.ts)}
-        </span>
-      </div>
+            {formatMessageTime(item.ts)}
+          </span>
+        </div>
+      </motion.div>
 
       {/* Status indicator outside the box, middle point aligned */}
       <ChatStatusIndicator

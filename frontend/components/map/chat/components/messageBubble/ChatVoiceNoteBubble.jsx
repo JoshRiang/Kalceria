@@ -20,6 +20,7 @@ export function ChatVoiceNoteBubble({
   handleToggleSelectMsg,
   onOpenContextMenu,
   onResendMessage,
+  isNudged = false,
 }) {
   const isPlaying = playingVoiceId === item.id;
 
@@ -320,7 +321,13 @@ export function ChatVoiceNoteBubble({
       />
 
       {/* Compact Voice Note Column (NO outer message box) */}
-      <div
+      <motion.div
+        animate={isNudged ? { x: [0, 20, -3, 0] } : { x: 0 }}
+        transition={
+          isNudged
+            ? { duration: 0.65, ease: [0.22, 1, 0.36, 1], times: [0, 0.35, 0.7, 1] }
+            : { duration: 0.15 }
+        }
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -453,7 +460,7 @@ export function ChatVoiceNoteBubble({
             {formatMessageTime(item.ts)}
           </span>
         </div>
-      </div>
+      </motion.div>
 
       <ChatStatusIndicator
         isMe={isMe}
