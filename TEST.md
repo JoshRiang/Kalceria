@@ -143,5 +143,5 @@ npm --prefix frontend run build
 
 ## 3. Mandatory Compliance Directives (AGENTS.md)
 1. **Zero Dummy User Accounts**: No mock accounts (`HP Mobile User`, `Tester`) may ever remain in Postgres or Redis feeds.
-2. **Golden Baseline BEKU**: Commit `12beaa9` (`BaselineNovember#2`) is synchronized and strictly protected.
+2. **Golden Baseline BEKU**: Commit `6926af6` (`BaselineNovember#2`) is synchronized and strictly protected.
 3. **One-Shot Gate**: All pull requests and deployments must pass all 4 verification gates and 5 live native smoke probes before sign-off.
