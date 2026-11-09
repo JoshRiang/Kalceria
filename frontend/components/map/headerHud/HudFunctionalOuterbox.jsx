@@ -1,8 +1,7 @@
 "use client";
 
 import { memo, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { HudTextureDivider } from "./HudTextureDivider";
+import { motion } from "framer-motion";
 import { HudRecenterButton } from "./HudRecenterButton";
 import { HudEyeButton } from "./HudEyeButton";
 import { HudThemeButton } from "./HudThemeButton";
@@ -12,7 +11,7 @@ import { HudTopDynamicBroadcast } from "./HudTopDynamicBroadcast";
 import { HudQuickActionsMenu } from "./HudQuickActionsMenu";
 
 /**
- * Tool Perkakas Icon (Spanner/Wrench)
+ * Tool Perkakas Icon (Spanner / Wrench)
  * Light Mode: fill #000000, border #ffffff
  * Dark Mode: fill #ffffff, border #000000
  */
@@ -37,9 +36,9 @@ function ToolPerkakasIcon({ isMapDark, className = "w-3.5 h-3.5 sm:w-4 sm:h-4" }
  * HudFunctionalOuterbox
  * 
  * Houses top functional icons (Event, Recenter, Eye, Plus, Theme, Sound)
- * inside a crisp outerbox with cyber crosshatch texture dividers, inner expanding square
- * press animations, a protruding semi-circle Tool tab for collapse/expand drawer behavior,
- * and seamless downstairs expansion when an active broadcast is published.
+ * inside a solid outerbox (white in light mode, deep black in dark mode)
+ * with clean 1px seam dividers, decoupled tactile popping buttons on hover/press,
+ * and a protruding semi-circle tab with the Tool Perkakas Icon that toggles rolling up/down.
  */
 export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
   isMapDark,
@@ -72,7 +71,6 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
     setIsCollapsed((prev) => {
       const next = !prev;
       if (next) {
-        // Genie out / close open action menus and broadcast popovers
         setActionMenuOpen?.(false);
         setMenuOpen?.(false);
       }
@@ -80,47 +78,39 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
     });
   }, [setActionMenuOpen, setMenuOpen]);
 
-  // Background and border styling for the outerbox container
-  const boxBg = isMapDark ? "bg-[#0a0e27]" : "bg-[#ffffff]";
-  const boxBorder = isMapDark ? "border-[#2a2d42]" : "border-black/20";
-  const boxShadow = isMapDark
-    ? "shadow-[0_6px_20px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)]"
-    : "shadow-[0_4px_16px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)]";
+  const boxBg = isMapDark ? "bg-[#000000]" : "bg-[#ffffff]";
+  const boxBorder = isMapDark ? "border-white" : "border-black";
+  const seamColor = isMapDark ? "bg-white/20" : "bg-black/20";
+  const shadow = isMapDark
+    ? "shadow-[0_4px_20px_rgba(0,0,0,0.85)]"
+    : "shadow-[0_4px_16px_rgba(0,0,0,0.14)]";
+
+  // When collapsed, the whole toolbar scrolls up out of screen while keeping the tool tab reachable
+  const collapseOffset = hasActiveOwnBroadcast ? -108 : -52;
 
   return (
-    <div className="relative flex flex-col items-end pointer-events-auto select-none">
-      {/* Collapsible Outerbox Container */}
-      <motion.div
-        animate={{
-          y: isCollapsed ? -68 : 0,
-          opacity: isCollapsed ? 0 : 1,
-          scale: isCollapsed ? 0.94 : 1,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 380,
-          damping: 30,
-          mass: 0.8,
-        }}
-        style={{
-          pointerEvents: isCollapsed ? "none" : "auto",
-        }}
-        className={`relative flex flex-col rounded-lg ${boxBg} border ${boxBorder} ${boxShadow} overflow-visible`}
+    <motion.div
+      animate={{
+        y: isCollapsed ? collapseOffset : 0,
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 380,
+        damping: 30,
+        mass: 0.8,
+      }}
+      className="relative flex flex-col items-center pointer-events-auto select-none"
+    >
+      {/* Main Solid Outerbox */}
+      <div
+        className={`relative flex flex-col rounded-xl ${boxBg} border-[1.5px] ${boxBorder} ${shadow} overflow-visible`}
       >
-        {/* Main Functional Icons Row */}
-        <div className="relative flex items-center h-10 sm:h-11 px-1">
+        {/* Row of Functional Icons */}
+        <div className="relative flex items-center h-10 sm:h-11 px-1.5 gap-1">
           {/* Slot 0: Dynamic Event (if active) */}
           {topDynamicEvent && (
             <>
-              <div className="relative group/slot flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9">
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-0.5 rounded-sm transition-transform duration-200 pointer-events-none scale-0 opacity-0 group-hover/slot:scale-95 group-hover/slot:opacity-100 group-active/slot:scale-110 group-active/slot:opacity-100"
-                  style={{
-                    backgroundColor: isMapDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
-                    border: isMapDark ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid rgba(0, 0, 0, 0.15)",
-                  }}
-                />
+              <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
                 <HudTopDynamicEvent
                   topDynamicEvent={topDynamicEvent}
                   hasTopDynamicEventNotif={hasTopDynamicEventNotif}
@@ -130,20 +120,12 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
                   isMapDark={isMapDark}
                 />
               </div>
-              <HudTextureDivider isMapDark={isMapDark} vertical={true} />
+              <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
             </>
           )}
 
           {/* Slot 1: Recenter Button */}
-          <div className="relative group/slot flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9">
-            <span
-              aria-hidden="true"
-              className="absolute inset-0.5 rounded-sm transition-transform duration-200 pointer-events-none scale-0 opacity-0 group-hover/slot:scale-95 group-hover/slot:opacity-100 group-active/slot:scale-110 group-active/slot:opacity-100"
-              style={{
-                backgroundColor: isMapDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
-                border: isMapDark ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid rgba(0, 0, 0, 0.15)",
-              }}
-            />
+          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
             <HudRecenterButton
               isMapDark={isMapDark}
               recenterMap={recenterMap}
@@ -151,18 +133,10 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
             />
           </div>
 
-          <HudTextureDivider isMapDark={isMapDark} vertical={true} />
+          <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
 
           {/* Slot 2: Eye Button */}
-          <div className="relative group/slot flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9">
-            <span
-              aria-hidden="true"
-              className="absolute inset-0.5 rounded-sm transition-transform duration-200 pointer-events-none scale-0 opacity-0 group-hover/slot:scale-95 group-hover/slot:opacity-100 group-active/slot:scale-110 group-active/slot:opacity-100"
-              style={{
-                backgroundColor: isMapDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
-                border: isMapDark ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid rgba(0, 0, 0, 0.15)",
-              }}
-            />
+          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
             <HudEyeButton
               isMapDark={isMapDark}
               presence={presence}
@@ -171,18 +145,10 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
             />
           </div>
 
-          <HudTextureDivider isMapDark={isMapDark} vertical={true} />
+          <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
 
           {/* Slot 3: Plus (+) Button with Quick Actions Menu */}
-          <div className="relative group/slot flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9">
-            <span
-              aria-hidden="true"
-              className="absolute inset-0.5 rounded-sm transition-transform duration-200 pointer-events-none scale-0 opacity-0 group-hover/slot:scale-95 group-hover/slot:opacity-100 group-active/slot:scale-110 group-active/slot:opacity-100"
-              style={{
-                backgroundColor: isMapDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
-                border: isMapDark ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid rgba(0, 0, 0, 0.15)",
-              }}
-            />
+          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
             <button
               type="button"
               disabled={isSelfOffline}
@@ -193,7 +159,7 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
               className={`p-1.5 transition-all outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
                 isSelfOffline
                   ? "opacity-35 grayscale cursor-not-allowed"
-                  : "hover:scale-110 active:scale-95 cursor-pointer group"
+                  : "cursor-pointer group"
               }`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -244,36 +210,20 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
             />
           </div>
 
-          <HudTextureDivider isMapDark={isMapDark} vertical={true} />
+          <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
 
           {/* Slot 4: Theme Button */}
-          <div className="relative group/slot flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9">
-            <span
-              aria-hidden="true"
-              className="absolute inset-0.5 rounded-sm transition-transform duration-200 pointer-events-none scale-0 opacity-0 group-hover/slot:scale-95 group-hover/slot:opacity-100 group-active/slot:scale-110 group-active/slot:opacity-100"
-              style={{
-                backgroundColor: isMapDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
-                border: isMapDark ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid rgba(0, 0, 0, 0.15)",
-              }}
-            />
+          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
             <HudThemeButton
               isMapDark={isMapDark}
               setIsMapDark={setIsMapDark}
             />
           </div>
 
-          <HudTextureDivider isMapDark={isMapDark} vertical={true} />
+          <span aria-hidden="true" className={`w-[1px] h-5 ${seamColor} self-center shrink-0`} />
 
           {/* Slot 5: Sound Button */}
-          <div className="relative group/slot flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9">
-            <span
-              aria-hidden="true"
-              className="absolute inset-0.5 rounded-sm transition-transform duration-200 pointer-events-none scale-0 opacity-0 group-hover/slot:scale-95 group-hover/slot:opacity-100 group-active/slot:scale-110 group-active/slot:opacity-100"
-              style={{
-                backgroundColor: isMapDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
-                border: isMapDark ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid rgba(0, 0, 0, 0.15)",
-              }}
-            />
+          <div className="relative flex items-center justify-center group/btn rounded-lg p-0.5 transition-all duration-200 hover:scale-105 active:scale-110 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:border hover:border-black/20 dark:hover:border-white/30 hover:shadow-sm">
             <HudSoundButton
               isMapDark={isMapDark}
               soundMuted={soundMuted}
@@ -282,10 +232,10 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
           </div>
         </div>
 
-        {/* Lower Compartment: Active Broadcast Box (Picture 2 bottom sketch & Picture 3) */}
+        {/* Lower Compartment: Active Broadcast Box */}
         {hasActiveOwnBroadcast && (
           <div className="relative flex flex-col w-full">
-            <HudTextureDivider isMapDark={isMapDark} vertical={false} />
+            <span aria-hidden="true" className={`h-[1px] w-full ${seamColor}`} />
             <div className="relative flex items-center justify-center py-1 px-2">
               <HudTopDynamicBroadcast
                 hasActiveOwnBroadcast={hasActiveOwnBroadcast}
@@ -297,22 +247,18 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
             </div>
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Protruding Semi-Circle Tab Housing the Tool Perkakas Icon */}
-      <div
-        className={`relative z-20 flex justify-center ${
-          hasActiveOwnBroadcast ? "w-full" : "w-full"
-        }`}
-      >
+      <div className="relative z-20 flex justify-center w-full">
         <button
           type="button"
           onClick={toggleCollapse}
-          title={isCollapsed ? "Expand Tools" : "Collapse Tools"}
+          title={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
           aria-label={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
-          className={`flex items-center justify-center h-5 sm:h-5.5 px-3 -mt-[1px] ${
+          className={`flex items-center justify-center h-5 sm:h-5.5 px-3 -mt-[1.5px] ${
             hasActiveOwnBroadcast ? "w-28 sm:w-36 rounded-b-lg" : "w-11 sm:w-12 rounded-b-full"
-          } ${boxBg} border-b border-x ${boxBorder} ${boxShadow} cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group`}
+          } ${boxBg} border-b-[1.5px] border-x-[1.5px] ${boxBorder} ${shadow} cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group`}
         >
           <ToolPerkakasIcon
             isMapDark={isMapDark}
@@ -322,7 +268,6 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
           />
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 });
-

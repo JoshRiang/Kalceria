@@ -1,16 +1,15 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { motion } from "framer-motion";
 import { HudProfileAvatar } from "./HudProfileAvatar";
-import { HudTextureDivider } from "./HudTextureDivider";
 
 /**
  * Generic Profile Icon (Silhouette)
  * Light Mode: fill #000000, border #ffffff
  * Dark Mode: fill #ffffff, border #000000
  */
-function GenericProfileIcon({ isMapDark, className = "w-4 h-4 sm:w-4.5 sm:h-4.5" }) {
+function GenericProfileIcon({ isMapDark, className = "w-3.5 h-3.5 sm:w-4 sm:h-4" }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
   return (
@@ -30,9 +29,10 @@ function GenericProfileIcon({ isMapDark, className = "w-4 h-4 sm:w-4.5 sm:h-4.5"
 /**
  * HudRightProfileDock
  * 
- * Docked on the right screen edge (Picture 5 style).
- * Wraps the User Photo Profile in the upper compartment and a Generic Profile Icon
- * in the lower compartment, separated by the cyber crosshatch texture divider.
+ * Docked on the right screen edge.
+ * Features a protruding semi-circle tab on the left with the Generic Profile Icon
+ * that toggles the sidebar drawer closed/open (slides into right edge with the tab remaining visible).
+ * Houses the circular photo profile in a recessed well ("hole in a stack") that opens the full profile card.
  */
 export const HudRightProfileDock = memo(function HudRightProfileDock({
   isMapDark,
@@ -42,25 +42,54 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
   isStatusBusy,
   onOpenOwnProfile,
 }) {
-  const boxBg = isMapDark ? "bg-[#0a0e27]" : "bg-[#ffffff]";
-  const boxBorder = isMapDark ? "border-[#2a2d42]" : "border-black/20";
-  const boxShadow = isMapDark
-    ? "shadow-[0_6px_20px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)]"
-    : "shadow-[0_4px_16px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.8)]";
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const boxBg = isMapDark ? "bg-[#000000]" : "bg-[#ffffff]";
+  const boxBorder = isMapDark ? "border-white" : "border-black";
+  const shadow = isMapDark
+    ? "shadow-[0_4px_20px_rgba(0,0,0,0.85)]"
+    : "shadow-[0_4px_16px_rgba(0,0,0,0.14)]";
 
   return (
     <motion.aside
-      initial={{ x: 50, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.25, ease: "easeOut" }}
+      initial={{ x: 60, opacity: 0 }}
+      animate={{
+        // When collapsed, slides into the right edge by the width of the avatar box (~62px),
+        // leaving the protruding semi-circle tab visible at the right edge
+        x: isCollapsed ? 60 : 0,
+        opacity: 1,
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 380,
+        damping: 30,
+        mass: 0.8,
+      }}
       aria-label="User Profile Quick Dock"
-      className="fixed right-3 sm:right-4 top-20 sm:top-24 z-[1000] pointer-events-auto select-none"
+      className="fixed right-0 top-20 sm:top-24 z-[1000] pointer-events-auto select-none flex items-center"
     >
-      <div
-        className={`flex flex-col items-center rounded-xl ${boxBg} border ${boxBorder} ${boxShadow} overflow-hidden p-1`}
+      {/* Protruding Semi-Circle Tab (Jendolan) on the LEFT: Toggles Sidebar Drawer */}
+      <button
+        type="button"
+        onClick={() => setIsCollapsed((prev) => !prev)}
+        title={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
+        aria-label={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
+        className={`flex items-center justify-center w-6 sm:w-7 h-11 sm:h-12 rounded-l-full ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group z-20 -mr-[1.5px]`}
       >
-        {/* Upper Compartment: Circular Photo Profile Avatar with Online Dot */}
-        <div className="relative group/slot flex items-center justify-center p-1">
+        <GenericProfileIcon
+          isMapDark={isMapDark}
+          className={`transition-transform duration-300 ${
+            isCollapsed ? "rotate-180" : "group-hover:scale-110"
+          }`}
+        />
+      </button>
+
+      {/* Main Profile Card: Houses Photo Avatar in a Recessed Well (Hole in a Stack) */}
+      <div
+        className={`relative flex items-center justify-center rounded-l-xl ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} p-2 z-10`}
+      >
+        {/* Recessed well / hole in a stack for the circular avatar */}
+        <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full p-[2px] bg-black/[0.06] dark:bg-white/[0.08] border-[1.5px] border-black/25 dark:border-white/30 shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] flex items-center justify-center">
           <HudProfileAvatar
             isMapDark={isMapDark}
             currentUser={currentUser}
@@ -70,32 +99,7 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
             onOpenOwnProfile={onOpenOwnProfile}
           />
         </div>
-
-        {/* Textured Divider */}
-        <HudTextureDivider isMapDark={isMapDark} vertical={false} className="my-0.5" />
-
-        {/* Lower Compartment: Generic Profile Icon */}
-        <div className="relative group/slot flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9">
-          <span
-            aria-hidden="true"
-            className="absolute inset-0.5 rounded-sm transition-transform duration-200 pointer-events-none scale-0 opacity-0 group-hover/slot:scale-95 group-hover/slot:opacity-100 group-active/slot:scale-110 group-active/slot:opacity-100"
-            style={{
-              backgroundColor: isMapDark ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
-              border: isMapDark ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid rgba(0, 0, 0, 0.15)",
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => onOpenOwnProfile?.()}
-            title="Open Profile Panel"
-            aria-label="Open Profile Panel"
-            className="relative z-10 p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none cursor-pointer flex items-center justify-center"
-          >
-            <GenericProfileIcon isMapDark={isMapDark} />
-          </button>
-        </div>
       </div>
     </motion.aside>
   );
 });
-
