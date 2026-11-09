@@ -128,7 +128,7 @@ Sebelum mengeluarkan kata "sudah" atau melapor ke user, jalankan pipeline valida
 
 ## 4. Disiplin Keamanan & Git (Non-Negotiable)
 1. **BaselineNovember#2 Adalah Sakral**:
-   - Commit `74eaf7474234dcd2eff2de33bea7f1c5bbc30844` adalah Golden Baseline yang **BEKU** (Updated by Programmer).
+   - Commit `12beaa9c837684c8a6134d37624879094d6a146b` adalah Golden Baseline yang **BEKU** (Updated by Programmer).
    - DILARANG KERAS checkout, rebase, merge, atau push ke `BaselineNovember#2` tanpa perizinan eksplisit dari programmer.
 2. **Clean Branching**:
    - Semua pekerjaan berada di `main` dan didorong ke `origin main`.
