@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { MapAuthGate } from "@/components/map/MapAuthGate";
-import { INITIAL_MOCK_MINI_EVENTS, INITIAL_ACCEPTED_COLLABS, INITIAL_EVENT_REQUESTS, cleanEventDesc, mergeEvents } from "@/components/map/mockMiniEvents";
+import { INITIAL_MOCK_MINI_EVENTS, cleanEventDesc } from "@/components/map/mockMiniEvents";
 
 import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
 import { AtmosphericBackground } from "@/components/map/AtmosphericBackground";
@@ -19,16 +19,9 @@ import { EditProfileModal } from "@/components/map/EditProfileModal";
 const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel").then((m) => m.KalceriansPanel), { ssr: false });
 const MapHeaderHud = dynamic(() => import("@/components/map/MapHeaderHud").then((m) => m.MapHeaderHud), { ssr: false });
 const MapModals = dynamic(() => import("@/components/map/MapModals").then((m) => m.MapModals), { ssr: false });
-import { hasUserSession, clearSession } from "@/lib/session";
-import {
-  resolvePersistentAvatarUrl,
-  resolvePersistentCover,
-  persistProfileIdentityCache,
-} from "@/lib/profileIdentity";
-import { toSmartTitleCase } from "@/lib/titleCase";
-import { splitMediaUrlListClient } from "@/lib/urlSecurity";
+import { hasUserSession } from "@/lib/session";
+import { resolvePersistentAvatarUrl } from "@/lib/profileIdentity";
 import { prewarmOsmTiles, hasValidCoordinates } from "@/lib/osmTilePrewarmer";
-import { getInstantInitialCenter } from "@/components/snapmap/snapMapHelpers";
 import { useMapBlockedUsers } from "@/components/map/mapPage/useMapBlockedUsers";
 import {
   useMapChatAndNotifications,
@@ -36,31 +29,25 @@ import {
 } from "@/components/map/hooks/useMapChatAndNotifications";
 import { buildVisibleMapUsers, buildVisibleEvents } from "./mapPage/mapEntitiesProjection";
 import { buildSidebarKalcerians } from "./mapPage/sidebarKalceriansProjection";
-import { parseEventDesc } from "./mapPage/eventDescCodec";
-import { buildMiniEventPayload } from "./mapPage/miniEventPayload";
-import {
-  patchUserCollection,
-  patchEventCollectionForUser,
-  buildSyncedProfilePatch,
-} from "./mapPage/profilePatch";
 import { useMapStartupGate } from "./mapPage/useMapStartupGate";
+import { useEagerGeolocation } from "./mapPage/useEagerGeolocation";
+import { useMapSession } from "./mapPage/useMapSession";
+import { useLiveLocationSync } from "./mapPage/useLiveLocationSync";
 import { useOfflineBeacon } from "./mapPage/useOfflineBeacon";
 import { useEventsRefreshListener } from "./mapPage/useEventsRefreshListener";
+import { useMapDataPolling } from "./mapPage/useMapDataPolling";
+import { useMapViewport } from "./mapPage/useMapViewport";
 import { useMapBroadcastActions } from "./mapPage/useMapBroadcastActions";
 import { useMapPresenceActions } from "./mapPage/useMapPresenceActions";
+import { useMiniEventActions } from "./mapPage/useMiniEventActions";
 import { useMapProfileActions } from "./mapPage/useMapProfileActions";
-import api, {
-  fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents, fetchMiniEventsWithMeta,
-  postBroadcast, putBroadcast, delBroadcast, postLocation, patchVisibility,
-  postMiniEvent, putMiniEvent, delMiniEvent, ackPersonalChatRead,
-} from "@/lib/api";
+import { ackPersonalChatRead } from "@/lib/api";
 
 import {
   EVENT_CARD_BG_DARK,
   EVENT_CARD_BG_LIGHT,
   preloadAllMapBackgrounds,
 } from "@/lib/mapBgCache";
-import { prewarmVideoBatch, sortItemsByProximity } from "@/lib/videoPrewarmer";
 
 const SnapMap = dynamic(() => import("@/components/SnapMap"), {
   ssr: false,
@@ -129,7 +116,6 @@ export default function MapPage() {
   const {
     showStartup,
     setShowStartup,
-    checkShouldSkipStartup,
     handleStartupComplete,
   } = useMapStartupGate();
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -137,39 +123,15 @@ export default function MapPage() {
   const [notLoggedIn, setNotLoggedIn] = useState(() => (typeof window !== "undefined" ? !hasUserSession() : false));
   const [initialCoordsResolved, setInitialCoordsResolved] = useState(false);
   const hasInitialCenteredRef = useRef(false);
+  const mapRef = useRef(null);
 
-  // Eager pre-calculation of GPS coordinates immediately on component mount (during startup intro)
-  useEffect(() => {
-    let active = true;
-    if (typeof window !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (!active) return;
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          setSelfLiveCoords({ lat, lng });
-          setInitialCoordsResolved(true);
-          if (mapRef.current) {
-            mapRef.current.setView([lat, lng], 15, { animate: false });
-          }
-          prewarmOsmTiles(lat, lng, 15);
-        },
-        () => {
-          if (active) setInitialCoordsResolved(true);
-        },
-        { timeout: 3500, enableHighAccuracy: false, maximumAge: 30000 }
-      );
-    } else {
-      setInitialCoordsResolved(true);
-    }
-    const safetyTimeout = setTimeout(() => {
-      if (active) setInitialCoordsResolved(true);
-    }, 2800);
-    return () => {
-      active = false;
-      clearTimeout(safetyTimeout);
-    };
-  }, []);
+  // Hook Ledger Pos 5: M2 (Eager pre-calculation of GPS coordinates on mount)
+  useEagerGeolocation({
+    mapRef,
+    setSelfLiveCoords,
+    setInitialCoordsResolved,
+  });
+
   const [isStatusBusy, setIsStatusBusy] = useState(false);
   const [isMapDark, setIsMapDark] = useState(false);
   const [focusedUserId, setFocusedUserId] = useState(null);
@@ -195,266 +157,66 @@ export default function MapPage() {
     }, 1500); // 1.5s matching the white flash transition
   };
 
-  // Eagerly preload & decode all 9 BG_IMPROVE_FOR_MAP WebP backgrounds immediately on map entry
+  // Hook Ledger Pos 6: M3 (Eagerly preload all WebP backgrounds)
   useEffect(() => {
     preloadAllMapBackgrounds();
   }, []);
 
-  // Login gate + fetch user profile
-  useEffect(() => {
-    if (!hasUserSession()) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- This reads the existing browser session gate after hydration.
-      setNotLoggedIn(true);
-      return;
-    }
-    setNotLoggedIn(false);
-    fetchMe()
-      .then((user) => {
-        const enrichedUser = {
-          ...user,
-          profilePicture: resolvePersistentAvatarUrl(user),
-          coverImage: resolvePersistentCover(user),
-          coverUrl: resolvePersistentCover(user),
-        };
-        setCurrentUser(enrichedUser);
-        if (user?.email) {
-          try {
-            localStorage.setItem("kalceria_user_email", user.email);
-          } catch {}
-        }
-        setPresence(user.allowLiveLocation ? "online" : "invisible");
-        if (user.broadcast?.message) setStatusText(user.broadcast.message);
-        if (hasValidCoordinates(user.domicileLat, user.domicileLng)) {
-          const userCoordKey = `kalceria_last_known_coords_${user.id}`;
-          try {
-            if (!localStorage.getItem(userCoordKey)) {
-              localStorage.setItem(
-                userCoordKey,
-                JSON.stringify({
-                  lat: Number(user.domicileLat),
-                  lng: Number(user.domicileLng),
-                })
-              );
-            }
-          } catch (_) {}
-          prewarmOsmTiles(Number(user.domicileLat), Number(user.domicileLng), 15);
-        }
-      })
-      .catch(() => {
-        clearSession();
-        setNotLoggedIn(true);
-      });
-  }, []);
+  // Hook Ledger Pos 7: M4 (Login gate + user profile fetching)
+  useMapSession({
+    setNotLoggedIn,
+    setCurrentUser,
+    setPresence,
+    setStatusText,
+  });
 
-  // Sync live coordinates with backend ONLY when online (every 5s keepalive to refresh 15s Redis TTL)
-  useEffect(() => {
-    if (typeof window === "undefined" || !currentUser?.id) return;
-    if (presence !== "online") return;
+  // Hook Ledger Pos 8: M5 (Sync live coordinates with backend when online)
+  useLiveLocationSync({
+    currentUser,
+    presence,
+    selfLiveCoords,
+    showStartup,
+    mapRef,
+    setSelfLiveCoords,
+  });
 
-    let isSubscribed = true;
-
-    const performSync = () => {
-      if (!isSubscribed) return;
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            if (!isSubscribed) return;
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            setSelfLiveCoords({ lat, lng });
-            try {
-              localStorage.setItem(`kalceria_last_known_coords_${currentUser.id}`, JSON.stringify({ lat, lng }));
-            } catch (_) {}
-            if (showStartup && mapRef.current) {
-              mapRef.current.setView([lat, lng], 15, { animate: false });
-            }
-            prewarmOsmTiles(lat, lng, 15);
-            postLocation(lat, lng).catch(() => {});
-          },
-          (err) => {
-            if (!isSubscribed) return;
-            // Fallback to active coordinates if GPS refresh has momentary delay
-            const fbLat = selfLiveCoords?.lat || Number(currentUser.domicileLat);
-            const fbLng = selfLiveCoords?.lng || Number(currentUser.domicileLng);
-            if (Number.isFinite(fbLat) && Number.isFinite(fbLng)) {
-              postLocation(fbLat, fbLng).catch(() => {});
-            }
-          },
-          { timeout: 4000, enableHighAccuracy: false, maximumAge: 10000 }
-        );
-      } else {
-        const fbLat = selfLiveCoords?.lat || Number(currentUser.domicileLat);
-        const fbLng = selfLiveCoords?.lng || Number(currentUser.domicileLng);
-        if (Number.isFinite(fbLat) && Number.isFinite(fbLng)) {
-          postLocation(fbLat, fbLng).catch(() => {});
-        }
-      }
-    };
-
-    performSync();
-    const keepaliveId = setInterval(performSync, 5000);
-    return () => {
-      isSubscribed = false;
-      clearInterval(keepaliveId);
-    };
-  }, [currentUser?.id, presence, selfLiveCoords?.lat, selfLiveCoords?.lng, currentUser?.domicileLat, currentUser?.domicileLng]);
-
+  // Hook Ledger Pos 9: M6 (Offline beacon on pagehide / beforeunload / unmount)
   useOfflineBeacon({ currentUser });
 
+  // Hook Ledger Pos 10: M7 (Window event listener for refresh-events-request)
   useEventsRefreshListener({ setEvents, syncCollabStateFromServer });
 
-  // fetch map users + kalcerians (poll every 10s)
-  useEffect(() => {
-    if (notLoggedIn || !currentUser) return;
-    let alive = true;
-    const load = async () => {
-      try {
-        const [users, kals, eventMeta] = await Promise.all([
-          fetchMapUsers(),
-          fetchKalcerians(),
-          fetchMiniEventsWithMeta(),
-        ]);
-        if (!alive) return;
-        const activeEvents = eventMeta?.events || [];
-        const mergedEvents = mergeEvents(activeEvents);
-        setMapUsersData(users || []);
-        setKalcerians(kals || []);
-        setEvents(mergedEvents);
-        syncCollabStateFromServer(mergedEvents, eventMeta?.requestedEventId ?? null);
-        setIsDataLoading(false);
+  // Hook Ledger Pos 11: M8 (Poll map users + kalcerians every 10s + video prewarming)
+  useMapDataPolling({
+    notLoggedIn,
+    currentUser,
+    selfLiveCoords,
+    syncCollabStateFromServer,
+    setMapUsersData,
+    setKalcerians,
+    setEvents,
+    setIsDataLoading,
+  });
 
-        // Pre-warm event clips and profile video covers prioritized by geographic proximity
-        const centerCoords =
-          selfLiveCoords?.lat && selfLiveCoords?.lng
-            ? selfLiveCoords
-            : currentUser?.domicileLat && currentUser?.domicileLng
-            ? { lat: Number(currentUser.domicileLat), lng: Number(currentUser.domicileLng) }
-            : null;
-
-        const videoUrls = [];
-        if (currentUser?.coverImage && currentUser?.coverType === "video") {
-          videoUrls.push(currentUser.coverImage);
-        }
-
-        const sortedEvents = sortItemsByProximity(mergedEvents, centerCoords);
-        sortedEvents.forEach((ev) => {
-          if (ev.mediaUrl) {
-            splitMediaUrlListClient(ev.mediaUrl).forEach((u) => videoUrls.push(u));
-          }
-        });
-
-        const sortedKals = sortItemsByProximity(kals || [], centerCoords);
-        sortedKals.forEach((u) => {
-          if (u.coverImage && (u.coverType === "video" || u.coverImage.includes(".mp4") || u.coverImage.includes("/api/blob/raw"))) {
-            videoUrls.push(u.coverImage);
-          }
-        });
-
-        prewarmVideoBatch(videoUrls);
-      } catch (err) {
-        console.error("[Map] fetch error", err);
-        if (alive) setIsDataLoading(false);
-      }
-    };
-    load();
-    const interval = setInterval(load, 10000);
-    return () => {
-      alive = false;
-      clearInterval(interval);
-    };
-  }, [notLoggedIn, currentUser, syncCollabStateFromServer]);
-
-  const recenterMap = useCallback(() => {
-    if (!mapRef.current) return;
-    setIsRecentering(true);
-    const me = mapUsersData.find((u) => u.id === currentUser?.id);
-    if (me && me.isOnline !== false && hasValidCoordinates(me.lat, me.lng)) {
-      const mLat = Number(me.lat);
-      const mLng = Number(me.lng);
-      prewarmOsmTiles(mLat, mLng, 15);
-      mapRef.current.flyTo([mLat, mLng], 15, {
-        animate: true,
-        duration: 0.5,
-        easeLinearity: 0.25,
-      });
-    } else if (selfLiveCoords && hasValidCoordinates(selfLiveCoords.lat, selfLiveCoords.lng)) {
-      prewarmOsmTiles(selfLiveCoords.lat, selfLiveCoords.lng, 15);
-      mapRef.current.flyTo([selfLiveCoords.lat, selfLiveCoords.lng], 15, {
-        animate: true,
-        duration: 0.5,
-        easeLinearity: 0.25,
-      });
-    } else if (hasValidCoordinates(currentUser?.domicileLat, currentUser?.domicileLng)) {
-      const dLat = Number(currentUser.domicileLat);
-      const dLng = Number(currentUser.domicileLng);
-      prewarmOsmTiles(dLat, dLng, 15);
-      mapRef.current.flyTo([dLat, dLng], 15, {
-        animate: true,
-        duration: 0.5,
-        easeLinearity: 0.25,
-      });
-    } else {
-      prewarmOsmTiles(-6.2735, 106.715, 14);
-      mapRef.current.flyTo([-6.2735, 106.7150], 14, {
-        animate: true,
-        duration: 0.5,
-        easeLinearity: 0.25,
-      });
-    }
-  }, [mapUsersData, currentUser, selfLiveCoords]);
-
-  const mapRef = useRef(null);
-
-  // Map Event Tracking
-  const handleMapReady = useCallback((mapInstance) => {
-    // eslint-disable-next-line react-hooks/immutability -- Leaflet calls this external ref callback; the live map must be available synchronously.
-    mapRef.current = mapInstance;
-    setIsMapEngineReady(true);
-
-    // Invalidate size immediately so tiles compute & load in background
-    mapInstance.invalidateSize();
-
-    mapInstance.on("moveend", () => {
-      setIsRecentering(false);
-    });
-  }, []);
-
-  // Guarantee tile loading & viewport synchronization when startup sequence completes
-  useEffect(() => {
-    if (!showStartup && mapRef.current) {
-      mapRef.current.invalidateSize({ debounceMoveend: true });
-      const t1 = setTimeout(() => {
-        mapRef.current?.invalidateSize({ debounceMoveend: true });
-      }, 100);
-      return () => clearTimeout(t1);
-    }
-  }, [showStartup]);
-
-  // Calculate instant initial map coordinates and set view silently behind startup sequence
-  const initialCenter = useMemo(() => {
-    if (selfLiveCoords && hasValidCoordinates(selfLiveCoords.lat, selfLiveCoords.lng)) {
-      return [selfLiveCoords.lat, selfLiveCoords.lng];
-    }
-    return getInstantInitialCenter(currentUser);
-  }, [currentUser, selfLiveCoords]);
-
-  useEffect(() => {
-    if (showStartup && mapRef.current) {
-      const coords =
-        selfLiveCoords ||
-        (hasValidCoordinates(currentUser?.domicileLat, currentUser?.domicileLng)
-          ? { lat: Number(currentUser.domicileLat), lng: Number(currentUser.domicileLng) }
-          : null);
-      if (coords && hasValidCoordinates(coords.lat, coords.lng)) {
-        mapRef.current.setView([coords.lat, coords.lng], 15, { animate: false });
-      }
-    }
-  }, [showStartup, selfLiveCoords, currentUser]);
+  // Hook Ledger Pos 12: M9, M10 (recenterMap, handleMapReady, initialCenter, viewport sync)
+  const {
+    recenterMap,
+    handleMapReady,
+    initialCenter,
+  } = useMapViewport({
+    mapRef,
+    mapUsersData,
+    currentUser,
+    selfLiveCoords,
+    showStartup,
+    setIsRecentering,
+    setIsMapEngineReady,
+  });
 
   // Blocked users state (modularized package hook: synced with localStorage + backend API)
   const { blockedUserIds, handleBlockUser, handleUnblockUser } = useMapBlockedUsers();
 
-  // derived: ONLY online & live-location-enabled users with real finite coordinates render on the map (zero mock coordinates, zero offline avatars)
+  // derived: ONLY online & live-location-enabled users with real finite coordinates render on the map
   const visibleMapUsers = useMemo(() => {
     return buildVisibleMapUsers(
       { mapUsersData, kalcerians, currentUser, selfLiveCoords, presence, blockedUserIds },
@@ -547,7 +309,7 @@ export default function MapPage() {
     }
   }, [markPersonalChatRead, isSelfOffline]);
 
-  // derived: kalcerians for the sidebar (only real registered users, strictly omitting dummy mock profiles and admin test credentials)
+  // derived: kalcerians for the sidebar (only real registered users, strictly omitting dummy mock profiles)
   const sidebarKalcerians = useMemo(() => {
     return buildSidebarKalcerians(
       { kalcerians, events, searchQuery, personalChatMap, favouriteUserIds, currentUser },
@@ -559,6 +321,7 @@ export default function MapPage() {
     (e) => e.id === "own" || (currentUser?.id && String(e.creator?.id) === String(currentUser?.id))
   );
 
+  // Hook Ledger Pos 16: M11 (Broadcast handlers and remote edit listener)
   const {
     hasActiveOwnBroadcast,
     handleGoToOwnEvent,
@@ -585,6 +348,7 @@ export default function MapPage() {
     handleOpenItemOnMap,
   });
 
+  // Hook Ledger Pos 17: Presence toggle (non-memo)
   const { handlePresenceChange } = useMapPresenceActions({
     setIsStatusBusy,
     setPresence,
@@ -601,247 +365,39 @@ export default function MapPage() {
     setNotice,
   });
 
-  const handleOpenEditEvent = useCallback((eventItem) => {
-    if (!eventItem || isSelfOffline) return;
-    const { category, mediaUrl, location, cleanDesc } = parseEventDesc(eventItem);
+  // Hook Ledger Pos 18: Mini event actions (CRUD + guarded collab actions)
+  const {
+    handleOpenEditEvent,
+    saveMiniEvent,
+    handleOpenEventModal,
+    guardedRequestCollab,
+    guardedPromptCancelRequest,
+    guardedOpenRequests,
+    guardedCollaboratorUpload,
+    deleteMiniEvent,
+  } = useMiniEventActions({
+    events,
+    currentUser,
+    mapUsersData,
+    eventForm,
+    editingEventId,
+    isSelfOffline,
+    setEvents,
+    setEditingEventId,
+    setEventForm,
+    setShowEventModal,
+    setBusy,
+    setNotice,
+    syncCollabStateFromServer,
+    triggerToolbarRetractCycle,
+    handleOpenItemOnMap,
+    handleRequestCollab,
+    handlePromptCancelRequest,
+    handleOpenRequests,
+    handleCollaboratorUpload,
+  });
 
-    const mediaMetadataByUrl = {};
-    if (Array.isArray(eventItem.mediaItems)) {
-      eventItem.mediaItems.forEach((m) => {
-        if (m?.url && (m.width || m.height || m.duration)) {
-          mediaMetadataByUrl[m.url] = {
-            width: m.width || null,
-            height: m.height || null,
-            duration: m.duration || null,
-          };
-        }
-      });
-    }
-
-    setEventForm({
-      title: eventItem.title || "",
-      description: cleanDesc,
-      category,
-      mediaUrl,
-      mediaMetadataByUrl,
-      mediaSyncedAt: Date.now(),
-      location,
-      lat: eventItem.lat || null,
-      lng: eventItem.lng || null,
-    });
-    setEditingEventId(eventItem.id);
-    setShowEventModal(true);
-  }, [isSelfOffline]);
-
-  async function saveMiniEvent(e) {
-    e.preventDefault();
-    if (isSelfOffline) return;
-    setBusy(true);
-    try {
-      const me = mapUsersData.find((u) => u.id === currentUser?.id);
-
-      // Prioritize coordinates from LocationAutocomplete if selected, otherwise current GPS / user domicile
-      let currentLat = eventForm.lat ? Number(eventForm.lat) : (me?.lat || currentUser?.domicileLat || -6.2715);
-      let currentLng = eventForm.lng ? Number(eventForm.lng) : (me?.lng || currentUser?.domicileLng || 106.7135);
-
-      if (!eventForm.lat && typeof navigator !== "undefined" && navigator.geolocation) {
-        try {
-          const pos = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              timeout: 2000,
-              maximumAge: 60000,
-              enableHighAccuracy: false,
-            });
-          });
-          if (pos?.coords) {
-            currentLat = pos.coords.latitude;
-            currentLng = pos.coords.longitude;
-          }
-        } catch {}
-      }
-
-      // Location string from form or reverse geocoding
-      let locationName = (eventForm.location || "").trim();
-      if (!locationName) {
-        try {
-          const revRes = await api.get('/location/reverse', {
-            params: { lat: currentLat, lng: currentLng },
-          });
-          if (revRes?.data?.formatted) {
-            locationName = revRes.data.formatted;
-          }
-        } catch {}
-      }
-
-      const payload = buildMiniEventPayload(
-        { eventForm, currentLat, currentLng, locationName },
-        { splitMediaUrlListClientFn: splitMediaUrlListClient, toSmartTitleCaseFn: toSmartTitleCase }
-      );
-
-      let eventIdToUpdate = editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;
-      let savedEventObj = null;
-
-      if (!eventIdToUpdate) {
-        try {
-          const createdRes = await postMiniEvent(payload);
-          const createdEvent = createdRes?.data?.event || createdRes?.data || createdRes;
-          if (createdEvent && typeof createdEvent === "object") {
-            savedEventObj = cleanEventDesc({
-              ...payload,
-              ...createdEvent,
-              id: createdEvent.id || `evt_${Date.now()}`,
-              lat: Number(createdEvent.lat ?? currentLat),
-              lng: Number(createdEvent.lng ?? currentLng),
-              creator: {
-                ...(createdEvent.creator || {}),
-                id: currentUser?.id || createdEvent.creator?.id,
-                name: currentUser?.displayName || currentUser?.name || createdEvent.creator?.name,
-                displayName: currentUser?.displayName || currentUser?.name || createdEvent.creator?.displayName,
-                nickname: currentUser?.nickname || createdEvent.creator?.nickname,
-                profilePicture: resolvePersistentAvatarUrl(currentUser),
-              },
-            });
-            setEvents((prev) => [
-              savedEventObj,
-              ...prev.filter((ev) => String(ev.id) !== String(savedEventObj.id) && String(ev.creator?.id) !== String(currentUser?.id)),
-            ]);
-          }
-        } catch (postErr) {
-          // If backend reports 409 (user already has an active event), fetch and update it
-          const latestList = await fetchMiniEvents().catch(() => []);
-          const existingOwn = (latestList || []).find((ev) => String(ev.creator?.id || ev.creatorId) === String(currentUser?.id));
-          if (existingOwn?.id) {
-            eventIdToUpdate = existingOwn.id;
-          } else {
-            throw postErr;
-          }
-        }
-      }
-
-      if (eventIdToUpdate) {
-        const updatedRes = await putMiniEvent(eventIdToUpdate, payload);
-        const updatedEvent = updatedRes?.data?.event || updatedRes?.data || updatedRes;
-        savedEventObj = cleanEventDesc({
-          ...payload,
-          ...(updatedEvent && typeof updatedEvent === "object" ? updatedEvent : {}),
-          id: eventIdToUpdate,
-          lat: Number(updatedEvent?.lat ?? currentLat),
-          lng: Number(updatedEvent?.lng ?? currentLng),
-          creator: {
-            ...(updatedEvent?.creator || {}),
-            id: currentUser?.id,
-            name: currentUser?.displayName || currentUser?.name,
-            displayName: currentUser?.displayName || currentUser?.name,
-            nickname: currentUser?.nickname,
-            profilePicture: resolvePersistentAvatarUrl(currentUser),
-          },
-        });
-        setEvents((prev) => {
-          const exists = prev.some((ev) => String(ev.id) === String(eventIdToUpdate));
-          if (exists) {
-            return prev.map((ev) => (String(ev.id) === String(eventIdToUpdate) ? { ...ev, ...savedEventObj } : ev));
-          }
-          return [savedEventObj, ...prev];
-        });
-      }
-
-      const refreshedMeta = await fetchMiniEventsWithMeta().catch(() => null);
-      if (refreshedMeta?.events && refreshedMeta.events.length > 0) {
-        const merged = mergeEvents(refreshedMeta.events);
-        setEvents(merged);
-        syncCollabStateFromServer(merged, refreshedMeta.requestedEventId ?? null);
-        if (!savedEventObj && currentUser?.id) {
-          savedEventObj = merged.find((ev) => String(ev.creator?.id) === String(currentUser.id)) || null;
-        }
-      }
-      setNotice(eventIdToUpdate ? "Mini event updated." : "Mini event saved.");
-      setEditingEventId(null);
-      setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {}, location: "", lat: null, lng: null });
-      setShowEventModal(false);
-      triggerToolbarRetractCycle();
-
-      // Immediately pan/fly to the created/updated event on the map and open its popup
-      if (savedEventObj) {
-        setTimeout(() => {
-          handleOpenItemOnMap(savedEventObj, "event");
-        }, 120);
-      }
-    } catch (err) {
-      const errorMsg = err?.response?.data?.error || err?.message || "Failed to save mini event.";
-      setNotice(errorMsg);
-      setBusy(false);
-      throw err;
-    }
-    setBusy(false);
-  }
-
-  const handleOpenEventModal = useCallback((open = true) => {
-    if (open && isSelfOffline) return;
-    if (open) {
-      if (!editingEventId) {
-        const own = events.find((ev) => ev.creator?.id === currentUser?.id || ev.id === "own");
-        if (own) {
-          handleOpenEditEvent(own);
-          return;
-        } else {
-          setEditingEventId(null);
-          setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {}, location: "", lat: null, lng: null });
-        }
-      }
-    } else {
-      setEditingEventId(null);
-    }
-    setShowEventModal(open);
-  }, [events, currentUser, editingEventId, handleOpenEditEvent, isSelfOffline]);
-
-  const guardedRequestCollab = useCallback((id) => {
-    if (isSelfOffline) return;
-    handleRequestCollab?.(id);
-  }, [isSelfOffline, handleRequestCollab]);
-
-  const guardedPromptCancelRequest = useCallback((id, title) => {
-    if (isSelfOffline) return;
-    handlePromptCancelRequest?.(id, title);
-  }, [isSelfOffline, handlePromptCancelRequest]);
-
-  const guardedOpenRequests = useCallback((id) => {
-    if (isSelfOffline) return;
-    handleOpenRequests?.(id);
-  }, [isSelfOffline, handleOpenRequests]);
-
-  const guardedCollaboratorUpload = useCallback((id) => {
-    if (isSelfOffline) return;
-    handleCollaboratorUpload?.(id);
-  }, [isSelfOffline, handleCollaboratorUpload]);
-
-  async function deleteMiniEvent(targetId) {
-    const idToDelete = targetId || editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;
-    if (!idToDelete) return;
-
-    // 1. Instant 0ms Optimistic UI Updates
-    setEvents((prev) => prev.filter((ev) => ev.id !== idToDelete));
-    setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {} });
-    setEditingEventId(null);
-    setShowEventModal(false);
-    setNotice("Mini event deleted.");
-
-    // Trigger auto-retract animation so toolbar tucks in and reconfigures cleanly
-    triggerToolbarRetractCycle();
-
-    // 2. Asynchronous backend deletion in background
-    try {
-      await delMiniEvent(idToDelete).catch(() => {});
-      const refreshedMeta = await fetchMiniEventsWithMeta().catch(() => null);
-      if (refreshedMeta?.events) {
-        const merged = mergeEvents(refreshedMeta.events);
-        setEvents(merged);
-        syncCollabStateFromServer(merged, refreshedMeta.requestedEventId ?? null);
-      }
-    } catch (err) {
-      console.warn("Delete mini event background sync warning:", err?.message);
-    }
-  }
-
+  // Hook Ledger Pos 19: Profile actions
   const {
     handleSaveProfile,
     handleRequestChangePassword,
@@ -958,101 +514,107 @@ export default function MapPage() {
             hasActiveOwnEvent={Boolean(activeOwnEvent)}
             onGoToOwnEvent={handleGoToOwnEvent}
             hasActiveOwnBroadcast={hasActiveOwnBroadcast}
-            onTopDynamicBroadcastClick={handleTopDynamicBroadcastClick}
+            onGoToOwnBroadcast={handleTopDynamicBroadcastClick}
+            drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
+            activeOwnEvent={activeOwnEvent}
+            onEditOwnEvent={() => {
+              if (activeOwnEvent) handleOpenEditEvent(activeOwnEvent);
+            }}
+            onEditOwnBroadcast={handleOpenEditBroadcast}
+            isSelfOffline={isSelfOffline}
             isToolbarRetracting={isToolbarRetracting}
           />
 
-          {/* Kalcerians Panel */}
-          <input
-            type="checkbox"
-            id="panel-toggle"
-            className="hidden peer"
-            checked={drawerOpen}
-            onChange={(e) => setDrawerOpen(e.target.checked)}
-          />
-
           <KalceriansPanel
-            scheduleTimeout={scheduleTimeout} mapUsersData={mapUsersData} kalcerians={kalcerians} events={events}
-            searchQuery={searchQuery} setSearchQuery={setSearchQuery} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
-            isDataLoading={isDataLoading}
-            isMapDark={isMapDark} setFocusedUserId={setFocusedUserId}
-            sidebarKalcerians={sidebarKalcerians} focusUser={focusUser} blockedUserIds={blockedUserIds}
-            onBlockUser={handleBlockUser} onUnblockUser={handleUnblockUser} onOpenItemOnMap={handleOpenItemOnMap}
-            currentUser={currentUser} requestedEventId={requestedEventId} eventRequestsMap={eventRequestsMap}
-            acceptedCollabsMap={acceptedCollabsMap} eventGroupChatMap={eventGroupChatMap}
-            personalChatMap={personalChatMap} recentlyMessagedUserIds={recentlyMessagedUserIds}
-            favouriteUserIds={favouriteUserIds} mutedUserIds={mutedUserIds}
-            onToggleFavourite={toggleFavouriteUser} onToggleMute={toggleMuteUser}
-            onOutgoingMessageUpdate={recordOutgoingPersonalMessage}
+            drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
+            searchQuery={searchQuery} setSearchQuery={setSearchQuery}
+            kalcerians={sidebarKalcerians} currentUser={currentUser}
+            avatarUrl={avatarUrl}
+            focusUser={focusUser} handleOpenItemOnMap={handleOpenItemOnMap}
+            recentlyMessagedUserIds={recentlyMessagedUserIds}
             onPersonalChatOpen={handlePersonalChatOpen}
-            onPromptCancelRequest={guardedPromptCancelRequest} onOpenRequests={guardedOpenRequests}
+            favouriteUserIds={favouriteUserIds} toggleFavouriteUser={toggleFavouriteUser}
+            mutedUserIds={mutedUserIds} toggleMuteUser={toggleMuteUser}
             isSelfOffline={isSelfOffline}
-          />
-
-          <OwnProfileDrawer
-            isOpen={showOwnProfile}
-            onClose={() => setShowOwnProfile(false)}
-            currentUser={currentUser}
-            isMapDark={isMapDark}
-            onEditProfile={() => {
-              setShowOwnProfile(false);
-              setShowEditProfileModal(true);
-            }}
-          />
-
-          <EditProfileModal
-            show={showEditProfileModal}
-            onClose={() => setShowEditProfileModal(false)}
-            isMapDark={isMapDark}
-            currentUser={currentUser}
-            onSaveProfile={handleSaveProfile}
-            onRequestChangePassword={handleRequestChangePassword}
-            onRequestDeleteAccount={() => {
-              setShowEditProfileModal(false);
-              setShowDeleteAccountModal(true);
-            }}
-          />
-
-          <CollaboratorUploadOverlay
-            uploadState={collaboratorUploadState}
-            onDismiss={() => setCollaboratorUploadState(null)}
+            onBlockUser={handleBlockUser}
+            onUnblockUser={handleUnblockUser}
           />
         </>
       )}
 
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 4px; }
-        @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
-        @keyframes floatUp { 0% { transform: translateY(10px); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } 100% { transform: translateY(-115vh); opacity: 0; } }
-      `}</style>
-      {/* Startup Sequence Overlay :: FORZA HORIZON STYLE */}
-      <StartupSequenceOverlay
-        showStartup={hasMounted && showStartup && !checkShouldSkipStartup()}
-        authReady={Boolean(currentUser)}
-        mapEngineReady={isMapEngineReady}
-        isReady={!isDataLoading && hasMounted && !notLoggedIn && (initialCoordsResolved || Boolean(currentUser))}
-        onComplete={handleStartupComplete}
+      {/* Fullscreen Own Profile Modern Drawer (Slides from Right with 0ms backdrop lag) */}
+      <OwnProfileDrawer
+        isOpen={showOwnProfile}
+        onClose={() => setShowOwnProfile(false)}
+        currentUser={currentUser}
+        avatarUrl={avatarUrl}
+        activeOwnEvent={activeOwnEvent}
+        onOpenEditProfile={() => setShowEditProfileModal(true)}
+        onOpenEditEvent={handleOpenEditEvent}
+        onOpenCreateEvent={() => handleOpenEventModal(true)}
+        onRequestChangePassword={handleRequestChangePassword}
+        onRequestDeleteAccount={() => setShowDeleteAccountModal(true)}
       />
 
+      {/* Edit Profile Modal (Avatar, Bio, Domicile, Links) */}
+      <EditProfileModal
+        isOpen={showEditProfileModal}
+        onClose={() => setShowEditProfileModal(false)}
+        currentUser={currentUser}
+        onSave={handleSaveProfile}
+      />
+
+      {/* Collaborator Direct Upload Modal (Non-owners adding clips to ongoing event) */}
+      <CollaboratorUploadOverlay
+        uploadState={collaboratorUploadState}
+        onClose={() => setCollaboratorUploadState(null)}
+        onUploadSuccess={(updatedEvent) => {
+          if (updatedEvent && updatedEvent.id) {
+            setEvents((prev) =>
+              prev.map((ev) => (String(ev.id) === String(updatedEvent.id) ? { ...ev, ...updatedEvent } : ev))
+            );
+          }
+          setCollaboratorUploadState(null);
+        }}
+      />
+
+      {/* Full-Screen Cyberpunk Startup Sequence Overlay */}
+      {showStartup && (
+        <StartupSequenceOverlay onComplete={handleStartupComplete} />
+      )}
+
+      {/* Map Modals Component (Status, Event, Requests, Delete, Quit Modals) */}
       <MapModals
         showStatusModal={showStatusModal} setShowStatusModal={setShowStatusModal}
-        isMapDark={isMapDark} saveBroadcast={saveBroadcast} statusText={statusText} setStatusText={setStatusText} busy={busy}
-        isEditingBroadcast={isEditingBroadcast} setIsEditingBroadcast={setIsEditingBroadcast}
+        statusText={statusText} setStatusText={setStatusText} saveBroadcast={saveBroadcast}
+        busy={busy} isEditingBroadcast={isEditingBroadcast}
         showDeleteBroadcastConfirm={showDeleteBroadcastConfirm} setShowDeleteBroadcastConfirm={setShowDeleteBroadcastConfirm}
         handleConfirmDeleteBroadcast={handleConfirmDeleteBroadcast}
-        showEventModal={showEventModal} setShowEventModal={handleOpenEventModal}
-        saveMiniEvent={saveMiniEvent} eventForm={eventForm} setEventForm={setEventForm}
-        activeOwnEvent={activeOwnEvent} deleteMiniEvent={deleteMiniEvent} editingEventId={editingEventId}
+        showEventModal={showEventModal} setShowEventModal={setShowEventModal}
+        editingEventId={editingEventId} eventForm={eventForm} setEventForm={setEventForm}
+        saveMiniEvent={saveMiniEvent} deleteMiniEvent={deleteMiniEvent}
+        activeOwnEvent={activeOwnEvent}
+        showRequestsModal={showRequestsModal} setShowRequestsModal={setShowRequestsModal}
+        viewingRequestsEventId={viewingRequestsEventId}
+        events={events} eventRequestsMap={eventRequestsMap}
+        handleAcceptCollabRequest={handleAcceptCollabRequest}
+        handleDeclineCollabRequest={handleDeclineCollabRequest}
         showCancelRequestModal={showCancelRequestModal} setShowCancelRequestModal={setShowCancelRequestModal}
         cancelRequestTarget={cancelRequestTarget} handleConfirmCancelRequest={handleConfirmCancelRequest}
-        showRequestsModal={showRequestsModal} setShowRequestsModal={setShowRequestsModal}
-        viewingRequestsEvent={events.find((e) => String(e.id) === String(viewingRequestsEventId))}
-        currentRequestsList={viewingRequestsEventId ? (eventRequestsMap[viewingRequestsEventId] || []) : []}
-        onAcceptCollabRequest={handleAcceptCollabRequest} onDeclineCollabRequest={handleDeclineCollabRequest}
+        showQuitModal={showQuitModal} setShowQuitModal={setShowQuitModal}
+        handleQuitConfirm={handleQuitConfirm}
         showDeleteAccountModal={showDeleteAccountModal} setShowDeleteAccountModal={setShowDeleteAccountModal}
         handleConfirmDeleteAccount={handleConfirmDeleteAccount}
-        isExiting={isExiting} showQuitModal={showQuitModal} setShowQuitModal={setShowQuitModal} handleQuitConfirm={handleQuitConfirm}
       />
+
+      <style jsx global>{`
+        /* Dynamic HUD floating animation */
+        @keyframes floatUp {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-4px); }
+          100% { transform: translateY(0px); }
+        }
+      `}</style>
     </main>
   );
 }
