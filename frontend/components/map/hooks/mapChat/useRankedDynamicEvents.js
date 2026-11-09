@@ -94,13 +94,16 @@ export function useRankedDynamicEvents({
     return enriched;
   }, [events, currentUser, acceptedCollabsMap, requestedEventId, eventRequestsMap, eventGroupChatMap]);
 
-  const topDynamicEvent = userRankedEvents[0]?.event || null;
-  const hasTopDynamicEventNotif = userRankedEvents.some((entry) => entry.hasNotif);
+  // Strict Creator Ownership Protocol: Collaborators do NOT share event/broadcast ownership on the top toolbar HUD
+  const topDynamicEvent = userRankedEvents.find((entry) => entry.isOwner)?.event || null;
+  const hasTopDynamicEventNotif = userRankedEvents
+    .filter((entry) => entry.isOwner)
+    .some((entry) => entry.hasNotif);
 
   // Direct Icon Tap Algorithm for Top Bar Dynamic Event Icon:
   // Opens the newest notification box (Envelope vs. Group Chat) or falls back safely to opening the newest Event Card on the map
   const handleTopDynamicEventClick = useCallback(() => {
-    const best = userRankedEvents[0];
+    const best = userRankedEvents.find((entry) => entry.isOwner);
     if (!best || !best.event) return;
 
     const targetEvent = best.event;

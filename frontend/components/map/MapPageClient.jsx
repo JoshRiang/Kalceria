@@ -93,6 +93,14 @@ export default function MapPage() {
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [isEditingBroadcast, setIsEditingBroadcast] = useState(false);
   const [showDeleteBroadcastConfirm, setShowDeleteBroadcastConfirm] = useState(false);
+  const [isToolbarRetracting, setIsToolbarRetracting] = useState(false);
+
+  const triggerToolbarRetractCycle = useCallback(() => {
+    setIsToolbarRetracting(true);
+    setTimeout(() => {
+      setIsToolbarRetracting(false);
+    }, 450);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(() => {
     if (typeof window !== "undefined" && window.innerWidth < 860) {
@@ -257,6 +265,11 @@ export default function MapPage() {
           coverUrl: resolvePersistentCover(user),
         };
         setCurrentUser(enrichedUser);
+        if (user?.email) {
+          try {
+            localStorage.setItem("kalceria_user_email", user.email);
+          } catch {}
+        }
         setPresence(user.allowLiveLocation ? "online" : "invisible");
         if (user.broadcast?.message) setStatusText(user.broadcast.message);
         if (hasValidCoordinates(user.domicileLat, user.domicileLng)) {
@@ -923,23 +936,29 @@ export default function MapPage() {
   }, [isSelfOffline, currentUser, setStatusText]);
 
   const handleConfirmDeleteBroadcast = useCallback(async () => {
-    setBusy(true);
+    // 1. Instant 0ms Optimistic UI Updates
+    setShowStatusModal(false);
+    setIsEditingBroadcast(false);
+    setShowDeleteBroadcastConfirm(false);
+    setStatusText("");
+    setCurrentUser((prev) => (prev ? { ...prev, broadcast: null } : prev));
+    setMapUsersData((prev) =>
+      prev.map((u) => (u.id === currentUser?.id ? { ...u, broadcast: null } : u))
+    );
+    setNotice("Broadcast deleted.");
+
+    // Trigger auto-retract animation so toolbar tucks in and reconfigures cleanly
+    triggerToolbarRetractCycle();
+
+    // 2. Asynchronous backend deletion in background
     try {
       await delBroadcast();
-      const user = await fetchMe();
-      setCurrentUser(user);
-      const updatedMapUsers = await fetchMapUsers();
+      const updatedMapUsers = await fetchMapUsers().catch(() => null);
       if (updatedMapUsers) setMapUsersData(updatedMapUsers);
-      setNotice("Broadcast deleted.");
-      setShowStatusModal(false);
-      setIsEditingBroadcast(false);
-      setStatusText("");
     } catch (err) {
-      setNotice(err.message || "Failed to delete broadcast.");
-    } finally {
-      setBusy(false);
+      console.warn("Delete broadcast background sync warning:", err?.message);
     }
-  }, [fetchMe, fetchMapUsers, setNotice, setStatusText]);
+  }, [currentUser?.id, setStatusText, triggerToolbarRetractCycle, fetchMapUsers, setNotice]);
 
   useEffect(() => {
     const handleRemoteEditBroadcast = (e) => {
@@ -1260,27 +1279,31 @@ export default function MapPage() {
   }, [isSelfOffline, handleCollaboratorUpload]);
 
   async function deleteMiniEvent(targetId) {
-    setBusy(true);
+    const idToDelete = targetId || editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;
+    if (!idToDelete) return;
+
+    // 1. Instant 0ms Optimistic UI Updates
+    setEvents((prev) => prev.filter((ev) => ev.id !== idToDelete));
+    setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {} });
+    setEditingEventId(null);
+    setShowEventModal(false);
+    setNotice("Mini event deleted.");
+
+    // Trigger auto-retract animation so toolbar tucks in and reconfigures cleanly
+    triggerToolbarRetractCycle();
+
+    // 2. Asynchronous backend deletion in background
     try {
-      const idToDelete = targetId || editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;
-      if (idToDelete) {
-        await delMiniEvent(idToDelete).catch(() => {});
-        setEvents((prev) => prev.filter((ev) => ev.id !== idToDelete));
-      }
+      await delMiniEvent(idToDelete).catch(() => {});
       const refreshedMeta = await fetchMiniEventsWithMeta().catch(() => null);
       if (refreshedMeta?.events) {
         const merged = mergeEvents(refreshedMeta.events);
         setEvents(merged);
         syncCollabStateFromServer(merged, refreshedMeta.requestedEventId ?? null);
       }
-      setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {} });
-      setEditingEventId(null);
-      setNotice("Mini event deleted.");
-      setShowEventModal(false);
     } catch (err) {
-      setNotice(err.message || "Failed to delete mini event.");
+      console.warn("Delete mini event background sync warning:", err?.message);
     }
-    setBusy(false);
   }
 
   const handleSaveProfile = useCallback(async (updatedData) => {
@@ -1361,57 +1384,51 @@ export default function MapPage() {
     setNotice("Profile updated successfully!");
   }, [currentUser]);
 
-  const handleRequestChangePassword = useCallback(async () => {
-    const markReturnToMapWithoutIntro = () => {
+  const handleRequestChangePassword = useCallback(() => {
+    let email = currentUser?.email;
+    if (!email && typeof window !== "undefined") {
       try {
-        localStorage.setItem("kalceria_auth_return", "/map");
-        localStorage.setItem("kalceria_password_reset_from_map", "true");
-        sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+        const u = JSON.parse(localStorage.getItem("kalceria_user") || "null");
+        const s = JSON.parse(localStorage.getItem("kalceria_user_session") || "null");
+        email = u?.email || s?.user?.email || localStorage.getItem("kalceria_user_email") || "";
       } catch {}
-    };
-    try {
-      let email = currentUser?.email;
-      if (!email) {
-        const res = await api.get("/users/me").catch(() => null);
-        email = res?.data?.user?.email;
-        if (res?.data?.user) {
-          setCurrentUser(res.data.user);
-        }
-      }
-      markReturnToMapWithoutIntro();
-      setShowEditProfileModal(false);
-      setShowOwnProfile(false);
-
-      if (email) {
-        window.location.href = `/?auth=true&mode=forgot-password&from=map&email=${encodeURIComponent(email)}`;
-        return;
-      }
-      window.location.href = "/?auth=true&mode=forgot-password&from=map";
-    } catch {
-      markReturnToMapWithoutIntro();
-      setShowEditProfileModal(false);
-      setShowOwnProfile(false);
-      window.location.href = "/?auth=true&mode=forgot-password&from=map";
     }
-  }, [currentUser]);
+
+    try {
+      localStorage.setItem("kalceria_auth_return", "/map");
+      localStorage.setItem("kalceria_password_reset_from_map", "true");
+      sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+    } catch {}
+
+    setShowEditProfileModal(false);
+    setShowOwnProfile(false);
+
+    const targetUrl = email
+      ? `/?auth=true&mode=forgot-password&from=map&email=${encodeURIComponent(email)}`
+      : "/?auth=true&mode=forgot-password&from=map";
+
+    window.location.assign(targetUrl);
+  }, [currentUser?.email]);
 
   const handleConfirmDeleteAccount = useCallback(async () => {
     setShowDeleteAccountModal(false);
     setShowEditProfileModal(false);
     setShowOwnProfile(false);
+    setNotice("Account deleted. Redirecting...");
+
     try {
-      await api.delete("/users/me");
-    } catch (e) {
-      console.warn("Delete account remote sync deferred:", e?.message);
-    }
-    try {
+      clearSession();
       localStorage.clear();
       sessionStorage.clear();
     } catch {}
-    setNotice("Account deleted. Redirecting...");
+
+    api.delete("/users/me").catch((e) => {
+      console.warn("Delete account remote sync deferred:", e?.message);
+    });
+
     setTimeout(() => {
-      window.location.href = "/";
-    }, 1200);
+      window.location.replace("/");
+    }, 300);
   }, []);
 
   // login gate
@@ -1517,6 +1534,7 @@ export default function MapPage() {
             onGoToOwnEvent={handleGoToOwnEvent}
             hasActiveOwnBroadcast={hasActiveOwnBroadcast}
             onTopDynamicBroadcastClick={handleTopDynamicBroadcastClick}
+            isToolbarRetracting={isToolbarRetracting}
           />
 
           {/* Kalcerians Panel */}

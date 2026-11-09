@@ -101,8 +101,8 @@ export async function deleteBroadcast(req, res, next) {
   try {
     const userId = req.user.userId;
     await prisma.userBroadcast.deleteMany({ where: { userId } });
-    await invalidateKalceriansCache();
-    res.json({ message: 'Broadcast deleted.' });
+    invalidateKalceriansCache().catch(() => {});
+    return res.json({ message: 'Broadcast deleted.' });
   } catch (err) {
     next(err);
   }

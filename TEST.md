@@ -44,14 +44,15 @@ npm --prefix frontend run build
 
 ---
 
-### Test Suite 2: Password Reset Routing & Danger Zone
+### Test Suite 2: Password Reset Routing, Profile Danger Zone & Delete Account
 | Test ID | Feature / Case | Input / Trigger | Expected Result | Destination Verification |
 |---|---|---|---|---|
 | `PWD-01` | **Reset originating from Landing Page** | Click "Forgot Password" on `/` -> Open magic link -> Enter new password -> Save & Log in | Welcome transition completes -> **Gracefully fades into Landing Page (`setPhase("landing")`)**. | **MUST NOT** jump to `/map`. Query params cleared. |
-| `PWD-02` | **Reset originating from User Map** | Edit Profile modal -> Click "Change Password" -> Open magic link -> Enter new password -> Save & Log in | Welcome transition completes -> **Navigates directly to User Map (`/map?from=password_reset&skip_intro=true`)**. | Map startup intro completely bypassed. Immediate live view. |
-| `PWD-03` | Password Catalog Retention | New password equals any of last 5 passwords | Backend returns HTTP 400: "Password baru tidak boleh sama dengan password sebelumnya". | Token preserved in Redis so user does not need new email. |
-| `PWD-04` | Cross-Tab / Cross-Device Sync | Reset password in phone/tab B while tab A is on "Link sent" screen | Tab A receives `RESET_PASSWORD_COMPLETE` (BroadcastChannel or polling) -> routes to Login with success banner. | Zero page reload required. |
-| `PWD-05` | **Delete Account (`deleteMe`)** | Edit Profile -> Danger Zone -> Delete Account | Backend cascades cleanup (comments, events, media, Redis sessions) -> Cookies cleared -> Redirect to `/`. | Session invalidated across all devices instantly. |
+| `PWD-02` | **Reset originating from User Map** | Edit Profile modal -> Click "Change Password" -> Prefills email immediately -> Open magic link -> Enter new password -> Save & Log in | Welcome transition completes -> **Navigates directly to User Map (`/map?from=password_reset&skip_intro=true`)**. | Map startup intro completely bypassed. Immediate live view. |
+| `PWD-03` | **Change Password Button Responsiveness** | Click "Change Password" inside Edit Profile Danger Zone | Immediate button activation without event bubbling or form submission blocks (`e.preventDefault()`, `e.stopPropagation()`). | Synchronous resolution of cached email from state/localStorage. Zero click delay. |
+| `PWD-04` | Password Catalog Retention | New password equals any of last 5 passwords | Backend returns HTTP 400: "Password baru tidak boleh sama dengan password sebelumnya". | Token preserved in Redis so user does not need new email. |
+| `PWD-05` | Cross-Tab / Cross-Device Sync | Reset password in phone/tab B while tab A is on "Link sent" screen | Tab A receives `RESET_PASSWORD_COMPLETE` (BroadcastChannel or polling) -> routes to Login with success banner. Tab B closes cleanly or switches to login. | Zero page reload required. No tab duplication. |
+| `PWD-06` | **Delete Account (`deleteMe`) 0-Latency** | Edit Profile -> Danger Zone -> Delete Account | Modal closes instantly (0ms), immediate toast "Account deleted. Redirecting...", tokens/storage wiped, backend cascades cleanup in background, smooth redirect to `/`. | Session invalidated across all devices instantly without hanging. |
 
 ---
 
@@ -74,23 +75,25 @@ npm --prefix frontend run build
 
 ---
 
-### Test Suite 5: Kalcerian Live Map & HUD Controls
+### Test Suite 5: Kalcerian Live Map & HUD Controls (Toolbar State Machine)
 | Test ID | Feature / Case | Input / Trigger | Expected Result | UI & Motion DNA |
 |---|---|---|---|---|
 | `MAP-01` | Cold Startup Intro | First visit to `/map` | Sound toggle, intro animation, then reveals Leaflet map centered at user GPS. | No Leaflet API key error; smooth fade. |
 | `MAP-02` | Intro Bypass (Password Reset) | Visit `/map?from=password_reset&skip_intro=true` | Startup intro **bypassed immediately**; user lands directly on live map. | Flags cleaned from storage on mount. |
-| `MAP-03` | Top Functional Outerbox | 6 Crater Slots (Event, Recenter, Eye, Plus, Theme, Sound) | Each icon sits in a 2D sunken crater (`bg-[#f1f3f5]` light / `bg-[#161926]` dark). | Responsive, GPU-accelerated spring motion. |
-| `MAP-04` | Toolbar Collapse / Expand | Tap wrench tool tab | Outerbox smoothly translates up; tab stays upright with no rotation flip. | Tab seamlessly fused to outerbox bottom (`border-t-0`). |
-| `MAP-05` | Right Profile Dock | Dock positioned at screen right edge | Pulled down 25% (`top-16 sm:top-20`); generic profile tab toggles sidebar open/closed. | Seamless fusion with avatar box (`border-r-0`). |
+| `MAP-03` | **Strict Creator Toolbar Ownership** | User accepted as collaborator on someone's event | Top HUD Toolbar displays **NO Event icon** and **NO Broadcast icon**. Only standard controls render. | Collaborator does NOT share event/broadcast ownership on toolbar. |
+| `MAP-04` | **Toolbar Collapse Geometry** | Tap wrench tool tab (with or without broadcast) | Toolbar retracts completely off-screen until **ONLY the tool tab (wrench handle)** is visible at top edge. | Zero dangling boxes or leftover icons when collapsed. |
+| `MAP-05` | **Toolbar Layout Variations** | Toggle active states of Event and Broadcast | **Var A**: Event + 5 slots + Broadcast box.<br>**Var B**: Event + 5 slots (centered tab).<br>**Var C**: 5 slots only (narrower width, centered tab).<br>**Var D**: 5 slots + Broadcast box. | Dynamic width adjustment; beveled 2D sunken crater slots. |
+| `MAP-06` | **Auto-Retract on Deletion** | Delete Event or Delete Broadcast | Toolbar automatically retracts up to top edge (only wrench visible), reconfigures layout, and expands down smoothly. | Zero layout jumps; cinematic spring transition. |
+| `MAP-07` | Right Profile Dock | Dock positioned at screen right edge | Pulled down 25% (`top-16 sm:top-20`); generic profile tab toggles sidebar open/closed. | Seamless fusion with avatar box (`border-r-0`). |
 
 ---
 
-### Test Suite 6: Broadcast Lifecycle & Management
+### Test Suite 6: Broadcast Lifecycle & 0-Latency Deletion
 | Test ID | Feature / Case | Input / Trigger | Expected Result | Geometry & Expiry |
 |---|---|---|---|---|
 | `BCAST-01` | Broadcast Creation | User publishes broadcast on map | Broadcast marker appears on map; exactly **1 small square box** renders on far left of top HUD. | Zero excess rectangular width. |
 | `BCAST-02` | Tool Tab Realignment | Broadcast active | Wrench tab hangs directly beneath the 1 small broadcast box on the far left. | Width strictly matches the single box. |
-| `BCAST-03` | Edit & Trim | Creator edits message text | Inline edit form with trashcan delete button and trimmed update action. | Instant optimistic UI update on map. |
+| `BCAST-03` | **Realtime 0-Latency Deletion** | Click Delete Broadcast -> Confirm Yes | Status modal closes immediately (0ms), pin balloon removed immediately (0ms), toolbar auto-retracts and re-expands without broadcast, backend deletes asynchronously. | Zero UI lag; no 3-second freeze. |
 | `BCAST-04` | 24-Hour Automated Purge | Broadcast reaches 24-hour TTL | Cron/TTL purge removes broadcast from Redis and Leaflet map feed. | Zero stale markers left behind. |
 
 ---
@@ -98,11 +101,12 @@ npm --prefix frontend run build
 ### Test Suite 7: Mini Event & N-Collaborator Concurrency Queue
 | Test ID | Feature / Case | Input / Trigger | Expected Result | Concurrency Defense |
 |---|---|---|---|---|
-| `EVENT-01` | Event Creation & Marker | Creator creates event with location & details | Event popup renders on map with custom category icon. | Elastic header accommodates creator and collaborator names. |
+| `EVENT-01` | Event Creation & Marker | Creator creates event with location & details | Event popup renders on map with custom category icon. Creator gets Slot 1 Event icon on toolbar. | Elastic header accommodates creator and collaborator names. |
 | `EVENT-02` | **Distributed Mutex Queue** | N collaborators upload clips simultaneously | Requests queued in Redis (`eventMediaQueue.js`) and processed sequentially. | **Zero race conditions / zero torn media clips**. |
 | `EVENT-03` | Destructive Action Isolation | Creator deletes event while collaborator uploads | Distributed lock holds delete until pending queue job completes or aborts cleanly. | Prevents orphaned blob uploads in storage. |
-| `EVENT-04` | Media Aspect Ratio & Whiteline | Upload 9:16 portrait and 16:9 landscape media | Elongated media frame maintains exact ratio; synced white line indicator renders without jitter. | Video autoplay/pause on popup visibility. |
-| `EVENT-05` | Upload Buffer Overlay | Collaborator uploads image/video | Screen dims, center loading buffer displays; on failure, turns into error message without outer box. | Tested in `event_media_clips.test.mjs`. |
+| `EVENT-04` | **Realtime 0-Latency Event Deletion** | Creator clicks Delete Event -> Confirm Yes | Event modal closes immediately (0ms), marker removed from map immediately (0ms), toolbar auto-retracts and re-expands without event icon, backend cleans up asynchronously. | Zero perceived latency. |
+| `EVENT-05` | Media Aspect Ratio & Whiteline | Upload 9:16 portrait and 16:9 landscape media | Elongated media frame maintains exact ratio; synced white line indicator renders without jitter. | Video autoplay/pause on popup visibility. |
+| `EVENT-06` | Upload Buffer Overlay | Collaborator uploads image/video | Screen dims, center loading buffer displays; on failure, turns into error message without outer box. | Tested in `event_media_clips.test.mjs`. |
 
 ---
 
@@ -120,6 +124,5 @@ npm --prefix frontend run build
 
 ## 3. Mandatory Compliance Directives (AGENTS.md)
 1. **Zero Dummy User Accounts**: No mock accounts (`HP Mobile User`, `Tester`) may ever remain in Postgres or Redis feeds.
-2. **Golden Baseline BEKU**: Commit `6673153952b91b3053f5bead5863aad36fa9c80e` (`BaselineNovember#2`) is strictly protected.
+2. **Golden Baseline BEKU**: Commit `6673153952b91b3053f5bead5863aad36fa9c80e` (`BaselineNovember#2`) is strictly protected. Dilarang checkout, rebase, merge, atau push ke `BaselineNovember#2`.
 3. **One-Shot Gate**: All pull requests and deployments must pass all 4 verification gates and 5 live native smoke probes before sign-off.
-

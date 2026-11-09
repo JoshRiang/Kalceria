@@ -230,7 +230,7 @@ export async function deleteMe(req, res, next) {
       { maxWait: 10000, timeout: 25000 }
     );
 
-    await purgeUserRedisFootprint(userId, user.email, ownedEventIds);
+    purgeUserRedisFootprint(userId, user.email, ownedEventIds).catch(() => {});
 
     clearAuthCookie(res);
     res.clearCookie('csrfToken', csrfCookieOptions());

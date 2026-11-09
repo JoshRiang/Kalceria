@@ -345,11 +345,11 @@ export async function deleteMiniEvent(req, res, next) {
         data: { isActive: false, expiresAt: new Date(0) },
       });
 
-      await Promise.allSettled([
+      Promise.allSettled([
         purgeEventMediaByIds([id]),
         purgeEventCollabByIds([id]),
         invalidateMiniEventsCache(),
-      ]);
+      ]).catch(() => {});
 
       return res.json({ message: 'Mini event deleted.' });
     });

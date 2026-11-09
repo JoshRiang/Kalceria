@@ -33,6 +33,7 @@ export const MapHeaderHud = memo(function MapHeaderHud({
   onGoToOwnEvent,
   hasActiveOwnBroadcast = false,
   onTopDynamicBroadcastClick,
+  isToolbarRetracting = false,
 }) {
   const [soundMuted, setSoundMuted] = useState(false);
   const isSelfOffline = presence !== "online";
@@ -114,6 +115,7 @@ export const MapHeaderHud = memo(function MapHeaderHud({
             soundMuted={soundMuted}
             setSoundMuted={setSoundMuted}
             isSelfOffline={isSelfOffline}
+            isToolbarRetracting={isToolbarRetracting}
           />
         </div>
       </motion.header>

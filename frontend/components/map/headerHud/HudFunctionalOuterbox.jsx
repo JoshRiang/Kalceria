@@ -72,6 +72,7 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
   soundMuted,
   setSoundMuted,
   isSelfOffline,
+  isToolbarRetracting = false,
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -98,12 +99,14 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
     ? "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#161b22] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group"
     : "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#f1f3f5] border border-black/15 shadow-[inset_1px_1.5px_2.5px_rgba(0,0,0,0.18),inset_-1px_-1px_1.5px_rgba(255,255,255,0.9)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group";
 
-  const collapseOffset = -46;
+  // Pure Tool Tab collapse offset: With or without broadcast, ONLY the tool tab remains visible flush at top edge
+  const collapseOffset = hasActiveOwnBroadcast ? -86 : -42;
+  const effectiveCollapsed = Boolean(isCollapsed || isToolbarRetracting);
 
   return (
     <motion.div
       animate={{
-        y: isCollapsed ? collapseOffset : 0,
+        y: effectiveCollapsed ? collapseOffset : 0,
       }}
       transition={{
         type: "spring",
@@ -113,7 +116,8 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
       }}
       className="relative flex flex-col items-start pointer-events-auto select-none"
     >
-      {/* Row 1: 6 Beveled Sunken Crater Slots - Docked flush to top screen edge */}
+      {/* Row 1: Beveled Sunken Crater Slots - Docked flush to top screen edge */}
+      {/* Dynamic Sizing: 6 slots when topDynamicEvent exists, naturally shorter 5 slots when no event */}
       <div
         className={`relative flex items-center gap-1 sm:gap-1.5 p-1 rounded-b-2xl ${boxBg} border-b-[1.5px] border-x-[1.5px] border-t-0 ${boxBorder} ${boxShadow} overflow-visible`}
       >
@@ -232,11 +236,7 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
       {/* Row 2 (When Broadcast is Active): Unified Group Shell (Broadcast Slot + Wrench Tab) */}
       {hasActiveOwnBroadcast && (
         <div
-          className={`mt-1 flex flex-col items-center ${boxBg} ${
-            isCollapsed
-              ? "rounded-b-2xl border-b-[1.5px] border-x-[1.5px] border-t-0"
-              : "rounded-2xl border-[1.5px]"
-          } ${boxBorder} ${boxShadow} overflow-hidden self-start transition-all duration-200`}
+          className={`mt-1 flex flex-col items-center ${boxBg} rounded-2xl border-[1.5px] ${boxBorder} ${boxShadow} overflow-hidden self-start transition-all duration-200`}
         >
           {/* Top: Broadcast Crater Slot */}
           <div className="p-1">
@@ -255,8 +255,8 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
           <button
             type="button"
             onClick={toggleCollapse}
-            title={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
-            aria-label={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
+            title={effectiveCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
+            aria-label={effectiveCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
             className={`flex items-center justify-center w-full h-4 sm:h-4.5 ${boxBg} hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors outline-none group pb-0.5 border-none`}
           >
             <ToolPerkakasIcon
@@ -273,8 +273,8 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
           <button
             type="button"
             onClick={toggleCollapse}
-            title={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
-            aria-label={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
+            title={effectiveCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
+            aria-label={effectiveCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
             className={`relative flex items-center justify-center w-8 h-4 sm:w-8.5 sm:h-4.5 rounded-b-full ${boxBg} border-b-[1.5px] border-x-[1.5px] border-t-0 ${boxBorder} ${
               isMapDark
                 ? "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_6px_rgba(0,0,0,0.6)]"
