@@ -111,6 +111,24 @@
   transition: transform 0.2s ease-out !important;
 }
 
+/* Marker Landing & Takeoff Entrance (Smooth 0.45s fade-in on map landing across all device families) */
+@keyframes markerEntranceTakeoff {
+  0% {
+    opacity: 0;
+    transform: scale(0.65) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.radar-node,
+.broadcast-map-node {
+  animation: markerEntranceTakeoff 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  will-change: transform, opacity;
+}
+
 .radar-node {
   position: relative;
   width: 48px;
