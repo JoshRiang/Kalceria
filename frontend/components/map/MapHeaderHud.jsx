@@ -58,13 +58,13 @@ export const MapHeaderHud = memo(function MapHeaderHud({
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-        className="absolute z-[1000] top-2 sm:top-2.5 left-2 sm:left-3 right-0 flex justify-between items-start pointer-events-none select-none"
+        className="absolute z-[1000] top-0 left-2 sm:left-3 right-0 flex justify-between items-start pointer-events-none select-none"
       >
         {/* 2D Back Arrow Button on Left - Tight to screen corner */}
         <button
           onClick={() => setShowQuitModal(true)}
           aria-label="Back to home"
-          className="pointer-events-auto p-1 sm:p-1.5 transition-transform hover:-translate-x-0.5 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 group cursor-pointer"
+          className="pointer-events-auto p-1 sm:p-1.5 mt-2 sm:mt-2.5 transition-transform hover:-translate-x-0.5 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-white/40 group cursor-pointer"
         >
           <svg
             width="26"

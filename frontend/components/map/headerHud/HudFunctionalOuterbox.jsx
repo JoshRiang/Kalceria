@@ -98,7 +98,7 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
     ? "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#161926] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group"
     : "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#f1f3f5] border border-black/15 shadow-[inset_1px_1.5px_2.5px_rgba(0,0,0,0.18),inset_-1px_-1px_1.5px_rgba(255,255,255,0.9)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group";
 
-  const collapseOffset = hasActiveOwnBroadcast ? -92 : -46;
+  const collapseOffset = -46;
 
   return (
     <motion.div
@@ -113,9 +113,9 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
       }}
       className="relative flex flex-col items-start pointer-events-auto select-none"
     >
-      {/* Row 1: 6 Beveled Sunken Crater Slots */}
+      {/* Row 1: 6 Beveled Sunken Crater Slots - Docked flush to top screen edge */}
       <div
-        className={`relative flex items-center gap-1 sm:gap-1.5 p-1 rounded-xl ${boxBg} border-[1.5px] ${boxBorder} ${boxShadow} overflow-visible`}
+        className={`relative flex items-center gap-1 sm:gap-1.5 p-1 rounded-b-2xl ${boxBg} border-b-[1.5px] border-x-[1.5px] border-t-0 ${boxBorder} ${boxShadow} overflow-visible`}
       >
         {/* Crater Slot 1: Dynamic Event (if active) */}
         {topDynamicEvent && (
@@ -232,7 +232,11 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
       {/* Row 2 (When Broadcast is Active): Unified Group Shell (Broadcast Slot + Wrench Tab) */}
       {hasActiveOwnBroadcast && (
         <div
-          className={`mt-1 flex flex-col items-center ${boxBg} border-[1.5px] ${boxBorder} ${boxShadow} rounded-2xl overflow-hidden self-start`}
+          className={`mt-1 flex flex-col items-center ${boxBg} ${
+            isCollapsed
+              ? "rounded-b-2xl border-b-[1.5px] border-x-[1.5px] border-t-0"
+              : "rounded-2xl border-[1.5px]"
+          } ${boxBorder} ${boxShadow} overflow-hidden self-start transition-all duration-200`}
         >
           {/* Top: Broadcast Crater Slot */}
           <div className="p-1">
