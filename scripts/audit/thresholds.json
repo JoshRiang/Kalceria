@@ -56,6 +56,11 @@
     { "path": "frontend/components/map/chat/hooks/personalCall/useCallSession.js", "baselineLoc": 557, "currentLoc": 439, "maxLoc": 445 },
     { "path": "frontend/components/admin/dashboard/dashboard.jsx", "baselineLoc": 553, "currentLoc": 421, "maxLoc": 430 }
   ],
+  "submoduleExceptions": {
+    "frontend/components/map/mapPage/useMiniEventActions.js": 330,
+    "frontend/components/map/chat/hooks/personalChat/useChatSender.js": 330,
+    "frontend/components/map/chat/hooks/personalChat/useChatSyncLoop.js": 320
+  },
   "tierCExcluded": {
     "description": "Tier C files (300-499 lines) must NOT be modified in this program.",
     "minLoc": 300,

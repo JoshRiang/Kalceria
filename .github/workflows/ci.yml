@@ -70,5 +70,10 @@ jobs:
           npx prisma migrate deploy --schema backend/prisma/schema.prisma
           npm test
 
+      - name: Modularity & Hook Conservation Gate (Strict Ratchet)
+        run: |
+          npm run test:modularity
+          npm run audit:modularity
+
       - name: Build
         run: npm run build

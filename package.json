@@ -21,6 +21,8 @@
     "start:frontend": "npm run start --workspace=frontend",
     "lint": "npm run lint --workspaces",
     "test": "npm run test:api --workspace=backend",
+    "test:modularity": "node --test frontend/tests/pure_modules_golden.test.mjs frontend/tests/modularity_harness.test.mjs",
+    "audit:modularity": "node scripts/audit/modularity-audit.mjs --check",
     "db:generate": "npm run db:generate --workspace=backend",
     "db:migrate": "npm run db:migrate --workspace=backend",
     "db:push": "npm run db:push --workspace=backend",

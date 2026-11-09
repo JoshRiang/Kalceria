@@ -303,6 +303,19 @@ export function runAuditCheck() {
     }
   }
 
+  // Check 5: Strict Submodule Ratchet Limits (K1)
+  const exceptions = thresholds.submoduleExceptions || {};
+  for (const [relPath, data] of Object.entries(tierAResults)) {
+    for (const sub of data.submodules) {
+      const allowedMax = exceptions[sub.relPath] || thresholds.limits?.moduleMaxLoc || 300;
+      if (sub.loc > allowedMax) {
+        errors.push(
+          `[K1 Ratchet Violation] Submodule ${sub.relPath} exceeds allowed limit ${allowedMax} LOC (current: ${sub.loc})`
+        );
+      }
+    }
+  }
+
   const pass = errors.length === 0;
   return { pass, errors, warnings, tierAResults, tierBResults };
 }
