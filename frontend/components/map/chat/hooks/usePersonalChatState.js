@@ -34,13 +34,10 @@ import {
   formatVoiceDuration,
   inferReplyMediaType,
 } from "../components/messageBubble/replyHelpers";
+import { useChatThreadUi } from "./personalChat/useChatThreadUi";
+import { useChatComposerActions } from "./personalChat/useChatComposerActions";
+import { useChatSelectionActions } from "./personalChat/useChatSelectionActions";
 import { groupMessages } from "./personalChat/groupMessages";
-import {
-  buildMessageCopyText,
-  buildSelectedMessagesCopyText,
-  copyTextToClipboard,
-} from "./personalChat/clipboardText";
-import { buildReplyPayload, buildReplyDraft } from "./personalChat/replyPayload";
 import {
   applyPeerReadReceipt,
   filterDeletedMessages,
@@ -666,59 +663,21 @@ export function usePersonalChatState({
     };
   }, [targetId, myId, storageKey, persistQuickLocal, persistEncryptedLocal]);
 
-  // Cursor pagination for older messages from Cold Archive
-  const loadOlderMessages = useCallback(async () => {
-    if (!nextCursor || isLoadingOlder || !targetId) return;
-    setIsLoadingOlder(true);
-    try {
-      const page = await fetchPersonalChatPage(targetId, { cursor: nextCursor, limit: 30 });
-      setNextCursor(page?.nextCursor || null);
-      const remoteEnvelopes = page?.messages || [];
-      if (Array.isArray(remoteEnvelopes) && remoteEnvelopes.length > 0) {
-        const decryptedOlder = (
-          await Promise.all(
-            remoteEnvelopes.map((env) => decryptChatEnvelope(env, myId, targetId))
-          )
-        ).filter(Boolean);
-        if (decryptedOlder.length > 0) {
-          setMessages((prev) => {
-            const mergedMap = new Map();
-            decryptedOlder.forEach((m) => mergedMap.set(m.id, m));
-            prev.forEach((m) => mergedMap.set(m.id, m));
-            return Array.from(mergedMap.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
-          });
-        }
-      }
-    } catch { } finally {
-      setIsLoadingOlder(false);
-    }
-  }, [nextCursor, isLoadingOlder, targetId, myId]);
-
-  // Auto-scroll message thread container to bottom when messages change (never scroll outer page/main!)
-  useEffect(() => {
-    const container = messagesEndRef.current;
-    if (!container) return;
-    const raf = requestAnimationFrame(() => {
-      try {
-        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-      } catch {
-        container.scrollTop = container.scrollHeight;
-      }
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [messages.length, isPeerTyping]);
-
-  // Close 3-dots dropdown when clicking outside
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handleOutside(e) {
-      if (menuContainerRef.current && !menuContainerRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [menuOpen]);
+  const { loadOlderMessages } = useChatThreadUi({
+    nextCursor,
+    isLoadingOlder,
+    targetId,
+    myId,
+    messages,
+    isPeerTyping,
+    menuOpen,
+    setMessages,
+    setNextCursor,
+    setIsLoadingOlder,
+    setMenuOpen,
+    messagesEndRef,
+    menuContainerRef,
+  });
 
   const appendAndEncryptMessage = useCallback(
     async ({
@@ -993,212 +952,55 @@ export function usePersonalChatState({
     [myId, targetId, persistQuickLocal, persistEncryptedLocal]
   );
 
-  const handleSendText = async (e) => {
-    if (e?.preventDefault) e.preventDefault();
-    const trimmed = inputText.trim();
-    if (!trimmed) return;
-    setInputText("");
-    setShowEmojiBar(false);
-    setMediaError("");
+  const {
+    handleSendText,
+    handleFileUpload,
+    handleStartVoiceNote,
+    handleCancelVoiceNote,
+    handleFinishVoiceNote,
+    handleSendCapturedMedia,
+    handleTriggerCall,
+  } = useChatComposerActions({
+    inputText,
+    setInputText,
+    setShowEmojiBar,
+    setMediaError,
+    replyingTo,
+    setReplyingTo,
+    appendAndEncryptMessage,
+    voiceRecorder,
+    fileInputRef,
+    setPermissionModal,
+    setCallState,
+    activeChatUser,
+    setIsUploadingMedia,
+  });
 
-    const currentReply = replyingTo;
-    setReplyingTo(null);
-
-    const replyPayload = buildReplyPayload(currentReply);
-
-    await appendAndEncryptMessage({
-      text: trimmed,
-      msgType: "text",
-      replyTo: replyPayload,
-    });
-  };
-
-  // Surface-level Media Validation (Max 10MB, strictly PNG / JPEG / MP4, Consolas Red Error)
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMediaError("");
-
-    if (file.size > 10 * 1024 * 1024) {
-      setMediaError("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    const ext = (file.name.split(".").pop() || "").toLowerCase();
-    const validExts = ["png", "jpg", "jpeg", "mp4"];
-    const declaredMime = (file.type || "").toLowerCase();
-    const validMimes = ["image/png", "image/jpeg", "image/pjpeg", "video/mp4"];
-
-    if (!validExts.includes(ext) || (declaredMime && !validMimes.includes(declaredMime))) {
-      setMediaError("Hanya file .png, .jpeg, dan .mp4 yang diizinkan.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    const captionText = inputText.trim();
-    setInputText("");
-    const localPreviewUrl = URL.createObjectURL(file);
-    const isVideoFile = ext === "mp4" || declaredMime.startsWith("video/");
-
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    setIsUploadingMedia(true);
-    try {
-      await appendAndEncryptMessage({
-        text: captionText,
-        msgType: isVideoFile ? "video" : "media",
-        mediaUrl: localPreviewUrl,
-        rawBlob: file,
-      });
-    } finally {
-      setIsUploadingMedia(false);
-    }
-  };
-
-  const handleStartVoiceNote = async () => {
-    const perm = await checkHardwarePermission("microphone");
-    if (perm === "prompt" || perm === "unknown") {
-      setPermissionModal({
-        isOpen: true,
-        type: "mic",
-        onGrant: async () => {
-          setPermissionModal((p) => ({ ...p, isOpen: false }));
-          await voiceRecorder.startRecording();
-        },
-        onCancel: () => setPermissionModal((p) => ({ ...p, isOpen: false })),
-        errorMessage: null,
-      });
-      return;
-    }
-    const started = await voiceRecorder.startRecording();
-    if (!started && voiceRecorder.recorderError) {
-      setMediaError(voiceRecorder.recorderError);
-    }
-  };
-
-  const handleCancelVoiceNote = () => {
-    voiceRecorder.cancelRecording();
-  };
-
-  const handleFinishVoiceNote = async () => {
-    const result = await voiceRecorder.stopRecording();
-    if (!result) return;
-    const { blob, url, duration, waveform } = result;
-    const localPreviewUrl = url || (blob ? URL.createObjectURL(blob) : null);
-
-    await appendAndEncryptMessage({
-      text: "Voice message",
-      msgType: "voice",
-      mediaUrl: localPreviewUrl,
-      rawBlob: blob,
-      voiceDuration: duration,
-      voiceWaveform: waveform,
-    });
-  };
-
-  const handleSendCapturedMedia = async ({
-    blob,
-    url,
-    type,
-    duration,
-    trimFragment = "",
-    isViewOnce,
-    caption,
-  }) => {
-    if (type === "video" && duration && duration > 60) {
-      setMediaError("Durasi video melebihi batas 1 menit (maksimal 60 detik).");
-      return;
-    }
-
-    const captionText = (typeof caption === "string" ? caption : inputText).trim();
-    setInputText("");
-    const localPreviewUrl = url || (blob ? URL.createObjectURL(blob) : null);
-
-    setIsUploadingMedia(true);
-    try {
-      await appendAndEncryptMessage({
-        text: captionText,
-        msgType: type === "video" ? "video" : "media",
-        mediaUrl: localPreviewUrl,
-        rawBlob: blob,
-        trimFragment,
-        videoDuration: duration,
-        isViewOnce: Boolean(isViewOnce),
-      });
-    } finally {
-      setIsUploadingMedia(false);
-    }
-  };
-
-  const handleTriggerCall = async (mode = "voice") => {
-    const neededType = mode === "video" ? "camera" : "mic";
-    const permName = mode === "video" ? "camera" : "microphone";
-    const perm = await checkHardwarePermission(permName);
-
-    if (perm === "prompt" || perm === "unknown") {
-      setPermissionModal({
-        isOpen: true,
-        type: neededType,
-        onGrant: () => {
-          setPermissionModal((p) => ({ ...p, isOpen: false }));
-          setCallState({ mode, user: activeChatUser });
-        },
-        onCancel: () => setPermissionModal((p) => ({ ...p, isOpen: false })),
-        errorMessage: null,
-      });
-      return;
-    }
-
-    setCallState({ mode, user: activeChatUser });
-  };
-
-  const handleToggleSelectMsg = (msgId) => {
-    setSelectedMsgIds((prev) =>
-      prev.includes(msgId) ? prev.filter((id) => id !== msgId) : [...prev, msgId]
-    );
-  };
-
-  const handleDeleteSelectedMessages = async (customIds = null) => {
-    const ids = Array.isArray(customIds) ? customIds : selectedMsgIds;
-    if (!ids.length) return;
-    const idSet = new Set(ids);
-    if (ids.some((id) => id === playingVoiceId)) {
-      setPlayingVoiceId(null);
-    }
-    setMessages((prev) => {
-      const { next } = filterDeletedMessages(prev, ids);
-      persistQuickLocal(next);
-      persistEncryptedLocal(next);
-      return next;
-    });
-    sendRealtimePacketRef.current?.({ type: "delete_msgs", ids });
-    deletePersonalChatMessages(targetId, { messageIds: ids }).catch(() => { });
-    if (!customIds) {
-      setSelectedMsgIds([]);
-      setSelectMode(false);
-    } else {
-      setSelectedMsgIds((prev) => prev.filter((id) => !idSet.has(id)));
-    }
-  };
-
-  const handleCopySingleMessage = (msg) => {
-    if (!msg) return;
-    const textToCopy = buildMessageCopyText(msg, formatVoiceDuration);
-    copyTextToClipboard(textToCopy);
-  };
-
-  const handleStartReply = (msg) => {
-    if (!msg) return;
-    const draft = buildReplyDraft(msg, { myId, activeChatUser, inferReplyMediaType });
-    setReplyingTo(draft);
-  };
-
-  const handleCopySelectedMessages = () => {
-    const selectedTexts = buildSelectedMessagesCopyText(messages, selectedMsgIds, formatVoiceDuration);
-    copyTextToClipboard(selectedTexts);
-    setSelectedMsgIds([]);
-    setSelectMode(false);
-  };
+  const {
+    handleToggleSelectMsg,
+    handleDeleteSelectedMessages,
+    handleCopySingleMessage,
+    handleStartReply,
+    handleCopySelectedMessages,
+  } = useChatSelectionActions({
+    messages,
+    selectedMsgIds,
+    setSelectedMsgIds,
+    setSelectMode,
+    playingVoiceId,
+    setPlayingVoiceId,
+    setMessages,
+    persistQuickLocal,
+    persistEncryptedLocal,
+    sendRealtimePacketRef,
+    deletePersonalChatMessages,
+    targetId,
+    myId,
+    activeChatUser,
+    setReplyingTo,
+    formatVoiceDuration,
+    inferReplyMediaType,
+  });
 
   const groupedMessages = useMemo(() => {
     return groupMessages(messages, messageSearchQuery, getChatTimeLabel);

@@ -43,6 +43,12 @@ import {
   patchEventCollectionForUser,
   buildSyncedProfilePatch,
 } from "./mapPage/profilePatch";
+import { useMapStartupGate } from "./mapPage/useMapStartupGate";
+import { useOfflineBeacon } from "./mapPage/useOfflineBeacon";
+import { useEventsRefreshListener } from "./mapPage/useEventsRefreshListener";
+import { useMapBroadcastActions } from "./mapPage/useMapBroadcastActions";
+import { useMapPresenceActions } from "./mapPage/useMapPresenceActions";
+import { useMapProfileActions } from "./mapPage/useMapProfileActions";
 import api, {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents, fetchMiniEventsWithMeta,
   postBroadcast, putBroadcast, delBroadcast, postLocation, patchVisibility,
@@ -120,72 +126,12 @@ export default function MapPage() {
   const [isRecentering, setIsRecentering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMapEngineReady, setIsMapEngineReady] = useState(false);
-  const checkShouldSkipStartup = useCallback(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      // Fade in gracefully directly to map page without intro is for:
-      // 1. Password reset return from map
-      // 2. Active map session (already initialized in this session)
-      const params = new URLSearchParams(window.location.search);
-      const isPasswordResetReturn =
-        params.get("from") === "password_reset" ||
-        params.get("skip_intro") === "true" ||
-        sessionStorage.getItem("kalceria_password_reset_from_map") === "true" ||
-        localStorage.getItem("kalceria_password_reset_from_map") === "true" ||
-        sessionStorage.getItem("kalceria_skip_map_intro") === "true" ||
-        localStorage.getItem("kalceria_skip_map_intro") === "true";
-
-      const isSessionMapActive = sessionStorage.getItem("kalceria_map_intro_seen") === "true";
-
-      return Boolean(isPasswordResetReturn || isSessionMapActive);
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const [showStartup, setShowStartup] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !checkShouldSkipStartup();
-  });
-  const handleStartupComplete = useCallback(() => {
-    setShowStartup(false);
-    try {
-      sessionStorage.setItem("kalceria_map_intro_seen", "true");
-    } catch {}
-  }, []);
-
-  // Consume password-reset-from-map flag immediately on mount
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      if (checkShouldSkipStartup()) {
-        setShowStartup(false);
-        const params = new URLSearchParams(window.location.search);
-        if (
-          (params.get("skip_intro") === "true" || params.get("from") === "password_reset") &&
-          window.history.replaceState
-        ) {
-          params.delete("skip_intro");
-          params.delete("from");
-          const cleanSearch = params.toString();
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname + (cleanSearch ? `?${cleanSearch}` : "")
-          );
-        }
-      } else {
-        setShowStartup(true);
-      }
-      // Immediately clear the one-time bypass and any lingering legacy skip flags
-      sessionStorage.removeItem("kalceria_password_reset_from_map");
-      localStorage.removeItem("kalceria_password_reset_from_map");
-      sessionStorage.removeItem("kalceria_skip_map_intro");
-      localStorage.removeItem("kalceria_skip_map_intro");
-      localStorage.removeItem("kalceria_skip_map_intro_until");
-      localStorage.removeItem("kalceria_auth_return");
-    } catch {}
-  }, [checkShouldSkipStartup]);
+  const {
+    showStartup,
+    setShowStartup,
+    checkShouldSkipStartup,
+    handleStartupComplete,
+  } = useMapStartupGate();
   const [isDataLoading, setIsDataLoading] = useState(true);
   const hasMounted = useHasMounted();
   const [notLoggedIn, setNotLoggedIn] = useState(() => (typeof window !== "undefined" ? !hasUserSession() : false));
@@ -353,64 +299,9 @@ export default function MapPage() {
     };
   }, [currentUser?.id, presence, selfLiveCoords?.lat, selfLiveCoords?.lng, currentUser?.domicileLat, currentUser?.domicileLng]);
 
-  // Immediately mark offline in Redis when leaving map, closing tab, or shutting down laptop
-  useEffect(() => {
-    if (!currentUser?.id) return;
-    const userId = currentUser.id;
+  useOfflineBeacon({ currentUser });
 
-    const markOffline = () => {
-      try {
-        const payload = JSON.stringify({ userId });
-        // 1. SendBeacon with Blob application/json
-        if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-          const blob = new Blob([payload], { type: "application/json" });
-          navigator.sendBeacon("/api/location/offline", blob);
-        }
-        // 2. Fetch with keepalive (standard across desktop Chrome/Edge/Firefox)
-        if (typeof fetch === "function") {
-          fetch("/api/location/offline", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: payload,
-            keepalive: true,
-            credentials: "include",
-          }).catch(() => {});
-        }
-      } catch {}
-    };
-
-    window.addEventListener("pagehide", markOffline);
-    window.addEventListener("beforeunload", markOffline);
-
-    return () => {
-      window.removeEventListener("pagehide", markOffline);
-      window.removeEventListener("beforeunload", markOffline);
-      markOffline();
-    };
-  }, [currentUser?.id]);
-
-  // Instant Event refresh upon collab request or media upload
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handleRefresh = (e) => {
-      const { updatedEvent } = e?.detail || {};
-      if (updatedEvent?.id) {
-        setEvents((prev) =>
-          prev.map((ev) => (String(ev.id) === String(updatedEvent.id) ? updatedEvent : ev))
-        );
-      } else {
-        fetchMiniEventsWithMeta().then((res) => {
-          if (res?.events) {
-            const merged = mergeEvents(res.events);
-            setEvents(merged);
-            syncCollabStateFromServer(merged, res.requestedEventId ?? null);
-          }
-        }).catch(() => {});
-      }
-    };
-    window.addEventListener("kalceria:refresh-events-request", handleRefresh);
-    return () => window.removeEventListener("kalceria:refresh-events-request", handleRefresh);
-  }, [setEvents, syncCollabStateFromServer]);
+  useEventsRefreshListener({ setEvents, syncCollabStateFromServer });
 
   // fetch map users + kalcerians (poll every 10s)
   useEffect(() => {
@@ -668,159 +559,47 @@ export default function MapPage() {
     (e) => e.id === "own" || (currentUser?.id && String(e.creator?.id) === String(currentUser?.id))
   );
 
-  const handleGoToOwnEvent = useCallback(() => {
-    if (!activeOwnEvent) return;
-    handleOpenItemOnMap(activeOwnEvent, "event");
-  }, [activeOwnEvent, handleOpenItemOnMap]);
+  const {
+    hasActiveOwnBroadcast,
+    handleGoToOwnEvent,
+    handleTopDynamicBroadcastClick,
+    saveBroadcast,
+    handleOpenEditBroadcast,
+    handleConfirmDeleteBroadcast,
+  } = useMapBroadcastActions({
+    currentUser,
+    mapUsersData,
+    statusText,
+    isSelfOffline,
+    activeOwnEvent,
+    setStatusText,
+    setIsEditingBroadcast,
+    setShowStatusModal,
+    setShowDeleteBroadcastConfirm,
+    setCurrentUser,
+    setMapUsersData,
+    setNotice,
+    setBusy,
+    setSelfLiveCoords,
+    triggerToolbarRetractCycle,
+    handleOpenItemOnMap,
+  });
 
-  const hasActiveOwnBroadcast = useMemo(() => {
-    const rawMsg =
-      typeof currentUser?.broadcast === "string"
-        ? currentUser.broadcast
-        : currentUser?.broadcast?.message;
-    return Boolean(rawMsg && rawMsg.trim());
-  }, [currentUser?.broadcast]);
-
-  const handleTopDynamicBroadcastClick = useCallback(() => {
-    if (!currentUser?.id) return;
-    const me = (mapUsersData || []).find((u) => String(u.id) === String(currentUser.id)) || currentUser;
-    handleOpenItemOnMap(me, "user");
-  }, [currentUser, mapUsersData, handleOpenItemOnMap]);
-
-  // real broadcast save (disabled when self is offline)
-  async function saveBroadcast(e) {
-    e.preventDefault();
-    if (isSelfOffline || !statusText.trim()) return;
-    setBusy(true);
-    try {
-      // update location first if browser supports it
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            setSelfLiveCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-            postLocation(pos.coords.latitude, pos.coords.longitude).catch(
-              () => {},
-            );
-          },
-          () => {},
-        );
-      }
-      // create or update broadcast
-      if (currentUser?.broadcast) {
-        await putBroadcast(statusText.trim());
-      } else {
-        await postBroadcast(statusText.trim());
-      }
-      // refresh user data
-      const user = await fetchMe();
-      setCurrentUser(user);
-      const updatedMapUsers = await fetchMapUsers();
-      if (updatedMapUsers) setMapUsersData(updatedMapUsers);
-      setNotice("Broadcast updated.");
-      setShowStatusModal(false);
-      setIsEditingBroadcast(false);
-      triggerToolbarRetractCycle();
-    } catch (err) {
-      setNotice(err.message || "Failed to update broadcast.");
-    }
-    setBusy(false);
-  }
-
-  const handleOpenEditBroadcast = useCallback((userId) => {
-    if (isSelfOffline) return;
-    const currentMsg =
-      typeof currentUser?.broadcast === "string"
-        ? currentUser.broadcast
-        : currentUser?.broadcast?.message || "";
-    setStatusText(currentMsg);
-    setIsEditingBroadcast(true);
-    setShowStatusModal(true);
-  }, [isSelfOffline, currentUser, setStatusText]);
-
-  const handleConfirmDeleteBroadcast = useCallback(async () => {
-    // 1. Instant 0ms Optimistic UI Updates
-    setShowStatusModal(false);
-    setIsEditingBroadcast(false);
-    setShowDeleteBroadcastConfirm(false);
-    setStatusText("");
-    setCurrentUser((prev) => (prev ? { ...prev, broadcast: null } : prev));
-    setMapUsersData((prev) =>
-      prev.map((u) => (u.id === currentUser?.id ? { ...u, broadcast: null } : u))
-    );
-    setNotice("Broadcast deleted.");
-
-    // Trigger auto-retract animation so toolbar tucks in and reconfigures cleanly
-    triggerToolbarRetractCycle();
-
-    // 2. Asynchronous backend deletion in background
-    try {
-      await delBroadcast();
-      const updatedMapUsers = await fetchMapUsers().catch(() => null);
-      if (updatedMapUsers) setMapUsersData(updatedMapUsers);
-    } catch (err) {
-      console.warn("Delete broadcast background sync warning:", err?.message);
-    }
-  }, [currentUser?.id, setStatusText, triggerToolbarRetractCycle, fetchMapUsers, setNotice]);
-
-  useEffect(() => {
-    const handleRemoteEditBroadcast = (e) => {
-      const userId = e.detail?.userId;
-      handleOpenEditBroadcast(userId);
-    };
-    window.addEventListener("kalceria:open-edit-broadcast", handleRemoteEditBroadcast);
-    return () => window.removeEventListener("kalceria:open-edit-broadcast", handleRemoteEditBroadcast);
-  }, [handleOpenEditBroadcast]);
-
-  // toggle visibility (broadcast status on/off)
-  async function handlePresenceChange(mode) {
-    const isOnline = mode === "online";
-    setIsStatusBusy(true);
-    setPresence(mode);
-    setMenuOpen(false);
-    if (!isOnline) {
-      setActionMenuOpen(false);
-      setShowStatusModal(false);
-      setShowEventModal(false);
-      setShowRequestsModal(false);
-      setShowCancelRequestModal(false);
-    }
-    try {
-      await patchVisibility(isOnline);
-      if (isOnline && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            setSelfLiveCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-            postLocation(pos.coords.latitude, pos.coords.longitude)
-              .then(() => {
-                fetchMapUsers().then((u) => setMapUsersData(u || []));
-                fetchKalcerians().then((k) => setKalcerians(k || []));
-              })
-              .catch(() => {});
-          },
-          () => {
-            // Still update the list even if location fails
-            fetchMapUsers().then((u) => setMapUsersData(u || []));
-            fetchKalcerians().then((k) => setKalcerians(k || []));
-          },
-        );
-      } else {
-        fetchMapUsers().then((u) => setMapUsersData(u || []));
-        fetchKalcerians().then((k) => setKalcerians(k || []));
-      }
-
-      const user = await fetchMe();
-      setCurrentUser(user);
-      setNotice(
-        isOnline
-          ? "Status ONLINE: tampil di radar."
-          : "Status STEALTH: lokasi disembunyikan.",
-      );
-    } catch (err) {
-      setNotice(err.message || "Failed to update visibility.");
-    } finally {
-      setIsStatusBusy(false);
-    }
-  }
+  const { handlePresenceChange } = useMapPresenceActions({
+    setIsStatusBusy,
+    setPresence,
+    setMenuOpen,
+    setActionMenuOpen,
+    setShowStatusModal,
+    setShowEventModal,
+    setShowRequestsModal,
+    setShowCancelRequestModal,
+    setSelfLiveCoords,
+    setMapUsersData,
+    setKalcerians,
+    setCurrentUser,
+    setNotice,
+  });
 
   const handleOpenEditEvent = useCallback((eventItem) => {
     if (!eventItem || isSelfOffline) return;
@@ -1063,92 +842,21 @@ export default function MapPage() {
     }
   }
 
-  const handleSaveProfile = useCallback(async (updatedData) => {
-    const applyProfilePatch = (patch) => {
-      persistProfileIdentityCache(currentUser, {
-        profilePicture: patch.profilePicture,
-        coverImage: patch.coverImage,
-        coverType: patch.coverType,
-      });
-      setCurrentUser((prev) => {
-        const merged = { ...(prev || {}), ...patch };
-        try {
-          localStorage.setItem("kalceria_user", JSON.stringify(merged));
-          const sess = localStorage.getItem("kalceria_user_session");
-          if (sess) {
-            const parsed = JSON.parse(sess);
-            parsed.user = { ...(parsed.user || {}), ...patch };
-            localStorage.setItem("kalceria_user_session", JSON.stringify(parsed));
-          }
-        } catch {}
-        return merged;
-      });
-      setKalcerians((prev) => patchUserCollection(prev, currentUser?.id, patch));
-      setMapUsersData((prev) => patchUserCollection(prev, currentUser?.id, patch));
-      setEvents((prev) => patchEventCollectionForUser(prev, currentUser?.id, patch));
-    };
-
-    applyProfilePatch(updatedData);
-    try {
-      const res = await api.put("/users/me", updatedData);
-      if (res?.data?.user) {
-        const serverUser = res.data.user;
-        const syncedPatch = buildSyncedProfilePatch(updatedData, serverUser);
-        applyProfilePatch(syncedPatch);
-      }
-    } catch (e) {
-      console.warn("Profile update remote sync deferred:", e?.message);
-    }
-    setNotice("Profile updated successfully!");
-  }, [currentUser]);
-
-  const handleRequestChangePassword = useCallback(() => {
-    let email = currentUser?.email;
-    if (!email && typeof window !== "undefined") {
-      try {
-        const u = JSON.parse(localStorage.getItem("kalceria_user") || "null");
-        const s = JSON.parse(localStorage.getItem("kalceria_user_session") || "null");
-        email = u?.email || s?.user?.email || localStorage.getItem("kalceria_user_email") || "";
-      } catch {}
-    }
-
-    try {
-      sessionStorage.setItem("kalceria_auth_return", "/map");
-      sessionStorage.setItem("kalceria_password_reset_from_map", "true");
-      localStorage.removeItem("kalceria_auth_return");
-      localStorage.removeItem("kalceria_password_reset_from_map");
-    } catch {}
-
-    setShowEditProfileModal(false);
-    setShowOwnProfile(false);
-
-    const targetUrl = email
-      ? `/?auth=true&mode=forgot-password&from=map&email=${encodeURIComponent(email)}`
-      : "/?auth=true&mode=forgot-password&from=map";
-
-    window.location.href = targetUrl;
-  }, [currentUser?.email]);
-
-  const handleConfirmDeleteAccount = useCallback(async () => {
-    setShowDeleteAccountModal(false);
-    setShowEditProfileModal(false);
-    setShowOwnProfile(false);
-    setNotice("Account deleted. Redirecting...");
-
-    try {
-      clearSession();
-      localStorage.clear();
-      sessionStorage.clear();
-    } catch {}
-
-    api.delete("/users/me").catch((e) => {
-      console.warn("Delete account remote sync deferred:", e?.message);
-    });
-
-    setTimeout(() => {
-      window.location.replace("/");
-    }, 300);
-  }, []);
+  const {
+    handleSaveProfile,
+    handleRequestChangePassword,
+    handleConfirmDeleteAccount,
+  } = useMapProfileActions({
+    currentUser,
+    setCurrentUser,
+    setKalcerians,
+    setMapUsersData,
+    setEvents,
+    setNotice,
+    setShowEditProfileModal,
+    setShowOwnProfile,
+    setShowDeleteAccountModal,
+  });
 
   // login gate
   if (notLoggedIn) {
