@@ -151,3 +151,65 @@ Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyat
 - Merusak orientasi layar HP atau memicu regresi pada fitur yang sebelumnya stabil di older commits.
 - Menulis kode monolitik yang melanggar prinsip modularitas.
 - Melanggar proteksi `BaselineNovember#2`.
+
+
+---
+
+## 6. Protokol Modularisasi (Berlaku untuk Tier A, Tier B, dan Setiap Ekstraksi Modul)
+**Referensi wajib (baca UTUH sebelum menyentuh file Tier A/B):** `docs/KALCERIA_MODULARIZATION_STRATEGY.md`. Dokumen itu berisi inventaris atomik, Hook Ledger, kartu spesifikasi modul, KPI, dan matriks uji manual. Bagian ini hanya aturan mengikatnya.
+
+**Cakupan:** Tier A = `frontend/components/map/MapPageClient.jsx`, `frontend/components/map/chat/hooks/usePersonalChatState.js`. Tier B = 10 file produksi 500–799 baris (daftar di dokumen strategi §9). **Tier C (300–499 baris) DILARANG diubah** dalam program ini. Test besar dibiarkan.
+
+### 6.1 Baseline Referensi & Perlindungan `BaselineNovember#2`
+1. Acuan perilaku = commit **`f1dbb70`** (kode identik dengan `6926af6`; beda hanya `AGENTS.md` dan `TEST.md`). Akses HANYA lewat hash: `git show f1dbb70:<path>`, `git archive f1dbb70`, `git diff f1dbb70`.
+2. DILARANG TOTAL terhadap branch `BaselineNovember#2`: `checkout`, `switch`, `merge`, `rebase`, `reset`, `push`, `git branch -f`, membuat worktree dari branch itu. Branch itu hanya bergerak atas **perintah eksplisit programmer**.
+3. Semua pekerjaan di `main`, di-push setiap commit yang lulus gate.
+
+### 6.2 Sepuluh Hukum Besi (pelanggaran satu pun = `git revert` + kegagalan §5)
+- **IL-1 Irisan Kontigu:** ekstrak hanya blok yang berurutan pada Hook Ledger; modul berisi efek menempati posisi ledger yang sama. Urutan efek (termasuk efek dalam hook eksternal) wajib identik dengan baseline.
+- **IL-2 Registri Kepemilikan:** `useState`/`useRef` yang dipakai lintas blok dibuat di facade dan disuntik lewat satu parameter-object. Modul dilarang membuat ref/state bersama.
+- **IL-3** Assignment `ref.current = …` di render-body DILARANG dipindah ke `useEffect` atau digeser posisi relatifnya.
+- **IL-4** Updater `setMessages` yang tidak murni (persist, `ackPersonalChatRead`, `dispatchEvent('kalceria:personal-chat-read')`) dipindah **verbatim**; dilarang "dirapikan" ke efek. Itu jalur red dot.
+- **IL-5** Dependency array disalin **verbatim**, termasuk yang dianggap "salah" oleh ESLint. Dilarang menambah/mengurangi dep.
+- **IL-6** Handler non-memo (mis. `handleSendText`, `saveMiniEvent`, `deleteMiniEvent`, `saveBroadcast`, `handlePresenceChange`, `handleQuitConfirm`) tetap non-memo. Dilarang membungkus `useCallback`.
+- **IL-7** Deduplikasi hanya untuk blok **byte-identik**. Blok yang mirip tapi berbeda (mis. persist Quick+Encrypted vs Encrypted saja) tetap terpisah.
+- **IL-8** Konstanta literal (timer, batas, koordinat, nama event/storage) tidak diubah, tidak dijadikan config, tidak di-rename.
+- **IL-9** Kontrak pemanggil/anak dibekukan: 58 key return `usePersonalChatState`, 9 re-export dari file hook (dipakai `ChatMessageBubble`, `ChatVoiceNoteBubble`), default export `MapPage`, seluruh nama dan nilai prop JSX ke anak, baris `dynamic(... ssr:false)` tetap di facade.
+- **IL-10** Nol dependensi npm baru; nol perubahan UI/CSS/animasi; nol perbaikan lint atau dead-code dalam commit ekstraksi (dead-code hanya ditandai di dokumen strategi §14).
+
+### 6.3 Prosedur Per-Ekstraksi (12 langkah, berurutan)
+1. Baca utuh file sumber + semua konsumen (`git grep`) + helper terkait.
+2. Tulis kartu spesifikasi modul dan buktikan irisan kontigu.
+3. Rekam metrik baseline modul (LOC, jumlah hook, dep array).
+4. Potong blok **verbatim** (termasuk komentar lama); hanya signature, parameter, `import/export` yang ditambah.
+5. Ganti blok asli dengan satu panggilan modul pada posisi ledger yang sama.
+6. Periksa IL-1…IL-10 satu per satu.
+7. `git diff -M --color-moved=dimmed-zebra --color-moved-ws=allow-indentation-change f1dbb70 -- <paths>`: baris non-pindah hanya boleh berupa glue.
+8. Jalankan seluruh gate §6.4.
+9. Jalankan audit kontrak/ledger/konservasi hook; selisih harus **nol**.
+10. Matriks uji manual wave terkait dijalankan programmer pada perangkat nyata.
+11. Commit atomik: `refactor(<area>): extract <module> (zero-behavior-change)`, `git status` bersih.
+12. Push `main`. Gagal **2 kali** pada ekstraksi yang sama → berhenti dan laporkan penyebab.
+
+### 6.4 Gate Tambahan (melengkapi Tahap 4)
+- **Gate 3b:** `node --test frontend/tests/*.test.mjs` ➔ WAJIB 100% (golden-master modul murni vs baseline `f1dbb70`).
+- **Gate 3c:** `node scripts/audit/modularity-audit.mjs --check` ➔ WAJIB hijau: ukuran file/fungsi, konservasi hook (selisih 0), Hook Ledger identik, snapshot kontrak identik.
+- **Status:** Gate 3b/3c **berlaku setelah Wave 0 selesai** (alatnya dibangun di Wave 0). Sebelum itu, Gate 1–4 + smoke probe tetap wajib seperti biasa.
+- Lint BUKAN gate lulus/gagal (baseline sudah gagal); metriknya: temuan ESLint per file yang disentuh **tidak boleh naik**. Jalankan ESLint selalu dengan batas waktu eksplisit.
+- Gate 1–4 dan 5 probe live tetap wajib di akhir tiap wave yang di-deploy. Deploy mengikuti Tahap 4.5 (dari root, JANGAN `cd backend`).
+
+### 6.5 Aturan Modul
+1. Lokasi: subfolder camelCase di sebelah file induk, mengikuti pola yang sudah ada (`mapPage/`, `personalChat/`, `mediaCard/`, `cameraCapture/`, `personalCall/`, `mapChat/`, `controllers/miniEvent/`). Jangan membuat folder paralel bila sudah ada.
+2. Hook `useXxx.js`, satu hook utama per file, named export, satu parameter-object dengan nama field = nama variabel baseline.
+3. Modul murni: tanpa React, **tanpa import `@/`** (helper beralias, `Date.now`, storage, `navigator`, `document` diinjeksi lewat parameter) agar dapat dites `node --test`.
+4. Komentar/docstring lama yang melekat pada kode ikut dipindah. Kepala tiap modul memuat tujuan, posisi ledger, field input/output.
+5. Backend (Tier B): file lama menjadi **barrel re-export** dengan nama ekspor identik; rute, middleware, dan respons tidak berubah.
+6. Fixture test hanya in-memory (§1.6): dilarang membuat akun/data di Postgres/Redis.
+
+### 6.6 Tambahan Failure Verdict ("OUT")
+- Mengubah urutan efek, memindah assignment ref render-body ke efek, atau memecah efek yang memuat dua concern.
+- Menambah `useCallback`/`useMemo` pada handler non-memo, atau mengubah dep array.
+- Mengubah kontrak pemanggil/anak (key return, re-export, prop JSX) tanpa izin eksplisit.
+- Menyentuh Tier C atau `BaselineNovember#2`.
+- Melapor "sudah" sementara Gate 3b/3c (bila sudah aktif), moved-lines diff, atau matriks manual belum dijalankan.
+- Menggabungkan beberapa ekstraksi dalam satu commit sehingga tidak dapat di-`git revert` secara bersih.
