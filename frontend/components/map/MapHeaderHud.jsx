@@ -88,8 +88,8 @@ export const MapHeaderHud = memo(function MapHeaderHud({
           </svg>
         </button>
 
-        {/* Top-Right Controls: Shifted slightly to left so its right edge stops right at the left tip of Profile Sidebar */}
-        <div className="relative pointer-events-auto mr-[70px] sm:mr-[74px]">
+        {/* Top-Right Controls: Clean and tight to top-right screen boundary */}
+        <div className="relative pointer-events-auto mr-2.5 sm:mr-3">
           <HudFunctionalOuterbox
             isMapDark={isMapDark}
             setIsMapDark={setIsMapDark}
@@ -118,7 +118,7 @@ export const MapHeaderHud = memo(function MapHeaderHud({
         </div>
       </motion.header>
 
-      {/* Right-Side Screen Profile Dock: Tight to top-2 sm:top-2.5 and right-0 */}
+      {/* Right-Side Screen Profile Dock: Pulled down 25% to top-16 sm:top-20 for zero collision */}
       <HudRightProfileDock
         isMapDark={isMapDark}
         currentUser={currentUser}
