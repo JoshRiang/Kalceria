@@ -1,0 +1,147 @@
+{
+  "baselineCommit": "f1dbb70",
+  "generatedAt": "2026-11-09T11:07:12.526Z",
+  "tierA": {
+    "frontend/components/map/MapPageClient.jsx": {
+      "loc": 1632,
+      "hooks": {
+        "useState": 35,
+        "useEffect": 11,
+        "useCallback": 21,
+        "useMemo": 5,
+        "useRef": 2,
+        "useLayoutEffect": 0
+      }
+    },
+    "frontend/components/map/chat/hooks/usePersonalChatState.js": {
+      "loc": 1604,
+      "hooks": {
+        "useState": 20,
+        "useEffect": 7,
+        "useCallback": 9,
+        "useMemo": 1,
+        "useRef": 17,
+        "useLayoutEffect": 0
+      }
+    }
+  },
+  "tierB": [
+    {
+      "path": "backend/controllers/personalChatController.js",
+      "loc": 673
+    },
+    {
+      "path": "backend/controllers/miniEvent/miniEventHandlers.js",
+      "loc": 654
+    },
+    {
+      "path": "frontend/components/map/KalceriansPanel.jsx",
+      "loc": 648
+    },
+    {
+      "path": "frontend/components/map/chat/components/CameraCaptureModal.jsx",
+      "loc": 637
+    },
+    {
+      "path": "frontend/components/map/chat/components/ChatMediaCard.jsx",
+      "loc": 625
+    },
+    {
+      "path": "frontend/components/map/eventPopup/popupCarouselController.js",
+      "loc": 618
+    },
+    {
+      "path": "frontend/components/map/EditProfileModal.jsx",
+      "loc": 597
+    },
+    {
+      "path": "frontend/components/map/hooks/useMapChatAndNotifications.js",
+      "loc": 563
+    },
+    {
+      "path": "frontend/components/map/chat/hooks/personalCall/useCallSession.js",
+      "loc": 557
+    },
+    {
+      "path": "frontend/components/admin/dashboard/dashboard.jsx",
+      "loc": 553
+    }
+  ],
+  "contracts": {
+    "frontend/components/map/chat/hooks/usePersonalChatState.js": {
+      "returnKeysCount": 58,
+      "returnKeys": [
+        "starterPlaceholder",
+        "myId",
+        "targetId",
+        "displayName",
+        "groupedMessages",
+        "nextCursor",
+        "isLoadingOlder",
+        "loadOlderMessages",
+        "inputText",
+        "setInputText",
+        "searchOpen",
+        "setSearchOpen",
+        "messageSearchQuery",
+        "setMessageSearchQuery",
+        "menuOpen",
+        "setMenuOpen",
+        "selectMode",
+        "setSelectMode",
+        "selectedMsgIds",
+        "setSelectedMsgIds",
+        "showContactInfo",
+        "setShowContactInfo",
+        "showEmojiBar",
+        "setShowEmojiBar",
+        "replyingTo",
+        "setReplyingTo",
+        "handleStartReply",
+        "handleCopySingleMessage",
+        "fileInputRef",
+        "isUploadingMedia",
+        "mediaError",
+        "setMediaError",
+        "isCameraModalOpen",
+        "setIsCameraModalOpen",
+        "permissionModal",
+        "setPermissionModal",
+        "isRecordingVoice",
+        "recordingSeconds",
+        "liveWaveform",
+        "playingVoiceId",
+        "setPlayingVoiceId",
+        "callState",
+        "setCallState",
+        "handleCallFinished",
+        "handleResendMessage",
+        "isPeerTyping",
+        "messagesEndRef",
+        "menuContainerRef",
+        "handleSendText",
+        "handleFileUpload",
+        "handleStartVoiceNote",
+        "handleCancelVoiceNote",
+        "handleFinishVoiceNote",
+        "handleSendCapturedMedia",
+        "handleTriggerCall",
+        "handleToggleSelectMsg",
+        "handleDeleteSelectedMessages",
+        "handleCopySelectedMessages"
+      ],
+      "reExportsCount": 9,
+      "reExports": [
+        "LOCAL_CHAT_CACHE_PREFIX",
+        "blobToDataUrl",
+        "uploadMediaWithPersistFallback",
+        "QUICK_EMOJIS",
+        "formatMessageTime",
+        "GAUL_JAKSEL_STARTERS",
+        "getChatTimeLabel",
+        "getDateLabel",
+        "getInitialSeedMessages"
+      ]
+    }
+  }
+}

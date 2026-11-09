@@ -1,0 +1,24 @@
+    let replyPayload = null;
+    if (currentReply) {
+      replyPayload = {
+        id: currentReply.id,
+        text: currentReply.text || "",
+        msgType: currentReply.msgType,
+        mediaUrl: currentReply.mediaUrl || null,
+        voiceDuration: currentReply.voiceDuration || null,
+        videoDuration: currentReply.videoDuration || null,
+        caption: currentReply.caption || "",
+        senderId: currentReply.senderId,
+        senderName: currentReply.senderName || "Kalcerian",
+        isBroadcast: Boolean(currentReply.isBroadcast),
+        broadcastMessage: currentReply.broadcastMessage || null,
+        broadcastDuration: currentReply.broadcastDuration || null,
+        lat: currentReply.lat || null,
+        lng: currentReply.lng || null,
+        userId: currentReply.userId || currentReply.senderId || null,
+        isCall: Boolean(currentReply.isCall),
+        callMode: currentReply.callMode || null,
+        callDuration: currentReply.callDuration !== undefined ? currentReply.callDuration : null,
+        callTimestamp: currentReply.callTimestamp || null,
+      };
+    }

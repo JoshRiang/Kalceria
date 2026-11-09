@@ -1,0 +1,50 @@
+{
+  "baselineCommit": "f1dbb70",
+  "pureModuleRanges": {
+    "frontend/components/map/chat/hooks/usePersonalChatState.js": [
+      {
+        "moduleName": "groupMessages.js",
+        "startLine": 1367,
+        "endLine": 1386,
+        "description": "Pure memoized message grouping by day divider"
+      },
+      {
+        "moduleName": "clipboardText.js",
+        "startLine": 1247,
+        "endLine": 1286,
+        "altStartLine": 1322,
+        "altEndLine": 1365,
+        "description": "Clipboard payload builder and native/fallback copy implementation"
+      },
+      {
+        "moduleName": "replyPayload.js",
+        "startLine": 1047,
+        "endLine": 1070,
+        "altStartLine": 1288,
+        "altEndLine": 1319,
+        "description": "Reply payload parser and draft builder"
+      }
+    ],
+    "frontend/components/map/MapPageClient.jsx": [
+      {
+        "moduleName": "mapEntitiesProjection.js",
+        "startLine": 558,
+        "endLine": 650,
+        "description": "Projection of visible online map users and active events"
+      },
+      {
+        "moduleName": "sidebarKalceriansProjection.js",
+        "startLine": 734,
+        "endLine": 862,
+        "description": "Sidebar Kalcerians list projection, exclusion filters, and 4-tier sorting"
+      },
+      {
+        "moduleName": "eventDescCodec.js",
+        "startLine": 1024,
+        "endLine": 1036,
+        "description": "Event tag encoder/decoder for [CAT], [LOC], [MEDIA], [COLLABS]"
+      }
+    ]
+  }
+}
+

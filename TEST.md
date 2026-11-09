@@ -141,7 +141,17 @@ npm --prefix frontend run build
 
 ---
 
+### Test Suite 10: Modularity & Invariance Golden Gate (Gate 3b & Gate 3c)
+| Test ID | Feature / Case | Input / Trigger | Expected Result | Concurrency & Stability |
+|---|---|---|---|---|
+| `MOD-01` | **Hook Conservation (K3)** | `node scripts/audit/modularity-audit.mjs --check` | Aggregate hook sum across facade and submodules equals baseline with 0 delta. | Zero hook additions/leaks across extractions. |
+| `MOD-02` | **Contract Invariance (K5)** | Audit of `usePersonalChatState.js` return signature | All 58 return keys and 9 re-exports strictly preserved. | Zero breakages for downstream consumers. |
+| `MOD-03` | **Golden-Master Pure Test Harness (Gate 3b)** | `node --test frontend/tests/*.test.mjs` | 100% pass against deterministic in-memory fixtures. | In-memory only; zero Postgres or Redis pollution. |
+| `MOD-04` | **Deterministic Golden Slices** | `node scripts/audit/golden/make-golden.mjs` | Verbatim Git slice extraction from `f1dbb70` without behavioral drift. | Reproducible verification against frozen commit. |
+
+---
+
 ## 3. Mandatory Compliance Directives (AGENTS.md)
 1. **Zero Dummy User Accounts**: No mock accounts (`HP Mobile User`, `Tester`) may ever remain in Postgres or Redis feeds.
-2. **Golden Baseline BEKU**: Commit `6926af6` (`BaselineNovember#2`) is synchronized and strictly protected.
+2. **Golden Baseline BEKU**: Commit `f1dbb70` (`BaselineNovember#2`) is synchronized and strictly protected.
 3. **One-Shot Gate**: All pull requests and deployments must pass all 4 verification gates and 5 live native smoke probes before sign-off.

@@ -1,0 +1,20 @@
+  const groupedMessages = useMemo(() => {
+    const q = messageSearchQuery.trim().toLowerCase();
+    const filtered = q
+      ? messages.filter((m) => String(m.text || "").toLowerCase().includes(q))
+      : messages;
+
+    const items = [];
+    let lastDayKey = null;
+    filtered.forEach((m) => {
+      const msgDate = new Date(Number(m.ts) || Date.now());
+      const dayKey = `${msgDate.getFullYear()}-${msgDate.getMonth()}-${msgDate.getDate()}`;
+      if (dayKey !== lastDayKey) {
+        const label = getChatTimeLabel(m.ts);
+        items.push({ type: "date_divider", id: `date_${dayKey}_${m.id}`, label });
+        lastDayKey = dayKey;
+      }
+      items.push({ type: "message", ...m });
+    });
+    return items;
+  }, [messages, messageSearchQuery]);

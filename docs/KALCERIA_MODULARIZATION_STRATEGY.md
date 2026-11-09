@@ -664,8 +664,8 @@ Dijalankan **sebelum** (catat sebagai baseline) dan **sesudah** tiap wave pemicu
 
 | Wave | Status | Commit | KPI hijau | Matriks manual |
 |---|---|---|---|---|
-| Dokumentasi strategi + AGENTS §6 | Selesai putaran ini | (lihat `git log`) | n/a | n/a |
-| 0 | Belum mulai | | | |
+| Dokumentasi strategi + AGENTS §6 | Selesai | `f362880` | n/a | n/a |
+| 0 | Selesai (Gate 3b & 3c aktif) | (commit Wave 0) | K3 (selisih 0), K5 (58 return keys intact), K6 (golden slices) | n/a (0 file produksi) |
 | 1 | Belum mulai | | | |
 | 2 | Belum mulai | | | |
 | 3 | Belum mulai | | | |

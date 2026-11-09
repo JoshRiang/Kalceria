@@ -1,0 +1,62 @@
+{
+  "targetBaselineCommit": "f1dbb70",
+  "limits": {
+    "moduleMaxLoc": 300,
+    "functionMaxLoc": 80,
+    "facades": {
+      "frontend/components/map/MapPageClient.jsx": 500,
+      "frontend/components/map/chat/hooks/usePersonalChatState.js": 450
+    }
+  },
+  "hookConservation": {
+    "tolerance": 0
+  },
+  "tierA": {
+    "frontend/components/map/MapPageClient.jsx": {
+      "baselineLoc": 1632,
+      "hooks": {
+        "useState": 35,
+        "useEffect": 11,
+        "useCallback": 21,
+        "useMemo": 5,
+        "useRef": 2,
+        "useLayoutEffect": 0
+      },
+      "facadeMaxLoc": 500,
+      "targetSubfolder": "frontend/components/map/mapPage",
+      "preexistingFiles": [
+        "useMapBlockedUsers.js"
+      ]
+    },
+    "frontend/components/map/chat/hooks/usePersonalChatState.js": {
+      "baselineLoc": 1604,
+      "hooks": {
+        "useState": 20,
+        "useEffect": 7,
+        "useCallback": 9,
+        "useMemo": 1,
+        "useRef": 17,
+        "useLayoutEffect": 0
+      },
+      "facadeMaxLoc": 450,
+      "targetSubfolder": "frontend/components/map/chat/hooks/personalChat"
+    }
+  },
+  "tierB": [
+    { "path": "backend/controllers/personalChatController.js", "baselineLoc": 673 },
+    { "path": "backend/controllers/miniEvent/miniEventHandlers.js", "baselineLoc": 654 },
+    { "path": "frontend/components/map/KalceriansPanel.jsx", "baselineLoc": 648 },
+    { "path": "frontend/components/map/chat/components/CameraCaptureModal.jsx", "baselineLoc": 637 },
+    { "path": "frontend/components/map/chat/components/ChatMediaCard.jsx", "baselineLoc": 625 },
+    { "path": "frontend/components/map/eventPopup/popupCarouselController.js", "baselineLoc": 618 },
+    { "path": "frontend/components/map/EditProfileModal.jsx", "baselineLoc": 597 },
+    { "path": "frontend/components/map/hooks/useMapChatAndNotifications.js", "baselineLoc": 563 },
+    { "path": "frontend/components/map/chat/hooks/personalCall/useCallSession.js", "baselineLoc": 557 },
+    { "path": "frontend/components/admin/dashboard/dashboard.jsx", "baselineLoc": 553 }
+  ],
+  "tierCExcluded": {
+    "description": "Tier C files (300-499 lines) must NOT be modified in this program.",
+    "minLoc": 300,
+    "maxLoc": 499
+  }
+}

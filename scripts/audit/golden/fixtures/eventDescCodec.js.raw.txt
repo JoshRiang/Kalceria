@@ -1,0 +1,13 @@
+    const rawDesc = eventItem.description || "";
+    const catMatch = rawDesc.match(/\[CAT:([a-z_]+)\]/i);
+    const mediaMatch = rawDesc.match(/\[MEDIA:([^\]]+)\]/i);
+    const locMatch = rawDesc.match(/\[LOC:([^\]]+)\]/i);
+    const category = catMatch ? catMatch[1].toLowerCase() : (eventItem.category || "cafe");
+    const mediaUrl = eventItem.mediaUrl || (mediaMatch ? mediaMatch[1] : "");
+    const location = eventItem.location || (locMatch ? locMatch[1] : "");
+    const cleanDesc = rawDesc
+      .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+      .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+      .replace(/\[LOC:[^\]]+\]\s*/gi, "")
+      .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
+      .trim();
