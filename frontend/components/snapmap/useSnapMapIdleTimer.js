@@ -38,14 +38,8 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
         popupWrapper.classList.add("popup-shrinking");
       });
 
+      // Trimmed to 290ms: matches 280ms cubic-bezier ease-in transition perfectly with zero excess delay
       setTimeout(() => {
-        activePopups.forEach((el) => {
-          const popupWrapper = el.closest(".leaflet-popup") || el;
-          const closeBtn = popupWrapper.querySelector(".leaflet-popup-close-button");
-          if (closeBtn) {
-            try { closeBtn.click(); } catch {}
-          }
-        });
         if (mapRef.current) {
           try {
             mapRef.current.closePopup();
@@ -66,11 +60,7 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
             }
           });
         }
-        activePopups.forEach((el) => {
-          const popupWrapper = el.closest(".leaflet-popup") || el;
-          popupWrapper.classList.remove("popup-shrinking");
-        });
-      }, 380);
+      }, 290);
     }, delayMs);
   }, [mapRef, markerRefs]);
   resetIdleTimerRef.current = resetIdleTimer;

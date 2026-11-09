@@ -48,7 +48,7 @@ export function formatBroadcastDuration(diffMs) {
 }
 
 export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser = null) {
-  const displayName = user?.nickname || user?.name || "Kalcerian";
+  const displayName = user?.name || user?.displayName || user?.nickname || "Kalcerian";
   const safeName = esc(displayName);
   const rawMessage = typeof user?.broadcast === "string" ? user.broadcast : user?.broadcast?.message;
   const safeMessage = esc(rawMessage || "");
@@ -102,24 +102,28 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
       font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       text-align: left;
     ">
-      <!-- Header Row: User Name on Left, Edit / Reply Button on Right -->
+      <!-- Header Row: User Display Name (Bold + Truncated) on Left, Edit / Reply Button on Right -->
       <div style="
         display: flex;
         align-items: center;
         justify-content: space-between;
         width: 100%;
+        gap: 8px;
       ">
         <div style="
           font-family: Arial, sans-serif;
           font-size: 14px;
-          font-weight: 500;
+          font-weight: 700;
           line-height: 1.25;
           color: ${textColor};
           letter-spacing: -0.01em;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-        ">${safeName}</div>
+          max-width: 195px;
+          flex: 1;
+          min-width: 0;
+        " title="${safeName}">${safeName}</div>
 
         ${
           isOwner

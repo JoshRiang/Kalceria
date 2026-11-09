@@ -74,6 +74,7 @@ export function useSnapMapInit({
         resetIdleTimer?.();
         const popupEl = e?.popup?.getElement?.();
         if (popupEl) {
+          popupEl.classList.remove("popup-shrinking");
           initEventPopupCarouselsFromRoot(popupEl, e.popup);
         }
       });

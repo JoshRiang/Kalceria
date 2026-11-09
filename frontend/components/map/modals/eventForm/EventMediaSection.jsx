@@ -145,6 +145,22 @@ export function EventMediaSection({
   const parsedUrls = splitMediaUrlListClient(eventForm.mediaUrl || "");
 
   // Format internal blob / server URL into clean original filename
+  const cleanFilename = (rawName) => {
+    if (!rawName) return "media-file";
+    let decoded = rawName;
+    try {
+      decoded = decodeURIComponent(rawName);
+    } catch {}
+    // Strip standard UUID prefix (e.g. 7b5088fb-f360-4983-b1d1-732f56baa279- or _):
+    decoded = decoded.replace(
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[-_]/i,
+      ""
+    );
+    // Strip timestamp or numeric prefix (e.g. 1731174928123- or 1731174928123_):
+    decoded = decoded.replace(/^\d{9,}[-_]/, "");
+    return decoded || "media-file";
+  };
+
   const getDisplayFilename = (url) => {
     if (!url) return "";
     if (fileNamesRef.current[url]) return fileNamesRef.current[url];
@@ -154,18 +170,17 @@ export function EventMediaSection({
         const inner = new URL(url, "https://kalceria.internal").searchParams.get("url") || "";
         const parts = inner.split("/");
         const last = parts[parts.length - 1];
-        const cleaned = last.replace(/^[0-9a-fA-F-]+_/, "").replace(/^\d+[-_]/, "");
-        return decodeURIComponent(cleaned || "media-file");
+        return cleanFilename(last);
       } catch {
         return "uploaded-media";
       }
     }
     try {
-      const u = new URL(url);
+      const u = new URL(url, "https://kalceria.internal");
       const name = u.pathname.split("/").pop();
-      if (name) return decodeURIComponent(name);
+      if (name) return cleanFilename(name);
     } catch {}
-    return url;
+    return cleanFilename(url);
   };
 
   const activeIdx = Math.min(selectedIdx, Math.max(0, parsedUrls.length - 1));
@@ -309,8 +324,12 @@ export function EventMediaSection({
                   title={`Pilih klip: ${getDisplayFilename(url)}`}
                   className={`relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm transition-all duration-200 transform cursor-pointer ${
                     isSelected
-                      ? "scale-105 ring-2 ring-[#00ffff] ring-offset-2 ring-offset-black/40 shadow-cyan-500/20 shadow-md z-10 opacity-100"
-                      : "hover:scale-102 opacity-75 hover:opacity-100 border border-black/10 dark:border-white/10"
+                      ? isModalDark
+                        ? "scale-105 ring-2 ring-white ring-offset-2 ring-offset-black/80 shadow-white/10 shadow-lg z-10 opacity-100"
+                        : "scale-105 ring-2 ring-black ring-offset-2 ring-offset-white shadow-black/10 shadow-lg z-10 opacity-100"
+                      : isModalDark
+                        ? "hover:scale-102 opacity-70 hover:opacity-100 border border-white/20"
+                        : "hover:scale-102 opacity-70 hover:opacity-100 border border-black/20"
                   }`}
                 >
                   {isVideo ? (

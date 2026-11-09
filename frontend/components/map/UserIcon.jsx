@@ -38,7 +38,7 @@ export function getSafeMapColor(value) {
 }
 
 export function getUserIconHtml(user, isMapDark = false) {
-  const displayName = user?.displayName || user?.nickname || user?.name || "Kalcerian";
+  const displayName = user?.name || user?.displayName || user?.nickname || "Kalcerian";
   const random = createSeededRandom(`map-user-icon-${user?.id || user?.nickname || user?.name || "anon"}`);
   const randomDelay = (random() * -2).toFixed(2);
   const rawColor = getSafeMapColor(user?.color);
@@ -66,7 +66,7 @@ export function getUserIconHtml(user, isMapDark = false) {
 }
 
 export function getBroadcastUserIconHtml(user, isMapDark = false) {
-  const displayName = user?.displayName || user?.nickname || user?.name || "Kalcerian";
+  const displayName = user?.name || user?.displayName || user?.nickname || "Kalcerian";
   const safeName = escapeMapHtml(displayName);
   const safeAvatar = escapeMapHtml(getSafeMapAvatarUrl(user));
 

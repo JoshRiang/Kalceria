@@ -91,12 +91,14 @@ export function computeCardGeometryForMedia(width, height) {
 export function trackPopupLayoutDuringTransition(state, durationMs = GEOMETRY_TRANSITION_MS) {
   const popup = state?.popupInstance;
   if (!popup || state.destroyed) return;
+  if (popup._container?.classList?.contains("popup-shrinking")) return;
 
   state.layoutTrackUntil = performance.now() + durationMs + 80;
   if (state.layoutTrackRaf) return;
 
   const repositionPopup = () => {
     try {
+      if (popup._container?.classList?.contains("popup-shrinking")) return;
       if (popup._container) {
         popup._containerWidth = popup._container.offsetWidth;
       }
@@ -132,6 +134,7 @@ export function cancelPopupLayoutTracking(state) {
 
 export function applyCardGeometry(state, geometry) {
   if (!state || state.destroyed || !state.cardEl || !state.frameEl) return false;
+  if (state.cardEl.closest?.(".popup-shrinking")) return false;
   const key = `${geometry.cardWidth}x${geometry.frameHeight}`;
   if (state.geometryKey === key) return false;
   state.geometryKey = key;

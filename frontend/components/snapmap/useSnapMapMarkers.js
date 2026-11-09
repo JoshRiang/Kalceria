@@ -81,6 +81,7 @@ export function useSnapMapMarkers({
               offset: [0, -26],
               autoClose: true,
               closeButton: false,
+              autoPan: false,
             });
             marker._lastPopupContent = popupContent;
             marker._lastPopupSig = userSig;
@@ -117,6 +118,7 @@ export function useSnapMapMarkers({
             offset: [0, -26],
             autoClose: true,
             closeButton: false,
+            autoPan: false,
           });
           marker._lastPopupContent = popupContent;
           marker._lastPopupSig = userSig;
@@ -225,6 +227,7 @@ export function useSnapMapMarkers({
         if (marker.getPopup()) {
           marker.getPopup().options.autoClose = false;
           marker.getPopup().options.closeOnClick = false;
+          marker.getPopup().options.autoPan = false;
         }
         if (marker._lastPopupSig !== newSig) {
           marker.getPopup().setContent(newPopupContent);
@@ -266,6 +269,7 @@ export function useSnapMapMarkers({
           autoClose: false,
           closeOnClick: false,
           closeButton: false,
+          autoPan: false,
         });
         marker._eventId = item.id;
         marker._lastIconHtml = nextEventIconHtml;
