@@ -6,3 +6,6 @@ export * from "./HudProfileAvatar";
 export * from "./HudRecenterButton";
 export * from "./HudTopDynamicEvent";
 export * from "./HudTopDynamicBroadcast";
+export * from "./HudTextureDivider";
+export * from "./HudFunctionalOuterbox";
+export * from "./HudRightProfileDock";

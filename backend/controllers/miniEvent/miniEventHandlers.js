@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { redis } from '../../lib/redis.js';
+import { withEventMediaLock } from './eventMediaQueue.js';
 import { decodePageCursor, encodePageCursor, parsePageLimit } from '../../utils/cursorPagination.js';
 import { resolveIndonesianReverseGeo } from '../geoController.js';
 import { ensurePersistentUserProfile } from '../../utils/profileDefaults.js';
@@ -239,87 +240,89 @@ export async function updateMiniEvent(req, res, next) {
     const creatorId = req.user.userId;
     const { id } = req.params;
 
-    const existing = await prisma.miniEvent.findFirst({
-      where: { id, creatorId, isActive: true },
-      include: { creator: { select: CREATOR_SELECT } },
-    });
-    if (!existing) {
-      return res.status(404).json({ error: 'No active mini event found.' });
-    }
-
-    const existingTags = extractEncodedTags(existing.description);
-    const title = toSmartTitleCase(cleanText(req.body.title));
-    const rawDescInput = cleanText(req.body.description);
-    const inputTags = extractEncodedTags(rawDescInput);
-    const category = cleanText(req.body.category) || inputTags.category || existingTags.category || 'cafe';
-    let location = cleanText(req.body.location) || inputTags.location || '';
-    const lat = parseCoordinate(req.body.lat);
-    const lng = parseCoordinate(req.body.lng);
-
-    if (!location && lat !== null && lng !== null) {
-      try {
-        const geoData = await resolveIndonesianReverseGeo(lat, lng);
-        if (geoData?.formatted) {
-          location = geoData.formatted;
-        }
-      } catch {}
-    }
-
-    let finalClips;
-    let mediaPlan = null;
-    const hasExplicitMediaField =
-      req.body.mediaUrl !== undefined || req.body.mediaItems !== undefined;
-
-    const currentHydrated = await hydrateAndPruneEventMedia(existing, existing.creator?.name || null);
-    if (hasExplicitMediaField) {
-      const parsedMedia = parseSubmittedMediaItems({
-        mediaUrl: req.body.mediaUrl,
-        mediaItems: req.body.mediaItems,
-        authorId: creatorId,
-        authorName: existing.creator?.name || null,
+    return await withEventMediaLock(id, async () => {
+      const existing = await prisma.miniEvent.findFirst({
+        where: { id, creatorId, isActive: true },
+        include: { creator: { select: CREATOR_SELECT } },
       });
-      if (!parsedMedia.valid) {
-        return res.status(400).json({ error: parsedMedia.error || 'Format URL media tidak valid.' });
+      if (!existing) {
+        return res.status(404).json({ error: 'No active mini event found.' });
       }
-      mediaPlan = planEventMediaSelection(
-        currentHydrated.mediaItems,
-        parsedMedia.clips,
-        req.body.mediaSyncedAt
-      );
-      finalClips = mediaPlan.finalClips;
-    } else {
-      finalClips = currentHydrated.mediaItems;
-    }
 
-    const description = buildEncodedDescription({
-      category,
-      location,
-      mediaUrls: finalClips.map((c) => c.url),
-      plainDescription: inputTags.plainDescription,
+      const existingTags = extractEncodedTags(existing.description);
+      const title = toSmartTitleCase(cleanText(req.body.title));
+      const rawDescInput = cleanText(req.body.description);
+      const inputTags = extractEncodedTags(rawDescInput);
+      const category = cleanText(req.body.category) || inputTags.category || existingTags.category || 'cafe';
+      let location = cleanText(req.body.location) || inputTags.location || '';
+      const lat = parseCoordinate(req.body.lat);
+      const lng = parseCoordinate(req.body.lng);
+
+      if (!location && lat !== null && lng !== null) {
+        try {
+          const geoData = await resolveIndonesianReverseGeo(lat, lng);
+          if (geoData?.formatted) {
+            location = geoData.formatted;
+          }
+        } catch {}
+      }
+
+      let finalClips;
+      let mediaPlan = null;
+      const hasExplicitMediaField =
+        req.body.mediaUrl !== undefined || req.body.mediaItems !== undefined;
+
+      const currentHydrated = await hydrateAndPruneEventMedia(existing, existing.creator?.name || null);
+      if (hasExplicitMediaField) {
+        const parsedMedia = parseSubmittedMediaItems({
+          mediaUrl: req.body.mediaUrl,
+          mediaItems: req.body.mediaItems,
+          authorId: creatorId,
+          authorName: existing.creator?.name || null,
+        });
+        if (!parsedMedia.valid) {
+          return res.status(400).json({ error: parsedMedia.error || 'Format URL media tidak valid.' });
+        }
+        mediaPlan = planEventMediaSelection(
+          currentHydrated.mediaItems,
+          parsedMedia.clips,
+          req.body.mediaSyncedAt
+        );
+        finalClips = mediaPlan.finalClips;
+      } else {
+        finalClips = currentHydrated.mediaItems;
+      }
+
+      const description = buildEncodedDescription({
+        category,
+        location,
+        mediaUrls: finalClips.map((c) => c.url),
+        plainDescription: inputTags.plainDescription,
+      });
+
+      const error = validateMiniEvent({ title, description, lat, lng });
+      if (error) return res.status(400).json({ error });
+
+      const event = await prisma.miniEvent.update({
+        where: { id },
+        data: {
+          title,
+          description,
+          lat,
+          lng,
+          expiresAt: MINI_EVENT_PERMANENT_EXPIRES_AT,
+        },
+        include: { creator: { select: CREATOR_SELECT } },
+      });
+
+      if (mediaPlan) {
+        await persistEventMediaSelection(id, mediaPlan);
+      }
+
+      await invalidateMiniEventsCache();
+      const formatted = await hydrateFullMiniEvent(event);
+      return res.json({ event: formatted });
     });
-
-    const error = validateMiniEvent({ title, description, lat, lng });
-    if (error) return res.status(400).json({ error });
-
-    const event = await prisma.miniEvent.update({
-      where: { id },
-      data: {
-        title,
-        description,
-        lat,
-        lng,
-        expiresAt: MINI_EVENT_PERMANENT_EXPIRES_AT,
-      },
-      include: { creator: { select: CREATOR_SELECT } },
-    });
-
-    if (mediaPlan) {
-      await persistEventMediaSelection(id, mediaPlan);
-    }
-
-    await invalidateMiniEventsCache();
-    const formatted = await hydrateFullMiniEvent(event);
-    return res.json({ event: formatted });
   } catch (err) {
     return next(err);
   }
@@ -329,24 +332,27 @@ export async function deleteMiniEvent(req, res, next) {
   try {
     const creatorId = req.user.userId;
     const { id } = req.params;
-    const event = await prisma.miniEvent.findFirst({
-      where: { id, creatorId, isActive: true },
+
+    return await withEventMediaLock(id, async () => {
+      const event = await prisma.miniEvent.findFirst({
+        where: { id, creatorId, isActive: true },
+      });
+
+      if (!event) return res.status(404).json({ error: 'No mini event found.' });
+
+      await prisma.miniEvent.update({
+        where: { id },
+        data: { isActive: false, expiresAt: new Date(0) },
+      });
+
+      await Promise.allSettled([
+        purgeEventMediaByIds([id]),
+        purgeEventCollabByIds([id]),
+        invalidateMiniEventsCache(),
+      ]);
+
+      return res.json({ message: 'Mini event deleted.' });
     });
-
-    if (!event) return res.status(404).json({ error: 'No mini event found.' });
-
-    await prisma.miniEvent.update({
-      where: { id },
-      data: { isActive: false, expiresAt: new Date(0) },
-    });
-
-    await Promise.allSettled([
-      purgeEventMediaByIds([id]),
-      purgeEventCollabByIds([id]),
-      invalidateMiniEventsCache(),
-    ]);
-
-    return res.json({ message: 'Mini event deleted.' });
   } catch (err) {
     return next(err);
   }
@@ -362,54 +368,56 @@ export async function addMiniEventMedia(req, res, next) {
       return res.status(400).json({ error: 'Media URL is required.' });
     }
 
-    const event = await prisma.miniEvent.findFirst({
-      where: { id, isActive: true, expiresAt: { gt: new Date() } },
-      include: { creator: { select: CREATOR_SELECT } },
+    return await withEventMediaLock(id, async () => {
+      const event = await prisma.miniEvent.findFirst({
+        where: { id, isActive: true, expiresAt: { gt: new Date() } },
+        include: { creator: { select: CREATOR_SELECT } },
+      });
+      if (!event) {
+        return res.status(404).json({ error: 'Mini event not found.' });
+      }
+
+      const tags = extractEncodedTags(event.description);
+      const acceptedCollabs = await getAcceptedCollaboratorIds(id, tags.collaborators);
+      const isCreator = String(event.creatorId) === String(userId);
+      const isCollab = acceptedCollabs.some((cid) => String(cid) === String(userId));
+
+      if (!isCreator && !isCollab) {
+        return res.status(403).json({ error: 'Not authorized to add media to this event.' });
+      }
+
+      const uploader = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, nickname: true },
+      });
+
+      const parsedMedia = parseSubmittedMediaItems({
+        mediaUrl,
+        mediaItems: req.body.mediaItems || (mediaUrl ? [{
+          url: mediaUrl,
+          width: req.body.width,
+          height: req.body.height,
+          duration: req.body.duration,
+        }] : undefined),
+        authorId: userId,
+        authorName: uploader?.name || uploader?.nickname || 'Kalcerian',
+      });
+
+      if (!parsedMedia.valid || parsedMedia.clips.length === 0) {
+        return res.status(400).json({ error: parsedMedia.error || 'Format URL media tidak valid.' });
+      }
+
+      const result = await appendClipsToEventMedia(
+        event,
+        parsedMedia.clips,
+        event.creator?.name || null
+      );
+      event.description = result.updatedDescription;
+
+      await invalidateMiniEventsCache();
+      const formatted = await hydrateFullMiniEvent(event);
+      return res.json({ event: formatted });
     });
-    if (!event) {
-      return res.status(404).json({ error: 'Mini event not found.' });
-    }
-
-    const tags = extractEncodedTags(event.description);
-    const acceptedCollabs = await getAcceptedCollaboratorIds(id, tags.collaborators);
-    const isCreator = String(event.creatorId) === String(userId);
-    const isCollab = acceptedCollabs.some((cid) => String(cid) === String(userId));
-
-    if (!isCreator && !isCollab) {
-      return res.status(403).json({ error: 'Not authorized to add media to this event.' });
-    }
-
-    const uploader = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, nickname: true },
-    });
-
-    const parsedMedia = parseSubmittedMediaItems({
-      mediaUrl,
-      mediaItems: req.body.mediaItems || (mediaUrl ? [{
-        url: mediaUrl,
-        width: req.body.width,
-        height: req.body.height,
-        duration: req.body.duration,
-      }] : undefined),
-      authorId: userId,
-      authorName: uploader?.name || uploader?.nickname || 'Kalcerian',
-    });
-
-    if (!parsedMedia.valid || parsedMedia.clips.length === 0) {
-      return res.status(400).json({ error: parsedMedia.error || 'Format URL media tidak valid.' });
-    }
-
-    const result = await appendClipsToEventMedia(
-      event,
-      parsedMedia.clips,
-      event.creator?.name || null
-    );
-    event.description = result.updatedDescription;
-
-    await invalidateMiniEventsCache();
-    const formatted = await hydrateFullMiniEvent(event);
-    return res.json({ event: formatted });
   } catch (err) {
     return next(err);
   }
@@ -425,26 +433,28 @@ export async function deleteMiniEventMedia(req, res, next) {
       return res.status(400).json({ error: 'Clip identifier is required.' });
     }
 
-    const event = await prisma.miniEvent.findFirst({
-      where: { id, isActive: true },
-      include: { creator: { select: CREATOR_SELECT } },
+    return await withEventMediaLock(id, async () => {
+      const event = await prisma.miniEvent.findFirst({
+        where: { id, isActive: true },
+        include: { creator: { select: CREATOR_SELECT } },
+      });
+      if (!event) {
+        return res.status(404).json({ error: 'Mini event not found.' });
+      }
+
+      const removal = await removeClipFromEventMedia(event, { clipId, url }, userId);
+      if (removal.forbidden) {
+        return res.status(403).json({ error: 'Not authorized to remove this media item.' });
+      }
+      if (removal.notFound) {
+        return res.status(404).json({ error: 'Media item not found.' });
+      }
+
+      event.description = removal.updatedDescription;
+      await invalidateMiniEventsCache();
+      const formatted = await hydrateFullMiniEvent(event);
+      return res.json({ event: formatted });
     });
-    if (!event) {
-      return res.status(404).json({ error: 'Mini event not found.' });
-    }
-
-    const removal = await removeClipFromEventMedia(event, { clipId, url }, userId);
-    if (removal.forbidden) {
-      return res.status(403).json({ error: 'Not authorized to remove this media item.' });
-    }
-    if (removal.notFound) {
-      return res.status(404).json({ error: 'Media item not found.' });
-    }
-
-    event.description = removal.updatedDescription;
-    await invalidateMiniEventsCache();
-    const formatted = await hydrateFullMiniEvent(event);
-    return res.json({ event: formatted });
   } catch (err) {
     return next(err);
   }
