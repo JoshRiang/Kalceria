@@ -108,12 +108,19 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
       animate={{
         y: effectiveCollapsed ? collapseOffset : 0,
       }}
-      transition={{
-        type: "spring",
-        stiffness: 380,
-        damping: 30,
-        mass: 0.8,
-      }}
+      transition={
+        isToolbarRetracting
+          ? {
+              duration: 1.25,
+              ease: [0.16, 1, 0.3, 1], // Slow, graceful cinematic ease (~3s total roundtrip cycle)
+            }
+          : {
+              type: "spring",
+              stiffness: 380,
+              damping: 30,
+              mass: 0.8,
+            }
+      }
       className="relative flex flex-col items-start pointer-events-auto select-none"
     >
       {/* Row 1: Beveled Sunken Crater Slots - Docked flush to top screen edge */}

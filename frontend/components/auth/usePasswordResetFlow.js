@@ -86,11 +86,18 @@ export function usePasswordResetFlow({
       const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
       const isFromMap = Boolean(
         urlParams?.get("from") === "map" ||
-        (typeof window !== "undefined" && (
-          sessionStorage.getItem("kalceria_password_reset_from_map") === "true" ||
-          localStorage.getItem("kalceria_auth_return") === "/map"
-        ))
+        (typeof window !== "undefined" &&
+          sessionStorage.getItem("kalceria_password_reset_from_map") === "true")
       );
+
+      if (!isFromMap) {
+        try {
+          localStorage.removeItem("kalceria_auth_return");
+          localStorage.removeItem("kalceria_password_reset_from_map");
+          sessionStorage.removeItem("kalceria_password_reset_from_map");
+        } catch {}
+      }
+
       const res = await api.post("/auth/password/reset-request", {
         email: emailToReset,
         fromMap: isFromMap,
@@ -113,10 +120,8 @@ export function usePasswordResetFlow({
         typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
       const fromMapParam = Boolean(
         urlParams?.get("from") === "map" ||
-        (typeof window !== "undefined" && (
-          localStorage.getItem("kalceria_auth_return") === "/map" ||
-          sessionStorage.getItem("kalceria_password_reset_from_map") === "true"
-        ))
+        (typeof window !== "undefined" &&
+          sessionStorage.getItem("kalceria_password_reset_from_map") === "true")
       );
 
       const res = await api.post("/auth/password/reset", {

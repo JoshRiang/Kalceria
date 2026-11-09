@@ -14,7 +14,23 @@ export function EditProfileDangerZone({
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onRequestChangePassword?.();
+          if (onRequestChangePassword) {
+            onRequestChangePassword();
+          } else {
+            let email = "";
+            try {
+              const u = JSON.parse(localStorage.getItem("kalceria_user") || "null");
+              const s = JSON.parse(localStorage.getItem("kalceria_user_session") || "null");
+              email = u?.email || s?.user?.email || localStorage.getItem("kalceria_user_email") || "";
+              localStorage.setItem("kalceria_auth_return", "/map");
+              localStorage.setItem("kalceria_password_reset_from_map", "true");
+              sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+            } catch {}
+            const targetUrl = email
+              ? `/?auth=true&mode=forgot-password&from=map&email=${encodeURIComponent(email)}`
+              : "/?auth=true&mode=forgot-password&from=map";
+            window.location.href = targetUrl;
+          }
         }}
         style={{ fontFamily: "Arial, sans-serif" }}
         className="font-bold text-xs text-red-500 hover:text-red-400 no-underline transition-colors flex items-center gap-1.5 cursor-pointer relative z-20 pointer-events-auto select-none"

@@ -28,9 +28,18 @@ export function EventFormModal({
   busy,
   onPromptDeleteConfirm,
 }) {
-  const [isLocationVerified, setIsLocationVerified] = useState(false);
+  const isEditing = Boolean(editingEventId || activeOwnEvent);
+  const [isLocationVerified, setIsLocationVerified] = useState(() =>
+    Boolean(editingEventId || activeOwnEvent || (eventForm?.location && (eventForm?.lat || eventForm?.lng)))
+  );
   const [formError, setFormError] = useState(null);
   useModalBackClose(Boolean(show), onClose);
+
+  useEffect(() => {
+    if (show && (isEditing || (eventForm?.location && (eventForm?.lat || eventForm?.lng)))) {
+      setIsLocationVerified(true);
+    }
+  }, [show, isEditing, eventForm?.location, eventForm?.lat, eventForm?.lng]);
 
   useEffect(() => {
     setFormError(null);
@@ -51,8 +60,6 @@ export function EventFormModal({
     (eventForm.location || "").trim() &&
     isDescriptionValid
   );
-
-  const isEditing = Boolean(editingEventId || activeOwnEvent);
 
   return (
     <AnimatePresence>
@@ -269,6 +276,7 @@ export function EventFormModal({
               }}
               isVerified={isLocationVerified}
               setIsVerified={setIsLocationVerified}
+              initialVerified={isEditing || Boolean(eventForm?.location && (eventForm?.lat || eventForm?.lng))}
               required={true}
               isModalDark={isModalDark}
               label={<>Deployment Area <span className="text-[#ef4444]">*</span></>}

@@ -28,6 +28,11 @@ export function AuthPageFooter({
                 onClick={() => {
                   setError("");
                   setSuccess("");
+                  try {
+                    localStorage.removeItem("kalceria_auth_return");
+                    localStorage.removeItem("kalceria_password_reset_from_map");
+                    sessionStorage.removeItem("kalceria_password_reset_from_map");
+                  } catch {}
                   setMode("forgot-password");
                 }}
                 className="font-sans font-bold text-xs text-white hover:text-slate-300 transition-colors underline decoration-slate-600 underline-offset-4 cursor-pointer"

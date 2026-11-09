@@ -41,6 +41,7 @@ npm --prefix frontend run build
 | `AUTH-03` | Anti-Torn Registration | Step 1 Form Submit -> Close Tab before OTP | Redis holds temporary pending payload; PostgreSQL contains **0 rows** until OTP & chosen username verified. | Zero zombie records in production DB. |
 | `AUTH-04` | Google OAuth Login | Google popup sign-in | Seamless callback, non-torn profile generation, cookie + csrfToken emission. | Preserves existing user ID if email matches. |
 | `AUTH-05` | Email & Password Login | Registered email + valid argon2 password | JWT session cookie set, `users/me` returns HTTP 200, Welcome transition renders nickname. | Case-insensitive email normalization. |
+| `AUTH-06` | **Strict Map vs Landing Password Reset State Machine** | Test both origin flows with real credentials | **Flow A (Landing)**: Guest -> forgot-password -> link sent -> reset password -> login lagi -> fades into Landing Page.<br>**Flow B (Map)**: Auth user -> Edit Profile -> Change Password -> prefills logged-in email -> link sent -> reset password -> login lagi -> returns directly to `/map` (intro bypassed). | **Zero collision**: Landing flow never ends up in Map; Map flow never forces intro replay. |
 
 ---
 
@@ -83,8 +84,11 @@ npm --prefix frontend run build
 | `MAP-03` | **Strict Creator Toolbar Ownership** | User accepted as collaborator on someone's event | Top HUD Toolbar displays **NO Event icon** and **NO Broadcast icon**. Only standard controls render. | Collaborator does NOT share event/broadcast ownership on toolbar. |
 | `MAP-04` | **Toolbar Collapse Geometry** | Tap wrench tool tab (with or without broadcast) | Toolbar retracts completely off-screen until **ONLY the tool tab (wrench handle)** is visible at top edge. | Zero dangling boxes or leftover icons when collapsed. |
 | `MAP-05` | **Toolbar Layout Variations** | Toggle active states of Event and Broadcast | **Var A**: Event + 5 slots + Broadcast box.<br>**Var B**: Event + 5 slots (centered tab).<br>**Var C**: 5 slots only (narrower width, centered tab).<br>**Var D**: 5 slots + Broadcast box. | Dynamic width adjustment; beveled 2D sunken crater slots. |
-| `MAP-06` | **Auto-Retract on Deletion** | Delete Event or Delete Broadcast | Toolbar automatically retracts up to top edge (only wrench visible), reconfigures layout, and expands down smoothly. | Zero layout jumps; cinematic spring transition. |
-| `MAP-07` | Right Profile Dock | Dock positioned at screen right edge | Pulled down 25% (`top-16 sm:top-20`); generic profile tab toggles sidebar open/closed. | Seamless fusion with avatar box (`border-r-0`). |
+| `MAP-06` | **Auto-Retract on Deletion & Creation** | Create/Delete Event or Broadcast | Toolbar gracefully and slowly retracts up to top edge (only wrench visible), holds static (~1.5s), and smoothly expands back down into the new layout variation (~3.5s total choreographed cycle). | Zero layout jumps; cinematic spring transition. |
+| `MAP-07` | Right Profile Dock | Dock positioned at screen right edge | Pulled down 25% (`top-16 sm:top-20`); generic profile tab toggles sidebar open/closed. | Seamless fusion with avatar box (`rounded-l-full`, zero divider line). |
+| `MAP-08` | **Edit Event Location Autocomplete & In-Memory Cache** | Open existing mini event for editing | Location field prefilled with existing address; **zero "Lokasi tidak ditemukan" error**. In-memory dual-verification verifies preset coordinates automatically. | Editing preserves verified location state; error only triggers if user types unverified text. |
+| `MAP-09` | **Anti-Intro-Replay Session Isolation** | Create, edit, or delete event/broadcast | Modal closes cleanly, sentinel pops cleanly without triggering Next.js unhandled popstate reload (`__NA: true`). **Map startup intro sequence NEVER replays**. | Session remains intact on the map with zero page reloading. |
+| `MAP-10` | **Toolbar 3-Variation Dynamic Sizing** | Observe toolbar across Event and Broadcast presence | **Var 1 (Event + Broadcast)**: Event slot + 5 slots, broadcast box on far left with wrench tab below it.<br>**Var 2 (Event only)**: Event slot + 5 slots (6 total), wrench tab centered below.<br>**Var 3 (No Event, No Broadcast)**: 5 slots total (narrower box width), wrench tab centered below. | Sizing adjusts dynamically and seamlessly with zero gray seam lines. |
 
 ---
 

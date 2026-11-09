@@ -99,7 +99,7 @@ export default function MapPage() {
     setIsToolbarRetracting(true);
     setTimeout(() => {
       setIsToolbarRetracting(false);
-    }, 450);
+    }, 2800);
   }, []);
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(() => {
@@ -115,7 +115,9 @@ export default function MapPage() {
   const checkShouldSkipStartup = useCallback(() => {
     if (typeof window === "undefined") return false;
     try {
-      // Fade in gracefully directly to map page is ONLY for change password via map page
+      // Fade in gracefully directly to map page without intro is for:
+      // 1. Password reset return from map
+      // 2. Active map session (already initialized in this session)
       const params = new URLSearchParams(window.location.search);
       const isPasswordResetReturn =
         params.get("from") === "password_reset" ||
@@ -125,7 +127,9 @@ export default function MapPage() {
         sessionStorage.getItem("kalceria_skip_map_intro") === "true" ||
         localStorage.getItem("kalceria_skip_map_intro") === "true";
 
-      return Boolean(isPasswordResetReturn);
+      const isSessionMapActive = sessionStorage.getItem("kalceria_map_intro_seen") === "true";
+
+      return Boolean(isPasswordResetReturn || isSessionMapActive);
     } catch {
       return false;
     }
@@ -137,6 +141,9 @@ export default function MapPage() {
   });
   const handleStartupComplete = useCallback(() => {
     setShowStartup(false);
+    try {
+      sessionStorage.setItem("kalceria_map_intro_seen", "true");
+    } catch {}
   }, []);
 
   // Consume password-reset-from-map flag immediately on mount
@@ -225,6 +232,9 @@ export default function MapPage() {
     sessionStorage.setItem("landingScrollTarget", "section-map");
     // Mark landing intro as played so it bypasses the preloader and lands directly on the anchor
     sessionStorage.setItem("introPlayed", "true");
+    try {
+      sessionStorage.removeItem("kalceria_map_intro_seen");
+    } catch {}
     
     scheduleTimeout(() => {
       window.location.href = "/?anchor=section-map";
@@ -918,6 +928,7 @@ export default function MapPage() {
       setNotice("Broadcast updated.");
       setShowStatusModal(false);
       setIsEditingBroadcast(false);
+      triggerToolbarRetractCycle();
     } catch (err) {
       setNotice(err.message || "Failed to update broadcast.");
     }
@@ -1223,6 +1234,7 @@ export default function MapPage() {
       setEditingEventId(null);
       setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {}, location: "", lat: null, lng: null });
       setShowEventModal(false);
+      triggerToolbarRetractCycle();
 
       // Immediately pan/fly to the created/updated event on the map and open its popup
       if (savedEventObj) {
@@ -1407,7 +1419,7 @@ export default function MapPage() {
       ? `/?auth=true&mode=forgot-password&from=map&email=${encodeURIComponent(email)}`
       : "/?auth=true&mode=forgot-password&from=map";
 
-    window.location.assign(targetUrl);
+    window.location.href = targetUrl;
   }, [currentUser?.email]);
 
   const handleConfirmDeleteAccount = useCallback(async () => {

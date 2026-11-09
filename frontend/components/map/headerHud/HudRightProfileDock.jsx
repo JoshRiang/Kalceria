@@ -77,7 +77,7 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
     >
       {/* Unified One-Shape Shell: wraps both the Jendolan tab and the Avatar Card with ZERO dividing seam */}
       <div
-        className={`flex items-center ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} rounded-l-2xl overflow-hidden`}
+        className={`flex items-center ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} rounded-l-full overflow-hidden`}
       >
         {/* Protruding Tab (Jendolan) on the LEFT: diameter matching the box height, zero divider */}
         <button
@@ -85,7 +85,7 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
           onClick={() => setIsCollapsed((prev) => !prev)}
           title={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
           aria-label={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
-          className={`flex items-center justify-center w-7 sm:w-8 self-stretch ${boxBg} hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors outline-none group border-none`}
+          className={`flex items-center justify-center w-7 sm:w-8 h-10 sm:h-11 rounded-l-full ${boxBg} hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors outline-none group border-none pl-1`}
         >
           <GenericProfileIcon
             isMapDark={isMapDark}
@@ -94,7 +94,7 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
         </button>
 
         {/* Profile Avatar Card: flush against tab, ZERO internal border */}
-        <div className="p-1 sm:p-1.5 flex items-center justify-center">
+        <div className="pr-1.5 pl-0.5 py-1 sm:py-1.5 flex items-center justify-center">
           <div
             className={`relative w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-full p-[2px] ${
               isMapDark

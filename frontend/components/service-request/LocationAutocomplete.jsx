@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import api from "@/lib/api";
 
+// In-memory persistent cache of verified locations and coordinates
+const verifiedLocationCache = new Map();
+
 export function LocationAutocomplete({ 
   value, 
   onChange, 
@@ -13,6 +16,7 @@ export function LocationAutocomplete({
   isModalDark,
   label = "Deployment Area",
   hideCheckmark = false,
+  initialVerified = false,
 }) {
   const [query, setQuery] = useState(value || "");
   const [suggestions, setSuggestions] = useState([]);
@@ -22,13 +26,27 @@ export function LocationAutocomplete({
   const [detectError, setDetectError] = useState("");
   const containerRef = useRef(null);
   const debounceTimerRef = useRef(null);
+  const hasUserTypedRef = useRef(false);
 
-  // Synchronize incoming value changes (e.g., from GPS auto-detection)
+  // Synchronize incoming value changes (e.g., from GPS auto-detection or editing existing event)
   useEffect(() => {
     if (value !== query) {
       setQuery(value || "");
+      if (value && value.trim().length >= 2) {
+        const normKey = value.trim().toLowerCase();
+        if (verifiedLocationCache.has(normKey) || initialVerified) {
+          setIsVerified?.(true);
+        }
+      }
     }
-  }, [value]);
+  }, [value, query, initialVerified, setIsVerified]);
+
+  // Initial verification registration for pre-existing valid location
+  useEffect(() => {
+    if ((initialVerified || isVerified) && value && value.trim().length >= 2) {
+      verifiedLocationCache.set(value.trim().toLowerCase(), { formatted: value.trim() });
+    }
+  }, [initialVerified, isVerified, value]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -53,19 +71,35 @@ export function LocationAutocomplete({
       const results = res.data?.results || [];
       setSuggestions(results);
       setIsOpen(results.length > 0);
+
+      const normQ = q.trim().toLowerCase();
+      const exactMatch = results.find(
+        (r) => r.formatted && r.formatted.toLowerCase().includes(normQ)
+      );
+      if (exactMatch && !hasUserTypedRef.current) {
+        verifiedLocationCache.set(normQ, exactMatch);
+        setIsVerified?.(true);
+      }
     } catch {
       setSuggestions([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setIsVerified]);
 
   const handleInputChange = (e) => {
     const nextVal = e.target.value;
+    hasUserTypedRef.current = true;
     setQuery(nextVal);
     onChange(nextVal);
-    setIsVerified(false); // Must re-select from list to verify
     setDetectError("");
+
+    const normKey = nextVal.trim().toLowerCase();
+    if (verifiedLocationCache.has(normKey)) {
+      setIsVerified?.(true);
+    } else {
+      setIsVerified?.(false);
+    }
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
@@ -75,9 +109,11 @@ export function LocationAutocomplete({
 
   const handleSelectSuggestion = (item) => {
     const formatted = item.formatted;
+    hasUserTypedRef.current = false;
     setQuery(formatted);
+    verifiedLocationCache.set(formatted.trim().toLowerCase(), item);
     onChange(formatted, item);
-    setIsVerified(true);
+    setIsVerified?.(true);
     setSuggestions([]);
     setIsOpen(false);
     setDetectError("");
@@ -101,9 +137,15 @@ export function LocationAutocomplete({
           });
           const formatted = res.data?.formatted;
           if (formatted) {
+            hasUserTypedRef.current = false;
             setQuery(formatted);
+            verifiedLocationCache.set(formatted.trim().toLowerCase(), {
+              formatted,
+              lat: latitude,
+              lon: longitude,
+            });
             onChange(formatted, res.data);
-            setIsVerified(true);
+            setIsVerified?.(true);
             setIsOpen(false);
           } else {
             setDetectError("Unable to reverse-geocode your location.");
@@ -210,7 +252,14 @@ export function LocationAutocomplete({
       {detectError && (
         <p className="text-[10px] text-red-500 mt-1 font-sans">{detectError}</p>
       )}
-      {((!isVerified && query.trim().length >= 2 && !isOpen) || (isOpen && suggestions.length === 0 && !loading && query.trim().length >= 2)) && (
+      {Boolean(
+        hasUserTypedRef.current &&
+        query.trim().length >= 2 &&
+        !isVerified &&
+        !loading &&
+        !verifiedLocationCache.has(query.trim().toLowerCase()) &&
+        ((!isOpen && !loading) || (isOpen && suggestions.length === 0))
+      ) && (
         <p className="text-[10px] text-red-500 mt-1 font-sans">
           Lokasi tidak ditemukan
         </p>

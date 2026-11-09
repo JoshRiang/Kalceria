@@ -41,7 +41,15 @@ function pushSentinel() {
       window.history.state && typeof window.history.state === "object"
         ? window.history.state
         : {};
-    window.history.pushState({ ...base, [SENTINEL_KEY]: true }, "", window.location.href);
+    // Ensure base state has __NA: true so Next.js app-router never reloads on popstate traversal
+    if (!base.__NA && window.history.replaceState) {
+      window.history.replaceState({ ...base, __NA: true }, "", window.location.href);
+    }
+    window.history.pushState(
+      { ...base, __NA: true, [SENTINEL_KEY]: true },
+      "",
+      window.location.href
+    );
     sentinelActive = true;
   } catch {
     sentinelActive = false;
@@ -53,11 +61,14 @@ function releaseSentinelIfIdle() {
   if (modalStack.length > 0 || !sentinelActive) return;
   sentinelActive = false;
   if (window.history.state && window.history.state[SENTINEL_KEY]) {
-    ignoredPopStates += 1;
     try {
-      window.history.back();
+      const cleanState = { ...window.history.state, __NA: true };
+      delete cleanState[SENTINEL_KEY];
+      if (window.history.replaceState) {
+        window.history.replaceState(cleanState, "", window.location.href);
+      }
     } catch {
-      ignoredPopStates = Math.max(0, ignoredPopStates - 1);
+      // fallback
     }
   }
 }
