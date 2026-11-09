@@ -100,6 +100,13 @@ export function ChatComposerBar({
                 >
                   Broadcast <span className="font-bold">{replyInfo.broadcastDuration || "0m"}</span>
                 </p>
+              ) : replyInfo.isEvent ? (
+                <p
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="text-[10px] opacity-80 truncate leading-tight mt-0.5 font-normal not-italic"
+                >
+                  Event
+                </p>
               ) : (
                 <p
                   style={{ fontFamily: "Arial, sans-serif" }}
@@ -114,6 +121,13 @@ export function ChatComposerBar({
                   className="text-[10px] opacity-85 truncate leading-tight mt-0.5 font-normal not-italic"
                 >
                   {replyInfo.callDurationText}
+                </p>
+              ) : replyInfo.isEvent && replyInfo.caption ? (
+                <p
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="text-[10px] italic font-bold opacity-85 truncate leading-tight mt-0.5"
+                >
+                  &ldquo;{replyInfo.caption}&rdquo;
                 </p>
               ) : replyInfo.caption ? (
                 <p

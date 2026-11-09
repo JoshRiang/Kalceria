@@ -347,7 +347,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
   // Handle lively Broadcast Reply sequence:
   // Slide down current view / drawer / previous chat, then slide up personal chat with creator, and inject reply
   useEffect(() => {
-    const handleBroadcastReply = (e) => {
+    const handleReplyLaunch = (e) => {
       if (isSelfOfflineRef.current) return;
       const { targetUser, replyPayload } = e.detail || {};
       if (!targetUser) return;
@@ -389,8 +389,12 @@ export const KalceriansPanel = memo(function KalceriansPanel({
         }
       }
     };
-    window.addEventListener("kalceria:start-broadcast-reply", handleBroadcastReply);
-    return () => window.removeEventListener("kalceria:start-broadcast-reply", handleBroadcastReply);
+    window.addEventListener("kalceria:start-broadcast-reply", handleReplyLaunch);
+    window.addEventListener("kalceria:start-event-reply", handleReplyLaunch);
+    return () => {
+      window.removeEventListener("kalceria:start-broadcast-reply", handleReplyLaunch);
+      window.removeEventListener("kalceria:start-event-reply", handleReplyLaunch);
+    };
   }, [currentUser]);
 
   const handleOpenChatWithTransition = (user) => {

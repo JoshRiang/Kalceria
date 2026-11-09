@@ -25,10 +25,8 @@ export function ChatStatusIndicator({
             e.stopPropagation();
             onResendMessage?.(item);
           }}
-          title="Kirim ulang"
-          className={`cursor-pointer transition-transform active:scale-90 ${
-            isMapDark ? "text-white" : "text-black"
-          }`}
+          title="Kirim ulang pesan"
+          className="cursor-pointer transition-transform hover:scale-110 active:scale-90 text-[#ff0033] hover:text-[#ff3355] drop-shadow-[0_0_8px_rgba(255,0,51,0.7)]"
         >
           <svg
             viewBox="0 0 24 24"

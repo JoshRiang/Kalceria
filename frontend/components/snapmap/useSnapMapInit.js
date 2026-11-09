@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { OSM_SUBDOMAINS } from "@/lib/osmTilePrewarmer";
-import { DEFAULT_CENTER, loadLeaflet, tickAllEventUptimeElements } from "./snapMapHelpers";
+import { DEFAULT_CENTER, getInstantInitialCenter, loadLeaflet, tickAllEventUptimeElements } from "./snapMapHelpers";
 import {
   cleanupEventPopupCarouselsFromRoot,
   initEventPopupCarouselsFromRoot,
@@ -11,6 +11,8 @@ import {
 export function useSnapMapInit({
   mapNodeRef,
   mapRef: externalMapRef,
+  initialCenter,
+  currentUser,
   isMapDark,
   onMapReady,
   resetIdleTimer,
@@ -52,10 +54,12 @@ export function useSnapMapInit({
     loadLeaflet().then((L) => {
       if (!alive || !mapNodeRef.current || mapRef.current || !L) return;
 
+      const resolvedCenter = initialCenter || getInstantInitialCenter(currentUser);
+
       const map = L.map(mapNodeRef.current, {
         zoomControl: false,
         attributionControl: false,
-        center: DEFAULT_CENTER,
+        center: resolvedCenter,
         zoom: 14,
         preferCanvas: true,
         zoomAnimation: true,

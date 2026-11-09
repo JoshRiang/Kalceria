@@ -32,7 +32,9 @@ import {
   renderDoubleMessageIconButton,
   renderRequestOrEnvelopeButton,
   renderPencilEditButton,
+  renderReplyEventButton,
 } from "./eventPopup/popupActionButtons";
+import { renderEventAvatarStack } from "./eventPopup/popupAvatarStack";
 
 export function eventPopup(
   item,
@@ -140,6 +142,22 @@ export function eventPopup(
     offlineBtnLockStyle,
   });
 
+  const replyIconHtml = renderReplyEventButton({
+    isOwner,
+    isSelfOffline,
+    item,
+    iconFg,
+    offlineBtnLockStyle,
+  });
+
+  const avatarStackHtml = renderEventAvatarStack({
+    creatorUserObj,
+    creatorDisplayName,
+    collaboratorProfiles: item.collaboratorProfiles,
+    collaboratorIds: item.collaborators,
+    isMapDark,
+  });
+
   const parsedCreatedMs = item.createdAt ? new Date(item.createdAt).getTime() : NaN;
   const createdAtMs = Number.isFinite(parsedCreatedMs) ? parsedCreatedMs : Date.now();
   const uptimeString = calculateUptime(createdAtMs);
@@ -202,16 +220,23 @@ export function eventPopup(
         <div style="flex: 0 0 auto; height: 100%; aspect-ratio: var(--kalceria-event-bg-aspect, 0.5578); transform: scaleX(-1); background-image: var(${bgCssVar}, url('${bgImage}')); background-size: 100% 100%; background-repeat: no-repeat;"></div>
       </div>
 
-      <!-- Upper Space: Header with blur -->
-      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 12px 14px 10px 14px; background: transparent !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; border: none !important;">
-        <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 0; flex: 1; padding-right: 4px;">
-          <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${esc(displayTitle)}</strong>
-          <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 400; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${byAuthorLineHtml}</span>
+      <!-- Upper Space: Elongated Header with blur & flexible elasticity -->
+      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 10px 14px; background: transparent !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; border: none !important;">
+        <!-- Top Row: Dynamic Avatar Stack on Left (Creator on top, Collaborators nested to right), Action Icons on Right -->
+        <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%;">
+          ${avatarStackHtml}
+          <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 7px; margin-left: 6px; flex-shrink: 0;">
+            ${doubleMessageIconHtml}
+            ${replyIconHtml}
+            ${requestOrEnvelopeIconHtml}
+            ${pencilIconHtml}
+          </div>
         </div>
-        <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 7px; margin-left: 6px; flex-shrink: 0;">
-          ${doubleMessageIconHtml}
-          ${requestOrEnvelopeIconHtml}
-          ${pencilIconHtml}
+
+        <!-- Bottom Row: Event Title and By-Author Line -->
+        <div style="display: flex; flex-direction: column; align-items: flex-start; min-width: 0; width: 100%;">
+          <strong style="color: ${titleColor}; font-size: 15px; font-weight: 700; line-height: 1.25; word-break: break-word; letter-spacing: -0.025em; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${esc(displayTitle)}</strong>
+          <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 400; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${byAuthorLineHtml}</span>
         </div>
       </div>
 

@@ -65,6 +65,14 @@ export function formatCallDurationDetailed(totalSeconds = 0) {
 export function inferReplyMediaType(replyObj) {
   if (!replyObj) return "text";
   if (
+    replyObj.msgType === "event" ||
+    Boolean(replyObj.isEvent) ||
+    Boolean(replyObj.eventName) ||
+    Boolean(replyObj.eventId)
+  ) {
+    return "event";
+  }
+  if (
     replyObj.msgType === "broadcast" ||
     Boolean(replyObj.isBroadcast) ||
     Boolean(replyObj.broadcastMessage)
@@ -107,6 +115,7 @@ export function getReplyDisplayInfo(replyObj) {
       typeLabel: "",
       caption: null,
       isBroadcast: false,
+      isEvent: false,
       isCall: false,
     };
   }
@@ -147,8 +156,30 @@ export function getReplyDisplayInfo(replyObj) {
       typeLabel: `Broadcast ${duration}`,
       broadcastDuration: duration,
       isBroadcast: true,
+      isEvent: false,
       isCall: false,
       caption: rawCaption ? String(rawCaption).trim() : null,
+    };
+  }
+
+  if (mediaType === "event") {
+    const rawName =
+      replyObj.eventName ||
+      replyObj.title ||
+      replyObj.name ||
+      replyObj.caption ||
+      replyObj.text ||
+      "Event";
+    return {
+      senderName,
+      typeLabel: "Event",
+      caption: String(rawName).trim(),
+      isEvent: true,
+      eventId: replyObj.eventId || replyObj.id,
+      lat: replyObj.lat,
+      lng: replyObj.lng,
+      isBroadcast: false,
+      isCall: false,
     };
   }
 

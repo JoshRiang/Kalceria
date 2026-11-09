@@ -17,6 +17,7 @@ export default function SnapMap({
   onMapReady,
   focusUserId,
   focusTarget,
+  initialCenter,
   isMapDark = false,
   currentUser = null,
   onEditEvent,
@@ -46,6 +47,8 @@ export default function SnapMap({
   const { usersLayerRef, eventsLayerRef, isReady } = useSnapMapInit({
     mapNodeRef,
     mapRef,
+    initialCenter,
+    currentUser,
     isMapDark,
     onMapReady,
     resetIdleTimer,

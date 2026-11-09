@@ -171,11 +171,7 @@ export function ChatMessageBubble({
             isSelected ? "scale-[1.035] shadow-lg z-10" : "scale-100"
           } ${
             isMe
-              ? item.status === "failed"
-                ? isMapDark
-                  ? "bg-red-700/85 border-red-500 text-white rounded-tr-xs"
-                  : "bg-red-600/85 border-red-700 text-black rounded-tr-xs"
-                : isMapDark
+              ? isMapDark
                 ? "bg-black border-white/20 text-white rounded-tr-xs"
                 : "bg-white border-black text-black rounded-tr-xs"
               : isMapDark
@@ -190,6 +186,25 @@ export function ChatMessageBubble({
               <div
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (
+                    quoteInfo.isEvent ||
+                    item.replyTo?.isEvent ||
+                    item.replyTo?.msgType === "event"
+                  ) {
+                    window.dispatchEvent(
+                      new CustomEvent("kalceria:open-event-on-map", {
+                        detail: {
+                          eventId:
+                            item.replyTo.eventId ||
+                            quoteInfo.eventId ||
+                            item.replyTo.id,
+                          lat: item.replyTo.lat,
+                          lng: item.replyTo.lng,
+                        },
+                      })
+                    );
+                    return;
+                  }
                   if (
                     quoteInfo.isBroadcast ||
                     item.replyTo?.isBroadcast ||
@@ -217,7 +232,9 @@ export function ChatMessageBubble({
                     : "bg-black/5 border-black text-black/90"
                 }`}
                 title={
-                  quoteInfo.isBroadcast
+                  quoteInfo.isEvent
+                    ? "Ketuk untuk membuka event di peta"
+                    : quoteInfo.isBroadcast
                     ? "Ketuk untuk membuka broadcast di peta"
                     : "Ketuk untuk menuju pesan asli"
                 }
@@ -243,6 +260,13 @@ export function ChatMessageBubble({
                   >
                     Broadcast <span className="font-bold">{quoteInfo.broadcastDuration || "0m"}</span>
                   </p>
+                ) : quoteInfo.isEvent ? (
+                  <p
+                    style={{ fontFamily: "Arial, sans-serif" }}
+                    className="text-[10px] opacity-80 leading-tight truncate mt-0.5 font-normal not-italic"
+                  >
+                    Event
+                  </p>
                 ) : (
                   <p
                     style={{ fontFamily: "Arial, sans-serif" }}
@@ -257,6 +281,13 @@ export function ChatMessageBubble({
                     className="text-[10px] opacity-85 leading-tight truncate mt-0.5 font-normal not-italic"
                   >
                     {quoteInfo.callDurationText}
+                  </p>
+                ) : quoteInfo.isEvent && quoteInfo.caption ? (
+                  <p
+                    style={{ fontFamily: "Arial, sans-serif" }}
+                    className="text-[10px] italic font-bold opacity-85 leading-tight truncate mt-0.5"
+                  >
+                    &ldquo;{quoteInfo.caption}&rdquo;
                   </p>
                 ) : quoteInfo.caption ? (
                   <p

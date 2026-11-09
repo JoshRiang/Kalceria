@@ -218,3 +218,28 @@ export function renderPencilEditButton({
     </button>
   `;
 }
+
+export function renderReplyEventButton({
+  isOwner,
+  isSelfOffline,
+  item,
+  iconFg,
+  offlineBtnLockStyle,
+}) {
+  // Non-creator only: reply goes directly to the Event's creator
+  if (isOwner) return "";
+
+  return `
+    <button
+      type="button"
+      ${isSelfOffline ? "disabled" : `onclick="window.__kalceriaReplyEvent?.('${esc(item.id)}')"`}
+      title="${isSelfOffline ? "Offline (Stealth Mode)" : "Reply Event"}"
+      style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0; ${offlineBtnLockStyle}"
+      ${isSelfOffline ? "" : `onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'"`}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconFg}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+        <path d="M9 15L3 9m0 0l6-6M3 9h11a6 6 0 0 1 6 6v3" />
+      </svg>
+    </button>
+  `;
+}

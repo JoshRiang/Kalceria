@@ -1,5 +1,34 @@
 export const DEFAULT_CENTER = [-6.2735, 106.7150];
 
+export function getInstantInitialCenter(currentUser = null) {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("kalceria_last_known_coords");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (
+          Number.isFinite(parsed?.lat) &&
+          Number.isFinite(parsed?.lng) &&
+          Math.abs(parsed.lat) <= 90 &&
+          Math.abs(parsed.lng) <= 180
+        ) {
+          return [Number(parsed.lat), Number(parsed.lng)];
+        }
+      }
+    } catch (_) {}
+  }
+  if (
+    currentUser &&
+    Number.isFinite(Number(currentUser.domicileLat)) &&
+    Number.isFinite(Number(currentUser.domicileLng)) &&
+    Math.abs(Number(currentUser.domicileLat)) <= 90 &&
+    Math.abs(Number(currentUser.domicileLng)) <= 180
+  ) {
+    return [Number(currentUser.domicileLat), Number(currentUser.domicileLng)];
+  }
+  return DEFAULT_CENTER;
+}
+
 export function stripDynamicUptime(html) {
   return String(html || "")
     .replace(

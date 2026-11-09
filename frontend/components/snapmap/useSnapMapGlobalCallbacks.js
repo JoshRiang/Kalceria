@@ -168,6 +168,80 @@ export function useSnapMapGlobalCallbacks({
       }, 120);
     };
 
+    window.__kalceriaReplyEvent = (id) => {
+      const { isSelfOffline, events, users, mapRef } = latestRef.current;
+      if (isSelfOffline) return;
+      const targetEvent = (events || []).find((e) => String(e.id) === String(id));
+      if (!targetEvent) return;
+
+      // Step 1: Genie-out / close the event popup on the map
+      if (mapRef?.current) {
+        try {
+          mapRef.current.closePopup();
+        } catch (_) {}
+      }
+
+      const creatorId =
+        targetEvent.creator?.id ||
+        targetEvent.creatorId ||
+        targetEvent.userId;
+
+      let targetCreatorUser = (users || []).find((u) => String(u.id) === String(creatorId));
+      if (!targetCreatorUser) {
+        targetCreatorUser = targetEvent.creator || {
+          id: creatorId,
+          name: targetEvent.creator?.name || targetEvent.creator?.nickname || "Kalcerian",
+          nickname: targetEvent.creator?.nickname,
+          profilePicture: targetEvent.creator?.profilePicture,
+        };
+      }
+
+      const creatorName =
+        targetEvent.creator?.displayName ||
+        targetEvent.creator?.name ||
+        targetEvent.creator?.nickname ||
+        targetCreatorUser?.displayName ||
+        targetCreatorUser?.name ||
+        targetCreatorUser?.nickname ||
+        "Kalcerian";
+
+      const eventTitle =
+        targetEvent.name ||
+        targetEvent.title ||
+        targetEvent.description ||
+        "Event";
+
+      const replyPayload = {
+        id: `event_${targetEvent.id}_${Date.now()}`,
+        eventId: targetEvent.id,
+        msgType: "event",
+        isEvent: true,
+        senderName: creatorName,
+        senderId: creatorId,
+        userId: creatorId,
+        creatorId,
+        eventName: eventTitle,
+        title: eventTitle,
+        caption: eventTitle,
+        text: eventTitle,
+        lat: targetEvent.lat,
+        lng: targetEvent.lng,
+        createdAt: targetEvent.createdAt,
+      };
+
+      // Step 2: Automated lively sequence (scroll down drawer/other chats, scroll up to personal chat)
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("kalceria:start-event-reply", {
+            detail: {
+              targetUser: targetCreatorUser,
+              replyPayload,
+            },
+          })
+        );
+      }, 120);
+    };
+
     return () => {
       delete window.__kalceriaEditEvent;
       delete window.__kalceriaRequestCollab;
@@ -178,6 +252,7 @@ export function useSnapMapGlobalCallbacks({
       delete window.__kalceriaStepEventMedia;
       delete window.__kalceriaEditBroadcast;
       delete window.__kalceriaReplyBroadcast;
+      delete window.__kalceriaReplyEvent;
     };
   }, []);
 }

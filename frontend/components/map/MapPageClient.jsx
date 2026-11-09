@@ -28,6 +28,7 @@ import {
 import { toSmartTitleCase } from "@/lib/titleCase";
 import { splitMediaUrlListClient } from "@/lib/urlSecurity";
 import { prewarmOsmTiles, hasValidCoordinates } from "@/lib/osmTilePrewarmer";
+import { getInstantInitialCenter } from "@/components/snapmap/snapMapHelpers";
 import { useMapBlockedUsers } from "@/components/map/mapPage/useMapBlockedUsers";
 import {
   useMapChatAndNotifications,
@@ -220,6 +221,17 @@ export default function MapPage() {
         setPresence(user.allowLiveLocation ? "online" : "invisible");
         if (user.broadcast?.message) setStatusText(user.broadcast.message);
         if (hasValidCoordinates(user.domicileLat, user.domicileLng)) {
+          try {
+            if (!localStorage.getItem("kalceria_last_known_coords")) {
+              localStorage.setItem(
+                "kalceria_last_known_coords",
+                JSON.stringify({
+                  lat: Number(user.domicileLat),
+                  lng: Number(user.domicileLng),
+                })
+              );
+            }
+          } catch (_) {}
           prewarmOsmTiles(Number(user.domicileLat), Number(user.domicileLng), 15);
         }
       })
@@ -245,6 +257,12 @@ export default function MapPage() {
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
             setSelfLiveCoords({ lat, lng });
+            try {
+              localStorage.setItem("kalceria_last_known_coords", JSON.stringify({ lat, lng }));
+            } catch (_) {}
+            if (showStartup && mapRef.current) {
+              mapRef.current.setView([lat, lng], 15, { animate: false });
+            }
             prewarmOsmTiles(lat, lng, 15);
             postLocation(lat, lng).catch(() => {});
           },
@@ -442,6 +460,25 @@ export default function MapPage() {
       };
     }
   }, [showStartup]);
+
+  // Calculate instant initial map coordinates and set view silently behind startup sequence
+  const initialCenter = useMemo(
+    () => getInstantInitialCenter(currentUser),
+    [currentUser]
+  );
+
+  useEffect(() => {
+    if (showStartup && mapRef.current) {
+      const coords =
+        selfLiveCoords ||
+        (hasValidCoordinates(currentUser?.domicileLat, currentUser?.domicileLng)
+          ? { lat: Number(currentUser.domicileLat), lng: Number(currentUser.domicileLng) }
+          : null);
+      if (coords && hasValidCoordinates(coords.lat, coords.lng)) {
+        mapRef.current.setView([coords.lat, coords.lng], 15, { animate: false });
+      }
+    }
+  }, [showStartup, selfLiveCoords, currentUser]);
 
   // Blocked users state (modularized package hook: synced with localStorage + backend API)
   const { blockedUserIds, handleBlockUser, handleUnblockUser } = useMapBlockedUsers();
@@ -1359,6 +1396,7 @@ export default function MapPage() {
         <SnapMap
           users={visibleMapUsers} events={visibleEvents} onMapReady={handleMapReady}
           focusUserId={focusedUserId} focusTarget={focusTarget} isMapDark={isMapDark}
+          initialCenter={initialCenter}
           currentUser={currentUser} onEditEvent={handleOpenEditEvent} onEditBroadcast={handleOpenEditBroadcast} requestedEventId={requestedEventId}
           eventRequestsMap={eventRequestsMap} acceptedCollabsMap={acceptedCollabsMap}
           eventGroupChatMap={eventGroupChatMap}
