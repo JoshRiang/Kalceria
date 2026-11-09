@@ -3,20 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  acquireCameraStream,
-  acquireMicrophoneStream,
-  stopMediaStream,
-  probeVideoDeviceCapabilities,
-  applyCameraTorch,
-  pickSupportedVideoRecordingMime,
-} from "@/lib/mediaHardware";
-import {
   CameraBottomControls,
   CameraCaptionBox,
   CameraViewport,
   bakePhotoCropAndRotation,
   computeVideoTrimFragment,
 } from "./cameraCapture";
+import { useCameraDeviceStream } from "./cameraCapture/useCameraDeviceStream";
+import { useCameraMediaRecorder } from "./cameraCapture/useCameraMediaRecorder";
 
 export function CameraCaptureModal({
   isOpen,
@@ -25,16 +19,11 @@ export function CameraCaptureModal({
   isMapDark = true,
   onPermissionNeeded,
 }) {
-  const [facingMode, setFacingMode] = useState("user"); // "user" | "environment"
-  const [hasStream, setHasStream] = useState(false);
-  const [cameraError, setCameraError] = useState("");
+  const onPermissionNeededRef = useRef(onPermissionNeeded);
+  onPermissionNeededRef.current = onPermissionNeeded;
+
   const [previewMedia, setPreviewMedia] = useState(null); // { type: "photo" | "video", url, blob, duration }
   const [isViewOnce, setIsViewOnce] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(1); // 1 or 2
-  const [canFlipCamera, setCanFlipCamera] = useState(false);
-  const [hasFlash, setHasFlash] = useState(false);
-  const [isFlashOn, setIsFlashOn] = useState(false);
-  const [isSpinningFlip, setIsSpinningFlip] = useState(false);
   const [photoRotation, setPhotoRotation] = useState(0); // 0, 90, 180, 270
   const [isCropping, setIsCropping] = useState(false);
   const [cropRect, setCropRect] = useState({ left: 0, top: 0, right: 1, bottom: 1 });
@@ -45,75 +34,74 @@ export function CameraCaptureModal({
   const [trimStart, setTrimStart] = useState(0); // 0 to 1
   const [trimEnd, setTrimEnd] = useState(1);     // 0 to 1
   const [activeTrimHandle, setActiveTrimHandle] = useState(null); // "start" | "end" | null
-  const [videoTrueDuration, setVideoTrueDuration] = useState(0);
   const previewVideoRef = useRef(null);
   const previewViewportRef = useRef(null);
   const trimmerTrackRef = useRef(null);
-  const videoStartTimeRef = useRef(null);
 
-  // Video recording on hold
-  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const hasPreview = Boolean(previewMedia);
 
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const activeStreamFacingRef = useRef(null);
-  const onPermissionNeededRef = useRef(onPermissionNeeded);
-  onPermissionNeededRef.current = onPermissionNeeded;
-  const mediaRecorderRef = useRef(null);
-  const recordedChunksRef = useRef([]);
-  const holdTimerRef = useRef(null);
-  const recordIntervalRef = useRef(null);
-  const isHoldingShutterRef = useRef(false);
+  const {
+    facingMode,
+    setFacingMode,
+    hasStream,
+    setHasStream,
+    cameraError,
+    setCameraError,
+    zoomLevel,
+    setZoomLevel,
+    canFlipCamera,
+    hasFlash,
+    isFlashOn,
+    setIsFlashOn,
+    isSpinningFlip,
+    videoRef,
+    streamRef,
+    startCamera,
+    cleanupCameraStream,
+    handleToggleZoom,
+    handleToggleFlash,
+    handleFlipCamera,
+  } = useCameraDeviceStream({
+    isOpen,
+    hasPreview,
+    onPermissionNeededRef,
+  });
 
-  // Hardware Camera Detection: inspect dual-camera flip & active track torch capability
-  const syncHardwareCapabilities = useCallback(async (stream) => {
-    const caps = await probeVideoDeviceCapabilities(stream);
-    setCanFlipCamera(caps.canFlipCamera);
-    setHasFlash(caps.hasFlash);
-
-    if (stream && !caps.hasFlash) {
-      setTimeout(async () => {
-        if (streamRef.current !== stream) return;
-        const retryCaps = await probeVideoDeviceCapabilities(stream);
-        setCanFlipCamera(retryCaps.canFlipCamera);
-        setHasFlash(retryCaps.hasFlash);
-      }, 220);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isOpen) {
-      syncHardwareCapabilities(streamRef.current);
-    }
-  }, [isOpen, syncHardwareCapabilities]);
+  const {
+    isRecordingVideo,
+    setIsRecordingVideo,
+    recordingSeconds,
+    setRecordingSeconds,
+    videoTrueDuration,
+    setVideoTrueDuration,
+    handleShutterPointerDown,
+    handleShutterPointerUp,
+    handleTakePhoto,
+    cleanupRecorder,
+  } = useCameraMediaRecorder({
+    streamRef,
+    hasStream,
+    videoRef,
+    facingMode,
+    zoomLevel,
+    isFlashOn,
+    setIsFlashOn,
+    setPreviewMedia,
+    setPhotoRotation,
+    setIsCropping,
+    setCropRect,
+    setTrimStart,
+    setTrimEnd,
+    setActiveTrimHandle,
+    setShowCameraGuide,
+    setCameraError,
+    previewMedia,
+  });
 
   const cleanupCamera = useCallback(() => {
-    if (recordIntervalRef.current) {
-      clearInterval(recordIntervalRef.current);
-      recordIntervalRef.current = null;
-    }
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch {}
-      mediaRecorderRef.current = null;
-    }
-    if (streamRef.current) {
-      applyCameraTorch(streamRef.current, false).catch(() => {});
-      stopMediaStream(streamRef.current);
-      streamRef.current = null;
-    }
-    activeStreamFacingRef.current = null;
-    setHasStream(false);
-    setHasFlash(false);
-    setIsFlashOn(false);
-    setIsRecordingVideo(false);
-  }, []);
+    cleanupRecorder();
+    cleanupCameraStream();
+  }, [cleanupRecorder, cleanupCameraStream]);
 
   // Teardown when closing modal + auto-fade camera guide after 2s
   useEffect(() => {
@@ -139,7 +127,7 @@ export function CameraCaptureModal({
       const timer = setTimeout(() => setShowCameraGuide(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, cleanupCamera]);
+  }, [isOpen, cleanupCamera, setCameraError, setZoomLevel, setIsRecordingVideo, setRecordingSeconds, setVideoTrueDuration]);
 
   // Teardown on unmount
   useEffect(() => {
@@ -147,308 +135,6 @@ export function CameraCaptureModal({
       cleanupCamera();
     };
   }, [cleanupCamera]);
-
-  // Persistent Camera Stream initializer (stable reference, never restarts an active matching stream)
-  const startCamera = useCallback(async (facing = "user", forceRestart = false) => {
-    if (
-      !forceRestart &&
-      streamRef.current &&
-      activeStreamFacingRef.current === facing &&
-      streamRef.current.getTracks?.().some((t) => t.readyState === "live")
-    ) {
-      setHasStream(true);
-      if (videoRef.current && videoRef.current.srcObject !== streamRef.current) {
-        videoRef.current.srcObject = streamRef.current;
-        videoRef.current.play?.().catch(() => {});
-      }
-      return;
-    }
-
-    if (streamRef.current) {
-      await applyCameraTorch(streamRef.current, false).catch(() => {});
-      stopMediaStream(streamRef.current);
-      streamRef.current = null;
-    }
-    activeStreamFacingRef.current = null;
-    setCameraError("");
-    setIsFlashOn(false);
-    setHasFlash(false);
-
-    try {
-      const stream = await acquireCameraStream({ facingMode: facing }, true);
-
-      // Guarantee an audio track so recorded videos always carry sound.
-      if (stream.getAudioTracks().length === 0) {
-        try {
-          const mic = await acquireMicrophoneStream({
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          });
-          mic.getAudioTracks().forEach((track) => stream.addTrack(track));
-        } catch (micErr) {
-          if (micErr?.code === "PERMISSION_DENIED" && onPermissionNeededRef.current) {
-            onPermissionNeededRef.current("mic");
-          }
-        }
-      }
-
-      streamRef.current = stream;
-      activeStreamFacingRef.current = facing;
-      setHasStream(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play?.().catch(() => {});
-      }
-      syncHardwareCapabilities(stream);
-    } catch (err) {
-      setHasStream(false);
-      setCameraError(err?.message || "Tidak dapat mengakses kamera.");
-      if (err?.code === "PERMISSION_DENIED" && onPermissionNeededRef.current) {
-        onPermissionNeededRef.current("camera");
-      }
-    }
-  }, []);
-
-  // Re-start camera only when modal opens, preview closes, or facingMode changes
-  const hasPreview = Boolean(previewMedia);
-  useEffect(() => {
-    if (isOpen && !hasPreview) {
-      startCamera(facingMode, false);
-    }
-  }, [isOpen, facingMode, hasPreview, startCamera]);
-
-  // Ensure video element receives stream when ready
-  useEffect(() => {
-    if (hasStream && streamRef.current && videoRef.current && !hasPreview) {
-      if (videoRef.current.srcObject !== streamRef.current) {
-        videoRef.current.srcObject = streamRef.current;
-        videoRef.current.play?.().catch(() => {});
-      }
-    }
-  }, [hasStream, hasPreview]);
-
-  // Take Snapshot Photo
-  const handleTakePhoto = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || !hasStream) return;
-
-    try {
-      const canvas = document.createElement("canvas");
-      const vWidth = video.videoWidth || 640;
-      const vHeight = video.videoHeight || 480;
-      canvas.width = vWidth;
-      canvas.height = vHeight;
-      const ctx = canvas.getContext("2d");
-
-      if (facingMode === "user") {
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-      }
-
-      if (zoomLevel === 2) {
-        const cropW = vWidth / 1.5;
-        const cropH = vHeight / 1.5;
-        const cropX = (vWidth - cropW) / 2;
-        const cropY = (vHeight - cropH) / 2;
-        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, vWidth, vHeight);
-      } else {
-        ctx.drawImage(video, 0, 0, vWidth, vHeight);
-      }
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return;
-          if (streamRef.current && isFlashOn) {
-            applyCameraTorch(streamRef.current, false).catch(() => {});
-            setIsFlashOn(false);
-          }
-          const url = URL.createObjectURL(blob);
-          setPreviewMedia({
-            type: "photo",
-            url,
-            blob,
-          });
-          setPhotoRotation(0);
-          setIsCropping(false);
-          setCropRect({ left: 0, top: 0, right: 1, bottom: 1 });
-        },
-        "image/jpeg",
-        0.92
-      );
-    } catch {
-      setCameraError("Gagal mengambil foto.");
-    }
-  }, [hasStream, facingMode, zoomLevel, isFlashOn]);
-
-  // Start Video Recording on Hold (stable callback, never interrupted by timer ticks)
-  const startVideoRecording = useCallback(() => {
-    if (!streamRef.current || !hasStream) return;
-    recordedChunksRef.current = [];
-    videoStartTimeRef.current = Date.now();
-    setRecordingSeconds(0);
-    setVideoTrueDuration(0);
-    setIsRecordingVideo(true);
-
-    try {
-      const mime = pickSupportedVideoRecordingMime();
-      const hasAudioTrack = streamRef.current.getAudioTracks().length > 0;
-      const recorderOptions = {
-        ...(mime ? { mimeType: mime } : {}),
-        videoBitsPerSecond: 1200000,
-        ...(hasAudioTrack ? { audioBitsPerSecond: 128000 } : {}),
-      };
-      let recorder;
-      try {
-        recorder = new MediaRecorder(streamRef.current, recorderOptions);
-      } catch {
-        recorder = mime
-          ? new MediaRecorder(streamRef.current, { mimeType: mime })
-          : new MediaRecorder(streamRef.current);
-      }
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          recordedChunksRef.current.push(e.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        if (recordIntervalRef.current) {
-          clearInterval(recordIntervalRef.current);
-          recordIntervalRef.current = null;
-        }
-        if (streamRef.current) {
-          applyCameraTorch(streamRef.current, false).catch(() => {});
-          setIsFlashOn(false);
-        }
-        const blob = new Blob(recordedChunksRef.current, {
-          type: recorder.mimeType || mime || "video/webm",
-        });
-        const url = URL.createObjectURL(blob);
-        const elapsedSec = videoStartTimeRef.current
-          ? Math.max(1, Math.round((Date.now() - videoStartTimeRef.current) / 1000))
-          : 1;
-
-        setVideoTrueDuration(elapsedSec);
-        setTrimStart(0);
-        setTrimEnd(1);
-        setActiveTrimHandle(null);
-        setPreviewMedia({
-          type: "video",
-          url,
-          blob,
-          duration: elapsedSec,
-        });
-        setIsRecordingVideo(false);
-      };
-
-      recorder.start(100);
-
-      recordIntervalRef.current = setInterval(() => {
-        const elapsed = videoStartTimeRef.current
-          ? (Date.now() - videoStartTimeRef.current) / 1000
-          : 0;
-        if (elapsed >= 60) {
-          if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            try {
-              mediaRecorderRef.current.stop();
-            } catch {}
-          }
-          if (recordIntervalRef.current) {
-            clearInterval(recordIntervalRef.current);
-            recordIntervalRef.current = null;
-          }
-          setRecordingSeconds(60);
-        } else {
-          setRecordingSeconds(Math.min(60, Number(elapsed.toFixed(1))));
-        }
-      }, 100);
-    } catch {
-      setIsRecordingVideo(false);
-    }
-  }, [hasStream]);
-
-  // Stop Video Recording
-  const stopVideoRecording = useCallback(() => {
-    if (recordIntervalRef.current) {
-      clearInterval(recordIntervalRef.current);
-      recordIntervalRef.current = null;
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      try {
-        mediaRecorderRef.current.stop();
-      } catch {}
-    }
-    setIsRecordingVideo(false);
-  }, []);
-
-  // Shutter pointer down / up with robust pointer capture
-  const handleShutterPointerDown = (e) => {
-    e.preventDefault();
-    if (previewMedia || !hasStream) return;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {}
-    setShowCameraGuide(false);
-    isHoldingShutterRef.current = true;
-
-    holdTimerRef.current = setTimeout(() => {
-      if (isHoldingShutterRef.current && hasStream) {
-        startVideoRecording();
-      }
-    }, 280);
-  };
-
-  const handleShutterPointerUp = (e) => {
-    e.preventDefault();
-    if (!isHoldingShutterRef.current && !isRecordingVideo) return;
-    try {
-      if (e.currentTarget?.hasPointerCapture && e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-    } catch {}
-
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-
-    const wasHolding = isHoldingShutterRef.current;
-    isHoldingShutterRef.current = false;
-
-    if (isRecordingVideo || (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording")) {
-      stopVideoRecording();
-    } else if (wasHolding) {
-      handleTakePhoto();
-    }
-  };
-
-  // Toggle Zoom Level 1x / 2x
-  const handleToggleZoom = () => {
-    setZoomLevel((prev) => (prev === 1 ? 2 : 1));
-  };
-
-  // Toggle Real Hardware Flashlight / Torch
-  const handleToggleFlash = useCallback(async () => {
-    if (!hasFlash || !streamRef.current) return;
-    const nextEnabled = !isFlashOn;
-    const res = await applyCameraTorch(streamRef.current, nextEnabled);
-    setIsFlashOn(res.active);
-  }, [hasFlash, isFlashOn]);
-
-  // Flip Camera User <-> Environment with 360 Spin Animation
-  const handleFlipCamera = () => {
-    if (!canFlipCamera) return;
-    setIsSpinningFlip(true);
-    const nextFacing = facingMode === "user" ? "environment" : "user";
-    setFacingMode(nextFacing);
-    startCamera(nextFacing, true);
-    setTimeout(() => {
-      setIsSpinningFlip(false);
-    }, 380);
-  };
 
   // Rotate photo 90 degrees in edit mode
   const handleRotatePhoto = () => {

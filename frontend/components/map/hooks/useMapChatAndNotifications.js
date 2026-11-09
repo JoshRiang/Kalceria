@@ -2,14 +2,6 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { playNotificationSound } from "@/lib/soundEngine";
-import {
-  fetchFavouriteUsers,
-  favouriteKalcerian,
-  unfavouriteKalcerian,
-  fetchMutedUsers,
-  muteKalcerian,
-  unmuteKalcerian,
-} from "@/lib/api";
 
 import {
   PERSONAL_CHAT_STORAGE_KEY,
@@ -24,6 +16,8 @@ import {
 } from "./mapChat/eventChatHelpers";
 import { useRankedDynamicEvents } from "./mapChat/useRankedDynamicEvents";
 import { useInboxSummarySync } from "./mapChat/useInboxSummarySync";
+import { useMapUserPreferences } from "./mapChat/useMapUserPreferences";
+import { useMapChatEventListeners } from "./mapChat/useMapChatEventListeners";
 
 export {
   PERSONAL_CHAT_STORAGE_KEY,
@@ -68,93 +62,13 @@ export function useMapChatAndNotifications({
   const [recentlyMessagedUserIds, setRecentlyMessagedUserIds] = useState({});
   const highlightTimersRef = useRef({});
 
-  // Favourites (Love badge + Priority slot) synced with localStorage & backend
-  const [favouriteUserIds, setFavouriteUserIds] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem(FAVOURITES_STORAGE_KEY);
-        if (stored) return JSON.parse(stored);
-      } catch {}
-    }
-    return [];
-  });
-
-  // Muted Notifications (Muted Speaker badge + Silences personal chat chime) synced with localStorage & backend
-  const [mutedUserIds, setMutedUserIds] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem(MUTED_STORAGE_KEY);
-        if (stored) return JSON.parse(stored);
-      } catch {}
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    fetchFavouriteUsers()
-      .then((ids) => {
-        if (Array.isArray(ids) && ids.length) {
-          setFavouriteUserIds((prev) => {
-            const next = Array.from(new Set([...prev, ...ids]));
-            try {
-              localStorage.setItem(FAVOURITES_STORAGE_KEY, JSON.stringify(next));
-            } catch {}
-            return next;
-          });
-        }
-      })
-      .catch(() => {});
-
-    fetchMutedUsers()
-      .then((ids) => {
-        if (Array.isArray(ids) && ids.length) {
-          setMutedUserIds((prev) => {
-            const next = Array.from(new Set([...prev, ...ids]));
-            try {
-              localStorage.setItem(MUTED_STORAGE_KEY, JSON.stringify(next));
-            } catch {}
-            return next;
-          });
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const toggleFavouriteUser = useCallback((targetId) => {
-    if (!targetId) return;
-    const strId = String(targetId);
-    setFavouriteUserIds((prev) => {
-      const exists = prev.includes(strId);
-      const next = exists ? prev.filter((id) => id !== strId) : [...prev, strId];
-      try {
-        localStorage.setItem(FAVOURITES_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
-      if (exists) {
-        unfavouriteKalcerian(strId).catch(() => {});
-      } else {
-        favouriteKalcerian(strId).catch(() => {});
-      }
-      return next;
-    });
-  }, []);
-
-  const toggleMuteUser = useCallback((targetId) => {
-    if (!targetId) return;
-    const strId = String(targetId);
-    setMutedUserIds((prev) => {
-      const exists = prev.includes(strId);
-      const next = exists ? prev.filter((id) => id !== strId) : [...prev, strId];
-      try {
-        localStorage.setItem(MUTED_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
-      if (exists) {
-        unmuteKalcerian(strId).catch(() => {});
-      } else {
-        muteKalcerian(strId).catch(() => {});
-      }
-      return next;
-    });
-  }, []);
+  // Favourites & Muted Notifications (Modularized Package Hook)
+  const {
+    favouriteUserIds,
+    mutedUserIds,
+    toggleFavouriteUser,
+    toggleMuteUser,
+  } = useMapUserPreferences();
 
   // 2. Event Group Chat Metadata: { [eventId]: { lastMessageAt, unreadCount, lastMessageText, senderName } }
   const [eventGroupChatMap, setEventGroupChatMap] = useState(() => {
@@ -402,65 +316,14 @@ export function useMapChatAndNotifications({
     [events, currentUser, setEventRequestsMap]
   );
 
-  // Register global event listeners & imperative test/integration helpers
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const onPersonalChat = (e) => receivePersonalChatMessage(e?.detail || {});
-    const onPersonalChatRead = (e) => {
-      const targetId = e?.detail?.targetId;
-      if (targetId) markPersonalChatRead(targetId);
-    };
-    const onEventChat = (e) => receiveEventGroupChatMessage(e?.detail || {});
-    const onEnvelope = (e) => receiveEnvelopeNotification(e?.detail || {});
-
-    window.addEventListener("kalceria:incoming-personal-chat", onPersonalChat);
-    window.addEventListener("kalceria:personal-chat-read", onPersonalChatRead);
-    window.addEventListener("kalceria:incoming-event-chat", onEventChat);
-    window.addEventListener("kalceria:incoming-envelope-request", onEnvelope);
-
-    window.__kalceriaTriggerPersonalChat = (senderIdOrHandle, message = "Hey, let's roll!") => {
-      receivePersonalChatMessage({ senderId: senderIdOrHandle, message, timestamp: Date.now() });
-    };
-    window.__kalceriaTriggerEventGroupChat = (eventId, message = "New group update!", senderName = "Kalcerian") => {
-      receiveEventGroupChatMessage({ eventId, message, senderName, timestamp: Date.now() });
-    };
-    window.__kalceriaTriggerEnvelopeRequest = (eventId, request) => {
-      receiveEnvelopeNotification({ eventId, request });
-    };
-
-    let bc = null;
-    try {
-      if (typeof BroadcastChannel !== "undefined") {
-        bc = new BroadcastChannel("kalceria_realtime_channel");
-        bc.onmessage = (ev) => {
-          const { type, payload } = ev.data || {};
-          if (type === "personal_chat") {
-            receivePersonalChatMessage(payload || {});
-          } else if (type === "envelope_request") {
-            receiveEnvelopeNotification(payload || {});
-          } else if (type === "event_group_chat") {
-            receiveEventGroupChatMessage(payload || {});
-          }
-        };
-      }
-    } catch {}
-
-    return () => {
-      window.removeEventListener("kalceria:incoming-personal-chat", onPersonalChat);
-      window.removeEventListener("kalceria:personal-chat-read", onPersonalChatRead);
-      window.removeEventListener("kalceria:incoming-event-chat", onEventChat);
-      window.removeEventListener("kalceria:incoming-envelope-request", onEnvelope);
-      delete window.__kalceriaTriggerPersonalChat;
-      delete window.__kalceriaTriggerEventGroupChat;
-      delete window.__kalceriaTriggerEnvelopeRequest;
-      if (bc) {
-        try {
-          bc.close();
-        } catch {}
-      }
-    };
-  }, [receivePersonalChatMessage, markPersonalChatRead, receiveEventGroupChatMessage, receiveEnvelopeNotification]);
+  // Register global event listeners & incoming chat events (Modularized Package Hook)
+  useMapChatEventListeners({
+    receivePersonalChatMessage,
+    markPersonalChatRead,
+    receiveEventGroupChatMessage,
+    receiveEnvelopeNotification,
+    currentUser,
+  });
 
   // Cleanup highlight timers on unmount
   useEffect(() => {
@@ -469,25 +332,6 @@ export function useMapChatAndNotifications({
       Object.values(timers).forEach((t) => clearTimeout(t));
     };
   }, []);
-
-  // Listen for real incoming personal chat events and background-poll for genuine unread peer messages
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handleIncomingPersonalMsg = (e) => {
-      const detail = e?.detail;
-      if (!detail || !detail.senderId) return;
-      if (currentUser?.id && String(detail.senderId) === String(currentUser.id)) return;
-      receivePersonalChatMessage({
-        senderId: detail.senderId,
-        message: detail.message || "Pesan baru",
-        timestamp: detail.timestamp || Date.now(),
-      });
-    };
-    window.addEventListener("kalceria:incoming-personal-message", handleIncomingPersonalMsg);
-    return () => {
-      window.removeEventListener("kalceria:incoming-personal-message", handleIncomingPersonalMsg);
-    };
-  }, [currentUser?.id, receivePersonalChatMessage]);
 
   // O(1) Global Unread Inbox Watermark Sync (Modularized Package Hook)
   useInboxSummarySync({

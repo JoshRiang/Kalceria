@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { generateSafetyCode, generateCryptoNonce } from "@/lib/chatCrypto";
+import { generateCryptoNonce } from "@/lib/chatCrypto";
 import { postCallSignal, fetchCallSignals, fetchLiveKitCallToken } from "@/lib/api";
 import { startOutgoingRingtone, stopCallRingtone } from "@/lib/soundEngine";
 import { RTC_CONFIG } from "./callHelpers";
+import { useCallTimerAndSecurity } from "./useCallTimerAndSecurity";
+import { useCallStreamBinding } from "./useCallStreamBinding";
+import { useCallCamStateSync } from "./useCallCamStateSync";
+import { startSignalPollingLoop } from "./callSignalPoller";
 
 export function useCallSession({
   targetUserId,
@@ -18,16 +22,25 @@ export function useCallSession({
   hardware,
 }) {
   const [status, setStatus] = useState(isIncomingAnswer ? "connected" : "calling"); // "calling" | "ringing" | "connected" | "ended"
-  const [seconds, setSeconds] = useState(0);
   const [isRemoteCamOff, setIsRemoteCamOff] = useState(false);
   const [isBadConnection, setIsBadConnection] = useState(false);
-  const [safetyCode, setSafetyCode] = useState("");
-  const [showSafetyTooltip, setShowSafetyTooltip] = useState(false);
+
+  const {
+    seconds,
+    setSeconds,
+    secondsRef,
+    safetyCode,
+    showSafetyTooltip,
+    setShowSafetyTooltip,
+  } = useCallTimerAndSecurity({
+    status,
+    targetUserId,
+    currentUserId: currentUser?.id,
+  });
 
   const pcRef = useRef(null);
   const callCtrlChannelRef = useRef(null);
   const pendingIceCandidatesRef = useRef([]);
-  const secondsRef = useRef(0);
   const activeCallIdRef = useRef(callId || `call_${Date.now()}`);
   const pollTimerRef = useRef(null);
   const isHungUpRef = useRef(false);
@@ -74,31 +87,6 @@ export function useCallSession({
     setIsRemoteCamOff(false);
     livekitSessionRef.current = null;
   }, []);
-
-  // Connected Call Timer
-  useEffect(() => {
-    if (status !== "connected") return;
-    const interval = setInterval(() => {
-      setSeconds((s) => {
-        const next = s + 1;
-        secondsRef.current = next;
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [status]);
-
-  // Generate E2EE safety verification code
-  useEffect(() => {
-    if (!targetUserId) return;
-    let active = true;
-    generateSafetyCode(currentUser?.id || "me", targetUserId).then((code) => {
-      if (active) setSafetyCode(code);
-    });
-    return () => {
-      active = false;
-    };
-  }, [targetUserId, currentUser?.id]);
 
   // Main Call Lifecycle and WebRTC Pipeline
   useEffect(() => {
@@ -358,74 +346,24 @@ export function useCallSession({
       }
 
       // 5. Adaptive Polling Loop for Peer Signals (Ringing / Answer / ICE / CamState / Hangup)
-      // Fast 450ms handshake during call establishment; relaxes to 1000ms once connected
-      const runSignalPoll = async () => {
-        if (cancelled || isHungUpRef.current) return;
-        try {
-          const res = await fetchCallSignals({ clear: "true" });
-          const signals = res?.signals || [];
-
-          for (const sig of signals) {
-            if (sig.callId && sig.callId !== activeCallIdRef.current) continue;
-
-            if (sig.livekit && !cancelled) {
-              livekitSessionRef.current = sig.livekit;
-            }
-
-            if (sig.signalType === "hangup") {
-              stopCallRingtone();
-              setStatus("ended");
-              const callDuration = secondsRef.current;
-              setTimeout(() => {
-                teardownCall();
-                onEndCallRef.current?.({ mode, seconds: callDuration });
-              }, 700);
-              return;
-            }
-
-            if (sig.signalType === "cam_state" && sig.encryptedPayload) {
-              try {
-                const camPayload = JSON.parse(sig.encryptedPayload);
-                setIsRemoteCamOff(Boolean(camPayload?.isCamOff));
-              } catch {}
-            }
-
-            if (sig.signalType === "ringing" && !isIncomingAnswer) {
-              setStatus((prev) => (prev === "calling" ? "ringing" : prev));
-            }
-
-            if (sig.signalType === "answer" && !isIncomingAnswer) {
-              stopCallRingtone();
-              setStatus("connected");
-              if (pcRef.current && sig.encryptedPayload) {
-                try {
-                  const answerDesc = JSON.parse(sig.encryptedPayload);
-                  await pcRef.current.setRemoteDescription(new RTCSessionDescription(answerDesc));
-                  await flushPendingIceCandidates(pcRef.current);
-                } catch {}
-              }
-            }
-
-            if (sig.signalType === "ice" && pcRef.current && sig.encryptedPayload) {
-              try {
-                const candidateObj = JSON.parse(sig.encryptedPayload);
-                if (pcRef.current.remoteDescription && pcRef.current.remoteDescription.type) {
-                  await pcRef.current.addIceCandidate(new RTCIceCandidate(candidateObj));
-                } else {
-                  pendingIceCandidatesRef.current.push(candidateObj);
-                }
-              } catch {}
-            }
-          }
-        } catch {}
-
-        if (!cancelled && !isHungUpRef.current) {
-          const nextDelay = statusRef.current === "connected" ? 1000 : 450;
-          pollTimerRef.current = setTimeout(runSignalPoll, nextDelay);
-        }
-      };
-
-      pollTimerRef.current = setTimeout(runSignalPoll, 350);
+      startSignalPollingLoop({
+        isCancelled: () => cancelled,
+        isHungUpRef,
+        statusRef,
+        pollTimerRef,
+        activeCallIdRef,
+        livekitSessionRef,
+        isIncomingAnswer,
+        pcRef,
+        secondsRef,
+        mode,
+        onEndCallRef,
+        setStatus,
+        setIsRemoteCamOff,
+        flushPendingIceCandidates,
+        pendingIceCandidatesRef,
+        teardownCall,
+      });
     }
 
     initCall();
@@ -444,79 +382,23 @@ export function useCallSession({
   ]);
 
   // Reactive binding: ensure local & remote media elements play stream as soon as elements mount / status updates
-  useEffect(() => {
-    if (
-      hardware.localVideoRef.current &&
-      hardware.localStreamRef.current &&
-      mode === "video" &&
-      !hardware.isCamOff
-    ) {
-      if (hardware.localVideoRef.current.srcObject !== hardware.localStreamRef.current) {
-        hardware.localVideoRef.current.srcObject = hardware.localStreamRef.current;
-        hardware.localVideoRef.current.play?.().catch(() => {});
-      }
-    }
-  }, [
-    hardware.hasLocalStream,
-    hardware.isCamOff,
+  useCallStreamBinding({
+    hardware,
     mode,
     status,
-    hardware.localVideoRef,
-    hardware.localStreamRef,
-  ]);
-
-  useEffect(() => {
-    if (hardware.remoteStreamRef.current) {
-      if (hardware.remoteVideoRef.current && mode === "video") {
-        if (hardware.remoteVideoRef.current.srcObject !== hardware.remoteStreamRef.current) {
-          hardware.remoteVideoRef.current.srcObject = hardware.remoteStreamRef.current;
-        }
-        if (!isRemoteCamOff) {
-          hardware.remoteVideoRef.current.play?.().catch(() => {});
-        }
-      }
-      if (hardware.remoteAudioRef.current) {
-        if (hardware.remoteAudioRef.current.srcObject !== hardware.remoteStreamRef.current) {
-          hardware.remoteAudioRef.current.srcObject = hardware.remoteStreamRef.current;
-          hardware.remoteAudioRef.current.play?.().catch(() => {});
-        }
-      }
-    }
-  }, [
-    hardware.hasRemoteStream,
     isRemoteCamOff,
-    mode,
-    status,
-    hardware.remoteStreamRef,
-    hardware.remoteVideoRef,
-    hardware.remoteAudioRef,
-  ]);
+  });
 
   // Toggle Camera Mute + Real-Time Peer Camera State Sync (DataChannel + Signal Queue Fallback)
-  useEffect(() => {
-    const isCamOff = hardware.isCamOff;
-    const dc = callCtrlChannelRef.current;
-    if (dc && dc.readyState === "open") {
-      try {
-        dc.send(JSON.stringify({ type: "cam_state", isCamOff: Boolean(isCamOff), ts: Date.now() }));
-      } catch {}
-    }
-
-    if (!camMountSyncedRef.current) {
-      camMountSyncedRef.current = true;
-      if (!isCamOff) return;
-    }
-
-    if (mode === "video" && targetUserId && !isHungUpRef.current) {
-      postCallSignal(targetUserId, {
-        callId: activeCallIdRef.current,
-        callMode: mode,
-        signalType: "cam_state",
-        nonce: generateCryptoNonce(),
-        encryptedPayload: JSON.stringify({ isCamOff: Boolean(isCamOff) }),
-      }).catch(() => {});
-    }
-  }, [hardware.isCamOff, mode, targetUserId]);
+  useCallCamStateSync({
+    hardware,
+    mode,
+    targetUserId,
+    callCtrlChannelRef,
+    activeCallIdRef,
+    isHungUpRef,
+    camMountSyncedRef,
+  });
 
   const handleHangup = useCallback(() => {
     stopCallRingtone();

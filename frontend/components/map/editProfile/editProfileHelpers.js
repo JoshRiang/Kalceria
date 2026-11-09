@@ -1,4 +1,15 @@
 import { resolvePersistentCover } from "@/lib/profileIdentity";
+import { uploadBlobMedia } from "@/lib/api";
+
+export async function uploadDataUrlViaBlob(dataUrl, fallbackName) {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  const mime = blob.type || "image/jpeg";
+  const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
+  const file = new File([blob], `${fallbackName}.${ext}`, { type: mime });
+  const uploaded = await uploadBlobMedia(file);
+  return uploaded?.url || dataUrl;
+}
 
 export function getDeterministicBaseColor(user) {
   return resolvePersistentCover(user);
