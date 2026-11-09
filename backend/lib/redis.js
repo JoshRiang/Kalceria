@@ -26,8 +26,11 @@ function startKeepalive() {
   keepaliveTimer = setInterval(async () => {
     try {
       await redis.ping();
-    } catch {
-      // Silently ignore — reconnect strategy handles it
+    } catch (err) {
+      if (err?.message?.includes('max requests limit exceeded')) {
+        clearInterval(keepaliveTimer);
+        keepaliveTimer = null;
+      }
     }
   }, KEEPALIVE_INTERVAL_MS);
   

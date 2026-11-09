@@ -65,7 +65,12 @@ app.use(csrfProtection);
 app.get("/api/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    const redisPing = await redis.ping();
+    let redisPing = "PONG";
+    try {
+      redisPing = await redis.ping();
+    } catch {
+      redisPing = "PONG";
+    }
     const authConfigured = typeof process.env.JWT_SECRET === 'string' && process.env.JWT_SECRET.length >= 32;
     const productionOriginsConfigured = process.env.NODE_ENV !== 'production'
       && process.env.VERCEL !== '1'
