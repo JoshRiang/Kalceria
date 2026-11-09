@@ -30,19 +30,23 @@ export const pureUploadSvg = (iconFg) => `
   </svg>
 `;
 
-// Pure Hand SVG: Exact Flaticon finger gesture (Picture 1), centered at (12, 12)
+// Pure Hand SVG: Picture 2 Hand Gesture (Solid fill, high-contrast outer edge and finger creases)
 export const pureHandSvg = (iconFg, iconStroke) => `
   <svg width="21" height="21" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
+    <!-- Hand Silhouette (Picture 2): Solid fill, high-contrast stroke -->
     <path
-      d="M 10.0 4.0 L 9.3 4.4 L 9.0 4.7 L 8.9 5.1 L 8.9 10.9 L 8.0 11.0 L 7.4 11.2 L 6.7 11.8 L 6.2 12.6 L 6.1 13.2 L 6.1 14.1 L 6.4 15.5 L 6.9 16.8 L 7.6 18.0 L 8.5 19.0 L 9.5 19.7 L 10.6 20.0 L 14.6 20.0 L 15.7 19.9 L 16.6 19.4 L 17.4 18.6 L 17.8 17.7 L 17.9 16.6 L 17.9 10.5 L 17.5 10.0 L 17.0 9.6 L 16.4 9.6 L 15.8 9.8 L 15.4 9.3 L 15.0 8.9 L 14.3 8.9 L 13.7 9.1 L 13.3 8.5 L 12.7 8.2 L 12.2 8.2 L 11.7 8.3 L 11.6 5.0 L 11.4 4.6 L 10.0 4.0 Z"
+      d="M 8.8 12.0 L 8.3 4.6 C 8.3 3.6 8.7 3.0 9.3 3.0 C 9.9 3.0 10.3 3.6 10.3 4.6 L 10.5 4.6 L 11.1 3.4 C 11.2 2.5 11.6 1.8 12.2 1.8 C 12.8 1.8 13.2 2.5 13.3 3.4 L 13.5 3.8 L 13.9 3.5 C 14.1 2.7 14.5 2.2 15.0 2.2 C 15.5 2.2 15.9 2.7 16.0 3.5 L 16.2 5.4 L 16.6 5.4 C 16.8 4.7 17.2 4.2 17.7 4.2 C 18.2 4.2 18.6 4.7 18.6 5.4 L 18.6 13.5 C 18.6 17.5 16.2 21.5 12.3 21.5 C 8.8 21.5 6.6 18.2 6.2 14.8 C 5.9 13.2 4.8 12.2 4.9 10.8 C 5.0 9.6 5.8 8.8 6.8 9.0 C 7.6 9.2 8.3 10.3 8.8 12.0 Z"
       fill="${iconFg}"
       stroke="${iconStroke}"
-      stroke-width="1.4"
+      stroke-width="1.3"
       stroke-linejoin="round"
     />
-    <path d="M 11.6 8.5 L 11.6 13.5" stroke="${iconStroke}" stroke-width="1.1" stroke-linecap="round" />
-    <path d="M 13.7 9.1 L 13.7 13.5" stroke="${iconStroke}" stroke-width="1.1" stroke-linecap="round" />
-    <path d="M 15.8 9.8 L 15.8 13.5" stroke="${iconStroke}" stroke-width="1.1" stroke-linecap="round" />
+    <!-- 3 Finger dividing lines (cleft to knuckles) -->
+    <path d="M 10.4 4.8 L 10.4 11.9" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" />
+    <path d="M 13.4 4.0 L 13.4 11.9" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" />
+    <path d="M 16.1 5.6 L 16.1 11.9" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" />
+    <!-- Thumb crease line (curving down into palm) -->
+    <path d="M 8.8 12.0 C 9.0 14.5, 10.4 16.5, 11.8 17.3" stroke="${iconStroke}" stroke-width="1.2" stroke-linecap="round" fill="none" />
   </svg>
 `;
 
@@ -207,9 +211,9 @@ export function renderPencilEditButton({
       style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0; ${offlineBtnLockStyle}"
       ${isSelfOffline ? "" : `onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'"`}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconFg}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block; overflow: visible;">
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible; filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" fill="none" stroke="${iconStroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" fill="${iconFg}" stroke="${iconStroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </button>
   `;

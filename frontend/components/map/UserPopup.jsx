@@ -80,6 +80,8 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
   const borderColor = isMapDark ? "#ffffff" : "#000000";
   const timeColor = isMapDark ? "rgba(255, 255, 255, 0.65)" : "rgba(0, 0, 0, 0.55)";
   const iconColor = isMapDark ? "#ffffff" : "#000000";
+  const iconFg = isMapDark ? "#ffffff" : "#000000";
+  const iconStroke = isMapDark ? "#000000" : "#ffffff";
   const shadow = isMapDark
     ? "0 4px 20px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.4)"
     : "0 4px 16px rgba(0, 0, 0, 0.18)";
@@ -131,9 +133,9 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
             onmouseover="this.style.transform='scale(1.15)'"
             onmouseout="this.style.transform='scale(1)'"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible; filter: drop-shadow(0 0 1px ${isMapDark ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.45)"});">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" fill="none" stroke="${iconStroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" fill="${iconFg}" stroke="${iconStroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
         `
