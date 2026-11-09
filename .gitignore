@@ -61,13 +61,49 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Lighthouse reports, summary, and scratch scripts
+# Lighthouse audit folders, reports, and summary (from screenshot)
 lighthouse*
+lighthouse*/
+lighthouse*/**
+lighthouse-*
+lighthouse-*/**
 *.report.html
 *.report.json
 summary.md
 **/*[Ss][Uu][Mm][Mm][Aa][Rr][Yy]*.md
+
+# Scratch directory, inspection scripts, and review text (from screenshot)
 scratch/
+scratch/**
+scratch/*
+review_*.txt
+review*.txt
+check_*.cjs
+check_*.js
+update-ikastara.cjs
+
+# Developer notes, instruction dumps, crops, and GIFs (from screenshot)
+1000*
+1000
+ALLNEEDTOIMPLE*
+*ALLNEEDTOIMPLE*
+EDGEINSTRUCTIO*
+*EDGEINSTRUCTIO*
+cat_crop*.png
+cat_crop.png
+cat_crop2.png
+EXABYTE.txt
+*EXABYTE*
+test_mentalist.gif
+*test_mentalist*
+
+# Scratch dark/light previews, map tiles, and imagery (from screenshot)
+scratch_*
+scratch_carto_*
+scratch_dark*
+scratch_light*
+esri.jpg
+/osm.png
 
 .vercel/
 
@@ -75,8 +111,4 @@ scratch/
 *.py
 *.pyc
 __pycache__/
-
-# Scratch / Notes
-EXABYTE.txt
-*EXABYTE*
 
