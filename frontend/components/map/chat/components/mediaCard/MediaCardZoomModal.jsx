@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChatVideoSoundIcon } from "./mediaCardIcons";
 
 export function MediaCardZoomModal({
   isZoomOpen,
@@ -17,6 +18,8 @@ export function MediaCardZoomModal({
   startVideoLoop,
   videoRafRef,
   togglePlayVideo,
+  isVideoMuted,
+  handleToggleMute,
   isPlayingVideo,
   isScrubbing,
   videoProgress,
@@ -99,6 +102,7 @@ export function MediaCardZoomModal({
                     src={item.mediaUrl}
                     playsInline
                     autoPlay
+                    muted={isVideoMuted}
                     loop
                     onLoadedMetadata={(e) => {
                       if (videoRef.current && Number.isFinite(videoRef.current.currentTime) && videoRef.current.currentTime > 0) {
@@ -207,8 +211,19 @@ export function MediaCardZoomModal({
                 </button>
               </div>
 
-              {/* ENLARGED TOP-RIGHT: Download Icon (2nd from right, strictly hidden if View-Once) + Flip Icon (far right) */}
+              {/* ENLARGED TOP-RIGHT: Sound/Mute Icon (left of download) + Download Icon (2nd from right, strictly hidden if View-Once) + Flip Icon (far right) */}
               <div className="absolute top-3 right-3 z-35 flex items-center gap-1.5 pointer-events-auto">
+                {isVideo && item.mediaUrl && (
+                  <button
+                    type="button"
+                    onClick={handleToggleMute}
+                    className="p-1.5 rounded-full text-white/95 hover:text-white transition-transform hover:scale-110 active:scale-90 cursor-pointer drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)]"
+                    title={isVideoMuted ? "Bunyikan video" : "Bisukan video"}
+                  >
+                    <ChatVideoSoundIcon isMuted={isVideoMuted} className="w-5 h-5 sm:w-[22px] sm:h-[22px]" />
+                  </button>
+                )}
+
                 {!isViewOnce && (
                   <button
                     type="button"

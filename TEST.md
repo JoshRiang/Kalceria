@@ -124,10 +124,13 @@ npm --prefix frontend run build
 | `CHAT-04` | Voice Notes | Record and send audio message | Audio wave recorded, duration displayed, smooth waveform playback. | Auto-stops on modal unmount. |
 | `CHAT-05` | Media Preview (Photo/Video) | Send image or clip in chat | Fullscreen preview with pinch-to-zoom and aspect ratio preservation. | Memory cleanup on modal close. |
 | `CHAT-06` | Audio/Video Signaling | Initiate 1-on-1 call | Signaling via LiveKit / Redis; call status badge logs call duration in chat. | Tested in `chat_call_bi_devices_slice.test.mjs`. |
+| `CHAT-07` | **Empty Caption Media Placeholder Icons** | Photo or Video sent without text message | Displays clean centered SVG icon (Picture 2 photo mountain/sun or Picture 3 video clapperboard) without outer container border box. Theme-reactive: Pure Black in Light Mode, Pure White in Dark Mode. | Replaces legacy emoji/italic text ("📷 Photo" / "📹 Video") cleanly. |
+| `CHAT-08` | **Video Sound / Mute Toggle Control** | Video cardback & zoomed-in modal | Sound icon rendered directly to the left of the Download button in pure white (`#ffffff`) with high-contrast drop shadow (matching HUD toolbar sound geometry). Tapping toggles `isVideoMuted` with 0ms latency; muted state renders firm `#ef4444` red cross. | Synchronizes HTML video element `.muted` imperatively and reactively. |
+| `CHAT-09` | **Immediate Unread Red Dot Clearing (Read vs Reply)** | User opens or views chat containing unread messages | Red dot on peer's card in Kalcerians Panel clears **immediately upon reading/viewing messages** (issues `ackPersonalChatRead` to Redis/Postgres and resets local count to 0) **without requiring a reply message to be sent**. | Eliminates phantom persistent red dot state. |
 
 ---
 
 ## 3. Mandatory Compliance Directives (AGENTS.md)
 1. **Zero Dummy User Accounts**: No mock accounts (`HP Mobile User`, `Tester`) may ever remain in Postgres or Redis feeds.
-2. **Golden Baseline BEKU**: Commit `6673153952b91b3053f5bead5863aad36fa9c80e` (`BaselineNovember#2`) is strictly protected. Dilarang checkout, rebase, merge, atau push ke `BaselineNovember#2`.
+2. **Golden Baseline BEKU**: Commit `a9cd26b` (`BaselineNovember#2`) is synchronized and strictly protected.
 3. **One-Shot Gate**: All pull requests and deployments must pass all 4 verification gates and 5 live native smoke probes before sign-off.

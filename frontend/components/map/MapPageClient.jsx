@@ -38,7 +38,7 @@ import {
 import api, {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents, fetchMiniEventsWithMeta,
   postBroadcast, putBroadcast, delBroadcast, postLocation, patchVisibility,
-  postMiniEvent, putMiniEvent, delMiniEvent,
+  postMiniEvent, putMiniEvent, delMiniEvent, ackPersonalChatRead,
 } from "@/lib/api";
 
 import {
@@ -733,6 +733,7 @@ export default function MapPage() {
   const handlePersonalChatOpen = useCallback((user) => {
     if (!user || isSelfOffline) return;
     markPersonalChatRead(user.id);
+    ackPersonalChatRead(user.id, { upToTs: Date.now() }).catch(() => {});
     if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("kalceria:open-personal-chat", {

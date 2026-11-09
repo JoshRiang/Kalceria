@@ -1,6 +1,10 @@
 "use client";
 
 import { memo } from "react";
+import {
+  PhotoMediaPlaceholderIcon,
+  VideoMediaPlaceholderIcon,
+} from "./mediaCardIcons";
 
 export const CardFront = memo(function CardFront({
   isMapDark,
@@ -45,7 +49,7 @@ export const CardFront = memo(function CardFront({
         </div>
       )}
 
-      {/* Centered Caption Text with Typing Animation or Loading Buffer */}
+      {/* Centered Caption Text with Typing Animation OR Media Icon (No Caption) */}
       <div className="flex-1 w-full h-full flex items-center justify-center text-center px-1">
         {item.status === "sending" ? (
           <span
@@ -53,13 +57,13 @@ export const CardFront = memo(function CardFront({
               isMapDark ? "text-white" : "text-black"
             }`}
           />
-        ) : (
+        ) : typedText || item.text ? (
           <p
             className={`${captionFont} ${textSizeClass} select-none break-words max-w-full font-normal ${
               isMapDark ? "text-white" : "text-black"
             }`}
           >
-            {typedText || item.text || (isVideo ? "📹 Video" : "📷 Photo")}
+            {typedText || item.text}
             {!hasFinishedTyping && item.text && (
               <span
                 className={`inline-block w-[1.5px] h-3 ml-0.5 align-middle animate-pulse ${
@@ -68,6 +72,15 @@ export const CardFront = memo(function CardFront({
               />
             )}
           </p>
+        ) : (
+          /* Pure icon when media is sent without message/caption (no border box, theme-reactive) */
+          <div className="flex items-center justify-center pointer-events-none select-none">
+            {isVideo ? (
+              <VideoMediaPlaceholderIcon isMapDark={isMapDark} />
+            ) : (
+              <PhotoMediaPlaceholderIcon isMapDark={isMapDark} />
+            )}
+          </div>
         )}
       </div>
 

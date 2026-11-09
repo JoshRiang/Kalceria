@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { ChatVideoSoundIcon } from "./mediaCardIcons";
 
 export const CardBack = memo(function CardBack({
   isFlipped,
@@ -17,6 +18,8 @@ export const CardBack = memo(function CardBack({
   startVideoLoop,
   videoRafRef,
   togglePlayVideo,
+  isVideoMuted,
+  handleToggleMute,
   handleScrubberPointerDown,
   isScrubbing,
   videoProgress,
@@ -64,7 +67,7 @@ export const CardBack = memo(function CardBack({
               src={item.mediaUrl}
               playsInline
               autoPlay={isFlipped && !isZoomOpen}
-              muted={!isFlipped || isZoomOpen}
+              muted={!isFlipped || isZoomOpen || isVideoMuted}
               loop
               onLoadedMetadata={(e) => {
                 if (e.currentTarget.duration && Number.isFinite(e.currentTarget.duration) && e.currentTarget.duration > 0) {
@@ -184,8 +187,19 @@ export const CardBack = memo(function CardBack({
           </div>
         )}
 
-        {/* TOP-RIGHT: Download Icon (2nd from right, omitted if View-Once) + Flip Back Icon (far right) */}
+        {/* TOP-RIGHT: Sound/Mute Icon (left of download) + Download Icon (2nd from right, omitted if View-Once) + Flip Back Icon (far right) */}
         <div className="absolute top-2 right-2 z-35 flex items-center gap-0.5 pointer-events-auto">
+          {isVideo && item.mediaUrl && !mediaLoadError && (
+            <button
+              type="button"
+              onClick={handleToggleMute}
+              className="p-1 rounded-full text-white/90 hover:text-white transition-transform hover:scale-110 active:scale-90 cursor-pointer drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.85)]"
+              title={isVideoMuted ? "Bunyikan video" : "Bisukan video"}
+            >
+              <ChatVideoSoundIcon isMuted={isVideoMuted} className="w-3.5 h-3.5" />
+            </button>
+          )}
+
           {!isViewOnce && item.mediaUrl && !mediaLoadError && (
             <button
               type="button"

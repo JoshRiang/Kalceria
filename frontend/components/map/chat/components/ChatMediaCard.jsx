@@ -48,6 +48,7 @@ export function ChatMediaCard({
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [realVideoDuration, setRealVideoDuration] = useState(item.videoDuration || 0);
   const [mediaLoadError, setMediaLoadError] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(false);
   const videoRafRef = useRef(null);
 
   // Sync persisted view-once state if item.id changes
@@ -373,6 +374,20 @@ export function ChatMediaCard({
     }
   };
 
+  const handleToggleMute = useCallback((e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setIsVideoMuted((prev) => {
+      const next = !prev;
+      if (videoRef.current) {
+        videoRef.current.muted = !isFlipped || isZoomOpen || next;
+      }
+      if (zoomVideoRef.current) {
+        zoomVideoRef.current.muted = next;
+      }
+      return next;
+    });
+  }, [isFlipped, isZoomOpen]);
+
   // Sync card video playback & dimmed Play/Pause indicator cleanly on flip/zoom state changes
   useEffect(() => {
     if (!isVideo) return;
@@ -552,6 +567,8 @@ export function ChatMediaCard({
             startVideoLoop={startVideoLoop}
             videoRafRef={videoRafRef}
             togglePlayVideo={togglePlayVideo}
+            isVideoMuted={isVideoMuted}
+            handleToggleMute={handleToggleMute}
             handleScrubberPointerDown={handleScrubberPointerDown}
             isScrubbing={isScrubbing}
             videoProgress={videoProgress}
@@ -583,6 +600,8 @@ export function ChatMediaCard({
         startVideoLoop={startVideoLoop}
         videoRafRef={videoRafRef}
         togglePlayVideo={togglePlayVideo}
+        isVideoMuted={isVideoMuted}
+        handleToggleMute={handleToggleMute}
         isPlayingVideo={isPlayingVideo}
         isScrubbing={isScrubbing}
         videoProgress={videoProgress}

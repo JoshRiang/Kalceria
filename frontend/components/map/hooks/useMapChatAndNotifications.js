@@ -407,10 +407,15 @@ export function useMapChatAndNotifications({
     if (typeof window === "undefined") return;
 
     const onPersonalChat = (e) => receivePersonalChatMessage(e?.detail || {});
+    const onPersonalChatRead = (e) => {
+      const targetId = e?.detail?.targetId;
+      if (targetId) markPersonalChatRead(targetId);
+    };
     const onEventChat = (e) => receiveEventGroupChatMessage(e?.detail || {});
     const onEnvelope = (e) => receiveEnvelopeNotification(e?.detail || {});
 
     window.addEventListener("kalceria:incoming-personal-chat", onPersonalChat);
+    window.addEventListener("kalceria:personal-chat-read", onPersonalChatRead);
     window.addEventListener("kalceria:incoming-event-chat", onEventChat);
     window.addEventListener("kalceria:incoming-envelope-request", onEnvelope);
 
@@ -443,6 +448,7 @@ export function useMapChatAndNotifications({
 
     return () => {
       window.removeEventListener("kalceria:incoming-personal-chat", onPersonalChat);
+      window.removeEventListener("kalceria:personal-chat-read", onPersonalChatRead);
       window.removeEventListener("kalceria:incoming-event-chat", onEventChat);
       window.removeEventListener("kalceria:incoming-envelope-request", onEnvelope);
       delete window.__kalceriaTriggerPersonalChat;
@@ -454,7 +460,7 @@ export function useMapChatAndNotifications({
         } catch {}
       }
     };
-  }, [receivePersonalChatMessage, receiveEventGroupChatMessage, receiveEnvelopeNotification]);
+  }, [receivePersonalChatMessage, markPersonalChatRead, receiveEventGroupChatMessage, receiveEnvelopeNotification]);
 
   // Cleanup highlight timers on unmount
   useEffect(() => {

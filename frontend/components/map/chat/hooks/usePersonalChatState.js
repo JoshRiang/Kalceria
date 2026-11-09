@@ -300,32 +300,13 @@ export function usePersonalChatState({
           messageIds: [readyMsg.id],
         }).catch(() => {});
 
-        // 0ms Real-Time Synchronous Red Dot & Unread Count update for Kalcerians Panel
-        const notifText = readyMsg.text || (readyMsg.voiceUrl ? "🎤 Voice note" : (readyMsg.mediaUrl ? "📷 Media" : "Pesan baru"));
+        // User is actively inside this chat viewing messages: immediately mark read
         if (typeof window !== "undefined") {
           window.dispatchEvent(
-            new CustomEvent("kalceria:incoming-personal-chat", {
-              detail: {
-                senderId: targetId,
-                message: notifText,
-                timestamp: msgTs,
-              },
+            new CustomEvent("kalceria:personal-chat-read", {
+              detail: { targetId },
             })
           );
-          try {
-            if (typeof BroadcastChannel !== "undefined") {
-              const bc = new BroadcastChannel("kalceria_realtime_channel");
-              bc.postMessage({
-                type: "personal_chat",
-                payload: {
-                  senderId: targetId,
-                  message: notifText,
-                  timestamp: msgTs,
-                },
-              });
-              bc.close();
-            }
-          } catch {}
         }
         return;
       }
@@ -579,18 +560,20 @@ export function usePersonalChatState({
             persistEncryptedLocal(sorted);
 
             const newPeerMsgs = decryptedRemote.filter((m) => String(m.senderId) === String(targetId));
-            if (newPeerMsgs.length > 0 && typeof window !== "undefined") {
-              const latestPeerMsg = newPeerMsgs[newPeerMsgs.length - 1];
-              const notifText = latestPeerMsg.text || (latestPeerMsg.voiceUrl ? "🎤 Voice note" : (latestPeerMsg.mediaUrl ? "📷 Media" : "Pesan baru"));
-              window.dispatchEvent(
-                new CustomEvent("kalceria:incoming-personal-chat", {
-                  detail: {
-                    senderId: targetId,
-                    message: notifText,
-                    timestamp: Number(latestPeerMsg.ts) || Date.now(),
-                  },
-                })
-              );
+            if (newPeerMsgs.length > 0) {
+              const latestPeerTs = Math.max(...newPeerMsgs.map((m) => Number(m.ts) || 0));
+              // Acknowledge read to backend (clears Redis chat:unread:${myId} watermark)
+              ackPersonalChatRead(targetId, {
+                upToTs: latestPeerTs || Date.now(),
+              }).catch(() => {});
+              // Instantly clear local unread state in personalChatMap
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(
+                  new CustomEvent("kalceria:personal-chat-read", {
+                    detail: { targetId },
+                  })
+                );
+              }
             }
 
             return sorted;
@@ -658,6 +641,19 @@ export function usePersonalChatState({
           }
           return localMsgs;
         });
+
+        const peerMsgs = (localMsgs || []).filter((m) => String(m.senderId) === String(targetId));
+        if (peerMsgs.length > 0) {
+          const latestPeerTs = Math.max(...peerMsgs.map((m) => Number(m.ts) || 0));
+          ackPersonalChatRead(targetId, { upToTs: latestPeerTs || Date.now() }).catch(() => {});
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("kalceria:personal-chat-read", {
+                detail: { targetId },
+              })
+            );
+          }
+        }
       }
 
       await syncFromRemote();
@@ -1026,12 +1022,8 @@ export function usePersonalChatState({
 
           if (typeof window !== "undefined") {
             window.dispatchEvent(
-              new CustomEvent("kalceria:incoming-personal-chat", {
-                detail: {
-                  senderId: targetId,
-                  message: replyText,
-                  timestamp: Date.now(),
-                },
+              new CustomEvent("kalceria:personal-chat-read", {
+                detail: { targetId },
               })
             );
           }
