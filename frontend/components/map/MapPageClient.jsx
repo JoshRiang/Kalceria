@@ -575,7 +575,7 @@ export default function MapPage() {
         showStartup={hasMounted && showStartup && !checkShouldSkipStartup()}
         authReady={Boolean(currentUser)}
         mapEngineReady={isMapEngineReady}
-        isReady={!isDataLoading && hasMounted && !notLoggedIn && Boolean(currentUser) && (initialCoordsResolved || !showStartup)}
+        isReady={!isDataLoading && hasMounted && !notLoggedIn && (initialCoordsResolved || Boolean(currentUser))}
         onComplete={handleStartupComplete}
       />
 
