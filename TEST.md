@@ -24,6 +24,7 @@ node --test backend/tests/service_location_validation.test.mjs
 node --test backend/tests/mini_event_and_cleanup.test.mjs
 node --test backend/tests/chat_o1_scalability_slice.test.mjs
 node --test backend/tests/chat_call_bi_devices_slice.test.mjs
+node --test backend/tests/prisma_connection_pool.test.mjs
 
 # 4. Next.js Production Build Gate
 npm --prefix frontend run build
@@ -127,6 +128,16 @@ npm --prefix frontend run build
 | `CHAT-07` | **Empty Caption Media Placeholder Icons** | Photo or Video sent without text message | Displays clean centered SVG icon (Picture 2 photo mountain/sun or Picture 3 video clapperboard) without outer container border box. Theme-reactive: Pure Black in Light Mode, Pure White in Dark Mode. | Replaces legacy emoji/italic text ("📷 Photo" / "📹 Video") cleanly. |
 | `CHAT-08` | **Video Sound / Mute Toggle Control** | Video cardback & zoomed-in modal | Sound icon rendered directly to the left of the Download button in pure white (`#ffffff`) with high-contrast drop shadow (matching HUD toolbar sound geometry). Tapping toggles `isVideoMuted` with 0ms latency; muted state renders firm `#ef4444` red cross. | Synchronizes HTML video element `.muted` imperatively and reactively. |
 | `CHAT-09` | **Immediate Unread Red Dot Clearing (Read vs Reply)** | User opens or views chat containing unread messages | Red dot on peer's card in Kalcerians Panel clears **immediately upon reading/viewing messages** (issues `ackPersonalChatRead` to Redis/Postgres and resets local count to 0) **without requiring a reply message to be sent**. | Eliminates phantom persistent red dot state. |
+
+---
+
+### Test Suite 9: Database Connection Resilience & Serverless Pooling Gate
+| Test ID | Feature / Case | Input / Trigger | Expected Result | Concurrency & Stability |
+|---|---|---|---|---|
+| `DB-01` | **Serverless Connection Limit** | Standard PostgreSQL connection URL without query params | `buildEffectiveDatabaseUrl` injects `connection_limit=3`. | Allows interactive `$transaction` (e.g. account wipe) + concurrent background queries without saturating PostgreSQL max connections. |
+| `DB-02` | **Pool Acquisition Timeout** | Serverless cold start or transient spike | `buildEffectiveDatabaseUrl` injects `pool_timeout=10` (10s). | Absorbs acquisition queues while guaranteeing clean catchable rejection before Vercel serverless function hard timeout (10-15s). |
+| `DB-03` | **Custom Setting Preservation** | `DATABASE_URL` with explicit `connection_limit` or `pool_timeout` | User parameters are strictly preserved and never overridden. | Tested in `backend/tests/prisma_connection_pool.test.mjs`. |
+| `DB-04` | **Non-Postgres / Protocol Safety** | SQLite or file-based URLs | Returned untouched without invalid query parameter pollution. | Zero regression across test and development harnesses. |
 
 ---
 
