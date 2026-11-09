@@ -17,7 +17,7 @@ export const HudQuickActionsMenu = memo(function HudQuickActionsMenu({
     <div
       className={`absolute top-[44px] right-0 z-[1001] w-[220px] sm:w-[232px] p-2.5 transition-all duration-200 origin-top-right overflow-hidden rounded-2xl font-sans ${
         isMapDark
-          ? "bg-[#000000] border border-[#30363d]/90 text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.15),inset_-1px_-1.5px_2px_rgba(0,0,0,0.8),0_14px_36px_rgba(0,0,0,0.85)]"
+          ? "bg-[#0f1014] border border-[#2a2d37] text-[#f0f6fc] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.15),inset_-1px_-1.5px_2px_rgba(0,0,0,0.8),0_14px_36px_rgba(0,0,0,0.85)]"
           : "bg-[#ffffff] border border-[#c4cbd4] text-[#1f2328] shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.95),inset_-1px_-1.5px_2px_rgba(160,174,192,0.3),0_12px_32px_rgba(0,0,0,0.1)]"
       } ${
         !isSelfOffline && actionMenuOpen

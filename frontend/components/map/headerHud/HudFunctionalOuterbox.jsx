@@ -86,16 +86,16 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
     });
   }, [setActionMenuOpen, setMenuOpen]);
 
-  // Base outerbox styling
-  const boxBg = isMapDark ? "bg-[#0a0e27]" : "bg-[#ffffff]";
-  const boxBorder = isMapDark ? "border-white/30" : "border-black/30";
+  // Base outerbox styling (matching "Find other Kalcerians" solid black #0f1014)
+  const boxBg = isMapDark ? "bg-[#0f1014]" : "bg-[#ffffff]";
+  const boxBorder = isMapDark ? "border-[#2a2d37]" : "border-black/30";
   const boxShadow = isMapDark
-    ? "shadow-[0_4px_20px_rgba(0,0,0,0.85)]"
+    ? "shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.12),inset_-1px_-1.5px_2px_rgba(0,0,0,0.8),0_14px_36px_rgba(0,0,0,0.85)]"
     : "shadow-[0_4px_16px_rgba(0,0,0,0.12)]";
 
-  // 2D beveled sunken crater slot styling (80% softened gray, clean tactile recess)
+  // 2D beveled sunken crater slot styling (clean tactical recess matching panel slot cards #161b22)
   const craterSlotClass = isMapDark
-    ? "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#161926] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group"
+    ? "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#161b22] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group"
     : "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#f1f3f5] border border-black/15 shadow-[inset_1px_1.5px_2.5px_rgba(0,0,0,0.18),inset_-1px_-1px_1.5px_rgba(255,255,255,0.9)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group";
 
   const collapseOffset = -46;

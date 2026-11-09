@@ -51,10 +51,10 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const boxBg = isMapDark ? "bg-[#0a0e27]" : "bg-[#ffffff]";
-  const boxBorder = isMapDark ? "border-white/30" : "border-black/30";
+  const boxBg = isMapDark ? "bg-[#0f1014]" : "bg-[#ffffff]";
+  const boxBorder = isMapDark ? "border-[#2a2d37]" : "border-black/30";
   const shadow = isMapDark
-    ? "shadow-[0_4px_20px_rgba(0,0,0,0.85)]"
+    ? "shadow-[inset_1px_1.5px_2px_rgba(255,255,255,0.12),inset_-1px_-1.5px_2px_rgba(0,0,0,0.8),0_14px_36px_rgba(0,0,0,0.85)]"
     : "shadow-[0_4px_16px_rgba(0,0,0,0.12)]";
 
   return (
@@ -98,7 +98,7 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
           <div
             className={`relative w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-full p-[2px] ${
               isMapDark
-                ? "bg-[#161926] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)]"
+                ? "bg-[#161b22] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)]"
                 : "bg-[#f1f3f5] border border-black/15 shadow-[inset_1px_1.5px_2.5px_rgba(0,0,0,0.18),inset_-1px_-1px_1.5px_rgba(255,255,255,0.9)]"
             } flex items-center justify-center transition-transform hover:scale-105`}
           >
