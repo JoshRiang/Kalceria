@@ -63,17 +63,20 @@ function ResetPasswordContent() {
 
       if (isFromMap) {
         try {
-          localStorage.setItem("kalceria_auth_return", "/map");
-          localStorage.setItem("kalceria_password_reset_from_map", "true");
+          sessionStorage.setItem("kalceria_auth_return", "/map");
           sessionStorage.setItem("kalceria_password_reset_from_map", "true");
-          localStorage.setItem("kalceria_skip_map_intro", "true");
           sessionStorage.setItem("kalceria_skip_map_intro", "true");
+          sessionStorage.setItem("kalceria_is_password_reset_login", "true");
+          localStorage.removeItem("kalceria_auth_return");
+          localStorage.removeItem("kalceria_password_reset_from_map");
         } catch {}
       } else {
         try {
+          sessionStorage.setItem("kalceria_is_password_reset_login", "true");
+          sessionStorage.removeItem("kalceria_auth_return");
+          sessionStorage.removeItem("kalceria_password_reset_from_map");
           localStorage.removeItem("kalceria_auth_return");
           localStorage.removeItem("kalceria_password_reset_from_map");
-          sessionStorage.removeItem("kalceria_password_reset_from_map");
         } catch {}
       }
 

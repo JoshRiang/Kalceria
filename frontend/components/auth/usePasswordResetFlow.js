@@ -39,9 +39,10 @@ export function usePasswordResetFlow({
       const isFromMap = urlParams.get("from") === "map";
       if (isFromMap) {
         try {
-          localStorage.setItem("kalceria_auth_return", "/map");
-          localStorage.setItem("kalceria_password_reset_from_map", "true");
+          sessionStorage.setItem("kalceria_auth_return", "/map");
           sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+          localStorage.removeItem("kalceria_auth_return");
+          localStorage.removeItem("kalceria_password_reset_from_map");
         } catch {}
       } else {
         // Explicitly clear when NOT from map so stale flags from previous sessions never pollute landing-page flow
@@ -52,7 +53,9 @@ export function usePasswordResetFlow({
           ) {
             localStorage.removeItem("kalceria_auth_return");
             localStorage.removeItem("kalceria_password_reset_from_map");
+            sessionStorage.removeItem("kalceria_auth_return");
             sessionStorage.removeItem("kalceria_password_reset_from_map");
+            sessionStorage.removeItem("kalceria_is_password_reset_login");
           }
         } catch {}
       }
@@ -70,6 +73,7 @@ export function usePasswordResetFlow({
       } else if (urlParams.get("reset_success") === "true") {
         setMode("login");
         setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
+        sessionStorage.setItem("kalceria_is_password_reset_login", "true");
         if (paramEmail && setForm) {
           setForm((prev) => ({ ...prev, email: paramEmail, password: "" }));
         }
@@ -135,17 +139,20 @@ export function usePasswordResetFlow({
 
       if (isFromMap) {
         try {
-          localStorage.setItem("kalceria_auth_return", "/map");
-          localStorage.setItem("kalceria_password_reset_from_map", "true");
+          sessionStorage.setItem("kalceria_auth_return", "/map");
           sessionStorage.setItem("kalceria_password_reset_from_map", "true");
-          localStorage.setItem("kalceria_skip_map_intro", "true");
           sessionStorage.setItem("kalceria_skip_map_intro", "true");
+          sessionStorage.setItem("kalceria_is_password_reset_login", "true");
+          localStorage.removeItem("kalceria_auth_return");
+          localStorage.removeItem("kalceria_password_reset_from_map");
         } catch {}
       } else {
         try {
+          sessionStorage.setItem("kalceria_is_password_reset_login", "true");
+          sessionStorage.removeItem("kalceria_auth_return");
+          sessionStorage.removeItem("kalceria_password_reset_from_map");
           localStorage.removeItem("kalceria_auth_return");
           localStorage.removeItem("kalceria_password_reset_from_map");
-          sessionStorage.removeItem("kalceria_password_reset_from_map");
         } catch {}
       }
 
@@ -193,17 +200,20 @@ export function usePasswordResetFlow({
     const isFromMap = Boolean(data?.fromMap);
     if (isFromMap) {
       try {
-        localStorage.setItem("kalceria_auth_return", "/map");
-        localStorage.setItem("kalceria_password_reset_from_map", "true");
+        sessionStorage.setItem("kalceria_auth_return", "/map");
         sessionStorage.setItem("kalceria_password_reset_from_map", "true");
-        localStorage.setItem("kalceria_skip_map_intro", "true");
         sessionStorage.setItem("kalceria_skip_map_intro", "true");
+        sessionStorage.setItem("kalceria_is_password_reset_login", "true");
+        localStorage.removeItem("kalceria_auth_return");
+        localStorage.removeItem("kalceria_password_reset_from_map");
       } catch {}
     } else {
       try {
+        sessionStorage.setItem("kalceria_is_password_reset_login", "true");
+        sessionStorage.removeItem("kalceria_auth_return");
+        sessionStorage.removeItem("kalceria_password_reset_from_map");
         localStorage.removeItem("kalceria_auth_return");
         localStorage.removeItem("kalceria_password_reset_from_map");
-        sessionStorage.removeItem("kalceria_password_reset_from_map");
       } catch {}
     }
 

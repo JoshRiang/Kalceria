@@ -1407,9 +1407,10 @@ export default function MapPage() {
     }
 
     try {
-      localStorage.setItem("kalceria_auth_return", "/map");
-      localStorage.setItem("kalceria_password_reset_from_map", "true");
+      sessionStorage.setItem("kalceria_auth_return", "/map");
       sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+      localStorage.removeItem("kalceria_auth_return");
+      localStorage.removeItem("kalceria_password_reset_from_map");
     } catch {}
 
     setShowEditProfileModal(false);

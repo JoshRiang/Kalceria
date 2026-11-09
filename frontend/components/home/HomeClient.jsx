@@ -56,7 +56,19 @@ export default function HomeClient() {
     const isAuthParam = urlParams.get("auth") === "true";
     const hasResetToken = Boolean(urlParams.get("token") || urlParams.get("reset_token"));
     const isForgotMode = urlParams.get("mode") === "forgot-password";
+    const isResetSuccess = urlParams.get("reset_success") === "true";
     const triggerAuth = sessionStorage.getItem("triggerAuth");
+
+    // Clean up any stale return flags if this is standard browsing or a normal login attempt
+    if (!hasResetToken && !isForgotMode && !isResetSuccess) {
+      try {
+        localStorage.removeItem("kalceria_auth_return");
+        localStorage.removeItem("kalceria_password_reset_from_map");
+        sessionStorage.removeItem("kalceria_auth_return");
+        sessionStorage.removeItem("kalceria_password_reset_from_map");
+        sessionStorage.removeItem("kalceria_is_password_reset_login");
+      } catch {}
+    }
 
     if (triggerAuth === "true" || isAuthParam || hasResetToken || isForgotMode) {
       sessionStorage.removeItem("triggerAuth");
@@ -130,7 +142,18 @@ export default function HomeClient() {
             transition={{ duration: 0.8, ease: "easeInOut" }}
             className="w-full"
           >
-            <LandingPage onNavigateAuth={() => setPhase("auth")} />
+            <LandingPage
+              onNavigateAuth={() => {
+                try {
+                  localStorage.removeItem("kalceria_auth_return");
+                  localStorage.removeItem("kalceria_password_reset_from_map");
+                  sessionStorage.removeItem("kalceria_auth_return");
+                  sessionStorage.removeItem("kalceria_password_reset_from_map");
+                  sessionStorage.removeItem("kalceria_is_password_reset_login");
+                } catch {}
+                setPhase("auth");
+              }}
+            />
           </motion.div>
         )}
 
@@ -180,23 +203,40 @@ export default function HomeClient() {
                 if (typeof window !== "undefined" && window.history.replaceState) {
                   window.history.replaceState({}, document.title, window.location.pathname);
                 }
-                const returnUrl = typeof window !== "undefined" ? localStorage.getItem("kalceria_auth_return") : null;
-                const isFromMapReset = typeof window !== "undefined" && (
-                  sessionStorage.getItem("kalceria_password_reset_from_map") === "true" ||
-                  localStorage.getItem("kalceria_password_reset_from_map") === "true"
+
+                // Strictly verify if this login session came from a completed Password Reset that originated from the Map
+                const isPasswordResetLogin = typeof window !== "undefined" && (
+                  sessionStorage.getItem("kalceria_is_password_reset_login") === "true"
                 );
-                if (returnUrl === "/map" && isFromMapReset) {
+                const isFromMapReset = typeof window !== "undefined" && (
+                  sessionStorage.getItem("kalceria_password_reset_from_map") === "true"
+                );
+                const returnUrl = typeof window !== "undefined" ? (
+                  sessionStorage.getItem("kalceria_auth_return") || localStorage.getItem("kalceria_auth_return")
+                ) : null;
+
+                // STRICT GATE: ONLY redirect to map if this was an active password reset flow initiated from Map
+                if (isPasswordResetLogin && isFromMapReset && returnUrl === "/map") {
                   try {
+                    sessionStorage.removeItem("kalceria_is_password_reset_login");
+                    sessionStorage.removeItem("kalceria_password_reset_from_map");
+                    sessionStorage.removeItem("kalceria_auth_return");
+                    localStorage.removeItem("kalceria_password_reset_from_map");
                     localStorage.removeItem("kalceria_auth_return");
-                    sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+                    sessionStorage.setItem("kalceria_skip_map_intro", "true");
                   } catch {}
                   window.location.href = "/map?from=password_reset&skip_intro=true";
                   return;
                 }
+
+                // In ALL other cases (Normal Login, Normal Registration, Landing Page Password Reset):
+                // Always return gracefully to Landing Page!
                 try {
-                  localStorage.removeItem("kalceria_auth_return");
-                  localStorage.removeItem("kalceria_password_reset_from_map");
+                  sessionStorage.removeItem("kalceria_is_password_reset_login");
                   sessionStorage.removeItem("kalceria_password_reset_from_map");
+                  sessionStorage.removeItem("kalceria_auth_return");
+                  localStorage.removeItem("kalceria_password_reset_from_map");
+                  localStorage.removeItem("kalceria_auth_return");
                 } catch {}
                 setPhase("landing");
                 if (typeof window !== "undefined") {

@@ -176,6 +176,21 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isResetSuccess = urlParams.get("reset_success") === "true";
+      const hasToken = Boolean(urlParams.get("token") || urlParams.get("reset_token"));
+      const isForgot = urlParams.get("mode") === "forgot-password";
+      if (!isResetSuccess && !hasToken && !isForgot) {
+        try {
+          localStorage.removeItem("kalceria_auth_return");
+          localStorage.removeItem("kalceria_password_reset_from_map");
+          sessionStorage.removeItem("kalceria_auth_return");
+          sessionStorage.removeItem("kalceria_password_reset_from_map");
+          sessionStorage.removeItem("kalceria_is_password_reset_login");
+        } catch {}
+      }
+    }
     const checkMobile = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);

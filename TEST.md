@@ -42,6 +42,7 @@ npm --prefix frontend run build
 | `AUTH-04` | Google OAuth Login | Google popup sign-in | Seamless callback, non-torn profile generation, cookie + csrfToken emission. | Preserves existing user ID if email matches. |
 | `AUTH-05` | Email & Password Login | Registered email + valid argon2 password | JWT session cookie set, `users/me` returns HTTP 200, Welcome transition renders nickname. | Case-insensitive email normalization. |
 | `AUTH-06` | **Strict Map vs Landing Password Reset State Machine** | Test both origin flows with real credentials | **Flow A (Landing)**: Guest -> forgot-password -> link sent -> reset password -> login lagi -> fades into Landing Page.<br>**Flow B (Map)**: Auth user -> Edit Profile -> Change Password -> prefills logged-in email -> link sent -> reset password -> login lagi -> returns directly to `/map` (intro bypassed). | **Zero collision**: Landing flow never ends up in Map; Map flow never forces intro replay. |
+| `AUTH-07` | **Normal Login Preservation (Zero Map Interception)** | Normal login from Landing Page (`/` or `/?auth=true`) with email + password | Welcome transition completes -> **Gracefully fades into Landing Page (`setPhase("landing")`)**. **NEVER redirects to `/map`**. | Storage isolation: Stale map return flags in browser storage are proactively purged; only explicit map password reset (`is_password_reset_login === true && isFromMapReset === true`) can ever route to `/map`. |
 
 ---
 

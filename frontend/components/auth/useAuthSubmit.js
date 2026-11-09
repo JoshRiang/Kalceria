@@ -75,6 +75,15 @@ export function useAuthSubmit({
         setError("Please enter your email and password.");
         return;
       }
+      // If this is a normal login (not preceded by password reset done), ensure zero stale return flags linger
+      if (typeof window !== "undefined" && sessionStorage.getItem("kalceria_is_password_reset_login") !== "true") {
+        try {
+          localStorage.removeItem("kalceria_auth_return");
+          localStorage.removeItem("kalceria_password_reset_from_map");
+          sessionStorage.removeItem("kalceria_auth_return");
+          sessionStorage.removeItem("kalceria_password_reset_from_map");
+        } catch {}
+      }
     } else if (mode === "register") {
       if (!PUBLIC_SIGNUP_ENABLED) {
         setError("Public registration is currently disabled.");

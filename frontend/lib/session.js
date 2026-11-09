@@ -89,7 +89,12 @@ export function clearSession() {
   localStorage.removeItem("adminToken");
   localStorage.removeItem("user");
   localStorage.removeItem("kalceria_auth_store");
+  localStorage.removeItem("kalceria_auth_return");
+  localStorage.removeItem("kalceria_password_reset_from_map");
   sessionStorage.removeItem("kalceriaCsrfToken");
+  sessionStorage.removeItem("kalceria_auth_return");
+  sessionStorage.removeItem("kalceria_password_reset_from_map");
+  sessionStorage.removeItem("kalceria_is_password_reset_login");
 
   // Hard purge any residual location coordinates from previous logins
   try {

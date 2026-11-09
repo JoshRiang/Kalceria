@@ -22,9 +22,10 @@ export function EditProfileDangerZone({
               const u = JSON.parse(localStorage.getItem("kalceria_user") || "null");
               const s = JSON.parse(localStorage.getItem("kalceria_user_session") || "null");
               email = u?.email || s?.user?.email || localStorage.getItem("kalceria_user_email") || "";
-              localStorage.setItem("kalceria_auth_return", "/map");
-              localStorage.setItem("kalceria_password_reset_from_map", "true");
+              sessionStorage.setItem("kalceria_auth_return", "/map");
               sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+              localStorage.removeItem("kalceria_auth_return");
+              localStorage.removeItem("kalceria_password_reset_from_map");
             } catch {}
             const targetUrl = email
               ? `/?auth=true&mode=forgot-password&from=map&email=${encodeURIComponent(email)}`

@@ -54,7 +54,16 @@ export function LandingHeroSection({
             </button>
           ) : (
             <button
-              onClick={onNavigateAuth}
+              onClick={() => {
+                try {
+                  localStorage.removeItem("kalceria_auth_return");
+                  localStorage.removeItem("kalceria_password_reset_from_map");
+                  sessionStorage.removeItem("kalceria_auth_return");
+                  sessionStorage.removeItem("kalceria_password_reset_from_map");
+                  sessionStorage.removeItem("kalceria_is_password_reset_login");
+                } catch {}
+                onNavigateAuth?.();
+              }}
               className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
               style={{
                 clipPath:
