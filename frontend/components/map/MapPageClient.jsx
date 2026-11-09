@@ -9,7 +9,6 @@ import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { MapAuthGate } from "@/components/map/MapAuthGate";
 import { INITIAL_MOCK_MINI_EVENTS, INITIAL_ACCEPTED_COLLABS, INITIAL_EVENT_REQUESTS, cleanEventDesc, mergeEvents } from "@/components/map/mockMiniEvents";
-import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRandom";
 
 import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
 import { AtmosphericBackground } from "@/components/map/AtmosphericBackground";
@@ -240,18 +239,6 @@ export default function MapPage() {
       window.location.href = "/?anchor=section-map";
     }, 1500); // 1.5s matching the white flash transition
   };
-
-  const mapParticles = useMemo(() => {
-    const random = createSeededRandom("map-atmosphere-particles-v1");
-    return Array.from({ length: 8 }).map((_, i) => ({
-      id: i,
-      left: `${random() * 100}%`,
-      size: `${random() * 3.5 + 2}px`, // 2px to 5.5px
-      duration: random() * 7 + 6, // 6s to 13s (slower, more elegant rise)
-      delay: random() * 8, // 0s to 8s
-      opacity: random() * 0.35 + 0.25, // 0.25 to 0.6 (more sparse and subtle)
-    }));
-  }, []);
 
   // Eagerly preload & decode all 9 BG_IMPROVE_FOR_MAP WebP backgrounds immediately on map entry
   useEffect(() => {
@@ -1483,8 +1470,6 @@ export default function MapPage() {
       {/* 🌌 Atmospheric Tactical Background (Behind Map) */}
       <AtmosphericBackground
         showStartup={showStartup}
-        isMapDark={isMapDark}
-        mapParticles={mapParticles}
       />
 
       {/* SnapMap Component (Semi-Transparent for Glass Effect) */}

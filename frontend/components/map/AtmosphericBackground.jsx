@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-export function AtmosphericBackground({ showStartup, isMapDark, mapParticles = [] }) {
+export function AtmosphericBackground({ showStartup }) {
   return (
     <>
       {/* 🌌 Atmospheric Tactical Background (Behind Map) */}
@@ -35,33 +35,6 @@ export function AtmosphericBackground({ showStartup, isMapDark, mapParticles = [
           />
         </div>
       )}
-
-      {/* Global Map Ambient Micro-Particles (60% sparse) */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-[30]">
-        {!showStartup && mapParticles.map((p) => {
-          const activeColor = isMapDark
-            ? (p.id % 2 === 0 ? "#ff006e" : "#ffd60a") // Dark Mode: Neon Red/Magenta & Bright Gold
-            : (p.id % 2 === 0 ? "#10b981" : "#3b82f6"); // Light Mode: Emerald Green & Dodger Blue
-
-          return (
-            <div
-              key={p.id}
-              className="absolute rounded-full blur-[0.5px] pointer-events-none"
-              style={{
-                left: p.left,
-                bottom: "-20px",
-                width: p.size,
-                height: p.size,
-                backgroundColor: activeColor,
-                boxShadow: `0 0 6px ${activeColor}, 0 0 12px ${activeColor}`,
-                animation: `floatUp ${p.duration}s linear ${p.delay}s infinite both`,
-                opacity: p.opacity,
-                transition: "background-color 1.5s ease-in-out, box-shadow 1.5s ease-in-out",
-              }}
-            />
-          );
-        })}
-      </div>
 
       {/* Subtle Vignette Overlay */}
       <div
