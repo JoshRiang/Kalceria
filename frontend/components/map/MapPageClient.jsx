@@ -116,6 +116,7 @@ export default function MapPage() {
   const {
     showStartup,
     setShowStartup,
+    checkShouldSkipStartup,
     handleStartupComplete,
   } = useMapStartupGate();
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -539,72 +540,72 @@ export default function MapPage() {
             onBlockUser={handleBlockUser}
             onUnblockUser={handleUnblockUser}
           />
+
+          <OwnProfileDrawer
+            isOpen={showOwnProfile}
+            onClose={() => setShowOwnProfile(false)}
+            currentUser={currentUser}
+            isMapDark={isMapDark}
+            onEditProfile={() => {
+              setShowOwnProfile(false);
+              setShowEditProfileModal(true);
+            }}
+          />
+
+          <EditProfileModal
+            show={showEditProfileModal}
+            onClose={() => setShowEditProfileModal(false)}
+            isMapDark={isMapDark}
+            currentUser={currentUser}
+            onSaveProfile={handleSaveProfile}
+            onRequestChangePassword={handleRequestChangePassword}
+            onRequestDeleteAccount={() => {
+              setShowEditProfileModal(false);
+              setShowDeleteAccountModal(true);
+            }}
+          />
+
+          <CollaboratorUploadOverlay
+            uploadState={collaboratorUploadState}
+            onDismiss={() => setCollaboratorUploadState(null)}
+          />
         </>
       )}
 
-      {/* Fullscreen Own Profile Modern Drawer (Slides from Right with 0ms backdrop lag) */}
-      <OwnProfileDrawer
-        isOpen={showOwnProfile}
-        onClose={() => setShowOwnProfile(false)}
-        currentUser={currentUser}
-        avatarUrl={avatarUrl}
-        activeOwnEvent={activeOwnEvent}
-        onOpenEditProfile={() => setShowEditProfileModal(true)}
-        onOpenEditEvent={handleOpenEditEvent}
-        onOpenCreateEvent={() => handleOpenEventModal(true)}
-        onRequestChangePassword={handleRequestChangePassword}
-        onRequestDeleteAccount={() => setShowDeleteAccountModal(true)}
-      />
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 4px; }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        @keyframes floatUp { 0% { transform: translateY(10px); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } 100% { transform: translateY(-115vh); opacity: 0; } }
+      `}</style>
 
-      {/* Edit Profile Modal (Avatar, Bio, Domicile, Links) */}
-      <EditProfileModal
-        isOpen={showEditProfileModal}
-        onClose={() => setShowEditProfileModal(false)}
-        currentUser={currentUser}
-        onSave={handleSaveProfile}
+      {/* Startup Sequence Overlay :: FORZA HORIZON STYLE */}
+      <StartupSequenceOverlay
+        showStartup={hasMounted && showStartup && !checkShouldSkipStartup()}
+        authReady={Boolean(currentUser)}
+        mapEngineReady={isMapEngineReady}
+        isReady={!isDataLoading && hasMounted && !notLoggedIn && (initialCoordsResolved || Boolean(currentUser))}
+        onComplete={handleStartupComplete}
       />
-
-      {/* Collaborator Direct Upload Modal (Non-owners adding clips to ongoing event) */}
-      <CollaboratorUploadOverlay
-        uploadState={collaboratorUploadState}
-        onClose={() => setCollaboratorUploadState(null)}
-        onUploadSuccess={(updatedEvent) => {
-          if (updatedEvent && updatedEvent.id) {
-            setEvents((prev) =>
-              prev.map((ev) => (String(ev.id) === String(updatedEvent.id) ? { ...ev, ...updatedEvent } : ev))
-            );
-          }
-          setCollaboratorUploadState(null);
-        }}
-      />
-
-      {/* Full-Screen Cyberpunk Startup Sequence Overlay */}
-      {showStartup && (
-        <StartupSequenceOverlay onComplete={handleStartupComplete} />
-      )}
 
       {/* Map Modals Component (Status, Event, Requests, Delete, Quit Modals) */}
       <MapModals
         showStatusModal={showStatusModal} setShowStatusModal={setShowStatusModal}
-        statusText={statusText} setStatusText={setStatusText} saveBroadcast={saveBroadcast}
-        busy={busy} isEditingBroadcast={isEditingBroadcast}
+        isMapDark={isMapDark} saveBroadcast={saveBroadcast} statusText={statusText} setStatusText={setStatusText} busy={busy}
+        isEditingBroadcast={isEditingBroadcast} setIsEditingBroadcast={setIsEditingBroadcast}
         showDeleteBroadcastConfirm={showDeleteBroadcastConfirm} setShowDeleteBroadcastConfirm={setShowDeleteBroadcastConfirm}
         handleConfirmDeleteBroadcast={handleConfirmDeleteBroadcast}
-        showEventModal={showEventModal} setShowEventModal={setShowEventModal}
-        editingEventId={editingEventId} eventForm={eventForm} setEventForm={setEventForm}
-        saveMiniEvent={saveMiniEvent} deleteMiniEvent={deleteMiniEvent}
-        activeOwnEvent={activeOwnEvent}
-        showRequestsModal={showRequestsModal} setShowRequestsModal={setShowRequestsModal}
-        viewingRequestsEventId={viewingRequestsEventId}
-        events={events} eventRequestsMap={eventRequestsMap}
-        handleAcceptCollabRequest={handleAcceptCollabRequest}
-        handleDeclineCollabRequest={handleDeclineCollabRequest}
+        showEventModal={showEventModal} setShowEventModal={handleOpenEventModal}
+        saveMiniEvent={saveMiniEvent} eventForm={eventForm} setEventForm={setEventForm}
+        activeOwnEvent={activeOwnEvent} deleteMiniEvent={deleteMiniEvent} editingEventId={editingEventId}
         showCancelRequestModal={showCancelRequestModal} setShowCancelRequestModal={setShowCancelRequestModal}
         cancelRequestTarget={cancelRequestTarget} handleConfirmCancelRequest={handleConfirmCancelRequest}
-        showQuitModal={showQuitModal} setShowQuitModal={setShowQuitModal}
-        handleQuitConfirm={handleQuitConfirm}
+        showRequestsModal={showRequestsModal} setShowRequestsModal={setShowRequestsModal}
+        viewingRequestsEvent={events.find((e) => String(e.id) === String(viewingRequestsEventId))}
+        currentRequestsList={viewingRequestsEventId ? (eventRequestsMap[viewingRequestsEventId] || []) : []}
+        onAcceptCollabRequest={handleAcceptCollabRequest} onDeclineCollabRequest={handleDeclineCollabRequest}
         showDeleteAccountModal={showDeleteAccountModal} setShowDeleteAccountModal={setShowDeleteAccountModal}
         handleConfirmDeleteAccount={handleConfirmDeleteAccount}
+        isExiting={isExiting} showQuitModal={showQuitModal} setShowQuitModal={setShowQuitModal} handleQuitConfirm={handleQuitConfirm}
       />
 
       <style jsx global>{`

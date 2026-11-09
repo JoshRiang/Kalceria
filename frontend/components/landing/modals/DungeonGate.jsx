@@ -23,9 +23,14 @@ export function DungeonGate() {
     pendingTimeouts.current.add(timeout);
   };
 
-  useEffect(() => () => {
-    pendingTimeouts.current.forEach(clearTimeout);
-    pendingTimeouts.current.clear();
+  useEffect(() => {
+    const handlePageShow = () => setIsNavigating(false);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      pendingTimeouts.current.forEach(clearTimeout);
+      pendingTimeouts.current.clear();
+    };
   }, []);
 
   // Dummy target: Past date to keep it unlocked
@@ -68,6 +73,9 @@ export function DungeonGate() {
       scheduleTimeout(() => {
         router.push("/minigame");
       }, 1000);
+      scheduleTimeout(() => {
+        setIsNavigating(false);
+      }, 2500);
     }
   };
 

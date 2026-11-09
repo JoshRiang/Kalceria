@@ -199,19 +199,31 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
           {/* Background effects & progress bar */}
           <ServiceModalBackground step={step} />
 
-          <style jsx>{`
-            .custom-scrollbar::-webkit-scrollbar {
-              width: 3px;
+          <style jsx global>{`
+            .custom-scrollbar {
+              scrollbar-width: thin;
+              scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
             }
-            .custom-scrollbar::-webkit-scrollbar-track {
-              background: transparent;
+            .custom-scrollbar::-webkit-scrollbar {
+              width: 4px !important;
+              height: 4px !important;
+            }
+            .custom-scrollbar::-webkit-scrollbar-button {
+              display: none !important;
+              width: 0 !important;
+              height: 0 !important;
+              background: transparent !important;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track,
+            .custom-scrollbar::-webkit-scrollbar-track-piece {
+              background: transparent !important;
             }
             .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: rgba(255, 255, 255, 0.2);
-              border-radius: 10px;
+              background: rgba(255, 255, 255, 0.25) !important;
+              border-radius: 9999px !important;
             }
             .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: rgba(255, 255, 255, 0.4);
+              background: rgba(255, 255, 255, 0.45) !important;
             }
           `}</style>
 

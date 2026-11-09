@@ -6,7 +6,7 @@ import { DungeonGate } from "../modals/DungeonGate";
 
 export function ClosingLegacySection({ isMobile, onOpenIdeaModal }) {
   return (
-    <section id="section-minigame" className="relative w-full min-h-[820px] md:min-h-0 md:aspect-square bg-[#02040a] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900 py-16 md:py-0" style={{ contentVisibility: "auto", containIntrinsicSize: "850px" }}>
+    <section id="section-minigame" className="relative w-full min-h-[820px] md:min-h-0 md:aspect-square bg-[#02040a] flex flex-col items-center justify-center z-50 overflow-hidden border-t border-slate-900 py-16 md:py-0">
       {/* Background Atmosphere - Simplified Astral Divine (Lightweight) */}
       <div className="absolute inset-0 z-0 pointer-events-none">
          {/* Cyan Core Glow */}
