@@ -11,6 +11,7 @@ import {
   HudProfileAvatar,
   HudRecenterButton,
   HudTopDynamicEvent,
+  HudTopDynamicBroadcast,
 } from "./headerHud/index.js";
 
 export const MapHeaderHud = memo(function MapHeaderHud({
@@ -36,6 +37,8 @@ export const MapHeaderHud = memo(function MapHeaderHud({
   onTopDynamicEventClick,
   hasActiveOwnEvent = false,
   onGoToOwnEvent,
+  hasActiveOwnBroadcast = false,
+  onTopDynamicBroadcastClick,
 }) {
   const [soundMuted, setSoundMuted] = useState(false);
   const isSelfOffline = presence !== "online";
@@ -92,15 +95,49 @@ export const MapHeaderHud = memo(function MapHeaderHud({
 
       {/* Top-Right One-Line Controls: Dynamic Event Icon (if active), Recenter, Eye, Create Mini Event (+), Moon/Sun, Sound, Profile Photo */}
       <div className="relative flex items-center gap-2.5 sm:gap-3.5 md:gap-4 pointer-events-auto">
-        {/* 0. Dynamic Event Icon (Appears next to Recenter Pin when user creates or registers/collaborates in a mini event) */}
-        <HudTopDynamicEvent
-          topDynamicEvent={topDynamicEvent}
-          hasTopDynamicEventNotif={hasTopDynamicEventNotif}
-          onTopDynamicEventClick={onTopDynamicEventClick}
-          setActionMenuOpen={setActionMenuOpen}
-          setMenuOpen={setMenuOpen}
-          isMapDark={isMapDark}
-        />
+        {/* 0. Dynamic Event & Broadcast Slots (Responsive: stacked directly under Event on mobile HP, side-by-side on desktop) */}
+        {(topDynamicEvent || hasActiveOwnBroadcast) && (
+          <div className="relative flex items-center justify-center min-w-0">
+            {topDynamicEvent && hasActiveOwnBroadcast ? (
+              <div className="relative flex items-center justify-center">
+                <HudTopDynamicEvent
+                  topDynamicEvent={topDynamicEvent}
+                  hasTopDynamicEventNotif={hasTopDynamicEventNotif}
+                  onTopDynamicEventClick={onTopDynamicEventClick}
+                  setActionMenuOpen={setActionMenuOpen}
+                  setMenuOpen={setMenuOpen}
+                  isMapDark={isMapDark}
+                />
+                <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 sm:static sm:top-auto sm:left-auto sm:translate-x-0 sm:mt-0 sm:ml-2.5 md:sm:ml-3">
+                  <HudTopDynamicBroadcast
+                    hasActiveOwnBroadcast={hasActiveOwnBroadcast}
+                    onTopDynamicBroadcastClick={onTopDynamicBroadcastClick}
+                    setActionMenuOpen={setActionMenuOpen}
+                    setMenuOpen={setMenuOpen}
+                    isMapDark={isMapDark}
+                  />
+                </div>
+              </div>
+            ) : topDynamicEvent ? (
+              <HudTopDynamicEvent
+                topDynamicEvent={topDynamicEvent}
+                hasTopDynamicEventNotif={hasTopDynamicEventNotif}
+                onTopDynamicEventClick={onTopDynamicEventClick}
+                setActionMenuOpen={setActionMenuOpen}
+                setMenuOpen={setMenuOpen}
+                isMapDark={isMapDark}
+              />
+            ) : (
+              <HudTopDynamicBroadcast
+                hasActiveOwnBroadcast={hasActiveOwnBroadcast}
+                onTopDynamicBroadcastClick={onTopDynamicBroadcastClick}
+                setActionMenuOpen={setActionMenuOpen}
+                setMenuOpen={setMenuOpen}
+                isMapDark={isMapDark}
+              />
+            )}
+          </div>
+        )}
 
         {/* 1. Recenter Button (Map Pin Picture 4 style) - 2D, No Outer Box */}
         <HudRecenterButton

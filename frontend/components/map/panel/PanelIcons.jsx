@@ -69,11 +69,11 @@ export function CategoryIcon({ category, isMapDark, className = "w-[18px] h-[18p
 }
 
 // ─── 2. Broadcast Megaphone / TOA Icon (Picture 4 Style) ──────────────────────────
-export function BroadcastLineIcon({ isMapDark }) {
+export function BroadcastLineIcon({ isMapDark, className = "w-[18px] h-[18px] shrink-0" }) {
   const fg = isMapDark ? "#ffffff" : "#000000";
   const border = isMapDark ? "#000000" : "#ffffff";
   return (
-    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
+    <svg viewBox="0 0 24 24" className={className} fill="none">
       <path
         d="M4.5 13.5V10.5C4.5 9.7 5.1 9 6 9H8L14.5 5.2C15.3 4.7 16.5 5.3 16.5 6.2V17.8C16.5 18.7 15.3 19.3 14.5 18.8L8 15H6C5.1 15 4.5 14.3 4.5 13.5Z"
         fill={fg}

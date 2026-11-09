@@ -5,3 +5,4 @@ export * from "./HudThemeButton";
 export * from "./HudProfileAvatar";
 export * from "./HudRecenterButton";
 export * from "./HudTopDynamicEvent";
+export * from "./HudTopDynamicBroadcast";

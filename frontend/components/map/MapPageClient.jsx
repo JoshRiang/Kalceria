@@ -798,6 +798,20 @@ export default function MapPage() {
     handleOpenItemOnMap(activeOwnEvent, "event");
   }, [activeOwnEvent, handleOpenItemOnMap]);
 
+  const hasActiveOwnBroadcast = useMemo(() => {
+    const rawMsg =
+      typeof currentUser?.broadcast === "string"
+        ? currentUser.broadcast
+        : currentUser?.broadcast?.message;
+    return Boolean(rawMsg && rawMsg.trim());
+  }, [currentUser?.broadcast]);
+
+  const handleTopDynamicBroadcastClick = useCallback(() => {
+    if (!currentUser?.id) return;
+    const me = (mapUsersData || []).find((u) => String(u.id) === String(currentUser.id)) || currentUser;
+    handleOpenItemOnMap(me, "user");
+  }, [currentUser, mapUsersData, handleOpenItemOnMap]);
+
   // real broadcast save (disabled when self is offline)
   async function saveBroadcast(e) {
     e.preventDefault();
@@ -1442,6 +1456,8 @@ export default function MapPage() {
             onTopDynamicEventClick={handleTopDynamicEventClick}
             hasActiveOwnEvent={Boolean(activeOwnEvent)}
             onGoToOwnEvent={handleGoToOwnEvent}
+            hasActiveOwnBroadcast={hasActiveOwnBroadcast}
+            onTopDynamicBroadcastClick={handleTopDynamicBroadcastClick}
           />
 
           {/* Kalcerians Panel */}

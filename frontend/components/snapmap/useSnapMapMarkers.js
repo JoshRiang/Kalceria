@@ -77,7 +77,7 @@ export function useSnapMapMarkers({
         if (popupContent) {
           if (!marker.getPopup()) {
             marker.bindPopup(popupContent, {
-              className: "tactical-popup",
+              className: "tactical-popup broadcast-tactical-popup",
               offset: [0, -26],
               autoClose: true,
               closeButton: false,
@@ -113,7 +113,7 @@ export function useSnapMapMarkers({
 
         if (popupContent) {
           marker.bindPopup(popupContent, {
-            className: "tactical-popup",
+            className: "tactical-popup broadcast-tactical-popup",
             offset: [0, -26],
             autoClose: true,
             closeButton: false,

@@ -11,7 +11,7 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
   const idleTimerRef = useRef(null);
   const resetIdleTimerRef = useRef(null);
 
-  // Smooth idle auto-collapse timer for event cards on map
+  // Smooth idle auto-collapse timer for event cards and broadcast popups on map
   const resetIdleTimer = useCallback((delayMs = 5000) => {
     if (idleTimerRef.current) {
       clearTimeout(idleTimerRef.current);
@@ -19,7 +19,9 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
     }
     idleTimerRef.current = setTimeout(() => {
       const activeEventPopups = document.querySelectorAll(".event-tactical-popup");
-      if (!activeEventPopups.length) return;
+      const activeBroadcastPopups = document.querySelectorAll(".broadcast-tactical-popup, .broadcast-popup-box");
+      if (!activeEventPopups.length && !activeBroadcastPopups.length) return;
+
       // The card never closes while its Live Media Feed is still playing; it closes once the
       // feed reaches its end (or when there is nothing playing and the viewer has gone idle).
       const hasActivePlayingFeed = Array.from(activeEventPopups).some((el) =>
@@ -29,9 +31,13 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
         resetIdleTimerRef.current?.(3500);
         return;
       }
-      activeEventPopups.forEach((el) => {
-        el.classList.add("popup-shrinking");
+
+      const allActivePopups = [...activeEventPopups, ...activeBroadcastPopups];
+      allActivePopups.forEach((el) => {
+        const popupWrapper = el.closest(".leaflet-popup") || el;
+        popupWrapper.classList.add("popup-shrinking");
       });
+
       setTimeout(() => {
         if (mapRef.current) {
           try {
@@ -48,30 +54,31 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
             }
           });
         }
-        activeEventPopups.forEach((el) => {
-          el.classList.remove("popup-shrinking");
+        allActivePopups.forEach((el) => {
+          const popupWrapper = el.closest(".leaflet-popup") || el;
+          popupWrapper.classList.remove("popup-shrinking");
         });
       }, 300);
     }, delayMs);
   }, [mapRef, markerRefs]);
   resetIdleTimerRef.current = resetIdleTimer;
 
-  // Wire event popup idle collapse listeners
+  // Wire popup idle collapse listeners
   useEffect(() => {
     const handlePopupMouseEnter = (e) => {
-      if (e.target.closest?.(".event-tactical-popup")) {
+      if (e.target.closest?.(".event-tactical-popup, .broadcast-tactical-popup, .broadcast-popup-box")) {
         if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       }
     };
 
     const handlePopupMouseLeave = (e) => {
-      if (e.target.closest?.(".event-tactical-popup")) {
+      if (e.target.closest?.(".event-tactical-popup, .broadcast-tactical-popup, .broadcast-popup-box")) {
         resetIdleTimer(3000);
       }
     };
 
     const handleMapMove = () => {
-      const openPopups = document.querySelectorAll(".event-tactical-popup");
+      const openPopups = document.querySelectorAll(".event-tactical-popup, .broadcast-tactical-popup, .broadcast-popup-box");
       if (openPopups.length > 0) {
         resetIdleTimer(5000);
       }

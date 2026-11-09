@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { clearSession } from './session';
+import { clearSession, touchSession } from './session';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const apiBaseUrl = isProduction
@@ -64,6 +64,7 @@ api.interceptors.request.use(async (config) => {
 // Global response error handler
 api.interceptors.response.use(
   (res) => {
+    touchSession();
     return res;
   },
   (err) => {

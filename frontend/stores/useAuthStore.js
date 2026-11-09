@@ -6,6 +6,8 @@ import { persistProfileIdentityCache } from "@/lib/profileIdentity";
 
 const USER_SESSION_KEY = "kalceriaSessionActive";
 const ADMIN_SESSION_KEY = "kalceriaAdminSessionActive";
+const SESSION_TIMESTAMP_KEY = "kalceriaSessionTimestamp";
+const SESSION_MAX_AGE_MS = 20 * 60 * 1000;
 
 export const useAuthStore = create(
   persist(
@@ -19,6 +21,20 @@ export const useAuthStore = create(
       initSession: () => {
         if (typeof window === "undefined") return;
         try {
+          const lastActiveStr = localStorage.getItem(SESSION_TIMESTAMP_KEY);
+          if (lastActiveStr) {
+            const lastActive = Number(lastActiveStr);
+            if (Number.isFinite(lastActive) && Date.now() - lastActive > SESSION_MAX_AGE_MS) {
+              localStorage.removeItem(USER_SESSION_KEY);
+              localStorage.removeItem(ADMIN_SESSION_KEY);
+              localStorage.removeItem(SESSION_TIMESTAMP_KEY);
+              localStorage.removeItem("token");
+              localStorage.removeItem("adminToken");
+              set({ user: null, isLoggedIn: false, isAdmin: false, isInitialized: true });
+              return;
+            }
+          }
+
           const hasUser =
             localStorage.getItem(USER_SESSION_KEY) === "true" ||
             localStorage.getItem(ADMIN_SESSION_KEY) === "true";
@@ -88,6 +104,7 @@ export const useAuthStore = create(
           try {
             localStorage.removeItem(USER_SESSION_KEY);
             localStorage.removeItem(ADMIN_SESSION_KEY);
+            localStorage.removeItem(SESSION_TIMESTAMP_KEY);
             localStorage.removeItem("token");
             localStorage.removeItem("adminToken");
             sessionStorage.removeItem("kalceriaCsrfToken");
