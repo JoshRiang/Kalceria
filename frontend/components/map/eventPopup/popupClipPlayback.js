@@ -104,9 +104,19 @@ export function startVideoClip(state, gen, slideEl, vid, idx, resumeSeconds, com
     vid.currentTime = Math.max(0, resumeSeconds || 0);
   } catch {}
 
-  vid.onended = () => completeClip(state, gen);
+  vid.onended = () => {
+    if (state.rafId) {
+      cancelAnimationFrame(state.rafId);
+      state.rafId = null;
+    }
+    completeClip(state, gen);
+  };
   vid.onerror = () => {
     if (state.destroyed || state.genId !== gen) return;
+    if (state.rafId) {
+      cancelAnimationFrame(state.rafId);
+      state.rafId = null;
+    }
     state.skipTimerId = setTimeout(() => completeClip(state, gen), 800);
   };
 
@@ -147,6 +157,10 @@ export function startVideoClip(state, gen, slideEl, vid, idx, resumeSeconds, com
         setFeedState(state, "playing");
       }
     } else if (!state.holdPaused && now - lastAdvanceAt > STALL_SKIP_MS) {
+      if (state.rafId) {
+        cancelAnimationFrame(state.rafId);
+        state.rafId = null;
+      }
       completeClip(state, gen);
     }
   };
@@ -181,7 +195,13 @@ export function startImageClip(state, gen, slideEl, idx, resumeSeconds, complete
     }
     state.currentSeconds = elapsedMs / 1000;
     setFillProgress(state, idx, elapsedMs / durationMs);
-    if (elapsedMs >= durationMs) completeClip(state, gen);
+    if (elapsedMs >= durationMs) {
+      if (state.rafId) {
+        cancelAnimationFrame(state.rafId);
+        state.rafId = null;
+      }
+      completeClip(state, gen);
+    }
   };
   state.rafId = requestAnimationFrame(tick);
 }

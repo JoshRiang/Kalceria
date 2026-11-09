@@ -21,6 +21,7 @@ export function EventMediaSection({
 }) {
   const fileInputRef = useRef(null);
   const fileNamesRef = useRef({});
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
@@ -90,6 +91,7 @@ export function EventMediaSection({
           };
           return { ...f, mediaUrl: nextUrls, mediaMetadataByUrl: nextMeta };
         });
+        setSelectedIdx(existingUrls.length);
       }
     } catch (err) {
       // Revert optimistic local preview and revoke memory if upload permanently fails
@@ -124,6 +126,7 @@ export function EventMediaSection({
       if (removedUrl && nextMeta[removedUrl]) {
         delete nextMeta[removedUrl];
       }
+      setSelectedIdx((prev) => Math.max(0, Math.min(prev, urls.length - 2)));
       return { ...f, mediaUrl: updated, mediaMetadataByUrl: nextMeta };
     });
   };
@@ -135,6 +138,7 @@ export function EventMediaSection({
       }
       delete fileNamesRef.current[u];
     });
+    setSelectedIdx(0);
     setEventForm((f) => ({ ...f, mediaUrl: "", mediaMetadataByUrl: {} }));
   };
 
@@ -164,8 +168,10 @@ export function EventMediaSection({
     return url;
   };
 
+  const activeIdx = Math.min(selectedIdx, Math.max(0, parsedUrls.length - 1));
+  const activeUrl = parsedUrls[activeIdx] || "";
   const displayFilenameText = parsedUrls.length > 0
-    ? parsedUrls.map(getDisplayFilename).join(", ")
+    ? getDisplayFilename(activeUrl)
     : (eventForm.mediaUrl || "");
 
   return (
@@ -292,13 +298,20 @@ export function EventMediaSection({
             isModalDark ? "border-[#30363d] bg-[#0d1117]/60" : "border-[#d0d7de] bg-[#f6f8fa]/80"
           }`}
         >
-          <div className="flex items-center gap-2.5 overflow-x-auto py-1 custom-scrollbar">
+          <div className="flex items-center gap-3 overflow-x-auto py-1.5 px-1 custom-scrollbar">
             {parsedUrls.map((url, idx) => {
               const isVideo = inferIsVideoMediaUrl(url, eventForm.mediaMetadataByUrl?.[url]);
+              const isSelected = idx === activeIdx;
               return (
                 <div
                   key={`${idx}-${url.slice(0, 32)}`}
-                  className="relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm border border-black/10 dark:border-white/10 group"
+                  onClick={() => setSelectedIdx(idx)}
+                  title={`Pilih klip: ${getDisplayFilename(url)}`}
+                  className={`relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm transition-all duration-200 transform cursor-pointer ${
+                    isSelected
+                      ? "scale-105 ring-2 ring-[#00ffff] ring-offset-2 ring-offset-black/40 shadow-cyan-500/20 shadow-md z-10 opacity-100"
+                      : "hover:scale-102 opacity-75 hover:opacity-100 border border-black/10 dark:border-white/10"
+                  }`}
                 >
                   {isVideo ? (
                     <video
@@ -307,15 +320,22 @@ export function EventMediaSection({
                       autoPlay
                       loop
                       playsInline
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover pointer-events-none"
                     />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={url} alt={`Media ${idx + 1}`} className="w-full h-full object-cover" />
+                    <img
+                      src={url}
+                      alt={`Media ${idx + 1}`}
+                      className="w-full h-full object-cover pointer-events-none"
+                    />
                   )}
                   <button
                     type="button"
-                    onClick={() => handleRemoveCarouselMedia(idx)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveCarouselMedia(idx);
+                    }}
                     title="Remove this media"
                     className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
                   >

@@ -92,6 +92,7 @@ function destroyCarouselState(safeId, { keepSnapshot = false } = {}) {
 
 function finishFeed(state) {
   if (state.destroyed) return;
+  clearClipRuntime(state);
   state.feedEnded = true;
   paintIndicators(state, state.slides.length, 1);
   setFeedState(state, "ended");
