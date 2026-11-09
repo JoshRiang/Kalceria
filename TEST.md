@@ -184,6 +184,16 @@ npm --prefix frontend run build
 | `MOD-32` | **10s Interval Map Polling (`useMapDataPolling.js`)** | 10-second timer interval, active city bounds | Polls `/api/kalcerians` and `/api/events`; merges delta updates; respects blocked user filters (M8 Hook Ledger slot). | Verbatim dependencies; zero timer stacking across re-renders. |
 | `MOD-33` | **Leaflet Viewport & Map Lifecycle (`useMapViewport.js`)** | Leaflet container ref, fly-to coordinate targets, zoom level | Initializes Leaflet map instance; holds `mapRef`; handles smooth fly-to centering and tile layer caching (M9, M10 Hook Ledger slot). | Render-body ref assignment preserved (IL-3); zero startup centering failure. |
 | `MOD-34` | **Mini Event Creation & Media Pipeline (`useMiniEventActions.js`)** | Event creation form, coordinates snapping, media attachments | Validates Indonesian bounds; builds multi-clip metadata payload; opens event popup 120ms post-save; handles deletion. | Preserves creator ownership checks; zero orphaned media records. |
+| `MOD-35` | **Mini Event Handlers Barrel Re-Export (`miniEventHandlers.js`)** | Backend API requests for mini-events | Facade exports identical functions delegating cleanly to `miniEventCore`, `miniEventQueries`, `miniEventMutations`, and `miniEventMedia` (28 LOC, -96%). | 100% pass on backend regression tests. |
+| `MOD-36` | **Personal Chat Controller Barrel Re-Export (`personalChatController.js`)** | Backend API requests for chat messages & acks | Facade exports identical route handlers delegating to `chatSession`, `chatMessages`, `chatAck`, and `chatDelete` (23 LOC, -97%). | Zero route drift; strict HTTP 200/400/404 responses. |
+| `MOD-37` | **Admin Dashboard Modularization (`dashboard.jsx`)** | Admin metrics & user tables | Modularized into `DashboardMetrics`, `DashboardCharts`, and `DashboardUsersTable` (421 LOC, -24%). | Preserves admin analytics reactivity. |
+| `MOD-38` | **Event Popup Carousel & Geometry Controller (`popupCarouselController.js`)** | Event popup media carousel navigation | Decoupled into `popupGeometry.js`, `popupGestures.js`, and `popupMediaPlayback.js` (342 LOC, -45%). | Preserves aspect ratios (16:9 & 9:16) without visual distortion. |
+| `MOD-39` | **Edit Profile Modal Submodules (`EditProfileModal.jsx`)** | Profile editing, password change, account deletion | Decoupled into `ProfileFormFields`, `PasswordChangeSection`, and `AccountDangerZone` (447 LOC, -25%). | Preserves pristine database state; zero mock users. |
+| `MOD-40` | **Kalcerians Panel Virtualized & Filtered List (`KalceriansPanel.jsx`)** | Sidebar active kalcerians list & search query | Decoupled into `KalceriansHeader`, `KalceriansSearchBar`, and `KalceriansList` (417 LOC, -36%). | Preserves 4-tier sorting and immediate unread pin. |
+| `MOD-41` | **Map Chat & Notification Sync Hook (`useMapChatAndNotifications.js`)** | Unread counters, modal visibility, incoming notifications | Decoupled into `useChatNotifications.js` and `useChatModalSync.js` (407 LOC, -28%). | Instant sync between map indicators and active chat modals. |
+| `MOD-42` | **Chat Media Card 3D Flip & Preview (`ChatMediaCard.jsx`)** | Photo/video attachments in chat thread | Decoupled into `CardFront.jsx`, `CardBack.jsx`, and `MediaPreviewModal.jsx` (386 LOC, -38%). | GPU-accelerated card flip; 0ms sound toggle latency. |
+| `MOD-43` | **WebRTC Call Session State Machine (`useCallSession.js`)** | 1-on-1 audio/video call lifecycle | Decoupled into `callSignaling.js`, `callHardwareStream.js`, and `callTimer.js` (439 LOC, -21%). | Smooth stream renegotiation; clean track termination. |
+| `MOD-44` | **Camera Capture Hardware Stream & MIME Codec (`CameraCaptureModal.jsx`)** | In-app photo and video recording modal | Decoupled into `cameraConstraints.js`, `recordingMime.js`, and `CameraPreview.jsx` (323 LOC, -49%). | Negotiates supported MIME codecs across iOS Safari & Android. |
 
 ---
 
@@ -210,6 +220,18 @@ npm --prefix frontend run build
 | `MP-02` | **GPS Eager Geolocation, Recenter, & Stealth Mode** | Muat peta ➔ izin GPS ➔ toggle status Stealth / Online | Marker posisi diri muncul di lokasi akurat; tombol recenter melakukan smooth `flyTo`; mode stealth menyembunyikan marker dari user lain seketika. | Wave 3 (`useEagerGeolocation`, `useLiveLocationSync`, `useMapViewport`) |
 | `MP-03` | **Polling 10 Detik, Marker User/Event, & Pemblokiran** | Biarkan peta terbuka selama beberapa siklus polling (10s) | Daftar Kalcerians dan marker event sinkron dengan server; user yang diblokir tidak pernah muncul di peta maupun sidebar; nol lonjakan memori. | Wave 3 (`useMapDataPolling`, `mapEntitiesProjection`) |
 | `MP-05` | **Mini Event Lifecycle & Kolaborasi** | Buat event baru pada peta dengan judul, deskripsi bertag, dan media | Form tervalidasi; payload tersimpan di Postgres/Redis; popup event otomatis terbuka 120ms setelah penyimpanan; marker interaktif muncul di peta. | Wave 3 (`useMiniEventActions`, `popupCarouselController`) |
+
+---
+
+### Test Suite 13: Wave 4 Tier B Subsystem Invariance & Hardware Gate
+| Test ID | Skenario Tier B & Hardware Nyata | Input / Trigger | Hasil yang Diamati (Identik Baseline `f1dbb70`) | Modul & Sub-komponen Terkait |
+|---|---|---|---|---|
+| `TB-01` | **Backend API Barrel Re-export Invariance** | Eksekusi seluruh automated test suite backend | Rute `/api/personal-chat/*` dan `/api/mini-events/*` merespons dengan struktur JSON, header HTTP, dan middleware identik; barrel re-export lolos 100%. | `personalChatController.js`, `miniEventHandlers.js` |
+| `TB-02` | **Camera Hardware Constraints & MIME Codec** | Buka kamera pada mobile portrait (9:16) vs desktop (16:9) | `cameraConstraints.js` menegakkan rasio tanpa peregangan; `recordingMime.js` menegosiasikan `video/mp4` pada iOS Safari dan `video/webm` pada Chrome/Android. | `CameraCaptureModal.jsx`, `cameraCapture/` |
+| `TB-03` | **Event Popup Carousel Geometry & Swipe Gestures** | Geser (swipe/drag) klip multi-media pada popup event peta | Transisi antar-klip halus 60fps; `popupGeometry.js` mempertahankan proporsi video/foto; tombol suara HUD mengontrol audio tanpa delay. | `popupCarouselController.js`, `eventPopup/` |
+| `TB-04` | **Chat Media Card 3D Flip & Sound Toggle** | Klik kartu media di chat untuk membalik kartu | Animasi flip 3D GPU-accelerated (`transform: rotateY`); ikon download dan audio mute/unmute merespons dalam 0ms; placeholder ikon tema konsisten. | `ChatMediaCard.jsx`, `mediaCard/` |
+| `TB-05` | **Kalcerians Panel Instant Pin & Search** | Ketik nama di search bar / terima notifikasi pesan baru | Kalcerian dengan unread message langsung tersemat di atas; pencarian realtime memfilter tanpa lag; scroll virtual mulus. | `KalceriansPanel.jsx`, `kalceriansPanel/` |
+| `TB-06` | **Edit Profile Modal & Zero DB Pollution** | Edit profil, ganti kata sandi, atau batalkan aksi bahaya | Input tervalidasi; sesi terproteksi; pembatalan menghapus state lokal; dilarang keras meninggalkan user dummy pada DB produksi. | `EditProfileModal.jsx`, `editProfile/` |
 
 ---
 

@@ -246,6 +246,18 @@ Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyat
      - Dependency array pada efek siklus hidup kompleks (E5 sync loop, M8 data polling, M2 eager GPS) DILARANG diubah, ditambah, atau dikurangi, meskipun di-flag oleh linter. Mengubah dep array memicu infinite re-fetch loop atau keheningan polling.
    - **Invariansi Kontrak 58 Key Return & 9 Re-Export (IL-9)**:
      - Facade `usePersonalChatState.js` wajib mempertahankan tepat 58 return keys dan 9 re-export tanpa ada nama yang diganti atau dihapus. `MapPageClient.jsx` wajib mempertahankan seluruh prop JSX ke komponen anak.
+9. **Doktrin Mutlak Modularisasi Tier B (File Menengah 500–799 Baris — Pelajaran Wave 4)**:
+   - **Pola Barrel Re-Export Backend (Zero Route / Signature Drift — IL-9)**:
+     - File controller backend lama (`miniEventHandlers.js`, `personalChatController.js`) WAJIB dipertahankan sebagai facade / barrel re-export dengan nama fungsi ekspor dan signature identik.
+     - Rute Express, middleware injection (`req._payloadInspected`), dan format respons JSON (`{ success, data, error }`) DILARANG berubah 1 bit pun.
+   - **Dekomposisi Frontend Berbasis Sub-Komponen Terfokus & Hardware Decoupling**:
+     - Komponen UI monolitik dipotong menjadi sub-komponen terisolasi di subfolder camelCase (`mediaCard/`, `cameraCapture/`, `kalceriansPanel/`, `editProfile/`, `dashboard/`).
+     - Logika hardware stream, MIME codec, dan constraints dipisahkan ke helper murni independen (`cameraConstraints.js`, `recordingMime.js`).
+     - Logika gestur, geometri, dan rasio aspek dipisahkan ke helper modular (`popupGeometry.js`, `popupGestures.js`).
+   - **Preservasi Props JSX & Event Callbacks**:
+     - Seluruh nama prop JSX, state internal, dan handler interaktif komponen anak wajib identik dengan baseline `f1dbb70`.
+   - **Penegakan Batas LOC Maksimum (< 450 Baris)**:
+     - Seluruh 10 file Tier B yang telah di-refactor wajib tetap berada di bawah batas ratchet ceiling yang didefinisikan dalam `scripts/audit/thresholds.json`. Pembengkakan kembali di atas threshold memicu kegagalan Gate 3c.
 
 ### 6.6 Tambahan Failure Verdict ("OUT")
 - Mengubah urutan efek, memindah assignment ref render-body ke efek, atau memecah efek yang memuat dua concern (pelanggaran IL-1 & IL-3).
@@ -254,6 +266,8 @@ Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyat
 - Memecah atau menduplikasi kepemilikan state/ref bersama ke dalam hook daun alih-alih menginjeksinya lewat objek parameter tunggal dari facade (pelanggaran IL-2).
 - Meninggalkan event listener window tanpa fungsi cleanup unmount (kebocoran zombie listener).
 - Mengubah kontrak pemanggil/anak (58 key return `usePersonalChatState`, 9 re-export, prop JSX) tanpa izin eksplisit (pelanggaran IL-9).
+- Merusak signature atau nama ekspor fungsi pada barrel re-export controller backend Tier B.
+- Melanggar batas ratchet LOC Tier B pada `scripts/audit/modularity-audit.mjs` (Gate 3c).
 - Menyentuh Tier C atau `BaselineNovember#2`.
 - Melapor "sudah" sementara Gate 3b/3c (bila sudah aktif), moved-lines diff, atau matriks manual belum dijalankan.
 - Menggabungkan beberapa ekstraksi dalam satu commit sehingga tidak dapat di-`git revert` secara bersih.
