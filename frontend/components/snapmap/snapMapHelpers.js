@@ -1,9 +1,10 @@
 export const DEFAULT_CENTER = [-6.2735, 106.7150];
 
 export function getInstantInitialCenter(currentUser = null) {
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && currentUser?.id) {
     try {
-      const raw = localStorage.getItem("kalceria_last_known_coords");
+      const userCoordKey = `kalceria_last_known_coords_${currentUser.id}`;
+      const raw = localStorage.getItem(userCoordKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (

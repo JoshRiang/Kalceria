@@ -108,6 +108,12 @@ export const useAuthStore = create(
             localStorage.removeItem("token");
             localStorage.removeItem("adminToken");
             sessionStorage.removeItem("kalceriaCsrfToken");
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+              const k = localStorage.key(i);
+              if (k && (k === "kalceria_last_known_coords" || k.startsWith("kalceria_last_known_coords_"))) {
+                localStorage.removeItem(k);
+              }
+            }
           } catch {}
         }
 

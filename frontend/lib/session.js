@@ -88,7 +88,18 @@ export function clearSession() {
   localStorage.removeItem("token");
   localStorage.removeItem("adminToken");
   localStorage.removeItem("user");
+  localStorage.removeItem("kalceria_auth_store");
   sessionStorage.removeItem("kalceriaCsrfToken");
+
+  // Hard purge any residual location coordinates from previous logins
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && (k === "kalceria_last_known_coords" || k.startsWith("kalceria_last_known_coords_"))) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch {}
 
   // Sync with reactive Zustand store
   try {

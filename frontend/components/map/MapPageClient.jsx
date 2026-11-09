@@ -161,7 +161,41 @@ export default function MapPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const hasMounted = useHasMounted();
   const [notLoggedIn, setNotLoggedIn] = useState(() => (typeof window !== "undefined" ? !hasUserSession() : false));
+  const [initialCoordsResolved, setInitialCoordsResolved] = useState(false);
   const hasInitialCenteredRef = useRef(false);
+
+  // Eager pre-calculation of GPS coordinates immediately on component mount (during startup intro)
+  useEffect(() => {
+    let active = true;
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!active) return;
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setSelfLiveCoords({ lat, lng });
+          setInitialCoordsResolved(true);
+          if (mapRef.current) {
+            mapRef.current.setView([lat, lng], 15, { animate: false });
+          }
+          prewarmOsmTiles(lat, lng, 15);
+        },
+        () => {
+          if (active) setInitialCoordsResolved(true);
+        },
+        { timeout: 3500, enableHighAccuracy: false, maximumAge: 30000 }
+      );
+    } else {
+      setInitialCoordsResolved(true);
+    }
+    const safetyTimeout = setTimeout(() => {
+      if (active) setInitialCoordsResolved(true);
+    }, 2800);
+    return () => {
+      active = false;
+      clearTimeout(safetyTimeout);
+    };
+  }, []);
   const [isStatusBusy, setIsStatusBusy] = useState(false);
   const [isMapDark, setIsMapDark] = useState(false);
   const [focusedUserId, setFocusedUserId] = useState(null);
@@ -221,10 +255,11 @@ export default function MapPage() {
         setPresence(user.allowLiveLocation ? "online" : "invisible");
         if (user.broadcast?.message) setStatusText(user.broadcast.message);
         if (hasValidCoordinates(user.domicileLat, user.domicileLng)) {
+          const userCoordKey = `kalceria_last_known_coords_${user.id}`;
           try {
-            if (!localStorage.getItem("kalceria_last_known_coords")) {
+            if (!localStorage.getItem(userCoordKey)) {
               localStorage.setItem(
-                "kalceria_last_known_coords",
+                userCoordKey,
                 JSON.stringify({
                   lat: Number(user.domicileLat),
                   lng: Number(user.domicileLng),
@@ -258,7 +293,7 @@ export default function MapPage() {
             const lng = pos.coords.longitude;
             setSelfLiveCoords({ lat, lng });
             try {
-              localStorage.setItem("kalceria_last_known_coords", JSON.stringify({ lat, lng }));
+              localStorage.setItem(`kalceria_last_known_coords_${currentUser.id}`, JSON.stringify({ lat, lng }));
             } catch (_) {}
             if (showStartup && mapRef.current) {
               mapRef.current.setView([lat, lng], 15, { animate: false });
@@ -446,26 +481,24 @@ export default function MapPage() {
     });
   }, []);
 
-  // Guarantee tile loading & full viewport invalidation when startup sequence completes
+  // Guarantee tile loading & viewport synchronization when startup sequence completes
   useEffect(() => {
     if (!showStartup && mapRef.current) {
-      mapRef.current.invalidateSize();
-      const t1 = setTimeout(() => mapRef.current?.invalidateSize(), 150);
-      const t2 = setTimeout(() => mapRef.current?.invalidateSize(), 600);
-      const t3 = setTimeout(() => mapRef.current?.invalidateSize(), 1200);
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
+      mapRef.current.invalidateSize({ debounceMoveend: true });
+      const t1 = setTimeout(() => {
+        mapRef.current?.invalidateSize({ debounceMoveend: true });
+      }, 100);
+      return () => clearTimeout(t1);
     }
   }, [showStartup]);
 
   // Calculate instant initial map coordinates and set view silently behind startup sequence
-  const initialCenter = useMemo(
-    () => getInstantInitialCenter(currentUser),
-    [currentUser]
-  );
+  const initialCenter = useMemo(() => {
+    if (selfLiveCoords && hasValidCoordinates(selfLiveCoords.lat, selfLiveCoords.lng)) {
+      return [selfLiveCoords.lat, selfLiveCoords.lng];
+    }
+    return getInstantInitialCenter(currentUser);
+  }, [currentUser, selfLiveCoords]);
 
   useEffect(() => {
     if (showStartup && mapRef.current) {
@@ -1523,7 +1556,7 @@ export default function MapPage() {
         showStartup={hasMounted && showStartup && !checkShouldSkipStartup()}
         authReady={Boolean(currentUser)}
         mapEngineReady={isMapEngineReady}
-        isReady={!isDataLoading && hasMounted && !notLoggedIn}
+        isReady={!isDataLoading && hasMounted && !notLoggedIn && (initialCoordsResolved || Boolean(currentUser))}
         onComplete={handleStartupComplete}
       />
 

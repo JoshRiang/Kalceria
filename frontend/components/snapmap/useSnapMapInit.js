@@ -60,7 +60,7 @@ export function useSnapMapInit({
         zoomControl: false,
         attributionControl: false,
         center: resolvedCenter,
-        zoom: 14,
+        zoom: 15,
         preferCanvas: true,
         zoomAnimation: true,
         fadeAnimation: true,

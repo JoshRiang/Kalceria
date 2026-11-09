@@ -26,7 +26,7 @@ export function ChatStatusIndicator({
             onResendMessage?.(item);
           }}
           title="Kirim ulang pesan"
-          className="cursor-pointer transition-transform hover:scale-110 active:scale-90 text-[#ff0033] hover:text-[#ff3355] drop-shadow-[0_0_8px_rgba(255,0,51,0.7)]"
+          className="cursor-pointer transition-transform hover:scale-110 active:scale-90 text-[#ff0033] hover:text-[#ff2244]"
         >
           <svg
             viewBox="0 0 24 24"

@@ -191,6 +191,16 @@ export function useSnapMapMarkers({
       if (markerRefs.current[markerId]) {
         const marker = markerRefs.current[markerId];
 
+        marker._eventId = item.id;
+        if (!marker.options) marker.options = {};
+        marker.options.userData = {
+          id: item.id,
+          title: item.title,
+          name: item.name,
+          type: "event",
+          color: "#ff006e",
+        };
+
         const currentLatLng = marker.getLatLng();
         if (currentLatLng.lat !== item.lat || currentLatLng.lng !== item.lng) {
           marker.setLatLng([item.lat, item.lng]);
@@ -241,7 +251,13 @@ export function useSnapMapMarkers({
         );
         const marker = L.marker([item.lat, item.lng], {
           icon: nextEventIcon,
-          userData: { color: "#ff006e" },
+          userData: {
+            id: item.id,
+            title: item.title,
+            name: item.name,
+            type: "event",
+            color: "#ff006e",
+          },
         }).bindPopup(newPopupContent, {
           className: "tactical-popup event-tactical-popup",
           offset: [0, -34],
@@ -251,6 +267,7 @@ export function useSnapMapMarkers({
           closeOnClick: false,
           closeButton: false,
         });
+        marker._eventId = item.id;
         marker._lastIconHtml = nextEventIconHtml;
         marker._lastPopupContent = newPopupContent;
         marker._lastPopupSig = stripDynamicUptime(newPopupContent);

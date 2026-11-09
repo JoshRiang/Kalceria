@@ -193,17 +193,59 @@ export function useSnapMapFocus({
   useEffect(() => {
     const handleOpenEventOnMap = (e) => {
       if (!isReady || !markerRefs.current || !mapRef.current) return;
-      const { eventId, lat, lng } = e.detail || {};
+      const { eventId, title, lat, lng } = e.detail || {};
 
       let targetMarker = null;
-      if (eventId) {
+      const rawIdStr = String(eventId || "").trim();
+      const cleanEventId = rawIdStr.replace(/^event_/, "").split("_")[0];
+
+      if (cleanEventId) {
         targetMarker =
-          markerRefs.current[`event_${eventId}`] ||
-          markerRefs.current[eventId] ||
-          Object.values(markerRefs.current).find((m) => {
-            const ud = m?.options?.userData;
-            return ud && String(ud.id) === String(eventId);
-          });
+          markerRefs.current[`event_${cleanEventId}`] ||
+          markerRefs.current[cleanEventId] ||
+          markerRefs.current[`event_${rawIdStr}`] ||
+          markerRefs.current[rawIdStr];
+      }
+
+      // Fallback 1: match by userData id, title, or name
+      if (!targetMarker && markerRefs.current) {
+        const idLower = String(cleanEventId || rawIdStr || "").toLowerCase();
+        const titleLower = String(title || "").toLowerCase();
+        for (const key of Object.keys(markerRefs.current)) {
+          if (!key.startsWith("event_")) continue;
+          const m = markerRefs.current[key];
+          const ud = m?.options?.userData;
+          if (ud) {
+            const udId = String(ud.id || "").toLowerCase();
+            const udTitle = String(ud.title || ud.name || "").toLowerCase();
+            if (
+              (idLower && (udId === idLower || udTitle === idLower)) ||
+              (titleLower && (udTitle === titleLower || udTitle.includes(titleLower) || titleLower.includes(udTitle)))
+            ) {
+              targetMarker = m;
+              break;
+            }
+          }
+        }
+      }
+
+      // Fallback 2: coordinate proximity lookup (within 65 meters)
+      if (!targetMarker && markerRefs.current && lat && lng) {
+        const targetLatNum = Number(lat);
+        const targetLngNum = Number(lng);
+        let closestDist = 65; // meters tolerance
+        for (const key of Object.keys(markerRefs.current)) {
+          if (!key.startsWith("event_")) continue;
+          const m = markerRefs.current[key];
+          const mLatLng = m?.getLatLng?.();
+          if (mLatLng) {
+            const d = mapRef.current.distance([targetLatNum, targetLngNum], mLatLng);
+            if (d < closestDist) {
+              closestDist = d;
+              targetMarker = m;
+            }
+          }
+        }
       }
 
       const map = mapRef.current;
@@ -217,7 +259,7 @@ export function useSnapMapFocus({
 
       const openPopupSafe = () => {
         try {
-          if (targetMarker && targetMarker.getPopup && targetMarker.getPopup()) {
+          if (targetMarker && targetMarker.openPopup) {
             targetMarker.openPopup();
             tickAllEventUptimeElements();
           }

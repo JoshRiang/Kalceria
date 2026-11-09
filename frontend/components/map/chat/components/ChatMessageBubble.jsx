@@ -198,6 +198,11 @@ export function ChatMessageBubble({
                             item.replyTo.eventId ||
                             quoteInfo.eventId ||
                             item.replyTo.id,
+                          title:
+                            item.replyTo.eventName ||
+                            item.replyTo.title ||
+                            quoteInfo.caption ||
+                            item.replyTo.caption,
                           lat: item.replyTo.lat,
                           lng: item.replyTo.lng,
                         },
