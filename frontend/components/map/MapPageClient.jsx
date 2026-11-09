@@ -515,59 +515,51 @@ export default function MapPage() {
             hasActiveOwnEvent={Boolean(activeOwnEvent)}
             onGoToOwnEvent={handleGoToOwnEvent}
             hasActiveOwnBroadcast={hasActiveOwnBroadcast}
-            onGoToOwnBroadcast={handleTopDynamicBroadcastClick}
-            drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
-            activeOwnEvent={activeOwnEvent}
-            onEditOwnEvent={() => {
-              if (activeOwnEvent) handleOpenEditEvent(activeOwnEvent);
-            }}
-            onEditOwnBroadcast={handleOpenEditBroadcast}
-            isSelfOffline={isSelfOffline}
+            onTopDynamicBroadcastClick={handleTopDynamicBroadcastClick}
             isToolbarRetracting={isToolbarRetracting}
           />
 
+          <input
+            type="checkbox"
+            id="panel-toggle"
+            className="hidden peer"
+            checked={drawerOpen}
+            onChange={(e) => setDrawerOpen(e.target.checked)}
+          />
+
           <KalceriansPanel
-            drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
-            searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-            kalcerians={sidebarKalcerians} currentUser={currentUser}
-            avatarUrl={avatarUrl}
-            focusUser={focusUser} handleOpenItemOnMap={handleOpenItemOnMap}
-            recentlyMessagedUserIds={recentlyMessagedUserIds}
+            scheduleTimeout={scheduleTimeout} mapUsersData={mapUsersData} kalcerians={kalcerians} events={events}
+            searchQuery={searchQuery} setSearchQuery={setSearchQuery} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
+            isDataLoading={isDataLoading}
+            isMapDark={isMapDark} setFocusedUserId={setFocusedUserId}
+            sidebarKalcerians={sidebarKalcerians} focusUser={focusUser} blockedUserIds={blockedUserIds}
+            onBlockUser={handleBlockUser} onUnblockUser={handleUnblockUser} onOpenItemOnMap={handleOpenItemOnMap}
+            currentUser={currentUser} requestedEventId={requestedEventId} eventRequestsMap={eventRequestsMap}
+            acceptedCollabsMap={acceptedCollabsMap} eventGroupChatMap={eventGroupChatMap}
+            personalChatMap={personalChatMap} recentlyMessagedUserIds={recentlyMessagedUserIds}
+            favouriteUserIds={favouriteUserIds} mutedUserIds={mutedUserIds}
+            onToggleFavourite={toggleFavouriteUser} onToggleMute={toggleMuteUser}
+            onOutgoingMessageUpdate={recordOutgoingPersonalMessage}
             onPersonalChatOpen={handlePersonalChatOpen}
-            favouriteUserIds={favouriteUserIds} toggleFavouriteUser={toggleFavouriteUser}
-            mutedUserIds={mutedUserIds} toggleMuteUser={toggleMuteUser}
+            onPromptCancelRequest={guardedPromptCancelRequest} onOpenRequests={guardedOpenRequests}
             isSelfOffline={isSelfOffline}
-            onBlockUser={handleBlockUser}
-            onUnblockUser={handleUnblockUser}
           />
 
           <OwnProfileDrawer
-            isOpen={showOwnProfile}
-            onClose={() => setShowOwnProfile(false)}
-            currentUser={currentUser}
-            isMapDark={isMapDark}
-            onEditProfile={() => {
-              setShowOwnProfile(false);
-              setShowEditProfileModal(true);
-            }}
+            isOpen={showOwnProfile} onClose={() => setShowOwnProfile(false)}
+            currentUser={currentUser} isMapDark={isMapDark}
+            onEditProfile={() => { setShowOwnProfile(false); setShowEditProfileModal(true); }}
           />
 
           <EditProfileModal
-            show={showEditProfileModal}
-            onClose={() => setShowEditProfileModal(false)}
-            isMapDark={isMapDark}
-            currentUser={currentUser}
-            onSaveProfile={handleSaveProfile}
+            show={showEditProfileModal} onClose={() => setShowEditProfileModal(false)}
+            isMapDark={isMapDark} currentUser={currentUser} onSaveProfile={handleSaveProfile}
             onRequestChangePassword={handleRequestChangePassword}
-            onRequestDeleteAccount={() => {
-              setShowEditProfileModal(false);
-              setShowDeleteAccountModal(true);
-            }}
+            onRequestDeleteAccount={() => { setShowEditProfileModal(false); setShowDeleteAccountModal(true); }}
           />
 
           <CollaboratorUploadOverlay
-            uploadState={collaboratorUploadState}
-            onDismiss={() => setCollaboratorUploadState(null)}
+            uploadState={collaboratorUploadState} onDismiss={() => setCollaboratorUploadState(null)}
           />
         </>
       )}
