@@ -62,11 +62,6 @@ function ResetPasswordContent() {
       const isFromMap = Boolean(res.data?.fromMap || searchParams.get("from") === "map");
 
       if (isFromMap) {
-        if (res.data?.user) {
-          establishSession(res.data.user);
-        } else if (res.data) {
-          establishSession(res.data);
-        }
         try {
           localStorage.setItem("kalceria_auth_return", "/map");
           localStorage.setItem("kalceria_password_reset_from_map", "true");
@@ -96,14 +91,17 @@ function ResetPasswordContent() {
         }
       } catch {}
 
+      // Attempt to close this tab so user returns to parent tab
+      try {
+        if (window.opener || window.history.length <= 2) {
+          window.close();
+        }
+      } catch {}
+
       setTimeout(() => {
         setIsProcessing(false);
-        if (isFromMap) {
-          window.location.replace("/map?from=password_reset&skip_intro=true");
-        } else {
-          window.location.replace(`/?auth=true&mode=login&reset_success=true&email=${encodeURIComponent(userEmail)}`);
-        }
-      }, 450);
+        window.location.replace(`/?auth=true&mode=login&reset_success=true&email=${encodeURIComponent(userEmail)}${isFromMap ? '&from=map' : ''}`);
+      }, 500);
     } catch (err) {
       setIsProcessing(false);
       setError(

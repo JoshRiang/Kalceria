@@ -74,6 +74,16 @@ export default function HomeClient() {
     }
 
     const handlePageShow = (e) => {
+      const currentParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      if (
+        currentParams?.get("auth") === "true" ||
+        Boolean(currentParams?.get("token") || currentParams?.get("reset_token")) ||
+        currentParams?.get("mode") === "forgot-password"
+      ) {
+        setPhase("auth");
+        return;
+      }
+
       if (
         e.persisted ||
         sessionStorage.getItem("landingScrollTarget") ||

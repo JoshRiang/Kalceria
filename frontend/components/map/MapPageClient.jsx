@@ -1383,9 +1383,7 @@ export default function MapPage() {
       setShowOwnProfile(false);
 
       if (email) {
-        // Call reset-request to trigger magic link email dispatch (with fromMap flag for server-side & cross-tab persistence)
-        await api.post("/auth/password/reset-request", { email, fromMap: true, returnTo: "/map" }).catch(() => {});
-        window.location.href = `/?auth=true&mode=forgot-password&sent=true&from=map&email=${encodeURIComponent(email)}`;
+        window.location.href = `/?auth=true&mode=forgot-password&from=map&email=${encodeURIComponent(email)}`;
         return;
       }
       window.location.href = "/?auth=true&mode=forgot-password&from=map";
