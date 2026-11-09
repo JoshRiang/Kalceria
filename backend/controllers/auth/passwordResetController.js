@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import prisma from '../../lib/prisma.js';
 import { redis } from '../../lib/redis.js';
 import { sendPasswordResetEmail } from '../../lib/mailer.js';
-import { clearAuthCookie, revokeUserSessions } from '../../utils/authSession.js';
+import { clearAuthCookie, revokeUserSessions, createAuthSession, setAuthCookie } from '../../utils/authSession.js';
 import {
   PASSWORD_REGEX,
   isPasswordInHistory,
@@ -110,7 +110,13 @@ export async function resetPassword(req, res, next) {
     await redis.del(`reset_from_map:${token}`).catch(() => {});
     await redis.del(`reset_from_map_email:${email}`).catch(() => {});
 
-    clearAuthCookie(res);
+    let sessionToken = null;
+    if (fromMap) {
+      sessionToken = await createAuthSession(user);
+      setAuthCookie(res, sessionToken);
+    } else {
+      clearAuthCookie(res);
+    }
 
     await redis.set(
       `reset_status:${email}`,
@@ -119,6 +125,7 @@ export async function resetPassword(req, res, next) {
         username: user.nickname || user.name,
         email: user.email,
         fromMap,
+        sessionToken,
         user: {
           id: user.id,
           name: user.name,
@@ -136,6 +143,7 @@ export async function resetPassword(req, res, next) {
     res.json({
       message: 'Password reset successful.',
       fromMap,
+      sessionToken: fromMap ? sessionToken : undefined,
       user: {
         id: user.id,
         name: user.name,
@@ -159,6 +167,13 @@ export async function getResetPasswordStatus(req, res) {
     if (!data) return res.json({ status: 'none' });
     try {
       const parsed = JSON.parse(data);
+      if (parsed?.status === 'completed' && parsed?.fromMap && parsed?.sessionToken && typeof res.cookie === 'function') {
+        setAuthCookie(res, parsed.sessionToken);
+      }
+      if (parsed && typeof parsed === 'object') {
+        const { sessionToken: _omit, ...safePayload } = parsed;
+        return res.json(safePayload);
+      }
       return res.json(parsed);
     } catch {
       return res.json({ status: data });

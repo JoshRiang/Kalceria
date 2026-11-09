@@ -62,10 +62,17 @@ function ResetPasswordContent() {
       const isFromMap = Boolean(res.data?.fromMap || searchParams.get("from") === "map");
 
       if (isFromMap) {
+        if (res.data?.user) {
+          establishSession(res.data.user);
+        } else if (res.data) {
+          establishSession(res.data);
+        }
         try {
           localStorage.setItem("kalceria_auth_return", "/map");
           localStorage.setItem("kalceria_password_reset_from_map", "true");
           sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+          localStorage.setItem("kalceria_skip_map_intro", "true");
+          sessionStorage.setItem("kalceria_skip_map_intro", "true");
         } catch {}
       } else {
         try {

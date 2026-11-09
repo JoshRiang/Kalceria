@@ -61,9 +61,9 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
     <motion.aside
       initial={{ x: 50, opacity: 0 }}
       animate={{
-        // When collapsed, slides into the right edge by the width of the avatar box (~48px),
-        // leaving the protruding semi-circle tab neatly accessible at the right edge
-        x: isCollapsed ? 48 : 0,
+        // When collapsed, slides into the right edge by the width of the avatar card (~52px),
+        // leaving the unified jendolan tab neatly accessible at the screen right edge
+        x: isCollapsed ? 52 : 0,
         opacity: 1,
       }}
       transition={{
@@ -75,44 +75,42 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
       aria-label="User Profile Quick Dock"
       className="fixed right-0 top-16 sm:top-20 z-[1000] pointer-events-auto select-none flex items-center"
     >
-      {/* Protruding Semi-Circle Tab (Jendolan) on the LEFT: 25% Scaled-Down Toggle Drawer */}
-      <button
-        type="button"
-        onClick={() => setIsCollapsed((prev) => !prev)}
-        title={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
-        aria-label={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
-        className={`flex items-center justify-center w-4.5 sm:w-5 h-7 sm:h-8 rounded-l-full ${boxBg} border-y-[1.5px] border-l-[1.5px] border-r-0 ${boxBorder} ${
-          isMapDark
-            ? "shadow-[inset_1px_1px_1.5px_rgba(255,255,255,0.2),-3px_2px_8px_rgba(0,0,0,0.6)]"
-            : "shadow-[inset_1px_1px_1.5px_rgba(255,255,255,0.95),-3px_2px_8px_rgba(0,0,0,0.1)]"
-        } cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group z-20 -mr-[1.5px]`}
-      >
-        <GenericProfileIcon
-          isMapDark={isMapDark}
-          className="transition-transform group-hover:scale-110"
-        />
-      </button>
-
-      {/* Main Profile Card: Houses 1 Beveled Sunken Crater Circle matching the toolbar slots */}
+      {/* Unified One-Shape Shell: wraps both the Jendolan tab and the Avatar Card with ZERO dividing seam */}
       <div
-        className={`relative flex items-center justify-center rounded-l-xl ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} p-1.5 z-10`}
+        className={`flex items-center ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} rounded-l-2xl overflow-hidden`}
       >
-        {/* Softened 2D beveled sunken crater circle plate matching toolbar slots */}
-        <div
-          className={`relative w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-full p-[2px] ${
-            isMapDark
-              ? "bg-[#161926] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)]"
-              : "bg-[#f1f3f5] border border-black/15 shadow-[inset_1px_1.5px_2.5px_rgba(0,0,0,0.18),inset_-1px_-1px_1.5px_rgba(255,255,255,0.9)]"
-          } flex items-center justify-center transition-transform hover:scale-105`}
+        {/* Protruding Tab (Jendolan) on the LEFT: diameter matching the box height, zero divider */}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed((prev) => !prev)}
+          title={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
+          aria-label={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
+          className={`flex items-center justify-center w-7 sm:w-8 self-stretch ${boxBg} hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors outline-none group border-none`}
         >
-          <HudProfileAvatar
+          <GenericProfileIcon
             isMapDark={isMapDark}
-            currentUser={currentUser}
-            avatarUrl={avatarUrl}
-            presence={presence}
-            isStatusBusy={isStatusBusy}
-            onOpenOwnProfile={onOpenOwnProfile}
+            className="transition-transform group-hover:scale-110"
           />
+        </button>
+
+        {/* Profile Avatar Card: flush against tab, ZERO internal border */}
+        <div className="p-1 sm:p-1.5 flex items-center justify-center">
+          <div
+            className={`relative w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-full p-[2px] ${
+              isMapDark
+                ? "bg-[#161926] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)]"
+                : "bg-[#f1f3f5] border border-black/15 shadow-[inset_1px_1.5px_2.5px_rgba(0,0,0,0.18),inset_-1px_-1px_1.5px_rgba(255,255,255,0.9)]"
+            } flex items-center justify-center transition-transform hover:scale-105`}
+          >
+            <HudProfileAvatar
+              isMapDark={isMapDark}
+              currentUser={currentUser}
+              avatarUrl={avatarUrl}
+              presence={presence}
+              isStatusBusy={isStatusBusy}
+              onOpenOwnProfile={onOpenOwnProfile}
+            />
+          </div>
         </div>
       </div>
     </motion.aside>

@@ -229,43 +229,65 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
         </div>
       </div>
 
-      {/* Row 2 (When Broadcast is Active): Exactly 1 small box on FAR LEFT, zero excess rectangle */}
+      {/* Row 2 (When Broadcast is Active): Unified Group Shell (Broadcast Slot + Wrench Tab) */}
       {hasActiveOwnBroadcast && (
         <div
-          className={`mt-1 p-1 rounded-xl ${boxBg} border-[1.5px] ${boxBorder} ${boxShadow} self-start`}
+          className={`mt-1 flex flex-col items-center ${boxBg} border-[1.5px] ${boxBorder} ${boxShadow} rounded-2xl overflow-hidden self-start`}
         >
-          <div className={craterSlotClass}>
-            <HudTopDynamicBroadcast
-              hasActiveOwnBroadcast={hasActiveOwnBroadcast}
-              onTopDynamicBroadcastClick={onTopDynamicBroadcastClick}
-              setActionMenuOpen={setActionMenuOpen}
-              setMenuOpen={setMenuOpen}
-              isMapDark={isMapDark}
-            />
+          {/* Top: Broadcast Crater Slot */}
+          <div className="p-1">
+            <div className={craterSlotClass}>
+              <HudTopDynamicBroadcast
+                hasActiveOwnBroadcast={hasActiveOwnBroadcast}
+                onTopDynamicBroadcastClick={onTopDynamicBroadcastClick}
+                setActionMenuOpen={setActionMenuOpen}
+                setMenuOpen={setMenuOpen}
+                isMapDark={isMapDark}
+              />
+            </div>
           </div>
+
+          {/* Bottom: Tool Tab Protrusion - exact same width (w-full), ZERO dividing line */}
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            title={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
+            aria-label={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
+            className={`flex items-center justify-center w-full h-4 sm:h-4.5 ${boxBg} hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors outline-none group pb-0.5 border-none`}
+          >
+            <ToolPerkakasIcon
+              isMapDark={isMapDark}
+              className="transition-transform group-hover:scale-110"
+            />
+          </button>
         </div>
       )}
 
-      {/* Tool Perkakas Tab: Attached to bottom */}
-      {/* If broadcast active: hangs under the 1 small broadcast box on far left; otherwise centered */}
-      <div className={hasActiveOwnBroadcast ? "self-start pl-1" : "self-center"}>
-        <button
-          type="button"
-          onClick={toggleCollapse}
-          title={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
-          aria-label={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
-          className={`flex items-center justify-center w-8 h-3.5 sm:w-8.5 sm:h-4 rounded-b-full ${boxBg} border-b-[1.5px] border-x-[1.5px] border-t-0 ${boxBorder} ${
-            isMapDark
-              ? "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_6px_rgba(0,0,0,0.6)]"
-              : "shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.1)]"
-          } cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group -mt-[1.5px]`}
-        >
-          <ToolPerkakasIcon
-            isMapDark={isMapDark}
-            className="transition-transform group-hover:scale-110"
-          />
-        </button>
-      </div>
+      {/* Tool Perkakas Tab: Attached to bottom when NO broadcast is active */}
+      {!hasActiveOwnBroadcast && (
+        <div className="relative self-center -mt-[1.5px]">
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            title={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
+            aria-label={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
+            className={`relative flex items-center justify-center w-8 h-4 sm:w-8.5 sm:h-4.5 rounded-b-full ${boxBg} border-b-[1.5px] border-x-[1.5px] border-t-0 ${boxBorder} ${
+              isMapDark
+                ? "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_6px_rgba(0,0,0,0.6)]"
+                : "shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.1)]"
+            } cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group pt-0.5`}
+          >
+            {/* Seamless bridge mask: precisely eliminates the gray dividing line of the top box border */}
+            <span
+              className={`absolute -top-[1.5px] left-0 right-0 h-[2.5px] ${boxBg} pointer-events-none z-30`}
+            />
+            <ToolPerkakasIcon
+              isMapDark={isMapDark}
+              className="relative z-40 transition-transform group-hover:scale-110"
+            />
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 });

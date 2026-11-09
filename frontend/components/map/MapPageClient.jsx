@@ -110,9 +110,12 @@ export default function MapPage() {
       // Fade in gracefully directly to map page is ONLY for change password via map page
       const params = new URLSearchParams(window.location.search);
       const isPasswordResetReturn =
-        (params.get("from") === "password_reset" || params.get("skip_intro") === "true") &&
-        (sessionStorage.getItem("kalceria_password_reset_from_map") === "true" ||
-         localStorage.getItem("kalceria_password_reset_from_map") === "true");
+        params.get("from") === "password_reset" ||
+        params.get("skip_intro") === "true" ||
+        sessionStorage.getItem("kalceria_password_reset_from_map") === "true" ||
+        localStorage.getItem("kalceria_password_reset_from_map") === "true" ||
+        sessionStorage.getItem("kalceria_skip_map_intro") === "true" ||
+        localStorage.getItem("kalceria_skip_map_intro") === "true";
 
       return Boolean(isPasswordResetReturn);
     } catch {
