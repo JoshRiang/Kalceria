@@ -32,8 +32,18 @@ yarn-error.log*
 logs/
 *.log
 
-# Testing
+# Testing & Local-Only Test Scripts (NEVER expose to public git)
 coverage/
+backend/tests/
+backend/tests/**
+frontend/tests/
+frontend/tests/**
+tests/
+tests/**
+*.test.mjs
+*.test.js
+*.spec.mjs
+*.spec.js
 
 # Local audit and guidance notes (Markdown)
 **/*[Aa][Uu][Dd][Ii][Tt]*.md

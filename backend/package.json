@@ -18,7 +18,7 @@
     "db:pull": "prisma db pull",
     "db:studio": "prisma studio",
     "test": "npm run test:api",
-    "test:api": "node --test --test-concurrency=1 tests/api.test.mjs"
+    "test:api": "node scripts/run-api-tests.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.13.0",
