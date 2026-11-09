@@ -26,6 +26,12 @@ node --test backend/tests/chat_o1_scalability_slice.test.mjs
 node --test backend/tests/chat_call_bi_devices_slice.test.mjs
 node --test backend/tests/prisma_connection_pool.test.mjs
 
+# 3b. Frontend Golden-Master Pure Modules Gate
+node --test frontend/tests/pure_modules_golden.test.mjs frontend/tests/modularity_harness.test.mjs
+
+# 3c. Modularity & Hook Conservation Gate (Ratchet Active)
+node scripts/audit/modularity-audit.mjs --check
+
 # 4. Next.js Production Build Gate
 npm --prefix frontend run build
 ```

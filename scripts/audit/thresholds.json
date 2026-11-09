@@ -4,8 +4,8 @@
     "moduleMaxLoc": 300,
     "functionMaxLoc": 80,
     "facades": {
-      "frontend/components/map/MapPageClient.jsx": 500,
-      "frontend/components/map/chat/hooks/usePersonalChatState.js": 450
+      "frontend/components/map/MapPageClient.jsx": 630,
+      "frontend/components/map/chat/hooks/usePersonalChatState.js": 420
     }
   },
   "hookConservation": {
@@ -14,6 +14,7 @@
   "tierA": {
     "frontend/components/map/MapPageClient.jsx": {
       "baselineLoc": 1632,
+      "currentLoc": 620,
       "hooks": {
         "useState": 35,
         "useEffect": 11,
@@ -22,7 +23,7 @@
         "useRef": 2,
         "useLayoutEffect": 0
       },
-      "facadeMaxLoc": 500,
+      "facadeMaxLoc": 630,
       "targetSubfolder": "frontend/components/map/mapPage",
       "preexistingFiles": [
         "useMapBlockedUsers.js"
@@ -30,6 +31,7 @@
     },
     "frontend/components/map/chat/hooks/usePersonalChatState.js": {
       "baselineLoc": 1604,
+      "currentLoc": 402,
       "hooks": {
         "useState": 20,
         "useEffect": 7,
@@ -38,21 +40,21 @@
         "useRef": 17,
         "useLayoutEffect": 0
       },
-      "facadeMaxLoc": 450,
+      "facadeMaxLoc": 420,
       "targetSubfolder": "frontend/components/map/chat/hooks/personalChat"
     }
   },
   "tierB": [
-    { "path": "backend/controllers/personalChatController.js", "baselineLoc": 673 },
-    { "path": "backend/controllers/miniEvent/miniEventHandlers.js", "baselineLoc": 654 },
-    { "path": "frontend/components/map/KalceriansPanel.jsx", "baselineLoc": 648 },
-    { "path": "frontend/components/map/chat/components/CameraCaptureModal.jsx", "baselineLoc": 637 },
-    { "path": "frontend/components/map/chat/components/ChatMediaCard.jsx", "baselineLoc": 625 },
-    { "path": "frontend/components/map/eventPopup/popupCarouselController.js", "baselineLoc": 618 },
-    { "path": "frontend/components/map/EditProfileModal.jsx", "baselineLoc": 597 },
-    { "path": "frontend/components/map/hooks/useMapChatAndNotifications.js", "baselineLoc": 563 },
-    { "path": "frontend/components/map/chat/hooks/personalCall/useCallSession.js", "baselineLoc": 557 },
-    { "path": "frontend/components/admin/dashboard/dashboard.jsx", "baselineLoc": 553 }
+    { "path": "backend/controllers/personalChatController.js", "baselineLoc": 673, "currentLoc": 23, "maxLoc": 30 },
+    { "path": "backend/controllers/miniEvent/miniEventHandlers.js", "baselineLoc": 654, "currentLoc": 28, "maxLoc": 35 },
+    { "path": "frontend/components/map/KalceriansPanel.jsx", "baselineLoc": 648, "currentLoc": 417, "maxLoc": 425 },
+    { "path": "frontend/components/map/chat/components/CameraCaptureModal.jsx", "baselineLoc": 637, "currentLoc": 323, "maxLoc": 330 },
+    { "path": "frontend/components/map/chat/components/ChatMediaCard.jsx", "baselineLoc": 625, "currentLoc": 386, "maxLoc": 395 },
+    { "path": "frontend/components/map/eventPopup/popupCarouselController.js", "baselineLoc": 618, "currentLoc": 342, "maxLoc": 350 },
+    { "path": "frontend/components/map/EditProfileModal.jsx", "baselineLoc": 597, "currentLoc": 447, "maxLoc": 455 },
+    { "path": "frontend/components/map/hooks/useMapChatAndNotifications.js", "baselineLoc": 563, "currentLoc": 407, "maxLoc": 415 },
+    { "path": "frontend/components/map/chat/hooks/personalCall/useCallSession.js", "baselineLoc": 557, "currentLoc": 439, "maxLoc": 445 },
+    { "path": "frontend/components/admin/dashboard/dashboard.jsx", "baselineLoc": 553, "currentLoc": 421, "maxLoc": 430 }
   ],
   "tierCExcluded": {
     "description": "Tier C files (300-499 lines) must NOT be modified in this program.",

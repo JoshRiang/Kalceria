@@ -98,6 +98,14 @@ Sebelum mengeluarkan kata "sudah" atau melapor ke user, jalankan pipeline valida
    node --test backend/tests/ingress_security_defense.test.mjs backend/tests/event_media_clips.test.mjs backend/tests/google_oauth_and_city_resolution.test.mjs backend/tests/service_location_validation.test.mjs
    ```
    *(Wajib 100% pass: ingress defense, spatial validation, media clips, oauth, event store).*
+   - **Gate 3b (Frontend Golden-Master Gate)**:
+     ```powershell
+     node --test frontend/tests/pure_modules_golden.test.mjs frontend/tests/modularity_harness.test.mjs
+     ```
+   - **Gate 3c (Modularity & Conservation Ratchet Gate)**:
+     ```powershell
+     node scripts/audit/modularity-audit.mjs --check
+     ```
 4. **Next.js Production Build Gate**:
    ```powershell
    npm --prefix frontend run build

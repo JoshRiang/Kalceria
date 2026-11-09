@@ -276,16 +276,35 @@ export function runAuditCheck() {
     }
   }
 
-  // Check 3: Tier B file existence and integrity
+  // Check 3: Tier A Facade Ratchet Limits (K1)
+  for (const [relPath, data] of Object.entries(tierAResults)) {
+    const config = thresholds.tierA[relPath];
+    if (config?.facadeMaxLoc && data.facadeLoc > config.facadeMaxLoc) {
+      errors.push(
+        `[K1 Ratchet Violation] ${relPath} exceeds facade max LOC ${config.facadeMaxLoc} (current: ${data.facadeLoc})`
+      );
+    }
+  }
+
+  // Check 4: Tier B Ratchet Limits & File Existence (K1)
+  const tierBResults = [];
   for (const item of thresholds.tierB) {
     const absPath = path.join(ROOT_DIR, item.path);
     if (!fs.existsSync(absPath)) {
       errors.push(`[Tier B Integrity] File missing: ${item.path}`);
+      continue;
+    }
+    const currentLoc = countFileLines(absPath);
+    tierBResults.push({ path: item.path, baselineLoc: item.baselineLoc, currentLoc, maxLoc: item.maxLoc });
+    if (item.maxLoc && currentLoc > item.maxLoc) {
+      errors.push(
+        `[K1 Ratchet Violation] ${item.path} exceeds ratchet limit ${item.maxLoc} (current: ${currentLoc}, baseline: ${item.baselineLoc})`
+      );
     }
   }
 
   const pass = errors.length === 0;
-  return { pass, errors, warnings, tierAResults };
+  return { pass, errors, warnings, tierAResults, tierBResults };
 }
 
 /**
@@ -341,7 +360,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     process.exit(0);
   } else if (args.includes('--check')) {
     console.log('=== Running Kalceria Modularity Audit Gate 3c ===\n');
-    const { pass, errors, warnings, tierAResults } = runAuditCheck();
+    const { pass, errors, warnings, tierAResults, tierBResults } = runAuditCheck();
 
     for (const [relPath, data] of Object.entries(tierAResults)) {
       console.log(`[Tier A] ${relPath}`);
@@ -353,6 +372,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
       }
       console.log('');
     }
+
+    console.log('=== Tier B Ratchet Census ===');
+    for (const item of tierBResults || []) {
+      const reduction = Math.round(((item.baselineLoc - item.currentLoc) / item.baselineLoc) * 100);
+      console.log(`  [Tier B] ${item.path}: ${item.currentLoc} LOC (baseline: ${item.baselineLoc}, ratchet ceiling: ${item.maxLoc}, -${reduction}%)`);
+    }
+    console.log('');
 
     if (warnings.length > 0) {
       console.log('WARNINGS:');

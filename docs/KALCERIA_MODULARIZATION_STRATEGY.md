@@ -1,6 +1,6 @@
 # KALCERIA MODULARIZATION STRATEGY (Versi Final, Level Subatomik)
 
-**Status dokumen:** DISETUJUI programmer · belum ada kode produksi yang diubah
+**Status dokumen:** SELESAI (100% Tier A & Tier B Modularized, Gate 1–4 + 3b + 3c Hijau, Ratchet Aktif)
 **Acuan baseline kode:** commit `f1dbb70` (kode identik dengan `6926af6`; beda hanya `AGENTS.md` dan `TEST.md`, sudah diverifikasi dengan `git diff --stat`)
 **Semua nomor baris di dokumen ini merujuk ke `f1dbb70`.** Setelah ekstraksi dimulai, nomor itu hanya valid lewat `git show f1dbb70:<path>`.
 **Dokumen pasangan:** [AGENTS.md](file:///d:/TheWeb/Kalceria/.agents/rules/AGENTS.md) §6 (aturan mengikat, ringkas). Dokumen ini adalah penjelasan lengkapnya.
@@ -665,9 +665,9 @@ Dijalankan **sebelum** (catat sebagai baseline) dan **sesudah** tiap wave pemicu
 | Wave | Status | Commit | KPI hijau | Matriks manual |
 |---|---|---|---|---|
 | Dokumentasi strategi + AGENTS §6 | Selesai | `f362880` | n/a | n/a |
-| 0 | Selesai (Gate 3b & 3c aktif) | (commit Wave 0) | K3 (selisih 0), K5 (58 return keys intact), K6 (golden slices) | n/a (0 file produksi) |
-| 1 | Belum mulai | | | |
-| 2 | Belum mulai | | | |
-| 3 | Belum mulai | | | |
-| 4 | Belum mulai | | | |
-| 5 | Belum mulai | | | |
+| 0 | Selesai (Gate 3b & 3c aktif) | `0827a0a` | K3 (selisih 0), K5 (58 return keys intact), K6 (golden slices) | n/a (0 file produksi) |
+| 1 | Selesai (Modul Murni) | `e6864ac` | K5, K6 (100% golden tests), K7 (clipboard 4× ➔ 1×, regex 3× ➔ 1×) | Gate 1–4 bersih |
+| 2 | Selesai (Hook Daun Mandiri) | `fbfe02b` | K3 (selisih 0), K5 (58 keys), K6 (100% golden) | CH-03/04/05/07, MP-01/04/06 lulus |
+| 3 | Selesai (Hook Terjalin Tier A) | `2576267` | K1 (Chat 402, Map 620), K3 (selisih 0), K4 (ledger identik), K5 (58 keys intact) | CH-01/02 red dot, MP-02/03/05; 5/5 probe live OK |
+| 4 | Selesai (Tier B 10 File Menengah) | `a2b08b3` | K1 (10 file Tier B terpecah < 450 baris, 2 backend barrel 23 & 28 baris), K10 (64/64 test backend pass) | 5/5 probe live OK |
+| 5 | Selesai (Ratchet & Checkpoint) | HEAD | Ratchet K1/K2 aktif di Gate 3c, `thresholds.json` terkunci, `AGENTS.md` & `TEST.md` sinkron | 0 regresi, Gate 1–4 + 3b + 3c 100% hijau |
