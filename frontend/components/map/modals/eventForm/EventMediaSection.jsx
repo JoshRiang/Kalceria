@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { uploadBlobMedia } from "@/lib/api";
 import {
   splitMediaUrlListClient,
@@ -20,8 +20,21 @@ export function EventMediaSection({
   isOwner,
 }) {
   const fileInputRef = useRef(null);
+  const fileNamesRef = useRef({});
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadError, setUploadError] = useState("");
+
+  // Clean up in-memory blob URLs when modal unmounts to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      const urls = splitMediaUrlListClient(eventForm.mediaUrl || "");
+      urls.forEach((u) => {
+        if (u && u.startsWith("blob:")) {
+          try { URL.revokeObjectURL(u); } catch {}
+        }
+      });
+    };
+  }, []);
 
   const handleMediaUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -32,15 +45,17 @@ export function EventMediaSection({
       return;
     }
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "webp", "mp4", "webm", "mov", "m4v"].includes(ext)) {
-      setUploadError("Only .png, .jpeg, .webp, .mp4, and .webm files are allowed");
+    if (!["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"].includes(ext)) {
+      setUploadError("Hanya file gambar (.png, .jpeg, .webp) dan video (.mp4, .m4v, .mov, .webm) yang diizinkan");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    const isVideoFile = file.type.startsWith("video/") || ["mp4", "webm", "mov", "m4v"].includes(ext);
+    const isVideoFile = file.type.startsWith("video/") || ["mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"].includes(ext);
     // Instant 0ms latency local preview
     const instantObjUrl = URL.createObjectURL(file);
+    fileNamesRef.current[instantObjUrl] = file.name;
+
     setEventForm((f) => {
       const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
       const nextUrls = [...existingUrls, instantObjUrl].join(", ");
@@ -59,6 +74,11 @@ export function EventMediaSection({
       }));
       const res = await uploadBlobMedia(file, { purpose: "event-clip" });
       if (res?.url) {
+        // Revoke the temporary local preview blob URL once the uploaded permanent URL is ready
+        try { URL.revokeObjectURL(instantObjUrl); } catch {}
+        fileNamesRef.current[res.url] = file.name;
+        delete fileNamesRef.current[instantObjUrl];
+
         setEventForm((f) => {
           const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
           const nextUrls = existingUrls.map((u) => (u === instantObjUrl ? res.url : u)).join(", ");
@@ -72,7 +92,10 @@ export function EventMediaSection({
         });
       }
     } catch (err) {
-      // Revert optimistic local preview if upload permanently fails
+      // Revert optimistic local preview and revoke memory if upload permanently fails
+      try { URL.revokeObjectURL(instantObjUrl); } catch {}
+      delete fileNamesRef.current[instantObjUrl];
+
       setEventForm((f) => {
         const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
         const nextUrls = existingUrls.filter((u) => u !== instantObjUrl).join(", ");
@@ -91,6 +114,11 @@ export function EventMediaSection({
     setEventForm((f) => {
       const urls = splitMediaUrlListClient(f.mediaUrl || "");
       const removedUrl = urls[indexToRemove];
+      if (removedUrl && removedUrl.startsWith("blob:")) {
+        try { URL.revokeObjectURL(removedUrl); } catch {}
+      }
+      delete fileNamesRef.current[removedUrl];
+
       const updated = urls.filter((_, idx) => idx !== indexToRemove).join(", ");
       const nextMeta = { ...(f.mediaMetadataByUrl || {}) };
       if (removedUrl && nextMeta[removedUrl]) {
@@ -100,7 +128,45 @@ export function EventMediaSection({
     });
   };
 
+  const handleClearAll = () => {
+    parsedUrls.forEach((u) => {
+      if (u && u.startsWith("blob:")) {
+        try { URL.revokeObjectURL(u); } catch {}
+      }
+      delete fileNamesRef.current[u];
+    });
+    setEventForm((f) => ({ ...f, mediaUrl: "", mediaMetadataByUrl: {} }));
+  };
+
   const parsedUrls = splitMediaUrlListClient(eventForm.mediaUrl || "");
+
+  // Format internal blob / server URL into clean original filename
+  const getDisplayFilename = (url) => {
+    if (!url) return "";
+    if (fileNamesRef.current[url]) return fileNamesRef.current[url];
+    if (url.startsWith("blob:")) return "uploaded-media";
+    if (url.includes("/api/blob/raw")) {
+      try {
+        const inner = new URL(url, "https://kalceria.internal").searchParams.get("url") || "";
+        const parts = inner.split("/");
+        const last = parts[parts.length - 1];
+        const cleaned = last.replace(/^[0-9a-fA-F-]+_/, "").replace(/^\d+[-_]/, "");
+        return decodeURIComponent(cleaned || "media-file");
+      } catch {
+        return "uploaded-media";
+      }
+    }
+    try {
+      const u = new URL(url);
+      const name = u.pathname.split("/").pop();
+      if (name) return decodeURIComponent(name);
+    } catch {}
+    return url;
+  };
+
+  const displayFilenameText = parsedUrls.length > 0
+    ? parsedUrls.map(getDisplayFilename).join(", ")
+    : (eventForm.mediaUrl || "");
 
   return (
     <div className="flex flex-col gap-1.5 sm:gap-2">
@@ -127,7 +193,7 @@ export function EventMediaSection({
         {parsedUrls.length > 0 && (
           <button
             type="button"
-            onClick={() => setEventForm((f) => ({ ...f, mediaUrl: "", mediaMetadataByUrl: {} }))}
+            onClick={handleClearAll}
             className={`text-[10px] font-bold hover:underline cursor-pointer ${
               isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
             }`}
@@ -140,33 +206,38 @@ export function EventMediaSection({
       <div className="flex gap-2">
         <input
           type="text"
+          readOnly={parsedUrls.length > 0}
           className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all ${
             isModalDark
               ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff]"
               : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da]"
-          }`}
-          value={eventForm.mediaUrl || ""}
+          } ${parsedUrls.length > 0 ? "cursor-default select-all font-mono text-[11px]" : ""}`}
+          value={displayFilenameText}
           onChange={(e) => {
-            setEventForm((f) => ({ ...f, mediaUrl: e.target.value }));
-            setUploadError("");
+            if (parsedUrls.length === 0) {
+              setEventForm((f) => ({ ...f, mediaUrl: e.target.value }));
+              setUploadError("");
+            }
           }}
           onBlur={() => {
-            const raw = (eventForm.mediaUrl || "").trim();
-            if (raw) {
-              const check = validateAndNormalizeMediaUrlClient(raw);
-              if (!check.valid) {
-                setUploadError(check.error || "Format URL media tidak valid.");
-              } else if (check.normalized && check.normalized !== eventForm.mediaUrl) {
-                setEventForm((f) => ({ ...f, mediaUrl: check.normalized }));
+            if (parsedUrls.length === 0) {
+              const raw = (eventForm.mediaUrl || "").trim();
+              if (raw) {
+                const check = validateAndNormalizeMediaUrlClient(raw);
+                if (!check.valid) {
+                  setUploadError(check.error || "Format URL media tidak valid.");
+                } else if (check.normalized && check.normalized !== eventForm.mediaUrl) {
+                  setEventForm((f) => ({ ...f, mediaUrl: check.normalized }));
+                }
               }
             }
           }}
-          placeholder="Paste Video / GIF URL or choose file"
+          placeholder="Upload media atau tempel link..."
         />
         <input
           type="file"
           ref={fileInputRef}
-          accept=".png,.jpg,.jpeg,.webp,.mp4,.webm,.mov,.m4v,image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime"
+          accept=".png,.jpg,.jpeg,.webp,.mp4,.m4v,.mp4v,.mpg4,.mov,.3gp,.webm,image/png,image/jpeg,image/webp,video/mp4,video/x-m4v,video/mp4v-es,video/quicktime,video/3gpp,video/webm"
           className="hidden"
           onChange={handleMediaUpload}
         />

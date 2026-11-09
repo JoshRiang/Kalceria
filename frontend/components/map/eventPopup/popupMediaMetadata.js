@@ -29,11 +29,11 @@ export function inferIsVideoMediaUrl(url, metadata = null) {
   const s = String(url || "").trim();
   if (!s) return false;
   if (/^data:video\//i.test(s)) return true;
-  if (/\.(?:mp4|webm|ogg|mov|m4v)(?:$|\?|#)/i.test(s)) return true;
+  if (/\.(?:mp4|webm|ogg|mov|m4v|mp4v|mpg4|3gp)(?:$|\?|#)/i.test(s)) return true;
   if (s.includes("/api/blob/raw")) {
     try {
       const inner = new URL(s, "https://kalceria.internal").searchParams.get("url") || "";
-      if (/\.(?:mp4|webm|ogg|mov|m4v)(?:$|\?|#)/i.test(inner)) return true;
+      if (/\.(?:mp4|webm|ogg|mov|m4v|mp4v|mpg4|3gp)(?:$|\?|#)/i.test(inner)) return true;
     } catch {}
   }
   if (s.startsWith("blob:")) {

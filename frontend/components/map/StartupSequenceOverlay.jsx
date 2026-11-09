@@ -63,7 +63,7 @@ export function StartupSequenceOverlay({
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="relative z-10 w-full h-screen flex flex-col items-center justify-center pb-24 md:pb-0 md:justify-start pt-16 md:pt-20 lg:pt-24 select-none"
+            className="relative z-10 w-full h-screen flex flex-col items-center justify-start pt-12 sm:pt-16 md:pt-20 lg:pt-24 select-none"
           >
             {/* Main Title Section */}
             <motion.div

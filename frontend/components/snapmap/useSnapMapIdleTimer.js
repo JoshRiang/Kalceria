@@ -58,7 +58,7 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
           const popupWrapper = el.closest(".leaflet-popup") || el;
           popupWrapper.classList.remove("popup-shrinking");
         });
-      }, 300);
+      }, 380);
     }, delayMs);
   }, [mapRef, markerRefs]);
   resetIdleTimerRef.current = resetIdleTimer;
@@ -67,13 +67,13 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
   useEffect(() => {
     const handlePopupMouseEnter = (e) => {
       if (e.target.closest?.(".event-tactical-popup, .broadcast-tactical-popup, .broadcast-popup-box")) {
-        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+        resetIdleTimer(6000);
       }
     };
 
     const handlePopupMouseLeave = (e) => {
       if (e.target.closest?.(".event-tactical-popup, .broadcast-tactical-popup, .broadcast-popup-box")) {
-        resetIdleTimer(3000);
+        resetIdleTimer(2500);
       }
     };
 
@@ -85,7 +85,7 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
     };
 
     const handleFeedEnded = () => {
-      resetIdleTimer(3500);
+      resetIdleTimer(1200);
     };
 
     const handleFeedInteraction = () => {

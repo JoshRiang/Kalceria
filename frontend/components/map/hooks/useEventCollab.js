@@ -301,7 +301,7 @@ export function useEventCollab({ events, setEvents, setNotice }) {
     (eventId) => {
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = ".png,.jpg,.jpeg,.webp,.mp4,.webm,image/png,image/jpeg,image/webp,video/mp4,video/webm";
+      input.accept = ".png,.jpg,.jpeg,.webp,.mp4,.m4v,.mp4v,.mpg4,.mov,.3gp,.webm,image/png,image/jpeg,image/webp,video/mp4,video/x-m4v,video/mp4v-es,video/quicktime,video/3gpp,video/webm";
       input.onchange = async (e) => {
         const file = e.target?.files?.[0];
         if (!file) return;
@@ -313,7 +313,7 @@ export function useEventCollab({ events, setEvents, setNotice }) {
           return;
         }
         const ext = (file.name.split(".").pop() || "").toLowerCase();
-        if (!["png", "jpg", "jpeg", "webp", "mp4", "webm"].includes(ext)) {
+        if (!["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"].includes(ext)) {
           setCollaboratorUploadState({
             status: "error",
             errorMessage: "Upload media Gagal/Ukuran Media melebihi 10 MB",

@@ -21,6 +21,10 @@ export async function POST(req: NextRequest) {
       "image/webp": "webp",
       "image/gif": "gif",
       "video/mp4": "mp4",
+      "video/x-m4v": "m4v",
+      "video/mp4v-es": "mp4",
+      "video/quicktime": "mov",
+      "video/3gpp": "3gp",
       "video/webm": "webm",
       "audio/webm": "webm",
       "audio/mp4": "m4a",
@@ -39,7 +43,11 @@ export async function POST(req: NextRequest) {
       filename = `upload-${Date.now()}.${ext}`;
     }
 
-    const allowedExts = ["png", "jpg", "jpeg", "webp", "gif", "mp4", "webm", "m4a", "mp3", "ogg", "wav"];
+    const allowedExts = [
+      "png", "jpg", "jpeg", "webp", "gif",
+      "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm",
+      "m4a", "mp3", "ogg", "wav",
+    ];
     if (!allowedExts.includes(ext)) {
       return NextResponse.json(
         { error: "Security enforcement: Only standard image, audio, and video files are allowed" },
