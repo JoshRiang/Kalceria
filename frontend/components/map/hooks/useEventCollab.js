@@ -39,6 +39,7 @@ export function useEventCollab({ events, setEvents, setNotice }) {
   const [showCancelRequestModal, setShowCancelRequestModal] = useState(false);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [viewingRequestsEventId, setViewingRequestsEventId] = useState(null);
+  const [collaboratorUploadState, setCollaboratorUploadState] = useState(null);
 
   const persistRequestedEventId = useCallback((nextId) => {
     setRequestedEventId(nextId || null);
@@ -100,6 +101,22 @@ export function useEventCollab({ events, setEvents, setNotice }) {
         }
         persistRequestedEventId(res?.requestedEventId || eventId);
         setNotice?.(`Collab requested for ${ev?.title || "event"}!`);
+        try {
+          if (typeof BroadcastChannel !== "undefined") {
+            const bc = new BroadcastChannel("kalceria_realtime_channel");
+            bc.postMessage({
+              type: "envelope_request",
+              payload: {
+                eventId,
+                request: res?.request || {
+                  id: `req_${Date.now()}`,
+                  createdAt: new Date().toISOString(),
+                },
+              },
+            });
+            bc.close();
+          }
+        } catch {}
       } catch (err) {
         const serverReqId = err?.response?.data?.requestedEventId || null;
         persistRequestedEventId(serverReqId);
@@ -289,15 +306,21 @@ export function useEventCollab({ events, setEvents, setNotice }) {
         const file = e.target?.files?.[0];
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) {
-          setNotice?.("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+          setCollaboratorUploadState({
+            status: "error",
+            errorMessage: "Upload media Gagal/Ukuran Media melebihi 10 MB",
+          });
           return;
         }
         const ext = (file.name.split(".").pop() || "").toLowerCase();
         if (!["png", "jpg", "jpeg", "webp", "mp4", "webm"].includes(ext)) {
-          setNotice?.("Only .png, .jpeg, .webp, .mp4, and .webm files are allowed");
+          setCollaboratorUploadState({
+            status: "error",
+            errorMessage: "Upload media Gagal/Ukuran Media melebihi 10 MB",
+          });
           return;
         }
-        setNotice?.("Uploading media as collaborator...");
+        setCollaboratorUploadState({ status: "uploading" });
         try {
           const meta = await probeMediaFileMetadata(file).catch(() => ({
             width: null,
@@ -306,7 +329,10 @@ export function useEventCollab({ events, setEvents, setNotice }) {
           }));
           const uploadRes = await uploadBlobMedia(file, { purpose: "event-clip" });
           if (!uploadRes?.url) {
-            setNotice?.(uploadRes?.error || "Upload failed");
+            setCollaboratorUploadState({
+              status: "error",
+              errorMessage: uploadRes?.error || "Upload media Gagal/Ukuran Media melebihi 10 MB",
+            });
             return;
           }
           const addRes = await addEventMedia(eventId, {
@@ -320,10 +346,22 @@ export function useEventCollab({ events, setEvents, setNotice }) {
             setEvents((prev) =>
               prev.map((ev) => (String(ev.id) === String(eventId) ? hydrated : ev))
             );
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("kalceria:refresh-events-request", {
+                  detail: { eventId, updatedEvent: hydrated },
+                })
+              );
+            }
           }
+          // Graceful lively transition to clear overlay
+          setCollaboratorUploadState(null);
           setNotice?.("Media added to event by collaborator!");
         } catch (err) {
-          setNotice?.(err?.response?.data?.error || err?.message || "Upload error");
+          setCollaboratorUploadState({
+            status: "error",
+            errorMessage: err?.response?.data?.error || err?.message || "Upload media Gagal/Ukuran Media melebihi 10 MB",
+          });
         }
       };
       input.click();
@@ -346,6 +384,8 @@ export function useEventCollab({ events, setEvents, setNotice }) {
     setShowRequestsModal,
     viewingRequestsEventId,
     setViewingRequestsEventId,
+    collaboratorUploadState,
+    setCollaboratorUploadState,
     syncCollabStateFromServer,
     handleRequestCollab,
     handlePromptCancelRequest,

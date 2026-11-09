@@ -506,6 +506,26 @@ export async function requestMiniEventCollab(req, res, next) {
       });
     }
 
+    if (outcome.request && event.creatorId) {
+      try {
+        const creatorId = String(event.creatorId);
+        const reqNotif = {
+          type: 'collab_request',
+          eventId: id,
+          eventTitle: event.title || 'Event',
+          requestId: outcome.request.id,
+          user: outcome.request.user,
+          createdAt: outcome.request.createdAt || new Date().toISOString(),
+        };
+        const notifPipe = redis.pipeline();
+        notifPipe.lpush(`notif:events:${creatorId}`, JSON.stringify(reqNotif));
+        notifPipe.ltrim(`notif:events:${creatorId}`, 0, 19);
+        notifPipe.expire(`notif:events:${creatorId}`, 86400);
+        notifPipe.set(`chat:inbox_ver:${creatorId}`, `${Date.now()}_evreq`, 'EX', 86400);
+        await notifPipe.exec();
+      } catch {}
+    }
+
     return res.status(outcome.created ? 201 : 200).json({
       request: outcome.request,
       requestedEventId: id,
@@ -519,7 +539,29 @@ export async function cancelMiniEventCollabRequest(req, res, next) {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
+    const event = await prisma.miniEvent.findUnique({
+      where: { id },
+      select: { creatorId: true },
+    }).catch(() => null);
+
     const result = await cancelCollabRequest(id, userId);
+    if (result.cancelled && event?.creatorId) {
+      try {
+        const creatorId = String(event.creatorId);
+        const cancelNotif = {
+          type: 'collab_cancelled',
+          eventId: id,
+          userId: String(userId),
+          createdAt: new Date().toISOString(),
+        };
+        const notifPipe = redis.pipeline();
+        notifPipe.lpush(`notif:events:${creatorId}`, JSON.stringify(cancelNotif));
+        notifPipe.ltrim(`notif:events:${creatorId}`, 0, 19);
+        notifPipe.expire(`notif:events:${creatorId}`, 86400);
+        notifPipe.set(`chat:inbox_ver:${creatorId}`, `${Date.now()}_evcancel`, 'EX', 86400);
+        await notifPipe.exec();
+      } catch {}
+    }
     return res.json({
       cancelled: result.cancelled,
       requestedEventId: null,

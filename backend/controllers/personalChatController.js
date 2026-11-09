@@ -545,10 +545,12 @@ export async function getPersonalChatInboxSummary(req, res, next) {
     const pipe = redis.pipeline();
     pipe.hgetall(`chat:unread:${userId}`);
     pipe.hgetall(`chat:inbox_meta:${userId}`);
+    pipe.lrange(`notif:events:${userId}`, 0, 19);
     const pipeRes = await pipe.exec().catch(() => null);
 
     const rawUnread = unwrapPipeResult(pipeRes?.[0], {}) || {};
     const rawMeta = unwrapPipeResult(pipeRes?.[1], {}) || {};
+    const rawEventNotifs = unwrapPipeResult(pipeRes?.[2], []) || [];
 
     const peers = {};
     for (const [peerId, countStr] of Object.entries(rawUnread)) {
@@ -567,11 +569,22 @@ export async function getPersonalChatInboxSummary(req, res, next) {
       };
     }
 
+    const eventNotifications = (Array.isArray(rawEventNotifs) ? rawEventNotifs : [])
+      .map((item) => {
+        try {
+          return typeof item === 'string' ? JSON.parse(item) : item;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+
     res.json({
       ok: true,
       unchanged: false,
       ver: currentVer,
       peers,
+      eventNotifications,
     });
   } catch (err) {
     next(err);

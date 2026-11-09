@@ -14,6 +14,7 @@ import { createRuntimeSeededRandom, createSeededRandom } from "@/lib/seededRando
 import { StartupSequenceOverlay } from "@/components/map/StartupSequenceOverlay";
 import { AtmosphericBackground } from "@/components/map/AtmosphericBackground";
 import { useEventCollab } from "@/components/map/hooks/useEventCollab";
+import { CollaboratorUploadOverlay } from "@/components/map/eventPopup/CollaboratorUploadOverlay";
 import { OwnProfileDrawer } from "@/components/map/OwnProfileDrawer";
 import { EditProfileModal } from "@/components/map/EditProfileModal";
 const KalceriansPanel = dynamic(() => import("@/components/map/KalceriansPanel").then((m) => m.KalceriansPanel), { ssr: false });
@@ -80,6 +81,7 @@ export default function MapPage() {
     showCancelRequestModal, setShowCancelRequestModal,
     showRequestsModal, setShowRequestsModal,
     viewingRequestsEventId, setViewingRequestsEventId,
+    collaboratorUploadState, setCollaboratorUploadState,
     syncCollabStateFromServer,
     handleRequestCollab, handlePromptCancelRequest,
     handleConfirmCancelRequest, handleOpenRequests,
@@ -364,6 +366,29 @@ export default function MapPage() {
       markOffline();
     };
   }, [currentUser?.id]);
+
+  // Instant Event refresh upon collab request or media upload
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleRefresh = (e) => {
+      const { updatedEvent } = e?.detail || {};
+      if (updatedEvent?.id) {
+        setEvents((prev) =>
+          prev.map((ev) => (String(ev.id) === String(updatedEvent.id) ? updatedEvent : ev))
+        );
+      } else {
+        fetchMiniEventsWithMeta().then((res) => {
+          if (res?.events) {
+            const merged = mergeEvents(res.events);
+            setEvents(merged);
+            syncCollabStateFromServer(merged, res.requestedEventId ?? null);
+          }
+        }).catch(() => {});
+      }
+    };
+    window.addEventListener("kalceria:refresh-events-request", handleRefresh);
+    return () => window.removeEventListener("kalceria:refresh-events-request", handleRefresh);
+  }, [setEvents, syncCollabStateFromServer]);
 
   // fetch map users + kalcerians (poll every 10s)
   useEffect(() => {
@@ -1542,6 +1567,11 @@ export default function MapPage() {
               setShowEditProfileModal(false);
               setShowDeleteAccountModal(true);
             }}
+          />
+
+          <CollaboratorUploadOverlay
+            uploadState={collaboratorUploadState}
+            onDismiss={() => setCollaboratorUploadState(null)}
           />
         </>
       )}

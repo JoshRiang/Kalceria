@@ -21,6 +21,7 @@ export function useInboxSummarySync({
     let timerId = null;
     let lastVer = "";
     let isFirstSync = true;
+    const seenEventNotifIds = new Set();
 
     const syncInboxSummary = async () => {
       if (!alive) return;
@@ -105,6 +106,46 @@ export function useInboxSummarySync({
             return prev;
           });
 
+          // Process real-time event collaboration notifications from Redis pipeline
+          if (Array.isArray(res.eventNotifications) && res.eventNotifications.length > 0) {
+            for (const notif of res.eventNotifications) {
+              if (!notif) continue;
+              if (notif.type === "collab_request" && notif.requestId) {
+                if (!seenEventNotifIds.has(notif.requestId)) {
+                  seenEventNotifIds.add(notif.requestId);
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(
+                      new CustomEvent("kalceria:incoming-envelope-request", {
+                        detail: {
+                          eventId: notif.eventId,
+                          request: {
+                            id: notif.requestId,
+                            user: notif.user,
+                            message: notif.message || "Wants to collaborate on this event",
+                            createdAt: notif.createdAt,
+                          },
+                        },
+                      })
+                    );
+                    window.dispatchEvent(
+                      new CustomEvent("kalceria:refresh-events-request", {
+                        detail: { eventId: notif.eventId },
+                      })
+                    );
+                  }
+                }
+              } else if (notif.type === "collab_cancelled") {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(
+                    new CustomEvent("kalceria:refresh-events-request", {
+                      detail: { eventId: notif.eventId },
+                    })
+                  );
+                }
+              }
+            }
+          }
+
           isFirstSync = false;
 
           // Trigger notification chime & roll-to-top highlight for genuinely new incoming messages (silent when offline)
@@ -133,7 +174,7 @@ export function useInboxSummarySync({
 
       if (alive) {
         const isHidden = typeof document !== "undefined" && document.hidden;
-        timerId = setTimeout(syncInboxSummary, isHidden ? 8000 : 1800);
+        timerId = setTimeout(syncInboxSummary, isHidden ? 6000 : 450);
       }
     };
 
@@ -148,11 +189,30 @@ export function useInboxSummarySync({
     document.addEventListener("visibilitychange", onWake);
     window.addEventListener("focus", onWake);
 
+    // BroadcastChannel listener to trigger instant 0ms inbox sync upon peer events
+    let bc = null;
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        bc = new BroadcastChannel("kalceria_realtime_channel");
+        bc.onmessage = () => {
+          if (alive) {
+            if (timerId) clearTimeout(timerId);
+            syncInboxSummary();
+          }
+        };
+      }
+    } catch {}
+
     return () => {
       alive = false;
       if (timerId) clearTimeout(timerId);
       document.removeEventListener("visibilitychange", onWake);
       window.removeEventListener("focus", onWake);
+      if (bc) {
+        try {
+          bc.close();
+        } catch {}
+      }
     };
   }, [currentUser?.id, blockedUserIds, mutedUserIds, isSelfOfflineRef, setPersonalChatMap, setRecentlyMessagedUserIds, highlightTimersRef]);
 }

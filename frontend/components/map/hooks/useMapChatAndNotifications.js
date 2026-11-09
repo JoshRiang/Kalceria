@@ -424,6 +424,23 @@ export function useMapChatAndNotifications({
       receiveEnvelopeNotification({ eventId, request });
     };
 
+    let bc = null;
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        bc = new BroadcastChannel("kalceria_realtime_channel");
+        bc.onmessage = (ev) => {
+          const { type, payload } = ev.data || {};
+          if (type === "personal_chat") {
+            receivePersonalChatMessage(payload || {});
+          } else if (type === "envelope_request") {
+            receiveEnvelopeNotification(payload || {});
+          } else if (type === "event_group_chat") {
+            receiveEventGroupChatMessage(payload || {});
+          }
+        };
+      }
+    } catch {}
+
     return () => {
       window.removeEventListener("kalceria:incoming-personal-chat", onPersonalChat);
       window.removeEventListener("kalceria:incoming-event-chat", onEventChat);
@@ -431,6 +448,11 @@ export function useMapChatAndNotifications({
       delete window.__kalceriaTriggerPersonalChat;
       delete window.__kalceriaTriggerEventGroupChat;
       delete window.__kalceriaTriggerEnvelopeRequest;
+      if (bc) {
+        try {
+          bc.close();
+        } catch {}
+      }
     };
   }, [receivePersonalChatMessage, receiveEventGroupChatMessage, receiveEnvelopeNotification]);
 
