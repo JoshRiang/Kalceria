@@ -34,6 +34,15 @@ import {
   useMapChatAndNotifications,
   doesEventBelongToUser,
 } from "@/components/map/hooks/useMapChatAndNotifications";
+import { buildVisibleMapUsers, buildVisibleEvents } from "./mapPage/mapEntitiesProjection";
+import { buildSidebarKalcerians } from "./mapPage/sidebarKalceriansProjection";
+import { parseEventDesc } from "./mapPage/eventDescCodec";
+import { buildMiniEventPayload } from "./mapPage/miniEventPayload";
+import {
+  patchUserCollection,
+  patchEventCollectionForUser,
+  buildSyncedProfilePatch,
+} from "./mapPage/profilePatch";
 import api, {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents, fetchMiniEventsWithMeta,
   postBroadcast, putBroadcast, delBroadcast, postLocation, patchVisibility,
@@ -556,97 +565,14 @@ export default function MapPage() {
 
   // derived: ONLY online & live-location-enabled users with real finite coordinates render on the map (zero mock coordinates, zero offline avatars)
   const visibleMapUsers = useMemo(() => {
-    const mergedMap = new Map();
-
-    (mapUsersData || []).forEach((u) => {
-      if (!u?.id || blockedUserIds.includes(u.id)) return;
-      if (u.isOnline === false || u.allowLiveLocation === false) return;
-      if (!hasValidCoordinates(u.lat, u.lng)) return;
-      const lat = Number(u.lat);
-      const lng = Number(u.lng);
-      mergedMap.set(String(u.id), {
-        ...u,
-        displayName: u.displayName || u.name || u.nickname || "Kalcerian",
-        nickname: u.nickname || u.name || "Kalcerian",
-        profilePicture: resolvePersistentAvatarUrl(u),
-        isOnline: true,
-        allowLiveLocation: true,
-        lat,
-        lng,
-      });
-    });
-
-    (kalcerians || []).forEach((u) => {
-      if (!u?.id || blockedUserIds.includes(u.id)) return;
-      const key = String(u.id);
-      const existing = mergedMap.get(key);
-      // Strictly skip offline users from appearing on the map
-      if (!u.isOnline || u.allowLiveLocation === false) {
-        mergedMap.delete(key);
-        return;
-      }
-      const rawLat = existing ? existing.lat : u.lat;
-      const rawLng = existing ? existing.lng : u.lng;
-      if (!hasValidCoordinates(rawLat, rawLng)) return;
-      const lat = Number(rawLat);
-      const lng = Number(rawLng);
-      mergedMap.set(key, {
-        ...(existing || {}),
-        ...u,
-        displayName: u.displayName || existing?.displayName || u.name || u.nickname || "Kalcerian",
-        nickname: u.nickname || existing?.nickname || u.name || "Kalcerian",
-        profilePicture: resolvePersistentAvatarUrl(u),
-        isOnline: true,
-        allowLiveLocation: true,
-        lat,
-        lng,
-      });
-    });
-
-    if (currentUser?.id) {
-      const selfKey = String(currentUser.id);
-      if (presence === "online") {
-        const existingSelf = mergedMap.get(selfKey);
-        let selfCoords = null;
-        if (existingSelf && hasValidCoordinates(existingSelf.lat, existingSelf.lng)) {
-          selfCoords = { lat: existingSelf.lat, lng: existingSelf.lng };
-        } else if (selfLiveCoords && hasValidCoordinates(selfLiveCoords.lat, selfLiveCoords.lng)) {
-          selfCoords = { lat: selfLiveCoords.lat, lng: selfLiveCoords.lng };
-        } else if (hasValidCoordinates(currentUser.domicileLat, currentUser.domicileLng)) {
-          selfCoords = {
-            lat: Number(currentUser.domicileLat),
-            lng: Number(currentUser.domicileLng),
-          };
-        }
-
-        if (selfCoords) {
-          mergedMap.set(selfKey, {
-            ...(existingSelf || {}),
-            ...currentUser,
-            displayName: currentUser.displayName || currentUser.name || currentUser.nickname || "Kalcerian",
-            nickname: currentUser.nickname || currentUser.name || "Kalcerian",
-            profilePicture: resolvePersistentAvatarUrl(currentUser),
-            isOnline: true,
-            allowLiveLocation: true,
-            lat: selfCoords.lat,
-            lng: selfCoords.lng,
-          });
-        } else {
-          mergedMap.delete(selfKey);
-        }
-      } else {
-        mergedMap.delete(selfKey);
-      }
-    }
-
-    return Array.from(mergedMap.values());
+    return buildVisibleMapUsers(
+      { mapUsersData, kalcerians, currentUser, selfLiveCoords, presence, blockedUserIds },
+      { hasValidCoordinates, resolvePersistentAvatarUrl }
+    );
   }, [mapUsersData, kalcerians, currentUser, selfLiveCoords, presence, blockedUserIds]);
 
   const visibleEvents = useMemo(() => {
-    const now = Date.now();
-    return (events || [])
-      .filter((e) => !blockedUserIds.includes(e.creator?.id))
-      .filter((e) => !e.expiresAt || new Date(e.expiresAt).getTime() > now);
+    return buildVisibleEvents(events, blockedUserIds);
   }, [events, blockedUserIds]);
 
   // Handlers
@@ -732,133 +658,10 @@ export default function MapPage() {
 
   // derived: kalcerians for the sidebar (only real registered users, strictly omitting dummy mock profiles and admin test credentials)
   const sidebarKalcerians = useMemo(() => {
-    const map = new Map();
-
-    const isExcludedUser = (u) => {
-      if (!u) return true;
-      const idStr = String(u.id || "");
-      if (idStr.startsWith("mock_")) return true;
-      // Filter out self so current logged-in user never appears in "Find other Kalcerians" scroll bar
-      if (currentUser?.id && idStr === String(currentUser.id)) return true;
-      const email = String(u.email || "").toLowerCase();
-      if (currentUser?.email && email && email === String(currentUser.email).toLowerCase()) return true;
-      if (email.startsWith("admin") || email.includes("laptop_tester") || email.endsWith("@kalceria.id")) return true;
-      if (u.role === "ADMIN") return true;
-      const name = String(u.name || "").trim();
-      const nick = String(u.nickname || "").trim();
-      if (["Otniel", "Josh"].includes(name) || ["Otniel", "Josh"].includes(nick)) return true;
-      if (name.toLowerCase() === "otniel" || name.toLowerCase() === "josh") return true;
-      if (name.toLowerCase() === "reinathan" && (!nick || nick.toLowerCase() === "reinathan")) return true;
-      return false;
-    };
-
-    // 1. Add registered kalcerians (real verified users from database)
-    (kalcerians || []).forEach((u) => {
-      if (!u.id || isExcludedUser(u)) return;
-      map.set(String(u.id), {
-        id: u.id,
-        name: u.name || u.nickname || "Kalcerian",
-        displayName: u.displayName || u.name || u.nickname || "Kalcerian",
-        nickname: u.nickname || u.name || "Kalcerian",
-        profilePicture: u.profilePicture || null,
-        isOnline: Boolean(u.isOnline && u.allowLiveLocation !== false),
-        broadcast: u.broadcast || null,
-        lat: u.lat,
-        lng: u.lng,
-        coverType: u.coverType || null,
-        coverImage: u.coverImage || null,
-        socialPlatform: u.socialPlatform || null,
-        socialLink: u.socialLink || null,
-        instagram: u.instagram || null,
-        whatsapp: u.whatsapp || null,
-        phone: u.phone || null,
-        reason: u.reason || null,
-        createdAt: u.createdAt || null,
-      });
-    });
-
-    // 2. Attach any event STRICTLY created by that exact user (never by shared name and never self's event)
-    (events || []).forEach((ev) => {
-      if (!ev || ev.id === "own" || !ev.creator || isExcludedUser(ev.creator)) return;
-      const creatorId = ev.creator?.id || ev.creatorId;
-      if (!creatorId) return;
-      const creatorKey = String(creatorId);
-      if (currentUser?.id && creatorKey === String(currentUser.id)) return;
-
-      if (map.has(creatorKey)) {
-        const existing = map.get(creatorKey);
-        if (doesEventBelongToUser(ev, existing, currentUser?.id)) {
-          existing.event = ev;
-        }
-      } else if (doesEventBelongToUser(ev, ev.creator, currentUser?.id)) {
-        map.set(creatorKey, {
-          id: creatorId,
-          name: ev.creator.name || ev.creator.nickname || "Kalcerian",
-          displayName: ev.creator.displayName || ev.creator.name || ev.creator.nickname || "Kalcerian",
-          nickname: ev.creator.nickname || ev.creator.name || "Kalcerian",
-          profilePicture: ev.creator.profilePicture || null,
-          isOnline: Boolean(ev.creator.isOnline && ev.creator.allowLiveLocation !== false),
-          broadcast: ev.creator.broadcast || null,
-          lat: ev.creator.isOnline ? ev.lat : null,
-          lng: ev.creator.isOnline ? ev.lng : null,
-          event: ev,
-          coverType: ev.creator.coverType || null,
-          coverImage: ev.creator.coverImage || null,
-          socialPlatform: ev.creator.socialPlatform || null,
-          socialLink: ev.creator.socialLink || null,
-          instagram: ev.creator.instagram || null,
-          whatsapp: ev.creator.whatsapp || null,
-          phone: ev.creator.phone || null,
-          reason: ev.creator.reason || null,
-          createdAt: ev.creator.createdAt || null,
-        });
-      }
-    });
-
-    // 3. Ensure current logged-in user is strictly excluded from "Find other Kalcerians" sidebar list
-    if (currentUser?.id) {
-      map.delete(String(currentUser.id));
-    }
-
-    let list = Array.from(map.values());
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (u) =>
-          u.name.toLowerCase().includes(q) ||
-          (u.nickname && u.nickname.toLowerCase().includes(q)) ||
-          (u.event && u.event.title.toLowerCase().includes(q)),
-      );
-    }
-    // sort:
-    // 1. Unread incoming personal chat notifications (positions 1..n, sorted by newest message timestamp)
-    // 2. Favourites next (position n + 1 onwards, or top if n === 0)
-    // 3. Recent personal chat history
-    // 4. Event creators & online first, then alphabetical
-    return list.sort((a, b) => {
-      const aHasNotif = Boolean((personalChatMap?.[a.id]?.unreadCount || 0) > 0);
-      const bHasNotif = Boolean((personalChatMap?.[b.id]?.unreadCount || 0) > 0);
-      if (aHasNotif !== bHasNotif) return aHasNotif ? -1 : 1;
-      if (aHasNotif && bHasNotif) {
-        const aTime = Number(personalChatMap?.[a.id]?.lastMessageAt) || 0;
-        const bTime = Number(personalChatMap?.[b.id]?.lastMessageAt) || 0;
-        if (aTime !== bTime) return bTime - aTime;
-      }
-
-      const aFav = favouriteUserIds.includes(String(a.id));
-      const bFav = favouriteUserIds.includes(String(b.id));
-      if (aFav !== bFav) return aFav ? -1 : 1;
-
-      const aChatTime = Number(personalChatMap?.[a.id]?.lastMessageAt) || 0;
-      const bChatTime = Number(personalChatMap?.[b.id]?.lastMessageAt) || 0;
-      if (aChatTime !== bChatTime) return bChatTime - aChatTime;
-
-      if (a.event && !b.event) return -1;
-      if (!a.event && b.event) return 1;
-      if (a.isOnline && !b.isOnline) return -1;
-      if (!a.isOnline && b.isOnline) return 1;
-      return a.name.localeCompare(b.name);
-    });
+    return buildSidebarKalcerians(
+      { kalcerians, events, searchQuery, personalChatMap, favouriteUserIds, currentUser },
+      { doesEventBelongToUser }
+    );
   }, [kalcerians, events, searchQuery, personalChatMap, favouriteUserIds, currentUser, presence]);
 
   const activeOwnEvent = events.find(
@@ -1021,19 +824,7 @@ export default function MapPage() {
 
   const handleOpenEditEvent = useCallback((eventItem) => {
     if (!eventItem || isSelfOffline) return;
-    const rawDesc = eventItem.description || "";
-    const catMatch = rawDesc.match(/\[CAT:([a-z_]+)\]/i);
-    const mediaMatch = rawDesc.match(/\[MEDIA:([^\]]+)\]/i);
-    const locMatch = rawDesc.match(/\[LOC:([^\]]+)\]/i);
-    const category = catMatch ? catMatch[1].toLowerCase() : (eventItem.category || "cafe");
-    const mediaUrl = eventItem.mediaUrl || (mediaMatch ? mediaMatch[1] : "");
-    const location = eventItem.location || (locMatch ? locMatch[1] : "");
-    const cleanDesc = rawDesc
-      .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
-      .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
-      .replace(/\[LOC:[^\]]+\]\s*/gi, "")
-      .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
-      .trim();
+    const { category, mediaUrl, location, cleanDesc } = parseEventDesc(eventItem);
 
     const mediaMetadataByUrl = {};
     if (Array.isArray(eventItem.mediaItems)) {
@@ -1069,24 +860,6 @@ export default function MapPage() {
     setBusy(true);
     try {
       const me = mapUsersData.find((u) => u.id === currentUser?.id);
-      const category = eventForm.category || "cafe";
-      const mediaUrl = (eventForm.mediaUrl || "").trim();
-      const clipUrls = splitMediaUrlListClient(mediaUrl);
-      const mediaItemsPayload = clipUrls.map((url) => {
-        const m = eventForm.mediaMetadataByUrl?.[url] || {};
-        return {
-          url,
-          ...(m.width ? { width: m.width } : {}),
-          ...(m.height ? { height: m.height } : {}),
-          ...(m.duration ? { duration: m.duration } : {}),
-        };
-      });
-      const cleanDesc = (eventForm.description || "")
-        .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
-        .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
-        .replace(/\[LOC:[^\]]+\]\s*/gi, "")
-        .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
-        .trim();
 
       // Prioritize coordinates from LocationAutocomplete if selected, otherwise current GPS / user domicile
       let currentLat = eventForm.lat ? Number(eventForm.lat) : (me?.lat || currentUser?.domicileLat || -6.2715);
@@ -1121,26 +894,10 @@ export default function MapPage() {
         } catch {}
       }
 
-      let encodedDesc = `[CAT:${category}] ${cleanDesc}`.trim();
-      if (locationName) {
-        encodedDesc = `[LOC:${locationName}] ${encodedDesc}`.trim();
-      }
-      if (mediaUrl) {
-        encodedDesc = `[MEDIA:${mediaUrl}] ${encodedDesc}`.trim();
-      }
-
-      const formattedTitle = toSmartTitleCase(eventForm.title || "");
-      const payload = {
-        title: formattedTitle,
-        description: encodedDesc,
-        category,
-        mediaUrl,
-        mediaItems: mediaItemsPayload,
-        ...(eventForm.mediaSyncedAt ? { mediaSyncedAt: eventForm.mediaSyncedAt } : {}),
-        location: locationName,
-        lat: currentLat,
-        lng: currentLng,
-      };
+      const payload = buildMiniEventPayload(
+        { eventForm, currentLat, currentLng, locationName },
+        { splitMediaUrlListClientFn: splitMediaUrlListClient, toSmartTitleCaseFn: toSmartTitleCase }
+      );
 
       let eventIdToUpdate = editingEventId || events.find((ev) => ev.creator?.id === currentUser?.id)?.id;
       let savedEventObj = null;
@@ -1326,41 +1083,9 @@ export default function MapPage() {
         } catch {}
         return merged;
       });
-      setKalcerians((prev) =>
-        prev.map((u) =>
-          currentUser?.id && String(u.id) === String(currentUser.id)
-            ? { ...u, ...patch }
-            : u
-        )
-      );
-      setMapUsersData((prev) =>
-        prev.map((u) =>
-          currentUser?.id && String(u.id) === String(currentUser.id)
-            ? { ...u, ...patch }
-            : u
-        )
-      );
-      if (patch.displayName || patch.name || patch.profilePicture || patch.coverImage) {
-        setEvents((prev) =>
-          prev.map((ev) => {
-            const isMine =
-              ev.id === "own" ||
-              (currentUser?.id && String(ev.creator?.id) === String(currentUser.id));
-            if (!isMine) return ev;
-            return {
-              ...ev,
-              creator: {
-                ...(ev.creator || {}),
-                name: patch.displayName || patch.name || ev.creator?.name,
-                displayName: patch.displayName || patch.name || ev.creator?.displayName,
-                profilePicture: patch.profilePicture ?? ev.creator?.profilePicture,
-                coverImage: patch.coverImage ?? ev.creator?.coverImage,
-                coverType: patch.coverType ?? ev.creator?.coverType,
-              },
-            };
-          })
-        );
-      }
+      setKalcerians((prev) => patchUserCollection(prev, currentUser?.id, patch));
+      setMapUsersData((prev) => patchUserCollection(prev, currentUser?.id, patch));
+      setEvents((prev) => patchEventCollectionForUser(prev, currentUser?.id, patch));
     };
 
     applyProfilePatch(updatedData);
@@ -1368,14 +1093,7 @@ export default function MapPage() {
       const res = await api.put("/users/me", updatedData);
       if (res?.data?.user) {
         const serverUser = res.data.user;
-        const syncedPatch = {
-          ...updatedData,
-          ...serverUser,
-          displayName: serverUser.displayName || serverUser.name || updatedData.displayName,
-          profilePicture: serverUser.profilePicture || updatedData.profilePicture,
-          coverImage: serverUser.coverImage || serverUser.coverUrl || updatedData.coverImage,
-          coverUrl: serverUser.coverUrl || serverUser.coverImage || updatedData.coverImage,
-        };
+        const syncedPatch = buildSyncedProfilePatch(updatedData, serverUser);
         applyProfilePatch(syncedPatch);
       }
     } catch (e) {

@@ -34,6 +34,19 @@ import {
   formatVoiceDuration,
   inferReplyMediaType,
 } from "../components/messageBubble/replyHelpers";
+import { groupMessages } from "./personalChat/groupMessages";
+import {
+  buildMessageCopyText,
+  buildSelectedMessagesCopyText,
+  copyTextToClipboard,
+} from "./personalChat/clipboardText";
+import { buildReplyPayload, buildReplyDraft } from "./personalChat/replyPayload";
+import {
+  applyPeerReadReceipt,
+  filterDeletedMessages,
+  filterInFlightOrFailed,
+} from "./personalChat/messageStatusUpdaters";
+import { buildMergedRemoteMessages } from "./personalChat/mergeRemoteMessages";
 
 export {
   LOCAL_CHAT_CACHE_PREFIX,
@@ -316,18 +329,7 @@ export function usePersonalChatState({
         if (ackTs <= 0) return;
         syncWatermarkRef.current.peerReadTs = Math.max(syncWatermarkRef.current.peerReadTs, ackTs);
         setMessages((prev) => {
-          let changed = false;
-          const next = prev.map((m) => {
-            if (
-              String(m.senderId) === String(myId) &&
-              m.status === "sent" &&
-              Number(m.ts || 0) <= ackTs
-            ) {
-              changed = true;
-              return { ...m, status: "read" };
-            }
-            return m;
-          });
+          const { next, changed } = applyPeerReadReceipt(prev, myId, ackTs);
           if (changed) {
             persistQuickLocal(next);
             persistEncryptedLocal(next);
@@ -352,11 +354,10 @@ export function usePersonalChatState({
       }
 
       if (packet.type === "delete_msgs" && Array.isArray(packet.ids)) {
-        const delSet = new Set(packet.ids.map(String));
-        if (delSet.size > 0) {
+        if (packet.ids.length > 0) {
           setMessages((prev) => {
-            const next = prev.filter((m) => !delSet.has(String(m.id)));
-            if (next.length !== prev.length) {
+            const { next, changed } = filterDeletedMessages(prev, packet.ids);
+            if (changed) {
               persistQuickLocal(next);
               persistEncryptedLocal(next);
               return next;
@@ -476,18 +477,7 @@ export function usePersonalChatState({
         if (remoteEnvelopes.length === 0) {
           if (serverPeerReadTs > 0) {
             setMessages((prev) => {
-              let changed = false;
-              const next = prev.map((m) => {
-                if (
-                  String(m.senderId) === String(myId) &&
-                  m.status === "sent" &&
-                  Number(m.ts || 0) <= serverPeerReadTs
-                ) {
-                  changed = true;
-                  return { ...m, status: "read" };
-                }
-                return m;
-              });
+              const { next, changed } = applyPeerReadReceipt(prev, myId, serverPeerReadTs);
               if (changed) {
                 persistQuickLocal(next);
                 persistEncryptedLocal(next);
@@ -499,7 +489,7 @@ export function usePersonalChatState({
           // If clearAll happened on another device (deleteRev advanced and full fetch returned 0 messages)
           if (wasInitialized && serverDelRev !== prevDelRev && !page.delta) {
             setMessages((prev) => {
-              const kept = prev.filter((m) => m.status === "sending" || m.status === "failed");
+              const kept = filterInFlightOrFailed(prev);
               persistQuickLocal(kept);
               persistEncryptedLocal(kept);
               return kept;
@@ -517,45 +507,15 @@ export function usePersonalChatState({
         if (alive) {
           setMessages((prev) => {
             const isFullReconcile = wasInitialized && serverDelRev !== prevDelRev && !page.delta;
-            const mergedMap = new Map();
-
-            if (!isFullReconcile) {
-              prev.forEach((m) => {
-                if (!isAhmad && String(m.id).startsWith("seed_")) return;
-                if (
-                  (isAhmad && String(m.id).startsWith("seed_")) ||
-                  m.status === "sending" ||
-                  m.status === "failed"
-                ) {
-                  mergedMap.set(m.id, m);
-                } else if (!String(m.mediaUrl || "").startsWith("blob:")) {
-                  const updatedStatus =
-                    String(m.senderId) === String(myId) &&
-                    m.status === "sent" &&
-                    serverPeerReadTs > 0 &&
-                    Number(m.ts || 0) <= serverPeerReadTs
-                      ? "read"
-                      : m.status;
-                  mergedMap.set(m.id, updatedStatus !== m.status ? { ...m, status: updatedStatus } : m);
-                }
-              });
-            } else {
-              // Full reconcile after remote message deletion: keep only local in-flight/failed messages + server truth
-              prev.forEach((m) => {
-                if (m.status === "sending" || m.status === "failed") {
-                  mergedMap.set(m.id, m);
-                }
-              });
-            }
-
-            decryptedRemote.forEach((m) => {
-              const existing = mergedMap.get(m.id);
-              // Never downgrade a locally confirmed 'read' receipt back to 'sent'
-              const bestStatus = existing?.status === "read" ? "read" : m.status;
-              mergedMap.set(m.id, bestStatus !== m.status ? { ...m, status: bestStatus } : m);
+            const sorted = buildMergedRemoteMessages({
+              prev,
+              decryptedRemote,
+              isFullReconcile,
+              isAhmad,
+              myId,
+              serverPeerReadTs,
             });
 
-            const sorted = Array.from(mergedMap.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0));
             persistQuickLocal(sorted);
             persistEncryptedLocal(sorted);
 
@@ -1044,30 +1004,7 @@ export function usePersonalChatState({
     const currentReply = replyingTo;
     setReplyingTo(null);
 
-    let replyPayload = null;
-    if (currentReply) {
-      replyPayload = {
-        id: currentReply.id,
-        text: currentReply.text || "",
-        msgType: currentReply.msgType,
-        mediaUrl: currentReply.mediaUrl || null,
-        voiceDuration: currentReply.voiceDuration || null,
-        videoDuration: currentReply.videoDuration || null,
-        caption: currentReply.caption || "",
-        senderId: currentReply.senderId,
-        senderName: currentReply.senderName || "Kalcerian",
-        isBroadcast: Boolean(currentReply.isBroadcast),
-        broadcastMessage: currentReply.broadcastMessage || null,
-        broadcastDuration: currentReply.broadcastDuration || null,
-        lat: currentReply.lat || null,
-        lng: currentReply.lng || null,
-        userId: currentReply.userId || currentReply.senderId || null,
-        isCall: Boolean(currentReply.isCall),
-        callMode: currentReply.callMode || null,
-        callDuration: currentReply.callDuration !== undefined ? currentReply.callDuration : null,
-        callTimestamp: currentReply.callTimestamp || null,
-      };
-    }
+    const replyPayload = buildReplyPayload(currentReply);
 
     await appendAndEncryptMessage({
       text: trimmed,
@@ -1229,7 +1166,7 @@ export function usePersonalChatState({
       setPlayingVoiceId(null);
     }
     setMessages((prev) => {
-      const next = prev.filter((m) => !idSet.has(m.id));
+      const { next } = filterDeletedMessages(prev, ids);
       persistQuickLocal(next);
       persistEncryptedLocal(next);
       return next;
@@ -1246,143 +1183,25 @@ export function usePersonalChatState({
 
   const handleCopySingleMessage = (msg) => {
     if (!msg) return;
-    const textToCopy =
-      typeof msg === "string"
-        ? msg
-        : msg.text ||
-          (msg.msgType === "voice"
-            ? `Voice message ${formatVoiceDuration(msg.voiceDuration || 7)}`
-            : msg.msgType === "call"
-            ? msg.text || "Call log"
-            : msg.mediaUrl || "");
-
-    if (!textToCopy) return;
-
-    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(textToCopy).catch(() => {
-        try {
-          const ta = document.createElement("textarea");
-          ta.value = textToCopy;
-          ta.style.position = "fixed";
-          ta.style.opacity = "0";
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand("copy");
-          document.body.removeChild(ta);
-        } catch {}
-      });
-    } else if (typeof document !== "undefined") {
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = textToCopy;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-      } catch {}
-    }
+    const textToCopy = buildMessageCopyText(msg, formatVoiceDuration);
+    copyTextToClipboard(textToCopy);
   };
 
   const handleStartReply = (msg) => {
     if (!msg) return;
-    const senderName =
-      String(msg.senderId) === String(myId)
-        ? "You"
-        : activeChatUser?.displayName || activeChatUser?.name || "Kalcerian";
-
-    const mediaType = inferReplyMediaType(msg);
-    const voiceDuration = msg.voiceDuration || msg.duration || null;
-    const videoDuration = msg.videoDuration || null;
-    const isMedia = mediaType === "photo" || mediaType === "video";
-    const caption = isMedia ? (msg.text || "") : "";
-    const isCall = mediaType === "call" || msg.msgType === "call";
-    const callMode = msg.callMode || (msg.text?.toLowerCase().includes("video") ? "video" : "voice");
-    const callDuration = msg.callDuration !== undefined ? msg.callDuration : null;
-    const callTimestamp = msg.ts || msg.createdAt || Date.now();
-
-    setReplyingTo({
-      id: msg.id,
-      text: msg.text || "",
-      msgType: mediaType,
-      mediaUrl: msg.mediaUrl || null,
-      voiceDuration,
-      videoDuration,
-      caption,
-      senderId: msg.senderId,
-      senderName,
-      isCall,
-      callMode,
-      callDuration,
-      callTimestamp,
-    });
+    const draft = buildReplyDraft(msg, { myId, activeChatUser, inferReplyMediaType });
+    setReplyingTo(draft);
   };
 
   const handleCopySelectedMessages = () => {
-    const selectedTexts = messages
-      .filter((m) => selectedMsgIds.includes(m.id))
-      .map((m) =>
-        m.text ||
-        (m.msgType === "voice"
-          ? `Voice message ${formatVoiceDuration(m.voiceDuration || 7)}`
-          : m.msgType === "call"
-          ? m.text || "Call log"
-          : m.mediaUrl || "")
-      )
-      .filter(Boolean)
-      .join("\n");
-
-    if (selectedTexts) {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(selectedTexts).catch(() => {
-          try {
-            const ta = document.createElement("textarea");
-            ta.value = selectedTexts;
-            ta.style.position = "fixed";
-            ta.style.opacity = "0";
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand("copy");
-            document.body.removeChild(ta);
-          } catch {}
-        });
-      } else if (typeof document !== "undefined") {
-        try {
-          const ta = document.createElement("textarea");
-          ta.value = selectedTexts;
-          ta.style.position = "fixed";
-          ta.style.opacity = "0";
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand("copy");
-          document.body.removeChild(ta);
-        } catch {}
-      }
-    }
+    const selectedTexts = buildSelectedMessagesCopyText(messages, selectedMsgIds, formatVoiceDuration);
+    copyTextToClipboard(selectedTexts);
     setSelectedMsgIds([]);
     setSelectMode(false);
   };
 
   const groupedMessages = useMemo(() => {
-    const q = messageSearchQuery.trim().toLowerCase();
-    const filtered = q
-      ? messages.filter((m) => String(m.text || "").toLowerCase().includes(q))
-      : messages;
-
-    const items = [];
-    let lastDayKey = null;
-    filtered.forEach((m) => {
-      const msgDate = new Date(Number(m.ts) || Date.now());
-      const dayKey = `${msgDate.getFullYear()}-${msgDate.getMonth()}-${msgDate.getDate()}`;
-      if (dayKey !== lastDayKey) {
-        const label = getChatTimeLabel(m.ts);
-        items.push({ type: "date_divider", id: `date_${dayKey}_${m.id}`, label });
-        lastDayKey = dayKey;
-      }
-      items.push({ type: "message", ...m });
-    });
-    return items;
+    return groupMessages(messages, messageSearchQuery, getChatTimeLabel);
   }, [messages, messageSearchQuery]);
 
   const handleCallFinished = useCallback(

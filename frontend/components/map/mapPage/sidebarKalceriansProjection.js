@@ -1,0 +1,144 @@
+/**
+ * frontend/components/map/mapPage/sidebarKalceriansProjection.js
+ *
+ * Pure projection of Kalcerians sidebar list, security exclusions, and 4-tier sorting.
+ * Zero React dependencies, zero side-effects.
+ *
+ * Source: MapPageClient.jsx (L734-L862)
+ */
+
+export function isExcludedKalcerianUser(u, currentUser = null) {
+  if (!u) return true;
+  const idStr = String(u.id || '');
+  if (idStr.startsWith('mock_')) return true;
+  // Filter out self so current logged-in user never appears in "Find other Kalcerians" scroll bar
+  if (currentUser?.id && idStr === String(currentUser.id)) return true;
+  const email = String(u.email || '').toLowerCase();
+  if (currentUser?.email && email && email === String(currentUser.email).toLowerCase()) return true;
+  if (email.startsWith('admin') || email.includes('laptop_tester') || email.endsWith('@kalceria.id')) return true;
+  if (u.role === 'ADMIN') return true;
+  const name = String(u.name || '').trim();
+  const nick = String(u.nickname || '').trim();
+  if (['Otniel', 'Josh'].includes(name) || ['Otniel', 'Josh'].includes(nick)) return true;
+  if (name.toLowerCase() === 'otniel' || name.toLowerCase() === 'josh') return true;
+  if (name.toLowerCase() === 'reinathan' && (!nick || nick.toLowerCase() === 'reinathan')) return true;
+  return false;
+}
+
+export function buildSidebarKalcerians(
+  { kalcerians = [], events = [], searchQuery = '', personalChatMap = {}, favouriteUserIds = [], currentUser = null },
+  { doesEventBelongToUser = () => false } = {}
+) {
+  const map = new Map();
+
+  // 1. Add registered kalcerians (real verified users from database)
+  (kalcerians || []).forEach((u) => {
+    if (!u?.id || isExcludedKalcerianUser(u, currentUser)) return;
+    map.set(String(u.id), {
+      id: u.id,
+      name: u.name || u.nickname || 'Kalcerian',
+      displayName: u.displayName || u.name || u.nickname || 'Kalcerian',
+      nickname: u.nickname || u.name || 'Kalcerian',
+      profilePicture: u.profilePicture || null,
+      isOnline: Boolean(u.isOnline && u.allowLiveLocation !== false),
+      broadcast: u.broadcast || null,
+      lat: u.lat,
+      lng: u.lng,
+      coverType: u.coverType || null,
+      coverImage: u.coverImage || null,
+      socialPlatform: u.socialPlatform || null,
+      socialLink: u.socialLink || null,
+      instagram: u.instagram || null,
+      whatsapp: u.whatsapp || null,
+      phone: u.phone || null,
+      reason: u.reason || null,
+      createdAt: u.createdAt || null,
+    });
+  });
+
+  // 2. Attach any event STRICTLY created by that exact user (never by shared name and never self's event)
+  (events || []).forEach((ev) => {
+    if (!ev || ev.id === 'own' || !ev.creator || isExcludedKalcerianUser(ev.creator, currentUser)) return;
+    const creatorId = ev.creator?.id || ev.creatorId;
+    if (!creatorId) return;
+    const creatorKey = String(creatorId);
+    if (currentUser?.id && creatorKey === String(currentUser.id)) return;
+
+    if (map.has(creatorKey)) {
+      const existing = map.get(creatorKey);
+      if (doesEventBelongToUser(ev, existing, currentUser?.id)) {
+        existing.event = ev;
+      }
+    } else if (doesEventBelongToUser(ev, ev.creator, currentUser?.id)) {
+      map.set(creatorKey, {
+        id: creatorId,
+        name: ev.creator.name || ev.creator.nickname || 'Kalcerian',
+        displayName: ev.creator.displayName || ev.creator.name || ev.creator.nickname || 'Kalcerian',
+        nickname: ev.creator.nickname || ev.creator.name || 'Kalcerian',
+        profilePicture: ev.creator.profilePicture || null,
+        isOnline: Boolean(ev.creator.isOnline && ev.creator.allowLiveLocation !== false),
+        broadcast: ev.creator.broadcast || null,
+        lat: ev.creator.isOnline ? ev.lat : null,
+        lng: ev.creator.isOnline ? ev.lng : null,
+        event: ev,
+        coverType: ev.creator.coverType || null,
+        coverImage: ev.creator.coverImage || null,
+        socialPlatform: ev.creator.socialPlatform || null,
+        socialLink: ev.creator.socialLink || null,
+        instagram: ev.creator.instagram || null,
+        whatsapp: ev.creator.whatsapp || null,
+        phone: ev.creator.phone || null,
+        reason: ev.creator.reason || null,
+        createdAt: ev.creator.createdAt || null,
+      });
+    }
+  });
+
+  // 3. Ensure current logged-in user is strictly excluded from "Find other Kalcerians" sidebar list
+  if (currentUser?.id) {
+    map.delete(String(currentUser.id));
+  }
+
+  let list = Array.from(map.values());
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    list = list.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        (u.nickname && u.nickname.toLowerCase().includes(q)) ||
+        (u.event && u.event.title.toLowerCase().includes(q))
+    );
+  }
+
+  // sort:
+  // 1. Unread incoming personal chat notifications (positions 1..n, sorted by newest message timestamp)
+  // 2. Favourites next (position n + 1 onwards, or top if n === 0)
+  // 3. Recent personal chat history
+  // 4. Event creators & online first, then alphabetical
+  const favSet = new Set(favouriteUserIds || []);
+  return list.sort((a, b) => {
+    const aHasNotif = Boolean((personalChatMap?.[a.id]?.unreadCount || 0) > 0);
+    const bHasNotif = Boolean((personalChatMap?.[b.id]?.unreadCount || 0) > 0);
+    if (aHasNotif !== bHasNotif) return aHasNotif ? -1 : 1;
+    if (aHasNotif && bHasNotif) {
+      const aTime = Number(personalChatMap?.[a.id]?.lastMessageAt) || 0;
+      const bTime = Number(personalChatMap?.[b.id]?.lastMessageAt) || 0;
+      if (aTime !== bTime) return bTime - aTime;
+    }
+
+    const aFav = favSet.has(String(a.id));
+    const bFav = favSet.has(String(b.id));
+    if (aFav !== bFav) return aFav ? -1 : 1;
+
+    const aChatTime = Number(personalChatMap?.[a.id]?.lastMessageAt) || 0;
+    const bChatTime = Number(personalChatMap?.[b.id]?.lastMessageAt) || 0;
+    if (aChatTime !== bChatTime) return bChatTime - aChatTime;
+
+    if (a.event && !b.event) return -1;
+    if (!a.event && b.event) return 1;
+    if (a.isOnline && !b.isOnline) return -1;
+    if (!a.isOnline && b.isOnline) return 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+

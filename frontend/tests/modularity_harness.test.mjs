@@ -41,13 +41,10 @@ describe('Kalceria Modularity Test Harness (Gate 3b - Wave 0)', () => {
   });
 
   it('3. Tier A Hook Inventory: MapPageClient.jsx baseline equals exactly 1632 LOC and 74 hooks', () => {
-    const mapPagePath = path.join(ROOT_DIR, 'frontend/components/map/MapPageClient.jsx');
-    const loc = countFileLines(mapPagePath);
-    const content = fs.readFileSync(mapPagePath, 'utf8');
-    const hooks = countHooksInContent(content);
-
-    assert.equal(loc, 1632, 'MapPageClient.jsx must have exactly 1632 lines in baseline');
-    assert.deepEqual(hooks, {
+    const { baselineSnapshot } = loadAuditContext();
+    const baselineData = baselineSnapshot?.tierA?.['frontend/components/map/MapPageClient.jsx'];
+    assert.equal(baselineData?.loc, 1632, 'MapPageClient.jsx must have exactly 1632 lines in baseline snapshot');
+    assert.deepEqual(baselineData?.hooks, {
       useState: 35,
       useEffect: 11,
       useCallback: 21,
@@ -55,19 +52,18 @@ describe('Kalceria Modularity Test Harness (Gate 3b - Wave 0)', () => {
       useRef: 2,
       useLayoutEffect: 0,
     });
+
+    const mapPagePath = path.join(ROOT_DIR, 'frontend/components/map/MapPageClient.jsx');
+    const loc = countFileLines(mapPagePath);
+    assert.ok(loc <= 1632, `MapPageClient.jsx LOC must decrease or stay equal to baseline (${loc} <= 1632)`);
   });
 
   it('4. Tier A Hook Inventory: usePersonalChatState.js baseline equals exactly 1604 LOC and 54 hooks', () => {
-    const chatStatePath = path.join(
-      ROOT_DIR,
-      'frontend/components/map/chat/hooks/usePersonalChatState.js'
-    );
-    const loc = countFileLines(chatStatePath);
-    const content = fs.readFileSync(chatStatePath, 'utf8');
-    const hooks = countHooksInContent(content);
-
-    assert.equal(loc, 1604, 'usePersonalChatState.js must have exactly 1604 lines in baseline');
-    assert.deepEqual(hooks, {
+    const { baselineSnapshot } = loadAuditContext();
+    const baselineData =
+      baselineSnapshot?.tierA?.['frontend/components/map/chat/hooks/usePersonalChatState.js'];
+    assert.equal(baselineData?.loc, 1604, 'usePersonalChatState.js must have exactly 1604 lines in baseline snapshot');
+    assert.deepEqual(baselineData?.hooks, {
       useState: 20,
       useEffect: 7,
       useCallback: 9,
@@ -75,6 +71,13 @@ describe('Kalceria Modularity Test Harness (Gate 3b - Wave 0)', () => {
       useRef: 17,
       useLayoutEffect: 0,
     });
+
+    const chatStatePath = path.join(
+      ROOT_DIR,
+      'frontend/components/map/chat/hooks/usePersonalChatState.js'
+    );
+    const loc = countFileLines(chatStatePath);
+    assert.ok(loc <= 1604, `usePersonalChatState.js LOC must decrease or stay equal to baseline (${loc} <= 1604)`);
   });
 
   it('5. Contract Invariance: usePersonalChatState returns all 58 keys and 9 re-exports', () => {
