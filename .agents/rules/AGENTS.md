@@ -231,13 +231,29 @@ Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyat
    - **Pola Injeksi Parameter Objek Tunggal (Single Parameter-Object Pattern — IL-2)**: State dan ref bersama (mis. `chatScrollRef`, `activeMenuId`, `selectedMessageIds`, `currentLocation`) tetap dipegang oleh facade (`usePersonalChatState` / `MapPageClient`) dan disuntikkan ke hook daun melalui satu objek parameter tunggal. Hook daun dilarang menginstansiasi duplicate state/ref bersama.
    - **Siklus Pembersihan Event Listener Window (Zero Zombie Listeners)**: Semua hook daun yang mendaftarkan event eksternal (`window.addEventListener('kalceria:refresh-events')`, `window.addEventListener('online')`, `window.addEventListener('offline')`, timer splash, interval beacon) WAJIB membersihkan listener pada unmount (`useEffect` return cleanup). Zombie listener adalah pelanggaran fatal.
    - **Preservasi Kontrak Facade Transparan (IL-9)**: Semua state dan handler dari hook daun wajib diekspor kembali oleh facade secara transparan tanpa mengubah nama key, tipe kembalian, atau memecah kontrak pemanggil (58 keys return `usePersonalChatState` & JSX props `MapPageClient`).
+8. **Doktrin Mutlak Hook Terjalin & Hook Ledger (Core Lifecycle — Pelajaran Wave 3)**:
+   - **Preservasi Hook Ledger Sakral (Urutan Eksekusi E1..E7 & M1..M10 — IL-1)**:
+     - Urutan efek siklus hidup adalah sakral: E3 (hidrasi cache lokal) WAJIB mendahului E4 (jembatan paket realtime P2P), dan E4 WAJIB mendahului E5 (loop sinkronisasi 304 baris).
+     - Pada Map: M1 (startup gate), M2 (eager GPS), M4 (sesi), M5 (live location), M6 (refresh listener), M8 (data polling), M9/M10 (viewport/Leaflet) WAJIB mempertahankan urutan ledger identik terhadap baseline `f1dbb70`.
+     - Menukar urutan hook atau memecah efek terjalin memicu *race condition* inisialisasi state, desinkronisasi pesan, dan hilangnya pesan realtime pertama.
+   - **Hukum Besi Render-Body Ref Assignment (IL-3 — Anti-1-Render Lag)**:
+     - Penugasan ref imperatif (`peerConnectionRef.current = ...`, `dataChannelRef.current = ...`, `mapRef.current = ...`) di dalam render-body DILARANG KERAS dipindah ke `useEffect`!
+     - Pemindahan ke efek menyebabkan ref bernilai `null` atau basi (*stale*) selama fase render awal, mengakibatkan paket WebRTC pertama hilang dan kegagalan `flyTo` peta Leaflet saat startup.
+   - **Doktrin Red Dot & Non-Pure Updater Verbatim (IL-4 — CH-02 / CHAT-09)**:
+     - Logika pembersihan red dot dan read-ack (`ackPersonalChatRead`, dispatch event `kalceria:personal-chat-read`) yang bersarang di dalam updater `setMessages` WAJIB disalin *verbatim*; DILARANG "dibersihkan" atau dipindah ke `useEffect`.
+     - Jalur ini adalah jalur instan penghapusan red dot saat pesan dibaca tanpa menunggu user mengirim balasan (CHAT-09).
+   - **Pembekuan Dependency Array Verbatim (IL-5 — Anti-Network Thrashing)**:
+     - Dependency array pada efek siklus hidup kompleks (E5 sync loop, M8 data polling, M2 eager GPS) DILARANG diubah, ditambah, atau dikurangi, meskipun di-flag oleh linter. Mengubah dep array memicu infinite re-fetch loop atau keheningan polling.
+   - **Invariansi Kontrak 58 Key Return & 9 Re-Export (IL-9)**:
+     - Facade `usePersonalChatState.js` wajib mempertahankan tepat 58 return keys dan 9 re-export tanpa ada nama yang diganti atau dihapus. `MapPageClient.jsx` wajib mempertahankan seluruh prop JSX ke komponen anak.
 
 ### 6.6 Tambahan Failure Verdict ("OUT")
-- Mengubah urutan efek, memindah assignment ref render-body ke efek, atau memecah efek yang memuat dua concern.
+- Mengubah urutan efek, memindah assignment ref render-body ke efek, atau memecah efek yang memuat dua concern (pelanggaran IL-1 & IL-3).
+- Memindahkan logic read-ack/red-dot dari updater `setMessages` ke dalam efek (pelanggaran IL-4).
 - Menambah `useCallback`/`useMemo` pada handler non-memo, atau mengubah dep array (pelanggaran IL-5 & IL-6).
 - Memecah atau menduplikasi kepemilikan state/ref bersama ke dalam hook daun alih-alih menginjeksinya lewat objek parameter tunggal dari facade (pelanggaran IL-2).
 - Meninggalkan event listener window tanpa fungsi cleanup unmount (kebocoran zombie listener).
-- Mengubah kontrak pemanggil/anak (key return, re-export, prop JSX) tanpa izin eksplisit.
+- Mengubah kontrak pemanggil/anak (58 key return `usePersonalChatState`, 9 re-export, prop JSX) tanpa izin eksplisit (pelanggaran IL-9).
 - Menyentuh Tier C atau `BaselineNovember#2`.
 - Melapor "sudah" sementara Gate 3b/3c (bila sudah aktif), moved-lines diff, atau matriks manual belum dijalankan.
 - Menggabungkan beberapa ekstraksi dalam satu commit sehingga tidak dapat di-`git revert` secara bersih.
