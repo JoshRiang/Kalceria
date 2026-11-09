@@ -28,7 +28,8 @@ export function rateLimit({ name, max, windowSeconds, key = (req) => req.ip || '
 
       return next();
     } catch (error) {
-      return next(error);
+      console.warn(`[RateLimit] Limiter "${name}" warning:`, error.message);
+      return next();
     }
   };
 }

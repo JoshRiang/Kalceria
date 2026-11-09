@@ -30,6 +30,7 @@ export function useLiveLocationSync({
     if (presence !== "online") return;
 
     let isSubscribed = true;
+    let lastPostTimestamp = 0;
 
     const performSync = () => {
       if (!isSubscribed) return;
@@ -47,7 +48,11 @@ export function useLiveLocationSync({
               mapRef.current.setView([lat, lng], 15, { animate: false });
             }
             prewarmOsmTiles(lat, lng, 15);
-            postLocation(lat, lng).catch(() => {});
+            const now = Date.now();
+            if (now - lastPostTimestamp >= 3000) {
+              lastPostTimestamp = now;
+              postLocation(lat, lng).catch(() => {});
+            }
           },
           () => {
             if (!isSubscribed) return;
@@ -55,7 +60,11 @@ export function useLiveLocationSync({
             const fbLat = selfLiveCoords?.lat || Number(currentUser.domicileLat);
             const fbLng = selfLiveCoords?.lng || Number(currentUser.domicileLng);
             if (Number.isFinite(fbLat) && Number.isFinite(fbLng)) {
-              postLocation(fbLat, fbLng).catch(() => {});
+              const now = Date.now();
+              if (now - lastPostTimestamp >= 3000) {
+                lastPostTimestamp = now;
+                postLocation(fbLat, fbLng).catch(() => {});
+              }
             }
           },
           { timeout: 4000, enableHighAccuracy: false, maximumAge: 10000 }
@@ -64,7 +73,11 @@ export function useLiveLocationSync({
         const fbLat = selfLiveCoords?.lat || Number(currentUser.domicileLat);
         const fbLng = selfLiveCoords?.lng || Number(currentUser.domicileLng);
         if (Number.isFinite(fbLat) && Number.isFinite(fbLng)) {
-          postLocation(fbLat, fbLng).catch(() => {});
+          const now = Date.now();
+          if (now - lastPostTimestamp >= 3000) {
+            lastPostTimestamp = now;
+            postLocation(fbLat, fbLng).catch(() => {});
+          }
         }
       }
     };

@@ -50,11 +50,15 @@ export async function createAuthSession(user) {
     },
   );
 
-  const pipe = redis.pipeline();
-  pipe.set(sessionKey(jti), user.id, 'EX', AUTH_TTL_SECONDS);
-  pipe.sadd(userSessionsKey(user.id), jti);
-  pipe.expire(userSessionsKey(user.id), AUTH_TTL_SECONDS);
-  await pipe.exec();
+  try {
+    const pipe = redis.pipeline();
+    pipe.set(sessionKey(jti), user.id, 'EX', AUTH_TTL_SECONDS);
+    pipe.sadd(userSessionsKey(user.id), jti);
+    pipe.expire(userSessionsKey(user.id), AUTH_TTL_SECONDS);
+    await pipe.exec();
+  } catch (err) {
+    console.warn('[AuthSession] Session store warning:', err.message);
+  }
 
   cacheVerifiedJti(jti, user.id);
 
@@ -79,11 +83,21 @@ export async function verifyAuthSession(token) {
       SESSION_MEM_CACHE.delete(payload.jti);
     }
 
-    const sessionUserId = await redis.get(sessionKey(payload.jti));
-    if (sessionUserId === payload.userId) {
+    try {
+      const sessionUserId = await redis.get(sessionKey(payload.jti));
+      if (sessionUserId === payload.userId) {
+        cacheVerifiedJti(payload.jti, payload.userId);
+        return payload;
+      }
+    } catch {
+      // Redis error
+    }
+
+    if (redis.isQuotaExceeded || redis.isDegraded) {
       cacheVerifiedJti(payload.jti, payload.userId);
       return payload;
     }
+
     return null;
   } catch {
     return null;
