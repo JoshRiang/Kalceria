@@ -93,10 +93,10 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
     ? "shadow-[0_4px_20px_rgba(0,0,0,0.85)]"
     : "shadow-[0_4px_16px_rgba(0,0,0,0.12)]";
 
-  // Dark-gray 2D beveled sunken crater slot styling (exact crater texture)
+  // 2D beveled sunken crater slot styling (80% softened gray, clean tactile recess)
   const craterSlotClass = isMapDark
-    ? "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#141724] border border-white/15 shadow-[inset_1.5px_2px_4px_rgba(0,0,0,0.85),inset_-1px_-1px_1.5px_rgba(255,255,255,0.15)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group"
-    : "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#2d313c] border border-black/35 shadow-[inset_1.5px_2px_4px_rgba(0,0,0,0.65),inset_-1px_-1px_1.5px_rgba(255,255,255,0.2)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group";
+    ? "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#161926] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group"
+    : "relative flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-[#f1f3f5] border border-black/15 shadow-[inset_1px_1.5px_2.5px_rgba(0,0,0,0.18),inset_-1px_-1px_1.5px_rgba(255,255,255,0.9)] transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer group";
 
   const collapseOffset = hasActiveOwnBroadcast ? -92 : -46;
 
@@ -185,13 +185,13 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
             >
               <path
                 d="M 10 3.5 h 4 v 6.5 h 6.5 v 4 h -6.5 v 6.5 h -4 v -6.5 h -6.5 v -4 h 6.5 z"
-                fill="#ffffff"
-                stroke="#000000"
+                fill={isMapDark ? "#ffffff" : "#000000"}
+                stroke={isMapDark ? "#000000" : "#ffffff"}
                 strokeWidth="1.2"
                 strokeLinejoin="round"
                 style={{
                   paintOrder: "stroke fill",
-                  filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.5))",
+                  filter: isMapDark ? "drop-shadow(0 1px 3px rgba(0,0,0,0.5))" : "none",
                 }}
               />
             </svg>
@@ -254,11 +254,11 @@ export const HudFunctionalOuterbox = memo(function HudFunctionalOuterbox({
           onClick={toggleCollapse}
           title={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
           aria-label={isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
-          className={`flex items-center justify-center w-8 h-3.5 sm:w-8.5 sm:h-4 rounded-b-full ${boxBg} border-b-[1.5px] border-x-[1.5px] ${boxBorder} ${
+          className={`flex items-center justify-center w-8 h-3.5 sm:w-8.5 sm:h-4 rounded-b-full ${boxBg} border-b-[1.5px] border-x-[1.5px] border-t-0 ${boxBorder} ${
             isMapDark
               ? "shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_6px_rgba(0,0,0,0.6)]"
               : "shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.1)]"
-          } cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group -mt-[1px]`}
+          } cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group -mt-[1.5px]`}
         >
           <ToolPerkakasIcon
             isMapDark={isMapDark}

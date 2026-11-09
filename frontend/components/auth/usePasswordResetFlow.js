@@ -42,6 +42,18 @@ export function usePasswordResetFlow({
           localStorage.setItem("kalceria_password_reset_from_map", "true");
           sessionStorage.setItem("kalceria_password_reset_from_map", "true");
         } catch {}
+      } else {
+        // Explicitly clear when NOT from map so stale flags from previous sessions never pollute landing-page flow
+        try {
+          if (
+            urlParams.get("from") === "landing" ||
+            (!urlParams.get("from") && (token || isSent || urlMode === "forgot-password"))
+          ) {
+            localStorage.removeItem("kalceria_auth_return");
+            localStorage.removeItem("kalceria_password_reset_from_map");
+            sessionStorage.removeItem("kalceria_password_reset_from_map");
+          }
+        } catch {}
       }
 
       if (token) {
@@ -53,10 +65,18 @@ export function usePasswordResetFlow({
         setSuccess("Verifikasi Link sudah terkirim ke email kamu.");
         if (setResendCooldown) setResendCooldown(60);
       } else if (urlParams.get("reset_success") === "true") {
-        window.location.replace("/map?skip_intro=true");
+        if (isFromMap) {
+          window.location.replace("/map?from=password_reset&skip_intro=true");
+        } else {
+          setMode("login");
+          setSuccess("Password berhasil diubah. Silakan masuk dengan password baru kamu.");
+          if (paramEmail && setForm) {
+            setForm((prev) => ({ ...prev, email: paramEmail, password: "" }));
+          }
+        }
       }
     }
-  }, [setMode, setSuccess, setResendCooldown]);
+  }, [setMode, setSuccess, setResendCooldown, setForm]);
 
   // ── Forgot Password Magic Link Request ──
   async function handleForgotPasswordSubmit(emailToReset, setLoading) {
@@ -92,13 +112,19 @@ export function usePasswordResetFlow({
       });
 
       const userEmail = res.data?.user?.email || forgotEmail || "";
-      const isFromMap = Boolean(fromMapParam || res.data?.fromMap);
+      const isFromMap = Boolean(res.data?.fromMap ?? fromMapParam);
 
       if (isFromMap) {
         try {
           localStorage.setItem("kalceria_auth_return", "/map");
           localStorage.setItem("kalceria_password_reset_from_map", "true");
           sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+        } catch {}
+      } else {
+        try {
+          localStorage.removeItem("kalceria_auth_return");
+          localStorage.removeItem("kalceria_password_reset_from_map");
+          sessionStorage.removeItem("kalceria_password_reset_from_map");
         } catch {}
       }
 
@@ -136,11 +162,18 @@ export function usePasswordResetFlow({
   // ── Cross-Device / Cross-Tab Sync for Forgot Password Tab -> Route to Login page ──
   const handleCrossTabResetSuccess = (data) => {
     const userEmail = data?.email || forgotEmail || "";
-    if (data?.fromMap) {
+    const isFromMap = Boolean(data?.fromMap);
+    if (isFromMap) {
       try {
         localStorage.setItem("kalceria_auth_return", "/map");
         localStorage.setItem("kalceria_password_reset_from_map", "true");
         sessionStorage.setItem("kalceria_password_reset_from_map", "true");
+      } catch {}
+    } else {
+      try {
+        localStorage.removeItem("kalceria_auth_return");
+        localStorage.removeItem("kalceria_password_reset_from_map");
+        sessionStorage.removeItem("kalceria_password_reset_from_map");
       } catch {}
     }
     setIsBuffering(false);

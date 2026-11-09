@@ -180,11 +180,13 @@ export default function HomeClient() {
                     localStorage.removeItem("kalceria_auth_return");
                     sessionStorage.setItem("kalceria_password_reset_from_map", "true");
                   } catch {}
-                  window.location.href = "/map?from=password_reset";
+                  window.location.href = "/map?from=password_reset&skip_intro=true";
                   return;
                 }
                 try {
                   localStorage.removeItem("kalceria_auth_return");
+                  localStorage.removeItem("kalceria_password_reset_from_map");
+                  sessionStorage.removeItem("kalceria_password_reset_from_map");
                 } catch {}
                 setPhase("landing");
                 if (typeof window !== "undefined") {

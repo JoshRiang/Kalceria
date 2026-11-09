@@ -81,11 +81,11 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
         onClick={() => setIsCollapsed((prev) => !prev)}
         title={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
         aria-label={isCollapsed ? "Expand Profile Sidebar" : "Collapse Profile Sidebar"}
-        className={`flex items-center justify-center w-4.5 sm:w-5 h-7 sm:h-8 rounded-l-full ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${
+        className={`flex items-center justify-center w-4.5 sm:w-5 h-7 sm:h-8 rounded-l-full ${boxBg} border-y-[1.5px] border-l-[1.5px] border-r-0 ${boxBorder} ${
           isMapDark
             ? "shadow-[inset_1px_1px_1.5px_rgba(255,255,255,0.2),-3px_2px_8px_rgba(0,0,0,0.6)]"
             : "shadow-[inset_1px_1px_1.5px_rgba(255,255,255,0.95),-3px_2px_8px_rgba(0,0,0,0.1)]"
-        } cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group z-20 -mr-[1px]`}
+        } cursor-pointer transition-transform hover:scale-105 active:scale-95 outline-none group z-20 -mr-[1.5px]`}
       >
         <GenericProfileIcon
           isMapDark={isMapDark}
@@ -97,12 +97,12 @@ export const HudRightProfileDock = memo(function HudRightProfileDock({
       <div
         className={`relative flex items-center justify-center rounded-l-xl ${boxBg} border-y-[1.5px] border-l-[1.5px] ${boxBorder} ${shadow} p-1.5 z-10`}
       >
-        {/* Dark-gray 2D beveled sunken crater circle plate matching toolbar slots */}
+        {/* Softened 2D beveled sunken crater circle plate matching toolbar slots */}
         <div
           className={`relative w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-full p-[2px] ${
             isMapDark
-              ? "bg-[#141724] border border-white/15 shadow-[inset_1.5px_2px_4px_rgba(0,0,0,0.85),inset_-1px_-1px_1.5px_rgba(255,255,255,0.15)]"
-              : "bg-[#2d313c] border border-black/35 shadow-[inset_1.5px_2px_4px_rgba(0,0,0,0.65),inset_-1px_-1px_1.5px_rgba(255,255,255,0.2)]"
+              ? "bg-[#161926] border border-white/15 shadow-[inset_1px_1.5px_3px_rgba(0,0,0,0.8),inset_-1px_-1px_1.5px_rgba(255,255,255,0.1)]"
+              : "bg-[#f1f3f5] border border-black/15 shadow-[inset_1px_1.5px_2.5px_rgba(0,0,0,0.18),inset_-1px_-1px_1.5px_rgba(255,255,255,0.9)]"
           } flex items-center justify-center transition-transform hover:scale-105`}
         >
           <HudProfileAvatar

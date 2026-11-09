@@ -26,9 +26,11 @@ function ResetPasswordContent() {
       if (window.innerWidth <= 768) {
         setVideoSrc("/hp/vid_login_hp.mp4");
       }
-      // Redirect seamlessly to the original home page auth modal (?token=...)
+      // Redirect seamlessly to the original home page auth modal (?token=...&from=...)
       if (token) {
-        window.location.replace(`/?token=${encodeURIComponent(token)}`);
+        const fromParam = searchParams.get("from");
+        const redirectUrl = `/?token=${encodeURIComponent(token)}${fromParam ? `&from=${encodeURIComponent(fromParam)}` : ""}`;
+        window.location.replace(redirectUrl);
       }
     }
   }, [token]);
@@ -65,6 +67,12 @@ function ResetPasswordContent() {
           localStorage.setItem("kalceria_password_reset_from_map", "true");
           sessionStorage.setItem("kalceria_password_reset_from_map", "true");
         } catch {}
+      } else {
+        try {
+          localStorage.removeItem("kalceria_auth_return");
+          localStorage.removeItem("kalceria_password_reset_from_map");
+          sessionStorage.removeItem("kalceria_password_reset_from_map");
+        } catch {}
       }
 
       // Broadcast to other open tabs on the same device
@@ -83,7 +91,11 @@ function ResetPasswordContent() {
 
       setTimeout(() => {
         setIsProcessing(false);
-        window.location.replace(`/?auth=true&mode=login&reset_success=true&email=${encodeURIComponent(userEmail)}${isFromMap ? "&from=map" : ""}`);
+        if (isFromMap) {
+          window.location.replace("/map?from=password_reset&skip_intro=true");
+        } else {
+          window.location.replace(`/?auth=true&mode=login&reset_success=true&email=${encodeURIComponent(userEmail)}`);
+        }
       }, 450);
     } catch (err) {
       setIsProcessing(false);
