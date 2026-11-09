@@ -47,6 +47,13 @@ Setiap agen yang terburu-buru akan langsung dieliminasi ("OUT") tanpa kompromi j
    - Bersihkan dead code, jangan tinggalkan comment hacking atau kode usang.
    - Penanganan error harus eksplisit dan memberikan feedback terukur, bukan silent failure.
 
+### C. Direktori Referensi Wajib (Cross-Document Reading Mandate)
+Setiap agen WAJIB membaca, memahami, dan mematuhi dokumen-dokumen referensi berikut sebelum merancang atau menyentuh kode apa pun:
+1. **Aturan Uji & Matrix Verifikasi**: [`TEST.md`](file:///d:/TheWeb/Kalceria/TEST.md) (Verifikasi seluruh fitur, security gate, dan modularity test suites).
+2. **Strategi Modularisasi & Hook Ledger**: [`docs/KALCERIA_MODULARIZATION_STRATEGY.md`](file:///d:/TheWeb/Kalceria/docs/KALCERIA_MODULARIZATION_STRATEGY.md) (Inventaris atomik, 10 Iron Laws, Hook Ledger, hook conservation registry, dan 11 KPI).
+3. **Standar Desain & Frontend**: [`.agents/rules/frontend-guide.md`](file:///d:/TheWeb/Kalceria/.agents/rules/frontend-guide.md) dan [`.agents/rules/CODING_STYLE.md`](file:///d:/TheWeb/Kalceria/.agents/rules/CODING_STYLE.md) (Design DNA, color palette, visual styling, dan coding style).
+4. **Spesifikasi Domain & Arsitektur Kalceria**: [`docs/00-OVERVIEW.md`](file:///d:/TheWeb/Kalceria/docs/00-OVERVIEW.md) s/d [`docs/09-IMPLEMENTATION-GUIDE.md`](file:///d:/TheWeb/Kalceria/docs/09-IMPLEMENTATION-GUIDE.md) (Spesifikasi domain fitur, arsitektur data, keamanan, dan rute API).
+
 ---
 
 ## 3. Siklus Eksekusi One-Shot (Wajib Dilalui Setiap Tugas)
@@ -209,7 +216,12 @@ Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyat
 ### 6.5 Aturan Modul
 1. Lokasi: subfolder camelCase di sebelah file induk, mengikuti pola yang sudah ada (`mapPage/`, `personalChat/`, `mediaCard/`, `cameraCapture/`, `personalCall/`, `mapChat/`, `controllers/miniEvent/`). Jangan membuat folder paralel bila sudah ada.
 2. Hook `useXxx.js`, satu hook utama per file, named export, satu parameter-object dengan nama field = nama variabel baseline.
-3. Modul murni: tanpa React, **tanpa import `@/`** (helper beralias, `Date.now`, storage, `navigator`, `document` diinjeksi lewat parameter) agar dapat dites `node --test`.
+3. **Doktrin Mutlak Modul Murni (Pure Modules — Pelajaran Wave 1)**:
+   - Wajib 100% bebas dari React (`useState`, `useEffect`, hooks) dan bebas manipulasi DOM langsung.
+   - **DILARANG TOTAL mengimpor alias `@/`**: Semua helper beralias, dependensi luar, `Date.now`, storage, `navigator`, dan `document` WAJIB diinjeksi lewat parameter fungsi. Hal ini mutlak agar modul murni dapat dieksekusi secara instan dan headless oleh runner native `node --test` (Gate 3b) tanpa transpilation layer bundler.
+   - **Immutability & Reference Preservation (IL-7)**: Fungsi pengubah status (seperti `applyPeerReadReceipt`, `filterDeletedMessages`) wajib mengembalikan referensi array asli (*same reference*) jika tidak ada elemen yang berubah, guna mencegah re-render sia-sia pada komponen konsumen.
+   - **Deduplikasi Logika Murni (K7)**: Logika format teks (seperti clipboard format teks/VN/call/media) dan parsing metadata regex (seperti tag `[CAT]`, `[LOC]`, `[MEDIA]`, `[COLLABS]`) wajib disatukan ke modul murni tunggal, mengeliminasi duplikasi kode hingga 1×.
+   - **Cakupan Golden Test 100%**: Setiap modul murni wajib memiliki suite pengujian golden-master di `frontend/tests/pure_modules_golden.test.mjs` yang memverifikasi seluruh variasi input, boundary condition, nilai null/kosong, dan edge case.
 4. Komentar/docstring lama yang melekat pada kode ikut dipindah. Kepala tiap modul memuat tujuan, posisi ledger, field input/output.
 5. Backend (Tier B): file lama menjadi **barrel re-export** dengan nama ekspor identik; rute, middleware, dan respons tidak berubah.
 6. Fixture test hanya in-memory (§1.6): dilarang membuat akun/data di Postgres/Redis.

@@ -152,8 +152,18 @@ npm --prefix frontend run build
 |---|---|---|---|---|
 | `MOD-01` | **Hook Conservation (K3)** | `node scripts/audit/modularity-audit.mjs --check` | Aggregate hook sum across facade and submodules equals baseline with 0 delta. | Zero hook additions/leaks across extractions. |
 | `MOD-02` | **Contract Invariance (K5)** | Audit of `usePersonalChatState.js` return signature | All 58 return keys and 9 re-exports strictly preserved. | Zero breakages for downstream consumers. |
-| `MOD-03` | **Golden-Master Pure Test Harness (Gate 3b)** | `node --test frontend/tests/*.test.mjs` | 100% pass against deterministic in-memory fixtures. | In-memory only; zero Postgres or Redis pollution. |
+| `MOD-03` | **Golden-Master Pure Test Harness (Gate 3b)** | `node --test frontend/tests/*.test.mjs` | 100% pass against deterministic in-memory fixtures (61/61 tests pass). | In-memory only; zero Postgres or Redis pollution. |
 | `MOD-04` | **Deterministic Golden Slices** | `node scripts/audit/golden/make-golden.mjs` | Verbatim Git slice extraction from `f1dbb70` without behavioral drift. | Reproducible verification against frozen commit. |
+| `MOD-05` | **Message Day Divider & Search (`groupMessages.js`)** | Chat messages array with dates and optional search query | Groups messages into `date_divider` on day boundary; filters case-insensitively without throwing on empty/null. | Zero side-effects; pure array transformation. |
+| `MOD-06` | **Unified Clipboard Copy (`clipboardText.js`)** | Text, voice note, call log, or media message | Produces clean formatted copy text; invokes `navigator.clipboard` or falls back safely to textarea DOM (4× ➔ 1× deduplication). | Tested in `pure_modules_golden.test.mjs`. |
+| `MOD-07` | **Reply Payload Generation (`replyPayload.js`)** | Target message object (text, broadcast, or call) | Produces sanitized reply draft; sets senderName to "You" for self or peer name for incoming messages. | Preserves nested reply payload schema. |
+| `MOD-08` | **Immutable Status Updaters (`messageStatusUpdaters.js`)** | Incoming read-ack or deletion ID array | Updates `sent` ➔ `read` up to watermark `ackTs`. Returns identical array reference if unchanged (IL-7). | Prevents unnecessary re-renders in UI thread. |
+| `MOD-09` | **Delta Sync Reconciliation (`mergeRemoteMessages.js`)** | Local in-flight messages (`sending`/`failed`) + remote decrypted messages | Merges remote messages without downgrading local `read` status back to `sent`. Discards deleted messages on deleteRev. | Eliminates network race condition message flickering. |
+| `MOD-10` | **Map Entities Projection (`mapEntitiesProjection.js`)** | Raw users list and raw events list | Filters offline users, `allowLiveLocation === false`, NaN coordinates, blocked users, and expired events. | Pure projection ensures consistent spatial rendering. |
+| `MOD-11` | **Sidebar 4-Tier Sorting (`sidebarKalceriansProjection.js`)** | Sidebar Kalcerians list | Sorts strictly: (1) unread notifications first, (2) favourites second, (3) distance/recent third, (4) search query match. | Excludes forbidden accounts via `isExcludedKalcerianUser`. |
+| `MOD-12` | **Event Tags Codec (`eventDescCodec.js`)** | Description string with `[CAT]`, `[LOC]`, `[MEDIA]`, `[COLLABS]` | Parses and encodes tags cleanly; case-insensitive; deduplicated 3× ➔ 1× across entire codebase. | Preserves untagged raw description text intact. |
+| `MOD-13` | **Event Payload Builder (`miniEventPayload.js`)** | Event form state and media items | Formats title, tags description, strips existing duplicate tags, and structures multi-clip media metadata. | Handles empty title/location fallbacks gracefully. |
+| `MOD-14` | **Profile Patch Immutability (`profilePatch.js`)** | User collection, event collection, and updated profile fields | Immutably patches user object and creator metadata on map events; merges local edits with server response. | Zero mutation of underlying store references. |
 
 ---
 
