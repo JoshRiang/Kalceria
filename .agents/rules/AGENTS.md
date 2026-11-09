@@ -225,10 +225,18 @@ Pelanggaran berikut menandakan kegagalan total kualitas eksekusi dan agen dinyat
 4. Komentar/docstring lama yang melekat pada kode ikut dipindah. Kepala tiap modul memuat tujuan, posisi ledger, field input/output.
 5. Backend (Tier B): file lama menjadi **barrel re-export** dengan nama ekspor identik; rute, middleware, dan respons tidak berubah.
 6. Fixture test hanya in-memory (§1.6): dilarang membuat akun/data di Postgres/Redis.
+7. **Doktrin Mutlak Hook Daun Mandiri (Leaf Hooks — Pelajaran Wave 2)**:
+   - **Isolasi Logika UI/Action dari Jembatan P2P & Sync Terjalin**: Hook daun beroperasi di tepi arsitektur (UI thread, menu context, action handler, listener event). Hook daun DILARANG memegang atau memodifikasi ref jembatan P2P (`peerConnectionRef`, `dataChannelRef`) atau loop sync terjalin (`syncLoop`, `deleteRev`).
+   - **Hukum Besi Larangan `useCallback` pada Action Handlers (IL-6)**: Handler seperti `handleSendText`, `handlePresenceChange`, `handleQuitConfirm`, `saveBroadcast` WAJIB tetap non-memo sesuai baseline `f1dbb70`. DILARANG membungkusnya dengan `useCallback` karena membungkus handler yang membaca state dinamis (`messages`, `inputText`, `currentLocation`) akan memicu jebakan stale-closure atau dependency bloat.
+   - **Pola Injeksi Parameter Objek Tunggal (Single Parameter-Object Pattern — IL-2)**: State dan ref bersama (mis. `chatScrollRef`, `activeMenuId`, `selectedMessageIds`, `currentLocation`) tetap dipegang oleh facade (`usePersonalChatState` / `MapPageClient`) dan disuntikkan ke hook daun melalui satu objek parameter tunggal. Hook daun dilarang menginstansiasi duplicate state/ref bersama.
+   - **Siklus Pembersihan Event Listener Window (Zero Zombie Listeners)**: Semua hook daun yang mendaftarkan event eksternal (`window.addEventListener('kalceria:refresh-events')`, `window.addEventListener('online')`, `window.addEventListener('offline')`, timer splash, interval beacon) WAJIB membersihkan listener pada unmount (`useEffect` return cleanup). Zombie listener adalah pelanggaran fatal.
+   - **Preservasi Kontrak Facade Transparan (IL-9)**: Semua state dan handler dari hook daun wajib diekspor kembali oleh facade secara transparan tanpa mengubah nama key, tipe kembalian, atau memecah kontrak pemanggil (58 keys return `usePersonalChatState` & JSX props `MapPageClient`).
 
 ### 6.6 Tambahan Failure Verdict ("OUT")
 - Mengubah urutan efek, memindah assignment ref render-body ke efek, atau memecah efek yang memuat dua concern.
-- Menambah `useCallback`/`useMemo` pada handler non-memo, atau mengubah dep array.
+- Menambah `useCallback`/`useMemo` pada handler non-memo, atau mengubah dep array (pelanggaran IL-5 & IL-6).
+- Memecah atau menduplikasi kepemilikan state/ref bersama ke dalam hook daun alih-alih menginjeksinya lewat objek parameter tunggal dari facade (pelanggaran IL-2).
+- Meninggalkan event listener window tanpa fungsi cleanup unmount (kebocoran zombie listener).
 - Mengubah kontrak pemanggil/anak (key return, re-export, prop JSX) tanpa izin eksplisit.
 - Menyentuh Tier C atau `BaselineNovember#2`.
 - Melapor "sudah" sementara Gate 3b/3c (bila sudah aktif), moved-lines diff, atau matriks manual belum dijalankan.
