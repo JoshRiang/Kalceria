@@ -27,10 +27,8 @@ export function rateLimit({ name, max, windowSeconds, key = (req) => req.ip || '
       }
 
       return next();
-    } catch (_error) {
-      // If Redis is unreachable, sleeping, or over quota (e.g. Upstash max requests limit),
-      // gracefully fail-open so the application remains responsive and users are not blocked with 500 errors.
-      return next();
+    } catch (error) {
+      return next(error);
     }
   };
 }
