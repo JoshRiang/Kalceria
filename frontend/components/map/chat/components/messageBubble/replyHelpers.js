@@ -19,6 +19,13 @@ export function formatVoiceDuration(sec) {
  */
 export function inferReplyMediaType(replyObj) {
   if (!replyObj) return "text";
+  if (
+    replyObj.msgType === "broadcast" ||
+    Boolean(replyObj.isBroadcast) ||
+    Boolean(replyObj.broadcastMessage)
+  ) {
+    return "broadcast";
+  }
   if (replyObj.msgType === "voice" || Boolean(replyObj.voiceDuration)) return "voice";
   if (
     replyObj.msgType === "video" ||
@@ -45,28 +52,41 @@ export function inferReplyMediaType(replyObj) {
  * Extract clean display information for reply composer preview and quote bubbles
  * Format:
  * - Line 1: senderName
- * - Line 2: typeLabel (e.g. "Voice message 00:07", "Photo", "Video", or text message)
+ * - Line 2: typeLabel (e.g. "Broadcast 15m", "Voice message 00:07", "Photo", "Video", or text message)
  * - Line 3 (if caption): caption in italic with quotes
  */
 export function getReplyDisplayInfo(replyObj) {
   if (!replyObj) {
-    return { senderName: "Kalcerian", typeLabel: "", caption: null };
+    return { senderName: "Kalcerian", typeLabel: "", caption: null, isBroadcast: false };
   }
   const senderName = replyObj.senderName || "Kalcerian";
   const mediaType = inferReplyMediaType(replyObj);
+
+  if (mediaType === "broadcast") {
+    const rawCaption = replyObj.broadcastMessage || replyObj.caption || replyObj.text || "";
+    const duration = replyObj.broadcastDuration || "0m";
+    return {
+      senderName,
+      typeLabel: `Broadcast ${duration}`,
+      broadcastDuration: duration,
+      isBroadcast: true,
+      caption: rawCaption ? String(rawCaption).trim() : null,
+    };
+  }
 
   if (mediaType === "voice") {
     const textStr = String(replyObj.text || "").trim();
     if (/^voice message\s+\d{1,2}:\d{2}$/i.test(textStr)) {
       const match = textStr.match(/\d{1,2}:\d{2}/);
       const formatted = match ? formatVoiceDuration(match[0]) : "00:07";
-      return { senderName, typeLabel: `Voice message ${formatted}`, caption: null };
+      return { senderName, typeLabel: `Voice message ${formatted}`, caption: null, isBroadcast: false };
     }
     const durSec = replyObj.voiceDuration || 7;
     return {
       senderName,
       typeLabel: `Voice message ${formatVoiceDuration(durSec)}`,
       caption: null,
+      isBroadcast: false,
     };
   }
 
@@ -79,6 +99,7 @@ export function getReplyDisplayInfo(replyObj) {
       senderName,
       typeLabel: "Video",
       caption: isGenericText ? null : rawCaption.trim(),
+      isBroadcast: false,
     };
   }
 
@@ -91,6 +112,7 @@ export function getReplyDisplayInfo(replyObj) {
       senderName,
       typeLabel: "Photo",
       caption: isGenericText ? null : rawCaption.trim(),
+      isBroadcast: false,
     };
   }
 
@@ -99,6 +121,7 @@ export function getReplyDisplayInfo(replyObj) {
       senderName,
       typeLabel: replyObj.text || "Call log",
       caption: null,
+      isBroadcast: false,
     };
   }
 
@@ -106,5 +129,6 @@ export function getReplyDisplayInfo(replyObj) {
     senderName,
     typeLabel: replyObj.text || "Message",
     caption: null,
+    isBroadcast: false,
   };
 }

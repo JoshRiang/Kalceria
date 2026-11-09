@@ -120,4 +120,72 @@ export function useSnapMapFocus({
       }
     }
   }, [focusUserId, focusTarget, isReady, mapRef, markerRefs]);
+
+  // Open broadcast on map without closing personal chat
+  useEffect(() => {
+    const handleOpenBroadcastOnMap = (e) => {
+      if (!isReady || !markerRefs.current || !mapRef.current) return;
+      const { userId, lat, lng } = e.detail || {};
+
+      let targetMarker = null;
+      if (userId) {
+        targetMarker =
+          markerRefs.current[`user_${userId}`] ||
+          Object.values(markerRefs.current).find((m) => {
+            const ud = m?.options?.userData;
+            return ud && String(ud.id) === String(userId);
+          });
+      }
+
+      const map = mapRef.current;
+      const targetLatLng = targetMarker
+        ? targetMarker.getLatLng()
+        : lat && lng
+        ? [Number(lat), Number(lng)]
+        : null;
+
+      if (!targetLatLng) return;
+
+      const openPopupSafe = () => {
+        try {
+          if (targetMarker && targetMarker.getPopup && targetMarker.getPopup()) {
+            targetMarker.openPopup();
+            tickAllEventUptimeElements();
+          }
+        } catch (_) {}
+      };
+
+      const currentCenter = map.getCenter();
+      const dist = currentCenter ? currentCenter.distanceTo(targetLatLng) : 9999;
+
+      if (dist < 20) {
+        openPopupSafe();
+      } else {
+        let timer = null;
+        const onMoveEnd = () => {
+          map.off("moveend", onMoveEnd);
+          if (timer) clearTimeout(timer);
+          setTimeout(openPopupSafe, 50);
+        };
+
+        map.once("moveend", onMoveEnd);
+        timer = setTimeout(() => {
+          map.off("moveend", onMoveEnd);
+          openPopupSafe();
+        }, 750);
+
+        const targetLat = Array.isArray(targetLatLng) ? targetLatLng[0] : targetLatLng.lat;
+        const targetLng = Array.isArray(targetLatLng) ? targetLatLng[1] : targetLatLng.lng;
+        prewarmOsmTiles(targetLat, targetLng, 16);
+        map.flyTo(targetLatLng, 16, {
+          animate: true,
+          duration: dist > 4500 ? 0.62 : 0.45,
+          easeLinearity: 0.25,
+        });
+      }
+    };
+
+    window.addEventListener("kalceria:open-broadcast-on-map", handleOpenBroadcastOnMap);
+    return () => window.removeEventListener("kalceria:open-broadcast-on-map", handleOpenBroadcastOnMap);
+  }, [isReady, mapRef, markerRefs]);
 }

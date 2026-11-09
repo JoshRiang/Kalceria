@@ -20,6 +20,8 @@ export function StatusModal({
   statusText,
   setStatusText,
   busy,
+  isEditing = false,
+  onPromptDeleteBroadcast,
 }) {
   useModalBackClose(Boolean(show), onClose);
 
@@ -55,112 +57,169 @@ export function StatusModal({
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-        {/* 2-Piece (3 : 1) Smooth-Trimmed Broadcast Background Layer */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
-          style={{
-            backgroundColor: isModalDark ? "#010101" : "#ffffff",
-            maskImage: smoothTwoBandMask,
-            WebkitMaskImage: smoothTwoBandMask,
-          }}
-        >
-          <div
-            className="w-full h-full"
-            style={{
-              backgroundImage: `url("${resolvedBgUrl}")`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-              opacity: isModalDark ? 0.45 : 0.58,
-            }}
-          />
-        </div>
+            {/* 2-Piece (3 : 1) Smooth-Trimmed Broadcast Background Layer */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
+              style={{
+                backgroundColor: isModalDark ? "#010101" : "#ffffff",
+                maskImage: smoothTwoBandMask,
+                WebkitMaskImage: smoothTwoBandMask,
+              }}
+            >
+              <div
+                className="w-full h-full"
+                style={{
+                  backgroundImage: `url("${resolvedBgUrl}")`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                  opacity: isModalDark ? 0.45 : 0.58,
+                }}
+              />
+            </div>
 
-        {/* Header (Solid #010101 / #ffffff, 100% uncontaminated by background) */}
-        <div
-          className={`shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-none ${
-            isModalDark ? "bg-[#010101]" : "bg-[#ffffff]"
-          }`}
-        >
-          <h2
-            className={`font-sans font-bold text-base sm:text-lg tracking-tight ${
-              isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-            }`}
-          >
-            Update Status
-          </h2>
-          <button
-            type="button"
-            className={`text-2xl leading-none relative z-10 transition-colors p-1 cursor-pointer ${
-              isModalDark
-                ? "text-[#8b949e] hover:text-[#f0f6fc]"
-                : "text-[#57606a] hover:text-[#1f2328]"
-            }`}
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Form */}
-        <form
-          onSubmit={(e) => {
-            if (!isBroadcastValid) {
-              e.preventDefault();
-              return;
-            }
-            saveBroadcast(e);
-          }}
-          className="relative z-10 p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-4 sm:gap-5 custom-scrollbar"
-        >
-          <p
-            className={`text-xs sm:text-sm leading-relaxed tracking-normal ${
-              isModalDark ? "text-[#8b949e]" : "text-[#57606a]"
-            }`}
-          >
-            Share your current activity with other Kalcerians for 24h.
-          </p>
-
-          <div className="flex flex-col gap-2">
-            <label
-              className={`text-xs font-semibold tracking-wider ${
-                isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+            {/* Header (Solid #010101 / #ffffff, 100% uncontaminated by background) */}
+            <div
+              className={`shrink-0 relative z-10 flex justify-between items-center px-5 sm:px-6 py-3.5 sm:py-4 border-none ${
+                isModalDark ? "bg-[#010101]" : "bg-[#ffffff]"
               }`}
             >
-              Broadcast <span className="text-[#ef4444]">*</span>
-            </label>
-            <textarea
-              className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm outline-none min-h-[90px] sm:min-h-[120px] transition-all resize-none ${
-                isModalDark
-                  ? "bg-[#0a0c10]/90 border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
-                  : "bg-[#f6f8fa]/94 border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
-              }`}
-              value={statusText}
-              onChange={(e) => setStatusText(e.target.value)}
-              placeholder="OTW FM..."
-              autoFocus
-            />
-          </div>
+              <h2
+                className={`font-sans font-bold text-base sm:text-lg tracking-tight ${
+                  isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                }`}
+              >
+                {isEditing ? "Edit Broadcast" : "Update Status"}
+              </h2>
+              <button
+                type="button"
+                className={`text-2xl leading-none relative z-10 transition-colors p-1 cursor-pointer ${
+                  isModalDark
+                    ? "text-[#8b949e] hover:text-[#f0f6fc]"
+                    : "text-[#57606a] hover:text-[#1f2328]"
+                }`}
+                onClick={onClose}
+              >
+                ×
+              </button>
+            </div>
 
-          <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
-            <button
-              type="submit"
-              className={`w-full min-h-[40px] flex items-center justify-center py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
-                isModalDark
-                  ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
-                  : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
-              }`}
-              disabled={busy || !isBroadcastValid}
+            {/* Form */}
+            <form
+              onSubmit={(e) => {
+                if (!isBroadcastValid) {
+                  e.preventDefault();
+                  return;
+                }
+                saveBroadcast(e);
+              }}
+              className="relative z-10 p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-4 sm:gap-5 custom-scrollbar"
             >
-              {busy ? (
-                <ActionArcSpinner className="w-4 h-4" label="Posting status" />
+              <p
+                className={`text-xs sm:text-sm leading-relaxed tracking-normal ${
+                  isModalDark ? "text-[#8b949e]" : "text-[#57606a]"
+                }`}
+              >
+                Share your current activity with other Kalcerians for 24h.
+              </p>
+
+              <div className="flex flex-col gap-2">
+                <label
+                  className={`text-xs font-semibold tracking-wider ${
+                    isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                  }`}
+                >
+                  Broadcast <span className="text-[#ef4444]">*</span>
+                </label>
+                <textarea
+                  className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm outline-none min-h-[90px] sm:min-h-[120px] transition-all resize-none ${
+                    isModalDark
+                      ? "bg-[#0a0c10]/90 border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
+                      : "bg-[#f6f8fa]/94 border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
+                  }`}
+                  value={statusText}
+                  onChange={(e) => setStatusText(e.target.value)}
+                  placeholder="OTW FM..."
+                  autoFocus
+                />
+              </div>
+
+              {isEditing ? (
+                <div className="flex items-center justify-between mt-auto pt-3 shrink-0 px-1">
+                  {/* Left: Red Trashcan Icon Button with hollow transparent interior */}
+                  <button
+                    type="button"
+                    onClick={onPromptDeleteBroadcast}
+                    disabled={busy}
+                    title="Delete Broadcast"
+                    aria-label="Delete Broadcast"
+                    className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer group flex items-center justify-center"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="w-5 h-5">
+                      <defs>
+                        <mask id="hollow-trashcan-mask-broadcast">
+                          <rect x="0" y="0" width="24" height="24" fill="#ffffff" />
+                          {/* Hollow handle opening */}
+                          <rect x="9.6" y="4.2" width="4.8" height="1.8" rx="0.6" fill="#000000" />
+                          {/* Hollow lid separation line */}
+                          <line x1="5" y1="6.4" x2="19" y2="6.4" stroke="#000000" strokeWidth="1.2" strokeLinecap="round" />
+                          {/* Hollow interior vertical slits */}
+                          <line x1="9.5" y1="9.5" x2="9.5" y2="17" stroke="#000000" strokeWidth="1.7" strokeLinecap="round" />
+                          <line x1="14.5" y1="9.5" x2="14.5" y2="17" stroke="#000000" strokeWidth="1.7" strokeLinecap="round" />
+                        </mask>
+                      </defs>
+                      <g mask="url(#hollow-trashcan-mask-broadcast)">
+                        <path
+                          d="M 19 6 L 18.1 19.3 C 18 20.3 17.2 21 16.2 21 H 7.8 C 6.8 21 6 20.3 5.9 19.3 L 5 6 Z"
+                          fill="#ef4444"
+                        />
+                        <path
+                          d="M 8 6 V 3.8 C 8 3.1 8.5 2.6 9.2 2.6 H 14.8 C 15.5 2.6 16 3.1 16 3.8 V 6 Z"
+                          fill="#ef4444"
+                        />
+                        <path d="M 3.5 5.4 H 21" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" />
+                      </g>
+                    </svg>
+                  </button>
+
+                  {/* Right: Box button with Update font, trimmed to the right */}
+                  <button
+                    type="submit"
+                    disabled={busy || !isBroadcastValid}
+                    className={`min-w-[96px] min-h-[40px] flex items-center justify-center px-6 py-2.5 sm:py-3 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
+                      isModalDark
+                        ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
+                        : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                    }`}
+                  >
+                    {busy ? (
+                      <ActionArcSpinner className="w-4 h-4" label="Updating broadcast" />
+                    ) : (
+                      "Update"
+                    )}
+                  </button>
+                </div>
               ) : (
-                "Post"
+                <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
+                  <button
+                    type="submit"
+                    className={`w-full min-h-[40px] flex items-center justify-center py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
+                      isModalDark
+                        ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
+                        : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
+                    }`}
+                    disabled={busy || !isBroadcastValid}
+                  >
+                    {busy ? (
+                      <ActionArcSpinner className="w-4 h-4" label="Posting status" />
+                    ) : (
+                      "Post"
+                    )}
+                  </button>
+                </div>
               )}
-            </button>
-          </div>
-        </form>
+            </form>
           </motion.div>
         </motion.div>
       )}

@@ -344,6 +344,55 @@ export const KalceriansPanel = memo(function KalceriansPanel({
     return () => window.removeEventListener("kalceria:expand-kalcerian-profile", handleRemoteProfileExpand);
   }, []);
 
+  // Handle lively Broadcast Reply sequence:
+  // Slide down current view / drawer / previous chat, then slide up personal chat with creator, and inject reply
+  useEffect(() => {
+    const handleBroadcastReply = (e) => {
+      if (isSelfOfflineRef.current) return;
+      const { targetUser, replyPayload } = e.detail || {};
+      if (!targetUser) return;
+      if (currentUser?.id && String(targetUser.id) === String(currentUser.id)) return;
+
+      // Close expanded profile card if open
+      setExpandedUserId(null);
+
+      // Store pending reply payload on window
+      if (typeof window !== "undefined") {
+        window.__kalceriaPendingReplyPayload = replyPayload;
+      }
+
+      // If already chatting with someone else, close first then transition
+      if (
+        activeChatUserIdRef.current &&
+        String(activeChatUserIdRef.current) !== String(targetUser.id)
+      ) {
+        setActiveChatUserId(null);
+        setActiveChatUserSnapshot(null);
+        setTimeout(() => {
+          handleOpenChatWithTransition(targetUser);
+          if (replyPayload && typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("kalceria:set-reply-payload", {
+                detail: replyPayload,
+              })
+            );
+          }
+        }, 160);
+      } else {
+        handleOpenChatWithTransition(targetUser);
+        if (replyPayload && typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("kalceria:set-reply-payload", {
+              detail: replyPayload,
+            })
+          );
+        }
+      }
+    };
+    window.addEventListener("kalceria:start-broadcast-reply", handleBroadcastReply);
+    return () => window.removeEventListener("kalceria:start-broadcast-reply", handleBroadcastReply);
+  }, [currentUser]);
+
   const handleOpenChatWithTransition = (user) => {
     if (!user || isSelfOfflineRef.current) return;
     // Strict guard: Cannot chat with oneself

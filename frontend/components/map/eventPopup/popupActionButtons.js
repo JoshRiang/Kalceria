@@ -207,28 +207,9 @@ export function renderPencilEditButton({
       style="width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0; ${offlineBtnLockStyle}"
       ${isSelfOffline ? "" : `onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'"`}
     >
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" style="display: block; overflow: visible;">
-        <path
-          d="M 3.5 20.5 L 4.8 15.8 L 8.2 19.2 Z"
-          fill="${iconFg}"
-          stroke="${iconStroke}"
-          stroke-width="1.1"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M 6.4 14.2 L 14.2 6.4 L 17.6 9.8 L 9.8 17.6 Z"
-          fill="${iconFg}"
-          stroke="${iconStroke}"
-          stroke-width="1.1"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M 15.6 5.0 L 17.2 3.4 C 17.8 2.8 18.8 2.8 19.4 3.4 L 20.6 4.6 C 21.2 5.2 21.2 6.2 20.6 6.8 L 19.0 8.4 Z"
-          fill="${iconFg}"
-          stroke="${iconStroke}"
-          stroke-width="1.1"
-          stroke-linejoin="round"
-        />
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconFg}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block; overflow: visible;">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
       </svg>
     </button>
   `;

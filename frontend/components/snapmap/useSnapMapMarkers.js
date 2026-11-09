@@ -72,7 +72,8 @@ export function useSnapMapMarkers({
           marker._lastIconHtml = nextUserIconHtml;
         }
 
-        const popupContent = userPopup(user, isMapDark);
+        const popupContent = userPopup(user, isMapDark, currentUser);
+        const userSig = popupContent ? stripDynamicUptime(popupContent) : null;
         if (popupContent) {
           if (!marker.getPopup()) {
             marker.bindPopup(popupContent, {
@@ -81,23 +82,29 @@ export function useSnapMapMarkers({
               autoClose: true,
               closeButton: false,
             });
-          } else if (marker._lastPopupContent !== popupContent) {
+            marker._lastPopupContent = popupContent;
+            marker._lastPopupSig = userSig;
+          } else if (marker._lastPopupSig !== userSig) {
             marker.getPopup().setContent(popupContent);
             if (marker.getPopup().options) {
               marker.getPopup().options.offset = [0, -26];
             }
+            marker._lastPopupContent = popupContent;
+            marker._lastPopupSig = userSig;
+            tickAllEventUptimeElements();
           }
-          marker._lastPopupContent = popupContent;
         } else {
           if (marker.getPopup()) {
             marker.unbindPopup();
           }
           marker._lastPopupContent = null;
+          marker._lastPopupSig = null;
         }
 
         marker.options.userData = user;
       } else {
-        const popupContent = userPopup(user, isMapDark);
+        const popupContent = userPopup(user, isMapDark, currentUser);
+        const userSig = popupContent ? stripDynamicUptime(popupContent) : null;
         const marker = L.marker([user.lat, user.lng], {
           icon: nextUserIcon,
           userData: user,
@@ -112,8 +119,10 @@ export function useSnapMapMarkers({
             closeButton: false,
           });
           marker._lastPopupContent = popupContent;
+          marker._lastPopupSig = userSig;
         } else {
           marker._lastPopupContent = null;
+          marker._lastPopupSig = null;
         }
 
         // When tapping an avatar marker on the map, show username tooltip box AND trigger inline profile animation in the scroll bar
@@ -277,6 +286,25 @@ export function useSnapMapMarkers({
     usersLayerRef,
     eventsLayerRef,
   ]);
+
+  // Purge expired broadcast instantly when 24h is reached
+  useEffect(() => {
+    const handlePurge = (e) => {
+      const userId = e.detail?.userId;
+      if (!userId || !markerRefs.current) return;
+      const marker = markerRefs.current[`user_${userId}`];
+      if (marker && marker.getPopup()) {
+        try {
+          marker.closePopup();
+          marker.unbindPopup();
+        } catch (_) {}
+        marker._lastPopupContent = null;
+        marker._lastPopupSig = null;
+      }
+    };
+    window.addEventListener("kalceria:purge-expired-broadcast", handlePurge);
+    return () => window.removeEventListener("kalceria:purge-expired-broadcast", handlePurge);
+  }, [markerRefs]);
 
   return { markerRefs };
 }

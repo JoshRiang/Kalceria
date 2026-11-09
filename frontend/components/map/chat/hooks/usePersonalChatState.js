@@ -80,6 +80,21 @@ export function usePersonalChatState({
   const [showEmojiBar, setShowEmojiBar] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
 
+  // Support initial pending reply payload (e.g. from broadcast reply)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.__kalceriaPendingReplyPayload) {
+      setReplyingTo(window.__kalceriaPendingReplyPayload);
+      window.__kalceriaPendingReplyPayload = null;
+    }
+    const handleSetReply = (e) => {
+      if (e.detail) {
+        setReplyingTo(e.detail);
+      }
+    };
+    window.addEventListener("kalceria:set-reply-payload", handleSetReply);
+    return () => window.removeEventListener("kalceria:set-reply-payload", handleSetReply);
+  }, []);
+
   // Camera Capture Modal State
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
 
@@ -1005,6 +1020,12 @@ export function usePersonalChatState({
         caption: currentReply.caption || "",
         senderId: currentReply.senderId,
         senderName: currentReply.senderName || "Kalcerian",
+        isBroadcast: Boolean(currentReply.isBroadcast),
+        broadcastMessage: currentReply.broadcastMessage || null,
+        broadcastDuration: currentReply.broadcastDuration || null,
+        lat: currentReply.lat || null,
+        lng: currentReply.lng || null,
+        userId: currentReply.userId || currentReply.senderId || null,
       };
     }
 

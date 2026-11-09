@@ -85,12 +85,21 @@ export function ChatComposerBar({
               >
                 {replyInfo.senderName}
               </p>
-              <p
-                style={{ fontFamily: "Arial, sans-serif" }}
-                className="text-[10px] opacity-80 truncate leading-tight mt-0.5"
-              >
-                {replyInfo.typeLabel}
-              </p>
+              {replyInfo.isBroadcast ? (
+                <p
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="text-[10px] opacity-80 truncate leading-tight mt-0.5"
+                >
+                  Broadcast <span className="font-bold">{replyInfo.broadcastDuration || "0m"}</span>
+                </p>
+              ) : (
+                <p
+                  style={{ fontFamily: "Arial, sans-serif" }}
+                  className="text-[10px] opacity-80 truncate leading-tight mt-0.5"
+                >
+                  {replyInfo.typeLabel}
+                </p>
+              )}
               {replyInfo.caption && (
                 <p
                   style={{ fontFamily: "Arial, sans-serif" }}

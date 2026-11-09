@@ -190,6 +190,25 @@ export function ChatMessageBubble({
               <div
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (
+                    quoteInfo.isBroadcast ||
+                    item.replyTo?.isBroadcast ||
+                    item.replyTo?.msgType === "broadcast"
+                  ) {
+                    window.dispatchEvent(
+                      new CustomEvent("kalceria:open-broadcast-on-map", {
+                        detail: {
+                          userId:
+                            item.replyTo.userId ||
+                            item.replyTo.creatorId ||
+                            item.replyTo.senderId,
+                          lat: item.replyTo.lat,
+                          lng: item.replyTo.lng,
+                        },
+                      })
+                    );
+                    return;
+                  }
                   onJumpToMessage?.(item.replyTo.id);
                 }}
                 className={`mb-1.5 px-2.5 py-1.5 rounded-md text-[10.5px] leading-tight select-none border-l-2 cursor-pointer transition-opacity hover:opacity-85 ${
@@ -197,7 +216,11 @@ export function ChatMessageBubble({
                     ? "bg-white/10 border-white text-white/90"
                     : "bg-black/5 border-black text-black/90"
                 }`}
-                title="Ketuk untuk menuju pesan asli"
+                title={
+                  quoteInfo.isBroadcast
+                    ? "Ketuk untuk membuka broadcast di peta"
+                    : "Ketuk untuk menuju pesan asli"
+                }
               >
                 <p
                   style={{ fontFamily: "Arial, sans-serif" }}
@@ -205,12 +228,21 @@ export function ChatMessageBubble({
                 >
                   {quoteInfo.senderName}
                 </p>
-                <p
-                  style={{ fontFamily: "Arial, sans-serif" }}
-                  className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
-                >
-                  {quoteInfo.typeLabel}
-                </p>
+                {quoteInfo.isBroadcast ? (
+                  <p
+                    style={{ fontFamily: "Arial, sans-serif" }}
+                    className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
+                  >
+                    Broadcast <span className="font-bold">{quoteInfo.broadcastDuration || "0m"}</span>
+                  </p>
+                ) : (
+                  <p
+                    style={{ fontFamily: "Arial, sans-serif" }}
+                    className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
+                  >
+                    {quoteInfo.typeLabel}
+                  </p>
+                )}
                 {quoteInfo.caption && (
                   <p
                     style={{ fontFamily: "Arial, sans-serif" }}

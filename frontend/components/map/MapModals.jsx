@@ -41,10 +41,16 @@ export const MapModals = memo(function MapModals({
   setShowDeleteAccountModal,
   handleConfirmDeleteAccount,
   isExiting,
+  isEditingBroadcast = false,
+  setIsEditingBroadcast,
+  showDeleteBroadcastConfirm = false,
+  setShowDeleteBroadcastConfirm,
+  handleConfirmDeleteBroadcast,
 }) {
   const [quitChoice, setQuitChoice] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteChoice, setDeleteChoice] = useState(null);
+  const [deleteBroadcastChoice, setDeleteBroadcastChoice] = useState(null);
   const [cancelChoice, setCancelChoice] = useState(null);
   const [deleteAccountChoice, setDeleteAccountChoice] = useState(null);
 
@@ -67,15 +73,20 @@ export const MapModals = memo(function MapModals({
 
   return (
     <>
-      {/* 1. Update Status Modal */}
+      {/* 1. Update Status / Edit Broadcast Modal */}
       <StatusModal
         show={showStatusModal}
-        onClose={() => setShowStatusModal(false)}
+        onClose={() => {
+          setShowStatusModal(false);
+          setIsEditingBroadcast?.(false);
+        }}
         isModalDark={isModalDark}
         saveBroadcast={saveBroadcast}
         statusText={statusText}
         setStatusText={setStatusText}
         busy={busy}
+        isEditing={isEditingBroadcast}
+        onPromptDeleteBroadcast={() => setShowDeleteBroadcastConfirm?.(true)}
       />
 
       {/* 2. Create Your Own Event / Edit Event Modal */}
@@ -134,6 +145,29 @@ export const MapModals = memo(function MapModals({
           setTimeout(() => {
             setShowDeleteConfirm(false);
             setDeleteChoice(null);
+          }, 160);
+        }}
+      />
+
+      <ConfirmationPromptModal
+        show={showDeleteBroadcastConfirm}
+        title="Delete this broadcast"
+        isMapDark={isMapDark}
+        choice={deleteBroadcastChoice}
+        onConfirm={() => {
+          setDeleteBroadcastChoice("yes");
+          setTimeout(() => {
+            handleConfirmDeleteBroadcast?.();
+            setShowDeleteBroadcastConfirm?.(false);
+            setDeleteBroadcastChoice(null);
+            setShowStatusModal?.(false);
+          }, 200);
+        }}
+        onClose={() => {
+          setDeleteBroadcastChoice("no");
+          setTimeout(() => {
+            setShowDeleteBroadcastConfirm?.(false);
+            setDeleteBroadcastChoice(null);
           }, 160);
         }}
       />

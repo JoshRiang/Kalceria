@@ -28,6 +28,8 @@ export default function SnapMap({
   onPromptCancelRequest,
   onOpenRequests,
   onCollaboratorUpload,
+  onEditBroadcast,
+  onReplyBroadcast,
   isSelfOffline = false,
 }) {
   const mapNodeRef = useRef(null);
@@ -70,11 +72,15 @@ export default function SnapMap({
   // Global popup callbacks
   useSnapMapGlobalCallbacks({
     events,
+    users,
+    mapRef,
     onEditEvent,
     onRequestCollab,
     onPromptCancelRequest,
     onOpenRequests,
     onCollaboratorUpload,
+    onEditBroadcast,
+    onReplyBroadcast,
     isSelfOffline,
   });
 

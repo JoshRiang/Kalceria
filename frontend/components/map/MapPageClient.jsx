@@ -35,7 +35,7 @@ import {
 } from "@/components/map/hooks/useMapChatAndNotifications";
 import api, {
   fetchMe, fetchMapUsers, fetchKalcerians, fetchMiniEvents, fetchMiniEventsWithMeta,
-  postBroadcast, putBroadcast, postLocation, patchVisibility,
+  postBroadcast, putBroadcast, delBroadcast, postLocation, patchVisibility,
   postMiniEvent, putMiniEvent, delMiniEvent,
 } from "@/lib/api";
 
@@ -88,6 +88,8 @@ export default function MapPage() {
   const [showOwnProfile, setShowOwnProfile] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [isEditingBroadcast, setIsEditingBroadcast] = useState(false);
+  const [showDeleteBroadcastConfirm, setShowDeleteBroadcastConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(() => {
     if (typeof window !== "undefined" && window.innerWidth < 860) {
@@ -762,11 +764,51 @@ export default function MapPage() {
       if (updatedMapUsers) setMapUsersData(updatedMapUsers);
       setNotice("Broadcast updated.");
       setShowStatusModal(false);
+      setIsEditingBroadcast(false);
     } catch (err) {
       setNotice(err.message || "Failed to update broadcast.");
     }
     setBusy(false);
   }
+
+  const handleOpenEditBroadcast = useCallback((userId) => {
+    if (isSelfOffline) return;
+    const currentMsg =
+      typeof currentUser?.broadcast === "string"
+        ? currentUser.broadcast
+        : currentUser?.broadcast?.message || "";
+    setStatusText(currentMsg);
+    setIsEditingBroadcast(true);
+    setShowStatusModal(true);
+  }, [isSelfOffline, currentUser, setStatusText]);
+
+  const handleConfirmDeleteBroadcast = useCallback(async () => {
+    setBusy(true);
+    try {
+      await delBroadcast();
+      const user = await fetchMe();
+      setCurrentUser(user);
+      const updatedMapUsers = await fetchMapUsers();
+      if (updatedMapUsers) setMapUsersData(updatedMapUsers);
+      setNotice("Broadcast deleted.");
+      setShowStatusModal(false);
+      setIsEditingBroadcast(false);
+      setStatusText("");
+    } catch (err) {
+      setNotice(err.message || "Failed to delete broadcast.");
+    } finally {
+      setBusy(false);
+    }
+  }, [fetchMe, fetchMapUsers, setNotice, setStatusText]);
+
+  useEffect(() => {
+    const handleRemoteEditBroadcast = (e) => {
+      const userId = e.detail?.userId;
+      handleOpenEditBroadcast(userId);
+    };
+    window.addEventListener("kalceria:open-edit-broadcast", handleRemoteEditBroadcast);
+    return () => window.removeEventListener("kalceria:open-edit-broadcast", handleRemoteEditBroadcast);
+  }, [handleOpenEditBroadcast]);
 
   // toggle visibility (broadcast status on/off)
   async function handlePresenceChange(mode) {
@@ -1289,7 +1331,7 @@ export default function MapPage() {
         <SnapMap
           users={visibleMapUsers} events={visibleEvents} onMapReady={handleMapReady}
           focusUserId={focusedUserId} focusTarget={focusTarget} isMapDark={isMapDark}
-          currentUser={currentUser} onEditEvent={handleOpenEditEvent} requestedEventId={requestedEventId}
+          currentUser={currentUser} onEditEvent={handleOpenEditEvent} onEditBroadcast={handleOpenEditBroadcast} requestedEventId={requestedEventId}
           eventRequestsMap={eventRequestsMap} acceptedCollabsMap={acceptedCollabsMap}
           eventGroupChatMap={eventGroupChatMap}
           onRequestCollab={guardedRequestCollab}
@@ -1406,6 +1448,9 @@ export default function MapPage() {
       <MapModals
         showStatusModal={showStatusModal} setShowStatusModal={setShowStatusModal}
         isMapDark={isMapDark} saveBroadcast={saveBroadcast} statusText={statusText} setStatusText={setStatusText} busy={busy}
+        isEditingBroadcast={isEditingBroadcast} setIsEditingBroadcast={setIsEditingBroadcast}
+        showDeleteBroadcastConfirm={showDeleteBroadcastConfirm} setShowDeleteBroadcastConfirm={setShowDeleteBroadcastConfirm}
+        handleConfirmDeleteBroadcast={handleConfirmDeleteBroadcast}
         showEventModal={showEventModal} setShowEventModal={handleOpenEventModal}
         saveMiniEvent={saveMiniEvent} eventForm={eventForm} setEventForm={setEventForm}
         activeOwnEvent={activeOwnEvent} deleteMiniEvent={deleteMiniEvent} editingEventId={editingEventId}
