@@ -172,58 +172,168 @@ export async function sendEventNotificationEmail(toEmail, eventDetail, eventId) 
   });
 }
 
-export async function sendEventRegistrationEmail({ to, event, registration, paymentCheckoutUrl }) {
+export function buildEventRegistrationEmailHtml({ event, registration, cancelToken, paymentCheckoutUrl }) {
+  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+  const token = cancelToken || '';
+  const confirmUrl = `${frontendOrigin}/events?event_action=confirm&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}&anchor=see-event#see-event`;
+  const cancelUrl = `${frontendOrigin}/events?event_action=cancel&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}&anchor=see-event#see-event`;
+
+  const safeTitle = escapeHtml(event.title || 'Kalceria Event');
+  const safeSession = escapeHtml(registration.selectedSession || 'Regular Session');
+  const priceFormatted = Number(event.price || 0).toLocaleString('id-ID');
+
+  const posterRaw = event.displayPhotoUrl || event.posterUrl || '';
+  const safePosterUrl = escapeHtml(
+    posterRaw.startsWith('http://') || posterRaw.startsWith('https://')
+      ? posterRaw
+      : posterRaw.startsWith('/')
+        ? `${frontendOrigin}${posterRaw}`
+        : `${frontendOrigin}/${posterRaw || 'logo-avatar.png'}`
+  );
+
+  return `
+      <div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:28px 24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;color:#1e293b;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <img src="https://www.kalceria.id/logo-avatar.png" alt="Kalceria" width="60" height="60" style="border-radius:14px;background:#000000;display:inline-block;box-shadow:0 4px 12px rgba(0,0,0,0.15);" />
+        </div>
+
+        <h2 style="color:#0a0e27;margin:0 0 8px 0;font-size:22px;text-align:center;font-weight:900;letter-spacing:-0.5px;">Ringkasan Order Event: ${safeTitle}</h2>
+        <p style="color:#475569;font-size:14px;text-align:center;margin:0 0 20px 0;">Hai <strong>${escapeHtml(registration.user?.name || 'Kalcerian')}</strong>, pendaftaran tiket event kamu telah tercatat di buffer sistem kami.</p>
+
+        <div style="text-align:center;margin-bottom:22px;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;background:#000000;">
+          <img src="${safePosterUrl}" alt="${safeTitle}" style="width:100%;max-height:320px;object-fit:cover;display:block;margin:auto;" />
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin-bottom:20px;">
+          <p style="margin:0 0 12px 0;font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">Order Summary &amp; Event Parameters</p>
+          <table style="width:100%;font-size:13px;color:#1e293b;border-collapse:collapse;">
+            <tr><td style="padding:4px 0;font-weight:bold;width:130px;color:#334155;">ID Registrasi</td><td style="padding:4px 8px;width:10px;color:#94a3b8;">:</td><td style="padding:4px 0;">#${escapeHtml(registration.id.slice(-6))} (${escapeHtml(registration.id)})</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Nama Event</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${safeTitle}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Sesi Terpilih</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${safeSession}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Nama Peserta</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(registration.user?.name || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">WhatsApp</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(registration.user?.phone || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Email</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(registration.user?.email || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Lokasi Event</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(event.location || 'TBA')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Biaya Tiket</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">Rp ${priceFormatted}</td></tr>
+          </table>
+        </div>
+
+        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-left:4px solid #10b981;padding:14px;border-radius:8px;margin-bottom:20px;">
+          <p style="margin:0 0 6px 0;font-weight:bold;color:#065f46;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Konfirmasi Pendaftaran (Wajib) / Mandatory Confirmation:</p>
+          <p style="margin:0;color:#047857;font-size:13px;line-height:1.5;">
+            Apabila kamu sudah yakin dengan parameter pendaftaran event ini, silakan klik tombol <strong>CONFIRM</strong> di bawah ini untuk mengunci dan memverifikasi slot tiket kamu ke sistem resmi Kalceria sebelum batas waktu 3 menit berakhir. Jika waktu habis tanpa konfirmasi, pendaftaran otomatis dibatalkan dan dihapus dari sistem.
+          </p>
+        </div>
+
+        <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin-bottom:24px;">
+          <p style="margin:0 0 6px 0;font-weight:bold;color:#92400e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Ketentuan Waktu &amp; Pembatalan (3 Menit):</p>
+          <ol style="margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:1.5;">
+            <li><strong>Batas Waktu Konfirmasi &amp; Pembatalan:</strong> Kamu memiliki waktu 3 menit dari saat pendaftaran dibuat. Jika kamu ingin membatalkan, klik tombol <strong>CANCEL</strong>.</li>
+            <li>Setelah 3 menit berlalu tanpa konfirmasi, pendaftaran unconfirmed akan otomatis di-purge dari sistem.</li>
+          </ol>
+        </div>
+
+        <div style="text-align:center;margin:28px 0 20px 0;">
+          <a href="${confirmUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#10b981;border:1px solid #10b981;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CONFIRM</a>
+          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ef4444;border:1px solid #ef4444;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CANCEL</a>
+        </div>
+
+        ${paymentCheckoutUrl ? `
+          <div style="text-align:center;margin:16px 0;">
+            <a href="${paymentCheckoutUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#059669;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px;">Bayar Online Sekarang (QRIS / VA / E-Wallet)</a>
+          </div>
+        ` : ''}
+
+        <p style="color:#64748b;font-size:12px;text-align:center;margin:20px 0 0 0;line-height:1.5;">
+          Tim operasional Kalceria juga dapat menghubungi kamu via WhatsApp untuk koordinasi kedatangan di lokasi acara.
+        </p>
+      </div>
+  `;
+}
+
+export async function sendEventRegistrationEmail({ to, event, registration, cancelToken, paymentCheckoutUrl }) {
   if (process.env.ENABLE_EMAIL_NOTIF !== 'true' || !to || to.endsWith('@guest.kalceria.local')) {
     return { skipped: true, reason: 'EMAIL_NOTIF_DISABLED_OR_GUEST' };
   }
-  const safeTitle = escapeHtml(event.title);
-  const safeSession = escapeHtml(registration.selectedSession);
-  const priceFormatted = Number(event.price).toLocaleString('id-ID');
-  const payButtonHtml = paymentCheckoutUrl
-    ? `<a href="${paymentCheckoutUrl}" style="display:inline-block;background:#10B981;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0;">Bayar Sekarang Online (Rp ${priceFormatted})</a>`
-    : `<p style="color:#555;">Status Pembayaran: <strong>${escapeHtml(registration.paymentStatus)}</strong></p>`;
+  const safeTitle = escapeHtml(event.title || 'Kalceria Event');
+  const html = buildEventRegistrationEmailHtml({ event, registration, cancelToken, paymentCheckoutUrl });
 
   return sendEmail({
     to,
     channel: 'notif',
-    subject: `[Pendaftaran Berhasil] ${safeTitle} - Kalceria`,
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:24px;border:1px solid #eee;border-radius:8px;background:#ffffff;">
-        <h2 style="color:#111;">Pendaftaran Event Diterima! 🏁</h2>
-        <p>Pendaftaran kamu untuk event <strong>${safeTitle}</strong> telah tercatat di sistem.</p>
-        <div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0;">
-          <p style="margin:4px 0;"><strong>ID Registrasi:</strong> ${escapeHtml(registration.id)}</p>
-          <p style="margin:4px 0;"><strong>Sesi:</strong> ${safeSession}</p>
-          <p style="margin:4px 0;"><strong>Biaya:</strong> Rp ${priceFormatted}</p>
-        </div>
-        ${payButtonHtml}
-        <p style="font-size:12px;color:#888;">Terima kasih atas partisipasimu di kultur otomotif Kalceria!</p>
-      </div>
-    `,
+    subject: `[Pendaftaran Event] ${safeTitle} (#${escapeHtml(registration.id.slice(-6))}) - Kalceria`,
+    html,
   });
+}
+
+export function buildEventPaymentConfirmedEmailHtml({ event, registration }) {
+  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+  const safeTitle = escapeHtml(event.title || 'Kalceria Event');
+  const safeSession = escapeHtml(registration.selectedSession || 'Regular Session');
+  const priceFormatted = Number(event.price || 0).toLocaleString('id-ID');
+
+  const posterRaw = event.displayPhotoUrl || event.posterUrl || '';
+  const safePosterUrl = escapeHtml(
+    posterRaw.startsWith('http://') || posterRaw.startsWith('https://')
+      ? posterRaw
+      : posterRaw.startsWith('/')
+        ? `${frontendOrigin}${posterRaw}`
+        : `${frontendOrigin}/${posterRaw || 'logo-avatar.png'}`
+  );
+
+  return `
+      <div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:28px 24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;color:#1e293b;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <img src="https://www.kalceria.id/logo-avatar.png" alt="Kalceria" width="60" height="60" style="border-radius:14px;background:#000000;display:inline-block;box-shadow:0 4px 12px rgba(0,0,0,0.15);" />
+        </div>
+
+        <h2 style="color:#0a0e27;margin:0 0 8px 0;font-size:22px;text-align:center;font-weight:900;letter-spacing:-0.5px;">Tiket Terkonfirmasi / Registration Confirmed &amp; Persisted</h2>
+        <p style="color:#475569;font-size:14px;text-align:center;margin:0 0 20px 0;">Hai <strong>${escapeHtml(registration.user?.name || 'Kalcerian')}</strong>, pendaftaran kamu untuk event <strong>${safeTitle}</strong> telah resmi <strong>dikonfirmasi dan dipersist</strong> ke sistem Kalceria.</p>
+
+        <div style="text-align:center;margin-bottom:22px;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;background:#000000;">
+          <img src="${safePosterUrl}" alt="${safeTitle}" style="width:100%;max-height:320px;object-fit:cover;display:block;margin:auto;" />
+        </div>
+
+        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-left:4px solid #10b981;padding:14px;border-radius:8px;margin-bottom:20px;">
+          <p style="margin:0 0 4px 0;font-weight:bold;color:#065f46;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Status: Terkonfirmasi &amp; Terkunci / Confirmed &amp; Locked</p>
+          <p style="margin:0;color:#047857;font-size:13px;line-height:1.5;">
+            Slot tiket kamu telah diamankan. Tunjukkan email atau kode registrasi ini saat check-in di gerbang acara. Seluruh proses verifikasi 2 tahap telah selesai.
+          </p>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin-bottom:24px;">
+          <p style="margin:0 0 12px 0;font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">Final Ticket &amp; Event Summary</p>
+          <table style="width:100%;font-size:13px;color:#1e293b;border-collapse:collapse;">
+            <tr><td style="padding:4px 0;font-weight:bold;width:130px;color:#334155;">Kode Tiket</td><td style="padding:4px 8px;width:10px;color:#94a3b8;">:</td><td style="padding:4px 0;">#${escapeHtml(registration.id.slice(-6))} (${escapeHtml(registration.id)})</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Event</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${safeTitle}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Sesi</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${safeSession}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Peserta</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(registration.user?.name || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">WhatsApp</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(registration.user?.phone || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Email</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(registration.user?.email || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Lokasi</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(event.location || 'TBA')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Status Tiket</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;font-weight:bold;color:#10b981;">CONFIRMED</td></tr>
+          </table>
+        </div>
+
+        <p style="color:#64748b;font-size:12px;text-align:center;margin:0;line-height:1.5;">
+          Sampai jumpa di arena Kalceria! Patuhi arahan marshall dan nikmati pengalaman kultur otomotif bersama kami.
+        </p>
+      </div>
+  `;
 }
 
 export async function sendEventPaymentConfirmedEmail({ to, event, registration }) {
   if (process.env.ENABLE_EMAIL_NOTIF !== 'true' || !to || to.endsWith('@guest.kalceria.local')) {
     return { skipped: true, reason: 'EMAIL_NOTIF_DISABLED_OR_GUEST' };
   }
-  const safeTitle = escapeHtml(event.title);
+  const safeTitle = escapeHtml(event.title || 'Kalceria Event');
+  const html = buildEventPaymentConfirmedEmailHtml({ event, registration });
+
   return sendEmail({
     to,
     channel: 'notif',
-    subject: `[Tiket Terkonfirmasi] ${safeTitle} - Kalceria`,
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:24px;border:1px solid #10B981;border-radius:8px;background:#ffffff;">
-        <h2 style="color:#10B981;">Pembayaran Terkonfirmasi! 🎉</h2>
-        <p>Selamat! Pembayaran untuk event <strong>${safeTitle}</strong> telah lunas dan tiket kamu aktif.</p>
-        <div style="background:#f0fdf4;padding:16px;border-radius:8px;margin:16px 0;border-left:4px solid #10B981;">
-          <p style="margin:4px 0;"><strong>Kode Tiket:</strong> ${escapeHtml(registration.id)}</p>
-          <p style="margin:4px 0;"><strong>Sesi:</strong> ${escapeHtml(registration.selectedSession)}</p>
-          <p style="margin:4px 0;"><strong>Status:</strong> CONFIRMED / LUNAS</p>
-        </div>
-        <p style="color:#555;">Tunjukkan email atau kode tiket ini saat check-in di lokasi event.</p>
-      </div>
-    `,
+    subject: `[Tiket Terkonfirmasi] ${safeTitle} (#${escapeHtml(registration.id.slice(-6))}) - Kalceria`,
+    html,
   });
 }
 

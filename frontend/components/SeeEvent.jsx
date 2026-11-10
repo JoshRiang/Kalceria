@@ -76,6 +76,25 @@ export default function SeeEvent() {
   const [events, setEvents] = useState(DEFAULT_PUBLIC_EVENTS);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [eventManageState, setEventManageState] = useState(null);
+
+  // Cross-Tab / Email Magic Link handling for Event Registration (Confirm or Cancel)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventAction = urlParams.get("event_action");
+    const registrationId = urlParams.get("registration_id");
+    const token = urlParams.get("token");
+
+    if (eventAction && registrationId) {
+      setEventManageState({
+        action: eventAction,
+        registrationId,
+        token,
+      });
+      setApplyModalOpen(true);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -443,7 +462,20 @@ export default function SeeEvent() {
 
       </div>
       <AnimatePresence>
-        {applyModalOpen && <ApplyModal events={events.length > 0 ? events : DEFAULT_PUBLIC_EVENTS} startIndex={eventIdx} isMobile={isMobile} onClose={() => setApplyModalOpen(false)} />}
+        {applyModalOpen && (
+          <ApplyModal
+            events={events.length > 0 ? events : DEFAULT_PUBLIC_EVENTS}
+            startIndex={eventIdx}
+            isMobile={isMobile}
+            onClose={() => {
+              setApplyModalOpen(false);
+              setEventManageState(null);
+            }}
+            initialAction={eventManageState?.action}
+            initialRegistrationId={eventManageState?.registrationId}
+            initialToken={eventManageState?.token}
+          />
+        )}
       </AnimatePresence>
     </main>
   );

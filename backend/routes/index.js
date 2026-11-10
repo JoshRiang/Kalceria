@@ -59,6 +59,7 @@ import {
 import {
   registerEvent, listPublicEvents, getPublicEvent,
   listRegistrations, confirmRegistrationPayment, deleteRegistration, markPdfExported,
+  getEventRegistrationForManage, confirmEventRegistration, deleteOwnEventRegistration,
 } from "../controllers/eventRegistrationController.js";
 import {
   listServiceBookings, confirmServicePayment, deleteServiceBooking, markServicePdf,
@@ -165,8 +166,11 @@ router.post("/auth/password/change", requireAuth, changePassword);
 router.get("/events", listPublicEvents);
 router.get("/events/:eventId", getPublicEvent);
 
-// ─── Event Registration (Auth required) ──────────────────────────────────────
+// ─── Event Registration (Auth optional / 2-step verification) ───────────────
 router.post("/events/:eventId/register", optionalAuth, bookingRateLimit, eventRegistrationDefense, registerEvent);
+router.get("/events/registration/:id", optionalAuth, getEventRegistrationForManage);
+router.post("/events/registration/:id/confirm", optionalAuth, confirmEventRegistration);
+router.delete("/events/registration/:id", optionalAuth, deleteOwnEventRegistration);
 
 // ─── Location & Geocoding ────────────────────────────────────────────────────
 router.get("/location/cities", citySearchRateLimit, searchCitiesEndpoint);

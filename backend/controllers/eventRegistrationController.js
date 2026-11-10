@@ -9,7 +9,7 @@ import { createEventPaymentSession, isOnlinePaymentEnabled } from '../lib/paymen
 import { notifyEventRegistration, notifyEventPaymentConfirmed } from '../lib/whatsappBroker.js';
 import { setEventRegistrationCooldown } from '../middleware/ingressDefense.js';
 
-const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
+const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '628117998790';
 
 let guestPlaceholderHash;
 const getGuestPlaceholderHash = () => (
@@ -143,19 +143,20 @@ export async function registerEvent(req, res, next) {
     const participantName = guestName || reg.user.name;
     const participantContact = guestContact || reg.user.phone || '';
 
-    const msg = [
-      `📋 PENDAFTARAN EVENT BARU`,
-      ``,
+    const lines = [
+      'PENDAFTARAN EVENT - SEE EVENT',
+      '',
+      `Booking ID: #${reg.id ? reg.id.slice(-6) : 'PENDING'}`,
       `Event: ${event.title}`,
-      `Sesi: ${selectedSession}`,
-      `Peserta: ${participantName} (${reg.user.email})`,
-      ...(participantContact ? [`Kontak: ${participantContact}`] : []),
-      `Biaya: Rp ${event.price.toLocaleString('id-ID')}`,
-      ``,
-      `Segera konfirmasi pembayaran!`,
-    ].join('\n');
+      `Session: ${selectedSession}`,
+      `Participant Name: ${participantName}`,
+      `Email: ${reg.user.email}`,
+      ...(participantContact ? [`WhatsApp: ${participantContact}`] : []),
+      `Location: ${event.location || 'TBA'}`,
+      `Fee: Rp ${Number(event.price).toLocaleString('id-ID')}`,
+    ];
 
-    const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
+    const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(lines.join('\n'))}`;
 
     // Online Payment checkout session (if broker is enabled)
     let paymentCheckout = null;
@@ -179,6 +180,14 @@ export async function registerEvent(req, res, next) {
       )
       : undefined;
 
+    // Mint 3-minute cancelToken / manageToken for 2-step verification lifecycle
+    const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
+    const cancelToken = jwt.sign(
+      { registrationId: reg.id, userId },
+      cancelSecret,
+      { expiresIn: 180, issuer: 'kalceria-api' }
+    );
+
     // Dispatches (fire-and-forget, safe & isolated)
     safeNotify(() => notifyEventRegistration({
       registration: reg,
@@ -191,6 +200,7 @@ export async function registerEvent(req, res, next) {
       to: reg.user.email,
       event,
       registration: reg,
+      cancelToken,
       paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
     }), 'email-event-reg');
 
@@ -199,6 +209,7 @@ export async function registerEvent(req, res, next) {
       whatsappUrl,
       paymentCheckout,
       paymentToken,
+      cancelToken,
     });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'Already registered for this event.' });
@@ -209,6 +220,8 @@ export async function registerEvent(req, res, next) {
 // ─── GET /events (public listing) ────────────────────────────────────────────
 export async function listPublicEvents(req, res, next) {
   try {
+    purgeExpiredUnconfirmedEventRegistrations().catch(() => {});
+
     const limit = parsePageLimit(req.query.limit, 50, 100);
     const cursor = decodePageCursor(req.query.cursor);
     if (limit === null || cursor === false) {
@@ -358,5 +371,196 @@ export async function markPdfExported(req, res, next) {
     res.json({ message: 'PDF marked exported.' });
   } catch (err) {
     next(err);
+  }
+}
+
+const THREE_MINUTES_MS = 3 * 60 * 1000;
+
+function verifyEventRegistrationAuthorization(registration, req) {
+  const userId = req.user?.userId || null;
+  const tokenHeader = req.get('x-manage-token') || req.get('x-cancel-token') || req.query?.token || '';
+
+  let validTokenRegId = null;
+  if (tokenHeader) {
+    const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
+    try {
+      const decoded = jwt.verify(tokenHeader, cancelSecret, {
+        algorithms: ['HS256'],
+        issuer: 'kalceria-api',
+      });
+      validTokenRegId = decoded?.registrationId || null;
+    } catch {}
+  }
+
+  const authorizedByUser = Boolean(userId && registration.userId === userId);
+  const authorizedByToken = Boolean(validTokenRegId && validTokenRegId === registration.id);
+  const isRecentGuest = Boolean(
+    registration.user?.email?.endsWith('@guest.kalceria.local') &&
+    Date.now() - new Date(registration.createdAt).getTime() <= THREE_MINUTES_MS
+  );
+
+  return authorizedByUser || authorizedByToken || isRecentGuest;
+}
+
+// ─── GET /events/registration/:id (Inspect for manage/cancel within 3 mins) ───
+export async function getEventRegistrationForManage(req, res, next) {
+  try {
+    const { id } = req.params;
+    const registration = await prisma.eventRegistration.findUnique({
+      where: { id },
+      include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
+    });
+    if (!registration) return res.status(404).json({ error: 'Registration not found.' });
+
+    if (!verifyEventRegistrationAuthorization(registration, req)) {
+      return res.status(403).json({ error: 'Unauthorized to manage this registration.' });
+    }
+
+    if (registration.paymentStatus === 'CONFIRMED') {
+      return res.json({
+        registration,
+        isConfirmed: true,
+        remainingSeconds: 0,
+      });
+    }
+
+    const elapsed = Date.now() - new Date(registration.createdAt).getTime();
+    if (elapsed > THREE_MINUTES_MS) {
+      if (registration.paymentStatus === 'PENDING') {
+        try {
+          await prisma.eventRegistration.delete({ where: { id: registration.id } });
+        } catch {}
+      }
+      return res.status(403).json({
+        error: 'Batas waktu 3 menit untuk mengonfirmasi pendaftaran event telah berakhir. Pendaftaran yang belum dikonfirmasi telah dibatalkan.',
+        isExpired: true,
+      });
+    }
+
+    const remainingSeconds = Math.max(0, Math.floor((THREE_MINUTES_MS - elapsed) / 1000));
+    res.json({
+      registration,
+      remainingSeconds,
+      isConfirmed: false,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── POST /events/registration/:id/confirm (Confirm & persist order within 3 mins) ─
+export async function confirmEventRegistration(req, res, next) {
+  try {
+    const { id } = req.params;
+    const registration = await prisma.eventRegistration.findUnique({
+      where: { id },
+      include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
+    });
+    if (!registration) return res.status(404).json({ error: 'Registration not found.' });
+
+    if (!verifyEventRegistrationAuthorization(registration, req)) {
+      return res.status(403).json({ error: 'Unauthorized to confirm this registration.' });
+    }
+
+    if (registration.paymentStatus === 'CONFIRMED') {
+      return res.json({
+        success: true,
+        isConfirmed: true,
+        message: 'Pendaftaran sudah dikonfirmasi sebelumnya.',
+        registration,
+      });
+    }
+
+    const elapsed = Date.now() - new Date(registration.createdAt).getTime();
+    if (elapsed > THREE_MINUTES_MS) {
+      if (registration.paymentStatus === 'PENDING') {
+        try {
+          await prisma.eventRegistration.delete({ where: { id: registration.id } });
+        } catch {}
+      }
+      return res.status(403).json({
+        error: 'Batas waktu 3 menit untuk konfirmasi telah berakhir. Pendaftaran telah dibatalkan dan dihapus.',
+        isExpired: true,
+      });
+    }
+
+    const updatedReg = await prisma.eventRegistration.update({
+      where: { id: registration.id },
+      data: { paymentStatus: 'CONFIRMED', version: { increment: 1 } },
+      include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
+    });
+
+    safeNotify(() => sendEventPaymentConfirmedEmail({
+      to: updatedReg.user.email,
+      event: updatedReg.event,
+      registration: updatedReg,
+    }), 'email-event-confirmed');
+
+    res.json({
+      success: true,
+      isConfirmed: true,
+      message: 'Pendaftaran event berhasil dikonfirmasi dan dipersist.',
+      registration: updatedReg,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── DELETE /events/registration/:id (User cancel within 3 mins) ──────────────
+export async function deleteOwnEventRegistration(req, res, next) {
+  try {
+    const { id } = req.params;
+    const registration = await prisma.eventRegistration.findUnique({
+      where: { id },
+      include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
+    });
+    if (!registration) return res.status(404).json({ error: 'Registration not found.' });
+
+    if (!verifyEventRegistrationAuthorization(registration, req)) {
+      return res.status(403).json({ error: 'Unauthorized to delete this registration.' });
+    }
+
+    if (registration.paymentStatus === 'CONFIRMED') {
+      return res.status(403).json({
+        error: 'Pendaftaran ini sudah dikonfirmasi dan terkunci. Pembatalan mandiri tidak dapat dilakukan.',
+        isConfirmed: true,
+      });
+    }
+
+    const elapsed = Date.now() - new Date(registration.createdAt).getTime();
+    if (elapsed > THREE_MINUTES_MS) {
+      if (registration.paymentStatus === 'PENDING') {
+        try {
+          await prisma.eventRegistration.delete({ where: { id: registration.id } });
+        } catch {}
+      }
+      return res.status(403).json({
+        error: 'Batas waktu 3 menit untuk membatalkan pendaftaran telah berakhir.',
+        isExpired: true,
+      });
+    }
+
+    await prisma.eventRegistration.delete({ where: { id: registration.id } });
+    res.json({ message: 'Pendaftaran event berhasil dibatalkan.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Lazy Purge Helper for Expired Unconfirmed Event Registrations ────────────
+export async function purgeExpiredUnconfirmedEventRegistrations() {
+  try {
+    const cutoff = new Date(Date.now() - THREE_MINUTES_MS);
+    const result = await prisma.eventRegistration.deleteMany({
+      where: {
+        paymentStatus: 'PENDING',
+        createdAt: { lt: cutoff },
+      },
+    });
+    return result.count;
+  } catch (err) {
+    console.warn('[EventPurge] Failed to purge expired unconfirmed registrations:', err.message);
+    return 0;
   }
 }

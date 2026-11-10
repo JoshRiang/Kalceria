@@ -130,6 +130,16 @@ export default function LandingPage({ onNavigateAuth }) {
     // Smooth scroll restoration on fallback navigation
     const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
 
+    // Redirect event action links (Confirm or Cancel) to /events
+    const eventAction = urlParams?.get("event_action");
+    const registrationId = urlParams?.get("registration_id");
+    if (eventAction && registrationId) {
+      if (typeof window !== "undefined") {
+        window.location.replace(`/events?${urlParams.toString()}`);
+        return;
+      }
+    }
+
     // Cross-Tab / Email Link handling for Service Booking (Edit or Cancel)
     const serviceAction = urlParams?.get("service_action");
     const bookingId = urlParams?.get("booking_id");
