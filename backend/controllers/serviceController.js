@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
-import { safeNotify, sendServiceRequestSubmittedEmail, sendServiceRequestUpdatedEmail, sendServiceRequestAdminAlertEmail } from '../lib/mailer.js';
+import { safeNotify, sendServiceRequestSubmittedEmail, sendServiceRequestUpdatedEmail, sendServiceRequestConfirmedEmail, sendServiceRequestAdminAlertEmail } from '../lib/mailer.js';
 import { notifyServiceRequestCreated } from '../lib/whatsappBroker.js';
 import { isValidIndonesianLocation, isLocationFromVerifiedList } from './geoController.js';
 import { setServiceBookingCooldown, clearServiceBookingCooldown } from '../middleware/ingressDefense.js';
@@ -380,21 +380,28 @@ export async function createServiceRequest(req, res, next) {
 // ─── GET /services/bookings (Public for Heatmap) ───────────────────────────
 export async function listPublicServiceBookings(req, res, next) {
   try {
+    // Purge expired unconfirmed bookings lazily in background
+    purgeExpiredUnconfirmedServiceBookings().catch(() => {});
+
     const cacheKey = 'cache:public_bookings';
     const cached = await redis.get(cacheKey);
     if (cached) {
       return res.json(JSON.parse(cached));
     }
 
+    const cutoff = new Date(Date.now() - THREE_MINUTES_MS);
     const slots = await prisma.serviceBookingSlot.findMany({
       include: {
         serviceBooking: {
-          select: { status: true }
+          select: { status: true, createdAt: true }
         }
       },
       where: {
         serviceBooking: {
-          status: { in: ['PENDING', 'PROCESSED'] }
+          OR: [
+            { status: 'PROCESSED' },
+            { status: 'PENDING', createdAt: { gte: cutoff } }
+          ]
         }
       }
     });
@@ -460,10 +467,23 @@ export async function getServiceRequestForEdit(req, res, next) {
       return res.status(403).json({ error: 'Unauthorized to access this request.' });
     }
 
+    if (booking.status === 'PROCESSED') {
+      return res.status(403).json({
+        error: 'Pesanan ini sudah dikonfirmasi dan terkunci. Perubahan tidak dapat dilakukan.',
+        isConfirmed: true,
+      });
+    }
+
     const elapsed = Date.now() - new Date(booking.createdAt).getTime();
     if (elapsed > THREE_MINUTES_MS) {
+      if (booking.status === 'PENDING') {
+        try {
+          await prisma.serviceBooking.delete({ where: { id: booking.id } });
+          await redis.del('cache:public_bookings');
+        } catch {}
+      }
       return res.status(403).json({
-        error: 'Batas waktu 3 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        error: 'Batas waktu 3 menit untuk mengedit pesanan telah berakhir. Pesanan yang belum dikonfirmasi telah dibatalkan.',
         isExpired: true,
       });
     }
@@ -510,11 +530,24 @@ export async function updateServiceRequest(req, res, next) {
       return res.status(403).json({ error: 'Unauthorized to modify this request.' });
     }
 
+    if (booking.status === 'PROCESSED') {
+      return res.status(403).json({
+        error: 'Pesanan ini sudah dikonfirmasi dan terkunci. Perubahan tidak dapat dilakukan.',
+        isConfirmed: true,
+      });
+    }
+
     const originalCreatedAt = booking.createdAt;
     const elapsed = Date.now() - new Date(originalCreatedAt).getTime();
     if (elapsed > THREE_MINUTES_MS) {
+      if (booking.status === 'PENDING') {
+        try {
+          await prisma.serviceBooking.delete({ where: { id: booking.id } });
+          await redis.del('cache:public_bookings');
+        } catch {}
+      }
       return res.status(403).json({
-        error: 'Batas waktu 3 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        error: 'Batas waktu 3 menit untuk mengedit pesanan telah berakhir. Pesanan yang belum dikonfirmasi telah dibatalkan.',
         isExpired: true,
       });
     }
@@ -646,7 +679,7 @@ export async function updateServiceRequest(req, res, next) {
   }
 }
 
-// ─── DELETE /services/request/:id (User or immediate guest cancel within 15 mins) ────────────
+// ─── DELETE /services/request/:id (User or immediate guest cancel within 3 mins) ────────────
 export async function deleteOwnServiceRequest(req, res, next) {
   try {
     const { id } = req.params;
@@ -661,8 +694,21 @@ export async function deleteOwnServiceRequest(req, res, next) {
       return res.status(403).json({ error: 'Unauthorized to delete this request.' });
     }
 
+    if (booking.status === 'PROCESSED') {
+      return res.status(403).json({
+        error: 'Pesanan ini sudah dikonfirmasi dan terkunci. Pembatalan mandiri tidak dapat dilakukan.',
+        isConfirmed: true,
+      });
+    }
+
     const elapsed = Date.now() - new Date(booking.createdAt).getTime();
     if (elapsed > THREE_MINUTES_MS) {
+      if (booking.status === 'PENDING') {
+        try {
+          await prisma.serviceBooking.delete({ where: { id: booking.id } });
+          await redis.del('cache:public_bookings');
+        } catch {}
+      }
       return res.status(403).json({
         error: 'Batas waktu 3 menit untuk membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.',
         isExpired: true,
@@ -675,5 +721,95 @@ export async function deleteOwnServiceRequest(req, res, next) {
     res.json({ message: 'Request deleted successfully.' });
   } catch (err) {
     next(err);
+  }
+}
+
+// ─── POST /services/request/:id/confirm (Confirm & persist order within 3 mins) ───
+export async function confirmServiceRequest(req, res, next) {
+  try {
+    const { id } = req.params;
+    const booking = await prisma.serviceBooking.findUnique({
+      where: { id },
+      include: { slots: true, requestor: true },
+    });
+    if (!booking) return res.status(404).json({ error: 'Request not found.' });
+
+    if (!verifyServiceBookingAuthorization(booking, req)) {
+      return res.status(403).json({ error: 'Unauthorized to confirm this request.' });
+    }
+
+    if (booking.status === 'PROCESSED') {
+      return res.json({
+        success: true,
+        isConfirmed: true,
+        message: 'Pesanan sudah dikonfirmasi sebelumnya.',
+        booking,
+      });
+    }
+
+    const elapsed = Date.now() - new Date(booking.createdAt).getTime();
+    if (elapsed > THREE_MINUTES_MS) {
+      if (booking.status === 'PENDING') {
+        try {
+          await prisma.serviceBooking.delete({ where: { id: booking.id } });
+          await redis.del('cache:public_bookings');
+        } catch {}
+      }
+      return res.status(403).json({
+        error: 'Batas waktu 3 menit untuk konfirmasi telah berakhir. Pesanan yang belum dikonfirmasi telah dibatalkan dan dihapus.',
+        isExpired: true,
+      });
+    }
+
+    const updatedBooking = await prisma.serviceBooking.update({
+      where: { id: booking.id },
+      data: { status: 'PROCESSED' },
+      include: { slots: true, requestor: true },
+    });
+
+    try {
+      await redis.del('cache:public_bookings');
+    } catch {}
+
+    const targetEmail = booking.requestor?.email && !booking.requestor.email.endsWith('@guest.kalceria.local')
+      ? booking.requestor.email
+      : booking.email || '';
+
+    if (targetEmail) {
+      safeNotify(() => sendServiceRequestConfirmedEmail({
+        to: targetEmail,
+        booking: updatedBooking,
+        slots: updatedBooking.slots || [],
+      }), 'email-service-request-confirmed');
+    }
+
+    res.json({
+      success: true,
+      isConfirmed: true,
+      message: 'Pesanan berhasil dikonfirmasi dan dipersist.',
+      booking: updatedBooking,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Lazy Purge Helper for Expired Unconfirmed Bookings ───────────────────────
+export async function purgeExpiredUnconfirmedServiceBookings() {
+  try {
+    const cutoff = new Date(Date.now() - THREE_MINUTES_MS);
+    const result = await prisma.serviceBooking.deleteMany({
+      where: {
+        status: 'PENDING',
+        createdAt: { lt: cutoff },
+      },
+    });
+    if (result.count > 0) {
+      await redis.del('cache:public_bookings');
+    }
+    return result.count;
+  } catch (err) {
+    console.warn('[ServicePurge] Error purging expired unconfirmed bookings:', err.message);
+    return 0;
   }
 }

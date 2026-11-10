@@ -242,6 +242,7 @@ export function buildServiceRequestSubmittedEmailHtml({ booking, slots = [], can
 
   const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
   const token = cancelToken || '';
+  const confirmUrl = `${frontendOrigin}/?service_action=confirm&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
   const editUrl = `${frontendOrigin}/?service_action=edit&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
   const cancelUrl = `${frontendOrigin}/?service_action=cancel&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
 
@@ -269,6 +270,13 @@ export function buildServiceRequestSubmittedEmailHtml({ booking, slots = [], can
           </table>
         </div>
 
+        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-left:4px solid #10b981;padding:14px;border-radius:8px;margin-bottom:20px;">
+          <p style="margin:0 0 6px 0;font-weight:bold;color:#065f46;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Konfirmasi Pesanan (Wajib) / Mandatory Confirmation:</p>
+          <p style="margin:0;color:#047857;font-size:13px;line-height:1.5;">
+            Apabila kamu sudah yakin dengan parameter pesanan, silakan klik tombol <strong>CONFIRM</strong> di bawah ini untuk mengunci dan memverifikasi pesanan ke sistem operasional kami sebelum batas waktu 3 menit berakhir. Jika waktu habis tanpa konfirmasi, pesanan otomatis dibatalkan dan dihapus dari sistem.
+          </p>
+        </div>
+
         <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin-bottom:24px;">
           <p style="margin:0 0 6px 0;font-weight:bold;color:#92400e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Ketentuan Pemesanan & Perubahan / Modification Policy:</p>
           <ol style="margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:1.5;">
@@ -278,8 +286,9 @@ export function buildServiceRequestSubmittedEmailHtml({ booking, slots = [], can
         </div>
 
         <div style="text-align:center;margin:28px 0 20px 0;">
-          <a href="${editUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ffffff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">EDIT BOOKING</a>
-          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ef4444;border:1px solid #ef4444;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CANCEL BOOKING</a>
+          <a href="${confirmUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#10b981;border:1px solid #10b981;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CONFIRM</a>
+          <a href="${editUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ffffff;border:1px solid #ffffff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">EDIT</a>
+          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ef4444;border:1px solid #ef4444;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CANCEL</a>
         </div>
 
         <p style="color:#64748b;font-size:12px;text-align:center;margin:20px 0 0 0;line-height:1.5;">
@@ -325,6 +334,7 @@ export function buildServiceRequestUpdatedEmailHtml({ booking, slots = [], cance
 
   const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
   const token = cancelToken || '';
+  const confirmUrl = `${frontendOrigin}/?service_action=confirm&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
   const cancelUrl = `${frontendOrigin}/?service_action=cancel&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
 
   return `
@@ -351,6 +361,13 @@ export function buildServiceRequestUpdatedEmailHtml({ booking, slots = [], cance
           </table>
         </div>
 
+        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-left:4px solid #10b981;padding:14px;border-radius:8px;margin-bottom:20px;">
+          <p style="margin:0 0 6px 0;font-weight:bold;color:#065f46;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Konfirmasi Pembaruan (Wajib) / Mandatory Confirmation:</p>
+          <p style="margin:0;color:#047857;font-size:13px;line-height:1.5;">
+            Apabila pembaruan parameter pesanan kamu sudah sesuai dan yakin, silakan klik tombol <strong>CONFIRM</strong> di bawah ini untuk mengunci dan memverifikasi pesanan ke sistem operasional kami sebelum sisa waktu 3 menit berakhir. Jika waktu habis tanpa konfirmasi, pesanan otomatis dihapus dari sistem.
+          </p>
+        </div>
+
         <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin-bottom:24px;">
           <p style="margin:0 0 6px 0;font-weight:bold;color:#92400e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Ketentuan Pembatalan / Cancellation Policy:</p>
           <ol style="margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:1.5;">
@@ -360,7 +377,8 @@ export function buildServiceRequestUpdatedEmailHtml({ booking, slots = [], cance
         </div>
 
         <div style="text-align:center;margin:28px 0 20px 0;">
-          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ef4444;border:1px solid #ef4444;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;">CANCEL BOOKING</a>
+          <a href="${confirmUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#10b981;border:1px solid #10b981;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CONFIRM</a>
+          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ef4444;border:1px solid #ef4444;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CANCEL</a>
         </div>
 
         <p style="color:#64748b;font-size:12px;text-align:center;margin:20px 0 0 0;line-height:1.5;">
@@ -368,6 +386,78 @@ export function buildServiceRequestUpdatedEmailHtml({ booking, slots = [], cance
         </p>
       </div>
   `;
+}
+
+export function buildServiceRequestConfirmedEmailHtml({ booking, slots = [] }) {
+  const serviceLabelMap = {
+    SHOOTING: 'Shooting / Production',
+    EO: 'Event Organizer',
+    HOST_EVENT: 'Host Event',
+  };
+  const serviceLabel = serviceLabelMap[booking.serviceType] || booking.serviceType;
+
+  const slotsSummary = (slots || []).map((s) => {
+    const dStr = typeof s.date === 'string' ? s.date.split('T')[0] : new Date(s.date).toISOString().split('T')[0];
+    return `${escapeHtml(dStr)} (${escapeHtml(s.startTime || '')}-${escapeHtml(s.endTime || '')})`;
+  }).join(', ') || '1 slot';
+
+  return `
+      <div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:28px 24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;color:#1e293b;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <img src="https://www.kalceria.id/logo-avatar.png" alt="Kalceria" width="60" height="60" style="border-radius:14px;background:#000000;display:inline-block;box-shadow:0 4px 12px rgba(0,0,0,0.15);" />
+        </div>
+
+        <h2 style="color:#0a0e27;margin:0 0 8px 0;font-size:22px;text-align:center;font-weight:900;letter-spacing:-0.5px;">Pesanan Terkonfirmasi / Order Confirmed &amp; Persisted</h2>
+        <p style="color:#475569;font-size:14px;text-align:center;margin:0 0 20px 0;">Hai <strong>${escapeHtml(booking.contactPerson || 'Pelanggan')}</strong>, pesanan kamu telah resmi <strong>dikonfirmasi dan dipersist</strong> ke dalam sistem operasional Kalceria.</p>
+
+        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-left:4px solid #10b981;padding:14px;border-radius:8px;margin-bottom:20px;">
+          <p style="margin:0 0 4px 0;font-weight:bold;color:#065f46;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Status: Terkonfirmasi &amp; Terkunci / Confirmed &amp; Locked</p>
+          <p style="margin:0;color:#047857;font-size:13px;line-height:1.5;">
+            Jadwal operasional dan parameter pesanan telah dikunci untuk persiapan penugasan tim. Seluruh proses verifikasi 2 tahap telah selesai dan pesanan telah aktif di sistem.
+          </p>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin-bottom:24px;">
+          <p style="margin:0 0 12px 0;font-size:12px;font-weight:bold;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">Final Booking Summary</p>
+          <table style="width:100%;font-size:13px;color:#1e293b;border-collapse:collapse;">
+            <tr><td style="padding:4px 0;font-weight:bold;width:130px;color:#334155;">Booking ID</td><td style="padding:4px 8px;width:10px;color:#94a3b8;">:</td><td style="padding:4px 0;">#${escapeHtml(booking.id.slice(-6))} (${escapeHtml(booking.id)})</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Service</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(serviceLabel)}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Request Title</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.serviceName || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Operator Name</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.contactPerson || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">WhatsApp</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.whatsapp || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Email</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.requestor?.email || booking.email || '—')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Deployment Area</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.location || 'TBD')}</td></tr>
+            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Selected Schedule</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${slotsSummary}</td></tr>
+            ${booking.additionalNotes ? `<tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Notes</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.additionalNotes)}</td></tr>` : ''}
+          </table>
+        </div>
+
+        <p style="color:#64748b;font-size:12px;text-align:center;margin:0;line-height:1.5;">
+          Crew operasional Kalceria akan segera menghubungi kamu via WhatsApp untuk koordinasi teknis penugasan lebih lanjut.
+        </p>
+      </div>
+  `;
+}
+
+export async function sendServiceRequestConfirmedEmail({ to, booking, slots = [] }) {
+  if (process.env.ENABLE_EMAIL_NOTIF !== 'true' || !to || to.endsWith('@guest.kalceria.local')) {
+    return { skipped: true, reason: 'EMAIL_NOTIF_DISABLED_OR_GUEST' };
+  }
+
+  const serviceLabelMap = {
+    SHOOTING: 'Shooting / Production',
+    EO: 'Event Organizer',
+    HOST_EVENT: 'Host Event',
+  };
+  const serviceLabel = serviceLabelMap[booking.serviceType] || booking.serviceType;
+  const html = buildServiceRequestConfirmedEmailHtml({ booking, slots });
+
+  return sendEmail({
+    to,
+    channel: 'notif',
+    subject: `[Need Our Help] Order Confirmed & Persisted: ${escapeHtml(serviceLabel)} (#${escapeHtml(booking.id.slice(-6))})`,
+    html,
+  });
 }
 
 export async function sendServiceRequestUpdatedEmail({ to, booking, slots = [], cancelToken }) {

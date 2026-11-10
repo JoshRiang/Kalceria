@@ -76,6 +76,7 @@ export default function ServiceRequestModal({
   const [initialSnapshot, setInitialSnapshot] = useState(null);
   const [remainingSeconds, setRemainingSeconds] = useState(null);
   const [isWindowExpired, setIsWindowExpired] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
 
   // Live Countdown & Expiration Watcher (Strict 3-Minute Timeline Invariant)
   useEffect(() => {
@@ -118,40 +119,16 @@ export default function ServiceRequestModal({
 
     let active = true;
     setLoading(true);
-    api
-      .get(`/services/request/${initialBookingId}`, {
-        headers: initialToken ? { "x-manage-token": initialToken } : {},
-      })
-      .then((res) => {
-        if (!active || !res.data?.booking) return;
-        const b = res.data.booking;
-        setForm({
-          serviceType: b.serviceType,
-          serviceName: b.serviceName || "",
-          contactPerson: b.contactPerson || "",
-          whatsapp: b.whatsapp || "",
-          email: b.email || b.requestor?.email || activeEmail || "",
-          location: b.location || "",
-          additionalNotes: b.additionalNotes || "",
-        });
-        setIsLocationVerified(true);
 
-        const slotsMap = {};
-        (b.slots || []).forEach((s) => {
-          const d = typeof s.date === "string" ? s.date.split("T")[0] : new Date(s.date).toISOString().split("T")[0];
-          const startH = parseInt(String(s.startTime).split(":")[0], 10);
-          const endH = parseInt(String(s.endTime).split(":")[0], 10);
-          if (startH === 0 && endH === 1) {
-            slotsMap[`${d}-24`] = true;
-          } else {
-            for (let h = startH; h < (endH === 0 ? 24 : endH); h++) {
-              slotsMap[`${d}-${h}`] = true;
-            }
-          }
-        });
-        setSelectedSlots(slotsMap);
-        setInitialSnapshot({
-          form: {
+    if (initialAction === "confirm") {
+      api
+        .post(`/services/request/${initialBookingId}/confirm`, {}, {
+          headers: initialToken ? { "x-manage-token": initialToken } : {},
+        })
+        .then((res) => {
+          if (!active || !res.data?.booking) return;
+          const b = res.data.booking;
+          setForm({
             serviceType: b.serviceType,
             serviceName: b.serviceName || "",
             contactPerson: b.contactPerson || "",
@@ -159,43 +136,136 @@ export default function ServiceRequestModal({
             email: b.email || b.requestor?.email || activeEmail || "",
             location: b.location || "",
             additionalNotes: b.additionalNotes || "",
-          },
-          slotsMap: { ...slotsMap },
-        });
-        setDone({ bookingId: b.id, cancelToken: initialToken });
-        if (typeof res.data?.remainingSeconds === "number") {
-          setRemainingSeconds(res.data.remainingSeconds);
-          if (res.data.remainingSeconds <= 0) {
-            setIsWindowExpired(true);
-            setError("Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.");
-          }
-        }
+          });
+          setIsLocationVerified(true);
 
-        if (initialAction === "cancel") {
+          const slotsMap = {};
+          (b.slots || []).forEach((s) => {
+            const d = typeof s.date === "string" ? s.date.split("T")[0] : new Date(s.date).toISOString().split("T")[0];
+            const startH = parseInt(String(s.startTime).split(":")[0], 10);
+            const endH = parseInt(String(s.endTime).split(":")[0], 10);
+            if (startH === 0 && endH === 1) {
+              slotsMap[`${d}-24`] = true;
+            } else {
+              for (let h = startH; h < (endH === 0 ? 24 : endH); h++) {
+                slotsMap[`${d}-${h}`] = true;
+              }
+            }
+          });
+          setSelectedSlots(slotsMap);
+          setDone({
+            bookingId: b.id,
+            cancelToken: initialToken,
+            userEmail: b.email || b.requestor?.email || activeEmail,
+          });
+          setIsConfirmed(true);
           setStep(2);
-        } else {
-          setStep(1);
-        }
-      })
-      .catch((err) => {
-        if (!active) return;
-        setIsWindowExpired(true);
-        const errMsg = err.response?.data?.error || "Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.";
-        setError(errMsg);
-        if (initialAction === "cancel") {
+        })
+        .catch((err) => {
+          if (!active) return;
+          if (err.response?.data?.isConfirmed) {
+            setIsConfirmed(true);
+          }
+          if (err.response?.data?.isExpired) {
+            setIsWindowExpired(true);
+          }
+          const errMsg = err.response?.data?.error || "Gagal mengonfirmasi pesanan.";
+          setError(errMsg);
           setStep(2);
-        } else {
-          setStep(1);
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    } else {
+      api
+        .get(`/services/request/${initialBookingId}`, {
+          headers: initialToken ? { "x-manage-token": initialToken } : {},
+        })
+        .then((res) => {
+          if (!active || !res.data?.booking) return;
+          const b = res.data.booking;
+          if (b.status === "PROCESSED") {
+            setIsConfirmed(true);
+          }
+          setForm({
+            serviceType: b.serviceType,
+            serviceName: b.serviceName || "",
+            contactPerson: b.contactPerson || "",
+            whatsapp: b.whatsapp || "",
+            email: b.email || b.requestor?.email || activeEmail || "",
+            location: b.location || "",
+            additionalNotes: b.additionalNotes || "",
+          });
+          setIsLocationVerified(true);
+
+          const slotsMap = {};
+          (b.slots || []).forEach((s) => {
+            const d = typeof s.date === "string" ? s.date.split("T")[0] : new Date(s.date).toISOString().split("T")[0];
+            const startH = parseInt(String(s.startTime).split(":")[0], 10);
+            const endH = parseInt(String(s.endTime).split(":")[0], 10);
+            if (startH === 0 && endH === 1) {
+              slotsMap[`${d}-24`] = true;
+            } else {
+              for (let h = startH; h < (endH === 0 ? 24 : endH); h++) {
+                slotsMap[`${d}-${h}`] = true;
+              }
+            }
+          });
+          setSelectedSlots(slotsMap);
+          setInitialSnapshot({
+            form: {
+              serviceType: b.serviceType,
+              serviceName: b.serviceName || "",
+              contactPerson: b.contactPerson || "",
+              whatsapp: b.whatsapp || "",
+              email: b.email || b.requestor?.email || activeEmail || "",
+              location: b.location || "",
+              additionalNotes: b.additionalNotes || "",
+            },
+            slotsMap: { ...slotsMap },
+          });
+          setDone({
+            bookingId: b.id,
+            cancelToken: initialToken,
+            userEmail: b.email || b.requestor?.email || activeEmail,
+          });
+          if (typeof res.data?.remainingSeconds === "number") {
+            setRemainingSeconds(res.data.remainingSeconds);
+            if (res.data.remainingSeconds <= 0) {
+              setIsWindowExpired(true);
+              setError("Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.");
+            }
+          }
+
+          if (initialAction === "cancel" || b.status === "PROCESSED") {
+            setStep(2);
+          } else {
+            setStep(1);
+          }
+        })
+        .catch((err) => {
+          if (!active) return;
+          if (err.response?.data?.isConfirmed) {
+            setIsConfirmed(true);
+          }
+          setIsWindowExpired(true);
+          const errMsg = err.response?.data?.error || "Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.";
+          setError(errMsg);
+          if (initialAction === "cancel" || err.response?.data?.isConfirmed) {
+            setStep(2);
+          } else {
+            setStep(1);
+          }
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }
 
     return () => {
       active = false;
     };
-  }, [initialBookingId, initialToken, initialAction, setSelectedSlots]);
+  }, [initialBookingId, initialToken, initialAction, setSelectedSlots, activeEmail]);
 
   // Cross-Tab Synchronization via BroadcastChannel & localStorage
   useEffect(() => {
@@ -210,6 +280,9 @@ export default function ServiceRequestModal({
             handleCancel();
           } else if (data.action === "edit") {
             setStep(1);
+          } else if (data.action === "confirm") {
+            setIsConfirmed(true);
+            setStep(2);
           }
         };
       }
@@ -223,6 +296,9 @@ export default function ServiceRequestModal({
             handleCancel();
           } else if (parsed?.action === "edit") {
             setStep(1);
+          } else if (parsed?.action === "confirm") {
+            setIsConfirmed(true);
+            setStep(2);
           }
         } catch {}
       }
@@ -328,7 +404,7 @@ export default function ServiceRequestModal({
 
     // Strict email validation
     if (!form.email || !EMAIL_REGEX.test(form.email.trim())) {
-      setError("Email salah (e.g. name@domain.com).");
+      setError("Email salah");
       return;
     }
 
@@ -589,10 +665,11 @@ export default function ServiceRequestModal({
                     form={form}
                     bookingSchedule={bookingSchedule}
                     handleCancel={handleCancel}
-                    handleEdit={isEditMode ? null : () => setStep(1)}
+                    handleEdit={isEditMode || isConfirmed ? null : () => setStep(1)}
                     onFinalize={handleFinalizeOrder}
-                    isCancelMode={initialAction === "cancel"}
+                    isCancelMode={initialAction === "cancel" && !isConfirmed}
                     isEditMode={isEditMode}
+                    isConfirmedMode={isConfirmed}
                     isWindowExpired={isWindowExpired}
                     loading={loading}
                     error={error}
