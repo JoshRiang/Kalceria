@@ -214,7 +214,7 @@ export function ServiceDetailsStep({
               isFormValid ? "text-white hover:text-white/80" : "text-white/40 cursor-not-allowed"
             }`}
           >
-            {loading ? "SENDING..." : "NEXT"}
+            {loading ? "VALIDATING..." : "NEXT"}
           </button>
         </div>
       </form>

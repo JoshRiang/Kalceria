@@ -55,6 +55,7 @@ export default function ServiceRequestModal({
   const [done, setDone] = useState(
     initialBookingId ? { bookingId: initialBookingId, cancelToken: initialToken } : null
   );
+  const [candidateSlots, setCandidateSlots] = useState([]);
 
   // Heatmap & booking schedule hook
   const {
@@ -196,7 +197,7 @@ export default function ServiceRequestModal({
     setStep(1);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.serviceName || form.serviceName.trim().length < 2) {
       setError("Please provide a valid request title.");
@@ -229,40 +230,74 @@ export default function ServiceRequestModal({
       return;
     }
 
+    const selectedArray = Object.entries(selectedSlots)
+      .filter(([, val]) => val)
+      .map(([key]) => {
+        const [date, hour] = key.split(/-(?=\d+$)/);
+        return { date, hour: parseInt(hour, 10) };
+      });
+
+    const slots = selectedArray.map((s) => ({
+      date: s.date,
+      startTime: (s.hour === 24 ? 0 : s.hour).toString().padStart(2, "0") + ":00",
+      endTime:
+        (s.hour === 23 ? 0 : s.hour === 24 ? 1 : s.hour + 1).toString().padStart(2, "0") + ":00",
+    }));
+
+    // Buffer as candidate data without writing to database prematurely
+    setCandidateSlots(slots);
+    setError("");
+    setStep(2);
+  };
+
+  const handleFinalizeOrder = async () => {
+    if (done?.bookingId && !initialBookingId) {
+      return done;
+    }
+
     setLoading(true);
+    setError("");
+
+    let waWindow = null;
     try {
-      const selectedArray = Object.entries(selectedSlots)
-        .filter(([, val]) => val)
-        .map(([key]) => {
-          const [date, hour] = key.split(/-(?=\d+$)/);
-          return { date, hour: parseInt(hour, 10) };
-        });
+      if (typeof window !== "undefined") {
+        waWindow = window.open("", "_blank");
+      }
+    } catch {}
 
-      const slots = selectedArray.map((s) => ({
-        date: s.date,
-        startTime: (s.hour === 24 ? 0 : s.hour).toString().padStart(2, "0") + ":00",
-        endTime:
-          (s.hour === 23 ? 0 : s.hour === 24 ? 1 : s.hour + 1).toString().padStart(2, "0") + ":00",
-      }));
-
-      const isUpdate = Boolean(done?.bookingId);
-      const endpoint = isUpdate ? `/services/request/${done.bookingId}` : "/services/request";
+    try {
+      const isUpdate = Boolean(initialBookingId);
+      const endpoint = isUpdate ? `/services/request/${initialBookingId}` : "/services/request";
       const method = isUpdate ? "put" : "post";
 
       const res = await api[method](
         endpoint,
         {
           ...form,
-          slots,
+          slots: candidateSlots.length > 0 ? candidateSlots : undefined,
         },
         {
-          headers: done?.cancelToken ? { "x-manage-token": done.cancelToken } : undefined,
+          headers: initialToken ? { "x-manage-token": initialToken } : undefined,
         }
       );
-      setDone(res.data);
-      setStep(2);
+
+      const data = res.data;
+      setDone(data);
+
+      if (waWindow && !waWindow.closed && data?.whatsappUrl) {
+        waWindow.location.href = data.whatsappUrl;
+      } else if (data?.whatsappUrl && typeof window !== "undefined") {
+        window.open(data.whatsappUrl, "_blank");
+      }
+
+      return data;
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "Failed to submit request.");
+      if (waWindow && !waWindow.closed) {
+        try { waWindow.close(); } catch {}
+      }
+      const errMsg = err.response?.data?.error || err.message || "Failed to submit request.";
+      setError(errMsg);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -424,13 +459,14 @@ export default function ServiceRequestModal({
                   />
                 )}
 
-                {step === 2 && done && (
+                {step === 2 && (
                   <ServiceConfirmationStep
-                    done={done}
+                    done={done || {}}
                     form={form}
                     bookingSchedule={bookingSchedule}
                     handleCancel={handleCancel}
                     handleEdit={() => setStep(1)}
+                    onFinalize={handleFinalizeOrder}
                     loading={loading}
                     error={error}
                   />
