@@ -279,6 +279,11 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
     body: formData,
   });
   if (!res.ok) {
+    if (res.status === 413 || (file && file.size > 4.2 * 1024 * 1024)) {
+      throw new Error(
+        "File melebihi batas 4.5 MB Vercel Serverless. Tambahkan BLOB_READ_WRITE_TOKEN di Vercel Dashboard untuk direct upload hingga 25 MB, atau gunakan file di bawah 4.5 MB."
+      );
+    }
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to upload media file");
   }

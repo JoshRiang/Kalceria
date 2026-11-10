@@ -26,9 +26,9 @@ export function issueCsrfToken(_req, res) {
 export function csrfProtection(req, res, next) {
   if (SAFE_METHODS.has(req.method)) return next();
 
-  // Server-to-server broker webhooks (payment, whatsapp, resend) authenticate via HMAC/tokens, not browser cookies
+  // Server-to-server broker webhooks and OAuth 2.0 PKCE state exchanges authenticate via HMAC/tokens, not browser cookies
   const path = req.path || req.originalUrl || '';
-  if (path.includes('/webhooks/')) return next();
+  if (path.includes('/webhooks/') || path.includes('/auth/google/exchange')) return next();
 
   const cookieToken = req.cookies[CSRF_COOKIE_NAME];
   const headerToken = req.get('x-csrf-token');

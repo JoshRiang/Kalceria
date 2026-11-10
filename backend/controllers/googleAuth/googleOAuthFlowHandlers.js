@@ -87,7 +87,7 @@ export async function handleGoogleOAuthStart({
     redirect_uri: redirectUri,
     response_type: 'code',
     scope:
-      'openid email profile https://www.googleapis.com/auth/user.birthday.read https://www.googleapis.com/auth/user.addresses.read',
+      process.env.GOOGLE_OAUTH_SCOPES || 'openid email profile',
     include_granted_scopes: 'true',
     prompt: 'select_account',
     access_type: 'online',
