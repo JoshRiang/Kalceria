@@ -201,7 +201,7 @@ export const postMiniEvent = (data) => api.post('/mini-events', data);
 export const putMiniEvent = (id, data) => api.put(`/mini-events/${id}`, data);
 export const delMiniEvent = (id) => api.delete(`/mini-events/${id}`);
 
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB
 
 const MIME_EXT_MAP = {
   "image/jpeg": "jpg",
@@ -214,6 +214,7 @@ const MIME_EXT_MAP = {
   "video/quicktime": "mov",
   "video/3gpp": "3gp",
   "video/webm": "webm",
+  "video/x-matroska": "mkv",
   "audio/webm": "webm",
   "audio/mp4": "m4a",
   "audio/m4a": "m4a",
@@ -225,15 +226,52 @@ const MIME_EXT_MAP = {
 
 export const uploadBlobMedia = async (file, { purpose } = {}) => {
   if (file && file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+    throw new Error("Ukuran file melebihi 25 MB. Maksimal ukuran file adalah 25 MB.");
   }
-  const formData = new FormData();
+
   let filename = file?.name || "";
   if (!filename || filename === "blob" || !filename.includes(".")) {
     const rawType = (file?.type || "").split(";")[0].trim().toLowerCase();
-    const ext = MIME_EXT_MAP[rawType] || "bin";
+    const ext = MIME_EXT_MAP[rawType] || (rawType.startsWith("video/") ? "mp4" : "bin");
     filename = `upload-${Date.now()}.${ext}`;
   }
+
+  // 1. Direct Client-Side S3 Upload via @vercel/blob/client
+  // Bypasses Vercel's 4.5 MB Serverless Function body limit completely
+  if (typeof window !== "undefined" && file) {
+    try {
+      const { upload } = await import("@vercel/blob/client");
+      const cleanFilename = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const targetPathname = purpose === "event-clip"
+        ? `events/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${cleanFilename}`
+        : `events/${Date.now()}-${cleanFilename}`;
+
+      const blobResult = await upload(targetPathname, file, {
+        access: "public",
+        handleUploadUrl: "/api/blob/upload",
+      });
+
+      if (blobResult?.url) {
+        const isPrivate = blobResult.url.includes(".private.blob.vercel-storage.com");
+        const finalUrl = isPrivate
+          ? `/api/blob/raw?url=${encodeURIComponent(blobResult.url)}`
+          : blobResult.url;
+
+        return {
+          success: true,
+          url: finalUrl,
+          rawBlobUrl: blobResult.url,
+          access: isPrivate ? "private" : "public",
+          provider: "vercel-blob-client",
+        };
+      }
+    } catch (clientErr) {
+      console.warn("Client direct blob upload fallback:", clientErr?.message);
+    }
+  }
+
+  // 2. Fallback to multipart server upload for smaller files or environments without client token
+  const formData = new FormData();
   formData.append("file", file, filename);
   if (purpose) formData.append("purpose", purpose);
   const res = await fetch("/api/blob/upload", {

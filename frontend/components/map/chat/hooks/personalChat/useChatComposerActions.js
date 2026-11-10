@@ -53,16 +53,16 @@ export function useChatComposerActions({
     if (!file) return;
     setMediaError("");
 
-    if (file.size > 10 * 1024 * 1024) {
-      setMediaError("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+    if (file.size > 25 * 1024 * 1024) {
+      setMediaError("Ukuran file melebihi 25 MB. Maksimal ukuran file adalah 25 MB.");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    const validExts = ["png", "jpg", "jpeg", "mp4"];
+    const validExts = ["png", "jpg", "jpeg", "webp", "mp4", "mov", "webm"];
     const declaredMime = (file.type || "").toLowerCase();
-    const validMimes = ["image/png", "image/jpeg", "image/pjpeg", "video/mp4"];
+    const validMimes = ["image/png", "image/jpeg", "image/pjpeg", "image/webp", "video/mp4", "video/quicktime", "video/webm"];
 
     if (!validExts.includes(ext) || (declaredMime && !validMimes.includes(declaredMime))) {
       setMediaError("Hanya file .png, .jpeg, dan .mp4 yang diizinkan.");

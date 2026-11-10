@@ -70,7 +70,7 @@ export async function getPersonalChatInboxSummary(req, res, next) {
     const verKey = `chat:inbox_ver:${userId}`;
     const currentVer = (await redis.get(verKey).catch(() => null)) || '0';
 
-    if (sinceVer && sinceVer === currentVer) {
+    if (sinceVer && currentVer !== '0' && sinceVer === currentVer) {
       return res.json({ ok: true, unchanged: true, ver: currentVer });
     }
 

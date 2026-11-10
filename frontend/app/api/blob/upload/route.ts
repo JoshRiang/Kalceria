@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { optimizeUploadMedia } from "@/lib/mediaOptimizer";
 import { EVENT_CLIP_PREFIX, EVENT_CLIP_PURPOSE } from "@/lib/eventClipStorage";
 
@@ -7,6 +8,55 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    const contentType = req.headers.get("content-type") || "";
+
+    // 1. Direct Client-Side Upload Token Generation (@vercel/blob/client)
+    // Allows client browsers to upload up to 25MB videos directly to Vercel Blob S3 storage,
+    // completely bypassing Vercel's 4.5MB Serverless Function request body limit!
+    if (contentType.includes("application/json")) {
+      const body = (await req.json()) as HandleUploadBody;
+      try {
+        const jsonResponse = await handleUpload({
+          body,
+          request: req,
+          onBeforeGenerateToken: async () => {
+            return {
+              allowedContentTypes: [
+                "image/jpeg",
+                "image/png",
+                "image/webp",
+                "image/gif",
+                "video/mp4",
+                "video/quicktime",
+                "video/webm",
+                "video/x-m4v",
+                "video/3gpp",
+                "video/mp4v-es",
+                "video/x-matroska",
+                "audio/webm",
+                "audio/mp4",
+                "audio/m4a",
+                "audio/ogg",
+                "audio/wav",
+                "audio/mpeg",
+                "audio/mp3",
+              ],
+              maximumSizeInBytes: 25 * 1024 * 1024,
+              addRandomSuffix: true,
+            };
+          },
+          onUploadCompleted: async () => {},
+        });
+        return NextResponse.json(jsonResponse);
+      } catch (err) {
+        return NextResponse.json(
+          { error: (err as Error).message },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 2. Direct Multipart Upload (for smaller files or server-to-server calls)
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
 
@@ -26,6 +76,7 @@ export async function POST(req: NextRequest) {
       "video/quicktime": "mov",
       "video/3gpp": "3gp",
       "video/webm": "webm",
+      "video/x-matroska": "mkv",
       "audio/webm": "webm",
       "audio/mp4": "m4a",
       "audio/m4a": "m4a",
@@ -37,18 +88,18 @@ export async function POST(req: NextRequest) {
 
     let filename = file.name || "";
     let ext = (filename.split(".").pop() || "").toLowerCase();
+    const declaredMime = (file.type || "").toLowerCase().split(";")[0].trim();
     if (!ext || ext === "blob" || !filename.includes(".")) {
-      const declaredMime = (file.type || "").toLowerCase().split(";")[0].trim();
-      ext = mimeToExt[declaredMime] || "bin";
+      ext = mimeToExt[declaredMime] || (declaredMime.startsWith("video/") ? "mp4" : "bin");
       filename = `upload-${Date.now()}.${ext}`;
     }
 
     const allowedExts = [
       "png", "jpg", "jpeg", "webp", "gif",
-      "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm",
+      "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm", "mkv",
       "m4a", "mp3", "ogg", "wav",
     ];
-    if (!allowedExts.includes(ext)) {
+    if (!allowedExts.includes(ext) && !declaredMime.startsWith("video/") && !declaredMime.startsWith("image/")) {
       return NextResponse.json(
         { error: "Security enforcement: Only standard image, audio, and video files are allowed" },
         { status: 400 }

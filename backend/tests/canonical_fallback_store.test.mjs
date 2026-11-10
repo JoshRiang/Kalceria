@@ -54,3 +54,4 @@ describe('Canonical Fallback Store - Modularity & Behavior Tests', () => {
     assert.ok(presences instanceof Map);
   });
 });
+

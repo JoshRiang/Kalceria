@@ -164,22 +164,24 @@ export function EditProfileModal({
   const handleBgFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setFileError("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+    if (file.size > 25 * 1024 * 1024) {
+      setFileError("Ukuran file melebihi 25 MB. Maksimal ukuran file adalah 25 MB.");
       e.target.value = "";
       return;
     }
     const mime = String(file.type || "").toLowerCase();
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    const allowedCoverExts = ["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"];
-    if (!allowedCoverExts.includes(ext)) {
+    const allowedCoverExts = ["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm", "mkv"];
+    const isVideo = mime.startsWith("video/") || ["mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm", "mkv"].includes(ext);
+    const isImage = mime.startsWith("image/") || ["png", "jpg", "jpeg", "webp"].includes(ext);
+
+    if (!isVideo && !isImage) {
       setFileError("Only .png, .jpeg, .webp, and video files (.mp4, .mov, .webm) are allowed");
       e.target.value = "";
       return;
     }
     setFileError(null);
 
-    const isVideo = mime.startsWith("video/") || ["mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"].includes(ext);
     if (isVideo) {
       clearPendingCover();
       const objUrl = URL.createObjectURL(file);

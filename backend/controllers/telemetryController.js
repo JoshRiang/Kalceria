@@ -106,8 +106,19 @@ export async function getMapUsers(req, res, next) {
       }
     });
 
-    // Strict Online Rule: Only users actively present in Redis `active_users` with live telemetry AND `allowLiveLocation: true` appear on the map
+    let canonicalPresences = null;
+    let fallbackActiveIds = [];
     if (!activeMembers.length) {
+      canonicalPresences = await getActiveCanonicalPresences();
+      if (canonicalPresences && canonicalPresences.size > 0) {
+        fallbackActiveIds = Array.from(canonicalPresences.keys());
+      }
+    }
+
+    const effectiveActiveIds = activeMembers.length ? activeMembers : fallbackActiveIds;
+
+    // Strict Online Rule: Only users actively present in Redis `active_users` OR unexpired Canonical Store appear on the map
+    if (!effectiveActiveIds.length) {
       const emptyResponse = { users: [] };
       await redis.set(globalCacheKey, JSON.stringify(emptyResponse), "EX", 3).catch(() => {});
       return res.json(emptyResponse);
@@ -115,7 +126,7 @@ export async function getMapUsers(req, res, next) {
 
     const users = await prisma.user.findMany({
       where: {
-        id: { in: activeMembers },
+        id: { in: effectiveActiveIds },
         allowLiveLocation: true,
         isEmailVerified: true,
         role: "USER",
@@ -169,9 +180,8 @@ export async function getMapUsers(req, res, next) {
       : [];
 
     // Fallback: If Redis active_users is down or empty, fetch real active presences from PostgreSQL
-    let canonicalPresences = null;
     const hasAnyRedisPos = positions.some((p) => p && p[0] && Number.isFinite(parseFloat(p[0])));
-    if (!hasAnyRedisPos && userIds.length > 0) {
+    if (!hasAnyRedisPos && userIds.length > 0 && !canonicalPresences) {
       canonicalPresences = await getActiveCanonicalPresences(userIds);
     }
 

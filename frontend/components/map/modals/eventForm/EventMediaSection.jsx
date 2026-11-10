@@ -40,8 +40,8 @@ export function EventMediaSection({
   const handleMediaUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
+    if (file.size > 25 * 1024 * 1024) {
+      setUploadError("Ukuran file melebihi 25 MB. Maksimal ukuran file adalah 25 MB.");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
