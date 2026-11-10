@@ -74,6 +74,9 @@ model User {
   passwordHash      String
   passwordHistory   String[]        @default([])
   profilePicture    String?
+  coverImage        String?
+  coverType         String?
+  bio               String?
   nickname          String?
   domicileLat       Float
   domicileLng       Float

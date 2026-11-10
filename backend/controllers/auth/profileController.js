@@ -42,6 +42,9 @@ export async function getMe(req, res, next) {
         email: true,
         phone: true,
         profilePicture: true,
+        coverImage: true,
+        coverType: true,
+        bio: true,
         allowLiveLocation: true,
         domicileLat: true,
         domicileLng: true,
@@ -123,6 +126,25 @@ export async function updateMe(req, res, next) {
         sanitizedPic || getDeterministicAvatarUrl(existingUser);
     }
 
+    const rawCover = coverImage !== undefined ? coverImage : coverUrl;
+    let finalCover = undefined;
+    if (rawCover !== undefined) {
+      const sanitizedCover = sanitizeCoverMediaUrl(rawCover);
+      finalCover = sanitizedCover || getDeterministicCoverColor(existingUser);
+      updateData.coverImage = finalCover;
+      if (coverType !== undefined) {
+        updateData.coverType = coverType === 'video' ? 'video' : 'image';
+      } else {
+        const isVid = /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(String(finalCover)) || String(finalCover).includes('/api/blob/raw');
+        updateData.coverType = isVid ? 'video' : 'image';
+      }
+    }
+
+    const rawBio = bio !== undefined ? bio : alasanMasuk !== undefined ? alasanMasuk : reason;
+    if (rawBio !== undefined && typeof rawBio === 'string') {
+      updateData.bio = rawBio.trim().slice(0, 120);
+    }
+
     const user = await prisma.user.update({
       where: { id: userId },
       data: updateData,
@@ -132,6 +154,9 @@ export async function updateMe(req, res, next) {
         nickname: true,
         email: true,
         profilePicture: true,
+        coverImage: true,
+        coverType: true,
+        bio: true,
         phone: true,
         socialPlatform: true,
         socialLink: true,
@@ -152,28 +177,21 @@ export async function updateMe(req, res, next) {
 
     meta.profilePicture = user.profilePicture;
 
-    const rawCover = coverImage !== undefined ? coverImage : coverUrl;
     if (rawCover !== undefined) {
-      const sanitizedCover = sanitizeCoverMediaUrl(rawCover);
-      const finalCover = sanitizedCover || getDeterministicCoverColor(user);
-      meta.coverImage = finalCover;
-      meta.coverUrl = finalCover;
+      meta.coverImage = user.coverImage;
+      meta.coverUrl = user.coverImage;
     } else if (!meta.coverImage) {
-      const defaultCover = getDeterministicCoverColor(user);
+      const defaultCover = user.coverImage || getDeterministicCoverColor(user);
       meta.coverImage = defaultCover;
       meta.coverUrl = defaultCover;
     }
 
-    if (coverType !== undefined) {
-      meta.coverType = coverType === 'video' ? 'video' : 'image';
-    } else if (meta.coverImage) {
-      const isVid = /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(String(meta.coverImage)) || String(meta.coverImage).includes('/api/blob/raw');
-      meta.coverType = isVid ? 'video' : 'image';
+    if (user.coverType) {
+      meta.coverType = user.coverType;
     }
 
-    const rawBio = bio !== undefined ? bio : alasanMasuk !== undefined ? alasanMasuk : reason;
-    if (rawBio !== undefined && typeof rawBio === 'string') {
-      meta.bio = rawBio.trim().slice(0, 120);
+    if (rawBio !== undefined) {
+      meta.bio = user.bio || '';
       meta.alasanMasuk = meta.bio;
       meta.reason = meta.bio;
     }

@@ -9,6 +9,7 @@ import {
   handleGoogleOAuthStart,
   handleGoogleOAuthExchange,
   STATE_TTL_SECONDS,
+  signOAuthPayloadToken,
 } from './googleAuth/index.js';
 
 export {
@@ -19,6 +20,7 @@ export {
   verifyGoogleIdTokenWithJwks,
   handleGoogleOAuthStart,
   handleGoogleOAuthExchange,
+  signOAuthPayloadToken,
 };
 
 // ── Express Handlers ─────────────────────────────────────────────────────────
@@ -35,20 +37,33 @@ export async function startGoogleOAuth(req, res, next) {
     const flowMode = req.query?.mode === 'redirect' ? 'redirect' : 'popup';
     const reqClientFp = req.headers?.['x-forwarded-for'] || req.ip || '';
 
-    const { authUrl, state } = await handleGoogleOAuthStart({
+    const { authUrl, state, statePayload } = await handleGoogleOAuthStart({
       redirectUri: rawRedirect,
       flowMode,
       reqClientFp,
     });
 
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
     // Set HttpOnly anti-CSRF state cookie
     res.cookie('kalceria_g_state', state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production' || process.env.VERCEL === '1',
+      secure: isProd,
       sameSite: 'lax',
       maxAge: STATE_TTL_SECONDS * 1000,
       path: '/',
     });
+
+    if (statePayload) {
+      const signedPayload = signOAuthPayloadToken(statePayload, state);
+      res.cookie('kalceria_g_payload', signedPayload, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        maxAge: STATE_TTL_SECONDS * 1000,
+        path: '/',
+      });
+    }
 
     res.json({ authUrl, state });
   } catch (err) {
@@ -66,18 +81,27 @@ export async function exchangeGoogleOAuth(req, res, next) {
   try {
     const { code, state, redirectUri } = req.body || {};
     const stateCookie = req.cookies?.kalceria_g_state;
+    const signedCookie = req.cookies?.kalceria_g_payload;
 
     const result = await handleGoogleOAuthExchange({
       code,
       state,
       redirectUri,
       stateCookie,
+      signedCookie,
     });
 
-    // Clear state cookie
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    // Clear state cookies
     res.clearCookie('kalceria_g_state', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production' || process.env.VERCEL === '1',
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
+    });
+    res.clearCookie('kalceria_g_payload', {
+      httpOnly: true,
+      secure: isProd,
       sameSite: 'lax',
       path: '/',
     });

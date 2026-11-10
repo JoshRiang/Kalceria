@@ -99,7 +99,7 @@ export async function handleGoogleOAuthStart({
 
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
-  return { authUrl, state };
+  return { authUrl, state, statePayload };
 }
 
 /**
@@ -110,6 +110,7 @@ export async function handleGoogleOAuthExchange({
   state,
   redirectUri,
   stateCookie,
+  signedCookie,
   redisClient = redis,
   prismaClient = prisma,
   fetchImpl = fetch,
@@ -137,8 +138,8 @@ export async function handleGoogleOAuthExchange({
     }
   }
 
-  // 2. Atomic state consumption from Redis / Memory
-  const stateJson = await consumeOAuthState(state, redisClient);
+  // 2. Atomic state consumption from Redis / Memory / Signed Cookie
+  const stateJson = await consumeOAuthState(state, redisClient, signedCookie);
 
   if (!stateJson) {
     const err = new Error('OAuth state is expired or has already been used.');

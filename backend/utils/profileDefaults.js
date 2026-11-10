@@ -111,14 +111,25 @@ export async function ensurePersistentUserProfile(user) {
     changedMeta = true;
   }
 
-  // 2. Ensure persistent coverImage / coverUrl (stored in Redis meta)
-  let resolvedCoverImage = meta.coverImage || meta.coverUrl || user.coverImage || user.coverUrl || null;
+  // 2. Ensure persistent coverImage / coverUrl (stored in PostgreSQL User.coverImage + Redis meta)
+  let resolvedCoverImage = user.coverImage || user.coverUrl || meta.coverImage || meta.coverUrl || null;
   if (!resolvedCoverImage) {
     resolvedCoverImage = getDeterministicCoverColor(user);
     meta.coverImage = resolvedCoverImage;
     meta.coverUrl = resolvedCoverImage;
     changedMeta = true;
+    prisma.user
+      .update({
+        where: { id: user.id },
+        data: { coverImage: resolvedCoverImage, coverType: 'image' },
+      })
+      .catch(() => {});
+  } else if (meta.coverImage !== resolvedCoverImage) {
+    meta.coverImage = resolvedCoverImage;
+    changedMeta = true;
   }
+
+  let resolvedCoverType = user.coverType || meta.coverType || (resolvedCoverImage && /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(resolvedCoverImage) ? 'video' : 'image');
 
   if (changedMeta) {
     try {
@@ -145,7 +156,7 @@ export async function ensurePersistentUserProfile(user) {
       : user.socialPlatform === 'IG' && user.socialLink
       ? user.socialLink
       : '';
-  const bioVal = meta.bio ?? meta.alasanMasuk ?? meta.reason ?? '';
+  const bioVal = user.bio ?? meta.bio ?? meta.alasanMasuk ?? meta.reason ?? '';
 
   return {
     ...user,
@@ -154,7 +165,7 @@ export async function ensurePersistentUserProfile(user) {
     profilePicture: resolvedProfilePicture,
     coverImage: resolvedCoverImage,
     coverUrl: resolvedCoverImage,
-    coverType: meta.coverType || (resolvedCoverImage && /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(resolvedCoverImage) ? 'video' : 'image'),
+    coverType: resolvedCoverType,
     phone: phoneVal,
     whatsapp: whatsappVal,
     instagram: instagramVal,
@@ -202,7 +213,7 @@ export async function ensurePersistentUserProfilesBatch(users) {
       changedMeta = true;
     }
 
-    let resolvedCoverImage = meta.coverImage || meta.coverUrl || user.coverImage || user.coverUrl || null;
+    let resolvedCoverImage = user.coverImage || user.coverUrl || meta.coverImage || meta.coverUrl || null;
     if (!resolvedCoverImage) {
       resolvedCoverImage = getDeterministicCoverColor(user);
       meta.coverImage = resolvedCoverImage;
@@ -232,7 +243,7 @@ export async function ensurePersistentUserProfilesBatch(users) {
         : user.socialPlatform === 'IG' && user.socialLink
         ? user.socialLink
         : '';
-    const bioVal = meta.bio ?? meta.alasanMasuk ?? meta.reason ?? '';
+    const bioVal = user.bio ?? meta.bio ?? meta.alasanMasuk ?? meta.reason ?? '';
 
     return {
       ...user,
@@ -241,7 +252,7 @@ export async function ensurePersistentUserProfilesBatch(users) {
       profilePicture: resolvedProfilePicture,
       coverImage: resolvedCoverImage,
       coverUrl: resolvedCoverImage,
-      coverType: meta.coverType || (resolvedCoverImage && /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(resolvedCoverImage) ? 'video' : 'image'),
+      coverType: user.coverType || meta.coverType || (resolvedCoverImage && /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(resolvedCoverImage) ? 'video' : 'image'),
       phone: phoneVal,
       whatsapp: whatsappVal,
       instagram: instagramVal,

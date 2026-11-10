@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 export const STATE_TTL_SECONDS = 300; // 5 minutes
 
 // In-memory fallback for states if Redis is unreachable
@@ -13,6 +15,34 @@ export function pruneStateMemStore() {
   if (stateMemStore.size >= MAX_STATE_MEM) {
     const oldest = stateMemStore.keys().next().value;
     if (oldest !== undefined) stateMemStore.delete(oldest);
+  }
+}
+
+export function signOAuthPayloadToken(payload, state) {
+  const secret = process.env.JWT_SECRET || 'kalceria_google_oauth_state_binding';
+  const data = JSON.stringify({ ...payload, state });
+  const b64 = Buffer.from(data, 'utf8').toString('base64url');
+  const hmac = crypto.createHmac('sha256', secret).update(b64).digest('hex');
+  return `${b64}.${hmac}`;
+}
+
+export function verifySignedOAuthPayloadToken(token, expectedState) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [b64, hmac] = parts;
+  const secret = process.env.JWT_SECRET || 'kalceria_google_oauth_state_binding';
+  const expectedHmac = crypto.createHmac('sha256', secret).update(b64).digest('hex');
+  if (hmac.length !== expectedHmac.length || !crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expectedHmac))) {
+    return null;
+  }
+  try {
+    const data = JSON.parse(Buffer.from(b64, 'base64url').toString('utf8'));
+    if (data.state !== expectedState) return null;
+    if (Date.now() - data.createdAt > STATE_TTL_SECONDS * 1000) return null;
+    return JSON.stringify(data);
+  } catch {
+    return null;
   }
 }
 
@@ -34,7 +64,7 @@ export async function saveOAuthState(state, statePayload, redisClient) {
   }
 }
 
-export async function consumeOAuthState(state, redisClient) {
+export async function consumeOAuthState(state, redisClient, signedCookie) {
   const redisKey = `oauth:google:state:${state}`;
   let stateJson = null;
   if (redisClient && redisClient.status === 'ready') {
@@ -54,6 +84,9 @@ export async function consumeOAuthState(state, redisClient) {
         stateJson = JSON.stringify(mem.payload);
       }
     }
+  }
+  if (!stateJson && signedCookie) {
+    stateJson = verifySignedOAuthPayloadToken(signedCookie, state);
   }
   return stateJson;
 }

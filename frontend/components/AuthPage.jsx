@@ -195,8 +195,13 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
       if (mobile) {
-        const randNum = Math.floor(Math.random() * 6) + 1;
-        setMobileVideo(`/hp/vid_login_hp${randNum}.mp4`);
+        const validVideos = [
+          "/hp/vid_login_hp.mp4",
+          "/hp/vid_login_hp2.mp4",
+          "/hp/vid_login_hp3.mp4",
+        ];
+        const selected = validVideos[Math.floor(Math.random() * validVideos.length)];
+        setMobileVideo(selected);
       }
     };
     checkMobile();
