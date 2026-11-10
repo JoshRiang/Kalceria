@@ -28,6 +28,7 @@ export function ServiceDetailsStep({
   isFormValid,
   isEditMode = false,
   canUpdate = false,
+  isWindowExpired = false,
 }) {
   return (
     <motion.div
@@ -211,14 +212,14 @@ export function ServiceDetailsStep({
           <div className="flex justify-center items-center max-w-[900px] mx-auto w-full mt-2">
             <button
               type="submit"
-              disabled={loading || !canUpdate}
+              disabled={loading || !canUpdate || isWindowExpired}
               className={`py-3.5 sm:py-6 font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-all flex items-center justify-center gap-2 bg-transparent border-none shadow-none outline-none select-none ${
-                canUpdate
+                canUpdate && !isWindowExpired
                   ? "text-white hover:text-white/80 hover:scale-105 active:scale-95 cursor-pointer"
                   : "text-white/40 cursor-not-allowed opacity-40 pointer-events-none"
               }`}
             >
-              {loading ? "VALIDATING..." : "UPDATE"}
+              {loading ? "VALIDATING..." : isWindowExpired ? "UPDATE (EXPIRED)" : "UPDATE"}
             </button>
           </div>
         ) : (

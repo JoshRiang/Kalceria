@@ -272,14 +272,14 @@ export function buildServiceRequestSubmittedEmailHtml({ booking, slots = [], can
         <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin-bottom:24px;">
           <p style="margin:0 0 6px 0;font-weight:bold;color:#92400e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Ketentuan Pemesanan & Perubahan / Modification Policy:</p>
           <ol style="margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:1.5;">
-            <li><strong>Batas Waktu Perubahan (3 Menit):</strong> Pemesan masih memiliki hak penuh untuk mengedit parameter atau membatalkan pesanan dalam kurun waktu 3 menit setelah pesanan berhasil dibuat.</li>
-            <li>Setelah 3 menit berlalu, pesanan akan secara otomatis dikunci dan masuk ke antrean koordinasi operasional tim Kalceria.</li>
+            <li><strong>Batas Waktu Perubahan (15 Menit):</strong> Pemesan masih memiliki hak penuh untuk mengedit parameter atau membatalkan pesanan dalam kurun waktu 15 menit setelah pesanan berhasil dibuat.</li>
+            <li>Setelah 15 menit berlalu, pesanan akan secara otomatis dikunci dan masuk ke antrean koordinasi operasional tim Kalceria.</li>
           </ol>
         </div>
 
         <div style="text-align:center;margin:28px 0 20px 0;">
-          <a href="${editUrl}" target="_blank" rel="noopener noreferrer" style="background:#0a0e27;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;display:inline-block;margin:0 8px 8px 0;border:1px solid #1e293b;">Edit Booking</a>
-          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="background:#ef4444;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;display:inline-block;margin:0 8px 8px 0;">Cancel Booking</a>
+          <a href="${editUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ffffff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">EDIT BOOKING</a>
+          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ef4444;border:1px solid #ef4444;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CANCEL BOOKING</a>
         </div>
 
         <p style="color:#64748b;font-size:12px;text-align:center;margin:20px 0 0 0;line-height:1.5;">
@@ -354,13 +354,13 @@ export function buildServiceRequestUpdatedEmailHtml({ booking, slots = [], cance
         <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin-bottom:24px;">
           <p style="margin:0 0 6px 0;font-weight:bold;color:#92400e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Ketentuan Pembatalan / Cancellation Policy:</p>
           <ol style="margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:1.5;">
-            <li><strong>Batas Waktu Pembatalan (3 Menit):</strong> Kamu masih memiliki hak penuh untuk membatalkan pesanan ini dalam kurun waktu 3 menit setelah pembaruan disimpan.</li>
-            <li>Setelah 3 menit berlalu, jadwal operasional akan otomatis dikunci dan masuk ke antrean koordinasi operasional tim Kalceria.</li>
+            <li><strong>Batas Waktu Pembatalan (15 Menit Terpadu):</strong> Countdown tetap mengacu pada timeline 15 menit awal pemesanan dan counter tidak direset. Kamu masih memiliki hak untuk membatalkan pesanan ini selama sisa waktu 15 menit masih berlangsung.</li>
+            <li>Setelah 15 menit berlalu dari waktu pemesanan awal, jadwal operasional akan otomatis dikunci dan masuk ke antrean koordinasi operasional tim Kalceria.</li>
           </ol>
         </div>
 
         <div style="text-align:center;margin:28px 0 20px 0;">
-          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="background:#ef4444;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;display:inline-block;">Cancel Booking</a>
+          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ef4444;border:1px solid #ef4444;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;">CANCEL BOOKING</a>
         </div>
 
         <p style="color:#64748b;font-size:12px;text-align:center;margin:20px 0 0 0;line-height:1.5;">

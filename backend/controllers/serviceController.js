@@ -346,7 +346,7 @@ export async function createServiceRequest(req, res, next) {
     const cancelToken = jwt.sign(
       { bookingId: booking.id, requestorId: user.id, action: 'manage' },
       cancelSecret,
-      { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '3m' },
+      { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '15m' },
     );
 
     // Dispatches (fire-and-forget, safe & isolated)
@@ -418,7 +418,7 @@ export async function listPublicServiceBookings(req, res, next) {
   }
 }
 
-const THREE_MINUTES_MS = 3 * 60 * 1000;
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 
 function verifyServiceBookingAuthorization(booking, req) {
   const userId = req.user?.userId || null;
@@ -440,13 +440,13 @@ function verifyServiceBookingAuthorization(booking, req) {
   const authorizedByToken = Boolean(validTokenBookingId && validTokenBookingId === booking.id);
   const isRecentGuest = Boolean(
     booking.requestor?.email?.endsWith('@guest.kalceria.local') &&
-    Date.now() - new Date(booking.createdAt).getTime() <= THREE_MINUTES_MS
+    Date.now() - new Date(booking.createdAt).getTime() <= FIFTEEN_MINUTES_MS
   );
 
   return authorizedByUser || authorizedByToken || isRecentGuest;
 }
 
-// ─── GET /services/request/:id (Inspect for 3-minute edit) ───────────────────
+// ─── GET /services/request/:id (Inspect for 15-minute edit) ───────────────────
 export async function getServiceRequestForEdit(req, res, next) {
   try {
     const { id } = req.params;
@@ -461,13 +461,14 @@ export async function getServiceRequestForEdit(req, res, next) {
     }
 
     const elapsed = Date.now() - new Date(booking.createdAt).getTime();
-    if (elapsed > THREE_MINUTES_MS) {
+    if (elapsed > FIFTEEN_MINUTES_MS) {
       return res.status(403).json({
-        error: 'Batas waktu 3 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        error: 'Batas waktu 15 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        isExpired: true,
       });
     }
 
-    const remainingSeconds = Math.max(0, Math.floor((THREE_MINUTES_MS - elapsed) / 1000));
+    const remainingSeconds = Math.max(0, Math.floor((FIFTEEN_MINUTES_MS - elapsed) / 1000));
     res.json({
       booking: {
         id: booking.id,
@@ -509,12 +510,16 @@ export async function updateServiceRequest(req, res, next) {
       return res.status(403).json({ error: 'Unauthorized to modify this request.' });
     }
 
-    const elapsed = Date.now() - new Date(booking.createdAt).getTime();
-    if (elapsed > THREE_MINUTES_MS) {
+    const originalCreatedAt = booking.createdAt;
+    const elapsed = Date.now() - new Date(originalCreatedAt).getTime();
+    if (elapsed > FIFTEEN_MINUTES_MS) {
       return res.status(403).json({
-        error: 'Batas waktu 3 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        error: 'Batas waktu 15 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        isExpired: true,
       });
     }
+
+    const remainingSeconds = Math.max(1, Math.floor((FIFTEEN_MINUTES_MS - elapsed) / 1000));
 
     if (!Array.isArray(slots) || slots.length < 1 || slots.length > 10) {
       return res.status(400).json({ error: 'Maximum 10 slots allowed per booking request.' });
@@ -563,10 +568,11 @@ export async function updateServiceRequest(req, res, next) {
         where: { id: booking.id },
       });
 
-      // 2. Create the updated booking entry preserving user & operational invariants
+      // 2. Create the updated booking entry preserving user & operational invariants (original createdAt preserved so countdown counter is not reset!)
       return tx.serviceBooking.create({
         data: {
           requestorId: booking.requestorId,
+          createdAt: originalCreatedAt,
           serviceType: cleanServiceType,
           serviceName: serviceName || booking.serviceName,
           contactPerson: contactPerson || booking.contactPerson,
@@ -599,7 +605,7 @@ export async function updateServiceRequest(req, res, next) {
     const cancelToken = jwt.sign(
       { bookingId: updatedBooking.id },
       cancelSecret,
-      { expiresIn: '3m', issuer: 'kalceria-api' }
+      { expiresIn: remainingSeconds, issuer: 'kalceria-api' }
     );
 
     const targetEmail = rawEmail || booking.requestor?.email;
@@ -633,6 +639,7 @@ export async function updateServiceRequest(req, res, next) {
       cancelToken,
       whatsappUrl,
       userEmail: targetEmail,
+      remainingSeconds,
     });
   } catch (err) {
     next(err);
@@ -655,9 +662,10 @@ export async function deleteOwnServiceRequest(req, res, next) {
     }
 
     const elapsed = Date.now() - new Date(booking.createdAt).getTime();
-    if (elapsed > THREE_MINUTES_MS) {
+    if (elapsed > FIFTEEN_MINUTES_MS) {
       return res.status(403).json({
-        error: 'Batas waktu 3 menit untuk membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        error: 'Batas waktu 15 menit untuk membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        isExpired: true,
       });
     }
 

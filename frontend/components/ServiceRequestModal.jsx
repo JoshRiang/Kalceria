@@ -71,6 +71,25 @@ export default function ServiceRequestModal({
   );
   const [candidateSlots, setCandidateSlots] = useState([]);
   const [initialSnapshot, setInitialSnapshot] = useState(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(null);
+  const [isWindowExpired, setIsWindowExpired] = useState(false);
+
+  // Live Countdown & Expiration Watcher (Strict 15-Minute Timeline Invariant)
+  useEffect(() => {
+    if (remainingSeconds === null || remainingSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setRemainingSeconds((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          setIsWindowExpired(true);
+          setError("Batas waktu 15 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [remainingSeconds]);
 
   const isEditMode = Boolean(
     initialAction === "edit" || (initialBookingId && initialAction !== "cancel")
@@ -141,6 +160,13 @@ export default function ServiceRequestModal({
           slotsMap: { ...slotsMap },
         });
         setDone({ bookingId: b.id, cancelToken: initialToken });
+        if (typeof res.data?.remainingSeconds === "number") {
+          setRemainingSeconds(res.data.remainingSeconds);
+          if (res.data.remainingSeconds <= 0) {
+            setIsWindowExpired(true);
+            setError("Batas waktu 15 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.");
+          }
+        }
 
         if (initialAction === "cancel") {
           setStep(2);
@@ -150,7 +176,14 @@ export default function ServiceRequestModal({
       })
       .catch((err) => {
         if (!active) return;
-        setError(err.response?.data?.error || "Booking link expired or unavailable.");
+        setIsWindowExpired(true);
+        const errMsg = err.response?.data?.error || "Batas waktu 15 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.";
+        setError(errMsg);
+        if (initialAction === "cancel") {
+          setStep(2);
+        } else {
+          setStep(1);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -543,6 +576,7 @@ export default function ServiceRequestModal({
                     isFormValid={isFormValid}
                     isEditMode={isEditMode}
                     canUpdate={canUpdate}
+                    isWindowExpired={isWindowExpired}
                   />
                 )}
 
@@ -556,6 +590,7 @@ export default function ServiceRequestModal({
                     onFinalize={handleFinalizeOrder}
                     isCancelMode={initialAction === "cancel"}
                     isEditMode={isEditMode}
+                    isWindowExpired={isWindowExpired}
                     loading={loading}
                     error={error}
                   />

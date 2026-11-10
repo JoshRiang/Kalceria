@@ -14,6 +14,7 @@ export function ServiceConfirmationStep({
   onFinalize,
   isCancelMode = false,
   isEditMode = false,
+  isWindowExpired = false,
   loading,
   error,
 }) {
@@ -287,10 +288,14 @@ export function ServiceConfirmationStep({
             <button
               type="button"
               onClick={handleConfirmCancel}
-              disabled={isDeleting || loading}
-              className="font-sans font-black uppercase tracking-tight text-base sm:text-lg text-white hover:text-red-500 hover:scale-105 active:scale-95 transition-all duration-200 select-none cursor-pointer bg-transparent border-none shadow-none outline-none py-2 px-6 disabled:opacity-50"
+              disabled={isDeleting || loading || isWindowExpired}
+              className={`font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-all duration-200 select-none bg-transparent border-none shadow-none outline-none py-2 px-6 ${
+                isWindowExpired
+                  ? "text-white/40 opacity-40 cursor-not-allowed pointer-events-none"
+                  : "text-white hover:text-red-500 hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
+              }`}
             >
-              CANCEL
+              {isWindowExpired ? "CANCEL (EXPIRED)" : "CANCEL"}
             </button>
           </div>
           <FormErrorBox error={error} />
@@ -304,9 +309,13 @@ export function ServiceConfirmationStep({
                 <button
                   type="button"
                   onClick={handleEdit}
-                  disabled={loading}
+                  disabled={loading || isWindowExpired}
                   style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }}
-                  className="font-normal text-sm sm:text-base text-white/70 hover:text-white transition-colors cursor-pointer py-1.5 focus:outline-none underline underline-offset-2"
+                  className={`font-normal text-sm sm:text-base py-1.5 focus:outline-none underline underline-offset-2 transition-colors ${
+                    isWindowExpired
+                      ? "text-white/30 opacity-40 cursor-not-allowed pointer-events-none"
+                      : "text-white/70 hover:text-white cursor-pointer"
+                  }`}
                 >
                   Edit Details
                 </button>
@@ -316,9 +325,13 @@ export function ServiceConfirmationStep({
             <button
               type="button"
               onClick={handleCancel}
-              disabled={loading}
+              disabled={loading || isWindowExpired}
               style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }}
-              className="font-normal text-sm sm:text-base text-white/60 hover:text-red-400 transition-colors cursor-pointer py-1.5 focus:outline-none"
+              className={`font-normal text-sm sm:text-base py-1.5 focus:outline-none transition-colors ${
+                isWindowExpired
+                  ? "text-white/30 opacity-40 cursor-not-allowed pointer-events-none"
+                  : "text-white/60 hover:text-red-400 cursor-pointer"
+              }`}
             >
               {loading ? "Cancelling..." : "Cancel"}
             </button>
