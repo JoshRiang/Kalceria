@@ -13,8 +13,16 @@ import { ServiceModalBackground } from "./service-request/ServiceModalBackground
 import api from "@/lib/api";
 import { useHasMounted } from "@/hooks/useHasMounted";
 
-export default function ServiceRequestModal({ onClose, userName, onRequireAuth, initialLocation }) {
-  const [step, setStep] = useState(0); // 0: Type, 1: Details, 2: Done
+export default function ServiceRequestModal({
+  onClose,
+  userName,
+  onRequireAuth,
+  initialLocation,
+  initialBookingId,
+  initialToken,
+  initialAction,
+}) {
+  const [step, setStep] = useState(initialBookingId ? 1 : 0); // 0: Type, 1: Details, 2: Done
   const modalScrollRef = useRef(null);
 
   // Automatically reset modal scroll position to top whenever stepping forward/backward
@@ -44,13 +52,16 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState(null);
+  const [done, setDone] = useState(
+    initialBookingId ? { bookingId: initialBookingId, cancelToken: initialToken } : null
+  );
 
   // Heatmap & booking schedule hook
   const {
     weekOffset,
     setWeekOffset,
     selectedSlots,
+    setSelectedSlots,
     hoursA,
     hoursB,
     currentMonthYear,
@@ -58,6 +69,102 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
     renderGrid,
     bookingSchedule,
   } = useServiceBookingSchedule({ setError, mounted });
+
+  // Load existing booking if initialBookingId is provided
+  useEffect(() => {
+    if (!initialBookingId) return;
+
+    let active = true;
+    setLoading(true);
+    api
+      .get(`/services/request/${initialBookingId}`, {
+        headers: initialToken ? { "x-manage-token": initialToken } : {},
+      })
+      .then((res) => {
+        if (!active || !res.data?.booking) return;
+        const b = res.data.booking;
+        setForm({
+          serviceType: b.serviceType,
+          serviceName: b.serviceName || "",
+          contactPerson: b.contactPerson || "",
+          whatsapp: b.whatsapp || "",
+          location: b.location || "",
+          additionalNotes: b.additionalNotes || "",
+        });
+        setIsLocationVerified(true);
+
+        const slotsMap = {};
+        (b.slots || []).forEach((s) => {
+          const d = typeof s.date === "string" ? s.date.split("T")[0] : new Date(s.date).toISOString().split("T")[0];
+          const startH = parseInt(String(s.startTime).split(":")[0], 10);
+          const endH = parseInt(String(s.endTime).split(":")[0], 10);
+          if (startH === 0 && endH === 1) {
+            slotsMap[`${d}-24`] = true;
+          } else {
+            for (let h = startH; h < (endH === 0 ? 24 : endH); h++) {
+              slotsMap[`${d}-${h}`] = true;
+            }
+          }
+        });
+        setSelectedSlots(slotsMap);
+        setDone({ bookingId: b.id, cancelToken: initialToken });
+
+        if (initialAction === "cancel") {
+          setStep(2);
+        } else {
+          setStep(1);
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(err.response?.data?.error || "Booking link expired or unavailable.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initialBookingId, initialToken, initialAction, setSelectedSlots]);
+
+  // Cross-Tab Synchronization via BroadcastChannel & localStorage
+  useEffect(() => {
+    let channel;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        channel = new BroadcastChannel("kalceria_service_channel");
+        channel.onmessage = (event) => {
+          const data = event.data;
+          if (!data || data.type !== "SERVICE_ACTION_TRIGGERED") return;
+          if (data.action === "cancel") {
+            handleCancel();
+          } else if (data.action === "edit") {
+            setStep(1);
+          }
+        };
+      }
+    } catch {}
+
+    const handleStorage = (e) => {
+      if (e.key === "kalceria_service_action_sync" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed?.action === "cancel") {
+            handleCancel();
+          } else if (parsed?.action === "edit") {
+            setStep(1);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [done?.bookingId, done?.cancelToken]);
 
   // Form Validation
   const isFormValid = Boolean(
@@ -138,10 +245,20 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
           (s.hour === 23 ? 0 : s.hour === 24 ? 1 : s.hour + 1).toString().padStart(2, "0") + ":00",
       }));
 
-      const res = await api.post("/services/request", {
-        ...form,
-        slots,
-      });
+      const isUpdate = Boolean(done?.bookingId);
+      const endpoint = isUpdate ? `/services/request/${done.bookingId}` : "/services/request";
+      const method = isUpdate ? "put" : "post";
+
+      const res = await api[method](
+        endpoint,
+        {
+          ...form,
+          slots,
+        },
+        {
+          headers: done?.cancelToken ? { "x-manage-token": done.cancelToken } : undefined,
+        }
+      );
       setDone(res.data);
       setStep(2);
     } catch (err) {
@@ -313,6 +430,7 @@ export default function ServiceRequestModal({ onClose, userName, onRequireAuth, 
                     form={form}
                     bookingSchedule={bookingSchedule}
                     handleCancel={handleCancel}
+                    handleEdit={() => setStep(1)}
                     loading={loading}
                     error={error}
                   />

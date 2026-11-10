@@ -23,7 +23,7 @@ import {
   acceptMiniEventCollab,
   declineMiniEventCollab,
 } from "../controllers/miniEventController.js";
-import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings } from "../controllers/serviceController.js";
+import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings, getServiceRequestForEdit, updateServiceRequest } from "../controllers/serviceController.js";
 import {
   saveTelemetry, getMapUsers, getAllKalcerians,
   getBlockedUsers, blockUser, unblockUser,
@@ -199,6 +199,8 @@ router.post("/mini-events/:id/collab/requests/:requestId/decline", requireAuth, 
 // ─── Booking (Need Us? Timekeeper) ───────────────────────────────────────────
 router.post("/services/book", requireAuth, bookingRateLimit, checkServiceBookingDefense, createBooking);
 router.post("/services/request", optionalAuth, bookingRateLimit, checkServiceBookingDefense, createServiceRequest);
+router.get("/services/request/:id", optionalAuth, getServiceRequestForEdit);
+router.put("/services/request/:id", optionalAuth, bookingRateLimit, checkServiceBookingDefense, updateServiceRequest);
 router.get("/services/bookings", listPublicServiceBookings);
 router.delete("/services/request/:id", optionalAuth, deleteOwnServiceRequest);
 

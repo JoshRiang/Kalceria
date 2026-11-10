@@ -49,6 +49,7 @@ export default function LandingPage({ onNavigateAuth }) {
   const [mascotFrame, setMascotFrame] = useState(1);
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [detectedLocation, setDetectedLocation] = useState("");
+  const [serviceManageState, setServiceManageState] = useState(null);
 
   const handleApplyRequest = () => {
     setShowServiceModal(true);
@@ -127,6 +128,49 @@ export default function LandingPage({ onNavigateAuth }) {
 
     // Smooth scroll restoration on fallback navigation
     const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+
+    // Cross-Tab / Email Link handling for Service Booking (Edit or Cancel)
+    const serviceAction = urlParams?.get("service_action");
+    const bookingId = urlParams?.get("booking_id");
+    const token = urlParams?.get("token");
+
+    if (serviceAction && bookingId) {
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const ch = new BroadcastChannel("kalceria_service_channel");
+          ch.postMessage({
+            type: "SERVICE_ACTION_TRIGGERED",
+            action: serviceAction,
+            bookingId,
+            token,
+          });
+          ch.close();
+        }
+        localStorage.setItem(
+          "kalceria_service_action_sync",
+          JSON.stringify({
+            action: serviceAction,
+            bookingId,
+            token,
+            timestamp: Date.now(),
+          })
+        );
+      } catch {}
+
+      // Attempt to close this tab so user seamlessly returns to parent tab
+      if (typeof window !== "undefined") {
+        if (window.opener || window.history.length <= 2) {
+          window.close();
+        }
+      }
+
+      setServiceManageState({
+        action: serviceAction,
+        bookingId,
+        token,
+      });
+      setShowServiceModal(true);
+    }
     const scrollTarget = urlParams?.get("anchor") || sessionStorage.getItem("landingScrollTarget");
     const scrollY = sessionStorage.getItem("landingScrollY");
     if (scrollTarget || scrollY) {
@@ -279,12 +323,18 @@ export default function LandingPage({ onNavigateAuth }) {
         {showServiceModal && (
           <ServiceRequestModal
             initialLocation={detectedLocation}
+            initialBookingId={serviceManageState?.bookingId}
+            initialToken={serviceManageState?.token}
+            initialAction={serviceManageState?.action}
             onClose={() => {
               setShowServiceModal(false);
               setDetectedLocation("");
+              setServiceManageState(null);
             }}
             onRequireAuth={() => {
               setShowServiceModal(false);
+              setDetectedLocation("");
+              setServiceManageState(null);
               onNavigateAuth?.();
             }}
           />

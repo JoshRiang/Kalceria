@@ -10,7 +10,7 @@ import { setServiceBookingCooldown, clearServiceBookingCooldown } from '../middl
 import { CANONICAL_USER_SELECT } from '../utils/profileDefaults.js';
 
 const RATE_PER_HOUR = 120000;
-const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
+const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '628117998790';
 
 let serviceGuestPlaceholderHash;
 const getServiceGuestHash = () => (
@@ -46,6 +46,47 @@ function buildWaUrl(booking, user) {
     `Mohon segera konfirmasi!`,
   ].join('\n');
   return `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
+}
+
+export function buildServiceRequestWaMessage(booking, slots = [], contactPerson, whatsapp, location, additionalNotes, senderLabel) {
+  const serviceLabelMap = {
+    SHOOTING: 'Shooting / Production',
+    EO: 'Event Organizer',
+    HOST_EVENT: 'Host Event',
+  };
+  const serviceLabel = serviceLabelMap[booking.serviceType] || booking.serviceType;
+
+  const formattedDates = [...new Set((slots || []).map((s) => {
+    const d = new Date(s.date);
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }))].join(', ');
+
+  const formattedHours = (slots || []).map((s) => `${s.startTime} - ${s.endTime}`).join(', ');
+
+  const lines = [
+    `SERVICE REQUEST - NEED OUR HELP`,
+    ``,
+    `Booking ID: #${booking.id ? booking.id.slice(-6) : 'NEW'}`,
+    `Service: ${serviceLabel}`,
+    `Request Title: ${booking.serviceName || '—'}`,
+    `Operator Name: ${contactPerson || booking.contactPerson || '—'}`,
+    `WhatsApp: ${whatsapp || booking.whatsapp || '—'}`,
+    `Deployment Area: ${location || booking.location || '—'}`,
+    `Selected Date: ${formattedDates || '—'}`,
+    `Selected Hours: ${formattedHours || '—'}`,
+  ];
+
+  const notes = additionalNotes !== undefined ? additionalNotes : booking.additionalNotes;
+  if (notes && String(notes).trim()) {
+    const trimmed = String(notes).trim();
+    lines.push(`Notes: ${trimmed.length > 50 ? trimmed.slice(0, 50) + '...' : trimmed}`);
+  }
+  if (senderLabel) {
+    lines.push(``);
+    lines.push(`Dari: ${senderLabel}`);
+  }
+
+  return lines.join('\n');
 }
 
 // ─── POST /services/book (Need Us? Timekeeper) ────────────────────────────────
@@ -139,7 +180,7 @@ export async function createBooking(req, res, next) {
   }
 }
 
-async function resolveServiceRequestor(req, contactPerson, whatsapp) {
+async function resolveServiceRequestor(req, contactPerson, whatsapp, email) {
   if (req.user?.userId) {
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
@@ -154,8 +195,12 @@ async function resolveServiceRequestor(req, contactPerson, whatsapp) {
     return null;
   }
 
+  const cleanEmail = typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ? email.trim().toLowerCase()
+    : null;
+
   const digits = cleanWa.replace(/\D/g, '').slice(0, 20) || crypto.randomBytes(6).toString('hex');
-  const guestEmail = `guest-svc-${digits}@guest.kalceria.local`;
+  const guestEmail = cleanEmail || `guest-svc-${digits}@guest.kalceria.local`;
 
   const existing = await prisma.user.findUnique({
     where: { email: guestEmail },
@@ -173,7 +218,7 @@ async function resolveServiceRequestor(req, contactPerson, whatsapp) {
       passwordHash: await getServiceGuestHash(),
       domicileLat: 0,
       domicileLng: 0,
-      isEmailVerified: false,
+      isEmailVerified: Boolean(cleanEmail),
     },
     select: { id: true, name: true, email: true },
   });
@@ -239,7 +284,7 @@ export async function createServiceRequest(req, res, next) {
       });
     }
 
-    const user = await resolveServiceRequestor(req, contactPerson, cleanWa);
+    const user = await resolveServiceRequestor(req, contactPerson, cleanWa, body.email);
     if (!user) {
       return res.status(400).json({ error: 'Please provide operator name and WhatsApp contact.' });
     }
@@ -269,36 +314,26 @@ export async function createServiceRequest(req, res, next) {
     await redis.del('cache:public_bookings');
     await setServiceBookingCooldown(req, user.id);
 
-    const firstSlot = slots && slots.length > 0 ? slots[0] : null;
-    const dateStr = firstSlot ? new Date(firstSlot.date).toLocaleDateString('id-ID', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    }) : 'Multiple Dates';
-
     const senderLabel = user.email.endsWith('@guest.kalceria.local')
       ? `${contactPerson || user.name} (Guest)`
       : `${user.name} (${user.email})`;
 
-    const msg = [
-      `📋 SERVICE REQUEST BARU`,
-      ``,
-      `Layanan: ${serviceType}`,
-      `Nama: ${serviceName || '—'}`,
-      `PIC: ${contactPerson || user.name}`,
-      `WA: ${whatsapp || '—'}`,
-      `Lokasi: ${location || '—'}`,
-      `Jadwal: ${slots?.length || 0} slot dipilih`,
-      `Tanggal Mulai: ${dateStr}`,
-      `Catatan: ${additionalNotes || '—'}`,
-      ``,
-      `Dari: ${senderLabel}`,
-    ].join('\n');
+    const msg = buildServiceRequestWaMessage(
+      booking,
+      slots,
+      contactPerson,
+      whatsapp,
+      location,
+      additionalNotes,
+      senderLabel
+    );
 
     const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
     const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
     const cancelToken = jwt.sign(
-      { bookingId: booking.id, requestorId: user.id },
+      { bookingId: booking.id, requestorId: user.id, action: 'manage' },
       cancelSecret,
-      { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '30m' },
+      { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '15m' },
     );
 
     // Dispatches (fire-and-forget, safe & isolated)
@@ -314,6 +349,7 @@ export async function createServiceRequest(req, res, next) {
       to: user.email,
       booking,
       slots,
+      cancelToken,
     }), 'email-service-request');
 
     safeNotify(() => sendServiceRequestAdminAlertEmail({
@@ -322,7 +358,7 @@ export async function createServiceRequest(req, res, next) {
       user,
     }), 'email-service-admin-alert');
 
-    res.status(201).json({ bookingId: booking.id, whatsappUrl, cancelToken });
+    res.status(201).json({ bookingId: booking.id, whatsappUrl, cancelToken, userEmail: user.email });
   } catch (err) {
     next(err);
   }
@@ -369,27 +405,188 @@ export async function listPublicServiceBookings(req, res, next) {
   }
 }
 
-// ─── DELETE /services/request/:id (User or immediate guest cancel) ────────────
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+
+function verifyServiceBookingAuthorization(booking, req) {
+  const userId = req.user?.userId || null;
+  const tokenHeader = req.get('x-manage-token') || req.get('x-cancel-token') || req.query?.token || '';
+
+  let validTokenBookingId = null;
+  if (tokenHeader) {
+    const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
+    try {
+      const decoded = jwt.verify(tokenHeader, cancelSecret, {
+        algorithms: ['HS256'],
+        issuer: 'kalceria-api',
+      });
+      validTokenBookingId = decoded?.bookingId || null;
+    } catch {}
+  }
+
+  const authorizedByUser = Boolean(userId && booking.requestorId === userId);
+  const authorizedByToken = Boolean(validTokenBookingId && validTokenBookingId === booking.id);
+  const isRecentGuest = Boolean(
+    booking.requestor?.email?.endsWith('@guest.kalceria.local') &&
+    Date.now() - new Date(booking.createdAt).getTime() <= FIFTEEN_MINUTES_MS
+  );
+
+  return authorizedByUser || authorizedByToken || isRecentGuest;
+}
+
+// ─── GET /services/request/:id (Inspect for 15-minute edit) ───────────────────
+export async function getServiceRequestForEdit(req, res, next) {
+  try {
+    const { id } = req.params;
+    const booking = await prisma.serviceBooking.findUnique({
+      where: { id },
+      include: { slots: true, requestor: true },
+    });
+    if (!booking) return res.status(404).json({ error: 'Request not found.' });
+
+    if (!verifyServiceBookingAuthorization(booking, req)) {
+      return res.status(403).json({ error: 'Unauthorized to access this request.' });
+    }
+
+    const elapsed = Date.now() - new Date(booking.createdAt).getTime();
+    if (elapsed > FIFTEEN_MINUTES_MS) {
+      return res.status(403).json({
+        error: 'Batas waktu 15 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+      });
+    }
+
+    const remainingSeconds = Math.max(0, Math.floor((FIFTEEN_MINUTES_MS - elapsed) / 1000));
+    res.json({
+      booking: {
+        id: booking.id,
+        serviceType: booking.serviceType,
+        serviceName: booking.serviceName,
+        contactPerson: booking.contactPerson,
+        whatsapp: booking.whatsapp,
+        location: booking.location,
+        additionalNotes: booking.additionalNotes,
+        slots: (booking.slots || []).map((s) => ({
+          date: s.date.toISOString().split('T')[0],
+          startTime: s.startTime,
+          endTime: s.endTime,
+        })),
+        createdAt: booking.createdAt,
+      },
+      remainingSeconds,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── PUT /services/request/:id (Update within 15 minutes) ─────────────────────
+export async function updateServiceRequest(req, res, next) {
+  try {
+    const { id } = req.params;
+    const body = req.body || {};
+    const { serviceType, serviceName, contactPerson, whatsapp, location, additionalNotes, slots } = body;
+
+    const booking = await prisma.serviceBooking.findUnique({
+      where: { id },
+      include: { slots: true, requestor: true },
+    });
+    if (!booking) return res.status(404).json({ error: 'Request not found.' });
+
+    if (!verifyServiceBookingAuthorization(booking, req)) {
+      return res.status(403).json({ error: 'Unauthorized to modify this request.' });
+    }
+
+    const elapsed = Date.now() - new Date(booking.createdAt).getTime();
+    if (elapsed > FIFTEEN_MINUTES_MS) {
+      return res.status(403).json({
+        error: 'Batas waktu 15 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+      });
+    }
+
+    if (!Array.isArray(slots) || slots.length < 1 || slots.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 slots allowed per booking request.' });
+    }
+
+    const cleanServiceType = serviceType || booking.serviceType;
+    if (!['EO', 'SHOOTING', 'HOST_EVENT'].includes(cleanServiceType)) {
+      return res.status(400).json({ error: 'Invalid serviceType.' });
+    }
+
+    const validTime = (value) => typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+    const validSlots = slots.every((slot) => {
+      if (!slot || typeof slot.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(slot.date) || !Number.isFinite(new Date(slot.date).getTime())) return false;
+      if (!validTime(slot.startTime) || !(validTime(slot.endTime) || slot.endTime === '00:00')) return false;
+      if (slot.startTime === '00:00' && slot.endTime === '01:00') return true;
+      if (timeToMinutes(slot.startTime) < 9 * 60) return false;
+      return timeToMinutes(slot.endTime) > timeToMinutes(slot.startTime) || slot.endTime === '00:00';
+    });
+    if (!validSlots) return res.status(400).json({ error: 'Please provide valid booking dates and times.' });
+
+    // Strict Indonesian WhatsApp validation if updating whatsapp
+    const cleanWa = typeof whatsapp === 'string' ? whatsapp.trim().replace(/[\s-]/g, '') : booking.whatsapp;
+    const phoneDigits = cleanWa.replace(/^\+?62/, '').replace(/^0+/, '').replace(/\D/g, '');
+    const ID_MOBILE_REGEX = /^8(?:1[1-9]|2[1-3]|3[1238]|5[1-35-9]|7[78]|8[1-9]|9[5-9])\d{6,10}$/;
+    if (!cleanWa.startsWith('+62') || !ID_MOBILE_REGEX.test(phoneDigits)) {
+      return res.status(400).json({
+        error: 'Please provide a valid Indonesian WhatsApp contact (+62 8xx-xxxx-xxxx).',
+      });
+    }
+
+    const cleanLocation = typeof location === 'string' ? location.trim() : booking.location;
+    const cleanNotes = additionalNotes !== undefined ? (typeof additionalNotes === 'string' ? additionalNotes.trim() : null) : booking.additionalNotes;
+
+    const updatedBooking = await prisma.$transaction(async (tx) => {
+      await tx.serviceBookingSlot.deleteMany({
+        where: { serviceBookingId: id },
+      });
+
+      return tx.serviceBooking.update({
+        where: { id },
+        data: {
+          serviceType: cleanServiceType,
+          serviceName: serviceName || booking.serviceName,
+          contactPerson: contactPerson || booking.contactPerson,
+          whatsapp: cleanWa,
+          location: cleanLocation,
+          additionalNotes: cleanNotes,
+          slots: {
+            create: slots.map((s) => ({
+              date: new Date(s.date),
+              startTime: s.startTime,
+              endTime: s.endTime,
+            })),
+          },
+        },
+        include: { slots: true },
+      });
+    });
+
+    await redis.del('cache:public_bookings');
+
+    const senderLabel = booking.requestor?.email?.endsWith('@guest.kalceria.local')
+      ? `${contactPerson || booking.contactPerson} (Guest)`
+      : `${booking.requestor?.name || contactPerson} (${booking.requestor?.email || ''})`;
+
+    const msg = buildServiceRequestWaMessage(
+      updatedBooking,
+      slots,
+      contactPerson || booking.contactPerson,
+      cleanWa,
+      cleanLocation,
+      cleanNotes,
+      senderLabel
+    );
+    const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
+
+    res.json({ success: true, booking: updatedBooking, whatsappUrl });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── DELETE /services/request/:id (User or immediate guest cancel within 15 mins) ────────────
 export async function deleteOwnServiceRequest(req, res, next) {
   try {
-    const userId = req.user?.userId || null;
-    const cancelHeader = req.get('x-cancel-token') || '';
     const { id } = req.params;
-
-    let validCancelBookingId = null;
-    if (cancelHeader) {
-      const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
-      try {
-        const decoded = jwt.verify(cancelHeader, cancelSecret, {
-          algorithms: ['HS256'],
-          audience: 'kalceria-service-cancel',
-          issuer: 'kalceria-api',
-        });
-        validCancelBookingId = decoded?.bookingId || null;
-      } catch {
-        // Token verification failed; fallback to checking recent guest booking
-      }
-    }
 
     const booking = await prisma.serviceBooking.findUnique({ 
       where: { id },
@@ -397,17 +594,15 @@ export async function deleteOwnServiceRequest(req, res, next) {
     });
     if (!booking) return res.status(404).json({ error: 'Request not found.' });
 
-    // Allow cancellation if authorized by user session, cancel token, OR if it is a recent guest request (< 20 mins)
-    const isRecentGuest = Boolean(
-      booking.requestor?.email?.endsWith('@guest.kalceria.local') &&
-      Date.now() - new Date(booking.createdAt).getTime() < 20 * 60 * 1000
-    );
-
-    const authorizedByUser = Boolean(userId && booking.requestorId === userId);
-    const authorizedByToken = Boolean(validCancelBookingId && validCancelBookingId === booking.id);
-
-    if (!authorizedByUser && !authorizedByToken && !isRecentGuest) {
+    if (!verifyServiceBookingAuthorization(booking, req)) {
       return res.status(403).json({ error: 'Unauthorized to delete this request.' });
+    }
+
+    const elapsed = Date.now() - new Date(booking.createdAt).getTime();
+    if (elapsed > FIFTEEN_MINUTES_MS) {
+      return res.status(403).json({
+        error: 'Batas waktu 15 menit untuk membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.',
+      });
     }
 
     await prisma.serviceBooking.delete({ where: { id } });
