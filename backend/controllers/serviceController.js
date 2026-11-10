@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
-import { safeNotify, sendServiceRequestSubmittedEmail, sendServiceRequestAdminAlertEmail } from '../lib/mailer.js';
+import { safeNotify, sendServiceRequestSubmittedEmail, sendServiceRequestUpdatedEmail, sendServiceRequestAdminAlertEmail } from '../lib/mailer.js';
 import { notifyServiceRequestCreated } from '../lib/whatsappBroker.js';
 import { isValidIndonesianLocation, isLocationFromVerifiedList } from './geoController.js';
 import { setServiceBookingCooldown, clearServiceBookingCooldown } from '../middleware/ingressDefense.js';
@@ -48,7 +48,7 @@ function buildWaUrl(booking, user) {
   return `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
 }
 
-export function buildServiceRequestWaMessage(booking, slots = [], contactPerson, whatsapp, location, additionalNotes, senderLabel) {
+export function buildServiceRequestWaMessage(booking, slots = [], contactPerson, whatsapp, location, additionalNotes, senderLabel, isUpdate = false) {
   const serviceLabelMap = {
     SHOOTING: 'Shooting / Production',
     EO: 'Event Organizer',
@@ -63,8 +63,10 @@ export function buildServiceRequestWaMessage(booking, slots = [], contactPerson,
 
   const formattedHours = (slots || []).map((s) => `${s.startTime} - ${s.endTime}`).join(', ');
 
+  const header = isUpdate ? 'UPDATE PESANAN - NEED OUR HELP' : 'SERVICE REQUEST - NEED OUR HELP';
+
   const lines = [
-    `SERVICE REQUEST - NEED OUR HELP`,
+    header,
     ``,
     `Booking ID: #${booking.id ? booking.id.slice(-6) : 'NEW'}`,
     `Service: ${serviceLabel}`,
@@ -535,19 +537,24 @@ export async function updateServiceRequest(req, res, next) {
     const cleanNotes = additionalNotes !== undefined ? (typeof additionalNotes === 'string' ? additionalNotes.trim() : null) : booking.additionalNotes;
 
     const updatedBooking = await prisma.$transaction(async (tx) => {
-      await tx.serviceBookingSlot.deleteMany({
-        where: { serviceBookingId: id },
+      // 1. Delete old booking entry (which cascades slot deletion)
+      await tx.serviceBooking.delete({
+        where: { id: booking.id },
       });
 
-      return tx.serviceBooking.update({
-        where: { id },
+      // 2. Create the updated booking entry preserving user & operational invariants
+      return tx.serviceBooking.create({
         data: {
+          requestorId: booking.requestorId,
           serviceType: cleanServiceType,
           serviceName: serviceName || booking.serviceName,
           contactPerson: contactPerson || booking.contactPerson,
           whatsapp: cleanWa,
           location: cleanLocation,
+          locationString: cleanLocation,
           additionalNotes: cleanNotes,
+          status: 'PENDING',
+          paymentStatus: booking.paymentStatus || 'PENDING',
           slots: {
             create: slots.map((s) => ({
               date: new Date(s.date),
@@ -556,11 +563,23 @@ export async function updateServiceRequest(req, res, next) {
             })),
           },
         },
-        include: { slots: true },
+        include: { slots: true, requestor: true },
       });
     });
 
-    await redis.del('cache:public_bookings');
+    try {
+      await redis.del('cache:public_bookings');
+    } catch {}
+    try {
+      await setServiceBookingCooldown(req, booking.requestorId);
+    } catch {}
+
+    const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
+    const cancelToken = jwt.sign(
+      { bookingId: updatedBooking.id },
+      cancelSecret,
+      { expiresIn: '15m', issuer: 'kalceria-api' }
+    );
 
     const senderLabel = booking.requestor?.email?.endsWith('@guest.kalceria.local')
       ? `${contactPerson || booking.contactPerson} (Guest)`
@@ -573,11 +592,26 @@ export async function updateServiceRequest(req, res, next) {
       cleanWa,
       cleanLocation,
       cleanNotes,
-      senderLabel
+      senderLabel,
+      true // isUpdate
     );
     const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
 
-    res.json({ success: true, booking: updatedBooking, whatsappUrl });
+    safeNotify(() => sendServiceRequestUpdatedEmail({
+      to: booking.requestor?.email,
+      booking: updatedBooking,
+      slots,
+      cancelToken,
+    }), 'email-service-request-update');
+
+    res.json({
+      success: true,
+      bookingId: updatedBooking.id,
+      booking: updatedBooking,
+      cancelToken,
+      whatsappUrl,
+      userEmail: booking.requestor?.email,
+    });
   } catch (err) {
     next(err);
   }

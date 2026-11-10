@@ -13,6 +13,7 @@ export function ServiceConfirmationStep({
   handleEdit,
   onFinalize,
   isCancelMode = false,
+  isEditMode = false,
   loading,
   error,
 }) {
@@ -42,8 +43,11 @@ export function ServiceConfirmationStep({
   // Construct WhatsApp URL: +62 8117998790, exact metadata from Part 3, NO emojis
   const waUrl = useMemo(() => {
     if (done?.whatsappUrl) return done.whatsappUrl;
+    const header = isEditMode
+      ? "UPDATE PESANAN - NEED OUR HELP"
+      : "SERVICE REQUEST - NEED OUR HELP";
     const lines = [
-      "SERVICE REQUEST - NEED OUR HELP",
+      header,
       "",
       `Booking ID: #${done?.bookingId ? done.bookingId.slice(-6) : "PENDING"}`,
       `Service: ${serviceLabel}`,
@@ -59,7 +63,7 @@ export function ServiceConfirmationStep({
     }
     const cleanWaText = lines.join("\n");
     return `https://wa.me/628117998790?text=${encodeURIComponent(cleanWaText)}`;
-  }, [done?.whatsappUrl, done?.bookingId, serviceLabel, form, bookingSchedule, truncatedNotes]);
+  }, [done?.whatsappUrl, done?.bookingId, isEditMode, serviceLabel, form, bookingSchedule, truncatedNotes]);
 
   // Handle WhatsApp action: Candidate buffer is finalized in backend ONLY when WA is clicked!
   const handleWaClick = async () => {
@@ -179,7 +183,9 @@ export function ServiceConfirmationStep({
                 className="flex flex-col items-center text-center w-full py-1"
               >
                 <p className="text-white font-sans font-normal text-xs sm:text-sm md:text-base leading-relaxed text-center">
-                  Your order has been submitted to our system. If you wish to make any changes, you can check your registered email:{" "}
+                  {isEditMode
+                    ? "Your updated order has been submitted to our system. If you wish to review your parameters, you can check your registered email:"
+                    : "Your order has been submitted to our system. If you wish to make any changes, you can check your registered email:"}{" "}
                   <a
                     href={emailInboxUrl}
                     target="_blank"
@@ -287,7 +293,7 @@ export function ServiceConfirmationStep({
         /* Normal Middle Bottom Actions: Edit & Cancel */
         <div className="mt-2 pt-2 flex flex-col items-center w-full max-w-[460px]">
           <div className="flex items-center gap-3">
-            {handleEdit && (
+            {!isEditMode && handleEdit && (
               <>
                 <button
                   type="button"

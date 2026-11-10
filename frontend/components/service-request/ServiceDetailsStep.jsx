@@ -26,6 +26,8 @@ export function ServiceDetailsStep({
   error,
   loading,
   isFormValid,
+  isEditMode = false,
+  canUpdate = false,
 }) {
   return (
     <motion.div
@@ -195,28 +197,44 @@ export function ServiceDetailsStep({
           <FormErrorBox error={error} />
         </div>
 
-        {/* Horizontal Footer Navigation (Boxless Back and Next) */}
-        <div className="flex gap-4 sm:gap-6 max-w-[900px] mx-auto w-full mt-2">
-          <button
-            type="button"
-            onClick={() => {
-              setError("");
-              setStep(0);
-            }}
-            className="flex-1 py-3.5 sm:py-6 font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-colors flex items-center justify-center gap-2 bg-transparent text-white hover:text-white/70 border-none shadow-none cursor-pointer"
-          >
-            BACK
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className={`flex-1 py-3.5 sm:py-6 font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-colors flex items-center justify-center gap-2 bg-transparent border-none shadow-none cursor-pointer ${
-              isFormValid ? "text-white hover:text-white/80" : "text-white/40 cursor-not-allowed"
-            }`}
-          >
-            {loading ? "VALIDATING..." : "NEXT"}
-          </button>
-        </div>
+        {/* Horizontal Footer Navigation (Boxless Back and Next OR Centered Update) */}
+        {isEditMode ? (
+          <div className="flex justify-center items-center max-w-[900px] mx-auto w-full mt-2">
+            <button
+              type="submit"
+              disabled={loading || !canUpdate}
+              className={`py-3.5 sm:py-6 font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-all flex items-center justify-center gap-2 bg-transparent border-none shadow-none outline-none select-none ${
+                canUpdate
+                  ? "text-white hover:text-white/80 hover:scale-105 active:scale-95 cursor-pointer"
+                  : "text-white/40 cursor-not-allowed opacity-40 pointer-events-none"
+              }`}
+            >
+              {loading ? "VALIDATING..." : "UPDATE"}
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-4 sm:gap-6 max-w-[900px] mx-auto w-full mt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setError("");
+                setStep(0);
+              }}
+              className="flex-1 py-3.5 sm:py-6 font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-colors flex items-center justify-center gap-2 bg-transparent text-white hover:text-white/70 border-none shadow-none cursor-pointer"
+            >
+              BACK
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`flex-1 py-3.5 sm:py-6 font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-colors flex items-center justify-center gap-2 bg-transparent border-none shadow-none cursor-pointer ${
+                isFormValid ? "text-white hover:text-white/80" : "text-white/40 cursor-not-allowed"
+              }`}
+            >
+              {loading ? "VALIDATING..." : "NEXT"}
+            </button>
+          </div>
+        )}
       </form>
     </motion.div>
   );

@@ -56,6 +56,11 @@ export default function ServiceRequestModal({
     initialBookingId ? { bookingId: initialBookingId, cancelToken: initialToken } : null
   );
   const [candidateSlots, setCandidateSlots] = useState([]);
+  const [initialSnapshot, setInitialSnapshot] = useState(null);
+
+  const isEditMode = Boolean(
+    initialAction === "edit" || (initialBookingId && initialAction !== "cancel")
+  );
 
   // Heatmap & booking schedule hook
   const {
@@ -108,6 +113,17 @@ export default function ServiceRequestModal({
           }
         });
         setSelectedSlots(slotsMap);
+        setInitialSnapshot({
+          form: {
+            serviceType: b.serviceType,
+            serviceName: b.serviceName || "",
+            contactPerson: b.contactPerson || "",
+            whatsapp: b.whatsapp || "",
+            location: b.location || "",
+            additionalNotes: b.additionalNotes || "",
+          },
+          slotsMap: { ...slotsMap },
+        });
         setDone({ bookingId: b.id, cancelToken: initialToken });
 
         if (initialAction === "cancel") {
@@ -175,6 +191,41 @@ export default function ServiceRequestModal({
       form.location &&
       Object.values(selectedSlots).filter(Boolean).length > 0
   );
+
+  // Determine if user modified any field or calendar slot compared to initial loaded booking
+  const isDirty = React.useMemo(() => {
+    if (!initialSnapshot) return false;
+    const f1 = form;
+    const f0 = initialSnapshot.form;
+    if (
+      f1.serviceName !== f0.serviceName ||
+      f1.contactPerson !== f0.contactPerson ||
+      f1.whatsapp !== f0.whatsapp ||
+      f1.location !== f0.location ||
+      f1.additionalNotes !== f0.additionalNotes ||
+      f1.serviceType !== f0.serviceType
+    ) {
+      return true;
+    }
+
+    const currentSlots = Object.entries(selectedSlots)
+      .filter(([, v]) => Boolean(v))
+      .map(([k]) => k)
+      .sort();
+    const initialSlots = Object.entries(initialSnapshot.slotsMap || {})
+      .filter(([, v]) => Boolean(v))
+      .map(([k]) => k)
+      .sort();
+
+    if (currentSlots.length !== initialSlots.length) return true;
+    for (let i = 0; i < currentSlots.length; i++) {
+      if (currentSlots[i] !== initialSlots[i]) return true;
+    }
+
+    return false;
+  }, [form, selectedSlots, initialSnapshot]);
+
+  const canUpdate = isFormValid && isDirty;
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -463,6 +514,8 @@ export default function ServiceRequestModal({
                     error={error}
                     loading={loading}
                     isFormValid={isFormValid}
+                    isEditMode={isEditMode}
+                    canUpdate={canUpdate}
                   />
                 )}
 
@@ -472,9 +525,10 @@ export default function ServiceRequestModal({
                     form={form}
                     bookingSchedule={bookingSchedule}
                     handleCancel={handleCancel}
-                    handleEdit={() => setStep(1)}
+                    handleEdit={isEditMode ? null : () => setStep(1)}
                     onFinalize={handleFinalizeOrder}
                     isCancelMode={initialAction === "cancel"}
+                    isEditMode={isEditMode}
                     loading={loading}
                     error={error}
                   />

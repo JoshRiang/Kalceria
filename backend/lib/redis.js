@@ -413,7 +413,7 @@ export const redis = new Proxy(rawRedis, {
             try {
               return await origExec();
             } catch (err) {
-              if (String(err?.message || '').includes('max requests limit exceeded') || err?.name === 'MaxRetriesPerRequestError') {
+              if (String(err?.message || '').includes('max requests limit exceeded') || err?.name === 'MaxRetriesPerRequestError' || String(err?.message || '').includes('Connection is closed')) {
                 markFallback(err);
                 return memoryStore.pipeline().exec();
               }
@@ -436,7 +436,7 @@ export const redis = new Proxy(rawRedis, {
           const result = target[prop](...args);
           if (result && typeof result.then === 'function') {
             return result.catch((err) => {
-              if (String(err?.message || '').includes('max requests limit exceeded') || err?.name === 'MaxRetriesPerRequestError') {
+              if (String(err?.message || '').includes('max requests limit exceeded') || err?.name === 'MaxRetriesPerRequestError' || String(err?.message || '').includes('Connection is closed')) {
                 markFallback(err);
                 if (typeof memoryStore[prop] === 'function') {
                   return memoryStore[prop](...args);
@@ -447,7 +447,7 @@ export const redis = new Proxy(rawRedis, {
           }
           return result;
         } catch (err) {
-          if (String(err?.message || '').includes('max requests limit exceeded') || err?.name === 'MaxRetriesPerRequestError') {
+          if (String(err?.message || '').includes('max requests limit exceeded') || err?.name === 'MaxRetriesPerRequestError' || String(err?.message || '').includes('Connection is closed')) {
             markFallback(err);
             if (typeof memoryStore[prop] === 'function') {
               return memoryStore[prop](...args);
