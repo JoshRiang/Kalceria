@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import prisma from '../../lib/prisma.js';
 import { redis } from '../../lib/redis.js';
-import { ensurePersistentUserProfilesBatch } from '../../utils/profileDefaults.js';
+import { ensurePersistentUserProfilesBatch, CANONICAL_USER_SELECT } from '../../utils/profileDefaults.js';
 
 const acceptedKey = (eventId) => `mini_event:collab:accepted:${eventId}`;
 const requestsKey = (eventId) => `mini_event:collab:requests:${eventId}`;
@@ -126,14 +126,7 @@ export async function listEnrichedCollabRequests(eventId) {
   const userIds = Array.from(new Set(rawList.map((r) => String(r.userId))));
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
-    select: {
-      id: true,
-      name: true,
-      nickname: true,
-      profilePicture: true,
-      socialPlatform: true,
-      socialLink: true,
-    },
+    select: CANONICAL_USER_SELECT,
   });
   const enrichedUsers = await ensurePersistentUserProfilesBatch(users);
   const userMap = new Map(enrichedUsers.map((u) => [String(u.id), u]));
@@ -204,7 +197,7 @@ export async function hydrateEventCollabSummary(ev, legacyCollabs = []) {
   if (collaborators.length > 0) {
     const users = await prisma.user.findMany({
       where: { id: { in: collaborators } },
-      select: { id: true, name: true, nickname: true, profilePicture: true },
+      select: CANONICAL_USER_SELECT,
     });
     const enriched = await ensurePersistentUserProfilesBatch(users);
     collaboratorProfiles = enriched.map((u) => ({
@@ -213,6 +206,12 @@ export async function hydrateEventCollabSummary(ev, legacyCollabs = []) {
       displayName: u.displayName || u.name,
       nickname: u.nickname,
       profilePicture: u.profilePicture,
+      coverImage: u.coverImage,
+      coverType: u.coverType,
+      bio: u.bio,
+      phone: u.phone,
+      socialPlatform: u.socialPlatform,
+      socialLink: u.socialLink,
     }));
   }
 

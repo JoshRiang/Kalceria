@@ -2,6 +2,7 @@ import prisma from '../lib/prisma.js';
 import { createLog } from './auditController.js';
 import { safeNotify, sendServiceRequestStatusEmail } from '../lib/mailer.js';
 import { notifyServiceRequestUpdated } from '../lib/whatsappBroker.js';
+import { CANONICAL_USER_SELECT } from '../utils/profileDefaults.js';
 
 
 
@@ -10,7 +11,7 @@ export async function listServiceBookings(req, res, next) {
   try {
     const bookings = await prisma.serviceBooking.findMany({
       include: { 
-        requestor: { select: { id: true, name: true, email: true, phone: true, role: true } },
+        requestor: { select: CANONICAL_USER_SELECT },
         slots: true
       },
       orderBy: { createdAt: 'desc' },

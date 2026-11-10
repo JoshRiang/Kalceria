@@ -32,7 +32,15 @@ export const CREATOR_SELECT = {
   id: true,
   name: true,
   nickname: true,
+  email: true,
   profilePicture: true,
+  coverImage: true,
+  coverType: true,
+  bio: true,
+  phone: true,
+  socialPlatform: true,
+  socialLink: true,
+  createdAt: true,
 };
 
 export async function invalidateMiniEventsCache() {

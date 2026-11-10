@@ -7,6 +7,7 @@ import { safeNotify, sendServiceRequestSubmittedEmail, sendServiceRequestAdminAl
 import { notifyServiceRequestCreated } from '../lib/whatsappBroker.js';
 import { isValidIndonesianLocation, isLocationFromVerifiedList } from './geoController.js';
 import { setServiceBookingCooldown, clearServiceBookingCooldown } from '../middleware/ingressDefense.js';
+import { CANONICAL_USER_SELECT } from '../utils/profileDefaults.js';
 
 const RATE_PER_HOUR = 120000;
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '6281234567890';
@@ -116,7 +117,7 @@ export async function createBooking(req, res, next) {
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, email: true },
+        select: CANONICAL_USER_SELECT,
       });
 
       const booking = await prisma.booking.create({
@@ -142,7 +143,7 @@ async function resolveServiceRequestor(req, contactPerson, whatsapp) {
   if (req.user?.userId) {
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
-      select: { id: true, name: true, email: true },
+      select: CANONICAL_USER_SELECT,
     });
     if (user) return user;
   }

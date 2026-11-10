@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { setCommentCooldown } from '../middleware/commentDefense.js';
 import { sanitizeAndNormalizeMediaUrl } from '../utils/urlSecurity.js';
+import { CANONICAL_USER_SELECT } from '../utils/profileDefaults.js';
 
 export async function createComment(req, res, next) {
   try {
@@ -34,7 +35,7 @@ export async function createComment(req, res, next) {
     if (authUserId) {
       dbUser = await prisma.user.findUnique({
         where: { id: authUserId },
-        select: { id: true, name: true, nickname: true, email: true },
+        select: CANONICAL_USER_SELECT,
       });
       if (!dbUser && identity === 'User') {
         return res.status(401).json({ error: 'User session not found.' });

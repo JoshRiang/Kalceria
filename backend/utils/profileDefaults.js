@@ -69,9 +69,27 @@ export function sanitizeCoverMediaUrl(value) {
   return null;
 }
 
+export const CANONICAL_USER_SELECT = {
+  id: true,
+  name: true,
+  nickname: true,
+  email: true,
+  profilePicture: true,
+  coverImage: true,
+  coverType: true,
+  bio: true,
+  phone: true,
+  socialPlatform: true,
+  socialLink: true,
+  createdAt: true,
+};
+
 /**
  * Loads or initializes the persistent profile metadata (profilePicture, coverImage, bio, social handles)
- * for a user in Redis + PostgreSQL so that random defaults are generated once and persisted permanently.
+ * for a user in Redis + PostgreSQL.
+ *
+ * Invariant: Read-paths NEVER destructively overwrite existing database records.
+ * If user object is partial, it hydrates from PostgreSQL to preserve real user video covers and bio.
  */
 export async function ensurePersistentUserProfile(user) {
   if (!user || !user.id) return user;
@@ -87,49 +105,74 @@ export async function ensurePersistentUserProfile(user) {
     meta = null;
   }
 
+  let dbUser = null;
+  const isPartial =
+    user.coverImage === undefined ||
+    user.coverType === undefined ||
+    user.profilePicture === undefined ||
+    user.bio === undefined;
+
+  if (isPartial && (!meta || !meta.coverImage)) {
+    try {
+      dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: CANONICAL_USER_SELECT,
+      });
+    } catch {}
+  }
+
   let changedMeta = false;
   if (!meta || typeof meta !== 'object') {
     meta = {};
     changedMeta = true;
   }
 
-  // 1. Ensure persistent profilePicture (stored in PostgreSQL User.profilePicture + Redis meta)
-  let resolvedProfilePicture = user.profilePicture || meta.profilePicture || null;
+  // 1. Resolve Profile Picture
+  let resolvedProfilePicture =
+    user.profilePicture ||
+    dbUser?.profilePicture ||
+    meta.profilePicture ||
+    null;
+
   if (!resolvedProfilePicture) {
-    resolvedProfilePicture = getDeterministicAvatarUrl(user);
+    resolvedProfilePicture = getDeterministicAvatarUrl(dbUser || user);
     meta.profilePicture = resolvedProfilePicture;
     changedMeta = true;
-    // Persist in PostgreSQL asynchronously so it never changes even if nickname/name changes later
-    prisma.user
-      .update({
-        where: { id: user.id },
-        data: { profilePicture: resolvedProfilePicture },
-      })
-      .catch(() => {});
   } else if (meta.profilePicture !== resolvedProfilePicture) {
     meta.profilePicture = resolvedProfilePicture;
     changedMeta = true;
   }
 
-  // 2. Ensure persistent coverImage / coverUrl (stored in PostgreSQL User.coverImage + Redis meta)
-  let resolvedCoverImage = user.coverImage || user.coverUrl || meta.coverImage || meta.coverUrl || null;
+  // 2. Resolve Cover Image & Cover Type (Canonical preservation: NEVER overwrite an existing cover!)
+  let resolvedCoverImage =
+    user.coverImage ||
+    user.coverUrl ||
+    dbUser?.coverImage ||
+    meta.coverImage ||
+    meta.coverUrl ||
+    null;
+
+  let resolvedCoverType =
+    user.coverType ||
+    dbUser?.coverType ||
+    meta.coverType ||
+    (resolvedCoverImage && /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(resolvedCoverImage)
+      ? 'video'
+      : 'image');
+
   if (!resolvedCoverImage) {
-    resolvedCoverImage = getDeterministicCoverColor(user);
+    resolvedCoverImage = getDeterministicCoverColor(dbUser || user);
+    resolvedCoverType = 'image';
     meta.coverImage = resolvedCoverImage;
     meta.coverUrl = resolvedCoverImage;
+    meta.coverType = resolvedCoverType;
     changedMeta = true;
-    prisma.user
-      .update({
-        where: { id: user.id },
-        data: { coverImage: resolvedCoverImage, coverType: 'image' },
-      })
-      .catch(() => {});
-  } else if (meta.coverImage !== resolvedCoverImage) {
+  } else if (meta.coverImage !== resolvedCoverImage || meta.coverType !== resolvedCoverType) {
     meta.coverImage = resolvedCoverImage;
+    meta.coverUrl = resolvedCoverImage;
+    meta.coverType = resolvedCoverType;
     changedMeta = true;
   }
-
-  let resolvedCoverType = user.coverType || meta.coverType || (resolvedCoverImage && /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(resolvedCoverImage) ? 'video' : 'image');
 
   if (changedMeta) {
     try {
@@ -137,31 +180,47 @@ export async function ensurePersistentUserProfile(user) {
     } catch {}
   }
 
-  // Resolve social handles & bio from meta + DB
+  // Resolve social handles & bio from user / dbUser / meta
   const phoneVal =
     meta.phone !== undefined
       ? meta.phone
       : user.phone && user.phone !== '-'
       ? user.phone
+      : dbUser?.phone && dbUser.phone !== '-'
+      ? dbUser.phone
       : '';
+
   const whatsappVal =
     meta.whatsapp !== undefined
       ? meta.whatsapp
-      : user.socialPlatform === 'WA' && user.socialLink
+      : (user.socialPlatform === 'WA' && user.socialLink)
       ? user.socialLink
+      : (dbUser?.socialPlatform === 'WA' && dbUser?.socialLink)
+      ? dbUser.socialLink
       : phoneVal;
+
   const instagramVal =
     meta.instagram !== undefined
       ? meta.instagram
-      : user.socialPlatform === 'IG' && user.socialLink
+      : (user.socialPlatform === 'IG' && user.socialLink)
       ? user.socialLink
+      : (dbUser?.socialPlatform === 'IG' && dbUser?.socialLink)
+      ? dbUser.socialLink
       : '';
-  const bioVal = user.bio ?? meta.bio ?? meta.alasanMasuk ?? meta.reason ?? '';
+
+  const bioVal =
+    user.bio ??
+    dbUser?.bio ??
+    meta.bio ??
+    meta.alasanMasuk ??
+    meta.reason ??
+    '';
 
   return {
+    ...dbUser,
     ...user,
-    displayName: user.name || user.nickname || 'Kalcerian',
-    username: user.nickname || user.username || (user.name ? user.name.toLowerCase().replace(/\s+/g, '_') : 'kalcerian'),
+    displayName: user.displayName || user.name || dbUser?.name || user.nickname || dbUser?.nickname || 'Kalcerian',
+    username: user.nickname || dbUser?.nickname || user.username || (user.name ? user.name.toLowerCase().replace(/\s+/g, '_') : 'kalcerian'),
     profilePicture: resolvedProfilePicture,
     coverImage: resolvedCoverImage,
     coverUrl: resolvedCoverImage,
@@ -176,7 +235,7 @@ export async function ensurePersistentUserProfile(user) {
 }
 
 /**
- * Batch-enriches an array of user objects with their persistent profile metadata from Redis.
+ * Batch-enriches an array of user objects with their persistent profile metadata from Redis and PostgreSQL.
  */
 export async function ensurePersistentUserProfilesBatch(users) {
   if (!Array.isArray(users) || users.length === 0) return [];
@@ -188,8 +247,28 @@ export async function ensurePersistentUserProfilesBatch(users) {
     rawMetas = new Array(users.length).fill(null);
   }
 
+  // Identify users that need DB hydration (partial input + missing meta in Redis)
+  const missingIds = [];
+  users.forEach((u, idx) => {
+    const hasMeta = Boolean(rawMetas[idx]);
+    const isPartial = u.coverImage === undefined || u.coverType === undefined || u.profilePicture === undefined;
+    if (isPartial && !hasMeta) {
+      missingIds.push(u.id);
+    }
+  });
+
+  let dbUserMap = new Map();
+  if (missingIds.length > 0) {
+    try {
+      const dbUsers = await prisma.user.findMany({
+        where: { id: { in: Array.from(new Set(missingIds)) } },
+        select: CANONICAL_USER_SELECT,
+      });
+      dbUserMap = new Map(dbUsers.map((u) => [String(u.id), u]));
+    } catch {}
+  }
+
   const pipelineUpdates = [];
-  const dbAvatarUpdates = [];
 
   const enriched = users.map((user, idx) => {
     let meta = null;
@@ -202,22 +281,50 @@ export async function ensurePersistentUserProfilesBatch(users) {
       changedMeta = true;
     }
 
-    let resolvedProfilePicture = user.profilePicture || meta.profilePicture || null;
+    const dbUser = dbUserMap.get(String(user.id));
+
+    let resolvedProfilePicture =
+      user.profilePicture ||
+      dbUser?.profilePicture ||
+      meta.profilePicture ||
+      null;
+
     if (!resolvedProfilePicture) {
-      resolvedProfilePicture = getDeterministicAvatarUrl(user);
+      resolvedProfilePicture = getDeterministicAvatarUrl(dbUser || user);
       meta.profilePicture = resolvedProfilePicture;
       changedMeta = true;
-      dbAvatarUpdates.push({ id: user.id, profilePicture: resolvedProfilePicture });
     } else if (meta.profilePicture !== resolvedProfilePicture) {
       meta.profilePicture = resolvedProfilePicture;
       changedMeta = true;
     }
 
-    let resolvedCoverImage = user.coverImage || user.coverUrl || meta.coverImage || meta.coverUrl || null;
+    let resolvedCoverImage =
+      user.coverImage ||
+      user.coverUrl ||
+      dbUser?.coverImage ||
+      meta.coverImage ||
+      meta.coverUrl ||
+      null;
+
+    let resolvedCoverType =
+      user.coverType ||
+      dbUser?.coverType ||
+      meta.coverType ||
+      (resolvedCoverImage && /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(resolvedCoverImage)
+        ? 'video'
+        : 'image');
+
     if (!resolvedCoverImage) {
-      resolvedCoverImage = getDeterministicCoverColor(user);
+      resolvedCoverImage = getDeterministicCoverColor(dbUser || user);
+      resolvedCoverType = 'image';
       meta.coverImage = resolvedCoverImage;
       meta.coverUrl = resolvedCoverImage;
+      meta.coverType = resolvedCoverType;
+      changedMeta = true;
+    } else if (meta.coverImage !== resolvedCoverImage || meta.coverType !== resolvedCoverType) {
+      meta.coverImage = resolvedCoverImage;
+      meta.coverUrl = resolvedCoverImage;
+      meta.coverType = resolvedCoverType;
       changedMeta = true;
     }
 
@@ -230,29 +337,45 @@ export async function ensurePersistentUserProfilesBatch(users) {
         ? meta.phone
         : user.phone && user.phone !== '-'
         ? user.phone
+        : dbUser?.phone && dbUser.phone !== '-'
+        ? dbUser.phone
         : '';
+
     const whatsappVal =
       meta.whatsapp !== undefined
         ? meta.whatsapp
-        : user.socialPlatform === 'WA' && user.socialLink
+        : (user.socialPlatform === 'WA' && user.socialLink)
         ? user.socialLink
+        : (dbUser?.socialPlatform === 'WA' && dbUser?.socialLink)
+        ? dbUser.socialLink
         : phoneVal;
+
     const instagramVal =
       meta.instagram !== undefined
         ? meta.instagram
-        : user.socialPlatform === 'IG' && user.socialLink
+        : (user.socialPlatform === 'IG' && user.socialLink)
         ? user.socialLink
+        : (dbUser?.socialPlatform === 'IG' && dbUser?.socialLink)
+        ? dbUser.socialLink
         : '';
-    const bioVal = user.bio ?? meta.bio ?? meta.alasanMasuk ?? meta.reason ?? '';
+
+    const bioVal =
+      user.bio ??
+      dbUser?.bio ??
+      meta.bio ??
+      meta.alasanMasuk ??
+      meta.reason ??
+      '';
 
     return {
+      ...dbUser,
       ...user,
-      displayName: user.name || user.nickname || 'Kalcerian',
-      username: user.nickname || user.username || (user.name ? user.name.toLowerCase().replace(/\s+/g, '_') : 'kalcerian'),
+      displayName: user.displayName || user.name || dbUser?.name || user.nickname || dbUser?.nickname || 'Kalcerian',
+      username: user.nickname || dbUser?.nickname || user.username || (user.name ? user.name.toLowerCase().replace(/\s+/g, '_') : 'kalcerian'),
       profilePicture: resolvedProfilePicture,
       coverImage: resolvedCoverImage,
       coverUrl: resolvedCoverImage,
-      coverType: user.coverType || meta.coverType || (resolvedCoverImage && /\.(?:mp4|webm|mov|m4v)(?:$|\?|#)/i.test(resolvedCoverImage) ? 'video' : 'image'),
+      coverType: resolvedCoverType,
       phone: phoneVal,
       whatsapp: whatsappVal,
       instagram: instagramVal,
@@ -265,16 +388,6 @@ export async function ensurePersistentUserProfilesBatch(users) {
   if (pipelineUpdates.length > 0) {
     Promise.allSettled(
       pipelineUpdates.map(([k, v]) => redis.set(k, v))
-    ).catch(() => {});
-  }
-  if (dbAvatarUpdates.length > 0) {
-    Promise.allSettled(
-      dbAvatarUpdates.map((item) =>
-        prisma.user.update({
-          where: { id: item.id },
-          data: { profilePicture: item.profilePicture },
-        })
-      )
     ).catch(() => {});
   }
 

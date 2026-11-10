@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { createLog } from './auditController.js';
+import { CANONICAL_USER_SELECT, ensurePersistentUserProfilesBatch } from '../utils/profileDefaults.js';
 
 
 export async function listComments(req, res, next) {
@@ -25,10 +26,21 @@ export async function listComments(req, res, next) {
       orderBy: { createdAt: 'desc' },
       include: {
         user: {
-          select: { profilePicture: true, nickname: true }
-        }
-      }
+          select: CANONICAL_USER_SELECT,
+        },
+      },
     });
+
+    const usersToEnrich = comments.map((c) => c.user).filter(Boolean);
+    if (usersToEnrich.length > 0) {
+      const enrichedUsers = await ensurePersistentUserProfilesBatch(usersToEnrich);
+      const userMap = new Map(enrichedUsers.map((u) => [String(u.id), u]));
+      comments.forEach((c) => {
+        if (c.user?.id && userMap.has(String(c.user.id))) {
+          c.user = userMap.get(String(c.user.id));
+        }
+      });
+    }
 
     res.json({ comments });
   } catch (err) {

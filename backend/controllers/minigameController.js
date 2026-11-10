@@ -1,6 +1,7 @@
 import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { resolveClientFingerprint } from '../middleware/ingressDefense.js';
+import { CANONICAL_USER_SELECT } from '../utils/profileDefaults.js';
 
 // Fallback in-memory store for environments without active Redis
 const minigameMemStore = new Map();
@@ -112,9 +113,38 @@ export async function getMinigameStatus(req, res, next) {
   try {
     const userId = req.user?.userId || null;
     const userEmail = req.user?.email || null;
-    const { secondsUntilReset } = getWibDateInfo();
+    const { dateStr, secondsUntilReset } = getWibDateInfo();
     const used = await isAttemptUsed(req, userId, userEmail);
     const remaining = used ? 0 : 1;
+
+    let userStats = { bestScoreMs: null, todayScoreMs: null, totalPlays: 0 };
+    if (userId) {
+      try {
+        const emailLookup = userEmail || `user:${userId}`;
+        const logs = await prisma.auditLog.findMany({
+          where: {
+            adminEmail: { in: [emailLookup, `user:${userId}`] },
+            action: 'MINIGAME_PLAY',
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        });
+        userStats.totalPlays = logs.length;
+        let bestMs = Infinity;
+        for (const log of logs) {
+          try {
+            const d = JSON.parse(log.details || '{}');
+            if (d.date === dateStr && Number.isFinite(d.scoreMs)) {
+              userStats.todayScoreMs = d.scoreMs;
+            }
+            if (Number.isFinite(d.scoreMs) && d.scoreMs < bestMs) {
+              bestMs = d.scoreMs;
+            }
+          } catch {}
+        }
+        if (bestMs !== Infinity) userStats.bestScoreMs = bestMs;
+      } catch {}
+    }
 
     res.json({
       success: true,
@@ -122,6 +152,7 @@ export async function getMinigameStatus(req, res, next) {
       hasPlayedToday: used,
       maxDailyAttempts: 1,
       secondsUntilReset,
+      stats: userStats,
     });
   } catch (err) {
     console.error('[Minigame Status Error]', err);
@@ -132,12 +163,23 @@ export async function getMinigameStatus(req, res, next) {
 export async function recordMinigameScore(req, res, next) {
   try {
     const userId = req.user?.userId;
-    const userEmail = req.user?.email || `user:${userId}`;
+    let userEmail = req.user?.email || null;
     if (!userId) {
       return res.status(401).json({
         error: 'Please sign in to play the minigame and record your daily score.',
       });
     }
+
+    if (!userEmail) {
+      try {
+        const u = await prisma.user.findUnique({
+          where: { id: userId },
+          select: CANONICAL_USER_SELECT,
+        });
+        if (u?.email) userEmail = u.email;
+      } catch {}
+    }
+    userEmail = userEmail || `user:${userId}`;
 
     const { dateStr, secondsUntilReset } = getWibDateInfo();
     const used = await isAttemptUsed(req, userId, userEmail);
