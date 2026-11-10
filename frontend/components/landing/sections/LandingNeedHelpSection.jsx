@@ -11,6 +11,7 @@ export function LandingNeedHelpSection({
 }) {
   return (
     <section
+      id="need-our-help"
       className="relative w-full min-h-[100vh] lg:min-h-[107vh] bg-white flex flex-col items-center justify-center py-20 sm:py-24 z-50 overflow-hidden"
       style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}
     >

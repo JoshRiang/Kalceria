@@ -309,15 +309,22 @@ export default function ServiceRequestModal({
       return;
     }
     setLoading(true);
+    setError("");
     try {
       await api.delete(`/services/request/${done.bookingId}`, {
         headers: done.cancelToken ? { "x-cancel-token": done.cancelToken } : undefined,
       });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("kalceria:service-bookings-updated"));
+      }
+      onClose();
     } catch (err) {
-      console.warn("Cancel request non-blocking notice:", err);
+      const errMsg =
+        err.response?.data?.error || err.message || "Failed to cancel booking.";
+      setError(errMsg);
+      throw err;
     } finally {
       setLoading(false);
-      onClose();
     }
   };
 
@@ -467,6 +474,7 @@ export default function ServiceRequestModal({
                     handleCancel={handleCancel}
                     handleEdit={() => setStep(1)}
                     onFinalize={handleFinalizeOrder}
+                    isCancelMode={initialAction === "cancel"}
                     loading={loading}
                     error={error}
                   />

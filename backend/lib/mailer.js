@@ -242,8 +242,8 @@ export function buildServiceRequestSubmittedEmailHtml({ booking, slots = [], can
 
   const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
   const token = cancelToken || '';
-  const editUrl = `${frontendOrigin}/?service_action=edit&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
-  const cancelUrl = `${frontendOrigin}/?service_action=cancel&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+  const editUrl = `${frontendOrigin}/?service_action=edit&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
+  const cancelUrl = `${frontendOrigin}/?service_action=cancel&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
 
   return `
       <div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:28px 24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;color:#1e293b;">

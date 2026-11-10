@@ -17,8 +17,19 @@ export function useServiceBookingSchedule({ setError, mounted }) {
 
   useEffect(() => {
     fetchBookings();
+    const handleUpdate = () => {
+      fetchBookings();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("kalceria:service-bookings-updated", handleUpdate);
+    }
     const interval = setInterval(fetchBookings, 20000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("kalceria:service-bookings-updated", handleUpdate);
+      }
+    };
   }, [fetchBookings]);
 
   // Distribute computing: Pre-index bookings
@@ -256,5 +267,6 @@ export function useServiceBookingSchedule({ setError, mounted }) {
     toggleSlot,
     renderGrid,
     bookingSchedule,
+    fetchBookings,
   };
 }

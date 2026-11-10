@@ -164,6 +164,16 @@ export default function LandingPage({ onNavigateAuth }) {
         }
       }
 
+      // Smoothly scroll to the Need Our Help segment on the Landing Page
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          const el = document.getElementById("need-our-help");
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 100);
+      }
+
       setServiceManageState({
         action: serviceAction,
         bookingId,
