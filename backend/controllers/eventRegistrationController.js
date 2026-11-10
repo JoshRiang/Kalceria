@@ -7,9 +7,10 @@ import { decodePageCursor, encodePageCursor, parsePageLimit } from '../utils/cur
 import { safeNotify, sendEventRegistrationEmail, sendEventPaymentConfirmedEmail } from '../lib/mailer.js';
 import { createEventPaymentSession, isOnlinePaymentEnabled } from '../lib/paymentBroker.js';
 import { notifyEventRegistration, notifyEventPaymentConfirmed } from '../lib/whatsappBroker.js';
-import { setEventRegistrationCooldown } from '../middleware/ingressDefense.js';
+import { setEventRegistrationCooldown, clearEventRegistrationCooldown } from '../middleware/ingressDefense.js';
 
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '628117998790';
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,12}$/;
 
 let guestPlaceholderHash;
 const getGuestPlaceholderHash = () => (
@@ -27,7 +28,7 @@ async function resolveEventRegistrant(req) {
 
     if (
       !cleanName || cleanName.length > 80
-      || !cleanEmail || cleanEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)
+      || !cleanEmail || cleanEmail.length > 254 || !EMAIL_REGEX.test(cleanEmail)
       || cleanContact.length < 5 || cleanContact.length > 32
     ) {
       return { error: 'GUEST_INVALID' };
@@ -120,6 +121,29 @@ export async function registerEvent(req, res, next) {
         return { error: 'SESSION' };
       }
 
+      // Purge expired unconfirmed registrations for this event before checking quota
+      const cutoff = new Date(Date.now() - THREE_MINUTES_MS);
+      await tx.eventRegistration.deleteMany({
+        where: {
+          eventId,
+          paymentStatus: 'PENDING',
+          createdAt: { lt: cutoff },
+        },
+      });
+
+      // Active Registration Deduplication (Reuse pending registration to prevent Resend quota burn)
+      const existingReg = await tx.eventRegistration.findUnique({
+        where: { userId_eventId: { userId, eventId } },
+        include: { user: { select: { name: true, email: true, phone: true } }, event: true },
+      });
+
+      if (existingReg) {
+        if (existingReg.paymentStatus === 'CONFIRMED') {
+          return { error: 'ALREADY_CONFIRMED' };
+        }
+        return { event, reg: existingReg, isReused: true };
+      }
+
       const count = await tx.eventRegistration.count({ where: { eventId } });
       if (count >= event.quota) return { error: 'FULL' };
 
@@ -127,7 +151,7 @@ export async function registerEvent(req, res, next) {
         data: { userId, eventId, selectedSession },
         include: { user: { select: { name: true, email: true, phone: true } }, event: true },
       });
-      return { event, reg: registration };
+      return { event, reg: registration, isReused: false };
     });
 
     if (result.error === 'NOT_FOUND') return res.status(404).json({ error: 'Event not found.' });
@@ -135,10 +159,13 @@ export async function registerEvent(req, res, next) {
     if (result.error === 'WINDOW') return res.status(400).json({ error: 'Registration is not in active window.' });
     if (result.error === 'SESSION') return res.status(400).json({ error: 'Please select a valid event session.' });
     if (result.error === 'FULL') return res.status(400).json({ error: 'Event is full.' });
-    const { event, reg } = result;
+    if (result.error === 'ALREADY_CONFIRMED') {
+      return res.status(409).json({ error: 'Pendaftaran untuk event ini sudah terkonfirmasi dan terkunci.', isConfirmed: true });
+    }
+    const { event, reg, isReused } = result;
 
-    // Set 24-hour registration cooldown per event & device/account
-    await setEventRegistrationCooldown(req, eventId, userId);
+    // Set 24-hour registration cooldown per event & device/account/email
+    await setEventRegistrationCooldown(req, eventId, userId, reg.user.email);
 
     const participantName = guestName || reg.user.name;
     const participantContact = guestContact || reg.user.phone || '';
@@ -196,13 +223,15 @@ export async function registerEvent(req, res, next) {
       paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
     }), 'whatsapp-event-reg');
 
-    safeNotify(() => sendEventRegistrationEmail({
-      to: reg.user.email,
-      event,
-      registration: reg,
-      cancelToken,
-      paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
-    }), 'email-event-reg');
+    if (!isReused) {
+      safeNotify(() => sendEventRegistrationEmail({
+        to: reg.user.email,
+        event,
+        registration: reg,
+        cancelToken,
+        paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
+      }), 'email-event-reg');
+    }
 
     res.status(201).json({
       registration: reg,
@@ -542,6 +571,7 @@ export async function deleteOwnEventRegistration(req, res, next) {
     }
 
     await prisma.eventRegistration.delete({ where: { id: registration.id } });
+    await clearEventRegistrationCooldown(req, registration.eventId, registration.userId, registration.user?.email);
     res.json({ message: 'Pendaftaran event berhasil dibatalkan.' });
   } catch (err) {
     next(err);

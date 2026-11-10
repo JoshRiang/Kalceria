@@ -189,9 +189,26 @@ export async function checkEventRegistrationDefense(req, res, next) {
     return res.status(429).json({ error: 'High request velocity detected on Event Registration. Please slow down.' });
   }
 
-  // 24-Hour Cooldown Verification per event & device/guest
+  // Hourly Rate Limiting per IP/Network to prevent Resend Email Token Flooding
+  const hourlyKey = `event-reg:hourly:${ip}`;
+  const hourlyCount = await safeRedisCall(
+    () => redis.eval(INCR_WITH_TTL_LUA, 1, hourlyKey, 3600),
+    () => incrMem(hourlyKey, 3600)
+  );
+
+  if (hourlyCount > 15) {
+    res.setHeader('Retry-After', '3600');
+    return res.status(429).json({ error: 'Batas pendaftaran event per jam telah tercapai untuk jaringan ini. Silakan coba lagi nanti.' });
+  }
+
+  // 24-Hour Cooldown Verification per event & device/guest/email
   const userId = req.user?.userId;
   const { machineTag, fingerprint } = resolveClientFingerprint(req);
+  const rawEmail = typeof req.body?.email === 'string'
+    ? req.body.email.trim().toLowerCase()
+    : (typeof req.body?.identifier === 'string' && req.body.identifier.includes('@')
+      ? req.body.identifier.trim().toLowerCase()
+      : null);
 
   const keysToCheck = [
     `event-reg:cooldown:ev:${eventId}:ip:${ip}`,
@@ -199,6 +216,7 @@ export async function checkEventRegistrationDefense(req, res, next) {
   ];
   if (machineTag) keysToCheck.push(`event-reg:cooldown:ev:${eventId}:tag:${machineTag}`);
   if (userId) keysToCheck.push(`event-reg:cooldown:ev:${eventId}:user:${userId}`);
+  if (rawEmail) keysToCheck.push(`event-reg:cooldown:ev:${eventId}:email:${rawEmail}`);
 
   let activeCooldown = false;
   let maxRemainingTtl = 0;
@@ -233,7 +251,7 @@ export async function checkEventRegistrationDefense(req, res, next) {
   return next();
 }
 
-export async function setEventRegistrationCooldown(req, eventId, userId) {
+export async function setEventRegistrationCooldown(req, eventId, userId, email) {
   const ip = resolveClientIp(req);
   const { machineTag, fingerprint } = resolveClientFingerprint(req);
 
@@ -243,11 +261,35 @@ export async function setEventRegistrationCooldown(req, eventId, userId) {
   ];
   if (machineTag) keys.push(`event-reg:cooldown:ev:${eventId}:tag:${machineTag}`);
   if (userId) keys.push(`event-reg:cooldown:ev:${eventId}:user:${userId}`);
+  const cleanEmail = typeof email === 'string' && email.includes('@') ? email.trim().toLowerCase() : null;
+  if (cleanEmail) keys.push(`event-reg:cooldown:ev:${eventId}:email:${cleanEmail}`);
 
   for (const key of keys) {
     await safeRedisCall(
       () => redis.set(key, '1', 'EX', EVENT_REG_COOLDOWN_SECONDS),
       () => setMem(key, '1', EVENT_REG_COOLDOWN_SECONDS)
+    );
+  }
+}
+
+export async function clearEventRegistrationCooldown(req, eventId, userId, email) {
+  const ip = resolveClientIp(req);
+  const { machineTag, fingerprint } = resolveClientFingerprint(req);
+
+  const keys = [
+    `event-reg:cooldown:ev:${eventId}:ip:${ip}`,
+    `event-reg:cooldown:ev:${eventId}:fp:${fingerprint}`,
+  ];
+  if (machineTag) keys.push(`event-reg:cooldown:ev:${eventId}:tag:${machineTag}`);
+  if (userId) keys.push(`event-reg:cooldown:ev:${eventId}:user:${userId}`);
+  const cleanEmail = typeof email === 'string' && email.includes('@') ? email.trim().toLowerCase() : null;
+  if (cleanEmail) keys.push(`event-reg:cooldown:ev:${eventId}:email:${cleanEmail}`);
+
+  for (const key of keys) {
+    delMem(key);
+    await safeRedisCall(
+      () => redis.del(key),
+      () => {}
     );
   }
 }

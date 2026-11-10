@@ -3,8 +3,11 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { establishSession, hasUserSession } from "@/lib/session";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { CLIP } from "./constants";
 import ContentImage from "@/components/ui/ContentImage";
+
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,12}$/;
 
 export const CLIP_CARD = { clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" };
 
@@ -29,8 +32,13 @@ export function ApplyModal({
   initialRegistrationId,
   initialToken,
 }) {
+  const authUser = useAuthStore((s) => s.user);
+  const activeEmail = authUser?.email || "";
+  const activeName = authUser?.displayName || authUser?.name || authUser?.nickname || "";
+  const activePhone = authUser?.phone || "";
+
   const [idx, setIdx] = useState(startIndex);
-  const [mode, setMode] = useState(hasUserSession() ? "account" : "guest");
+  const [mode, setMode] = useState(hasUserSession() || activeEmail ? "account" : "guest");
   const [step, setStep] = useState(initialRegistrationId ? 2 : 1); // 1: Form Fill, 2: Review / Confirm / Cancel
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -42,12 +50,25 @@ export function ApplyModal({
 
   const event = events[idx];
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    contact: "",
-    identifier: "",
+    name: activeName,
+    email: activeEmail,
+    contact: activePhone,
+    identifier: activeEmail || activeName,
     session: event?.sessionOptions?.[0] || "",
   });
+
+  // Auto-fill form values when logged in user session hydrates
+  useEffect(() => {
+    if (activeEmail && !form.email) {
+      setForm((p) => ({ ...p, email: activeEmail, identifier: p.identifier || activeEmail }));
+    }
+    if (activeName && !form.name) {
+      setForm((p) => ({ ...p, name: activeName, identifier: p.identifier || activeName }));
+    }
+    if (activePhone && !form.contact) {
+      setForm((p) => ({ ...p, contact: activePhone }));
+    }
+  }, [activeEmail, activeName, activePhone, form.email, form.name, form.contact]);
 
   // Handle incoming initialAction (cancel or confirm from email magic link)
   useEffect(() => {
@@ -132,15 +153,16 @@ export function ApplyModal({
       .then((res) => {
         if (!active) return;
         const me = res.data?.user;
-        if (me) establishSession(me);
-        if (me?.nickname || me?.name) {
+        if (me) {
+          establishSession(me);
           setForm((prev) => ({
             ...prev,
-            identifier: prev.identifier || me.nickname || me.name,
-            name: prev.name || me.name || "",
+            identifier: prev.identifier || me.nickname || me.name || me.email || "",
+            name: prev.name || me.name || me.nickname || "",
             email: prev.email || me.email || "",
             contact: prev.contact || me.phone || "",
           }));
+          setMode("account");
         }
       })
       .catch(() => {});
@@ -169,25 +191,34 @@ export function ApplyModal({
     setError("");
     if (!event?.id) return;
 
-    if (mode === "account" && !form.identifier.trim()) {
-      setError("Please enter your registered email or username.");
+    const emailToValidate = (form.email || (mode === "account" && form.identifier?.includes("@") ? form.identifier : "")).trim();
+    const nameToValidate = (form.name || (mode === "account" ? form.identifier : "")).trim();
+    const contactToValidate = (form.contact || "").trim();
+
+    if (!nameToValidate) {
+      setError("Please fill in your full name or username.");
       return;
     }
-    if (mode === "guest") {
-      if (!form.name.trim() || !form.email.trim() || !form.contact.trim()) {
-        setError("Please fill in your full name, email, and WhatsApp contact.");
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-        setError("Please enter a valid email address.");
-        return;
-      }
-      const rawDigits = form.contact.replace(/\D/g, "");
-      if (rawDigits.length < 9) {
-        setError("Please enter a valid WhatsApp number (+62 8xx...).");
-        return;
-      }
+
+    // Strict email validation (with "Email salah" warning matching design DNA)
+    if (!emailToValidate || !EMAIL_REGEX.test(emailToValidate)) {
+      setError("Email salah");
+      return;
     }
+
+    const rawDigits = contactToValidate.replace(/\D/g, "");
+    if (rawDigits.length < 9) {
+      setError("Please enter a valid WhatsApp number (+62 8xx...).");
+      return;
+    }
+
+    // Synchronize validated candidate buffer
+    setForm((p) => ({
+      ...p,
+      email: emailToValidate,
+      name: nameToValidate,
+      identifier: p.identifier || emailToValidate || nameToValidate,
+    }));
 
     // Buffer candidate in memory and proceed to Part 2 gracefully!
     setStep(2);
@@ -213,19 +244,18 @@ export function ApplyModal({
     } catch {}
 
     try {
-      const payload = mode === "account"
-        ? {
-            eventId: event.id,
-            identifier: form.identifier.trim(),
-            selectedSession: form.session,
-          }
-        : {
-            eventId: event.id,
-            name: form.name.trim(),
-            email: form.email.trim(),
-            contact: form.contact.trim(),
-            selectedSession: form.session,
-          };
+      const emailVal = (form.email || (form.identifier?.includes("@") ? form.identifier : "")).trim();
+      const nameVal = (form.name || form.identifier || "").trim();
+      const contactVal = (form.contact || "").trim();
+
+      const payload = {
+        eventId: event.id,
+        name: nameVal,
+        email: emailVal,
+        contact: contactVal,
+        identifier: form.identifier || emailVal || nameVal,
+        selectedSession: form.session,
+      };
 
       const res = await api.post(`/events/${event.id}/register`, payload);
       setDoneData(res.data);
@@ -534,15 +564,57 @@ export function ApplyModal({
              <form onSubmit={handleSubmit} className="space-y-3">
                 <AnimatePresence mode="wait">
                   {mode === "account" ? (
-                    <motion.div key="acc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <label className={labelClass}>Gmail / Username</label>
-                      <input
-                        className={inputClass}
-                        placeholder="user@gmail.com or username"
-                        value={form.identifier}
-                        onChange={(e) => { setForm({ ...form, identifier: e.target.value }); setError(""); }}
-                        required
-                      />
+                    <motion.div key="acc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-3">
+                      <div>
+                        <label className={labelClass}>Gmail / Registered Email</label>
+                        <input
+                          type="email"
+                          className={inputClass}
+                          placeholder="user@gmail.com"
+                          value={form.email || (form.identifier?.includes("@") ? form.identifier : "")}
+                          onChange={(e) => {
+                            setForm({ ...form, email: e.target.value, identifier: e.target.value });
+                            setError("");
+                          }}
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelClass}>Username / Name</label>
+                          <input
+                            className={inputClass}
+                            placeholder="username or nickname"
+                            value={form.name || (form.identifier && !form.identifier.includes("@") ? form.identifier : "")}
+                            onChange={(e) => {
+                              setForm({ ...form, name: e.target.value });
+                              setError("");
+                            }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>WhatsApp Contact</label>
+                          <div className="flex items-center w-full bg-white/90 border-none rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-fuchsia-500 transition-all shadow-xl">
+                            <div className="flex items-center pl-2.5 pr-2 py-2 text-black font-sans font-bold text-[11px] select-none border-r border-black/10 bg-black/[0.04] shrink-0">
+                              +62
+                            </div>
+                            <input
+                              type="tel"
+                              className="w-full bg-transparent border-none py-2 px-2 text-black outline-none font-sans text-[11px] font-medium placeholder:text-gray-400"
+                              placeholder="8xx-xxxx-xxxx"
+                              value={(form.contact || "").replace(/^\+?62/, "").replace(/^0+/, "")}
+                              onChange={(e) => {
+                                let raw = (e.target.value || "").replace(/^\+?62/, "").replace(/^0+/, "");
+                                const digits = raw.replace(/\D/g, "");
+                                setForm({ ...form, contact: digits ? `+62${digits}` : "" });
+                                setError("");
+                              }}
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </motion.div>
                   ) : (
                     <motion.div key="gst" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-3">

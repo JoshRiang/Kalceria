@@ -21,11 +21,17 @@ import {
   purgeExpiredUnconfirmedServiceBookings,
 } from '../controllers/serviceController.js';
 import {
+  registerEvent,
   getEventRegistrationForManage,
   confirmEventRegistration,
   deleteOwnEventRegistration,
   purgeExpiredUnconfirmedEventRegistrations,
 } from '../controllers/eventRegistrationController.js';
+import {
+  checkEventRegistrationDefense,
+  setEventRegistrationCooldown,
+  clearEventRegistrationCooldown,
+} from '../middleware/ingressDefense.js';
 import prisma from '../lib/prisma.js';
 import jwt from 'jsonwebtoken';
 import {
@@ -1098,6 +1104,58 @@ describe('Service Request: Comms Channel & Location Verification', () => {
         } finally {
           prisma.eventRegistration.deleteMany = originalDeleteMany;
         }
+      });
+
+      it('registerEvent rejects public/guest submissions with invalid email', async () => {
+        const req = {
+          params: { eventId: mockEvent.id },
+          body: {
+            name: 'Public Participant',
+            email: 'not-an-email',
+            contact: '+628123456789',
+            selectedSession: 'Night Drive 20:00',
+          },
+        };
+        const res = createMockRes();
+
+        await registerEvent(req, res, () => {});
+        assert.equal(res.statusCode, 400);
+        assert.match(res.body.error, /Email/i);
+      });
+
+      it('checkEventRegistrationDefense enforces cooldown on email address to prevent flooding', async () => {
+        const fakeReq = {
+          ip: '198.51.100.44',
+          get: (h) => (h === 'x-forwarded-for' ? '198.51.100.44' : ''),
+          params: { eventId: 'evt-flood-test' },
+          body: {
+            email: 'flooder@target.test',
+          },
+        };
+
+        // 1. Initial request passes defense
+        let passed = false;
+        const res1 = createMockRes();
+        await checkEventRegistrationDefense(fakeReq, res1, () => { passed = true; });
+        assert.equal(passed, true);
+
+        // 2. Set cooldown for this email
+        await setEventRegistrationCooldown(fakeReq, 'evt-flood-test', null, 'flooder@target.test');
+
+        // 3. Subsequent request with same email is blocked with 429
+        passed = false;
+        const res2 = createMockRes();
+        await checkEventRegistrationDefense(fakeReq, res2, () => { passed = true; });
+        assert.equal(passed, false);
+        assert.equal(res2.statusCode, 429);
+        assert.match(res2.body.error, /cooldown active/i);
+
+        // 4. Clearing cooldown releases the restriction
+        await clearEventRegistrationCooldown(fakeReq, 'evt-flood-test', null, 'flooder@target.test');
+        passed = false;
+        const res3 = createMockRes();
+        await checkEventRegistrationDefense(fakeReq, res3, () => { passed = true; });
+        assert.equal(passed, true);
       });
     });
   });
