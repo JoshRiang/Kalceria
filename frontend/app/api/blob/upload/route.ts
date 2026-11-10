@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         } = {
           access: "public",
           contentType: optimized.contentType,
-          addRandomSuffix: true,
+          addRandomSuffix: false,
         };
         if (blobToken) {
           options.token = blobToken;

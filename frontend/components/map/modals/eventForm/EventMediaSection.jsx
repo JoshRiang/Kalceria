@@ -89,9 +89,12 @@ export function EventMediaSection({
             ...(meta || {}),
             isVideo: isVideoFile,
           };
+          const targetIdx = existingUrls.findIndex((u) => u === instantObjUrl);
+          if (targetIdx !== -1) {
+            setSelectedIdx(targetIdx);
+          }
           return { ...f, mediaUrl: nextUrls, mediaMetadataByUrl: nextMeta };
         });
-        setSelectedIdx(existingUrls.length);
       }
     } catch (err) {
       // Revert optimistic local preview and revoke memory if upload permanently fails
@@ -158,6 +161,8 @@ export function EventMediaSection({
     );
     // Strip timestamp or numeric prefix (e.g. 1731174928123- or 1731174928123_):
     decoded = decoded.replace(/^\d{9,}[-_]/, "");
+    // Strip Vercel Blob or random hash suffix before file extension (e.g. -xgFrwk6LKlT00nvx20bHRZ5v9QPR3W before .png):
+    decoded = decoded.replace(/-[a-zA-Z0-9_-]{16,40}(?=\.[a-zA-Z0-9]+$)/, "");
     return decoded || "media-file";
   };
 
