@@ -74,7 +74,7 @@ export default function ServiceRequestModal({
   const [remainingSeconds, setRemainingSeconds] = useState(null);
   const [isWindowExpired, setIsWindowExpired] = useState(false);
 
-  // Live Countdown & Expiration Watcher (Strict 15-Minute Timeline Invariant)
+  // Live Countdown & Expiration Watcher (Strict 3-Minute Timeline Invariant)
   useEffect(() => {
     if (remainingSeconds === null || remainingSeconds <= 0) return;
     const interval = setInterval(() => {
@@ -82,7 +82,7 @@ export default function ServiceRequestModal({
         if (prev === null || prev <= 1) {
           clearInterval(interval);
           setIsWindowExpired(true);
-          setError("Batas waktu 15 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.");
+          setError("Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.");
           return 0;
         }
         return prev - 1;
@@ -164,7 +164,7 @@ export default function ServiceRequestModal({
           setRemainingSeconds(res.data.remainingSeconds);
           if (res.data.remainingSeconds <= 0) {
             setIsWindowExpired(true);
-            setError("Batas waktu 15 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.");
+            setError("Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.");
           }
         }
 
@@ -177,7 +177,7 @@ export default function ServiceRequestModal({
       .catch((err) => {
         if (!active) return;
         setIsWindowExpired(true);
-        const errMsg = err.response?.data?.error || "Batas waktu 15 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.";
+        const errMsg = err.response?.data?.error || "Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.";
         setError(errMsg);
         if (initialAction === "cancel") {
           setStep(2);
