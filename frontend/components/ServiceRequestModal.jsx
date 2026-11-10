@@ -12,16 +12,22 @@ import { ServiceConfirmationStep } from "./service-request/ServiceConfirmationSt
 import { ServiceModalBackground } from "./service-request/ServiceModalBackground";
 import api from "@/lib/api";
 import { useHasMounted } from "@/hooks/useHasMounted";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function ServiceRequestModal({
   onClose,
   userName,
+  userEmail,
   onRequireAuth,
   initialLocation,
   initialBookingId,
   initialToken,
   initialAction,
 }) {
+  const authUser = useAuthStore((s) => s.user);
+  const activeEmail = userEmail || authUser?.email || "";
+  const activeName = userName || authUser?.name || authUser?.nickname || "";
+
   const [step, setStep] = useState(initialBookingId ? 1 : 0); // 0: Type, 1: Details, 2: Done
   const modalScrollRef = useRef(null);
 
@@ -37,11 +43,19 @@ export default function ServiceRequestModal({
   const [form, setForm] = useState({
     serviceType: "",
     serviceName: "",
-    contactPerson: userName || "",
+    contactPerson: activeName,
     whatsapp: "",
+    email: activeEmail,
     location: initialLocation || "",
     additionalNotes: "",
   });
+
+  // Auto-fill email if logged-in user session becomes active/hydrated
+  useEffect(() => {
+    if (activeEmail && !form.email) {
+      setForm((p) => ({ ...p, email: activeEmail }));
+    }
+  }, [activeEmail, form.email]);
 
   useEffect(() => {
     if (initialLocation && !form.location) {
@@ -94,6 +108,7 @@ export default function ServiceRequestModal({
           serviceName: b.serviceName || "",
           contactPerson: b.contactPerson || "",
           whatsapp: b.whatsapp || "",
+          email: b.email || b.requestor?.email || activeEmail || "",
           location: b.location || "",
           additionalNotes: b.additionalNotes || "",
         });
@@ -119,6 +134,7 @@ export default function ServiceRequestModal({
             serviceName: b.serviceName || "",
             contactPerson: b.contactPerson || "",
             whatsapp: b.whatsapp || "",
+            email: b.email || b.requestor?.email || activeEmail || "",
             location: b.location || "",
             additionalNotes: b.additionalNotes || "",
           },
@@ -183,11 +199,15 @@ export default function ServiceRequestModal({
     };
   }, [done?.bookingId, done?.cancelToken]);
 
+  const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,12}$/;
+  const isEmailValid = Boolean(form.email && EMAIL_REGEX.test(form.email.trim()));
+
   // Form Validation
   const isFormValid = Boolean(
     form.serviceName &&
       form.contactPerson &&
       form.whatsapp &&
+      isEmailValid &&
       form.location &&
       Object.values(selectedSlots).filter(Boolean).length > 0
   );
@@ -201,6 +221,7 @@ export default function ServiceRequestModal({
       f1.serviceName !== f0.serviceName ||
       f1.contactPerson !== f0.contactPerson ||
       f1.whatsapp !== f0.whatsapp ||
+      f1.email !== f0.email ||
       f1.location !== f0.location ||
       f1.additionalNotes !== f0.additionalNotes ||
       f1.serviceType !== f0.serviceType
@@ -266,6 +287,12 @@ export default function ServiceRequestModal({
         commsCheck.message ||
           "Please provide a valid Indonesian WhatsApp contact (+62 8xx-xxxx-xxxx)."
       );
+      return;
+    }
+
+    // Strict email validation
+    if (!form.email || !EMAIL_REGEX.test(form.email.trim())) {
+      setError("Email salah (e.g. name@domain.com).");
       return;
     }
 

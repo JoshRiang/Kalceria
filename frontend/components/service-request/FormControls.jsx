@@ -54,7 +54,7 @@ export function validateCommsValue(type, id, rawVal) {
 
   if (isEmail) {
     if (!EMAIL_REGEX.test(val)) {
-      return { valid: false, empty: false, message: "Enter a valid email (e.g. name@domain.com)" };
+      return { valid: false, empty: false, message: "Email salah (e.g. name@domain.com)" };
     }
     return { valid: true, empty: false, message: "Valid" };
   }

@@ -54,6 +54,7 @@ export function ServiceConfirmationStep({
       `Request Title: ${form.serviceName || "—"}`,
       `Operator Name: ${form.contactPerson || "—"}`,
       `WhatsApp: ${form.whatsapp || "—"}`,
+      `Email: ${form.email || userEmail || "—"}`,
       `Deployment Area: ${form.location || "—"}`,
       `Selected Date: ${bookingSchedule.dates || "—"}`,
       `Selected Hours: ${bookingSchedule.hours || "—"}`,
@@ -242,6 +243,11 @@ export function ServiceConfirmationStep({
             <span className="font-bold text-white">WhatsApp</span>
             <span className="text-white/60 text-center">:</span>
             <span className="text-white font-normal break-words">{form.whatsapp || "—"}</span>
+          </div>
+          <div className="grid grid-cols-[125px_12px_1fr] items-start">
+            <span className="font-bold text-white">Email</span>
+            <span className="text-white/60 text-center">:</span>
+            <span className="text-white font-normal break-words">{form.email || userEmail || "—"}</span>
           </div>
           <div className="grid grid-cols-[125px_12px_1fr] items-start">
             <span className="font-bold text-white">Deployment Area</span>

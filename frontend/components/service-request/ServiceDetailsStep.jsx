@@ -72,6 +72,15 @@ export function ServiceDetailsStep({
                 onChange={setField}
                 required
               />
+              <Field
+                id="email"
+                label="Email Address"
+                type="email"
+                placeholder="name@domain.com"
+                val={form.email}
+                onChange={setField}
+                required
+              />
               <LocationAutocomplete
                 value={form.location}
                 onChange={(loc, item) => {

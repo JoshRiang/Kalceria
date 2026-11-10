@@ -76,6 +76,7 @@ export default function LandingPage({ onNavigateAuth }) {
   const openIdeaModal = useCallback(() => setShowIdeaModal(true), []);
   const closeIdeaModal = useCallback(() => setShowIdeaModal(false), []);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const user = useAuthStore((s) => s.user);
   const [skipAnim, setSkipAnim] = useState(false);
   const [ambientGated, setAmbientGated] = useState(true);
   const displayedMerch = useMerchRandomizer();
@@ -336,6 +337,8 @@ export default function LandingPage({ onNavigateAuth }) {
             initialBookingId={serviceManageState?.bookingId}
             initialToken={serviceManageState?.token}
             initialAction={serviceManageState?.action}
+            userName={user?.name || user?.nickname || ""}
+            userEmail={user?.email || ""}
             onClose={() => {
               setShowServiceModal(false);
               setDetectedLocation("");

@@ -286,7 +286,17 @@ export async function createServiceRequest(req, res, next) {
       });
     }
 
-    const user = await resolveServiceRequestor(req, contactPerson, cleanWa, body.email);
+    // 3. Strict Email validation (public & authenticated submissions)
+    const rawEmail = typeof body.email === 'string' ? body.email.trim() : '';
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,12}$/;
+    const effectiveEmail = rawEmail || (req.user?.userId ? req.user.email : '');
+    if (!effectiveEmail || !EMAIL_REGEX.test(effectiveEmail)) {
+      return res.status(400).json({
+        error: 'Please provide a valid email address (e.g. name@domain.com).',
+      });
+    }
+
+    const user = await resolveServiceRequestor(req, contactPerson, cleanWa, effectiveEmail);
     if (!user) {
       return res.status(400).json({ error: 'Please provide operator name and WhatsApp contact.' });
     }
@@ -316,9 +326,10 @@ export async function createServiceRequest(req, res, next) {
     await redis.del('cache:public_bookings');
     await setServiceBookingCooldown(req, user.id);
 
-    const senderLabel = user.email.endsWith('@guest.kalceria.local')
+    const targetEmail = effectiveEmail || user.email;
+    const senderLabel = targetEmail.endsWith('@guest.kalceria.local')
       ? `${contactPerson || user.name} (Guest)`
-      : `${user.name} (${user.email})`;
+      : `${user.name || contactPerson} (${targetEmail})`;
 
     const msg = buildServiceRequestWaMessage(
       booking,
@@ -348,7 +359,7 @@ export async function createServiceRequest(req, res, next) {
     }), 'whatsapp-service-request');
 
     safeNotify(() => sendServiceRequestSubmittedEmail({
-      to: user.email,
+      to: targetEmail,
       booking,
       slots,
       cancelToken,
@@ -360,7 +371,7 @@ export async function createServiceRequest(req, res, next) {
       user,
     }), 'email-service-admin-alert');
 
-    res.status(201).json({ bookingId: booking.id, whatsappUrl, cancelToken, userEmail: user.email });
+    res.status(201).json({ bookingId: booking.id, whatsappUrl, cancelToken, userEmail: targetEmail });
   } catch (err) {
     next(err);
   }
@@ -464,6 +475,7 @@ export async function getServiceRequestForEdit(req, res, next) {
         serviceName: booking.serviceName,
         contactPerson: booking.contactPerson,
         whatsapp: booking.whatsapp,
+        email: booking.requestor?.email || "",
         location: booking.location,
         additionalNotes: booking.additionalNotes,
         slots: (booking.slots || []).map((s) => ({
@@ -533,6 +545,15 @@ export async function updateServiceRequest(req, res, next) {
       });
     }
 
+    // Strict email validation if updating email
+    const rawEmail = typeof body.email === 'string' ? body.email.trim() : '';
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,12}$/;
+    if (rawEmail && !EMAIL_REGEX.test(rawEmail)) {
+      return res.status(400).json({
+        error: 'Please provide a valid email address (e.g. name@domain.com).',
+      });
+    }
+
     const cleanLocation = typeof location === 'string' ? location.trim() : booking.location;
     const cleanNotes = additionalNotes !== undefined ? (typeof additionalNotes === 'string' ? additionalNotes.trim() : null) : booking.additionalNotes;
 
@@ -581,9 +602,10 @@ export async function updateServiceRequest(req, res, next) {
       { expiresIn: '3m', issuer: 'kalceria-api' }
     );
 
-    const senderLabel = booking.requestor?.email?.endsWith('@guest.kalceria.local')
+    const targetEmail = rawEmail || booking.requestor?.email;
+    const senderLabel = targetEmail?.endsWith('@guest.kalceria.local')
       ? `${contactPerson || booking.contactPerson} (Guest)`
-      : `${booking.requestor?.name || contactPerson} (${booking.requestor?.email || ''})`;
+      : `${booking.requestor?.name || contactPerson || booking.contactPerson} (${targetEmail || ''})`;
 
     const msg = buildServiceRequestWaMessage(
       updatedBooking,
@@ -598,7 +620,7 @@ export async function updateServiceRequest(req, res, next) {
     const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
 
     safeNotify(() => sendServiceRequestUpdatedEmail({
-      to: booking.requestor?.email,
+      to: targetEmail,
       booking: updatedBooking,
       slots,
       cancelToken,
@@ -610,7 +632,7 @@ export async function updateServiceRequest(req, res, next) {
       booking: updatedBooking,
       cancelToken,
       whatsappUrl,
-      userEmail: booking.requestor?.email,
+      userEmail: targetEmail,
     });
   } catch (err) {
     next(err);
