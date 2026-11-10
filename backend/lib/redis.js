@@ -121,6 +121,11 @@ class MemoryRedisFallback {
     return set ? Array.from(set) : [];
   }
 
+  async sismember(key, member) {
+    const set = this.sets.get(key);
+    return set && set.has(String(member)) ? 1 : 0;
+  }
+
   async zadd(key, ...args) {
     let zset = this.zsets.get(key);
     if (!zset) {
@@ -180,6 +185,25 @@ class MemoryRedisFallback {
     return list.length;
   }
 
+  async rpush(key, ...values) {
+    let list = this.lists.get(key);
+    if (!list) {
+      list = [];
+      this.lists.set(key, list);
+    }
+    for (const v of values.flat()) {
+      list.push(String(v));
+    }
+    return list.length;
+  }
+
+  async lindex(key, index) {
+    const list = this.lists.get(key);
+    if (!list) return null;
+    const idx = index < 0 ? list.length + index : index;
+    return list[idx] !== undefined ? list[idx] : null;
+  }
+
   async ltrim(key, start, stop) {
     const list = this.lists.get(key);
     if (!list) return 'OK';
@@ -200,6 +224,51 @@ class MemoryRedisFallback {
   async hget(key, field) {
     const hash = this.hashes.get(key);
     return hash ? hash.get(String(field)) || null : null;
+  }
+
+  async hset(key, ...args) {
+    let hash = this.hashes.get(key);
+    if (!hash) {
+      hash = new Map();
+      this.hashes.set(key, hash);
+    }
+    let count = 0;
+    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+      for (const [k, v] of Object.entries(args[0])) {
+        hash.set(String(k), String(v));
+        count++;
+      }
+    } else {
+      for (let i = 0; i < args.length; i += 2) {
+        if (args[i] !== undefined && args[i + 1] !== undefined) {
+          hash.set(String(args[i]), String(args[i + 1]));
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  async hgetall(key) {
+    const hash = this.hashes.get(key);
+    if (!hash) return {};
+    const obj = {};
+    for (const [k, v] of hash.entries()) {
+      obj[k] = v;
+    }
+    return obj;
+  }
+
+  async hincrby(key, field, increment = 1) {
+    let hash = this.hashes.get(key);
+    if (!hash) {
+      hash = new Map();
+      this.hashes.set(key, hash);
+    }
+    const current = Number(hash.get(String(field)) || 0);
+    const nextVal = current + Number(increment);
+    hash.set(String(field), String(nextVal));
+    return nextVal;
   }
 
   async hdel(key, ...fields) {
@@ -254,8 +323,19 @@ class MemoryRedisFallback {
       expire: (k, t) => { operations.push(() => this.expire(k, t)); return proxy; },
       sadd: (k, ...m) => { operations.push(() => this.sadd(k, ...m)); return proxy; },
       srem: (k, ...m) => { operations.push(() => this.srem(k, ...m)); return proxy; },
+      sismember: (k, m) => { operations.push(() => this.sismember(k, m)); return proxy; },
       zadd: (k, ...a) => { operations.push(() => this.zadd(k, ...a)); return proxy; },
       zrem: (k, ...m) => { operations.push(() => this.zrem(k, ...m)); return proxy; },
+      lpush: (k, ...v) => { operations.push(() => this.lpush(k, ...v)); return proxy; },
+      rpush: (k, ...v) => { operations.push(() => this.rpush(k, ...v)); return proxy; },
+      ltrim: (k, s, e) => { operations.push(() => this.ltrim(k, s, e)); return proxy; },
+      lrange: (k, s, e) => { operations.push(() => this.lrange(k, s, e)); return proxy; },
+      lindex: (k, idx) => { operations.push(() => this.lindex(k, idx)); return proxy; },
+      hget: (k, f) => { operations.push(() => this.hget(k, f)); return proxy; },
+      hset: (k, ...a) => { operations.push(() => this.hset(k, ...a)); return proxy; },
+      hdel: (k, ...f) => { operations.push(() => this.hdel(k, ...f)); return proxy; },
+      hgetall: (k) => { operations.push(() => this.hgetall(k)); return proxy; },
+      hincrby: (k, f, inc) => { operations.push(() => this.hincrby(k, f, inc)); return proxy; },
       exec: async () => {
         const results = [];
         for (const op of operations) {

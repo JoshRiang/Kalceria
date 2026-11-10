@@ -27,6 +27,10 @@ export async function cleanupUserDatabaseRecords(tx, userId) {
     tx.personalChatMessage.deleteMany({
       where: { OR: [{ senderId: userId }, { recipientId: userId }] },
     }),
+    tx.callSignal.deleteMany({ where: { OR: [{ fromUserId: userId }, { toUserId: userId }] } }),
+    tx.callLock.deleteMany({ where: { OR: [{ userId }, { callerId: userId }, { calleeId: userId }] } }),
+    tx.eventNotification.deleteMany({ where: { recipientId: userId } }),
+    tx.userPresence.deleteMany({ where: { userId } }),
   ]);
 
   const userBookings = await tx.serviceBooking.findMany({

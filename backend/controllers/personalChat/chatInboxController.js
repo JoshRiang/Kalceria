@@ -1,5 +1,6 @@
 import { redis } from '../../lib/redis.js';
 import prisma from '../../lib/prisma.js';
+import { getCanonicalInboxSummary } from '../../services/canonicalFallbackStore.js';
 import {
   HOT_RING_BUFFER_SIZE,
   COLD_ARCHIVE_MAX_SIZE,
@@ -110,10 +111,22 @@ export async function getPersonalChatInboxSummary(req, res, next) {
       })
       .filter(Boolean);
 
+    // Complementary Fallback: If Redis unread or event notifications were empty (cold lambda or Redis fallback),
+    // hydrate canonical unread counters & notifications directly from PostgreSQL
+    if (Object.keys(peers).length === 0 || eventNotifications.length === 0) {
+      const canonical = await getCanonicalInboxSummary(userId);
+      if (Object.keys(peers).length === 0 && Object.keys(canonical.peers).length > 0) {
+        Object.assign(peers, canonical.peers);
+      }
+      if (eventNotifications.length === 0 && Array.isArray(canonical.rawEventNotifs) && canonical.rawEventNotifs.length > 0) {
+        eventNotifications.push(...canonical.rawEventNotifs);
+      }
+    }
+
     res.json({
       ok: true,
       unchanged: false,
-      ver: currentVer,
+      ver: currentVer !== '0' ? currentVer : `${Date.now()}_ver`,
       peers,
       eventNotifications,
     });

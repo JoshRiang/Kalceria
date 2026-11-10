@@ -2,6 +2,7 @@ import { redis } from '../lib/redis.js';
 import prisma from '../lib/prisma.js';
 import { maskLocationToDistrict } from '../utils/privacyMask.js';
 import { ensurePersistentUserProfilesBatch } from '../utils/profileDefaults.js';
+import { getActiveCanonicalPresences } from '../services/canonicalFallbackStore.js';
 
 const DISTRICT_OFFSET = 0.012;
 
@@ -167,6 +168,13 @@ export async function getMapUsers(req, res, next) {
       ? await redis.geopos("active_users", ...userIds).catch(() => [])
       : [];
 
+    // Fallback: If Redis active_users is down or empty, fetch real active presences from PostgreSQL
+    let canonicalPresences = null;
+    const hasAnyRedisPos = positions.some((p) => p && p[0] && Number.isFinite(parseFloat(p[0])));
+    if (!hasAnyRedisPos && userIds.length > 0) {
+      canonicalPresences = await getActiveCanonicalPresences(userIds);
+    }
+
     const now = new Date();
     const rawEnriched = [];
     users.forEach((u, index) => {
@@ -177,6 +185,11 @@ export async function getMapUsers(req, res, next) {
       if ((rawLat === null || rawLng === null) && pos && pos[0]) {
         rawLng = parseFloat(pos[0]);
         rawLat = parseFloat(pos[1]);
+      }
+      if ((rawLat === null || rawLng === null) && canonicalPresences?.has(u.id)) {
+        const canRec = canonicalPresences.get(u.id);
+        rawLat = canRec.lat;
+        rawLng = canRec.lng;
       }
       // Never invent mock coordinates if real live coordinates are missing
       if (!Number.isFinite(rawLat) || !Number.isFinite(rawLng)) return;
@@ -284,14 +297,27 @@ export async function getAllKalcerians(req, res, next) {
     });
 
     const now = new Date();
+    let canonicalPresences = null;
+    if (onlineSet.size === 0 && users.length > 0) {
+      canonicalPresences = await getActiveCanonicalPresences(users.map((u) => u.id));
+    }
+
     const rawResult = users.map((u) => {
-      // Strictly online ONLY when present in Redis active_users AND allowLiveLocation is enabled
-      const isOnline = Boolean(onlineSet.has(u.id) && u.allowLiveLocation);
+      // Strictly online ONLY when present in Redis active_users OR unexpired canonical presences AND allowLiveLocation is enabled
+      const hasLivePresence = canonicalPresences?.has(u.id);
+      const isOnline = Boolean((onlineSet.has(u.id) || hasLivePresence) && u.allowLiveLocation);
       const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
       const liveRec = isOnline ? liveMap.get(u.id) : null;
+      let rawLat = Number.isFinite(liveRec?.lat) ? Number(liveRec.lat) : null;
+      let rawLng = Number.isFinite(liveRec?.lng) ? Number(liveRec.lng) : null;
+      if ((rawLat === null || rawLng === null) && hasLivePresence) {
+        const canRec = canonicalPresences.get(u.id);
+        rawLat = canRec.lat;
+        rawLng = canRec.lng;
+      }
       const coords =
-        isOnline && Number.isFinite(liveRec?.lat) && Number.isFinite(liveRec?.lng)
-          ? approximateCoordinate(Number(liveRec.lat), Number(liveRec.lng))
+        isOnline && Number.isFinite(rawLat) && Number.isFinite(rawLng)
+          ? approximateCoordinate(Number(rawLat), Number(rawLng))
           : { lat: null, lng: null };
       return {
         id: u.id,

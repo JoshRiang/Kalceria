@@ -53,7 +53,7 @@ export function sanitizeProfilePictureUrl(value) {
 
 export function sanitizeCoverMediaUrl(value) {
   if (value === undefined || value === null || value === '') return null;
-  if (typeof value !== 'string' || value.length > 5_000_000) return null;
+  if (typeof value !== 'string' || value.length > 25_000_000) return null;
   if (/^#[0-9a-fA-F]{3,8}$/.test(value.trim())) {
     return value.trim();
   }

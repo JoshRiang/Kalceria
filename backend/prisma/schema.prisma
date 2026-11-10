@@ -318,3 +318,55 @@ model PersonalChatMessage {
   @@map("personal_chat_messages")
 }
 
+// ─── Ephemeral Call Signals (Shared Serverless Realtime Fallback) ─────────────
+model CallSignal {
+  id         String    @id @default(uuid())
+  callId     String
+  fromUserId String
+  toUserId   String
+  signalType String
+  packetJson String
+  createdAt  DateTime  @default(now()) @db.Timestamptz
+  expiresAt  DateTime? @db.Timestamptz
+
+  @@index([toUserId, createdAt(sort: Desc)])
+  @@map("call_signals")
+}
+
+// ─── Ephemeral Call Lock (Shared Concurrency Lock for Realtime Calls) ─────────
+model CallLock {
+  userId    String   @id
+  callId    String
+  callerId  String
+  calleeId  String
+  mode      String
+  expiresAt DateTime @db.Timestamptz
+
+  @@map("call_locks")
+}
+
+// ─── Ephemeral Event Notifications (Shared Collab Alert Fallback) ─────────────
+model EventNotification {
+  id          String   @id @default(uuid())
+  recipientId String
+  type        String
+  payloadJson String
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  expiresAt   DateTime @db.Timestamptz
+
+  @@index([recipientId, expiresAt])
+  @@map("event_notifications")
+}
+
+// ─── User Live Presence (Shared Live GPS & Online State Fallback) ─────────────
+model UserPresence {
+  userId    String   @id
+  lat       Float
+  lng       Float
+  district  String?
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  @@index([updatedAt(sort: Desc)])
+  @@map("user_presences")
+}
+

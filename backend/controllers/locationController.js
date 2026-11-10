@@ -1,6 +1,10 @@
 import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { maskLocationToDistrict } from '../utils/privacyMask.js';
+import {
+  recordCanonicalLivePresence,
+  removeCanonicalLivePresence,
+} from '../services/canonicalFallbackStore.js';
 
 const LIVE_TTL_SECONDS = 15;
 const UPDATE_COOLDOWN_SECONDS = 3;
@@ -72,6 +76,7 @@ export async function updateLiveLocation(req, res, next) {
     await redis.geoadd('active_users', lng, lat, userId);
     await redis.setex(key, LIVE_TTL_SECONDS, JSON.stringify(nextRecord));
     await redis.del('cache:all_kalcerians', 'cache:map_users:global', 'cache:map_users_enriched').catch(() => {});
+    recordCanonicalLivePresence(userId, lat, lng, district).catch(() => {});
     res.json({ message: 'Location updated.' });
   } catch (err) {
     if (req.user?.userId) await redis.del(`live:cooldown:${req.user.userId}`).catch(() => {});
@@ -93,6 +98,7 @@ export async function setLiveLocationPreference(req, res, next) {
     });
 
     if (!allowLiveLocation) {
+      removeCanonicalLivePresence(userId).catch(() => {});
       await Promise.all([
         redis.zrem('active_users', userId).catch(() => {}),
         redis

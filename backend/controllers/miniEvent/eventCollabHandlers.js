@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { redis } from '../../lib/redis.js';
+import { storeCanonicalEventNotification } from '../../services/canonicalFallbackStore.js';
 import { cleanText, extractEncodedTags } from './eventFormatting.js';
 import {
   addAcceptedCollaboratorId,
@@ -88,6 +89,7 @@ export async function requestMiniEventCollab(req, res, next) {
         notifPipe.expire(`notif:events:${creatorId}`, 86400);
         notifPipe.set(`chat:inbox_ver:${creatorId}`, `${Date.now()}_evreq`, 'EX', 86400);
         await notifPipe.exec();
+        storeCanonicalEventNotification(creatorId, reqNotif).catch(() => {});
       } catch {}
     }
 
@@ -125,6 +127,7 @@ export async function cancelMiniEventCollabRequest(req, res, next) {
         notifPipe.expire(`notif:events:${creatorId}`, 86400);
         notifPipe.set(`chat:inbox_ver:${creatorId}`, `${Date.now()}_evcancel`, 'EX', 86400);
         await notifPipe.exec();
+        storeCanonicalEventNotification(creatorId, cancelNotif).catch(() => {});
       } catch {}
     }
     return res.json({

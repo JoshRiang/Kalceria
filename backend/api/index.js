@@ -53,12 +53,12 @@ app.use(
 app.use(cookieParser());
 app.use("/api", apiRateLimit);
 app.use(express.json({
-  limit: "1mb",
+  limit: "25mb",
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   },
 }));
-app.use(express.urlencoded({ extended: true, limit: "100kb", parameterLimit: 100 }));
+app.use(express.urlencoded({ extended: true, limit: "1mb", parameterLimit: 100 }));
 app.use(csrfProtection);
 
 // ─── Health ───────────────────────────────────────────────────────────────────

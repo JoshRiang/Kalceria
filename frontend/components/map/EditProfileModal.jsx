@@ -171,14 +171,16 @@ export function EditProfileModal({
     }
     const mime = String(file.type || "").toLowerCase();
     const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "mp4", "webp", "webm"].includes(ext)) {
-      setFileError("Only .png, .jpeg, .webp, .mp4, and .webm files are allowed");
+    const allowedCoverExts = ["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"];
+    if (!allowedCoverExts.includes(ext)) {
+      setFileError("Only .png, .jpeg, .webp, and video files (.mp4, .mov, .webm) are allowed");
       e.target.value = "";
       return;
     }
     setFileError(null);
 
-    if (mime.startsWith("video/") || ["mp4", "webm"].includes(ext)) {
+    const isVideo = mime.startsWith("video/") || ["mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"].includes(ext);
+    if (isVideo) {
       clearPendingCover();
       const objUrl = URL.createObjectURL(file);
       coverObjectUrlRef.current = objUrl;

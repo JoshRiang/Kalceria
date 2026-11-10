@@ -80,7 +80,7 @@ export async function sendPersonalChatMessage(req, res, next) {
     // Never persist ephemeral browser RAM blob: URLs
     const safeMediaUrl =
       typeof body.mediaUrl === 'string' && !body.mediaUrl.trim().startsWith('blob:')
-        ? body.mediaUrl.trim().slice(0, 2 * 1024 * 1024)
+        ? body.mediaUrl.trim().slice(0, 25 * 1024 * 1024)
         : null;
 
     const envelope = {

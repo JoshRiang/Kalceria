@@ -7,6 +7,14 @@ import {
   sanitizeTargetId,
   unwrapPipeResult,
 } from './chatConstants.js';
+import {
+  storeCanonicalCallSignal,
+  fetchCanonicalCallSignals,
+  clearCanonicalCallSignals,
+  acquireCanonicalCallLock,
+  releaseCanonicalCallLock,
+  getCanonicalCallLock,
+} from '../../services/canonicalFallbackStore.js';
 
 export function generateLiveKitToken({ userId, targetId, username, callId }) {
   const apiKey = process.env.LIVEKIT_API_KEY;
@@ -133,7 +141,11 @@ export async function sendCallSignal(req, res, next) {
       // Push the hangup packet so the peer device immediately receives the hangup signal on its next poll
       sigPipe.lpush(signalKey, JSON.stringify(packet));
       sigPipe.expire(signalKey, 30);
-      await sigPipe.exec().catch(() => {});
+      await Promise.allSettled([
+        sigPipe.exec(),
+        releaseCanonicalCallLock(userId, targetId),
+        storeCanonicalCallSignal(packet),
+      ]);
       return res.json({ ok: true, packet });
     }
 
@@ -164,12 +176,16 @@ export async function sendCallSignal(req, res, next) {
       });
       sigPipe.set(callerLockKey, lockPayload, 'EX', CALL_LOCK_TTL_SECONDS);
       sigPipe.set(targetLockKey, lockPayload, 'EX', CALL_LOCK_TTL_SECONDS);
+      acquireCanonicalCallLock({ userId, targetId, callId: safeCallId, mode: callMode }).catch(() => {});
     }
 
     sigPipe.lpush(signalKey, JSON.stringify(packet));
     sigPipe.ltrim(signalKey, 0, 49);
     sigPipe.expire(signalKey, CALL_SIGNAL_TTL_SECONDS);
-    await sigPipe.exec().catch(() => {});
+    await Promise.allSettled([
+      sigPipe.exec(),
+      storeCanonicalCallSignal(packet),
+    ]);
 
     res.json({ ok: true, packet, ...(livekit ? { livekit } : {}) });
   } catch (err) {
@@ -198,7 +214,7 @@ export async function getCallSignals(req, res, next) {
     const rawSignals = unwrapPipeResult(pipeRes?.[0], []);
     const activeLockRaw = unwrapPipeResult(pipeRes?.[1], null);
 
-    const signals = (Array.isArray(rawSignals) ? rawSignals : [])
+    let signals = (Array.isArray(rawSignals) ? rawSignals : [])
       .map((item) => {
         try {
           return typeof item === 'string' ? JSON.parse(item) : item;
@@ -209,11 +225,31 @@ export async function getCallSignals(req, res, next) {
       .filter(Boolean)
       .reverse();
 
+    // Complementary Fallback: If Redis returned empty signals (e.g. across cold serverless instances),
+    // fetch unexpired signals from the shared PostgreSQL Canonical Store
+    if (signals.length === 0) {
+      const canonicalSignals = await fetchCanonicalCallSignals(userId, { clear: shouldClear });
+      if (canonicalSignals.length > 0) {
+        signals = canonicalSignals;
+      }
+    }
+
     let activeLock = null;
     if (activeLockRaw) {
       try {
         activeLock = JSON.parse(activeLockRaw);
       } catch {}
+    } else {
+      const canonicalLock = await getCanonicalCallLock(userId);
+      if (canonicalLock) {
+        activeLock = {
+          callId: canonicalLock.callId,
+          callerId: canonicalLock.callerId,
+          calleeId: canonicalLock.calleeId,
+          mode: canonicalLock.mode,
+          ts: new Date(canonicalLock.expiresAt).getTime() - CALL_LOCK_TTL_SECONDS * 1000,
+        };
+      }
     }
 
     res.json({
@@ -233,7 +269,10 @@ export async function clearCallSignals(req, res, next) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     const signalKey = `chat:call:${userId}`;
-    await redis.del(signalKey).catch(() => {});
+    await Promise.allSettled([
+      redis.del(signalKey),
+      clearCanonicalCallSignals(userId),
+    ]);
     res.json({ ok: true, cleared: true });
   } catch (err) {
     next(err);
