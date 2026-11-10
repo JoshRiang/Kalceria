@@ -271,8 +271,8 @@ export function buildServiceRequestSubmittedEmailHtml({ booking, slots = [], can
         <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin-bottom:24px;">
           <p style="margin:0 0 6px 0;font-weight:bold;color:#92400e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Ketentuan Pemesanan & Perubahan / Modification Policy:</p>
           <ol style="margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:1.5;">
-            <li><strong>Batas Waktu Perubahan (15 Menit):</strong> Pemesan masih memiliki hak penuh untuk mengedit parameter atau membatalkan pesanan dalam kurun waktu 15 menit setelah pesanan berhasil dibuat.</li>
-            <li>Setelah 15 menit berlalu, pesanan akan secara otomatis dikunci dan masuk ke antrean koordinasi operasional tim Kalceria.</li>
+            <li><strong>Batas Waktu Perubahan (3 Menit):</strong> Pemesan masih memiliki hak penuh untuk mengedit parameter atau membatalkan pesanan dalam kurun waktu 3 menit setelah pesanan berhasil dibuat.</li>
+            <li>Setelah 3 menit berlalu, pesanan akan secara otomatis dikunci dan masuk ke antrean koordinasi operasional tim Kalceria.</li>
           </ol>
         </div>
 
@@ -352,8 +352,8 @@ export function buildServiceRequestUpdatedEmailHtml({ booking, slots = [], cance
         <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin-bottom:24px;">
           <p style="margin:0 0 6px 0;font-weight:bold;color:#92400e;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Ketentuan Pembatalan / Cancellation Policy:</p>
           <ol style="margin:0;padding-left:18px;color:#78350f;font-size:13px;line-height:1.5;">
-            <li><strong>Batas Waktu Pembatalan (15 Menit):</strong> Kamu masih memiliki hak penuh untuk membatalkan pesanan ini dalam kurun waktu 15 menit setelah pembaruan disimpan.</li>
-            <li>Setelah 15 menit berlalu, jadwal operasional akan otomatis dikunci dan masuk ke antrean koordinasi operasional tim Kalceria.</li>
+            <li><strong>Batas Waktu Pembatalan (3 Menit):</strong> Kamu masih memiliki hak penuh untuk membatalkan pesanan ini dalam kurun waktu 3 menit setelah pembaruan disimpan.</li>
+            <li>Setelah 3 menit berlalu, jadwal operasional akan otomatis dikunci dan masuk ke antrean koordinasi operasional tim Kalceria.</li>
           </ol>
         </div>
 

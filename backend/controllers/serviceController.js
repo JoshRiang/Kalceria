@@ -335,7 +335,7 @@ export async function createServiceRequest(req, res, next) {
     const cancelToken = jwt.sign(
       { bookingId: booking.id, requestorId: user.id, action: 'manage' },
       cancelSecret,
-      { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '15m' },
+      { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '3m' },
     );
 
     // Dispatches (fire-and-forget, safe & isolated)
@@ -407,7 +407,7 @@ export async function listPublicServiceBookings(req, res, next) {
   }
 }
 
-const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+const THREE_MINUTES_MS = 3 * 60 * 1000;
 
 function verifyServiceBookingAuthorization(booking, req) {
   const userId = req.user?.userId || null;
@@ -429,13 +429,13 @@ function verifyServiceBookingAuthorization(booking, req) {
   const authorizedByToken = Boolean(validTokenBookingId && validTokenBookingId === booking.id);
   const isRecentGuest = Boolean(
     booking.requestor?.email?.endsWith('@guest.kalceria.local') &&
-    Date.now() - new Date(booking.createdAt).getTime() <= FIFTEEN_MINUTES_MS
+    Date.now() - new Date(booking.createdAt).getTime() <= THREE_MINUTES_MS
   );
 
   return authorizedByUser || authorizedByToken || isRecentGuest;
 }
 
-// ─── GET /services/request/:id (Inspect for 15-minute edit) ───────────────────
+// ─── GET /services/request/:id (Inspect for 3-minute edit) ───────────────────
 export async function getServiceRequestForEdit(req, res, next) {
   try {
     const { id } = req.params;
@@ -450,13 +450,13 @@ export async function getServiceRequestForEdit(req, res, next) {
     }
 
     const elapsed = Date.now() - new Date(booking.createdAt).getTime();
-    if (elapsed > FIFTEEN_MINUTES_MS) {
+    if (elapsed > THREE_MINUTES_MS) {
       return res.status(403).json({
-        error: 'Batas waktu 15 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        error: 'Batas waktu 3 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
       });
     }
 
-    const remainingSeconds = Math.max(0, Math.floor((FIFTEEN_MINUTES_MS - elapsed) / 1000));
+    const remainingSeconds = Math.max(0, Math.floor((THREE_MINUTES_MS - elapsed) / 1000));
     res.json({
       booking: {
         id: booking.id,
@@ -498,9 +498,9 @@ export async function updateServiceRequest(req, res, next) {
     }
 
     const elapsed = Date.now() - new Date(booking.createdAt).getTime();
-    if (elapsed > FIFTEEN_MINUTES_MS) {
+    if (elapsed > THREE_MINUTES_MS) {
       return res.status(403).json({
-        error: 'Batas waktu 15 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        error: 'Batas waktu 3 menit untuk mengedit pesanan telah berakhir. Hubungi kami via WhatsApp.',
       });
     }
 
@@ -578,7 +578,7 @@ export async function updateServiceRequest(req, res, next) {
     const cancelToken = jwt.sign(
       { bookingId: updatedBooking.id },
       cancelSecret,
-      { expiresIn: '15m', issuer: 'kalceria-api' }
+      { expiresIn: '3m', issuer: 'kalceria-api' }
     );
 
     const senderLabel = booking.requestor?.email?.endsWith('@guest.kalceria.local')
@@ -633,9 +633,9 @@ export async function deleteOwnServiceRequest(req, res, next) {
     }
 
     const elapsed = Date.now() - new Date(booking.createdAt).getTime();
-    if (elapsed > FIFTEEN_MINUTES_MS) {
+    if (elapsed > THREE_MINUTES_MS) {
       return res.status(403).json({
-        error: 'Batas waktu 15 menit untuk membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.',
+        error: 'Batas waktu 3 menit untuk membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.',
       });
     }
 
