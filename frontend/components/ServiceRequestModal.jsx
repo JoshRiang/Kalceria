@@ -26,7 +26,7 @@ export default function ServiceRequestModal({
 }) {
   const authUser = useAuthStore((s) => s.user);
   const activeEmail = userEmail || authUser?.email || "";
-  const activeName = userName || authUser?.name || authUser?.nickname || "";
+  const activeName = userName || authUser?.displayName || authUser?.name || authUser?.nickname || "";
 
   const [step, setStep] = useState(initialBookingId ? 1 : 0); // 0: Type, 1: Details, 2: Done
   const modalScrollRef = useRef(null);
@@ -50,12 +50,15 @@ export default function ServiceRequestModal({
     additionalNotes: "",
   });
 
-  // Auto-fill email if logged-in user session becomes active/hydrated
+  // Auto-fill email & operator name if logged-in user session becomes active/hydrated
   useEffect(() => {
     if (activeEmail && !form.email) {
       setForm((p) => ({ ...p, email: activeEmail }));
     }
-  }, [activeEmail, form.email]);
+    if (activeName && !form.contactPerson) {
+      setForm((p) => ({ ...p, contactPerson: activeName }));
+    }
+  }, [activeEmail, activeName, form.email, form.contactPerson]);
 
   useEffect(() => {
     if (initialLocation && !form.location) {

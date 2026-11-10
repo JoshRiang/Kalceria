@@ -41,6 +41,8 @@ export function ServiceConfirmationStep({
     return trimmed.length > 50 ? trimmed.slice(0, 50) + "..." : trimmed;
   }, [form.additionalNotes]);
 
+  const userEmail = done?.userEmail || form?.email || "";
+
   // Construct WhatsApp URL: +62 8117998790, exact metadata from Part 3, NO emojis
   const waUrl = useMemo(() => {
     if (done?.whatsappUrl) return done.whatsappUrl;
@@ -55,7 +57,7 @@ export function ServiceConfirmationStep({
       `Request Title: ${form.serviceName || "—"}`,
       `Operator Name: ${form.contactPerson || "—"}`,
       `WhatsApp: ${form.whatsapp || "—"}`,
-      `Email: ${form.email || userEmail || "—"}`,
+      `Email: ${userEmail || "—"}`,
       `Deployment Area: ${form.location || "—"}`,
       `Selected Date: ${bookingSchedule.dates || "—"}`,
       `Selected Hours: ${bookingSchedule.hours || "—"}`,
@@ -65,7 +67,7 @@ export function ServiceConfirmationStep({
     }
     const cleanWaText = lines.join("\n");
     return `https://wa.me/628117998790?text=${encodeURIComponent(cleanWaText)}`;
-  }, [done?.whatsappUrl, done?.bookingId, isEditMode, serviceLabel, form, bookingSchedule, truncatedNotes]);
+  }, [done?.whatsappUrl, done?.bookingId, isEditMode, serviceLabel, form, bookingSchedule, truncatedNotes, userEmail]);
 
   // Handle WhatsApp action: Candidate buffer is finalized in backend ONLY when WA is clicked!
   const handleWaClick = async () => {
@@ -99,7 +101,6 @@ export function ServiceConfirmationStep({
   };
 
   // Resolve user's email client / webmail inbox URL
-  const userEmail = done?.userEmail || form?.email || "";
   const emailInboxUrl = useMemo(() => {
     const lower = String(userEmail).toLowerCase().trim();
     if (lower.includes("@gmail.com")) {
@@ -248,7 +249,7 @@ export function ServiceConfirmationStep({
           <div className="grid grid-cols-[125px_12px_1fr] items-start">
             <span className="font-bold text-white">Email</span>
             <span className="text-white/60 text-center">:</span>
-            <span className="text-white font-normal break-words">{form.email || userEmail || "—"}</span>
+            <span className="text-white font-normal break-words">{userEmail || "—"}</span>
           </div>
           <div className="grid grid-cols-[125px_12px_1fr] items-start">
             <span className="font-bold text-white">Deployment Area</span>
