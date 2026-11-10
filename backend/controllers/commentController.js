@@ -19,7 +19,7 @@ export async function createComment(req, res, next) {
       return res.status(400).json({ error: 'Please provide a valid identity.' });
     }
 
-    const authUserId = req.user ? req.user.userId : null;
+    const authUserId = req.user ? (req.user.userId || req.user.id) : null;
 
     // Defense: Identity Verification & Anti-Spoofing
     if (identity === 'User') {
@@ -78,7 +78,7 @@ export async function createComment(req, res, next) {
         category: cleanCategory || 'Other',
         type,
         username: finalUsername,
-        userId: identity === 'Anonymous' ? null : authUserId,
+        userId: (identity === 'Anonymous' || identity === 'Guest') ? null : authUserId,
         mediaUrl: cleanMediaUrl,
       },
     });

@@ -193,7 +193,7 @@ export async function checkCommentDefense(req, res, next) {
   }
 
   // 3. Cooldown Verification (2-hour cooldown)
-  const userId = req.user?.userId;
+  const userId = req.user?.userId || req.user?.id;
   const { machineTagHash, fingerprint } = resolveClientFingerprint(req);
 
   const keysToCheck = [

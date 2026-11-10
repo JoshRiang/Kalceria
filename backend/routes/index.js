@@ -288,7 +288,7 @@ router.patch("/admin/users/:id/role", requireAdmin, requireJIT, setUserRole);
 router.delete("/admin/users/:id", requireAdmin, requireJIT, deleteUser);
 
 // ─── Comments ───────────────────────────────────────────────────────────────
-router.post("/comments", optionalAuth, checkCommentDefense, createComment);
+router.post("/comments", optionalAuth, commentRateLimit, checkCommentDefense, createComment);
 router.get("/admin/comments", requireAdmin, listComments);
 router.patch("/admin/comments/:id/pin", requireAdmin, togglePinComment);
 router.delete("/admin/comments/:id", requireAdmin, requireJIT, deleteComment);
