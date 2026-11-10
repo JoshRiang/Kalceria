@@ -175,18 +175,18 @@ export async function notifyEventRegistration({ registration, event, user, payme
   const priceStr = Number(event.price).toLocaleString('id-ID');
 
   const clientMsg = [
-    `🏁 *KALCERIA EVENT REGISTRATION* 🏁`,
+    `*KALCERIA EVENT REGISTRATION*`,
     ``,
     `Halo *${user.name}*, pendaftaran event kamu berhasil tercatat!`,
     ``,
-    `📌 *Event:* ${event.title}`,
-    `🗓 *Sesi:* ${registration.selectedSession}`,
-    `🎫 *ID Tiket:* ${registration.id}`,
-    `💰 *Biaya:* Rp ${priceStr}`,
-    `📊 *Status:* ${registration.paymentStatus}`,
-    ...(paymentCheckoutUrl ? [``, `💳 *Link Pembayaran Online:*`, paymentCheckoutUrl] : []),
+    `*Event:* ${event.title}`,
+    `*Sesi:* ${registration.selectedSession}`,
+    `*ID Tiket:* ${registration.id}`,
+    `*Biaya:* Rp ${priceStr}`,
+    `*Status:* ${registration.paymentStatus}`,
+    ...(paymentCheckoutUrl ? [``, `*Link Pembayaran Online:*`, paymentCheckoutUrl] : []),
     ``,
-    `Sampai jumpa di arena, Kalcerian! 🔥`,
+    `Sampai jumpa di arena, Kalcerian!`,
   ].join('\n');
 
   // 1. Send to participant
@@ -202,7 +202,7 @@ export async function notifyEventRegistration({ registration, event, user, payme
   // 2. Alert Admin
   const adminNumber = process.env.WA_ADMIN_NUMBER;
   if (adminNumber) {
-    const adminMsg = `📢 *EVENT REGISTRATION ALERT*\nEvent: ${event.title}\nPeserta: ${user.name} (${user.email})\nID: ${registration.id}\nSesi: ${registration.selectedSession}`;
+    const adminMsg = `*EVENT REGISTRATION ALERT*\nEvent: ${event.title}\nPeserta: ${user.name} (${user.email})\nID: ${registration.id}\nSesi: ${registration.selectedSession}\nBiaya: Rp ${priceStr}`;
     await sendWhatsAppMessage({ to: adminNumber, message: adminMsg }).catch(() => {});
   }
 
@@ -213,15 +213,15 @@ export async function notifyEventPaymentConfirmed({ registration, event, user })
   if (!isWhatsAppBotEnabled() || !user.phone) return { skipped: true };
 
   const clientMsg = [
-    `🎉 *TIKET EVENT TERKONFIRMASI - KALCERIA* 🎉`,
+    `*TIKET EVENT TERKONFIRMASI - KALCERIA*`,
     ``,
     `Halo *${user.name}*, pembayaran kamu untuk event *${event.title}* telah LUNAS!`,
     ``,
-    `🎫 *KODE TIKET:* ${registration.id}`,
-    `🗓 *Sesi:* ${registration.selectedSession}`,
-    `✅ *Status:* CONFIRMED / LUNAS`,
+    `*KODE TIKET:* ${registration.id}`,
+    `*Sesi:* ${registration.selectedSession}`,
+    `*Status:* CONFIRMED / LUNAS`,
     ``,
-    `Tunjukkan pesan WhatsApp ini kepada crew check-in di gate masuk venue! Have fun! 🚗💨`,
+    `Tunjukkan pesan WhatsApp ini kepada crew check-in di gate masuk venue! Have fun!`,
   ].join('\n');
 
   return sendWhatsAppMessage({

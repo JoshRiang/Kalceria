@@ -12,6 +12,60 @@ import { setEventRegistrationCooldown, clearEventRegistrationCooldown } from '..
 const WA_ADMIN = process.env.WA_ADMIN_NUMBER || '628117998790';
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,12}$/;
 
+export function buildEventRegistrationWaMessage({ event, registration, user, paymentCheckoutUrl }) {
+  const regId = registration?.id ? registration.id.slice(-6) : 'PENDING';
+  const participantName = user?.name || '—';
+  const participantEmail = user?.email || '—';
+  const participantPhone = user?.phone || user?.contact || '—';
+  const eventTitle = event?.title || '—';
+  const session = registration?.selectedSession || '—';
+  const location = event?.location || 'TBA';
+  const rawPrice = Number(event?.price || 0);
+  const formattedPrice = rawPrice === 0 ? 'Rp 0 (Gratis / Free Entry)' : `Rp ${rawPrice.toLocaleString('id-ID')}`;
+  const status = registration?.paymentStatus || 'PENDING';
+
+  let formattedDate = '—';
+  if (registration?.createdAt) {
+    try {
+      const d = new Date(registration.createdAt);
+      formattedDate = d.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Jakarta',
+      }) + ' WIB';
+    } catch {
+      formattedDate = String(registration.createdAt);
+    }
+  }
+
+  const lines = [
+    'PENDAFTARAN EVENT - SEE EVENT',
+    '',
+    `Booking ID: #${regId}`,
+    `Event: ${eventTitle}`,
+    `Sesi: ${session}`,
+    `Nama Pendaftar: ${participantName}`,
+    `Email Pendaftar: ${participantEmail}`,
+    `WhatsApp Pendaftar: ${participantPhone}`,
+    `Lokasi Event: ${location}`,
+    `Total Tagihan: ${formattedPrice}`,
+    `Status Pendaftaran: ${status} (Menunggu Konfirmasi Email)`,
+    `Waktu Pendaftaran: ${formattedDate}`,
+  ];
+
+  if (paymentCheckoutUrl) {
+    lines.push(`Link Pembayaran Online: ${paymentCheckoutUrl}`);
+  }
+
+  lines.push('');
+  lines.push('Catatan: Pendaftaran wajib dikonfirmasi via email pendaftar dalam batas waktu 3 menit sebelum slot kedaluwarsa.');
+
+  return lines.join('\n');
+}
+
 let guestPlaceholderHash;
 const getGuestPlaceholderHash = () => (
   guestPlaceholderHash ??= argon2.hash(`guest-unusable-${crypto.randomBytes(24).toString('hex')}`)
@@ -169,21 +223,7 @@ export async function registerEvent(req, res, next) {
 
     const participantName = guestName || reg.user.name;
     const participantContact = guestContact || reg.user.phone || '';
-
-    const lines = [
-      'PENDAFTARAN EVENT - SEE EVENT',
-      '',
-      `Booking ID: #${reg.id ? reg.id.slice(-6) : 'PENDING'}`,
-      `Event: ${event.title}`,
-      `Session: ${selectedSession}`,
-      `Participant Name: ${participantName}`,
-      `Email: ${reg.user.email}`,
-      ...(participantContact ? [`WhatsApp: ${participantContact}`] : []),
-      `Location: ${event.location || 'TBA'}`,
-      `Fee: Rp ${Number(event.price).toLocaleString('id-ID')}`,
-    ];
-
-    const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(lines.join('\n'))}`;
+    const participantEmail = reg.user.email;
 
     // Online Payment checkout session (if broker is enabled)
     let paymentCheckout = null;
@@ -191,12 +231,20 @@ export async function registerEvent(req, res, next) {
       paymentCheckout = await createEventPaymentSession({
         event,
         registration: reg,
-        user: { id: userId, name: participantName, email: reg.user.email, phone: participantContact },
+        user: { id: userId, name: participantName, email: participantEmail, phone: participantContact },
       }).catch((err) => {
         console.warn('[EventRegistration] Payment session generation failed:', err.message);
         return null;
       });
     }
+
+    const waMsg = buildEventRegistrationWaMessage({
+      event,
+      registration: reg,
+      user: { id: userId, name: participantName, email: participantEmail, phone: participantContact },
+      paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
+    });
+    const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(waMsg)}`;
 
     // Signed payment token for guest checkout access
     const paymentToken = process.env.JWT_SECRET

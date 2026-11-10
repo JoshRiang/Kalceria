@@ -224,11 +224,40 @@ export function ApplyModal({
     setStep(2);
   }
 
+  // Coherent WhatsApp message format for admin +62 8117998790 with zero emojis
+  const fallbackWaUrl = useMemo(() => {
+    const rawPrice = Number(event?.price || 0);
+    const priceStr = rawPrice === 0 ? "Rp 0 (Gratis / Free Entry)" : `Rp ${rawPrice.toLocaleString("id-ID")}`;
+    const participantName = (mode === "account" ? form.identifier : form.name) || authUser?.name || "—";
+    const participantContact = form.contact || authUser?.phone || "—";
+    const session = form.session || "—";
+
+    const lines = [
+      "PENDAFTARAN EVENT - SEE EVENT",
+      "",
+      `Booking ID: #${doneData?.registration?.id ? doneData.registration.id.slice(-6) : "PENDING"}`,
+      `Event: ${event?.title || "—"}`,
+      `Sesi: ${session}`,
+      `Nama Pendaftar: ${participantName}`,
+      `Email Pendaftar: ${userEmail || "—"}`,
+      `WhatsApp Pendaftar: ${participantContact}`,
+      `Lokasi Event: ${event?.location || "TBA"}`,
+      `Total Tagihan: ${priceStr}`,
+      `Status Pendaftaran: ${doneData?.registration?.paymentStatus || "PENDING"} (Menunggu Konfirmasi Email)`,
+      "",
+      "Catatan: Pendaftaran wajib dikonfirmasi via email pendaftar dalam batas waktu 3 menit sebelum slot kedaluwarsa.",
+    ];
+
+    const cleanText = lines.join("\n");
+    return `https://wa.me/628117998790?text=${encodeURIComponent(cleanText)}`;
+  }, [event, doneData, form, mode, authUser, userEmail]);
+
   // Handle WhatsApp action: Store in Backend ONLY when WhatsApp is clicked!
   const handleConfirmViaWa = async () => {
-    if (doneData?.whatsappUrl && hasConfirmedWa) {
+    const currentWaUrl = doneData?.whatsappUrl || fallbackWaUrl;
+    if (currentWaUrl && hasConfirmedWa) {
       if (typeof window !== "undefined") {
-        window.open(doneData.whatsappUrl, "_blank");
+        window.open(currentWaUrl, "_blank");
       }
       return;
     }
@@ -261,10 +290,11 @@ export function ApplyModal({
       setDoneData(res.data);
       setHasConfirmedWa(true);
 
-      if (waWin && !waWin.closed && res.data?.whatsappUrl) {
-        waWin.location.href = res.data.whatsappUrl;
-      } else if (res.data?.whatsappUrl && typeof window !== "undefined") {
-        window.open(res.data.whatsappUrl, "_blank");
+      const targetWaUrl = res.data?.whatsappUrl || fallbackWaUrl;
+      if (waWin && !waWin.closed && targetWaUrl) {
+        waWin.location.href = targetWaUrl;
+      } else if (targetWaUrl && typeof window !== "undefined") {
+        window.open(targetWaUrl, "_blank");
       }
     } catch (err) {
       if (waWin && !waWin.closed) {
@@ -417,7 +447,7 @@ export function ApplyModal({
                 rel="noopener noreferrer"
                 className="w-full py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:opacity-95 text-black font-black uppercase tracking-tight text-xs rounded-lg transition-all flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)] mb-2"
               >
-                💳 Pay Online Now (QRIS / VA / E-Wallet)
+                Pay Online Now (QRIS / VA / E-Wallet)
               </a>
             )}
 
@@ -493,9 +523,9 @@ export function ApplyModal({
                         >
                           Check Email
                         </a>
-                        {doneData?.whatsappUrl && (
+                        {(doneData?.whatsappUrl || fallbackWaUrl) && (
                           <a
-                            href={doneData.whatsappUrl}
+                            href={doneData?.whatsappUrl || fallbackWaUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[11px] text-white/50 hover:text-white/80 underline underline-offset-2 transition-colors select-none mt-1"

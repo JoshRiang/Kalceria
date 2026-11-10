@@ -22,6 +22,7 @@ import {
 } from '../controllers/serviceController.js';
 import {
   registerEvent,
+  buildEventRegistrationWaMessage,
   getEventRegistrationForManage,
   confirmEventRegistration,
   deleteOwnEventRegistration,
@@ -1156,6 +1157,144 @@ describe('Service Request: Comms Channel & Location Verification', () => {
         const res3 = createMockRes();
         await checkEventRegistrationDefense(fakeReq, res3, () => { passed = true; });
         assert.equal(passed, true);
+      });
+
+      it('buildEventRegistrationWaMessage formats coherent event metadata with zero emojis and target admin', () => {
+        const testEvent = {
+          id: 'evt-track-day-1',
+          title: 'Sentul Track Day Championship',
+          location: 'Sentul International Circuit, Bogor',
+          price: 350000,
+        };
+        const testReg = {
+          id: 'reg-uuid-1234567890',
+          selectedSession: 'Morning Session (08:00 - 12:00)',
+          paymentStatus: 'PENDING',
+          createdAt: new Date('2026-11-20T10:00:00Z'),
+        };
+        const testUser = {
+          name: 'Varsha Kurniawan',
+          email: 'varsikurniawan@gmail.com',
+          phone: '+628117998790',
+        };
+
+        const msg = buildEventRegistrationWaMessage({
+          event: testEvent,
+          registration: testReg,
+          user: testUser,
+          paymentCheckoutUrl: 'https://checkout.xendit.co/v2/test-123',
+        });
+
+        // 1. Header & Identifiers
+        assert.match(msg, /^PENDAFTARAN EVENT - SEE EVENT/);
+        assert.match(msg, /Booking ID: #567890/);
+        assert.match(msg, /Event: Sentul Track Day Championship/);
+        assert.match(msg, /Sesi: Morning Session \(08:00 - 12:00\)/);
+
+        // 2. Participant & Location
+        assert.match(msg, /Nama Pendaftar: Varsha Kurniawan/);
+        assert.match(msg, /Email Pendaftar: varsikurniawan@gmail\.com/);
+        assert.match(msg, /WhatsApp Pendaftar: \+628117998790/);
+        assert.match(msg, /Lokasi Event: Sentul International Circuit, Bogor/);
+
+        // 3. Billing & Status
+        assert.match(msg, /Total Tagihan: Rp 350\.000/);
+        assert.match(msg, /Status Pendaftaran: PENDING \(Menunggu Konfirmasi Email\)/);
+        assert.match(msg, /Link Pembayaran Online: https:\/\/checkout\.xendit\.co\/v2\/test-123/);
+        assert.match(msg, /Catatan: Pendaftaran wajib dikonfirmasi via email pendaftar dalam batas waktu 3 menit/);
+
+        // 4. Free event formatting
+        const freeMsg = buildEventRegistrationWaMessage({
+          event: { ...testEvent, price: 0 },
+          registration: testReg,
+          user: testUser,
+        });
+        assert.match(freeMsg, /Total Tagihan: Rp 0 \(Gratis \/ Free Entry\)/);
+
+        // 5. Zero emojis constraint across all unicode ranges
+        const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+        assert.equal(emojiRegex.test(msg), false, 'Event WhatsApp message must not contain any emojis');
+        assert.equal(emojiRegex.test(freeMsg), false, 'Free event WhatsApp message must not contain any emojis');
+      });
+
+      it('registerEvent returns whatsappUrl pointing to WA_ADMIN with coherent metadata and zero emojis', async () => {
+        const originalTransaction = prisma.$transaction;
+        const originalUserFindUnique = prisma.user.findUnique;
+        const originalUserCreate = prisma.user.create;
+
+        prisma.$transaction = async (fn) => {
+          const fakeTx = {
+            $queryRaw: async () => [],
+            event: {
+              findUnique: async () => ({
+                ...mockEvent,
+                status: 'OPEN',
+                quota: 100,
+                sessionOptions: ['Night Drive 20:00'],
+                regStartTime: new Date(Date.now() - 3600000),
+                regEndTime: new Date(Date.now() + 3600000),
+              }),
+            },
+            eventRegistration: {
+              deleteMany: async () => ({ count: 0 }),
+              findUnique: async () => null,
+              count: async () => 1,
+              create: async ({ data }) => ({
+                id: 'reg-new-uuid-888',
+                userId: data.userId,
+                eventId: data.eventId,
+                selectedSession: data.selectedSession,
+                paymentStatus: 'PENDING',
+                createdAt: new Date(),
+                user: { id: data.userId, name: 'Wa Test Participant', email: 'watest@kalceria.test', phone: '+628117998790' },
+                event: mockEvent,
+              }),
+            },
+          };
+          return fn(fakeTx);
+        };
+        prisma.user.findUnique = async () => null;
+        prisma.user.create = async ({ data }) => ({
+          id: 'user-guest-new-id',
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+        });
+
+        try {
+          const req = {
+            params: { eventId: mockEvent.id },
+            body: {
+              name: 'Wa Test Participant',
+              email: 'watest@kalceria.test',
+              contact: '+628117998790',
+              selectedSession: 'Night Drive 20:00',
+            },
+            ip: '198.51.100.99',
+            get: () => '',
+          };
+          const res = createMockRes();
+
+          await registerEvent(req, res, () => {});
+          const expectedAdmin = process.env.WA_ADMIN_NUMBER || '628117998790';
+          assert.equal(res.statusCode, 201);
+          assert.ok(res.body.whatsappUrl);
+          assert.match(res.body.whatsappUrl, new RegExp(`^https:\\/\\/wa\\.me\\/${expectedAdmin}\\?text=`));
+
+          const decodedText = decodeURIComponent(res.body.whatsappUrl.replace(`https://wa.me/${expectedAdmin}?text=`, ''));
+          assert.match(decodedText, /^PENDAFTARAN EVENT - SEE EVENT/);
+          assert.match(decodedText, /watest@kalceria\.test/);
+          assert.match(decodedText, /Wa Test Participant/);
+          assert.match(decodedText, /Total Tagihan: Rp 150\.000/);
+
+          // Zero emojis in decoded URL text
+          const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+          assert.equal(emojiRegex.test(decodedText), false, 'Decoded whatsappUrl text must not contain any emojis');
+        } finally {
+          prisma.$transaction = originalTransaction;
+          prisma.user.findUnique = originalUserFindUnique;
+          prisma.user.create = originalUserCreate;
+        }
       });
     });
   });
