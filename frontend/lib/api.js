@@ -201,7 +201,7 @@ export const postMiniEvent = (data) => api.post('/mini-events', data);
 export const putMiniEvent = (id, data) => api.put(`/mini-events/${id}`, data);
 export const delMiniEvent = (id) => api.delete(`/mini-events/${id}`);
 
-const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB
+const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024; // 4.5 MB (native Vercel OIDC limit)
 
 const MIME_EXT_MAP = {
   "image/jpeg": "jpg",
@@ -226,7 +226,7 @@ const MIME_EXT_MAP = {
 
 export const uploadBlobMedia = async (file, { purpose } = {}) => {
   if (file && file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("Ukuran file melebihi 25 MB. Maksimal ukuran file adalah 25 MB.");
+    throw new Error("Ukuran file melebihi batas 4.5 MB. Mohon gunakan file dengan ukuran lebih kecil.");
   }
 
   let filename = file?.name || "";
@@ -236,41 +236,7 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
     filename = `upload-${Date.now()}.${ext}`;
   }
 
-  // 1. Direct Client-Side S3 Upload via @vercel/blob/client
-  // Bypasses Vercel's 4.5 MB Serverless Function body limit completely
-  if (typeof window !== "undefined" && file) {
-    try {
-      const { upload } = await import("@vercel/blob/client");
-      const cleanFilename = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const targetPathname = purpose === "event-clip"
-        ? `events/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${cleanFilename}`
-        : `events/${Date.now()}-${cleanFilename}`;
-
-      const blobResult = await upload(targetPathname, file, {
-        access: "public",
-        handleUploadUrl: "/api/blob/upload",
-      });
-
-      if (blobResult?.url) {
-        const isPrivate = blobResult.url.includes(".private.blob.vercel-storage.com");
-        const finalUrl = isPrivate
-          ? `/api/blob/raw?url=${encodeURIComponent(blobResult.url)}`
-          : blobResult.url;
-
-        return {
-          success: true,
-          url: finalUrl,
-          rawBlobUrl: blobResult.url,
-          access: isPrivate ? "private" : "public",
-          provider: "vercel-blob-client",
-        };
-      }
-    } catch (clientErr) {
-      console.warn("Client direct blob upload fallback:", clientErr?.message);
-    }
-  }
-
-  // 2. Fallback to multipart server upload for smaller files or environments without client token
+  // Native Vercel OIDC multipart upload
   const formData = new FormData();
   formData.append("file", file, filename);
   if (purpose) formData.append("purpose", purpose);
@@ -280,12 +246,10 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
   });
   if (!res.ok) {
     if (res.status === 413 || (file && file.size > 4.2 * 1024 * 1024)) {
-      throw new Error(
-        "File melebihi batas 4.5 MB Vercel Serverless. Tambahkan BLOB_READ_WRITE_TOKEN di Vercel Dashboard untuk direct upload hingga 25 MB, atau gunakan file di bawah 4.5 MB."
-      );
+      throw new Error("Ukuran file melebihi batas 4.5 MB. Mohon gunakan file dengan ukuran lebih kecil.");
     }
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Failed to upload media file");
+    throw new Error(err.error || "Gagal mengunggah file media.");
   }
   return res.json();
 };

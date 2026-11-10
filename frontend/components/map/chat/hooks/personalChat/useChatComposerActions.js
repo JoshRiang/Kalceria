@@ -53,8 +53,8 @@ export function useChatComposerActions({
     if (!file) return;
     setMediaError("");
 
-    if (file.size > 25 * 1024 * 1024) {
-      setMediaError("Ukuran file melebihi 25 MB. Maksimal ukuran file adalah 25 MB.");
+    if (file.size > 4.5 * 1024 * 1024) {
+      setMediaError("Ukuran file melebihi 4.5 MB. Maksimal ukuran file adalah 4.5 MB.");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }

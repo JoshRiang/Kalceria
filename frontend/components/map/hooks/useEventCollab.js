@@ -305,10 +305,10 @@ export function useEventCollab({ events, setEvents, setNotice }) {
       input.onchange = async (e) => {
         const file = e.target?.files?.[0];
         if (!file) return;
-        if (file.size > 25 * 1024 * 1024) {
+        if (file.size > 4.5 * 1024 * 1024) {
           setCollaboratorUploadState({
             status: "error",
-            errorMessage: "Upload media Gagal/Ukuran Media melebihi 25 MB",
+            errorMessage: "Upload media gagal: Ukuran media melebihi 4.5 MB",
           });
           return;
         }
