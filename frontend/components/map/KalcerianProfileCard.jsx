@@ -26,6 +26,7 @@ export default function KalcerianProfileCard({
   isOwnProfile = false,
   onEditProfile,
   inline = false,
+  isBlockedByTarget = false,
 }) {
   const [imgError, setImgError] = useState(false);
 
@@ -126,16 +127,20 @@ export default function KalcerianProfileCard({
       <div className={`relative w-full aspect-square max-h-[250px] sm:max-h-[270px] mx-auto overflow-hidden ${
         isMapDark ? "bg-[#0a0e27]" : "bg-[#f3f4f6]"
       }`}>
-        <NormalizedMediaCover
-          media={normalizedMedia}
-          altText={`${displayName} cover`}
-          onError={() => setImgError(true)}
-          fallbackColor={
-            typeof fallbackCover === "string" && (fallbackCover.startsWith("#") || fallbackCover.startsWith("rgb"))
-              ? fallbackCover
-              : (user?.coverColor || null)
-          }
-        />
+        {isBlockedByTarget ? (
+          <div className="w-full h-full bg-[#000000]" />
+        ) : (
+          <NormalizedMediaCover
+            media={normalizedMedia}
+            altText={`${displayName} cover`}
+            onError={() => setImgError(true)}
+            fallbackColor={
+              typeof fallbackCover === "string" && (fallbackCover.startsWith("#") || fallbackCover.startsWith("rgb"))
+                ? fallbackCover
+                : (user?.coverColor || null)
+            }
+          />
+        )}
         {/* Subtle top/bottom vignette to enhance depth */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
       </div>
@@ -148,14 +153,18 @@ export default function KalcerianProfileCard({
               isMapDark ? "border-[#161b22] bg-[#161b22]" : "border-white bg-white"
             }`}
           >
-            <Image
-              src={getAvatarUrl(user)}
-              alt={displayName}
-              width={88}
-              height={88}
-              unoptimized
-              className="w-full h-full object-cover"
-            />
+            {isBlockedByTarget ? (
+              <div className="w-full h-full bg-[#000000]" />
+            ) : (
+              <Image
+                src={getAvatarUrl(user)}
+                alt={displayName}
+                width={88}
+                height={88}
+                unoptimized
+                className="w-full h-full object-cover"
+              />
+            )}
           </div>
 
           {/* Close 'X' button for Mobile Family: snug and tight directly on profile picture rim */}

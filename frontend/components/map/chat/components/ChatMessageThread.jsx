@@ -7,6 +7,10 @@ import { ChatMessageContextMenu } from "./ChatMessageContextMenu";
 export function ChatMessageThread({
   groupedMessages,
   myId,
+  targetId,
+  displayName = "Kalcerian",
+  isTargetBlocked = false,
+  isBlockedByTarget = false,
   isMapDark,
   selectMode,
   selectedMsgIds,
@@ -32,6 +36,43 @@ export function ChatMessageThread({
   const [nudgedMsgId, setNudgedMsgId] = useState(null);
   const messageRefs = useRef({});
   const nudgeTimerRef = useRef(null);
+
+  // Realtime block / unblock system event pills
+  const [blockEvents, setBlockEvents] = useState(() => {
+    if (typeof window !== "undefined" && targetId) {
+      try {
+        const stored = localStorage.getItem(`kalceria:chat_block_events:${targetId}`);
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    const handleBlockChange = (e) => {
+      const { targetId: changedTargetId, action } = e.detail || {};
+      if (String(changedTargetId) === String(targetId)) {
+        setBlockEvents((prev) => {
+          const next = [...prev, { id: `block_evt_${Date.now()}`, type: action, ts: Date.now() }];
+          try {
+            localStorage.setItem(`kalceria:chat_block_events:${targetId}`, JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+      }
+    };
+    window.addEventListener("kalceria:user-block-changed", handleBlockChange);
+    return () => window.removeEventListener("kalceria:user-block-changed", handleBlockChange);
+  }, [targetId]);
+
+  // Derived active block events list (synthesizes initial block if user is currently blocked without logged events)
+  const displayBlockEvents = useMemo(() => {
+    if (blockEvents.length > 0) return blockEvents;
+    if (isTargetBlocked) {
+      return [{ id: `init_blocked_${targetId}`, type: "block", ts: Date.now() }];
+    }
+    return [];
+  }, [blockEvents, isTargetBlocked, targetId]);
 
   const handleJumpToMessage = useCallback((targetId) => {
     if (!targetId) return;
@@ -99,20 +140,25 @@ export function ChatMessageThread({
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-      {/* BG_PersonalChat.webp Background Layer (~60% opacity / reduced by 40% for soft clarity) */}
+      {/* Background Layer: Solid Black when blocked by peer, otherwise BG_PersonalChat.webp */}
       <div
-        className="absolute inset-0 z-0 pointer-events-none bg-cover bg-center bg-no-repeat transition-opacity duration-300"
+        className="absolute inset-0 z-0 pointer-events-none transition-all duration-300"
         style={{
-          backgroundImage: "url('/BG_PersonalChat.webp')",
-          opacity: isMapDark ? 0.45 : 0.58,
+          backgroundColor: isBlockedByTarget ? "#000000" : undefined,
+          backgroundImage: isBlockedByTarget ? "none" : "url('/BG_PersonalChat.webp')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          opacity: isBlockedByTarget ? 1 : isMapDark ? 0.45 : 0.58,
         }}
       />
-      {/* Subtle Theme Contrast Veil so text bubbles remain super clear while keeping the BG pattern soft */}
-      <div
-        className={`absolute inset-0 z-0 pointer-events-none ${
-          isMapDark ? "bg-[#0b141a]/45" : "bg-white/30"
-        }`}
-      />
+      {/* Subtle Theme Contrast Veil (hidden if blocked by peer for deep black) */}
+      {!isBlockedByTarget && (
+        <div
+          className={`absolute inset-0 z-0 pointer-events-none ${
+            isMapDark ? "bg-[#0b141a]/45" : "bg-white/30"
+          }`}
+        />
+      )}
 
       {/* Scrollable Message Thread: Optimized with GPU acceleration & low-latency scrolling */}
       <div
@@ -181,6 +227,21 @@ export function ChatMessageThread({
                 />
               </div>
             ))}
+          </div>
+        ))}
+
+        {/* Realtime Block / Unblock System Event Pills (matching size, placement & behaviour of Today 8:59 am) */}
+        {displayBlockEvents.map((evt) => (
+          <div key={evt.id} className="flex justify-center my-1.5 pointer-events-none">
+            <span
+              className={`px-3 py-0.5 rounded-md text-[10.5px] font-medium border shadow-md backdrop-blur-md pointer-events-auto ${
+                isMapDark
+                  ? "bg-[#182229]/95 border-white/15 text-white/85 shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+                  : "bg-white/95 border-black text-black shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
+              }`}
+            >
+              You <span className="text-[#ef4444] font-semibold">{evt.type === "block" ? "blocked" : "unblocked"}</span> {displayName}
+            </span>
           </div>
         ))}
       </div>

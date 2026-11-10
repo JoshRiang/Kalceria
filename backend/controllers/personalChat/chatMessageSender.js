@@ -70,7 +70,8 @@ export async function sendPersonalChatMessage(req, res, next) {
     const oldestRaw = unwrapPipeResult(preResults?.[3], null);
     const emptyConfirmed = unwrapPipeResult(preResults?.[4], null);
 
-    if (blockedByMe || blockedByTarget) {
+    // Blocker cannot send messages while keeping target blocked
+    if (blockedByMe) {
       return res.status(403).json({ error: 'Cannot send message to this user.' });
     }
     if (nonceSetReply !== 'OK') {
@@ -107,7 +108,7 @@ export async function sendPersonalChatMessage(req, res, next) {
       callDuration: typeof body.callDuration === 'number' && Number.isFinite(body.callDuration) ? body.callDuration : null,
       replyTo: body.replyTo && typeof body.replyTo === 'object' ? body.replyTo : null,
       ts, // Preserve client signed timestamp so E2EE signature verification matches 100%
-      status: 'sent', // Always starts as 'sent' until the recipient opens & reads the chat
+      status: blockedByTarget ? 'blocked_drop' : 'sent', // One-sided retention: marked blocked_drop so blocker never sees it
     };
 
     const packed = packEnvelope(envelope);
@@ -124,33 +125,35 @@ export async function sendPersonalChatMessage(req, res, next) {
     writePipe.ltrim(hotKey, 0, HOT_RING_BUFFER_SIZE - 1);
     writePipe.expire(hotKey, HOT_TTL_SECONDS);
 
-    // Update O(1) conversation metadata & O(1) recipient global inbox watermark in the exact same pipeline
-    const metaFields = [
-      'lastTs',
-      String(envelope.ts),
-      'lastId',
-      envelope.id,
-      'lastSender',
-      String(userId),
-      'emptyConfirmed',
-      '0',
-    ];
-    if (emptyConfirmed === '1' || oldestRaw) {
-      metaFields.push('backfilled', '1');
-    }
-    writePipe.hset(metaKey, ...metaFields);
-    writePipe.expire(metaKey, HOT_TTL_SECONDS);
+    // If sender is blocked by target, do NOT notify or update target's unread counter or inbox watermark
+    if (!blockedByTarget) {
+      const metaFields = [
+        'lastTs',
+        String(envelope.ts),
+        'lastId',
+        envelope.id,
+        'lastSender',
+        String(userId),
+        'emptyConfirmed',
+        '0',
+      ];
+      if (emptyConfirmed === '1' || oldestRaw) {
+        metaFields.push('backfilled', '1');
+      }
+      writePipe.hset(metaKey, ...metaFields);
+      writePipe.expire(metaKey, HOT_TTL_SECONDS);
 
-    const inboxVer = `${Date.now()}_${envelope.id.slice(-6)}`;
-    writePipe.hincrby(`chat:unread:${targetId}`, String(userId), 1);
-    writePipe.expire(`chat:unread:${targetId}`, HOT_TTL_SECONDS);
-    writePipe.hset(
-      `chat:inbox_meta:${targetId}`,
-      String(userId),
-      JSON.stringify({ ts: envelope.ts, id: envelope.id, msgType: envelope.msgType })
-    );
-    writePipe.expire(`chat:inbox_meta:${targetId}`, HOT_TTL_SECONDS);
-    writePipe.set(`chat:inbox_ver:${targetId}`, inboxVer, 'EX', HOT_TTL_SECONDS);
+      const inboxVer = `${Date.now()}_${envelope.id.slice(-6)}`;
+      writePipe.hincrby(`chat:unread:${targetId}`, String(userId), 1);
+      writePipe.expire(`chat:unread:${targetId}`, HOT_TTL_SECONDS);
+      writePipe.hset(
+        `chat:inbox_meta:${targetId}`,
+        String(userId),
+        JSON.stringify({ ts: envelope.ts, id: envelope.id, msgType: envelope.msgType })
+      );
+      writePipe.expire(`chat:inbox_meta:${targetId}`, HOT_TTL_SECONDS);
+      writePipe.set(`chat:inbox_ver:${targetId}`, inboxVer, 'EX', HOT_TTL_SECONDS);
+    }
 
     // Fast single-statement INSERT on PostgreSQL concurrently with Redis writePipe
     const dbWritePromise = prisma?.personalChatMessage
@@ -183,7 +186,7 @@ export async function sendPersonalChatMessage(req, res, next) {
 
     await Promise.all([writePipe.exec().catch(() => {}), dbWritePromise]);
 
-    res.status(201).json({ ok: true, envelope });
+    res.status(201).json({ ok: true, envelope: { ...envelope, status: 'sent' } });
   } catch (err) {
     next(err);
   }

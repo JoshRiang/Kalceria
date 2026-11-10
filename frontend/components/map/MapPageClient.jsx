@@ -215,7 +215,7 @@ export default function MapPage() {
   });
 
   // Blocked users state (modularized package hook: synced with localStorage + backend API)
-  const { blockedUserIds, handleBlockUser, handleUnblockUser } = useMapBlockedUsers();
+  const { blockedUserIds, blockedByUserIds, handleBlockUser, handleUnblockUser } = useMapBlockedUsers();
 
   // derived: ONLY online & live-location-enabled users with real finite coordinates render on the map
   const visibleMapUsers = useMemo(() => {
@@ -532,7 +532,7 @@ export default function MapPage() {
             searchQuery={searchQuery} setSearchQuery={setSearchQuery} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}
             isDataLoading={isDataLoading}
             isMapDark={isMapDark} setFocusedUserId={setFocusedUserId}
-            sidebarKalcerians={sidebarKalcerians} focusUser={focusUser} blockedUserIds={blockedUserIds}
+            sidebarKalcerians={sidebarKalcerians} focusUser={focusUser} blockedUserIds={blockedUserIds} blockedByUserIds={blockedByUserIds}
             onBlockUser={handleBlockUser} onUnblockUser={handleUnblockUser} onOpenItemOnMap={handleOpenItemOnMap}
             currentUser={currentUser} requestedEventId={requestedEventId} eventRequestsMap={eventRequestsMap}
             acceptedCollabsMap={acceptedCollabsMap} eventGroupChatMap={eventGroupChatMap}

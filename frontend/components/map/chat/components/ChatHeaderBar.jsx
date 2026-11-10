@@ -11,6 +11,7 @@ export function ChatHeaderBar({
   avatarUrl,
   isFavourite,
   isMuted,
+  isBlockedByTarget = false,
   isPeerTyping,
   menuOpen,
   setMenuOpen,
@@ -90,13 +91,17 @@ export function ChatHeaderBar({
             title="Click here for contact info"
           >
             <div className="relative w-9 h-9 rounded-full overflow-hidden border shrink-0 border-current/30">
-              <ContentImage
-                src={avatarUrl(activeChatUser)}
-                alt={displayName}
-                width={48}
-                height={48}
-                className="w-full h-full object-cover"
-              />
+              {isBlockedByTarget ? (
+                <div className="w-full h-full bg-[#000000]" />
+              ) : (
+                <ContentImage
+                  src={avatarUrl(activeChatUser)}
+                  alt={displayName}
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1">

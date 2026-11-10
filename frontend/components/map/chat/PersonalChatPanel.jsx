@@ -20,6 +20,8 @@ export function PersonalChatPanel({
   avatarUrl,
   isFavourite = false,
   isMuted = false,
+  isBlockedByTarget = false,
+  isTargetBlocked = false,
   initialCallState = null,
   onCallEnded,
   onToggleFavourite,
@@ -157,6 +159,7 @@ export function PersonalChatPanel({
             avatarUrl={avatarUrl}
             isFavourite={isFavourite}
             isMuted={isMuted}
+            isBlockedByTarget={isBlockedByTarget}
             isPeerTyping={isPeerTyping}
             menuOpen={menuOpen}
             setMenuOpen={setMenuOpen}
@@ -184,6 +187,10 @@ export function PersonalChatPanel({
           <ChatMessageThread
             groupedMessages={groupedMessages}
             myId={myId}
+            targetId={targetId}
+            displayName={displayName}
+            isTargetBlocked={isTargetBlocked}
+            isBlockedByTarget={isBlockedByTarget}
             isMapDark={isMapDark}
             selectMode={selectMode}
             selectedMsgIds={selectedMsgIds}
@@ -266,6 +273,7 @@ export function PersonalChatPanel({
               <KalcerianProfileCard
                 user={activeChatUser}
                 isMapDark={isMapDark}
+                isBlockedByTarget={isBlockedByTarget}
                 showMobileClose={true}
                 onClose={() => setShowContactInfo(false)}
                 isMobileCompact={true}

@@ -6,6 +6,7 @@ import ContentImage from "@/components/ui/ContentImage";
 export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
   user,
   isBlocked,
+  isBlockedByTarget = false,
   isExpanded,
   isMapDark,
   isFavourite,
@@ -35,15 +36,19 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
               : "border-[#d0d7de] opacity-60 group-hover/avatar:scale-105"
           }`}
         >
-          <ContentImage
-            className={`w-full h-full object-cover transition-all ${
-              isExpanded ? "blur-[2.5px] brightness-50" : ""
-            }`}
-            src={avatarUrl(user)}
-            alt={user.nickname || user.name}
-            width={64}
-            height={64}
-          />
+          {isBlockedByTarget ? (
+            <div className="w-full h-full bg-[#000000]" />
+          ) : (
+            <ContentImage
+              className={`w-full h-full object-cover transition-all ${
+                isExpanded ? "blur-[2.5px] brightness-50" : ""
+              }`}
+              src={avatarUrl(user)}
+              alt={user.nickname || user.name}
+              width={64}
+              height={64}
+            />
+          )}
 
           {/* When Expanded (Desktop/iPad): profile picture blurs and gets redup with thin white X */}
           {isExpanded && (

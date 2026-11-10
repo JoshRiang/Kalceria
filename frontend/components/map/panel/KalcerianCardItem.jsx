@@ -14,6 +14,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
   user,
   userEvent,
   isBlocked,
+  isBlockedByTarget = false,
   isExpanded,
   isConfirming,
   confirmingAction,
@@ -73,19 +74,19 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
       } ${
         isBlocked
           ? isMapDark
-            ? "bg-[#0f1014]/50 border-[#2a2d37]/40 opacity-40 select-none shadow-none"
-            : "bg-white/50 border-[#e5e7eb]/60 opacity-40 select-none shadow-none"
+            ? "bg-[#0f1014]/92 border-[#2e323d] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.1),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)]"
+            : "bg-white/95 border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)]"
           : isMapDark
           ? "bg-[#0f1014]/84 border-[#2e323d] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.1),inset_0_-1px_1px_rgba(0,0,0,0.6),0_2px_6px_rgba(0,0,0,0.35)] hover:border-[#4d5663] hover:bg-[#0f1014]/92"
           : "bg-white/88 border-[#d1d5db] shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.04)] hover:border-[#b0b8c2] hover:bg-white/95"
       }`}
     >
       <div
-        className={`relative w-full grid grid-cols-[52px_1fr_54px] items-center gap-2 px-3 py-2.5 text-left transition-colors group outline-none ${
+        className={`relative w-full grid grid-cols-[52px_1fr_54px] items-center gap-2 px-3 py-2.5 text-left transition-[filter] duration-200 ease-out group outline-none ${
           isBlocked
-            ? "cursor-default pointer-events-none"
+            ? "cursor-default"
             : "cursor-pointer active:scale-[0.99]"
-        } ${isConfirming ? "blur-[4px] pointer-events-none select-none" : ""}`}
+        } ${isConfirming ? "blur-[3.5px] pointer-events-none select-none" : "blur-0"}`}
         onMouseEnter={() => !isBlocked && !isConfirming && setHoveredKalcerian(user.id)}
         onMouseLeave={() => !isBlocked && !isConfirming && setHoveredKalcerian(null)}
         onClick={() => {
@@ -123,6 +124,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
         <KalcerianCardAvatar
           user={user}
           isBlocked={isBlocked}
+          isBlockedByTarget={isBlockedByTarget}
           isExpanded={isExpanded}
           isMapDark={isMapDark}
           isFavourite={isFavourite}
@@ -221,6 +223,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
             <KalcerianProfileCard
               user={user}
               isMapDark={isMapDark}
+              isBlockedByTarget={isBlockedByTarget}
               showMobileClose={deviceFamily === "hp" || deviceFamily === "tab"}
               onClose={() => setExpandedUserId(null)}
               inline={true}

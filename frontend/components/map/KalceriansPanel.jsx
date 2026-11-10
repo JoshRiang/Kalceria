@@ -41,6 +41,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
   sidebarKalcerians,
   focusUser,
   blockedUserIds = [],
+  blockedByUserIds = [],
   onBlockUser,
   onUnblockUser,
   onOpenItemOnMap,
@@ -234,6 +235,8 @@ export const KalceriansPanel = memo(function KalceriansPanel({
               avatarUrl={avatarUrl}
               isFavourite={favouriteUserIds.includes(String(activeChatUser.id))}
               isMuted={mutedUserIds.includes(String(activeChatUser.id))}
+              isBlockedByTarget={blockedByUserIds.includes(String(activeChatUser.id))}
+              isTargetBlocked={blockedUserIds.includes(String(activeChatUser.id))}
               initialCallState={incomingCallInitialState}
               onCallEnded={() => setIncomingCallInitialState(null)}
               onToggleFavourite={onToggleFavourite}
@@ -356,6 +359,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
                 user={user}
                 userEvent={userEvent}
                 isBlocked={isBlocked}
+                isBlockedByTarget={blockedByUserIds.includes(String(user.id))}
                 isExpanded={isExpanded}
                 isConfirming={isConfirming}
                 confirmingAction={confirmingAction}

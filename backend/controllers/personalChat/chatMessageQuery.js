@@ -37,19 +37,21 @@ export async function getPersonalChatMessages(req, res, next) {
     const metaKey = getMetaConversationKey(convHash);
     const myRtcKey = getChatRtcSignalKey(userId, targetId);
 
-    // 1. Single O(1) Redis pipeline: conversation metadata + optional piggybacked P2P WebRTC signals
+    // 1. Single O(1) Redis pipeline: conversation metadata + block relationship + optional piggybacked P2P WebRTC signals
     const metaPipe = redis.pipeline();
     metaPipe.hgetall(metaKey);
+    metaPipe.sismember(`blocked:${userId}`, targetId);
     if (includeRtc) {
       metaPipe.lrange(myRtcKey, 0, -1);
       metaPipe.del(myRtcKey);
     }
     const metaPipeRes = await metaPipe.exec().catch(() => null);
     const meta = unwrapPipeResult(metaPipeRes?.[0], {}) || {};
+    const isTargetBlockedByMe = Number(unwrapPipeResult(metaPipeRes?.[1], 0)) === 1;
 
     let rtcSignals = [];
     if (includeRtc) {
-      const rawRtc = unwrapPipeResult(metaPipeRes?.[1], []);
+      const rawRtc = unwrapPipeResult(metaPipeRes?.[2], []);
       rtcSignals = (Array.isArray(rawRtc) ? rawRtc : [])
         .map((item) => {
           try {
@@ -244,6 +246,12 @@ export async function getPersonalChatMessages(req, res, next) {
 
     if (isCursorPagination) {
       combined = combined.filter((m) => Number(m.ts) < cursorTs);
+    }
+
+    if (isTargetBlockedByMe) {
+      combined = combined.filter(
+        (m) => !(String(m.senderId) === String(targetId) && m.status === 'blocked_drop')
+      );
     }
 
     combined.sort((a, b) => Number(b.ts) - Number(a.ts));

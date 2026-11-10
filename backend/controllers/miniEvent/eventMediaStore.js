@@ -303,7 +303,7 @@ export async function hydrateAndPruneEventMedia(ev, creatorName = null) {
  * Pure planner for an owner edit: which clips remain, which are removed.
  * Clips another collaborator attached after the editor was opened (`syncedAt`) are preserved.
  */
-export function planEventMediaSelection(currentClips, submittedClips, syncedAt = null) {
+export function planEventMediaSelection(currentClips, submittedClips, syncedAt = null, editorAuthorId = null) {
   const currentByUrl = new Map(currentClips.map((c) => [c.url, c]));
   const seenUrls = new Set();
   const finalClips = [];
@@ -317,7 +317,9 @@ export function planEventMediaSelection(currentClips, submittedClips, syncedAt =
   const syncedAtMs = Number(syncedAt);
   if (Number.isFinite(syncedAtMs) && syncedAtMs > 0) {
     for (const clip of currentClips) {
-      if (!seenUrls.has(clip.url) && Number(clip.uploadedAt) > syncedAtMs) {
+      // Only preserve concurrent clips uploaded by another collaborator while editor was open
+      const isOtherAuthor = editorAuthorId ? String(clip.authorId) !== String(editorAuthorId) : true;
+      if (!seenUrls.has(clip.url) && Number(clip.uploadedAt) > syncedAtMs && isOtherAuthor) {
         seenUrls.add(clip.url);
         finalClips.push(clip);
       }

@@ -286,7 +286,8 @@ export async function updateMiniEvent(req, res, next) {
         mediaPlan = planEventMediaSelection(
           currentHydrated.mediaItems,
           parsedMedia.clips,
-          req.body.mediaSyncedAt
+          req.body.mediaSyncedAt,
+          creatorId
         );
         finalClips = mediaPlan.finalClips;
       } else {

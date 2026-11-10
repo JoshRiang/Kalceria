@@ -86,6 +86,7 @@ export async function purgeUserRedisFootprint(userId, email = '', ownedEventIds 
     redis.del(`live:cooldown:${userId}`),
     redis.del(`telemetry:${userId}`),
     redis.del(`blocked:${userId}`),
+    redis.del(`blocked_by:${userId}`),
     redis.del(`favourites:${userId}`),
     redis.del(`muted:${userId}`),
     redis.del(`chat:call:${userId}`),

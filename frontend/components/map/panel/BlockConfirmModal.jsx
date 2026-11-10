@@ -12,15 +12,15 @@ export function BlockConfirmModal({
 
   return (
     <div
-      className={`absolute inset-0 z-30 flex items-center justify-between px-3.5 sm:px-4 py-2 backdrop-blur-md rounded-xl transition-all ${
+      className={`absolute inset-0 z-30 flex items-center justify-between px-3.5 sm:px-4 py-2 rounded-xl transition-all shadow-xl ${
         isMapDark
-          ? "bg-[#161b22]/75 border border-[#38404a]/80 text-[#f0f6fc] shadow-md"
-          : "bg-white/75 border border-[#d1d5db]/90 text-[#1f2328] shadow-md"
+          ? "bg-[#161b22] border border-[#38404a] text-[#f0f6fc]"
+          : "bg-white border border-[#d1d5db] text-[#1f2328]"
       }`}
       onClick={(e) => e.stopPropagation()}
     >
       <span
-        className="font-sans font-semibold text-[13px] sm:text-[13.5px] tracking-tight truncate mr-2"
+        className="font-sans font-normal text-[13px] sm:text-[13.5px] tracking-tight truncate mr-2"
         style={{ fontFamily: "Arial, sans-serif" }}
       >
         {actionType === "block" ? `Block ${userName}?` : `Unblock ${userName}?`}

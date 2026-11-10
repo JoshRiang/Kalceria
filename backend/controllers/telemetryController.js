@@ -367,9 +367,15 @@ function isValidTargetId(targetId, currentUserId) {
 export async function getBlockedUsers(req, res, next) {
   try {
     const userId = req.user?.userId || req.user?.id;
-    if (!userId) return res.json({ blockedUsers: [] });
-    const blocked = await redis.smembers("blocked:" + userId).catch(() => []);
-    res.json({ blockedUsers: Array.isArray(blocked) ? blocked : [] });
+    if (!userId) return res.json({ blockedUsers: [], blockedByUsers: [] });
+    const [blocked, blockedBy] = await Promise.all([
+      redis.smembers("blocked:" + userId).catch(() => []),
+      redis.smembers("blocked_by:" + userId).catch(() => []),
+    ]);
+    res.json({
+      blockedUsers: Array.isArray(blocked) ? blocked : [],
+      blockedByUsers: Array.isArray(blockedBy) ? blockedBy : [],
+    });
   } catch (err) {
     next(err);
   }
@@ -382,7 +388,10 @@ export async function blockUser(req, res, next) {
     if (!isValidTargetId(targetId, userId)) {
       return res.status(400).json({ error: "Invalid target user id." });
     }
-    await redis.sadd("blocked:" + userId, targetId).catch(() => {});
+    await Promise.all([
+      redis.sadd("blocked:" + userId, targetId).catch(() => {}),
+      redis.sadd("blocked_by:" + targetId, userId).catch(() => {}),
+    ]);
     res.json({ ok: true, blockedUserId: targetId });
   } catch (err) {
     next(err);
@@ -396,7 +405,10 @@ export async function unblockUser(req, res, next) {
     if (!isValidTargetId(targetId)) {
       return res.status(400).json({ error: "Invalid target user id." });
     }
-    await redis.srem("blocked:" + userId, targetId).catch(() => {});
+    await Promise.all([
+      redis.srem("blocked:" + userId, targetId).catch(() => {}),
+      redis.srem("blocked_by:" + targetId, userId).catch(() => {}),
+    ]);
     res.json({ ok: true, unblockedUserId: targetId });
   } catch (err) {
     next(err);

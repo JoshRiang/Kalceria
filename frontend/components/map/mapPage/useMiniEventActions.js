@@ -205,13 +205,6 @@ export function useMiniEventActions({
             profilePicture: resolvePersistentAvatarUrl(currentUser),
           },
         });
-        setEvents((prev) => {
-          const exists = prev.some((ev) => String(ev.id) === String(eventIdToUpdate));
-          if (exists) {
-            return prev.map((ev) => (String(ev.id) === String(eventIdToUpdate) ? { ...ev, ...savedEventObj } : ev));
-          }
-          return [savedEventObj, ...prev];
-        });
       }
 
       const refreshedMeta = await fetchMiniEventsWithMeta().catch(() => null);
@@ -219,21 +212,31 @@ export function useMiniEventActions({
         const merged = mergeEvents(refreshedMeta.events);
         setEvents(merged);
         syncCollabStateFromServer(merged, refreshedMeta.requestedEventId ?? null);
-        if (!savedEventObj && currentUser?.id) {
-          savedEventObj = merged.find((ev) => String(ev.creator?.id) === String(currentUser.id)) || null;
+        const serverMatched = (eventIdToUpdate ? merged.find((ev) => String(ev.id) === String(eventIdToUpdate)) : null) ||
+          (currentUser?.id ? merged.find((ev) => String(ev.creator?.id) === String(currentUser.id)) : null);
+        if (serverMatched) {
+          savedEventObj = serverMatched;
         }
+      } else if (savedEventObj) {
+        setEvents((prev) => {
+          const exists = prev.some((ev) => String(ev.id) === String(savedEventObj.id));
+          return exists
+            ? prev.map((ev) => (String(ev.id) === String(savedEventObj.id) ? { ...ev, ...savedEventObj } : ev))
+            : [savedEventObj, ...prev];
+        });
       }
+
       setNotice(eventIdToUpdate ? "Mini event updated." : "Mini event saved.");
       setEditingEventId(null);
       setEventForm({ title: "", description: "", category: "cafe", mediaUrl: "", mediaMetadataByUrl: {}, location: "", lat: null, lng: null });
       setShowEventModal(false);
       triggerToolbarRetractCycle();
 
-      // Immediately pan/fly to the created/updated event on the map and open its popup
+      // Deletion/update completed fully with clean server state before redirecting to auto-open event card once
       if (savedEventObj) {
         setTimeout(() => {
           handleOpenItemOnMap(savedEventObj, "event");
-        }, 120);
+        }, 150);
       }
     } catch (err) {
       const errorMsg = err?.response?.data?.error || err?.message || "Failed to save mini event.";

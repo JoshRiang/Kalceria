@@ -164,7 +164,11 @@ export const addEventMedia = (eventId, payload) =>
 export const removeEventMedia = (eventId, payload) =>
   api.delete(`/mini-events/${eventId}/media`, { data: payload }).then((r) => r.data);
 export const fetchPublicEvents = () => fetchAllPages('/events', 'events', 50);
-export const fetchBlockedUsers = () => api.get('/map/blocked').then(r => r.data?.blockedUsers || []).catch(() => []);
+export const fetchBlockedUsers = () =>
+  api.get('/map/blocked').then((r) => ({
+    blockedUsers: Array.isArray(r.data?.blockedUsers) ? r.data.blockedUsers : (Array.isArray(r.data) ? r.data : []),
+    blockedByUsers: Array.isArray(r.data?.blockedByUsers) ? r.data.blockedByUsers : [],
+  })).catch(() => ({ blockedUsers: [], blockedByUsers: [] }));
 export const blockKalcerian = (targetId) => api.post(`/map/block/${targetId}`).then(r => r.data);
 export const unblockKalcerian = (targetId) => api.delete(`/map/block/${targetId}`).then(r => r.data);
 export const fetchFavouriteUsers = () => api.get('/map/favourites').then(r => r.data?.favouriteUsers || []).catch(() => []);
