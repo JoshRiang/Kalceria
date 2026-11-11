@@ -343,8 +343,7 @@ export async function deleteOwnServiceRequest(req, res, next) {
 export async function confirmServiceRequest(req, res, next) {
   try {
     const { id } = req.params;
-    const isDirectGet = (req.method === 'GET' || req.query?.direct === 'true') && 
-      (Boolean(req.headers?.accept?.includes('text/html')) || Boolean(req.query?.direct === 'true'));
+    const isDirectGet = req.method === 'GET' || req.query?.direct === 'true';
 
     const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
     const redirectToken = req.query?.token || req.query?.manage_token || req.headers?.['x-manage-token'] || (typeof req.get === 'function' ? req.get('x-manage-token') : '') || '';

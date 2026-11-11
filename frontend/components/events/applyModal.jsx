@@ -33,6 +33,7 @@ export function ApplyModal({
   initialAction,
   initialRegistrationId,
   initialToken,
+  initialError,
 }) {
   const authUser = useAuthStore((s) => s.user);
   const activeEmail = authUser?.email || "";
@@ -43,12 +44,16 @@ export function ApplyModal({
   const [mode, setMode] = useState(hasUserSession() || activeEmail ? "account" : "guest");
   const [step, setStep] = useState(initialRegistrationId ? 2 : 1); // 1: Form Fill, 2: Review / Confirm / Cancel
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    initialError === "expired"
+      ? "Batas waktu 3 menit untuk mengonfirmasi pendaftaran event telah berakhir. Pendaftaran otomatis dibatalkan atau tidak ditemukan."
+      : ""
+  );
   const [doneData, setDoneData] = useState(null);
   const [hasConfirmedWa, setHasConfirmedWa] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(Boolean(initialAction === "confirm"));
-  const [isWindowExpired, setIsWindowExpired] = useState(false);
+  const [isWindowExpired, setIsWindowExpired] = useState(Boolean(initialError === "expired"));
 
   const event = events[idx];
   const [form, setForm] = useState({
@@ -372,53 +377,47 @@ export function ApplyModal({
 
         {/* Scrollable Modal Body (Custom Semi-Transparent Scrollbar, Zero White Bar) */}
         <div className="relative z-30 flex-1 overflow-y-auto overflow-x-hidden pr-1 sm:pr-1.5 custom-scrollbar">
-          {/* Mini Carousel Header */}
-          <div className="relative z-30 mb-6">
-             <div className={`flex items-center justify-between mb-4 ${isMobile ? "px-6" : ""}`}>
-                {step === 1 ? (
+          {/* Mini Carousel Header (Shown ONLY on Step 1: Form Fill) */}
+          {step === 1 && (
+            <div className="relative z-30 mb-6">
+               <div className={`flex items-center justify-between mb-4 ${isMobile ? "px-6" : ""}`}>
                   <button type="button" onClick={prev} className="p-2 flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none outline-none focus:outline-none">
                     <ChevronLeft />
                   </button>
-                ) : (
-                  <div className="w-9" />
-                )}
-                <div className="text-center flex-1">
-                   <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white italic mb-0.5" style={{ textShadow: "2px 2px 0 #FF00FF" }}>
-                     {isCancelMode ? "Cancel Booking" : isConfirmed ? "Booking Confirmed" : event?.title}
-                   </h2>
-                   <p className="text-[9px] text-slate-400 font-sans uppercase tracking-[0.2em] italic">
-                     {isCancelMode ? "Operational window cancellation" : isConfirmed ? "Ticket secured & locked" : step === 2 ? (hasConfirmedWa ? "Transmission Received" : "Review Parameters") : "Secure your slot in the grid"}
-                   </p>
-                </div>
-                {step === 1 ? (
+                  <div className="text-center flex-1">
+                     <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white italic mb-0.5" style={{ textShadow: "2px 2px 0 #FF00FF" }}>
+                       {event?.title}
+                     </h2>
+                     <p className="text-[9px] text-slate-400 font-sans uppercase tracking-[0.2em] italic">
+                       Secure your slot in the grid
+                     </p>
+                  </div>
                   <button type="button" onClick={next} className="p-2 flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none outline-none focus:outline-none">
                     <ChevronRight />
                   </button>
-                ) : (
-                  <div className="w-9" />
-                )}
-             </div>
+               </div>
 
-             <div className="grid grid-cols-2 gap-4 md:gap-6 items-center">
-                <motion.div
-                  key={event?.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`relative w-full bg-white/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] ${isMobile ? "aspect-square max-h-[140px]" : "aspect-[4/3] max-h-[160px] md:max-h-[175px]"}`}
-                  style={CLIP_CARD}
-                >
-                   <ContentImage src={event?.displayPhotoUrl} className="w-full h-full object-cover" alt="" width={900} height={1200} />
-                   <div className="absolute inset-0 border-2 border-white/10 pointer-events-none" style={CLIP_CARD} />
-                </motion.div>
-              <div className="flex flex-col justify-center h-full space-y-0.5">
-                 <p className={metaStyle}>Location: <span className="text-white not-italic font-bold ml-2">{event?.location}</span></p>
-                 <p className={metaStyle}>Start: <span className="text-white not-italic font-bold ml-2">{new Date(event?.regStartTime).toLocaleDateString()}</span></p>
-                 <p className={metaStyle}>End: <span className="text-white not-italic font-bold ml-2">{new Date(event?.regEndTime).toLocaleDateString()}</span></p>
-                 <p className={metaStyle}>Kuota: <span className="text-white not-italic font-bold ml-2">{event?.quota} Slots</span></p>
-                 <p className={metaStyle}>Price: <span className="text-white not-italic font-bold ml-2">Rp {Number(event?.price).toLocaleString("id-ID")}</span></p>
-              </div>
-           </div>
-        </div>
+               <div className="grid grid-cols-2 gap-4 md:gap-6 items-center">
+                  <motion.div
+                    key={event?.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`relative w-full bg-white/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] ${isMobile ? "aspect-square max-h-[140px]" : "aspect-[4/3] max-h-[160px] md:max-h-[175px]"}`}
+                    style={CLIP_CARD}
+                  >
+                     <ContentImage src={event?.displayPhotoUrl} className="w-full h-full object-cover" alt="" width={900} height={1200} />
+                     <div className="absolute inset-0 border-2 border-white/10 pointer-events-none" style={CLIP_CARD} />
+                  </motion.div>
+                <div className="flex flex-col justify-center h-full space-y-0.5">
+                   <p className={metaStyle}>Location: <span className="text-white not-italic font-bold ml-2">{event?.location}</span></p>
+                   <p className={metaStyle}>Start: <span className="text-white not-italic font-bold ml-2">{new Date(event?.regStartTime).toLocaleDateString()}</span></p>
+                   <p className={metaStyle}>End: <span className="text-white not-italic font-bold ml-2">{new Date(event?.regEndTime).toLocaleDateString()}</span></p>
+                   <p className={metaStyle}>Kuota: <span className="text-white not-italic font-bold ml-2">{event?.quota} Slots</span></p>
+                   <p className={metaStyle}>Price: <span className="text-white not-italic font-bold ml-2">Rp {Number(event?.price).toLocaleString("id-ID")}</span></p>
+                </div>
+             </div>
+          </div>
+          )}
 
         {/* Step 2 (Review / Cancel / Confirmed) vs Step 1 (Form Fill) */}
         {step === 2 ? (

@@ -3,7 +3,7 @@ import { THREE_MINUTES_MS } from './eventRegistrationConstants.js';
 
 export function verifyEventRegistrationAuthorization(registration, req) {
   const userId = req.user?.userId || null;
-  const tokenHeader = req.get('x-manage-token') || req.get('x-cancel-token') || req.query?.manage_token || req.query?.token || '';
+  const tokenHeader = (typeof req.get === 'function' ? (req.get('x-manage-token') || req.get('x-cancel-token')) : (req.headers?.['x-manage-token'] || req.headers?.['x-cancel-token'])) || req.query?.manage_token || req.query?.token || '';
 
   let validTokenRegId = null;
   let isTokenExpired = false;

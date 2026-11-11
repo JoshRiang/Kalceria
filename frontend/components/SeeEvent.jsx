@@ -85,12 +85,14 @@ export default function SeeEvent() {
     const eventAction = urlParams.get("event_action");
     const registrationId = urlParams.get("registration_id");
     const token = urlParams.get("manage_token") || urlParams.get("token");
+    const error = urlParams.get("error");
 
     if (eventAction && registrationId) {
       setEventManageState({
         action: eventAction,
         registrationId,
         token,
+        error,
       });
       setApplyModalOpen(true);
     }
@@ -474,6 +476,7 @@ export default function SeeEvent() {
             initialAction={eventManageState?.action}
             initialRegistrationId={eventManageState?.registrationId}
             initialToken={eventManageState?.token}
+            initialError={eventManageState?.error}
           />
         )}
       </AnimatePresence>

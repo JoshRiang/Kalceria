@@ -62,6 +62,15 @@ export function buildEventRegistrationEmailHtml({ event, registration, cancelTok
         .action-buttons-box {
           animation: expireActionButtons 180s ease-in forwards;
         }
+        .action-btn:visited, .action-btn:active {
+          opacity: 0.3 !important;
+          filter: grayscale(100%) !important;
+          pointer-events: none !important;
+          cursor: default !important;
+          color: #888888 !important;
+          background-color: #333333 !important;
+          border-color: #333333 !important;
+        }
       </style>
       <div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:28px 24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;color:#1e293b;">
         <div style="text-align:center;margin-bottom:20px;">
@@ -109,8 +118,8 @@ export function buildEventRegistrationEmailHtml({ event, registration, cancelTok
         </div>
 
         <div class="action-buttons-box" style="text-align:center;margin:16px 0 20px 0;">
-          <a href="${confirmUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ffffff;border:1px solid #000000;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CONFIRM</a>
-          <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ffffff;border:1px solid #000000;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CANCEL</a>
+          <a href="${confirmUrl}" class="action-btn" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ffffff;border:1px solid #000000;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CONFIRM</a>
+          <a href="${cancelUrl}" class="action-btn" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#000000;color:#ffffff;border:1px solid #000000;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:0.5px;font-family:Arial,sans-serif;margin:0 8px 8px 0;">CANCEL</a>
         </div>
 
         ${paymentCheckoutUrl ? `
