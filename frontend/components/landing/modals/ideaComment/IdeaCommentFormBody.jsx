@@ -203,7 +203,7 @@ export function IdeaCommentFormBody({
             <button
               type="button"
               onClick={handleClearAll || (() => setMediaUrl(""))}
-              className="text-[11px] sm:text-xs font-semibold tracking-wider font-sans text-red-400 hover:text-red-300 transition-colors cursor-pointer select-none"
+              className="text-[11px] sm:text-xs font-semibold tracking-wider font-sans text-red-500 hover:text-red-400 transition-colors cursor-pointer select-none"
             >
               Clear All
             </button>

@@ -18,12 +18,17 @@ export function EventMediaSection({
   isModalDark,
   busy,
   isOwner,
+  isUploadingMedia: externalIsUploading,
+  setIsUploadingMedia: externalSetIsUploading,
 }) {
   const fileInputRef = useRef(null);
   const fileNamesRef = useRef({});
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [localIsUploadingMedia, setLocalIsUploadingMedia] = useState(false);
   const [uploadError, setUploadError] = useState("");
+
+  const isUploadingMedia = externalIsUploading !== undefined ? externalIsUploading : localIsUploadingMedia;
+  const setIsUploadingMedia = externalSetIsUploading || setLocalIsUploadingMedia;
 
   // Clean up in-memory blob URLs when modal unmounts to prevent memory leaks
   useEffect(() => {
@@ -78,7 +83,7 @@ export function EventMediaSection({
         // Revoke the temporary local preview blob URL once the uploaded permanent URL is ready
         try { URL.revokeObjectURL(instantObjUrl); } catch {}
         fileNamesRef.current[res.url] = file.name;
-        delete fileNamesRef.current[instantObjUrl];
+        fileNamesRef.current[instantObjUrl] = file.name;
 
         setEventForm((f) => {
           const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
@@ -150,6 +155,7 @@ export function EventMediaSection({
   // Format internal blob / server URL into clean original filename
   const cleanFilename = (rawName) => {
     if (!rawName) return "media-file";
+    if (rawName.startsWith("data:") || rawName.includes(";base64")) return "uploaded-media";
     let decoded = rawName;
     try {
       decoded = decodeURIComponent(rawName);
@@ -169,7 +175,7 @@ export function EventMediaSection({
   const getDisplayFilename = (url) => {
     if (!url) return "";
     if (fileNamesRef.current[url]) return fileNamesRef.current[url];
-    if (url.startsWith("blob:")) return "uploaded-media";
+    if (url.startsWith("blob:") || url.startsWith("data:") || url.includes(";base64")) return "uploaded-media";
     if (url.includes("/api/blob/raw")) {
       try {
         const inner = new URL(url, "https://kalceria.internal").searchParams.get("url") || "";
@@ -220,7 +226,7 @@ export function EventMediaSection({
           <button
             type="button"
             onClick={handleClearAll}
-            className={`text-[10px] font-bold hover:underline cursor-pointer ${
+            className={`text-[11px] sm:text-xs font-semibold tracking-wider hover:underline cursor-pointer select-none transition-colors ${
               isModalDark ? "text-[#f85149]" : "text-[#cf222e]"
             }`}
           >

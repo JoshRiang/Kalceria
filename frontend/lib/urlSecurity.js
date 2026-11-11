@@ -21,7 +21,7 @@ const BLOCKED_HOST_PATTERNS = [
 const VALID_MEDIA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.mp4', '.webm', '.mov', '.m4v'];
 const MAX_MEDIA_URLS = 100;
 const MAX_SINGLE_URL_LENGTH = 2048;
-const MAX_TOTAL_URL_LIST_LENGTH = 32768;
+const MAX_TOTAL_URL_LIST_LENGTH = 16 * 1024 * 1024; // 16 MB to allow base64 fallback data URLs
 
 export function splitMediaUrlListClient(rawInput) {
   if (typeof rawInput !== 'string') return [];
@@ -49,7 +49,7 @@ export function splitMediaUrlListClient(rawInput) {
           continue;
         } else {
           const remaining = trimmed.slice(i + 1).trim();
-          if (remaining.match(/^(?:[a-z][a-z0-9+.-]*:|\/)/i)) {
+          if (remaining.match(/^(?:https?:\/\/|blob:https?:\/\/|blob:http:\/\/|data:(?:image|video)\/|\/api\/blob\/)/i)) {
             results.push(current.trim());
             current = '';
             inDataUrl = false;
@@ -65,7 +65,7 @@ export function splitMediaUrlListClient(rawInput) {
     } else {
       if (char === ',') {
         const remaining = trimmed.slice(i + 1).trim();
-        if (remaining.match(/^(?:[a-z][a-z0-9+.-]*:|\/)/i)) {
+        if (remaining.match(/^(?:https?:\/\/|blob:https?:\/\/|blob:http:\/\/|data:(?:image|video)\/|\/api\/blob\/)/i)) {
           results.push(current.trim());
           current = '';
           while (i + 1 < trimmed.length && /\s/.test(trimmed[i + 1])) {

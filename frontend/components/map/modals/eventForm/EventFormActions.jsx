@@ -8,6 +8,7 @@ export function EventFormActions({
   busy,
   isEventFormValid,
   isModalDark,
+  isUploadingMedia = false,
 }) {
   if (isEditing) {
     return (
@@ -16,7 +17,7 @@ export function EventFormActions({
         <button
           type="button"
           onClick={onPromptDeleteConfirm}
-          disabled={busy}
+          disabled={busy || isUploadingMedia}
           title="Delete Event"
           aria-label="Delete Event"
           className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer group flex items-center justify-center"
@@ -51,7 +52,7 @@ export function EventFormActions({
         {/* Right: Box button with Update font, dimmed until required * fields are filled */}
         <button
           type="submit"
-          disabled={busy || !isEventFormValid}
+          disabled={busy || isUploadingMedia || !isEventFormValid}
           className={`min-w-[96px] min-h-[40px] flex items-center justify-center px-6 py-2.5 sm:py-3 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
             isModalDark
               ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
@@ -68,7 +69,7 @@ export function EventFormActions({
     <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
       <button
         type="submit"
-        disabled={busy || !isEventFormValid}
+        disabled={busy || isUploadingMedia || !isEventFormValid}
         className={`w-full min-h-[40px] flex items-center justify-center py-3 sm:py-3.5 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
           isModalDark
             ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"

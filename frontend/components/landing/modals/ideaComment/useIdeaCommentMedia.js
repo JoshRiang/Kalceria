@@ -28,7 +28,7 @@ export function useIdeaCommentMedia() {
 
   const cleanFilename = (rawName) => {
     if (!rawName) return "media-file";
-    if (rawName.startsWith("data:")) return "media-file";
+    if (rawName.startsWith("data:") || rawName.includes(";base64")) return "uploaded-media";
     let decoded = rawName;
     try {
       decoded = decodeURIComponent(rawName);
@@ -48,8 +48,7 @@ export function useIdeaCommentMedia() {
   const getDisplayFilename = (url) => {
     if (!url) return "";
     if (fileNamesRef.current[url]) return fileNamesRef.current[url];
-    if (url.startsWith("blob:")) return "uploaded-media";
-    if (url.startsWith("data:")) return "uploaded-media";
+    if (url.startsWith("blob:") || url.startsWith("data:") || url.includes(";base64")) return "uploaded-media";
     if (url.includes("/api/blob/raw")) {
       try {
         const inner = new URL(url, "https://kalceria.internal").searchParams.get("url") || "";

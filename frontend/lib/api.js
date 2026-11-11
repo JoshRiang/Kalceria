@@ -244,16 +244,24 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
   const formData = new FormData();
   formData.append("file", file, filename);
   if (purpose) formData.append("purpose", purpose);
-  const res = await fetch("/api/blob/upload", {
-    method: "POST",
-    body: formData,
-  });
-  if (!res.ok) {
-    if (res.status === 413 || (file && file.size > 4.2 * 1024 * 1024)) {
-      throw new Error("Ukuran file melebihi batas 4.5 MB. Mohon gunakan file dengan ukuran lebih kecil.");
+
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  try {
+    const res = await fetch("/api/blob/upload", {
+      method: "POST",
+      body: formData,
+      signal: controller ? controller.signal : undefined,
+    });
+    if (!res.ok) {
+      if (res.status === 413 || (file && file.size > 4.2 * 1024 * 1024)) {
+        throw new Error("Ukuran file melebihi batas 4.5 MB. Mohon gunakan file dengan ukuran lebih kecil.");
+      }
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Gagal mengunggah file media.");
     }
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Gagal mengunggah file media.");
+    return await res.json();
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
-  return res.json();
 };

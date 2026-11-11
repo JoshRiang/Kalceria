@@ -74,9 +74,9 @@ export async function POST(req: NextRequest) {
     // Support both modern Vercel OIDC (BLOB_STORE_ID / Vercel runtime) and static BLOB_READ_WRITE_TOKEN
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     const blobStoreId = process.env.BLOB_STORE_ID;
-    const isVercel = Boolean(process.env.VERCEL);
+    const hasBlobCredentials = Boolean(blobToken || blobStoreId);
 
-    if (blobToken || blobStoreId || isVercel) {
+    if (hasBlobCredentials) {
       try {
         const options: {
           access: "public" | "private";
@@ -92,16 +92,20 @@ export async function POST(req: NextRequest) {
           options.token = blobToken;
         }
 
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Vercel Blob put operation timed out after 5000ms")), 5000)
+        );
+
         let blob;
         let isPrivate = false;
         try {
-          blob = await put(safeFilename, optimized.buffer, options);
+          blob = await Promise.race([put(safeFilename, optimized.buffer, options), timeoutPromise]);
         } catch (firstErr: unknown) {
           const msg = firstErr instanceof Error ? firstErr.message : "";
           // If store is configured with private access, seamlessly retry with private access
           if (msg.includes("Cannot use public access on a private store") || msg.includes("private store")) {
             options.access = "private";
-            blob = await put(safeFilename, optimized.buffer, options);
+            blob = await Promise.race([put(safeFilename, optimized.buffer, options), timeoutPromise]);
             isPrivate = true;
           } else {
             throw firstErr;

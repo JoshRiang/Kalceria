@@ -29,6 +29,7 @@ export function EventFormModal({
   onPromptDeleteConfirm,
 }) {
   const isEditing = Boolean(editingEventId || activeOwnEvent);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [isLocationVerified, setIsLocationVerified] = useState(() =>
     Boolean(editingEventId || activeOwnEvent || (eventForm?.location && (eventForm?.lat || eventForm?.lng)))
   );
@@ -136,6 +137,7 @@ export function EventFormModal({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (isUploadingMedia) return;
             setFormError(null);
             if (!isEventFormValid) {
               if ((eventForm.description || "").length > 240) {
@@ -330,6 +332,8 @@ export function EventFormModal({
             isModalDark={isModalDark}
             busy={busy}
             isOwner={true}
+            isUploadingMedia={isUploadingMedia}
+            setIsUploadingMedia={setIsUploadingMedia}
           />
 
           {/* Action Buttons */}
@@ -342,6 +346,7 @@ export function EventFormModal({
             isEditing={isEditing}
             onPromptDeleteConfirm={onPromptDeleteConfirm}
             busy={busy}
+            isUploadingMedia={isUploadingMedia}
             isEventFormValid={isEventFormValid}
             isModalDark={isModalDark}
           />

@@ -12,15 +12,17 @@ export function buildMediaItemsPayload(mediaUrl = '', mediaMetadataByUrl = {}, s
     ? splitMediaUrlListFn(mediaUrl)
     : (mediaUrl ? mediaUrl.split(',').map((s) => s.trim()).filter(Boolean) : []);
 
-  return clipUrls.map((url) => {
-    const m = mediaMetadataByUrl?.[url] || {};
-    return {
-      url,
-      ...(m.width ? { width: m.width } : {}),
-      ...(m.height ? { height: m.height } : {}),
-      ...(m.duration ? { duration: m.duration } : {}),
-    };
-  });
+  return clipUrls
+    .filter((url) => !String(url).startsWith('blob:'))
+    .map((url) => {
+      const m = mediaMetadataByUrl?.[url] || {};
+      return {
+        url,
+        ...(m.width ? { width: m.width } : {}),
+        ...(m.height ? { height: m.height } : {}),
+        ...(m.duration ? { duration: m.duration } : {}),
+      };
+    });
 }
 
 export function buildMiniEventPayload(
@@ -28,7 +30,11 @@ export function buildMiniEventPayload(
   { splitMediaUrlListClientFn, toSmartTitleCaseFn } = {}
 ) {
   const category = eventForm.category || 'cafe';
-  const mediaUrl = (eventForm.mediaUrl || '').trim();
+  const rawClips = splitMediaUrlListClientFn
+    ? splitMediaUrlListClientFn(eventForm.mediaUrl || '')
+    : (eventForm.mediaUrl ? String(eventForm.mediaUrl).split(',').map((s) => s.trim()).filter(Boolean) : []);
+  const safeClips = rawClips.filter((u) => !String(u).startsWith('blob:'));
+  const mediaUrl = safeClips.join(', ');
   const mediaItemsPayload = buildMediaItemsPayload(mediaUrl, eventForm.mediaMetadataByUrl, splitMediaUrlListClientFn);
   const cleanDesc = (eventForm.description || '')
     .replace(/\[CAT:[a-z_]+\]\s*/gi, '')
