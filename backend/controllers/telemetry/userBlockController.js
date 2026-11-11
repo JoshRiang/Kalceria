@@ -8,13 +8,14 @@ export async function getBlockedUsers(req, res, next) {
   try {
     const userId = req.user?.userId || req.user?.id;
     if (!userId) return res.json({ blockedUsers: [], blockedByUsers: [] });
+    const cleanUserId = String(userId).trim();
     const [blocked, blockedBy] = await Promise.all([
-      redis.smembers("blocked:" + userId).catch(() => []),
-      redis.smembers("blocked_by:" + userId).catch(() => []),
+      redis.smembers("blocked:" + cleanUserId).catch(() => []),
+      redis.smembers("blocked_by:" + cleanUserId).catch(() => []),
     ]);
     res.json({
-      blockedUsers: Array.isArray(blocked) ? blocked : [],
-      blockedByUsers: Array.isArray(blockedBy) ? blockedBy : [],
+      blockedUsers: Array.isArray(blocked) ? blocked.map(String) : [],
+      blockedByUsers: Array.isArray(blockedBy) ? blockedBy.map(String) : [],
     });
   } catch (err) {
     next(err);
@@ -28,11 +29,14 @@ export async function blockUser(req, res, next) {
     if (!isValidTargetId(targetId, userId)) {
       return res.status(400).json({ error: "Invalid target user id." });
     }
+    const cleanUserId = String(userId).trim();
+    const cleanTargetId = String(targetId).trim();
+
     await Promise.all([
-      redis.sadd("blocked:" + userId, targetId).catch(() => {}),
-      redis.sadd("blocked_by:" + targetId, userId).catch(() => {}),
-      redis.del(getChatRtcSignalKey(userId, targetId)).catch(() => {}),
-      redis.del(getChatRtcSignalKey(targetId, userId)).catch(() => {}),
+      redis.sadd("blocked:" + cleanUserId, cleanTargetId),
+      redis.sadd("blocked_by:" + cleanTargetId, cleanUserId),
+      redis.del(getChatRtcSignalKey(cleanUserId, cleanTargetId)).catch(() => {}),
+      redis.del(getChatRtcSignalKey(cleanTargetId, cleanUserId)).catch(() => {}),
     ]);
 
     // Auto-kick blocked target user from any active events created by the blocker
@@ -117,11 +121,14 @@ export async function unblockUser(req, res, next) {
     if (!isValidTargetId(targetId)) {
       return res.status(400).json({ error: "Invalid target user id." });
     }
+    const cleanUserId = String(userId).trim();
+    const cleanTargetId = String(targetId).trim();
+
     await Promise.all([
-      redis.srem("blocked:" + userId, targetId).catch(() => {}),
-      redis.srem("blocked_by:" + targetId, userId).catch(() => {}),
+      redis.srem("blocked:" + cleanUserId, cleanTargetId),
+      redis.srem("blocked_by:" + cleanTargetId, cleanUserId),
     ]);
-    res.json({ ok: true, unblockedUserId: targetId });
+    res.json({ ok: true, unblockedUserId: cleanTargetId });
   } catch (err) {
     next(err);
   }

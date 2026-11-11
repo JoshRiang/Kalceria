@@ -207,7 +207,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
 
   const handleAvatarClick = useCallback((e, user) => {
     if (e?.stopPropagation) e.stopPropagation();
-    if (blockedUserIdsRef.current.includes(user.id)) return;
+    if ((blockedUserIdsRef.current || []).some((id) => String(id).toLowerCase() === String(user.id).toLowerCase())) return;
     if (Boolean(user?.isOnline && user?.allowLiveLocation !== false)) {
       focusUser(user);
     }
@@ -235,8 +235,8 @@ export const KalceriansPanel = memo(function KalceriansPanel({
               avatarUrl={avatarUrl}
               isFavourite={favouriteUserIds.includes(String(activeChatUser.id))}
               isMuted={mutedUserIds.includes(String(activeChatUser.id))}
-              isBlockedByTarget={blockedByUserIds.includes(String(activeChatUser.id))}
-              isTargetBlocked={blockedUserIds.includes(String(activeChatUser.id))}
+              isBlockedByTarget={(blockedByUserIds || []).some((id) => String(id).toLowerCase() === String(activeChatUser.id).toLowerCase())}
+              isTargetBlocked={(blockedUserIds || []).some((id) => String(id).toLowerCase() === String(activeChatUser.id).toLowerCase())}
               initialCallState={incomingCallInitialState}
               onCallEnded={() => setIncomingCallInitialState(null)}
               onToggleFavourite={onToggleFavourite}
@@ -326,7 +326,8 @@ export const KalceriansPanel = memo(function KalceriansPanel({
           <KalceriansSkeletonList isMapDark={isMapDark} />
         ) : sidebarKalcerians.length > 0 ? (
           sidebarKalcerians.map((user) => {
-            const isBlocked = blockedUserIds.includes(user.id);
+            const isBlocked = (blockedUserIds || []).some((id) => String(id).toLowerCase() === String(user.id).toLowerCase());
+            const isBlockedByTarget = Array.isArray(blockedByUserIds) && blockedByUserIds.some((id) => String(id).toLowerCase() === String(user.id).toLowerCase());
             const isConfirming = confirmingAction?.userId === user.id;
             const isExpanded = expandedUserId === user.id;
             const activeBroadcastMsg = getActiveBroadcast(user);
@@ -359,7 +360,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
                 user={user}
                 userEvent={userEvent}
                 isBlocked={isBlocked}
-                isBlockedByTarget={blockedByUserIds.includes(String(user.id))}
+                isBlockedByTarget={isBlockedByTarget}
                 isExpanded={isExpanded}
                 isConfirming={isConfirming}
                 confirmingAction={confirmingAction}
