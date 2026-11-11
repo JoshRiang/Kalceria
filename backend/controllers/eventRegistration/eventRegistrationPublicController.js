@@ -2,7 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { decodePageCursor, encodePageCursor, parsePageLimit } from '../../utils/cursorPagination.js';
 import { THREE_MINUTES_MS } from './eventRegistrationConstants.js';
 import { purgeExpiredUnconfirmedEventRegistrations } from './eventRegistrationLifecycleController.js';
-import { renderTimerBadgeSvg } from '../comms/timerBadgeRenderer.js';
+import { renderTimerBadgeSvg, renderTimerBadgeGif } from '../comms/timerBadgeRenderer.js';
 
 // ─── GET /events (public listing) ────────────────────────────────────────────
 export async function listPublicEvents(req, res, next) {
@@ -63,22 +63,43 @@ export async function getPublicEvent(req, res, next) {
   }
 }
 
-// ─── GET /events/registration/:id/timer.svg (Dynamic Email Timer & Status Badge) ─
+// ─── GET /events/registration/:id/timer.svg & timer.gif (Dynamic Email Timer & Status Badge) ─
 export async function getEventRegistrationTimerBadge(req, res, next) {
   try {
     const { id } = req.params;
+    const isGif = req.path?.endsWith('.gif') || req.originalUrl?.includes('.gif') || req.headers?.accept?.includes('image/gif');
+
     const registration = await prisma.eventRegistration.findUnique({
       where: { id },
       select: { paymentStatus: true, createdAt: true },
     });
+
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     if (!registration) {
+      if (isGif) {
+        const gif = renderTimerBadgeGif({ status: 'EXPIRED' });
+        res.setHeader('Content-Type', 'image/gif');
+        return res.send(gif);
+      }
       const svg = renderTimerBadgeSvg({ status: 'NOT_FOUND' });
       res.setHeader('Content-Type', 'image/svg+xml');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
       return res.send(svg);
     }
 
     const elapsedMs = Date.now() - new Date(registration.createdAt).getTime();
+    if (isGif) {
+      const gif = renderTimerBadgeGif({
+        status: registration.paymentStatus,
+        elapsedMs,
+        limitMs: THREE_MINUTES_MS,
+      });
+      res.setHeader('Content-Type', 'image/gif');
+      return res.send(gif);
+    }
+
     const svg = renderTimerBadgeSvg({
       status: registration.paymentStatus,
       elapsedMs,
@@ -86,9 +107,6 @@ export async function getEventRegistrationTimerBadge(req, res, next) {
     });
 
     res.setHeader('Content-Type', 'image/svg+xml');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
     res.send(svg);
   } catch (err) {
     next(err);

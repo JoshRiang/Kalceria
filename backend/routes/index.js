@@ -173,6 +173,7 @@ router.get("/events/registration/:id", optionalAuth, getEventRegistrationForMana
 router.get("/events/registration/:id/confirm", optionalAuth, confirmEventRegistration);
 router.post("/events/registration/:id/confirm", optionalAuth, confirmEventRegistration);
 router.get("/events/registration/:id/timer.svg", getEventRegistrationTimerBadge);
+router.get("/events/registration/:id/timer.gif", getEventRegistrationTimerBadge);
 router.delete("/events/registration/:id", optionalAuth, deleteOwnEventRegistration);
 
 // ─── Location & Geocoding ────────────────────────────────────────────────────
@@ -212,6 +213,7 @@ router.get("/services/bookings", listPublicServiceBookings);
 router.get("/services/request/:id/confirm", optionalAuth, confirmServiceRequest);
 router.post("/services/request/:id/confirm", optionalAuth, confirmServiceRequest);
 router.get("/services/request/:id/timer.svg", getServiceBookingTimerBadge);
+router.get("/services/request/:id/timer.gif", getServiceBookingTimerBadge);
 router.delete("/services/request/:id", optionalAuth, deleteOwnServiceRequest);
 
 // ─── Minigame (Daily Attempt & Score Tracking) ─────────────────────────────────

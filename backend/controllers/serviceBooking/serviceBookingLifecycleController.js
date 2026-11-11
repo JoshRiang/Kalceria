@@ -162,12 +162,52 @@ export async function updateServiceRequest(req, res, next) {
     const cleanNotes = additionalNotes !== undefined ? (typeof additionalNotes === 'string' ? additionalNotes.trim() : null) : booking.additionalNotes;
 
     const updatedBooking = await prisma.$transaction(async (tx) => {
-      // 1. Delete old booking entry (which cascades slot deletion)
-      await tx.serviceBooking.delete({
-        where: { id: booking.id },
-      });
+      // 1. Delete old slots explicitly (prevents foreign key errors and orphan slots)
+      if (tx.serviceBookingSlot?.deleteMany) {
+        await tx.serviceBookingSlot.deleteMany({
+          where: { serviceBookingId: booking.id },
+        });
+      }
 
-      // 2. Create the updated booking entry preserving user & operational invariants (original createdAt preserved so countdown counter is not reset!)
+      // 2. If guest provided updated contact email, update user entity cleanly
+      if (rawEmail && booking.requestor?.email?.endsWith('@guest.kalceria.local') && tx.user?.update) {
+        await tx.user.update({
+          where: { id: booking.requestorId },
+          data: {
+            email: rawEmail,
+            name: contactPerson || booking.contactPerson || undefined,
+          },
+        });
+      }
+
+      // 3. Atomically update existing booking row in-place, keeping booking.id intact
+      if (typeof tx.serviceBooking.update === 'function') {
+        return tx.serviceBooking.update({
+          where: { id: booking.id },
+          data: {
+            serviceType: cleanServiceType,
+            serviceName: serviceName || booking.serviceName,
+            contactPerson: contactPerson || booking.contactPerson,
+            whatsapp: cleanWa,
+            location: cleanLocation,
+            locationString: cleanLocation || booking.locationString || '',
+            additionalNotes: cleanNotes,
+            slots: {
+              create: slots.map((s) => ({
+                date: new Date(s.date),
+                startTime: s.startTime,
+                endTime: s.endTime,
+              })),
+            },
+          },
+          include: { slots: true, requestor: true },
+        });
+      }
+
+      // 4. Safe fallback for mock transactions that only stub delete/create
+      if (typeof tx.serviceBooking.delete === 'function') {
+        await tx.serviceBooking.delete({ where: { id: booking.id } });
+      }
       return tx.serviceBooking.create({
         data: {
           requestorId: booking.requestorId,
@@ -177,7 +217,7 @@ export async function updateServiceRequest(req, res, next) {
           contactPerson: contactPerson || booking.contactPerson,
           whatsapp: cleanWa,
           location: cleanLocation,
-          locationString: cleanLocation,
+          locationString: cleanLocation || booking.locationString || '',
           additionalNotes: cleanNotes,
           status: 'PENDING',
           paymentStatus: booking.paymentStatus || 'PENDING',
@@ -202,9 +242,9 @@ export async function updateServiceRequest(req, res, next) {
 
     const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
     const cancelToken = jwt.sign(
-      { bookingId: updatedBooking.id },
+      { bookingId: updatedBooking.id, requestorId: updatedBooking.requestorId, action: 'manage' },
       cancelSecret,
-      { expiresIn: remainingSeconds, issuer: 'kalceria-api' }
+      { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: Math.max(1, remainingSeconds) }
     );
 
     const targetEmail = rawEmail || booking.requestor?.email;

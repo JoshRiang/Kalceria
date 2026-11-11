@@ -38,7 +38,7 @@ export function buildEventRegistrationEmailHtml({ event, registration, cancelTok
   const token = cancelToken || '';
   const confirmUrl = `${frontendOrigin}/api/events/registration/${encodeURIComponent(registration.id)}/confirm?event_action=confirm&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}`;
   const cancelUrl = `${frontendOrigin}/events?event_action=cancel&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}&anchor=see-event#see-event`;
-  const timerBadgeUrl = `${frontendOrigin}/api/events/registration/${encodeURIComponent(registration.id)}/timer.svg`;
+  const timerBadgeUrl = `${frontendOrigin}/api/events/registration/${encodeURIComponent(registration.id)}/timer.gif`;
 
   const safeTitle = escapeHtml(event.title || 'Kalceria Event');
   const safeSession = escapeHtml(registration.selectedSession || 'Regular Session');

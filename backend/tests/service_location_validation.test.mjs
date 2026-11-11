@@ -28,6 +28,7 @@ import {
   deleteOwnEventRegistration,
   purgeExpiredUnconfirmedEventRegistrations,
 } from '../controllers/eventRegistrationController.js';
+import { renderTimerBadgeSvg, renderTimerBadgeGif } from '../controllers/comms/timerBadgeRenderer.js';
 import {
   checkEventRegistrationDefense,
   setEventRegistrationCooldown,
@@ -1295,6 +1296,37 @@ describe('Service Request: Comms Channel & Location Verification', () => {
           prisma.user.findUnique = originalUserFindUnique;
           prisma.user.create = originalUserCreate;
         }
+      });
+
+      it('renders dynamic timer badge SVG with dark theme card and valid SMIL visibility', () => {
+        const svgConfirmed = renderTimerBadgeSvg({ status: 'CONFIRMED' });
+        assert.ok(svgConfirmed.includes('STATUS: RESMI DIKONFIRMASI &amp; DIKUNCI'));
+        assert.ok(svgConfirmed.includes('<svg'));
+        assert.ok(svgConfirmed.includes('width="460"'));
+        assert.ok(svgConfirmed.includes('#0a0e27'));
+
+        const svgExpired = renderTimerBadgeSvg({ status: 'EXPIRED' });
+        assert.ok(svgExpired.includes('STATUS: KADALUARSA'));
+        assert.ok(svgExpired.includes('#dc2626'));
+
+        const svgActive = renderTimerBadgeSvg({ status: 'PENDING', elapsedMs: 30000, limitMs: 180000 });
+        assert.ok(svgActive.includes('SISA WAKTU:'));
+        assert.ok(svgActive.includes('attributeName="visibility"'));
+      });
+
+      it('renders dynamic timer badge animated GIF (Pure Node.js) with valid GIF89a header and frames', () => {
+        const gifConfirmed = renderTimerBadgeGif({ status: 'CONFIRMED' });
+        assert.ok(Buffer.isBuffer(gifConfirmed));
+        assert.equal(gifConfirmed.subarray(0, 6).toString('ascii'), 'GIF89a');
+
+        const gifExpired = renderTimerBadgeGif({ status: 'EXPIRED' });
+        assert.ok(Buffer.isBuffer(gifExpired));
+        assert.equal(gifExpired.subarray(0, 6).toString('ascii'), 'GIF89a');
+
+        const gifActive = renderTimerBadgeGif({ status: 'PENDING', elapsedMs: 175000, limitMs: 180000 });
+        assert.ok(Buffer.isBuffer(gifActive));
+        assert.equal(gifActive.subarray(0, 6).toString('ascii'), 'GIF89a');
+        assert.ok(gifActive.length > 500, 'GIF buffer must contain frames and color table');
       });
     });
   });

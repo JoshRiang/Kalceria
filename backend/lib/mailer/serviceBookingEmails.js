@@ -19,7 +19,7 @@ export function buildServiceRequestSubmittedEmailHtml({ booking, slots = [], can
   const confirmUrl = `${frontendOrigin}/api/services/request/${encodeURIComponent(booking.id)}/confirm?service_action=confirm&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}`;
   const editUrl = `${frontendOrigin}/?service_action=edit&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
   const cancelUrl = `${frontendOrigin}/?service_action=cancel&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
-  const timerBadgeUrl = `${frontendOrigin}/api/services/request/${encodeURIComponent(booking.id)}/timer.svg`;
+  const timerBadgeUrl = `${frontendOrigin}/api/services/request/${encodeURIComponent(booking.id)}/timer.gif`;
 
   return `
       <style>
@@ -124,7 +124,7 @@ export function buildServiceRequestUpdatedEmailHtml({ booking, slots = [], cance
   const token = cancelToken || '';
   const confirmUrl = `${frontendOrigin}/api/services/request/${encodeURIComponent(booking.id)}/confirm?service_action=confirm&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}`;
   const cancelUrl = `${frontendOrigin}/?service_action=cancel&booking_id=${encodeURIComponent(booking.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}&anchor=need-our-help#need-our-help`;
-  const timerBadgeUrl = `${frontendOrigin}/api/services/request/${encodeURIComponent(booking.id)}/timer.svg`;
+  const timerBadgeUrl = `${frontendOrigin}/api/services/request/${encodeURIComponent(booking.id)}/timer.gif`;
 
   return `
       <style>
