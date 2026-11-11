@@ -12,6 +12,7 @@ export function ChatHeaderBar({
   isFavourite,
   isMuted,
   isBlockedByTarget = false,
+  isTargetBlocked = false,
   isPeerTyping,
   menuOpen,
   setMenuOpen,
@@ -91,7 +92,7 @@ export function ChatHeaderBar({
             title="Click here for contact info"
           >
             <div className="relative w-9 h-9 rounded-full overflow-hidden border shrink-0 border-current/30">
-              {isBlockedByTarget ? (
+              {isBlockedByTarget || isTargetBlocked ? (
                 <div className="w-full h-full bg-[#000000]" />
               ) : (
                 <ContentImage

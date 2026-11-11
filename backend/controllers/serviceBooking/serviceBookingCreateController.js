@@ -224,27 +224,27 @@ export async function createServiceRequest(req, res, next) {
       { algorithm: 'HS256', audience: 'kalceria-service-cancel', issuer: 'kalceria-api', expiresIn: '3m' },
     );
 
-    // Dispatches (fire-and-forget, safe & isolated)
-    safeNotify(() => notifyServiceRequestCreated({
-      booking,
-      slots,
-      user,
-      contactPerson,
-      whatsapp,
-    }), 'whatsapp-service-request');
-
-    safeNotify(() => sendServiceRequestSubmittedEmail({
-      to: targetEmail,
-      booking: { ...booking, email: targetEmail, requestor: booking.requestor || user },
-      slots,
-      cancelToken,
-    }), 'email-service-request');
-
-    safeNotify(() => sendServiceRequestAdminAlertEmail({
-      booking,
-      slots,
-      user,
-    }), 'email-service-admin-alert');
+    // Dispatches (Awaited with Promise.allSettled for guaranteed serverless delivery before Lambda freeze)
+    await Promise.allSettled([
+      safeNotify(() => notifyServiceRequestCreated({
+        booking,
+        slots,
+        user,
+        contactPerson,
+        whatsapp,
+      }), 'whatsapp-service-request'),
+      safeNotify(() => sendServiceRequestSubmittedEmail({
+        to: targetEmail,
+        booking: { ...booking, email: targetEmail, requestor: booking.requestor || user },
+        slots,
+        cancelToken,
+      }), 'email-service-request'),
+      safeNotify(() => sendServiceRequestAdminAlertEmail({
+        booking,
+        slots,
+        user,
+      }), 'email-service-admin-alert'),
+    ]);
 
     res.status(201).json({ bookingId: booking.id, whatsappUrl, cancelToken, userEmail: targetEmail });
   } catch (err) {

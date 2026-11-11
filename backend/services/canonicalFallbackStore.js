@@ -349,8 +349,27 @@ export async function purgeCanonicalUserRecords(userId) {
 }
 
 // ─── 6. User Blocks Canonical Persistence ────────────────────────────────────
+let userBlocksTableChecked = false;
+async function ensureUserBlocksTable() {
+  if (userBlocksTableChecked) return;
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS user_blocks (
+        blocker_id VARCHAR(128) NOT NULL,
+        blocked_id VARCHAR(128) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (blocker_id, blocked_id)
+      )
+    `);
+    userBlocksTableChecked = true;
+  } catch (err) {
+    console.warn('[CanonicalStore] ensureUserBlocksTable error:', err?.message);
+  }
+}
+
 export async function persistCanonicalUserBlock(blockerId, blockedId) {
   if (!blockerId || !blockedId) return;
+  await ensureUserBlocksTable();
   try {
     await prisma.$executeRawUnsafe(
       'INSERT INTO user_blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
@@ -364,6 +383,7 @@ export async function persistCanonicalUserBlock(blockerId, blockedId) {
 
 export async function removeCanonicalUserBlock(blockerId, blockedId) {
   if (!blockerId || !blockedId) return;
+  await ensureUserBlocksTable();
   try {
     await prisma.$executeRawUnsafe(
       'DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2',
@@ -377,6 +397,7 @@ export async function removeCanonicalUserBlock(blockerId, blockedId) {
 
 export async function fetchCanonicalUserBlocks(userId) {
   if (!userId) return { blockedUsers: [], blockedByUsers: [] };
+  await ensureUserBlocksTable();
   const uid = String(userId).trim();
   try {
     const [blockedRows, blockedByRows] = await Promise.all([
@@ -395,6 +416,7 @@ export async function fetchCanonicalUserBlocks(userId) {
 
 export async function isUserBlockedCanonical(blockerId, blockedId) {
   if (!blockerId || !blockedId) return false;
+  await ensureUserBlocksTable();
   try {
     const rows = await prisma.$queryRawUnsafe(
       'SELECT 1 FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2 LIMIT 1',

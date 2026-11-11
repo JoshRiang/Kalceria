@@ -268,7 +268,7 @@ export async function updateServiceRequest(req, res, next) {
     );
     const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(msg)}`;
 
-    safeNotify(() => sendServiceRequestUpdatedEmail({
+    await safeNotify(() => sendServiceRequestUpdatedEmail({
       to: targetEmail,
       booking: { ...updatedBooking, email: targetEmail, requestor: updatedBooking.requestor || booking.requestor },
       slots,
@@ -413,7 +413,7 @@ export async function confirmServiceRequest(req, res, next) {
       : booking.email || '';
 
     if (targetEmail) {
-      safeNotify(() => sendServiceRequestConfirmedEmail({
+      await safeNotify(() => sendServiceRequestConfirmedEmail({
         to: targetEmail,
         booking: { ...updatedBooking, email: targetEmail, requestor: updatedBooking.requestor || booking.requestor },
         slots: updatedBooking.slots || [],

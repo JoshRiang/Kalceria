@@ -143,29 +143,30 @@ export async function registerEvent(req, res, next) {
       { expiresIn: 180, issuer: 'kalceria-api' }
     );
 
-    // Dispatches (fire-and-forget, safe & isolated)
-    safeNotify(() => notifyEventRegistration({
-      registration: reg,
-      event,
-      user: { name: participantName, phone: participantContact, email: reg.user.email },
-      paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
-    }), 'whatsapp-event-reg');
-
-    safeNotify(() => sendEventRegistrationEmail({
-      to: participantEmail || reg.user?.email,
-      event,
-      registration: {
-        ...reg,
-        user: {
-          ...reg.user,
-          name: participantName || reg.user?.name,
-          phone: participantContact || reg.user?.phone,
-          email: participantEmail || reg.user?.email,
+    // Dispatches (Awaited with Promise.allSettled for guaranteed serverless delivery before Lambda freeze)
+    await Promise.allSettled([
+      safeNotify(() => notifyEventRegistration({
+        registration: reg,
+        event,
+        user: { name: participantName, phone: participantContact, email: reg.user.email },
+        paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
+      }), 'whatsapp-event-reg'),
+      safeNotify(() => sendEventRegistrationEmail({
+        to: participantEmail || reg.user?.email,
+        event,
+        registration: {
+          ...reg,
+          user: {
+            ...reg.user,
+            name: participantName || reg.user?.name,
+            phone: participantContact || reg.user?.phone,
+            email: participantEmail || reg.user?.email,
+          },
         },
-      },
-      cancelToken,
-      paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
-    }), 'email-event-reg');
+        cancelToken,
+        paymentCheckoutUrl: paymentCheckout?.checkoutUrl,
+      }), 'email-event-reg'),
+    ]);
 
     res.status(201).json({
       registration: reg,

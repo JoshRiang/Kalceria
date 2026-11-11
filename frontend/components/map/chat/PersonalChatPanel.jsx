@@ -162,6 +162,7 @@ export function PersonalChatPanel({
             isFavourite={isFavourite}
             isMuted={isMuted}
             isBlockedByTarget={isBlockedByTarget}
+            isTargetBlocked={isTargetBlocked}
             isPeerTyping={isPeerTyping}
             menuOpen={menuOpen}
             setMenuOpen={setMenuOpen}

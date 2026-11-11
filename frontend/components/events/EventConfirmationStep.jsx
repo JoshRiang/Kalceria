@@ -59,7 +59,7 @@ export function EventConfirmationStep({
       className="py-2 sm:py-4 flex flex-col items-center text-center w-full"
     >
       {/* Transmission Header (Exact matching bold typography as Need Our Help) */}
-      <h3 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight text-center px-2 max-w-full break-words">
+      <h3 className="text-2xl xs:text-3xl sm:text-4xl font-black text-white uppercase tracking-tight leading-tight text-center px-2 max-w-full break-words">
         {isCancelMode ? (
           <>
             Cancel<br className="hidden xs:inline" /> Transmission
@@ -173,7 +173,7 @@ export function EventConfirmationStep({
       {/* Foto Event di Tengah (Centered Event Photo with CLIP_CARD cyber-cut shape matching Part 1) */}
       {(event?.displayPhotoUrl || event?.posterUrl) && (
         <div
-          className="w-full max-w-[420px] mx-auto my-3 relative shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] aspect-[16/10] sm:aspect-[16/9] bg-white/5"
+          className="w-full max-w-[240px] sm:max-w-[280px] mx-auto my-3 relative shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] aspect-[3/4] bg-white/5"
           style={CLIP_CARD}
         >
           <ContentImage
@@ -181,7 +181,7 @@ export function EventConfirmationStep({
             className="w-full h-full object-cover"
             alt={event.title || "Event Poster"}
             width={900}
-            height={560}
+            height={1200}
           />
           <div className="absolute inset-0 border-2 border-white/10 pointer-events-none" style={CLIP_CARD} />
         </div>
@@ -210,9 +210,9 @@ export function EventConfirmationStep({
           <button
             type="button"
             onClick={onClose}
-            className="font-sans font-medium text-xs sm:text-sm text-white/70 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-2.5 focus:outline-none"
+            className="font-sans font-bold text-xs sm:text-sm text-white/90 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-2.5 focus:outline-none"
           >
-            Tutup / Kembali ke Beranda
+            Selesai
           </button>
         </div>
       )}

@@ -44,6 +44,8 @@ export function useChatSyncLoop({
       peerReadTs: 0,
       deleteRev: 0,
       initialized: false,
+      isTargetBlocked,
+      isBlockedByTarget,
     };
 
     // Clean up legacy v1/v2/v3 cache keys that stored stale fake seed messages or dead blob: URLs
@@ -144,9 +146,13 @@ export function useChatSyncLoop({
 
         if (alive) {
           setMessages((prev) => {
+            const isBlockedActive = Boolean(syncWatermarkRef.current?.isTargetBlocked || syncWatermarkRef.current?.isBlockedByTarget || isTargetBlocked || isBlockedByTarget);
+            const sanitizedPrev = isBlockedActive
+              ? prev.filter((m) => !(String(m.senderId) === String(targetId) && (m.status === 'blocked_drop' || m.isBlockedDrop || m.blockedWhileSent || m.wasBlocked)))
+              : prev;
             const isFullReconcile = wasInitialized && serverDelRev !== prevDelRev && !page.delta;
             const sorted = buildMergedRemoteMessages({
-              prev,
+              prev: sanitizedPrev,
               decryptedRemote: effectiveRemote,
               isFullReconcile,
               isAhmad,

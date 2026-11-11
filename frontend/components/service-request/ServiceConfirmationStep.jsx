@@ -253,9 +253,9 @@ export function ServiceConfirmationStep({
           <button
             type="button"
             onClick={onClose}
-            className="font-sans font-medium text-xs sm:text-sm text-white/70 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-2.5 focus:outline-none"
+            className="font-sans font-bold text-xs sm:text-sm text-white/90 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-2.5 focus:outline-none"
           >
-            Tutup / Kembali ke Beranda
+            Selesai
           </button>
         </div>
       )}

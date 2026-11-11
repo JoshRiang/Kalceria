@@ -57,7 +57,7 @@ export function buildServiceRequestWaMessage(
   return lines.join('\n');
 }
 
-export function buildEventRegistrationWaMessage({ event, registration, user, paymentCheckoutUrl }) {
+export function buildEventRegistrationWaMessage({ event, registration, user, paymentCheckoutUrl, isUpdate = false }) {
   const regId = registration?.id ? registration.id.slice(-6) : 'PENDING';
   const participantName = user?.name || '—';
   const participantEmail = user?.email || '—';
@@ -86,8 +86,10 @@ export function buildEventRegistrationWaMessage({ event, registration, user, pay
     }
   }
 
+  const header = isUpdate ? 'UPDATE PENDAFTARAN - SEE EVENT' : 'PENDAFTARAN EVENT - SEE EVENT';
+
   const lines = [
-    'PENDAFTARAN EVENT - SEE EVENT',
+    header,
     '',
     `Booking ID: #${regId}`,
     `Event: ${eventTitle}`,

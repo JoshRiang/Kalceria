@@ -101,6 +101,16 @@ export function ChatMessageThread({
   const daySections = useMemo(() => {
     const sections = [];
     let current = null;
+    const isTargetCurrentlyBlocked = Boolean(
+      isTargetBlocked ||
+      (blockEvents && blockEvents.some((e) => e.type === "block"))
+    );
+    const earliestBlockTs = (blockEvents || [])
+      .filter((e) => e.type === "block")
+      .map((e) => Number(e.ts) || 0)
+      .filter((ts) => ts > 0)
+      .sort((a, b) => a - b)[0] || 0;
+
     (groupedMessages || []).forEach((item) => {
       if (item.type === "date_divider") {
         current = {
@@ -110,6 +120,24 @@ export function ChatMessageThread({
         };
         sections.push(current);
       } else {
+        // If target is blocked by me, suppress any incoming messages sent by target while blocked
+        if (
+          isTargetCurrentlyBlocked &&
+          String(item.senderId) === String(targetId)
+        ) {
+          if (
+            item.status === "blocked_drop" ||
+            item.isBlockedDrop ||
+            item.blockedWhileSent ||
+            item.wasBlocked
+          ) {
+            return;
+          }
+          if (earliestBlockTs > 0 && Number(item.ts) >= earliestBlockTs - 2000) {
+            return;
+          }
+        }
+
         if (!current) {
           current = {
             id: `sec_${item.id || sections.length}`,
@@ -121,8 +149,10 @@ export function ChatMessageThread({
         current.messages.push(item);
       }
     });
-    return sections;
-  }, [groupedMessages]);
+
+    // Remove empty day sections whose messages were all filtered out
+    return sections.filter((sec) => sec.messages.length > 0);
+  }, [groupedMessages, isTargetBlocked, targetId, blockEvents]);
 
   const handleOpenContextMenu = (e, message) => {
     // If in select mode, do not open context menu; selection takes precedence
@@ -140,25 +170,22 @@ export function ChatMessageThread({
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-      {/* Background Layer: Solid Black when blocked by peer, otherwise BG_PersonalChat.webp */}
+      {/* Background Layer: Keep BG_PersonalChat.webp always visible with subtle contrast veil */}
       <div
         className="absolute inset-0 z-0 pointer-events-none transition-all duration-300"
         style={{
-          backgroundColor: isBlockedByTarget ? "#000000" : undefined,
-          backgroundImage: isBlockedByTarget ? "none" : "url('/BG_PersonalChat.webp')",
+          backgroundImage: "url('/BG_PersonalChat.webp')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: isBlockedByTarget ? 1 : isMapDark ? 0.45 : 0.58,
+          opacity: isMapDark ? 0.45 : 0.58,
         }}
       />
-      {/* Subtle Theme Contrast Veil (hidden if blocked by peer for deep black) */}
-      {!isBlockedByTarget && (
-        <div
-          className={`absolute inset-0 z-0 pointer-events-none ${
-            isMapDark ? "bg-[#0b141a]/45" : "bg-white/30"
-          }`}
-        />
-      )}
+      {/* Subtle Theme Contrast Veil */}
+      <div
+        className={`absolute inset-0 z-0 pointer-events-none ${
+          isMapDark ? "bg-[#0b141a]/45" : "bg-white/30"
+        }`}
+      />
 
       {/* Scrollable Message Thread: Optimized with GPU acceleration & low-latency scrolling */}
       <div

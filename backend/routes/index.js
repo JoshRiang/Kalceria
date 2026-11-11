@@ -59,7 +59,7 @@ import {
 import {
   registerEvent, listPublicEvents, getPublicEvent,
   listRegistrations, confirmRegistrationPayment, deleteRegistration, markPdfExported,
-  getEventRegistrationForManage, confirmEventRegistration, deleteOwnEventRegistration,
+  getEventRegistrationForManage, updateEventRegistration, confirmEventRegistration, deleteOwnEventRegistration,
   getEventRegistrationTimerBadge,
 } from "../controllers/eventRegistrationController.js";
 import {
@@ -170,6 +170,7 @@ router.get("/events/:eventId", getPublicEvent);
 // ─── Event Registration (Auth optional / 2-step verification) ───────────────
 router.post("/events/:eventId/register", optionalAuth, bookingRateLimit, eventRegistrationDefense, registerEvent);
 router.get("/events/registration/:id", optionalAuth, getEventRegistrationForManage);
+router.put("/events/registration/:id", optionalAuth, updateEventRegistration);
 router.get("/events/registration/:id/confirm", optionalAuth, confirmEventRegistration);
 router.post("/events/registration/:id/confirm", optionalAuth, confirmEventRegistration);
 router.get("/events/registration/:id/timer.svg", getEventRegistrationTimerBadge);

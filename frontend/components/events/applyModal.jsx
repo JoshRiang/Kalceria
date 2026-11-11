@@ -52,6 +52,7 @@ export function ApplyModal({
   const [doneData, setDoneData] = useState(null);
   const [hasConfirmedWa, setHasConfirmedWa] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(Boolean(initialAction === "confirm"));
   const [isWindowExpired, setIsWindowExpired] = useState(Boolean(initialError === "expired"));
 
@@ -225,26 +226,49 @@ export function ApplyModal({
       const nameVal = nameToValidate;
       const contactVal = contactToValidate;
 
-      const payload = {
-        eventId: event.id,
-        mode,
-        name: nameVal,
-        email: emailVal,
-        contact: contactVal,
-        identifier: form.identifier || emailVal || nameVal,
-        selectedSession: form.session,
-      };
+      if (isEditing && doneData?.registration?.id) {
+        const updatePayload = {
+          name: nameVal,
+          contact: contactVal,
+          selectedSession: form.session,
+        };
+        const token = initialToken || doneData?.cancelToken;
+        const res = await api.put(`/events/registration/${doneData.registration.id}`, updatePayload, {
+          headers: token ? { "x-manage-token": token, "x-cancel-token": token } : {},
+        });
+        setDoneData(res.data);
+        setForm((p) => ({
+          ...p,
+          email: emailVal,
+          name: nameVal,
+          contact: contactVal,
+          identifier: p.identifier || emailVal || nameVal,
+        }));
+        setIsEditing(false);
+        setStep(2);
+      } else {
+        const payload = {
+          eventId: event.id,
+          mode,
+          name: nameVal,
+          email: emailVal,
+          contact: contactVal,
+          identifier: form.identifier || emailVal || nameVal,
+          selectedSession: form.session,
+        };
 
-      const res = await api.post(`/events/${event.id}/register`, payload);
-      setDoneData(res.data);
-      setForm((p) => ({
-        ...p,
-        email: emailVal,
-        name: nameVal,
-        contact: contactVal,
-        identifier: p.identifier || emailVal || nameVal,
-      }));
-      setStep(2);
+        const res = await api.post(`/events/${event.id}/register`, payload);
+        setDoneData(res.data);
+        setForm((p) => ({
+          ...p,
+          email: emailVal,
+          name: nameVal,
+          contact: contactVal,
+          identifier: p.identifier || emailVal || nameVal,
+        }));
+        setIsEditing(false);
+        setStep(2);
+      }
     } catch (err) {
       const errMsg = err.response?.data?.error || err.message || "Registration failed.";
       setError(errMsg);
@@ -350,6 +374,34 @@ export function ApplyModal({
 
         <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors text-2xl z-40">×</button>
 
+        <style jsx global>{`
+          .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+          }
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 4px !important;
+            height: 4px !important;
+          }
+          .custom-scrollbar::-webkit-scrollbar-button {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+          }
+          .custom-scrollbar::-webkit-scrollbar-track,
+          .custom-scrollbar::-webkit-scrollbar-track-piece {
+            background: transparent !important;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25) !important;
+            border-radius: 9999px !important;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.45) !important;
+          }
+        `}</style>
+
         {/* Scrollable Modal Body (Custom Semi-Transparent Scrollbar positioned flush to right edge) */}
         <div className="relative z-30 flex-1 overflow-y-auto overflow-x-hidden p-5 sm:p-6 md:p-8 custom-scrollbar">
           {/* Mini Carousel Header (Shown ONLY on Step 1: Form Fill) */}
@@ -413,7 +465,7 @@ export function ApplyModal({
             fallbackWaUrl={fallbackWaUrl}
             handleCancelRegistration={handleCancelRegistration}
             handleConfirmViaWa={handleConfirmViaWa}
-            onEditDetails={() => { setStep(1); setError(""); }}
+            onEditDetails={() => { setIsEditing(true); setStep(1); setError(""); }}
             onClose={onClose}
           />
         ) : (
@@ -554,7 +606,9 @@ export function ApplyModal({
 
                 <button type="submit" disabled={loading} className={`w-full py-3 bg-white text-black font-black uppercase tracking-tighter transition-all relative overflow-hidden group shadow-[0_0_30px_rgba(255,255,255,0.2)] ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-200"}`} style={{ clipPath: "polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)" }}>
                    <motion.div initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.7 }} className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-20deg] z-0" />
-                   <span className="relative z-10 text-lg tracking-tighter">{loading ? "PROCESSING..." : "SECURE SPOT"}</span>
+                   <span className="relative z-10 text-lg tracking-tighter">
+                     {loading ? (isEditing ? "UPDATING..." : "PROCESSING...") : (isEditing ? "UPDATE REGISTRATION" : "SECURE SPOT")}
+                   </span>
                 </button>
              </form>
           </div>

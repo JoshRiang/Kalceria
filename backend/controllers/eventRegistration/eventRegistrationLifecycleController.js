@@ -1,9 +1,11 @@
+import jwt from 'jsonwebtoken';
 import prisma from '../../lib/prisma.js';
-import { safeNotify, sendEventPaymentConfirmedEmail } from '../../lib/mailer.js';
+import { safeNotify, sendEventPaymentConfirmedEmail, sendEventRegistrationUpdatedEmail } from '../../lib/mailer.js';
 import { clearEventRegistrationCooldown } from '../../middleware/ingressDefense.js';
 import { renderConfirmResultHtml } from '../comms/confirmResultHtml.js';
-import { THREE_MINUTES_MS } from './eventRegistrationConstants.js';
+import { WA_ADMIN, THREE_MINUTES_MS } from './eventRegistrationConstants.js';
 import { verifyEventRegistrationAuthorization } from './eventRegistrationAuth.js';
+import { buildEventRegistrationWaMessage } from '../comms/waMessageBuilder.js';
 
 // ─── GET /events/registration/:id (Inspect for manage/cancel within 3 mins) ───
 export async function getEventRegistrationForManage(req, res, next) {
@@ -50,6 +52,107 @@ export async function getEventRegistrationForManage(req, res, next) {
       registration,
       remainingSeconds,
       isConfirmed: false,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── PUT /events/registration/:id (Atomic Update within 3 mins) ──────────────
+export async function updateEventRegistration(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { selectedSession, name, contact } = req.body || {};
+
+    const registration = await prisma.eventRegistration.findUnique({
+      where: { id },
+      include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
+    });
+    if (!registration) {
+      return res.status(404).json({
+        error: 'Batas waktu 3 menit untuk memproses pesanan telah berakhir. Pendaftaran otomatis dibatalkan atau tidak ditemukan.',
+        isExpired: true,
+      });
+    }
+
+    if (!verifyEventRegistrationAuthorization(registration, req)) {
+      return res.status(403).json({ error: 'Unauthorized to update this registration.' });
+    }
+
+    if (registration.paymentStatus === 'CONFIRMED') {
+      return res.status(409).json({
+        error: 'Pendaftaran ini sudah terkonfirmasi dan terkunci. Perubahan tidak dapat dilakukan.',
+        isConfirmed: true,
+      });
+    }
+
+    const elapsed = Date.now() - new Date(registration.createdAt).getTime();
+    const remainingSeconds = Math.max(0, Math.ceil((THREE_MINUTES_MS - elapsed) / 1000));
+    if (elapsed > THREE_MINUTES_MS || req._eventTokenExpired) {
+      return res.status(403).json({
+        error: 'Batas waktu 3 menit untuk mengedit pendaftaran telah berakhir.',
+        isExpired: true,
+      });
+    }
+
+    const cleanSession = (typeof selectedSession === 'string' && selectedSession.trim())
+      ? selectedSession.trim()
+      : registration.selectedSession;
+
+    const cleanName = (typeof name === 'string' && name.trim()) ? name.trim() : registration.user?.name;
+    const cleanContact = (typeof contact === 'string' && contact.trim()) ? contact.trim() : registration.user?.phone;
+
+    // Atomically update registration and guest user
+    const updatedReg = await prisma.$transaction(async (tx) => {
+      if (cleanName || cleanContact) {
+        try {
+          await tx.user.update({
+            where: { id: registration.userId },
+            data: {
+              ...(cleanName && { name: cleanName }),
+              ...(cleanContact && { phone: cleanContact }),
+            },
+          });
+        } catch {}
+      }
+
+      return tx.eventRegistration.update({
+        where: { id: registration.id },
+        data: {
+          selectedSession: cleanSession,
+          version: { increment: 1 },
+        },
+        include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
+      });
+    });
+
+    const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
+    const cancelToken = jwt.sign(
+      { registrationId: updatedReg.id, userId: updatedReg.userId, action: 'manage' },
+      cancelSecret,
+      { algorithm: 'HS256', issuer: 'kalceria-api', expiresIn: Math.max(1, remainingSeconds) }
+    );
+
+    const waMsg = buildEventRegistrationWaMessage({
+      event: updatedReg.event,
+      registration: updatedReg,
+      user: { id: updatedReg.userId, name: cleanName, email: updatedReg.user?.email, phone: cleanContact },
+      isUpdate: true,
+    });
+    const whatsappUrl = `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(waMsg)}`;
+
+    await safeNotify(() => sendEventRegistrationUpdatedEmail({
+      to: updatedReg.user.email,
+      event: updatedReg.event,
+      registration: updatedReg,
+      cancelToken,
+    }), 'email-event-reg-update');
+
+    res.json({
+      success: true,
+      registration: updatedReg,
+      whatsappUrl,
+      cancelToken,
     });
   } catch (err) {
     next(err);
@@ -120,7 +223,7 @@ export async function confirmEventRegistration(req, res, next) {
       include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
     });
 
-    safeNotify(() => sendEventPaymentConfirmedEmail({
+    await safeNotify(() => sendEventPaymentConfirmedEmail({
       to: updatedReg.user.email,
       event: updatedReg.event,
       registration: updatedReg,
