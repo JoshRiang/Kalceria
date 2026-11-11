@@ -316,7 +316,7 @@ export function useEventCollab({ events, setEvents, setNotice }) {
         if (!["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"].includes(ext)) {
           setCollaboratorUploadState({
             status: "error",
-            errorMessage: "Upload media Gagal/Ukuran Media melebihi 10 MB",
+            errorMessage: "Upload media gagal: Format file tidak didukung (gunakan PNG, JPG, WEBP, atau MP4/MOV)",
           });
           return;
         }
@@ -331,7 +331,7 @@ export function useEventCollab({ events, setEvents, setNotice }) {
           if (!uploadRes?.url) {
             setCollaboratorUploadState({
               status: "error",
-              errorMessage: uploadRes?.error || "Upload media Gagal/Ukuran Media melebihi 10 MB",
+              errorMessage: uploadRes?.error || "Upload media gagal: Silakan coba beberapa saat lagi",
             });
             return;
           }

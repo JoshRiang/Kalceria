@@ -17,7 +17,7 @@ export function CollaboratorUploadOverlay({
   const isVisible = Boolean(uploadState && uploadState.status);
   const status = uploadState?.status || "uploading";
   const errorMessage =
-    uploadState?.errorMessage || "Upload media Gagal/Ukuran Media melebihi 10 MB";
+    uploadState?.errorMessage || "Upload media gagal: Ukuran media melebihi 4.5 MB";
 
   // Auto-dismiss error state after 2.8 seconds
   useEffect(() => {
