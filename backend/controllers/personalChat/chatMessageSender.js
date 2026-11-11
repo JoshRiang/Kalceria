@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { redis } from '../../lib/redis.js';
 import prisma from '../../lib/prisma.js';
+import { isUserBlockedCanonical } from '../../services/canonicalFallbackStore.js';
 import {
   MAX_CIPHERTEXT_LENGTH,
   HOT_RING_BUFFER_SIZE,
@@ -64,8 +65,14 @@ export async function sendPersonalChatMessage(req, res, next) {
     prePipe.hget(metaKey, 'emptyConfirmed');
     const preResults = await prePipe.exec().catch(() => null);
 
-    const blockedByMe = Number(unwrapPipeResult(preResults?.[0], 0));
-    const blockedByTarget = Number(unwrapPipeResult(preResults?.[1], 0));
+    let blockedByMe = Number(unwrapPipeResult(preResults?.[0], 0));
+    let blockedByTarget = Number(unwrapPipeResult(preResults?.[1], 0));
+    if (!blockedByMe) {
+      blockedByMe = (await isUserBlockedCanonical(userId, targetId)) ? 1 : 0;
+    }
+    if (!blockedByTarget) {
+      blockedByTarget = (await isUserBlockedCanonical(targetId, userId)) ? 1 : 0;
+    }
     const nonceSetReply = preResults ? unwrapPipeResult(preResults[2], 'OK') : 'OK';
     const oldestRaw = unwrapPipeResult(preResults?.[3], null);
     const emptyConfirmed = unwrapPipeResult(preResults?.[4], null);

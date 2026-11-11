@@ -232,6 +232,8 @@ export function usePersonalChatState({
     setNextCursor,
     persistQuickLocal,
     persistEncryptedLocal,
+    isTargetBlocked,
+    isBlockedByTarget,
   });
 
   // Hook Ledger Pos 5: E6, E7 (Auto scroll & menu outside click)
@@ -341,6 +343,8 @@ export function usePersonalChatState({
     activeChatUserRef,
     persistQuickLocal,
     persistEncryptedLocal,
+    isTargetBlocked,
+    isBlockedByTarget,
   });
 
   return {

@@ -3,19 +3,33 @@ import { redis } from '../../lib/redis.js';
 import { getChatRtcSignalKey } from '../personalChat/chatConstants.js';
 import { invalidateMiniEventsCache } from '../miniEvent/index.js';
 import { isValidTargetId } from './telemetryUtils.js';
+import {
+  persistCanonicalUserBlock,
+  removeCanonicalUserBlock,
+  fetchCanonicalUserBlocks,
+} from '../../services/canonicalFallbackStore.js';
 
 export async function getBlockedUsers(req, res, next) {
   try {
     const userId = req.user?.userId || req.user?.id;
     if (!userId) return res.json({ blockedUsers: [], blockedByUsers: [] });
     const cleanUserId = String(userId).trim();
-    const [blocked, blockedBy] = await Promise.all([
+    const [blocked, blockedBy, canonical] = await Promise.all([
       redis.smembers("blocked:" + cleanUserId).catch(() => []),
       redis.smembers("blocked_by:" + cleanUserId).catch(() => []),
+      fetchCanonicalUserBlocks(cleanUserId).catch(() => ({ blockedUsers: [], blockedByUsers: [] })),
+    ]);
+    const blockedSet = new Set([
+      ...(Array.isArray(blocked) ? blocked.map(String) : []),
+      ...(canonical?.blockedUsers || []),
+    ]);
+    const blockedBySet = new Set([
+      ...(Array.isArray(blockedBy) ? blockedBy.map(String) : []),
+      ...(canonical?.blockedByUsers || []),
     ]);
     res.json({
-      blockedUsers: Array.isArray(blocked) ? blocked.map(String) : [],
-      blockedByUsers: Array.isArray(blockedBy) ? blockedBy.map(String) : [],
+      blockedUsers: Array.from(blockedSet),
+      blockedByUsers: Array.from(blockedBySet),
     });
   } catch (err) {
     next(err);
@@ -33,10 +47,11 @@ export async function blockUser(req, res, next) {
     const cleanTargetId = String(targetId).trim();
 
     await Promise.all([
-      redis.sadd("blocked:" + cleanUserId, cleanTargetId),
-      redis.sadd("blocked_by:" + cleanTargetId, cleanUserId),
+      redis.sadd("blocked:" + cleanUserId, cleanTargetId).catch(() => {}),
+      redis.sadd("blocked_by:" + cleanTargetId, cleanUserId).catch(() => {}),
       redis.del(getChatRtcSignalKey(cleanUserId, cleanTargetId)).catch(() => {}),
       redis.del(getChatRtcSignalKey(cleanTargetId, cleanUserId)).catch(() => {}),
+      persistCanonicalUserBlock(cleanUserId, cleanTargetId),
     ]);
 
     // Auto-kick blocked target user from any active events created by the blocker
@@ -125,8 +140,9 @@ export async function unblockUser(req, res, next) {
     const cleanTargetId = String(targetId).trim();
 
     await Promise.all([
-      redis.srem("blocked:" + cleanUserId, cleanTargetId),
-      redis.srem("blocked_by:" + cleanTargetId, cleanUserId),
+      redis.srem("blocked:" + cleanUserId, cleanTargetId).catch(() => {}),
+      redis.srem("blocked_by:" + cleanTargetId, cleanUserId).catch(() => {}),
+      removeCanonicalUserBlock(cleanUserId, cleanTargetId),
     ]);
     res.json({ ok: true, unblockedUserId: cleanTargetId });
   } catch (err) {

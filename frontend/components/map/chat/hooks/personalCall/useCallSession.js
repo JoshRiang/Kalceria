@@ -336,10 +336,9 @@ export function useCallSession({
         }).then((res) => {
           if (res?.isBlockedDrop || res?.packet?.isBlockedDrop) {
             isCallBlockedRef.current = true;
+            if (!cancelled && !isHungUpRef.current) setStatus("calling");
           }
-          if (res?.livekit && !cancelled) {
-            livekitSessionRef.current = res.livekit;
-          }
+          if (res?.livekit && !cancelled) livekitSessionRef.current = res.livekit;
         }).catch(() => {});
 
         // Transition from Calling to Ringing once offer is dispatched (ONLY if not blocked by target)

@@ -1,4 +1,5 @@
 import { redis } from '../../lib/redis.js';
+import { isUserBlockedCanonical } from '../../services/canonicalFallbackStore.js';
 import {
   CHAT_RTC_TTL_SECONDS,
   sanitizeTargetId,
@@ -35,8 +36,14 @@ export async function sendChatRtcSignal(req, res, next) {
     pipe.sismember(`blocked:${userId}`, targetId);
     pipe.sismember(`blocked:${targetId}`, userId);
     const blockRes = await pipe.exec().catch(() => null);
-    const targetBlockedByMe = Number(unwrapPipeResult(blockRes?.[0], 0)) > 0;
-    const meBlockedByTarget = Number(unwrapPipeResult(blockRes?.[1], 0)) > 0;
+    let targetBlockedByMe = Number(unwrapPipeResult(blockRes?.[0], 0)) > 0;
+    let meBlockedByTarget = Number(unwrapPipeResult(blockRes?.[1], 0)) > 0;
+    if (!targetBlockedByMe) {
+      targetBlockedByMe = await isUserBlockedCanonical(userId, targetId);
+    }
+    if (!meBlockedByTarget) {
+      meBlockedByTarget = await isUserBlockedCanonical(targetId, userId);
+    }
 
     if (targetBlockedByMe) {
       return res.status(403).json({ error: 'Blocked user.' });
@@ -64,6 +71,12 @@ export async function getChatRtcSignals(req, res, next) {
     const targetId = sanitizeTargetId(req.params?.targetId);
     if (!userId || !targetId) {
       return res.status(400).json({ error: 'Invalid chat RTC target.' });
+    }
+
+    const isBlocked = (await redis.sismember(`blocked:${userId}`, targetId).catch(() => 0)) > 0 ||
+      (await isUserBlockedCanonical(userId, targetId));
+    if (isBlocked) {
+      return res.json({ ok: true, signals: [] });
     }
 
     const rtcKey = getChatRtcSignalKey(userId, targetId);

@@ -14,6 +14,8 @@ import {
   acquireCanonicalCallLock,
   releaseCanonicalCallLock,
   getCanonicalCallLock,
+  isUserBlockedCanonical,
+  fetchCanonicalUserBlocks,
 } from '../../services/canonicalFallbackStore.js';
 
 export function generateLiveKitToken({ userId, targetId, username, callId }) {
@@ -90,8 +92,14 @@ export async function sendCallSignal(req, res, next) {
     }
     const preRes = await prePipe.exec().catch(() => null);
     const nonceReply = preRes ? unwrapPipeResult(preRes[0], 'OK') : 'OK';
-    const isCallerBlockedByTarget = Number(unwrapPipeResult(preRes?.[1], 0)) > 0;
-    const isTargetBlockedByCaller = Number(unwrapPipeResult(preRes?.[2], 0)) > 0;
+    let isCallerBlockedByTarget = Number(unwrapPipeResult(preRes?.[1], 0)) > 0;
+    let isTargetBlockedByCaller = Number(unwrapPipeResult(preRes?.[2], 0)) > 0;
+    if (!isCallerBlockedByTarget) {
+      isCallerBlockedByTarget = await isUserBlockedCanonical(targetId, userId);
+    }
+    if (!isTargetBlockedByCaller) {
+      isTargetBlockedByCaller = await isUserBlockedCanonical(userId, targetId);
+    }
     const existingTargetLock = checkLockNeeded ? unwrapPipeResult(preRes?.[3], null) : null;
 
     if (nonceReply !== 'OK') {
@@ -249,8 +257,14 @@ export async function getCallSignals(req, res, next) {
       }
     }
 
-    const myBlocked = await redis.smembers(`blocked:${userId}`).catch(() => []);
-    const blockedSet = new Set((Array.isArray(myBlocked) ? myBlocked : []).map(String));
+    const [myBlocked, canonicalBlocks] = await Promise.all([
+      redis.smembers(`blocked:${userId}`).catch(() => []),
+      fetchCanonicalUserBlocks(userId).catch(() => ({ blockedUsers: [] })),
+    ]);
+    const blockedSet = new Set([
+      ...(Array.isArray(myBlocked) ? myBlocked.map(String) : []),
+      ...(canonicalBlocks?.blockedUsers || []),
+    ]);
     if (blockedSet.size > 0) {
       signals = signals.filter((s) => !blockedSet.has(String(s.fromUserId)));
     }

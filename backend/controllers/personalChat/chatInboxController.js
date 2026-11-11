@@ -1,6 +1,6 @@
 import { redis } from '../../lib/redis.js';
 import prisma from '../../lib/prisma.js';
-import { getCanonicalInboxSummary } from '../../services/canonicalFallbackStore.js';
+import { getCanonicalInboxSummary, fetchCanonicalUserBlocks } from '../../services/canonicalFallbackStore.js';
 import {
   HOT_RING_BUFFER_SIZE,
   COLD_ARCHIVE_MAX_SIZE,
@@ -101,8 +101,18 @@ export async function getPersonalChatInboxSummary(req, res, next) {
       };
     }
 
-    const myBlocked = await redis.smembers(`blocked:${userId}`).catch(() => []);
-    const blockedSet = new Set((Array.isArray(myBlocked) ? myBlocked : []).map(String));
+    const [myBlocked, canonicalBlocks] = await Promise.all([
+      redis.smembers(`blocked:${userId}`).catch(() => []),
+      fetchCanonicalUserBlocks(userId).catch(() => ({ blockedUsers: [] })),
+    ]);
+    const blockedSet = new Set([
+      ...(Array.isArray(myBlocked) ? myBlocked.map(String) : []),
+      ...(canonicalBlocks?.blockedUsers || []),
+    ]);
+
+    for (const blockedId of blockedSet) {
+      delete peers[blockedId];
+    }
 
     let eventNotifications = (Array.isArray(rawEventNotifs) ? rawEventNotifs : [])
       .map((item) => {

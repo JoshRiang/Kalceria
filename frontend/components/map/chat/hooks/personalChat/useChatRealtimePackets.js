@@ -155,7 +155,7 @@ export function useChatRealtimePackets({
         syncNowRef.current?.();
       }
     },
-    [myId, targetId, persistQuickLocal, persistEncryptedLocal]
+    [myId, targetId, isTargetBlocked, isBlockedByTarget, persistQuickLocal, persistEncryptedLocal]
   );
 
   const {

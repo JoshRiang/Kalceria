@@ -1,5 +1,6 @@
 import { redis } from '../../lib/redis.js';
 import prisma from '../../lib/prisma.js';
+import { isUserBlockedCanonical } from '../../services/canonicalFallbackStore.js';
 import {
   HOT_RING_BUFFER_SIZE,
   COLD_ARCHIVE_MAX_SIZE,
@@ -47,7 +48,10 @@ export async function getPersonalChatMessages(req, res, next) {
     }
     const metaPipeRes = await metaPipe.exec().catch(() => null);
     const meta = unwrapPipeResult(metaPipeRes?.[0], {}) || {};
-    const isTargetBlockedByMe = Number(unwrapPipeResult(metaPipeRes?.[1], 0)) === 1;
+    let isTargetBlockedByMe = Number(unwrapPipeResult(metaPipeRes?.[1], 0)) === 1;
+    if (!isTargetBlockedByMe) {
+      isTargetBlockedByMe = await isUserBlockedCanonical(userId, targetId);
+    }
 
     let rtcSignals = [];
     if (includeRtc && !isTargetBlockedByMe) {

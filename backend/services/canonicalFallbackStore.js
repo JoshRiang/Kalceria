@@ -343,7 +343,67 @@ export async function purgeCanonicalUserRecords(userId) {
       prisma.callLock.deleteMany({ where: { OR: [{ userId: uid }, { callerId: uid }, { calleeId: uid }] } }),
       prisma.eventNotification.deleteMany({ where: { recipientId: uid } }),
       prisma.userPresence.deleteMany({ where: { userId: uid } }),
+      prisma.$executeRawUnsafe('DELETE FROM user_blocks WHERE blocker_id = $1 OR blocked_id = $1', uid),
     ]);
   } catch {}
+}
+
+// ─── 6. User Blocks Canonical Persistence ────────────────────────────────────
+export async function persistCanonicalUserBlock(blockerId, blockedId) {
+  if (!blockerId || !blockedId) return;
+  try {
+    await prisma.$executeRawUnsafe(
+      'INSERT INTO user_blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      String(blockerId).trim(),
+      String(blockedId).trim()
+    );
+  } catch (err) {
+    console.warn('[CanonicalStore] persistCanonicalUserBlock error:', err?.message);
+  }
+}
+
+export async function removeCanonicalUserBlock(blockerId, blockedId) {
+  if (!blockerId || !blockedId) return;
+  try {
+    await prisma.$executeRawUnsafe(
+      'DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2',
+      String(blockerId).trim(),
+      String(blockedId).trim()
+    );
+  } catch (err) {
+    console.warn('[CanonicalStore] removeCanonicalUserBlock error:', err?.message);
+  }
+}
+
+export async function fetchCanonicalUserBlocks(userId) {
+  if (!userId) return { blockedUsers: [], blockedByUsers: [] };
+  const uid = String(userId).trim();
+  try {
+    const [blockedRows, blockedByRows] = await Promise.all([
+      prisma.$queryRawUnsafe('SELECT blocked_id FROM user_blocks WHERE blocker_id = $1', uid).catch(() => []),
+      prisma.$queryRawUnsafe('SELECT blocker_id FROM user_blocks WHERE blocked_id = $1', uid).catch(() => []),
+    ]);
+    return {
+      blockedUsers: (Array.isArray(blockedRows) ? blockedRows : []).map((r) => String(r.blocked_id)),
+      blockedByUsers: (Array.isArray(blockedByRows) ? blockedByRows : []).map((r) => String(r.blocker_id)),
+    };
+  } catch (err) {
+    console.warn('[CanonicalStore] fetchCanonicalUserBlocks error:', err?.message);
+    return { blockedUsers: [], blockedByUsers: [] };
+  }
+}
+
+export async function isUserBlockedCanonical(blockerId, blockedId) {
+  if (!blockerId || !blockedId) return false;
+  try {
+    const rows = await prisma.$queryRawUnsafe(
+      'SELECT 1 FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2 LIMIT 1',
+      String(blockerId).trim(),
+      String(blockedId).trim()
+    );
+    return Array.isArray(rows) && rows.length > 0;
+  } catch {
+    return false;
+  }
 }
 

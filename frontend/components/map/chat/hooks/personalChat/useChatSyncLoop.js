@@ -2,33 +2,13 @@ import { useEffect } from "react";
 import { isAhmadDummyUser } from "../usePersonalCallState";
 import { fetchPersonalChatPage, ackPersonalChatRead } from "@/lib/api";
 import { decryptChatEnvelope } from "@/lib/chatCrypto";
-import {
-  applyPeerReadReceipt,
-  filterInFlightOrFailed,
-} from "./messageStatusUpdaters";
+import { applyPeerReadReceipt, filterInFlightOrFailed } from "./messageStatusUpdaters";
 import { buildMergedRemoteMessages } from "./mergeRemoteMessages";
 import { getInitialSeedMessages } from "./chatHelpers";
 
 /**
- * useChatSyncLoop
- * Hook Ledger Position: E5 (Adaptive O(1) Delta Sync, conversation history fetch & sync loop)
- *
- * Input:
- * - targetId: string
- * - myId: string
- * - storageKey: string
- * - activeChatUserRef: React.MutableRefObject
- * - syncWatermarkRef: React.MutableRefObject
- * - syncNowRef: React.MutableRefObject
- * - ingestPiggybackedRef: React.MutableRefObject
- * - isP2PConnectedRef: React.MutableRefObject
- * - autoReplyTimerRef: React.MutableRefObject
- * - setMessages: React.Dispatch<React.SetStateAction<Array>>
- * - setNextCursor: React.Dispatch<React.SetStateAction<string|null>>
- * - persistQuickLocal: Function
- * - persistEncryptedLocal: Function
- *
- * Output: void
+ * useChatSyncLoop - Hook Ledger Position: E5
+ * Adaptive O(1) Delta Sync, conversation history fetch & sync loop
  */
 export function useChatSyncLoop({
   targetId,
@@ -44,7 +24,14 @@ export function useChatSyncLoop({
   setNextCursor,
   persistQuickLocal,
   persistEncryptedLocal,
+  isTargetBlocked = false,
+  isBlockedByTarget = false,
 }) {
+  if (syncWatermarkRef?.current) {
+    syncWatermarkRef.current.isTargetBlocked = isTargetBlocked;
+    syncWatermarkRef.current.isBlockedByTarget = isBlockedByTarget;
+  }
+
   // Load & decrypt conversation history + Adaptive O(1) Delta Sync
   useEffect(() => {
     if (!targetId) return;
@@ -147,12 +134,20 @@ export function useChatSyncLoop({
           )
         ).filter(Boolean);
 
+        const effectiveRemote = (syncWatermarkRef.current?.isTargetBlocked || syncWatermarkRef.current?.isBlockedByTarget || isTargetBlocked || isBlockedByTarget)
+          ? decryptedRemote.filter((m) => {
+              if (String(m.senderId) === String(targetId)) return false;
+              if (m.status === 'blocked_drop' || m.isBlockedDrop || m.blockedWhileSent || m.wasBlocked) return false;
+              return true;
+            })
+          : decryptedRemote;
+
         if (alive) {
           setMessages((prev) => {
             const isFullReconcile = wasInitialized && serverDelRev !== prevDelRev && !page.delta;
             const sorted = buildMergedRemoteMessages({
               prev,
-              decryptedRemote,
+              decryptedRemote: effectiveRemote,
               isFullReconcile,
               isAhmad,
               myId,
@@ -162,7 +157,7 @@ export function useChatSyncLoop({
             persistQuickLocal(sorted);
             persistEncryptedLocal(sorted);
 
-            const newPeerMsgs = decryptedRemote.filter((m) => String(m.senderId) === String(targetId));
+            const newPeerMsgs = effectiveRemote.filter((m) => String(m.senderId) === String(targetId));
             if (newPeerMsgs.length > 0) {
               const latestPeerTs = Math.max(...newPeerMsgs.map((m) => Number(m.ts) || 0));
               // Acknowledge read to backend (clears Redis chat:unread:${myId} watermark)
