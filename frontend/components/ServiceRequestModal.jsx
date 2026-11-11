@@ -437,10 +437,22 @@ export default function ServiceRequestModal({
     // Buffer as candidate data without writing to database prematurely
     setCandidateSlots(slots);
     setError("");
+
+    if (isEditMode) {
+      handleFinalizeOrder(slots)
+        .then(() => {
+          setStep(2);
+        })
+        .catch(() => {
+          // error is already recorded in state and rendered in FormErrorBox
+        });
+      return;
+    }
+
     setStep(2);
   };
 
-  const handleFinalizeOrder = async () => {
+  const handleFinalizeOrder = async (explicitSlots) => {
     if (done?.bookingId && !initialBookingId) {
       return done;
     }
@@ -459,12 +471,13 @@ export default function ServiceRequestModal({
       const isUpdate = Boolean(initialBookingId);
       const endpoint = isUpdate ? `/services/request/${initialBookingId}` : "/services/request";
       const method = isUpdate ? "put" : "post";
+      const slotsToSend = explicitSlots || (candidateSlots.length > 0 ? candidateSlots : undefined);
 
       const res = await api[method](
         endpoint,
         {
           ...form,
-          slots: candidateSlots.length > 0 ? candidateSlots : undefined,
+          slots: slotsToSend,
         },
         {
           headers: initialToken ? { "x-manage-token": initialToken } : undefined,

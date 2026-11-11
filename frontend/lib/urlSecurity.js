@@ -27,10 +27,62 @@ export function splitMediaUrlListClient(rawInput) {
   if (typeof rawInput !== 'string') return [];
   const trimmed = rawInput.trim();
   if (!trimmed) return [];
-  return trimmed
-    .split(/,\s*(?=(?:[a-z][a-z0-9+.-]*:|\/))/i)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  if (!trimmed.includes(',')) return [trimmed];
+
+  const results = [];
+  let current = '';
+  let inDataUrl = false;
+  let seenDataUrlComma = false;
+
+  for (let i = 0; i < trimmed.length; i++) {
+    const char = trimmed[i];
+    if (!current.trim() && trimmed.slice(i, i + 5).toLowerCase() === 'data:') {
+      inDataUrl = true;
+      seenDataUrlComma = false;
+    }
+
+    if (inDataUrl) {
+      if (char === ',') {
+        if (!seenDataUrlComma) {
+          seenDataUrlComma = true;
+          current += char;
+          continue;
+        } else {
+          const remaining = trimmed.slice(i + 1).trim();
+          if (remaining.match(/^(?:[a-z][a-z0-9+.-]*:|\/)/i)) {
+            results.push(current.trim());
+            current = '';
+            inDataUrl = false;
+            seenDataUrlComma = false;
+            while (i + 1 < trimmed.length && /\s/.test(trimmed[i + 1])) {
+              i++;
+            }
+            continue;
+          }
+        }
+      }
+      current += char;
+    } else {
+      if (char === ',') {
+        const remaining = trimmed.slice(i + 1).trim();
+        if (remaining.match(/^(?:[a-z][a-z0-9+.-]*:|\/)/i)) {
+          results.push(current.trim());
+          current = '';
+          while (i + 1 < trimmed.length && /\s/.test(trimmed[i + 1])) {
+            i++;
+          }
+          continue;
+        }
+      }
+      current += char;
+    }
+  }
+
+  if (current.trim()) {
+    results.push(current.trim());
+  }
+
+  return results.filter(Boolean);
 }
 
 function hasUnsafeQuery(search) {
@@ -159,6 +211,15 @@ export function validateAndNormalizeMediaUrlClient(rawInput) {
   const normalizedList = [];
 
   for (const item of rawUrls) {
+    // Base64 Data URLs (optimistic fallback when Blob token is pending or offline)
+    if (item.startsWith('data:image/') || item.startsWith('data:video/')) {
+      if (item.length > 8 * 1024 * 1024) {
+        return { valid: false, error: 'Ukuran payload data media melebihi batas 8 MB.' };
+      }
+      normalizedList.push(item);
+      continue;
+    }
+
     if (item.length > MAX_SINGLE_URL_LENGTH) {
       return { valid: false, error: 'Panjang URL melebihi batas maksimum 2048 karakter.' };
     }

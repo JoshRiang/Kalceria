@@ -193,7 +193,7 @@ export function IdeaCommentModal({ onClose }) {
             }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="relative w-full max-w-[460px] my-auto max-h-[92dvh] sm:max-h-[88vh] flex flex-col shadow-2xl overflow-hidden backdrop-blur-2xl bg-[#0a0f1a]/85 border border-white/[0.18] z-[1001]"
-            style={CLIP}
+            style={{ ...CLIP, colorScheme: "dark" }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Dynamic Distributed Blobs: 75% Black, 25% Navy Blue */}

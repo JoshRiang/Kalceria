@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { uploadBlobMedia } from "@/lib/api";
+import { splitMediaUrlListClient } from "@/lib/urlSecurity";
 
 const ACCEPTED_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"];
 
@@ -16,7 +17,7 @@ export function useIdeaCommentMedia() {
   // Clean up in-memory blob URLs when modal unmounts to prevent memory leaks
   useEffect(() => {
     return () => {
-      const urls = (mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
+      const urls = splitMediaUrlListClient(mediaUrl || "");
       urls.forEach((u) => {
         if (u && u.startsWith("blob:")) {
           try { URL.revokeObjectURL(u); } catch {}
@@ -27,6 +28,7 @@ export function useIdeaCommentMedia() {
 
   const cleanFilename = (rawName) => {
     if (!rawName) return "media-file";
+    if (rawName.startsWith("data:")) return "media-file";
     let decoded = rawName;
     try {
       decoded = decodeURIComponent(rawName);
@@ -47,6 +49,7 @@ export function useIdeaCommentMedia() {
     if (!url) return "";
     if (fileNamesRef.current[url]) return fileNamesRef.current[url];
     if (url.startsWith("blob:")) return "uploaded-media";
+    if (url.startsWith("data:")) return "uploaded-media";
     if (url.includes("/api/blob/raw")) {
       try {
         const inner = new URL(url, "https://kalceria.internal").searchParams.get("url") || "";
@@ -90,7 +93,7 @@ export function useIdeaCommentMedia() {
     fileNamesRef.current[instantObjUrl] = file.name;
 
     setMediaUrl((prev) => {
-      const existing = (prev || "").split(",").map((s) => s.trim()).filter(Boolean);
+      const existing = splitMediaUrlListClient(prev || "");
       const nextUrls = [...existing, instantObjUrl].join(", ");
       setSelectedIdx(existing.length);
       return nextUrls;
@@ -102,10 +105,9 @@ export function useIdeaCommentMedia() {
       if (res?.url) {
         try { URL.revokeObjectURL(instantObjUrl); } catch {}
         fileNamesRef.current[res.url] = file.name;
-        delete fileNamesRef.current[instantObjUrl];
 
         setMediaUrl((prev) => {
-          const existing = (prev || "").split(",").map((s) => s.trim()).filter(Boolean);
+          const existing = splitMediaUrlListClient(prev || "");
           const nextUrls = existing.map((u) => (u === instantObjUrl ? res.url : u));
           const targetIdx = existing.findIndex((u) => u === instantObjUrl);
           if (targetIdx !== -1) {
@@ -119,7 +121,7 @@ export function useIdeaCommentMedia() {
       delete fileNamesRef.current[instantObjUrl];
 
       setMediaUrl((prev) => {
-        const existing = (prev || "").split(",").map((s) => s.trim()).filter(Boolean);
+        const existing = splitMediaUrlListClient(prev || "");
         return existing.filter((u) => u !== instantObjUrl).join(", ");
       });
       setMediaError(err.message || "Failed to upload media");
@@ -131,7 +133,7 @@ export function useIdeaCommentMedia() {
 
   const handleRemoveMedia = (indexToRemove) => {
     setMediaUrl((prev) => {
-      const urls = (prev || "").split(",").map((s) => s.trim()).filter(Boolean);
+      const urls = splitMediaUrlListClient(prev || "");
       const removedUrl = urls[indexToRemove];
       if (removedUrl && removedUrl.startsWith("blob:")) {
         try { URL.revokeObjectURL(removedUrl); } catch {}
@@ -144,7 +146,7 @@ export function useIdeaCommentMedia() {
   };
 
   const handleClearAll = () => {
-    const urls = (mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
+    const urls = splitMediaUrlListClient(mediaUrl || "");
     urls.forEach((u) => {
       if (u && u.startsWith("blob:")) {
         try { URL.revokeObjectURL(u); } catch {}

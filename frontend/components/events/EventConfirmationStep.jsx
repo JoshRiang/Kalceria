@@ -77,10 +77,10 @@ export function EventConfirmationStep({
               type="button"
               onClick={handleCancelRegistration}
               disabled={isDeleting || loading || isWindowExpired}
-              className={`font-sans font-bold text-xs sm:text-sm px-6 py-2.5 rounded-lg bg-black text-white border border-white/20 transition-all shadow-md select-none ${
+              className={`font-sans font-bold text-sm sm:text-base py-2 px-6 bg-transparent border-none shadow-none outline-none select-none transition-colors ${
                 isWindowExpired
-                  ? "text-white/40 opacity-40 cursor-not-allowed pointer-events-none"
-                  : "hover:bg-red-600 hover:border-red-600 cursor-pointer"
+                  ? "text-white/30 cursor-not-allowed pointer-events-none select-none"
+                  : "text-white hover:text-red-500 cursor-pointer"
               }`}
             >
               Cancel

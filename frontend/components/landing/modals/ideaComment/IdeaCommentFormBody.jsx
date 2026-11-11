@@ -1,7 +1,7 @@
 "use client";
 
 import { COMMENT_TYPES, CATEGORIES } from "./constants";
-import { validateAndNormalizeMediaUrlClient } from "@/lib/urlSecurity";
+import { validateAndNormalizeMediaUrlClient, splitMediaUrlListClient } from "@/lib/urlSecurity";
 
 export function IdeaCommentFormBody({
   handleSubmit,
@@ -31,10 +31,7 @@ export function IdeaCommentFormBody({
   isFormValid,
   setError,
 }) {
-  const parsedUrls = (mediaUrl || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const parsedUrls = splitMediaUrlListClient(mediaUrl || "");
   const activeIdx = Math.min(selectedIdx || 0, Math.max(0, parsedUrls.length - 1));
   const activeUrl = parsedUrls[activeIdx] || "";
   const displayFilenameText = parsedUrls.length > 0
@@ -44,7 +41,8 @@ export function IdeaCommentFormBody({
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3.5 sm:gap-4 custom-scrollbar pr-1.5"
+      style={{ colorScheme: "dark" }}
+      className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3.5 sm:gap-4 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.25)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-button]:hidden pr-1.5"
     >
       {/* Description Paragraph */}
       <p className="text-white/70 text-xs sm:text-sm leading-relaxed tracking-wide font-sans">
@@ -199,15 +197,13 @@ export function IdeaCommentFormBody({
               <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
             </svg>
             Add photos or videos{" "}
-            {mediaUrl && mediaUrl.includes(",")
-              ? `(${mediaUrl.split(",").filter((s) => s.trim()).length} files)`
-              : ""}
+            {parsedUrls.length > 1 ? `(${parsedUrls.length} files)` : ""}
           </label>
           {mediaUrl && (
             <button
               type="button"
               onClick={handleClearAll || (() => setMediaUrl(""))}
-              className="text-[10px] font-bold text-red-400 hover:underline cursor-pointer"
+              className="text-[11px] sm:text-xs font-semibold tracking-wider font-sans text-red-400 hover:text-red-300 transition-colors cursor-pointer select-none"
             >
               Clear All
             </button>
@@ -251,8 +247,7 @@ export function IdeaCommentFormBody({
             type="button"
             disabled={isUploadingMedia || isSubmitting}
             onClick={() => fileInputRef.current?.click()}
-            style={{ fontFamily: "Arial, sans-serif" }}
-            className="px-3.5 py-2 border rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all shrink-0 cursor-pointer border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/30 disabled:opacity-40"
+            className="px-3.5 py-2 border rounded-lg flex items-center justify-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/30 disabled:opacity-40 font-sans select-none"
           >
             {isUploadingMedia ? (
               <>

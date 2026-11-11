@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { establishSession, hasUserSession } from "@/lib/session";
@@ -226,6 +226,9 @@ export function ApplyModal({
     setStep(2);
   }
 
+  const userEmail = form.email || doneData?.registration?.user?.email || "";
+  const emailInboxUrl = resolveWebmailInboxUrl(userEmail);
+
   // Coherent WhatsApp message format for admin +62 8117998790 with zero emojis
   const fallbackWaUrl = useMemo(() => {
     const rawPrice = Number(event?.price || 0);
@@ -337,9 +340,6 @@ export function ApplyModal({
       setError(errMsg);
     }
   };
-
-  const userEmail = form.email || doneData?.registration?.user?.email || "";
-  const emailInboxUrl = resolveWebmailInboxUrl(userEmail);
 
   const isCancelMode = Boolean(initialAction === "cancel" && !isConfirmed);
 

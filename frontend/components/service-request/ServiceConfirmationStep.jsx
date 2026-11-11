@@ -311,16 +311,16 @@ export function ServiceConfirmationStep({
             Do you want to permanently cancel this order? This operational window will be released immediately and cannot be undone.
           </p>
 
-          {/* Centered CANCEL Action: Matching Picture 4 style */}
+          {/* Centered CANCEL Action: No outer box, text turns red on hover without glow */}
           <div className="flex justify-center items-center w-full mt-4">
             <button
               type="button"
               onClick={handleConfirmCancel}
               disabled={isDeleting || loading || isWindowExpired}
-              className={`font-sans font-bold text-xs sm:text-sm px-6 py-2.5 rounded-lg bg-black text-white border border-white/20 transition-all shadow-md select-none ${
+              className={`font-sans font-bold text-sm sm:text-base py-2 px-6 bg-transparent border-none shadow-none outline-none select-none transition-colors ${
                 isWindowExpired
                   ? "text-white/20 opacity-30 cursor-not-allowed pointer-events-none select-none"
-                  : "hover:bg-red-600 hover:border-red-600 cursor-pointer disabled:opacity-50"
+                  : "text-white hover:text-red-500 cursor-pointer disabled:opacity-50"
               }`}
             >
               {isWindowExpired ? "CANCEL (EXPIRED)" : "CANCEL"}
