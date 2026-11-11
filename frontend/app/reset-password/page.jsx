@@ -29,7 +29,7 @@ function ResetPasswordContent() {
       // Redirect seamlessly to the original home page auth modal (?token=...&from=...)
       if (token) {
         const fromParam = searchParams.get("from");
-        const redirectUrl = `/?token=${encodeURIComponent(token)}${fromParam ? `&from=${encodeURIComponent(fromParam)}` : ""}`;
+        const redirectUrl = `/?token=${encodeURIComponent(token)}&reset_token=${encodeURIComponent(token)}&mode=reset-password${fromParam ? `&from=${encodeURIComponent(fromParam)}` : ""}`;
         window.location.replace(redirectUrl);
       }
     }

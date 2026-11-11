@@ -64,6 +64,24 @@ export async function requestMiniEventCollab(req, res, next) {
       return res.json({ alreadyCollaborator: true, requestedEventId: null });
     }
 
+    // Suppress request if creator has blocked this user so it NEVER reaches Envelope Request
+    const isBlockedByCreator = Number(await redis.sismember(`blocked:${event.creatorId}`, String(userId)).catch(() => 0)) === 1;
+    if (isBlockedByCreator) {
+      const dummyReqId = crypto.randomUUID();
+      await redis
+        .set(`mini_event:collab:user_request:${userId}`, JSON.stringify({ eventId: String(id), requestId: dummyReqId }))
+        .catch(() => {});
+      return res.status(201).json({
+        request: {
+          id: dummyReqId,
+          eventId: String(id),
+          userId: String(userId),
+          createdAt: Date.now(),
+        },
+        requestedEventId: id,
+      });
+    }
+
     const outcome = await createCollabRequest(id, userId);
     if (outcome.activeElsewhere) {
       return res.status(409).json({

@@ -47,6 +47,7 @@ export function useCallSession({
   const statusRef = useRef(status);
   const camMountSyncedRef = useRef(false);
   const livekitSessionRef = useRef(null);
+  const isCallBlockedRef = useRef(false);
   statusRef.current = status;
 
   const hardwareRef = useRef(hardware);
@@ -92,6 +93,7 @@ export function useCallSession({
   useEffect(() => {
     if (!targetUserId) return;
     isHungUpRef.current = false;
+    isCallBlockedRef.current = false;
     secondsRef.current = 0;
     pendingIceCandidatesRef.current = [];
     let cancelled = false;
@@ -332,14 +334,17 @@ export function useCallSession({
           nonce: generateCryptoNonce(),
           encryptedPayload: offerSdpString || btoa(JSON.stringify({ sdpType: "e2ee_offer", mode, ts: Date.now() })),
         }).then((res) => {
+          if (res?.isBlockedDrop || res?.packet?.isBlockedDrop) {
+            isCallBlockedRef.current = true;
+          }
           if (res?.livekit && !cancelled) {
             livekitSessionRef.current = res.livekit;
           }
         }).catch(() => {});
 
-        // Transition from Calling to Ringing once offer is dispatched
+        // Transition from Calling to Ringing once offer is dispatched (ONLY if not blocked by target)
         setTimeout(() => {
-          if (!cancelled && !isHungUpRef.current) {
+          if (!cancelled && !isHungUpRef.current && !isCallBlockedRef.current) {
             setStatus((prev) => (prev === "calling" ? "ringing" : prev));
           }
         }, 750);

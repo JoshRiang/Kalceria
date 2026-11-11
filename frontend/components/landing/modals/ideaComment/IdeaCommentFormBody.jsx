@@ -17,6 +17,8 @@ export function IdeaCommentFormBody({
   setContent,
   mediaUrl,
   setMediaUrl,
+  selectedIdx = 0,
+  setSelectedIdx,
   fileInputRef,
   handleMediaUpload,
   isUploadingMedia,
@@ -24,13 +26,25 @@ export function IdeaCommentFormBody({
   mediaError,
   setMediaError,
   handleRemoveMedia,
+  handleClearAll,
+  getDisplayFilename,
   isFormValid,
   setError,
 }) {
+  const parsedUrls = (mediaUrl || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const activeIdx = Math.min(selectedIdx || 0, Math.max(0, parsedUrls.length - 1));
+  const activeUrl = parsedUrls[activeIdx] || "";
+  const displayFilenameText = parsedUrls.length > 0
+    ? (getDisplayFilename ? getDisplayFilename(activeUrl) : activeUrl)
+    : mediaUrl;
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3.5 sm:gap-4 comment-scrollbar"
+      className="relative z-10 p-4 xs:p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-3.5 sm:gap-4 custom-scrollbar pr-1.5"
     >
       {/* Description Paragraph */}
       <p className="text-white/70 text-xs sm:text-sm leading-relaxed tracking-wide font-sans">
@@ -192,7 +206,7 @@ export function IdeaCommentFormBody({
           {mediaUrl && (
             <button
               type="button"
-              onClick={() => setMediaUrl("")}
+              onClick={handleClearAll || (() => setMediaUrl(""))}
               className="text-[10px] font-bold text-red-400 hover:underline cursor-pointer"
             >
               Clear All
@@ -203,14 +217,19 @@ export function IdeaCommentFormBody({
         <div className="flex gap-2">
           <input
             type="text"
-            className="flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 focus:border-slate-400 font-sans"
-            value={mediaUrl}
+            readOnly={parsedUrls.length > 0}
+            className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 focus:border-slate-400 font-sans ${
+              parsedUrls.length > 0 ? "cursor-default select-all" : ""
+            }`}
+            value={displayFilenameText}
             onChange={(e) => {
-              setMediaUrl(e.target.value);
-              setMediaError("");
+              if (parsedUrls.length === 0) {
+                setMediaUrl(e.target.value);
+                setMediaError("");
+              }
             }}
             onBlur={() => {
-              if (mediaUrl.trim()) {
+              if (parsedUrls.length === 0 && mediaUrl.trim()) {
                 const check = validateAndNormalizeMediaUrlClient(mediaUrl.trim());
                 if (!check.valid) {
                   setMediaError(check.error || "Format URL media tidak valid.");
@@ -219,12 +238,12 @@ export function IdeaCommentFormBody({
                 }
               }
             }}
-            placeholder="Paste media URL or upload file"
+            placeholder="Upload media atau tempel link..."
           />
           <input
             type="file"
             ref={fileInputRef}
-            accept=".png,.jpg,.jpeg,.mp4,image/png,image/jpeg,video/mp4"
+            accept=".png,.jpg,.jpeg,.webp,.mp4,.m4v,.mp4v,.mpg4,.mov,.3gp,.webm,image/png,image/jpeg,image/webp,video/mp4,video/x-m4v,video/mp4v-es,video/quicktime,video/3gpp,video/webm"
             className="hidden"
             onChange={handleMediaUpload}
           />
@@ -232,22 +251,34 @@ export function IdeaCommentFormBody({
             type="button"
             disabled={isUploadingMedia || isSubmitting}
             onClick={() => fileInputRef.current?.click()}
-            className="px-3 py-2 border rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/30 disabled:opacity-40"
+            style={{ fontFamily: "Arial, sans-serif" }}
+            className="px-3.5 py-2 border rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all shrink-0 cursor-pointer border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/30 disabled:opacity-40"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-3.5 h-3.5"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            {isUploadingMedia ? "Uploading..." : "Upload"}
+            {isUploadingMedia ? (
+              <>
+                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 60" />
+                </svg>
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-3.5 h-3.5"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span>Upload</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -261,62 +292,67 @@ export function IdeaCommentFormBody({
           </div>
         )}
 
-        {/* Media Thumbnails with remove (×) button */}
-        {(() => {
-          const urls = (mediaUrl || "").split(",").map((s) => s.trim()).filter(Boolean);
-          if (urls.length === 0) return null;
-          return (
-            <div className="mt-1 p-2 rounded-xl border border-white/10 bg-white/[0.02] flex flex-col gap-1.5">
-              <div className="flex items-center gap-2 overflow-x-auto py-1 comment-scrollbar">
-                {urls.map((url, idx) => {
-                  const isVideo =
-                    /\.(mp4|webm|ogg)($|\?)/i.test(url) || /^data:video/i.test(url);
-                  return (
-                    <div
-                      key={idx}
-                      className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-lg overflow-hidden shadow-sm border border-white/10 group"
-                    >
-                      {isVideo ? (
-                        <video
-                          src={url}
-                          muted
-                          autoPlay
-                          loop
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={url}
-                          alt={`Media ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMedia(idx)}
-                        title="Remove this media"
-                        className="absolute top-1 right-1 z-20 w-4 h-4 rounded-full bg-white text-black shadow-md flex items-center justify-center text-[10px] font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
+        {/* Media Thumbnails (Zero outer box, matching Event Card real appearance) */}
+        {parsedUrls.length > 0 && (
+          <div className="flex items-center gap-2.5 overflow-x-auto py-1.5 px-0.5 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20">
+            {parsedUrls.map((url, idx) => {
+              const isVideo =
+                /\.(mp4|webm|mov|m4v|3gp)($|\?)/i.test(url) || /^data:video/i.test(url);
+              const isSelected = idx === activeIdx;
+              const displayName = getDisplayFilename ? getDisplayFilename(url) : `Media ${idx + 1}`;
+              return (
+                <div
+                  key={`${idx}-${url.slice(0, 32)}`}
+                  onClick={() => setSelectedIdx && setSelectedIdx(idx)}
+                  title={`Pilih media: ${displayName}`}
+                  className={`relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm transition-all duration-200 transform cursor-pointer ${
+                    isSelected
+                      ? "scale-105 ring-2 ring-white ring-offset-2 ring-offset-black/80 shadow-white/10 shadow-lg z-10 opacity-100"
+                      : "hover:scale-102 opacity-70 hover:opacity-100 border border-white/20"
+                  }`}
+                >
+                  {isVideo ? (
+                    <video
+                      src={url}
+                      muted
+                      autoPlay
+                      loop
+                      playsInline
+                      className="w-full h-full object-cover pointer-events-none"
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={url}
+                      alt={displayName}
+                      className="w-full h-full object-cover pointer-events-none"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveMedia(idx);
+                    }}
+                    title="Remove this media"
+                    className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Submit Action Button */}
-      <div className="flex flex-col gap-2 mt-auto pt-2 shrink-0">
+      {/* Submit Action Button (Clean Unboxed Action Button) */}
+      <div className="flex justify-center items-center mt-auto pt-3 pb-1 shrink-0">
         <button
           type="submit"
           disabled={!isFormValid || isSubmitting}
-          style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }}
-          className="w-full py-3 sm:py-3.5 backdrop-blur-md border text-sm sm:text-base rounded-xl transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)] bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          style={{ fontFamily: "Arial, sans-serif" }}
+          className="bg-transparent border-none shadow-none outline-none text-white hover:text-white/80 font-bold text-sm sm:text-base py-2 px-6 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed select-none"
         >
           {isSubmitting ? "Submitting..." : "Send Message"}
         </button>

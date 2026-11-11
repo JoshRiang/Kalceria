@@ -22,7 +22,17 @@ export function usePasswordResetFlow({
   const [resetToken, setResetToken] = useState(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get("token") || urlParams.get("reset_token") || "";
+      const isServiceOrEvent = Boolean(
+        urlParams.get("service_action") ||
+        urlParams.get("booking_id") ||
+        urlParams.get("event_action") ||
+        urlParams.get("registration_id") ||
+        urlParams.get("manage_token") ||
+        urlParams.get("cancel_token")
+      );
+      if (isServiceOrEvent) return "";
+      const validToken = urlParams.get("reset_token") || (urlParams.get("mode") === "reset-password" ? urlParams.get("token") : null);
+      return validToken || "";
     }
     return "";
   });
@@ -31,7 +41,17 @@ export function usePasswordResetFlow({
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get("token") || urlParams.get("reset_token");
+      const isServiceOrEvent = Boolean(
+        urlParams.get("service_action") ||
+        urlParams.get("booking_id") ||
+        urlParams.get("event_action") ||
+        urlParams.get("registration_id") ||
+        urlParams.get("manage_token") ||
+        urlParams.get("cancel_token")
+      );
+      if (isServiceOrEvent) return;
+
+      const token = urlParams.get("reset_token") || (urlParams.get("mode") === "reset-password" ? urlParams.get("token") : null);
       const urlMode = urlParams.get("mode");
       const isSent = urlParams.get("sent") === "true";
       const paramEmail = urlParams.get("email");

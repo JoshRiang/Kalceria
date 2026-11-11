@@ -14,6 +14,7 @@ export const KalcerianCardFlankActions = memo(function KalcerianCardFlankActions
   user,
   userEvent,
   isBlocked,
+  isBlockedByTarget = false,
   isMapDark,
   isSelfOffline,
   isRequestedByMe,
@@ -49,7 +50,7 @@ export const KalcerianCardFlankActions = memo(function KalcerianCardFlankActions
     <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch py-0.5 pointer-events-auto">
       {/* Top Row: Dynamic Category Event & Broadcast Badges (Stacked with circle texture) */}
       <div className="flex items-center justify-end w-[54px] h-6">
-        {!isBlocked && (userEvent || activeBroadcastMsg) ? (
+        {!isBlocked && !isBlockedByTarget && (userEvent || activeBroadcastMsg) ? (
           <div className="flex items-center justify-end">
             {/* Dynamic Slot 1: Category Event Icon */}
             {userEvent && (

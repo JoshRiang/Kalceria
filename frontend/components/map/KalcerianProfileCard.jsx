@@ -244,7 +244,7 @@ export default function KalcerianProfileCard({
       </div>
 
       {/* Broadcast Status (if user released active 24h broadcast) */}
-      {activeBroadcastMsg && (
+      {!isBlockedByTarget && activeBroadcastMsg && (
         <div className="text-center mt-1.5 px-4">
           <p
             className={`text-[11.5px] sm:text-[12px] font-normal normal-case leading-snug line-clamp-2 ${

@@ -22,6 +22,8 @@ export function IdeaCommentModal({ onClose }) {
   // Media Attachment Hook
   const {
     fileInputRef,
+    selectedIdx,
+    setSelectedIdx,
     mediaUrl,
     setMediaUrl,
     isUploadingMedia,
@@ -29,6 +31,8 @@ export function IdeaCommentModal({ onClose }) {
     setMediaError,
     handleMediaUpload,
     handleRemoveMedia,
+    handleClearAll,
+    getDisplayFilename,
   } = useIdeaCommentMedia();
 
   // Pre-fill active signed-in user's name if authenticated
@@ -192,26 +196,6 @@ export function IdeaCommentModal({ onClose }) {
             style={CLIP}
             onClick={(e) => e.stopPropagation()}
           >
-            <style jsx>{`
-              .comment-scrollbar::-webkit-scrollbar {
-                width: 4px;
-              }
-              .comment-scrollbar::-webkit-scrollbar-track {
-                background: transparent;
-              }
-              .comment-scrollbar::-webkit-scrollbar-thumb {
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 10px;
-              }
-              .comment-scrollbar::-webkit-scrollbar-thumb:hover {
-                background: rgba(255, 255, 255, 0.4);
-              }
-              .comment-scrollbar {
-                scrollbar-width: thin;
-                scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-              }
-            `}</style>
-
             {/* Dynamic Distributed Blobs: 75% Black, 25% Navy Blue */}
             <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden" style={CLIP}>
               {/* 75% Dominant Dynamic Black Blob */}
@@ -285,6 +269,8 @@ export function IdeaCommentModal({ onClose }) {
               setContent={setContent}
               mediaUrl={mediaUrl}
               setMediaUrl={setMediaUrl}
+              selectedIdx={selectedIdx}
+              setSelectedIdx={setSelectedIdx}
               fileInputRef={fileInputRef}
               handleMediaUpload={handleMediaUpload}
               isUploadingMedia={isUploadingMedia}
@@ -292,6 +278,8 @@ export function IdeaCommentModal({ onClose }) {
               mediaError={mediaError}
               setMediaError={setMediaError}
               handleRemoveMedia={handleRemoveMedia}
+              handleClearAll={handleClearAll}
+              getDisplayFilename={getDisplayFilename}
               isFormValid={isFormValid}
               setError={setError}
             />

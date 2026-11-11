@@ -35,10 +35,11 @@ export async function checkServiceBookingDefense(req, res, next) {
 
   // Burst Rate Limiting (Atomic Lua in Redis, fixed window in memStore)
   const burstKey = `booking:burst:${ip}`;
-  const burstCount = await safeRedisCall(
+  const rawBurst = await safeRedisCall(
     () => redis.eval(INCR_WITH_TTL_LUA, 1, burstKey, BOOKING_BURST_WINDOW),
     () => incrMem(burstKey, BOOKING_BURST_WINDOW)
   );
+  const burstCount = Array.isArray(rawBurst) ? Number(rawBurst[0]) : Number(rawBurst);
 
   if (burstCount > BOOKING_BURST_MAX) {
     res.setHeader('Retry-After', String(BOOKING_BURST_WINDOW));
@@ -143,10 +144,11 @@ export function createIngressShield({ name, maxBurst = 5, burstWindow = 30, form
     const ip = resolveClientIp(req);
     const burstKey = `shield:${name}:burst:${ip}`;
 
-    const burstCount = await safeRedisCall(
+    const rawBurst = await safeRedisCall(
       () => redis.eval(INCR_WITH_TTL_LUA, 1, burstKey, burstWindow),
       () => incrMem(burstKey, burstWindow)
     );
+    const burstCount = Array.isArray(rawBurst) ? Number(rawBurst[0]) : Number(rawBurst);
 
     if (burstCount > maxBurst) {
       res.setHeader('Retry-After', String(burstWindow));
@@ -179,10 +181,11 @@ export async function checkEventRegistrationDefense(req, res, next) {
 
   // Burst Rate Limiting
   const burstKey = `event-reg:burst:${ip}`;
-  const burstCount = await safeRedisCall(
+  const rawBurst = await safeRedisCall(
     () => redis.eval(INCR_WITH_TTL_LUA, 1, burstKey, 20),
     () => incrMem(burstKey, 20)
   );
+  const burstCount = Array.isArray(rawBurst) ? Number(rawBurst[0]) : Number(rawBurst);
 
   if (burstCount > 5) {
     res.setHeader('Retry-After', '20');
@@ -191,10 +194,11 @@ export async function checkEventRegistrationDefense(req, res, next) {
 
   // Hourly Rate Limiting per IP/Network to prevent Resend Email Token Flooding
   const hourlyKey = `event-reg:hourly:${ip}`;
-  const hourlyCount = await safeRedisCall(
+  const rawHourly = await safeRedisCall(
     () => redis.eval(INCR_WITH_TTL_LUA, 1, hourlyKey, 3600),
     () => incrMem(hourlyKey, 3600)
   );
+  const hourlyCount = Array.isArray(rawHourly) ? Number(rawHourly[0]) : Number(rawHourly);
 
   if (hourlyCount > 15) {
     res.setHeader('Retry-After', '3600');

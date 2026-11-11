@@ -1,5 +1,8 @@
 import crypto from 'node:crypto';
 import { redis } from '../lib/redis.js';
+import { resolveClientIp, cleanIpString, checkL7Botnet } from './ingress/clientResolver.js';
+
+export { cleanIpString, resolveClientIp };
 
 const COOLDOWN_SECONDS = 2 * 60 * 60; // 2 hours = 7,200s
 const BURST_MAX = 3;
@@ -78,66 +81,6 @@ async function safeRedisCall(fn, fallbackFn) {
   }
 }
 
-export function cleanIpString(rawIp) {
-  if (!rawIp) return '';
-  let s = String(rawIp).trim().replace(/^::ffff:/i, '');
-
-  // Bracketed IPv6 with optional port: [2001:db8::1]:8080 -> 2001:db8::1
-  if (s.startsWith('[')) {
-    const closeIdx = s.indexOf(']');
-    if (closeIdx !== -1) {
-      return s.slice(1, closeIdx);
-    }
-  }
-
-  // Only strip :port if it is an IPv4 address (contains dots and a single colon)
-  const colonCount = (s.match(/:/g) || []).length;
-  if (s.includes('.') && colonCount === 1) {
-    s = s.replace(/:\d+$/, '');
-  }
-
-  return s;
-}
-
-export function resolveClientIp(req) {
-  if (!req) return '127.0.0.1';
-
-  // 1. Cloudflare ingress when proxy header is present
-  const cf = req.headers?.['cf-connecting-ip'];
-  if (cf) {
-    const cleaned = cleanIpString(cf);
-    if (cleaned) return cleaned;
-  }
-
-  // 2. Standard RFC 7239 Forwarded header
-  const fwd = req.headers?.['forwarded'];
-  if (fwd) {
-    const match = /for="?([^;,"]+)/i.exec(fwd);
-    if (match?.[1]) {
-      const cleaned = cleanIpString(match[1]);
-      if (cleaned && cleaned !== 'unknown') return cleaned;
-    }
-  }
-
-  // 3. X-Forwarded-For (leftmost client address)
-  const xff = req.headers?.['x-forwarded-for'];
-  if (xff) {
-    const first = cleanIpString(String(xff).split(',')[0]);
-    if (first && first !== 'unknown') return first;
-  }
-
-  // 4. X-Real-IP
-  const real = req.headers?.['x-real-ip'];
-  if (real) {
-    const cleaned = cleanIpString(real);
-    if (cleaned) return cleaned;
-  }
-
-  // 5. Express trusted proxy / direct socket remote address
-  const direct = req.ip || req.socket?.remoteAddress || '127.0.0.1';
-  return cleanIpString(direct) || '127.0.0.1';
-}
-
 export function resolveClientFingerprint(req) {
   const ip = resolveClientIp(req);
   const rawTag = String(
@@ -173,10 +116,9 @@ async function getKeyTtl(key) {
 
 export async function checkCommentDefense(req, res, next) {
   const ip = resolveClientIp(req);
-  const ua = req.headers?.['user-agent'] || '';
 
   // 1. Layer 7 / Attack Tool Signature Detection
-  if (/loic|hoic|slowloris|nikto|sqlmap|masscan|morfeus/i.test(ua)) {
+  if (checkL7Botnet(req)) {
     return res.status(403).json({ error: 'Request rejected by security policy.' });
   }
 

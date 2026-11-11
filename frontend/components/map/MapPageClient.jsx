@@ -220,14 +220,14 @@ export default function MapPage() {
   // derived: ONLY online & live-location-enabled users with real finite coordinates render on the map
   const visibleMapUsers = useMemo(() => {
     return buildVisibleMapUsers(
-      { mapUsersData, kalcerians, currentUser, selfLiveCoords, presence, blockedUserIds },
+      { mapUsersData, kalcerians, currentUser, selfLiveCoords, presence, blockedUserIds, blockedByUserIds },
       { hasValidCoordinates, resolvePersistentAvatarUrl }
     );
-  }, [mapUsersData, kalcerians, currentUser, selfLiveCoords, presence, blockedUserIds]);
+  }, [mapUsersData, kalcerians, currentUser, selfLiveCoords, presence, blockedUserIds, blockedByUserIds]);
 
   const visibleEvents = useMemo(() => {
-    return buildVisibleEvents(events, blockedUserIds);
-  }, [events, blockedUserIds]);
+    return buildVisibleEvents(events, blockedUserIds, blockedByUserIds);
+  }, [events, blockedUserIds, blockedByUserIds]);
 
   // Handlers
   const focusUser = useCallback((user) => {

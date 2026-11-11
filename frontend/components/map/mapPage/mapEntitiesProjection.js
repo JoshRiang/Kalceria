@@ -8,11 +8,19 @@
  */
 
 export function buildVisibleMapUsers(
-  { mapUsersData = [], kalcerians = [], currentUser = null, selfLiveCoords = null, presence = 'online', blockedUserIds = [] },
+  {
+    mapUsersData = [],
+    kalcerians = [],
+    currentUser = null,
+    selfLiveCoords = null,
+    presence = 'online',
+    blockedUserIds = [],
+    blockedByUserIds = [],
+  },
   { hasValidCoordinates = () => false, resolvePersistentAvatarUrl = () => null } = {}
 ) {
   const mergedMap = new Map();
-  const blockedSet = new Set(blockedUserIds || []);
+  const blockedSet = new Set([...(blockedUserIds || []), ...(blockedByUserIds || [])]);
 
   (mapUsersData || []).forEach((u) => {
     if (!u?.id || blockedSet.has(u.id)) return;
@@ -98,20 +106,22 @@ export function buildVisibleMapUsers(
   return Array.from(mergedMap.values());
 }
 
-export function buildVisibleEvents(eventsOrOptions = [], blockedUserIds = [], now = Date.now()) {
+export function buildVisibleEvents(eventsOrOptions = [], blockedUserIds = [], blockedByUserIds = [], now = Date.now()) {
   let events = eventsOrOptions;
   let blocked = blockedUserIds;
+  let blockedBy = blockedByUserIds;
   let currentNow = now;
 
   if (eventsOrOptions && !Array.isArray(eventsOrOptions) && typeof eventsOrOptions === "object") {
     events = eventsOrOptions.events;
     blocked = eventsOrOptions.blockedUserIds;
+    blockedBy = eventsOrOptions.blockedByUserIds;
     currentNow = eventsOrOptions.now ?? Date.now();
   }
 
-  const blockedSet = new Set(blocked || []);
+  const blockedSet = new Set([...(blocked || []), ...(blockedBy || [])]);
   return (events || [])
-    .filter((e) => !blockedSet.has(e?.creator?.id))
+    .filter((e) => !blockedSet.has(e?.creator?.id) && !blockedSet.has(e?.creatorId))
     .filter((e) => !e?.expiresAt || new Date(e.expiresAt).getTime() > currentNow);
 }
 

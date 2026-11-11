@@ -87,10 +87,10 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
             ? "cursor-default"
             : "cursor-pointer active:scale-[0.99]"
         } ${isConfirming ? "blur-[3.5px] pointer-events-none select-none" : "blur-0"}`}
-        onMouseEnter={() => !isBlocked && !isConfirming && setHoveredKalcerian(user.id)}
-        onMouseLeave={() => !isBlocked && !isConfirming && setHoveredKalcerian(null)}
+        onMouseEnter={() => !isBlocked && !isBlockedByTarget && !isConfirming && setHoveredKalcerian(user.id)}
+        onMouseLeave={() => !isBlocked && !isBlockedByTarget && !isConfirming && setHoveredKalcerian(null)}
         onClick={() => {
-          if (isBlocked || isConfirming) return;
+          if (isBlocked || isBlockedByTarget || isConfirming) return;
           const isUserActivelyOnline = Boolean(user?.isOnline && user?.allowLiveLocation !== false);
           if (isUserActivelyOnline) {
             if (userEvent) {
@@ -105,7 +105,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
         }}
       >
         {/* Dynamic Color Shift Blobs across hover, click/active, or when rolling to top on incoming personal chat */}
-        {!isBlocked && (
+        {!isBlocked && !isBlockedByTarget && (
           <div
             className={`absolute inset-0 z-0 transition-opacity duration-300 overflow-hidden pointer-events-none rounded-xl ${
               isRecentlyMessaged
@@ -162,7 +162,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
           </span>
 
           {/* Line 3: 24h Broadcast Status */}
-          {!isBlocked && activeBroadcastMsg ? (
+          {!isBlocked && !isBlockedByTarget && activeBroadcastMsg ? (
             <p
               className={`text-[11px] sm:text-[11.5px] font-normal normal-case leading-snug line-clamp-2 mt-1 break-words ${
                 isMapDark ? "text-white" : "text-black"
@@ -182,6 +182,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
           user={user}
           userEvent={userEvent}
           isBlocked={isBlocked}
+          isBlockedByTarget={isBlockedByTarget}
           isMapDark={isMapDark}
           isSelfOffline={isSelfOffline}
           isRequestedByMe={isRequestedByMe}
@@ -250,7 +251,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
       />
 
       {/* 6. Desktop Hover Card (Only for non-blocked users) */}
-      {(isHovered || (hoveredKalcerian !== undefined && hoveredKalcerian === user.id)) && !isBlocked && (
+      {(isHovered || (hoveredKalcerian !== undefined && hoveredKalcerian === user.id)) && !isBlocked && !isBlockedByTarget && (
         <KalcerianCardHoverFlyout
           user={user}
           userEvent={userEvent}

@@ -23,7 +23,15 @@ export function BlockConfirmModal({
         className="font-sans font-normal text-[13px] sm:text-[13.5px] tracking-tight truncate mr-2"
         style={{ fontFamily: "Arial, sans-serif" }}
       >
-        {actionType === "block" ? `Block ${userName}?` : `Unblock ${userName}?`}
+        {actionType === "block" ? (
+          <>
+            Block <span className="font-bold">{userName}</span>?
+          </>
+        ) : (
+          <>
+            Unblock <span className="font-bold">{userName}</span>?
+          </>
+        )}
       </span>
       <div className="flex items-center gap-3 sm:gap-3.5 shrink-0">
         {/* Cancel ✕ */}

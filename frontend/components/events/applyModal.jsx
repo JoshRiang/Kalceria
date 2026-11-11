@@ -6,6 +6,8 @@ import { establishSession, hasUserSession } from "@/lib/session";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { CLIP } from "./constants";
 import ContentImage from "@/components/ui/ContentImage";
+import { resolveWebmailInboxUrl } from "@/utils/webmailUtils";
+import { EventConfirmationStep } from "./EventConfirmationStep";
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,12}$/;
 
@@ -98,10 +100,10 @@ export function ApplyModal({
           if (err.response?.data?.isConfirmed) {
             setIsConfirmed(true);
           }
-          if (err.response?.data?.isExpired) {
+          if (err.response?.data?.isExpired || err.response?.status === 404) {
             setIsWindowExpired(true);
           }
-          const errMsg = err.response?.data?.error || "Gagal mengonfirmasi pendaftaran event.";
+          const errMsg = err.response?.data?.error || "Batas waktu 3 menit untuk mengonfirmasi pendaftaran event telah berakhir. Pendaftaran otomatis dibatalkan.";
           setError(errMsg);
           setStep(2);
         })
@@ -279,6 +281,7 @@ export function ApplyModal({
 
       const payload = {
         eventId: event.id,
+        mode,
         name: nameVal,
         email: emailVal,
         contact: contactVal,
@@ -325,20 +328,18 @@ export function ApplyModal({
       onClose();
     } catch (err) {
       setIsDeleting(false);
+      if (err.response?.status === 404) {
+        setIsWindowExpired(true);
+        onClose();
+        return;
+      }
       const errMsg = err.response?.data?.error || err.message || "Gagal membatalkan pendaftaran.";
       setError(errMsg);
     }
   };
 
   const userEmail = form.email || doneData?.registration?.user?.email || "";
-  const emailInboxUrl = (() => {
-    const lower = String(userEmail).toLowerCase().trim();
-    if (lower.includes("@gmail.com")) return "https://mail.google.com/mail/u/0/#search/Kalceria";
-    if (lower.includes("@yahoo.com")) return "https://mail.yahoo.com";
-    if (lower.includes("@outlook.com") || lower.includes("@hotmail.com")) return "https://outlook.live.com/mail";
-    if (lower && lower.includes("@")) return `mailto:${lower}`;
-    return "https://mail.google.com";
-  })();
+  const emailInboxUrl = resolveWebmailInboxUrl(userEmail);
 
   const isCancelMode = Boolean(initialAction === "cancel" && !isConfirmed);
 
@@ -348,7 +349,12 @@ export function ApplyModal({
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
-      <motion.div initial={{ scale: isMobile ? 0.78 : 0.9, y: 20 }} animate={{ scale: isMobile ? 0.825 : 1, y: 0 }} className="bg-[#0B0C10]/85 border border-white/10 w-full max-w-lg relative overflow-hidden backdrop-blur-2xl shadow-[0_0_100px_rgba(0,0,0,0.8)] p-6 md:p-8 transition-transform duration-500" style={CLIP}>
+      <motion.div
+        initial={{ scale: isMobile ? 0.78 : 0.9, y: 20 }}
+        animate={{ scale: isMobile ? 0.825 : 1, y: 0 }}
+        className="bg-[#0B0C10]/85 border border-white/10 w-full max-w-lg max-h-[85vh] sm:max-h-[88vh] flex flex-col relative overflow-hidden backdrop-blur-2xl shadow-[0_0_100px_rgba(0,0,0,0.8)] p-5 sm:p-6 md:p-8 transition-transform duration-500 my-auto"
+        style={CLIP}
+      >
 
         {/* Dynamic Blobs */}
         <motion.div
@@ -364,38 +370,46 @@ export function ApplyModal({
 
         <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors text-2xl z-40">×</button>
 
-        {/* Mini Carousel Header */}
-        <div className="relative z-30 mb-6">
-           <div className={`flex items-center justify-between mb-4 ${isMobile ? "px-6" : ""}`}>
-              {step === 1 ? (
-                <button type="button" onClick={prev} className="p-2 flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none outline-none focus:outline-none">
-                  <ChevronLeft />
-                </button>
-              ) : (
-                <div className="w-9" />
-              )}
-              <div className="text-center flex-1">
-                 <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white italic mb-0.5" style={{ textShadow: "2px 2px 0 #FF00FF" }}>
-                   {isCancelMode ? "Cancel Booking" : isConfirmed ? "Booking Confirmed" : event?.title}
-                 </h2>
-                 <p className="text-[9px] text-slate-400 font-sans uppercase tracking-[0.2em] italic">
-                   {isCancelMode ? "Operational window cancellation" : isConfirmed ? "Ticket secured & locked" : step === 2 ? (hasConfirmedWa ? "Transmission Received" : "Review Parameters") : "Secure your slot in the grid"}
-                 </p>
-              </div>
-              {step === 1 ? (
-                <button type="button" onClick={next} className="p-2 flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none outline-none focus:outline-none">
-                  <ChevronRight />
-                </button>
-              ) : (
-                <div className="w-9" />
-              )}
-           </div>
+        {/* Scrollable Modal Body (Custom Semi-Transparent Scrollbar, Zero White Bar) */}
+        <div className="relative z-30 flex-1 overflow-y-auto overflow-x-hidden pr-1 sm:pr-1.5 custom-scrollbar">
+          {/* Mini Carousel Header */}
+          <div className="relative z-30 mb-6">
+             <div className={`flex items-center justify-between mb-4 ${isMobile ? "px-6" : ""}`}>
+                {step === 1 ? (
+                  <button type="button" onClick={prev} className="p-2 flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none outline-none focus:outline-none">
+                    <ChevronLeft />
+                  </button>
+                ) : (
+                  <div className="w-9" />
+                )}
+                <div className="text-center flex-1">
+                   <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white italic mb-0.5" style={{ textShadow: "2px 2px 0 #FF00FF" }}>
+                     {isCancelMode ? "Cancel Booking" : isConfirmed ? "Booking Confirmed" : event?.title}
+                   </h2>
+                   <p className="text-[9px] text-slate-400 font-sans uppercase tracking-[0.2em] italic">
+                     {isCancelMode ? "Operational window cancellation" : isConfirmed ? "Ticket secured & locked" : step === 2 ? (hasConfirmedWa ? "Transmission Received" : "Review Parameters") : "Secure your slot in the grid"}
+                   </p>
+                </div>
+                {step === 1 ? (
+                  <button type="button" onClick={next} className="p-2 flex items-center justify-center text-white/50 hover:text-white transition-colors cursor-pointer bg-transparent border-none outline-none focus:outline-none">
+                    <ChevronRight />
+                  </button>
+                ) : (
+                  <div className="w-9" />
+                )}
+             </div>
 
-           <div className="grid grid-cols-2 gap-4 md:gap-6 items-center">
-              <motion.div key={event?.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className={`relative w-full bg-white/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] ${isMobile ? "aspect-square" : "aspect-[3/4]"}`} style={CLIP_CARD}>
-                 <ContentImage src={event?.displayPhotoUrl} className="w-full h-full object-cover" alt="" width={900} height={1200} />
-                 <div className="absolute inset-0 border-2 border-white/10 pointer-events-none" style={CLIP_CARD} />
-              </motion.div>
+             <div className="grid grid-cols-2 gap-4 md:gap-6 items-center">
+                <motion.div
+                  key={event?.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className={`relative w-full bg-white/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] ${isMobile ? "aspect-square max-h-[140px]" : "aspect-[4/3] max-h-[160px] md:max-h-[175px]"}`}
+                  style={CLIP_CARD}
+                >
+                   <ContentImage src={event?.displayPhotoUrl} className="w-full h-full object-cover" alt="" width={900} height={1200} />
+                   <div className="absolute inset-0 border-2 border-white/10 pointer-events-none" style={CLIP_CARD} />
+                </motion.div>
               <div className="flex flex-col justify-center h-full space-y-0.5">
                  <p className={metaStyle}>Location: <span className="text-white not-italic font-bold ml-2">{event?.location}</span></p>
                  <p className={metaStyle}>Start: <span className="text-white not-italic font-bold ml-2">{new Date(event?.regStartTime).toLocaleDateString()}</span></p>
@@ -408,174 +422,26 @@ export function ApplyModal({
 
         {/* Step 2 (Review / Cancel / Confirmed) vs Step 1 (Form Fill) */}
         {step === 2 ? (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative z-30 space-y-4 text-center py-1">
-            {/* Order Parameters Summary */}
-            <div className="bg-black/60 p-3.5 rounded-lg border border-white/10 backdrop-blur-md space-y-1.5 text-left text-xs font-sans shadow-inner">
-              <div className="flex justify-between border-b border-white/10 pb-1">
-                <span className="text-slate-400 font-medium">Event:</span>
-                <span className="text-white font-bold">{event?.title}</span>
-              </div>
-              <div className="flex justify-between border-b border-white/10 pb-1">
-                <span className="text-slate-400 font-medium">Session:</span>
-                <span className="text-white font-bold">{form.session || doneData?.registration?.selectedSession || "—"}</span>
-              </div>
-              <div className="flex justify-between border-b border-white/10 pb-1">
-                <span className="text-slate-400 font-medium">Participant:</span>
-                <span className="text-white font-bold">{mode === "account" ? form.identifier : (form.name || doneData?.registration?.user?.name || "—")}</span>
-              </div>
-              <div className="flex justify-between border-b border-white/10 pb-1">
-                <span className="text-slate-400 font-medium">Email:</span>
-                <span className="text-white font-bold">{userEmail || "—"}</span>
-              </div>
-              {form.contact && (
-                <div className="flex justify-between border-b border-white/10 pb-1">
-                  <span className="text-slate-400 font-medium">WhatsApp:</span>
-                  <span className="text-white font-bold">{form.contact}</span>
-                </div>
-              )}
-              <div className="flex justify-between pt-0.5">
-                <span className="text-slate-400 font-medium">Price:</span>
-                <span className="text-emerald-400 font-bold">Rp {Number(event?.price || 0).toLocaleString("id-ID")}</span>
-              </div>
-            </div>
-
-            {/* Online Payment Link if available */}
-            {doneData?.paymentCheckout?.checkoutUrl && (
-              <a
-                href={doneData.paymentCheckout.checkoutUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:opacity-95 text-black font-black uppercase tracking-tight text-xs rounded-lg transition-all flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)] mb-2"
-              >
-                Pay Online Now (QRIS / VA / E-Wallet)
-              </a>
-            )}
-
-            {/* Cancel Mode from Magic Link */}
-            {isCancelMode ? (
-              <div className="space-y-4 pt-2">
-                <p className="font-sans font-normal text-sm sm:text-base text-white/90 text-center">
-                  Do you want to cancel your book for <span className="font-bold text-white not-italic">{event?.title}</span>?
-                </p>
-                <div className="flex justify-center items-center w-full mt-4">
-                  <button
-                    type="button"
-                    onClick={handleCancelRegistration}
-                    disabled={isDeleting || loading || isWindowExpired}
-                    className={`font-sans font-bold text-xs sm:text-sm transition-colors py-2 px-6 select-none bg-transparent border-none shadow-none outline-none ${
-                      isWindowExpired
-                        ? "text-white/40 opacity-40 cursor-not-allowed pointer-events-none"
-                        : "text-white hover:text-red-500 cursor-pointer"
-                    }`}
-                  >
-                    Cancel
-                  </button>
-                </div>
-                {error && (
-                  <div style={{ fontFamily: "Consolas, 'Courier New', monospace" }} className="text-red-500 text-[13px] font-normal tracking-tight py-1 text-center select-none">
-                    {error}
-                  </div>
-                )}
-              </div>
-            ) : isConfirmed ? (
-              /* Confirmed & Locked Mode */
-              <div className="space-y-3 pt-2 text-center">
-                <div className="inline-flex items-center gap-2 py-2 px-5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-sans font-bold text-xs sm:text-sm uppercase tracking-wider select-none">
-                  <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>Registration Confirmed &amp; Locked</span>
-                </div>
-                <p className="text-white/80 font-sans font-normal text-xs sm:text-sm leading-relaxed max-w-[460px] mx-auto">
-                  Your spot for <span className="font-bold text-white not-italic">{event?.title}</span> has been confirmed and locked. A final receipt with zero action buttons has been dispatched to your email.
-                </p>
-              </div>
-            ) : isWindowExpired ? (
-              /* Expired Window Notice */
-              <div className="space-y-3 pt-2 text-center">
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 font-sans text-xs sm:text-sm">
-                  {error || "Batas waktu 3 menit untuk mengonfirmasi pendaftaran event telah berakhir. Pendaftaran yang belum dikonfirmasi telah dibatalkan dan dihapus."}
-                </div>
-              </div>
-            ) : (
-              /* Normal Candidate Review Mode (Pre-WA / Post-WA) */
-              <div className="space-y-3 pt-2 text-center">
-                <AnimatePresence mode="wait">
-                  {hasConfirmedWa ? (
-                    <motion.div
-                      key="post-wa"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.3 }}
-                      className="space-y-3"
-                    >
-                      <p className="text-white font-sans font-normal text-xs sm:text-sm md:text-base leading-relaxed text-center max-w-[460px] mx-auto">
-                        Your booking buffer has been received. Checking your registered email is mandatory to confirm and lock your spot within 3 minutes before the reservation expires:
-                      </p>
-
-                      <div className="flex flex-col items-center justify-center gap-2 pt-1">
-                        <a
-                          href={emailInboxUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block px-6 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-sans font-bold text-xs sm:text-sm hover:bg-emerald-500/30 transition-all select-none shadow-none"
-                        >
-                          Check Email
-                        </a>
-                        {(doneData?.whatsappUrl || fallbackWaUrl) && (
-                          <a
-                            href={doneData?.whatsappUrl || fallbackWaUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[11px] text-white/50 hover:text-white/80 underline underline-offset-2 transition-colors select-none mt-1"
-                          >
-                            Reopen WhatsApp
-                          </a>
-                        )}
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="pre-wa"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.3 }}
-                      className="space-y-3"
-                    >
-                      <div className="flex items-center justify-center gap-6 pt-1">
-                        <button
-                          type="button"
-                          onClick={handleConfirmViaWa}
-                          disabled={loading}
-                          className={`font-sans font-bold text-xs sm:text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4 transition-colors cursor-pointer ${
-                            loading ? "opacity-50 cursor-not-allowed" : ""
-                          }`}
-                        >
-                          {loading ? "Securing Spot..." : "Confirm via WhatsApp"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setStep(1); setError(""); }}
-                          disabled={loading}
-                          className="font-sans font-bold text-xs sm:text-sm text-white/60 hover:text-white transition-colors cursor-pointer"
-                        >
-                          Edit Details
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {error && (
-                  <div style={{ fontFamily: "Consolas, 'Courier New', monospace" }} className="text-red-500 text-[13px] font-normal tracking-tight py-1 text-center select-none">
-                    {error}
-                  </div>
-                )}
-              </div>
-            )}
-          </motion.div>
+          <EventConfirmationStep
+            event={event}
+            form={form}
+            doneData={doneData}
+            mode={mode}
+            userEmail={userEmail}
+            emailInboxUrl={emailInboxUrl}
+            isCancelMode={isCancelMode}
+            isConfirmed={isConfirmed}
+            isWindowExpired={isWindowExpired}
+            hasConfirmedWa={hasConfirmedWa}
+            loading={loading}
+            isDeleting={isDeleting}
+            error={error}
+            fallbackWaUrl={fallbackWaUrl}
+            handleCancelRegistration={handleCancelRegistration}
+            handleConfirmViaWa={handleConfirmViaWa}
+            onEditDetails={() => { setStep(1); setError(""); }}
+            onClose={onClose}
+          />
         ) : (
           <div className="relative z-30 space-y-4">
              <div className="flex bg-black/60 p-1 rounded-lg border border-white/10 backdrop-blur-md shadow-inner">
@@ -719,6 +585,7 @@ export function ApplyModal({
              </form>
           </div>
         )}
+        </div>
 
         {/* Dimmed Screen Buffer during Cancellation (Arc Spinner without any text) */}
         <AnimatePresence>

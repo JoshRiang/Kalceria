@@ -44,8 +44,8 @@ export async function ackPersonalChatRead(req, res, next) {
         prisma.personalChatMessage
           .updateMany({
             where: messageIds.length > 0
-              ? { convHash, recipientId: String(userId), id: { in: messageIds } }
-              : { convHash, recipientId: String(userId), status: { not: 'read' }, ts: { lte: BigInt(Math.floor(nextReadTs)) } },
+              ? { convHash, recipientId: String(userId), id: { in: messageIds }, status: { not: 'blocked_drop' } }
+              : { convHash, recipientId: String(userId), status: { notIn: ['read', 'blocked_drop'] }, ts: { lte: BigInt(Math.floor(nextReadTs)) } },
             data: { status: 'read' },
           })
           .catch(() => {})
@@ -101,7 +101,10 @@ export async function getPersonalChatInboxSummary(req, res, next) {
       };
     }
 
-    const eventNotifications = (Array.isArray(rawEventNotifs) ? rawEventNotifs : [])
+    const myBlocked = await redis.smembers(`blocked:${userId}`).catch(() => []);
+    const blockedSet = new Set((Array.isArray(myBlocked) ? myBlocked : []).map(String));
+
+    let eventNotifications = (Array.isArray(rawEventNotifs) ? rawEventNotifs : [])
       .map((item) => {
         try {
           return typeof item === 'string' ? JSON.parse(item) : item;
@@ -109,7 +112,12 @@ export async function getPersonalChatInboxSummary(req, res, next) {
           return null;
         }
       })
-      .filter(Boolean);
+      .filter((notif) => {
+        if (!notif) return false;
+        const senderId = notif.user?.id || notif.userId || notif.payload?.userId || notif.senderId;
+        if (senderId && blockedSet.has(String(senderId))) return false;
+        return true;
+      });
 
     // Complementary Fallback: If Redis unread or event notifications were empty (cold lambda or Redis fallback),
     // hydrate canonical unread counters & notifications directly from PostgreSQL
@@ -119,7 +127,13 @@ export async function getPersonalChatInboxSummary(req, res, next) {
         Object.assign(peers, canonical.peers);
       }
       if (eventNotifications.length === 0 && Array.isArray(canonical.rawEventNotifs) && canonical.rawEventNotifs.length > 0) {
-        eventNotifications.push(...canonical.rawEventNotifs);
+        const canonicalFiltered = canonical.rawEventNotifs.filter((notif) => {
+          if (!notif) return false;
+          const senderId = notif.user?.id || notif.userId || notif.payload?.userId || notif.senderId;
+          if (senderId && blockedSet.has(String(senderId))) return false;
+          return true;
+        });
+        eventNotifications.push(...canonicalFiltered);
       }
     }
 

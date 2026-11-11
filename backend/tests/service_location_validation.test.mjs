@@ -465,8 +465,8 @@ describe('Service Request: Comms Channel & Location Verification', () => {
         cancelToken: mockToken,
       });
 
-      // 1. Icon / Favicon logo
-      assert.match(html, /https:\/\/www\.kalceria\.id\/logo-avatar\.png/);
+      // 1. Icon / Favicon logo (Seamless transparent favicon without black squircle)
+      assert.match(html, /https:\/\/www\.kalceria\.id\/favicon\.png/);
 
       // 2. Metadata table
       assert.match(html, /Booking ID/);
@@ -485,7 +485,7 @@ describe('Service Request: Comms Channel & Location Verification', () => {
       assert.match(html, />CONFIRM</);
       assert.match(html, />EDIT</);
       assert.match(html, />CANCEL</);
-      assert.match(html, /border-radius:6px/);
+      assert.match(html, /border-radius:(?:6|8)px/);
       assert.match(html, /letter-spacing:0\.5px/);
       assert.match(html, /service_action=confirm&booking_id=svc-test-uuid-999888&token=mock-jwt-manage-token/);
       assert.match(html, /service_action=edit&booking_id=svc-test-uuid-999888&token=mock-jwt-manage-token/);
@@ -546,8 +546,8 @@ describe('Service Request: Comms Channel & Location Verification', () => {
         cancelToken: newCancelToken,
       });
 
-      // 1. Logo Favicon
-      assert.match(html, /https:\/\/www\.kalceria\.id\/logo-avatar\.png/);
+      // 1. Logo Favicon (Seamless transparent favicon without black squircle)
+      assert.match(html, /https:\/\/www\.kalceria\.id\/favicon\.png/);
 
       // 2. Ringkasan Update title
       assert.match(html, /Ringkasan Update: Need Our Help/);
@@ -561,7 +561,7 @@ describe('Service Request: Comms Channel & Location Verification', () => {
       // 4. Strict constraint: Confirm and Cancel buttons MUST be present with Magic Link style
       assert.match(html, />CONFIRM</);
       assert.match(html, />CANCEL</);
-      assert.match(html, /border-radius:6px/);
+      assert.match(html, /border-radius:(?:6|8)px/);
       assert.match(html, /Batas Waktu Pembatalan \(3 Menit Terpadu\)/);
       assert.match(html, /service_action=confirm&booking_id=svc-test-uuid-updated-123&token=mock-new-cancel-jwt-token/);
       assert.match(html, /service_action=cancel&booking_id=svc-test-uuid-updated-123&token=mock-new-cancel-jwt-token/);

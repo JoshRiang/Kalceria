@@ -92,6 +92,8 @@ export function PersonalChatPanel({
     onOutgoingMessageUpdate,
     initialCallState,
     onCallEnded,
+    isTargetBlocked,
+    isBlockedByTarget,
   });
 
   if (!activeChatUser) return null;

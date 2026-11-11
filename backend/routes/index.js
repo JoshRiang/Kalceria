@@ -23,7 +23,7 @@ import {
   acceptMiniEventCollab,
   declineMiniEventCollab,
 } from "../controllers/miniEventController.js";
-import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings, getServiceRequestForEdit, updateServiceRequest, confirmServiceRequest } from "../controllers/serviceController.js";
+import { createBooking, createServiceRequest, deleteOwnServiceRequest, listPublicServiceBookings, getServiceRequestForEdit, updateServiceRequest, confirmServiceRequest, getServiceBookingTimerBadge } from "../controllers/serviceController.js";
 import {
   saveTelemetry, getMapUsers, getAllKalcerians,
   getBlockedUsers, blockUser, unblockUser,
@@ -60,6 +60,7 @@ import {
   registerEvent, listPublicEvents, getPublicEvent,
   listRegistrations, confirmRegistrationPayment, deleteRegistration, markPdfExported,
   getEventRegistrationForManage, confirmEventRegistration, deleteOwnEventRegistration,
+  getEventRegistrationTimerBadge,
 } from "../controllers/eventRegistrationController.js";
 import {
   listServiceBookings, confirmServicePayment, deleteServiceBooking, markServicePdf,
@@ -169,7 +170,9 @@ router.get("/events/:eventId", getPublicEvent);
 // ─── Event Registration (Auth optional / 2-step verification) ───────────────
 router.post("/events/:eventId/register", optionalAuth, bookingRateLimit, eventRegistrationDefense, registerEvent);
 router.get("/events/registration/:id", optionalAuth, getEventRegistrationForManage);
+router.get("/events/registration/:id/confirm", optionalAuth, confirmEventRegistration);
 router.post("/events/registration/:id/confirm", optionalAuth, confirmEventRegistration);
+router.get("/events/registration/:id/timer.svg", getEventRegistrationTimerBadge);
 router.delete("/events/registration/:id", optionalAuth, deleteOwnEventRegistration);
 
 // ─── Location & Geocoding ────────────────────────────────────────────────────
@@ -206,7 +209,9 @@ router.post("/services/request", optionalAuth, bookingRateLimit, checkServiceBoo
 router.get("/services/request/:id", optionalAuth, getServiceRequestForEdit);
 router.put("/services/request/:id", optionalAuth, bookingRateLimit, checkServiceBookingDefense, updateServiceRequest);
 router.get("/services/bookings", listPublicServiceBookings);
+router.get("/services/request/:id/confirm", optionalAuth, confirmServiceRequest);
 router.post("/services/request/:id/confirm", optionalAuth, confirmServiceRequest);
+router.get("/services/request/:id/timer.svg", getServiceBookingTimerBadge);
 router.delete("/services/request/:id", optionalAuth, deleteOwnServiceRequest);
 
 // ─── Minigame (Daily Attempt & Score Tracking) ─────────────────────────────────

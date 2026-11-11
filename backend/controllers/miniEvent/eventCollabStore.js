@@ -123,7 +123,25 @@ export async function listEnrichedCollabRequests(eventId) {
   const rawList = await readEventRequestsRaw(eventId);
   if (rawList.length === 0) return [];
 
-  const userIds = Array.from(new Set(rawList.map((r) => String(r.userId))));
+  let effectiveList = rawList;
+  if (prisma?.miniEvent) {
+    try {
+      const ev = await prisma.miniEvent.findUnique({
+        where: { id: String(eventId) },
+        select: { creatorId: true },
+      });
+      if (ev?.creatorId) {
+        const blockedUsers = await redis.smembers(`blocked:${ev.creatorId}`).catch(() => []);
+        if (blockedUsers.length > 0) {
+          const blockedSet = new Set(blockedUsers.map(String));
+          effectiveList = rawList.filter((r) => !blockedSet.has(String(r.userId)));
+        }
+      }
+    } catch {}
+  }
+  if (effectiveList.length === 0) return [];
+
+  const userIds = Array.from(new Set(effectiveList.map((r) => String(r.userId))));
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
     select: CANONICAL_USER_SELECT,
@@ -133,7 +151,7 @@ export async function listEnrichedCollabRequests(eventId) {
 
   const validRaw = [];
   const enriched = [];
-  for (const reqItem of rawList) {
+  for (const reqItem of effectiveList) {
     const profile = userMap.get(String(reqItem.userId));
     if (!profile) continue;
     validRaw.push(reqItem);
@@ -193,6 +211,17 @@ export async function hydrateEventCollabSummary(ev, legacyCollabs = []) {
     readEventRequestsRaw(ev.id),
   ]);
 
+  let effectiveRawReqs = rawReqs;
+  if (ev?.creatorId) {
+    try {
+      const blockedUsers = await redis.smembers(`blocked:${ev.creatorId}`).catch(() => []);
+      if (blockedUsers.length > 0) {
+        const blockedSet = new Set(blockedUsers.map(String));
+        effectiveRawReqs = rawReqs.filter((r) => !blockedSet.has(String(r.userId)));
+      }
+    } catch {}
+  }
+
   let collaboratorProfiles = [];
   if (collaborators.length > 0) {
     const users = await prisma.user.findMany({
@@ -218,7 +247,7 @@ export async function hydrateEventCollabSummary(ev, legacyCollabs = []) {
   return {
     collaborators: collaboratorProfiles.length > 0 ? collaboratorProfiles.map((u) => u.id) : collaborators,
     collaboratorProfiles,
-    pendingRequestsCount: rawReqs.length,
+    pendingRequestsCount: effectiveRawReqs.length,
   };
 }
 

@@ -10,8 +10,14 @@ export default function HomeClient() {
   const [phase, setPhase] = useState(() => {
     if (typeof window === "undefined") return "landing";
     const urlParams = new URLSearchParams(window.location.search);
-    const hasResetToken = Boolean(urlParams.get("token") || urlParams.get("reset_token"));
-    if (urlParams.get("auth") === "true" || hasResetToken || urlParams.get("mode") === "forgot-password" || sessionStorage.getItem("triggerAuth") === "true") {
+    const isServiceAction = Boolean(urlParams.get("service_action") || urlParams.get("booking_id"));
+    const isEventAction = Boolean(urlParams.get("event_action") || urlParams.get("registration_id"));
+    const isManageToken = Boolean(urlParams.get("manage_token") || urlParams.get("cancel_token"));
+    const isServiceOrEvent = isServiceAction || isEventAction || isManageToken;
+    const hasResetToken = !isServiceOrEvent && Boolean(
+      urlParams.get("reset_token") || (urlParams.get("mode") === "reset-password" && urlParams.get("token"))
+    );
+    if (!isServiceOrEvent && (urlParams.get("auth") === "true" || hasResetToken || urlParams.get("mode") === "forgot-password" || sessionStorage.getItem("triggerAuth") === "true")) {
       return "auth";
     }
     if (urlParams.get("skip_intro") === "true") {
@@ -24,7 +30,7 @@ export default function HomeClient() {
     const hasPlayedIntro = typeof window !== "undefined" && sessionStorage.getItem("introPlayed") === "true";
 
     // If returning from another section/page (e.g. Journey, Map, Minigame) or back-navigation, skip intro
-    if (hasScrollTarget || hasSeenLanding || hasPlayedIntro) {
+    if (isServiceOrEvent || hasScrollTarget || hasSeenLanding || hasPlayedIntro) {
       sessionStorage.setItem("introPlayed", "true");
       sessionStorage.setItem("landingSeen", "true");
       return "landing";
@@ -53,11 +59,17 @@ export default function HomeClient() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const isAuthParam = urlParams.get("auth") === "true";
-    const hasResetToken = Boolean(urlParams.get("token") || urlParams.get("reset_token"));
-    const isForgotMode = urlParams.get("mode") === "forgot-password";
-    const isResetSuccess = urlParams.get("reset_success") === "true";
-    const triggerAuth = sessionStorage.getItem("triggerAuth");
+    const isServiceAction = Boolean(urlParams.get("service_action") || urlParams.get("booking_id"));
+    const isEventAction = Boolean(urlParams.get("event_action") || urlParams.get("registration_id"));
+    const isManageToken = Boolean(urlParams.get("manage_token") || urlParams.get("cancel_token"));
+    const isServiceOrEvent = isServiceAction || isEventAction || isManageToken;
+    const isAuthParam = !isServiceOrEvent && urlParams.get("auth") === "true";
+    const hasResetToken = !isServiceOrEvent && Boolean(
+      urlParams.get("reset_token") || (urlParams.get("mode") === "reset-password" && urlParams.get("token"))
+    );
+    const isForgotMode = !isServiceOrEvent && urlParams.get("mode") === "forgot-password";
+    const isResetSuccess = !isServiceOrEvent && urlParams.get("reset_success") === "true";
+    const triggerAuth = !isServiceOrEvent && sessionStorage.getItem("triggerAuth");
 
     // Clean up any stale return flags if this is standard browsing or a normal login attempt
     if (!hasResetToken && !isForgotMode && !isResetSuccess) {
@@ -70,7 +82,10 @@ export default function HomeClient() {
       } catch {}
     }
 
-    if (triggerAuth === "true" || isAuthParam || hasResetToken || isForgotMode) {
+    if (isServiceOrEvent) {
+      sessionStorage.removeItem("triggerAuth");
+      setPhase("landing");
+    } else if (triggerAuth === "true" || isAuthParam || hasResetToken || isForgotMode) {
       sessionStorage.removeItem("triggerAuth");
       setPhase("auth");
     } else if (urlParams.get("skip_intro") === "true") {
@@ -87,16 +102,25 @@ export default function HomeClient() {
 
     const handlePageShow = (e) => {
       const currentParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const isParamServiceOrEvent = Boolean(
+        currentParams?.get("service_action") ||
+        currentParams?.get("booking_id") ||
+        currentParams?.get("event_action") ||
+        currentParams?.get("registration_id") ||
+        currentParams?.get("manage_token")
+      );
       if (
-        currentParams?.get("auth") === "true" ||
-        Boolean(currentParams?.get("token") || currentParams?.get("reset_token")) ||
-        currentParams?.get("mode") === "forgot-password"
+        !isParamServiceOrEvent &&
+        (currentParams?.get("auth") === "true" ||
+        Boolean(currentParams?.get("reset_token") || (currentParams?.get("mode") === "reset-password" && currentParams?.get("token"))) ||
+        currentParams?.get("mode") === "forgot-password")
       ) {
         setPhase("auth");
         return;
       }
 
       if (
+        isParamServiceOrEvent ||
         e.persisted ||
         sessionStorage.getItem("landingScrollTarget") ||
         sessionStorage.getItem("landingSeen") === "true" ||

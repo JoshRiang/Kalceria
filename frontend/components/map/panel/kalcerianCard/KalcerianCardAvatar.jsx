@@ -23,7 +23,9 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
       >
         <div
           className={`w-11 h-11 sm:w-12 sm:h-12 border overflow-hidden rounded-full transition-all relative ${
-            isBlocked
+            isBlockedByTarget
+              ? "border-[#30363d]/80 bg-[#000000]"
+              : isBlocked
               ? "grayscale-[80%] border-[#8b949e]/40"
               : isExpanded
               ? "border-white ring-2 ring-white/50"
@@ -61,7 +63,7 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
         </div>
 
         {/* Bottom-right Avatar Badges: Favourite (Love) & Mute (Speaker + Cross) Stacked Horizontally, with Active Green Dot at Lowest Stack Layer (z-[5]) */}
-        {!isExpanded && (
+        {!isExpanded && !isBlockedByTarget && (
           !isBlocked && (isFavourite || isMuted) ? (
             <div className="absolute -bottom-0.5 -right-1.5 z-20 flex items-center pointer-events-none">
               {isFavourite && (

@@ -83,15 +83,43 @@ export async function sendCallSignal(req, res, next) {
 
     const prePipe = redis.pipeline();
     prePipe.set(nonceKey, '1', 'EX', 120, 'NX');
+    prePipe.sismember(`blocked:${targetId}`, userId);
+    prePipe.sismember(`blocked:${userId}`, targetId);
     if (checkLockNeeded) {
       prePipe.get(targetLockKey);
     }
     const preRes = await prePipe.exec().catch(() => null);
     const nonceReply = preRes ? unwrapPipeResult(preRes[0], 'OK') : 'OK';
-    const existingTargetLock = checkLockNeeded ? unwrapPipeResult(preRes?.[1], null) : null;
+    const isCallerBlockedByTarget = Number(unwrapPipeResult(preRes?.[1], 0)) > 0;
+    const isTargetBlockedByCaller = Number(unwrapPipeResult(preRes?.[2], 0)) > 0;
+    const existingTargetLock = checkLockNeeded ? unwrapPipeResult(preRes?.[3], null) : null;
 
     if (nonceReply !== 'OK') {
       return res.status(409).json({ error: 'Duplicate call signal nonce rejected.' });
+    }
+
+    if (isTargetBlockedByCaller) {
+      return res.status(403).json({ error: 'Cannot call a user you have blocked.' });
+    }
+
+    if (isCallerBlockedByTarget) {
+      // One-sided silent drop: Caller is blocked by target.
+      // Accept call gracefully so caller UI remains on "calling...",
+      // but NEVER deliver to target, lock target, or trigger target device.
+      return res.json({
+        ok: true,
+        packet: {
+          callId: safeCallId,
+          fromUserId: String(userId),
+          toUserId: String(targetId),
+          callMode: callMode === 'video' ? 'video' : 'voice',
+          signalType,
+          ts: Date.now(),
+          isBlockedDrop: true,
+          blockedWhileSent: true,
+        },
+        isBlockedDrop: true,
+      });
     }
 
     const packet = {
@@ -219,6 +247,12 @@ export async function getCallSignals(req, res, next) {
       if (canonicalSignals.length > 0) {
         signals = canonicalSignals;
       }
+    }
+
+    const myBlocked = await redis.smembers(`blocked:${userId}`).catch(() => []);
+    const blockedSet = new Set((Array.isArray(myBlocked) ? myBlocked : []).map(String));
+    if (blockedSet.size > 0) {
+      signals = signals.filter((s) => !blockedSet.has(String(s.fromUserId)));
     }
 
     let activeLock = null;

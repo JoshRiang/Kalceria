@@ -84,7 +84,7 @@ export default function SeeEvent() {
     const urlParams = new URLSearchParams(window.location.search);
     const eventAction = urlParams.get("event_action");
     const registrationId = urlParams.get("registration_id");
-    const token = urlParams.get("token");
+    const token = urlParams.get("manage_token") || urlParams.get("token");
 
     if (eventAction && registrationId) {
       setEventManageState({

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SERVICE_TYPES } from "./constants";
 import { FormErrorBox } from "./FormErrorBox";
+import { resolveWebmailInboxUrl } from "../../utils/webmailUtils";
 
 export function ServiceConfirmationStep({
   done,
@@ -18,6 +19,7 @@ export function ServiceConfirmationStep({
   isWindowExpired = false,
   loading,
   error,
+  onClose,
 }) {
   const [hasClickedWa, setHasClickedWa] = useState(Boolean(done?.bookingId || isConfirmedMode));
   const [isSubmittingWa, setIsSubmittingWa] = useState(false);
@@ -103,20 +105,7 @@ export function ServiceConfirmationStep({
 
   // Resolve user's email client / webmail inbox URL
   const emailInboxUrl = useMemo(() => {
-    const lower = String(userEmail).toLowerCase().trim();
-    if (lower.includes("@gmail.com")) {
-      return "https://mail.google.com/mail/u/0/#search/Kalceria";
-    }
-    if (lower.includes("@yahoo.com")) {
-      return "https://mail.yahoo.com";
-    }
-    if (lower.includes("@outlook.com") || lower.includes("@hotmail.com")) {
-      return "https://outlook.live.com/mail";
-    }
-    if (lower && lower.includes("@")) {
-      return `mailto:${lower}`;
-    }
-    return "https://mail.google.com";
+    return resolveWebmailInboxUrl(userEmail);
   }, [userEmail]);
 
   return (
@@ -241,6 +230,20 @@ export function ServiceConfirmationStep({
         </div>
       )}
 
+      {/* Expired Window Banner if 3-minute timer has elapsed */}
+      {isWindowExpired && (
+        <div className="w-full max-w-[460px] my-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 font-sans text-xs sm:text-sm text-center">
+          <p>{error || "Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp."}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="font-sans font-bold text-xs sm:text-sm px-6 py-2 rounded-lg bg-black text-white border border-white/20 hover:bg-white hover:text-black transition-all cursor-pointer shadow-md select-none mt-3"
+          >
+            Tutup / Kembali ke Beranda
+          </button>
+        </div>
+      )}
+
       {/* Booking Details with Clean Rows and Colon Alignment (No subouter box) */}
       <div className="w-full max-w-[460px] text-left my-4 px-1 sm:px-0">
         <p className="font-sans font-bold text-white text-xs sm:text-sm uppercase tracking-wider mb-3 pb-2 border-b border-white/15 flex items-center justify-between">
@@ -308,16 +311,16 @@ export function ServiceConfirmationStep({
             Do you want to permanently cancel this order? This operational window will be released immediately and cannot be undone.
           </p>
 
-          {/* Centered CANCEL Action: Matching Part 2 Back / Next font style & size, red on hover, slightly enlarged, NO GLOW */}
+          {/* Centered CANCEL Action: Matching Picture 4 style */}
           <div className="flex justify-center items-center w-full mt-4">
             <button
               type="button"
               onClick={handleConfirmCancel}
               disabled={isDeleting || loading || isWindowExpired}
-              className={`font-sans font-black uppercase tracking-tight text-base sm:text-lg transition-all duration-200 select-none bg-transparent border-none shadow-none outline-none py-2 px-6 ${
+              className={`font-sans font-bold text-xs sm:text-sm px-6 py-2.5 rounded-lg bg-black text-white border border-white/20 transition-all shadow-md select-none ${
                 isWindowExpired
-                  ? "text-white/40 opacity-40 cursor-not-allowed pointer-events-none"
-                  : "text-white hover:text-red-500 hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-50"
+                  ? "text-white/20 opacity-30 cursor-not-allowed pointer-events-none select-none"
+                  : "hover:bg-red-600 hover:border-red-600 cursor-pointer disabled:opacity-50"
               }`}
             >
               {isWindowExpired ? "CANCEL (EXPIRED)" : "CANCEL"}
@@ -333,29 +336,33 @@ export function ServiceConfirmationStep({
             </svg>
             <span>Order Confirmed &amp; Locked</span>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="font-sans font-bold text-xs sm:text-sm px-6 py-2.5 rounded-lg bg-black text-white border border-white/20 hover:bg-white hover:text-black transition-all cursor-pointer shadow-md select-none mt-4"
+          >
+            Selesai / Kembali ke Beranda
+          </button>
           <FormErrorBox error={error} />
         </div>
       ) : (
         /* Normal Middle Bottom Actions: Edit & Cancel */
         <div className="mt-2 pt-2 flex flex-col items-center w-full max-w-[460px]">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {!isEditMode && handleEdit && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleEdit}
-                  disabled={loading || isWindowExpired}
-                  style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }}
-                  className={`font-normal text-sm sm:text-base py-1.5 focus:outline-none underline underline-offset-2 transition-colors ${
-                    isWindowExpired
-                      ? "text-white/30 opacity-40 cursor-not-allowed pointer-events-none"
-                      : "text-white/70 hover:text-white cursor-pointer"
-                  }`}
-                >
-                  Edit Details
-                </button>
-                <span className="text-white/30 text-xs">•</span>
-              </>
+              <button
+                type="button"
+                onClick={handleEdit}
+                disabled={loading || isWindowExpired}
+                style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }}
+                className={`font-normal text-sm sm:text-base py-1.5 focus:outline-none underline underline-offset-2 transition-colors ${
+                  isWindowExpired
+                    ? "text-white/20 opacity-30 cursor-not-allowed pointer-events-none select-none"
+                    : "text-white/70 hover:text-white cursor-pointer"
+                }`}
+              >
+                Edit Details
+              </button>
             )}
             <button
               type="button"
@@ -364,7 +371,7 @@ export function ServiceConfirmationStep({
               style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }}
               className={`font-normal text-sm sm:text-base py-1.5 focus:outline-none transition-colors ${
                 isWindowExpired
-                  ? "text-white/30 opacity-40 cursor-not-allowed pointer-events-none"
+                  ? "text-white/20 opacity-30 cursor-not-allowed pointer-events-none select-none"
                   : "text-white/60 hover:text-red-400 cursor-pointer"
               }`}
             >

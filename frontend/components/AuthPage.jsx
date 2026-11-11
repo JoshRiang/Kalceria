@@ -27,7 +27,16 @@ export default function AuthPage({ onAuthSuccess, onBack }) {
   const [mode, setMode] = useState(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get("token") || urlParams.get("reset_token");
+      const isServiceOrEvent = Boolean(
+        urlParams.get("service_action") ||
+        urlParams.get("booking_id") ||
+        urlParams.get("event_action") ||
+        urlParams.get("registration_id") ||
+        urlParams.get("manage_token") ||
+        urlParams.get("cancel_token")
+      );
+      if (isServiceOrEvent) return "login";
+      const token = urlParams.get("reset_token") || (urlParams.get("mode") === "reset-password" ? urlParams.get("token") : null);
       if (token) return "choose-new-password";
       const urlMode = urlParams.get("mode");
       if (urlMode === "forgot-password") return "forgot-password";

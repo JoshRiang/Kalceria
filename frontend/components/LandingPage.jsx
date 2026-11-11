@@ -143,7 +143,7 @@ export default function LandingPage({ onNavigateAuth }) {
     // Cross-Tab / Email Link handling for Service Booking (Edit or Cancel)
     const serviceAction = urlParams?.get("service_action");
     const bookingId = urlParams?.get("booking_id");
-    const token = urlParams?.get("token");
+    const token = urlParams?.get("manage_token") || urlParams?.get("token");
 
     if (serviceAction && bookingId) {
       try {
@@ -167,13 +167,6 @@ export default function LandingPage({ onNavigateAuth }) {
           })
         );
       } catch {}
-
-      // Attempt to close this tab so user seamlessly returns to parent tab
-      if (typeof window !== "undefined") {
-        if (window.opener || window.history.length <= 2) {
-          window.close();
-        }
-      }
 
       // Smoothly scroll to the Need Our Help segment on the Landing Page
       if (typeof window !== "undefined") {

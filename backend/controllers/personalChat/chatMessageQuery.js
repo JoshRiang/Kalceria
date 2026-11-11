@@ -50,7 +50,7 @@ export async function getPersonalChatMessages(req, res, next) {
     const isTargetBlockedByMe = Number(unwrapPipeResult(metaPipeRes?.[1], 0)) === 1;
 
     let rtcSignals = [];
-    if (includeRtc) {
+    if (includeRtc && !isTargetBlockedByMe) {
       const rawRtc = unwrapPipeResult(metaPipeRes?.[2], []);
       rtcSignals = (Array.isArray(rawRtc) ? rawRtc : [])
         .map((item) => {
@@ -120,6 +120,10 @@ export async function getPersonalChatMessages(req, res, next) {
           const dbRows = await prisma.personalChatMessage.findMany({
             where: {
               convHash,
+              NOT: {
+                recipientId: String(userId),
+                status: 'blocked_drop',
+              },
               ...(isCursorPagination ? { ts: { lt: BigInt(Math.floor(cursorTs)) } } : {}),
             },
             orderBy: { ts: 'desc' },
@@ -128,7 +132,23 @@ export async function getPersonalChatMessages(req, res, next) {
           for (const row of dbRows) {
             const unpacked = unpackEnvelope(row.packedJson);
             if (!unpacked) continue;
+            // Absolute Defense: Any message sent while sender was blocked must NEVER reach recipient in any way, even after unblocking
+            if (
+              String(unpacked.recipientId) === String(userId) &&
+              (unpacked.status === 'blocked_drop' || unpacked.isBlockedDrop || unpacked.blockedWhileSent || row.status === 'blocked_drop')
+            ) {
+              continue;
+            }
             if (row.status === 'read') unpacked.status = 'read';
+            // One-sided retention for sender: sender can still see their own message
+            if (
+              String(unpacked.senderId) === String(userId) &&
+              (unpacked.status === 'blocked_drop' || unpacked.isBlockedDrop || unpacked.blockedWhileSent)
+            ) {
+              unpacked.status = 'sent';
+              unpacked.isBlockedDrop = true;
+              unpacked.blockedWhileSent = true;
+            }
             const existing = byId.get(unpacked.id);
             if (!existing) {
               byId.set(unpacked.id, unpacked);
@@ -144,9 +164,13 @@ export async function getPersonalChatMessages(req, res, next) {
               healPipe.expire(metaKey, HOT_TTL_SECONDS);
             } else {
               const sortedDesc = Array.from(byId.values()).sort((a, b) => Number(b.ts) - Number(a.ts));
-              const newestFromDb = sortedDesc[0];
+              // Filter out any blocked_drop messages from hotKey hydration so hotKey stays clean for both peers
+              const cleanForHotKey = sortedDesc.filter(
+                (m) => !(m.status === 'blocked_drop' || m.isBlockedDrop || m.blockedWhileSent)
+              );
+              const newestFromDb = cleanForHotKey[0] || sortedDesc[0];
               if (hotMsgs.length === 0 || needsInitialBackfill) {
-                const toHydrate = sortedDesc.slice(0, HOT_RING_BUFFER_SIZE).map(packEnvelope);
+                const toHydrate = cleanForHotKey.slice(0, HOT_RING_BUFFER_SIZE).map(packEnvelope);
                 if (toHydrate.length > 0) {
                   healPipe.del(hotKey);
                   healPipe.rpush(hotKey, ...toHydrate);
@@ -202,12 +226,35 @@ export async function getPersonalChatMessages(req, res, next) {
       }
     }
 
+    // Absolute Invariant: Any message sent while sender was blocked must NEVER reach recipient in any way, even after unblocking
+    combined = combined.filter((m) => {
+      if (
+        String(m.recipientId) === String(userId) &&
+        (m.status === 'blocked_drop' || m.isBlockedDrop || m.blockedWhileSent || m.wasBlocked)
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    for (const m of combined) {
+      if (
+        String(m.senderId) === String(userId) &&
+        (m.status === 'blocked_drop' || m.isBlockedDrop || m.blockedWhileSent || m.wasBlocked)
+      ) {
+        m.status = 'sent';
+        m.isBlockedDrop = true;
+        m.blockedWhileSent = true;
+      }
+    }
+
     // Real Read Receipt Update: ONLY mark messages as 'read' when actual recipient fetches chat (not peek)
     let readUpdated = false;
     const newlyReadIds = [];
     let maxNewlyReadTs = myReadUpTo;
     if (!isPeekOnly) {
       for (const m of combined) {
+        if (m.status === 'blocked_drop') continue;
         if (String(m.recipientId) === String(userId) && m.status !== 'read') {
           m.status = 'read';
           readUpdated = true;
@@ -248,10 +295,26 @@ export async function getPersonalChatMessages(req, res, next) {
       combined = combined.filter((m) => Number(m.ts) < cursorTs);
     }
 
-    if (isTargetBlockedByMe) {
-      combined = combined.filter(
-        (m) => !(String(m.senderId) === String(targetId) && m.status === 'blocked_drop')
-      );
+    // Absolute Invariant: Any message sent while sender was blocked must NEVER reach recipient in any way, even after unblocking
+    combined = combined.filter((m) => {
+      if (
+        String(m.recipientId) === String(userId) &&
+        (m.status === 'blocked_drop' || m.isBlockedDrop || m.blockedWhileSent || m.wasBlocked)
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    for (const m of combined) {
+      if (
+        String(m.senderId) === String(userId) &&
+        (m.status === 'blocked_drop' || m.isBlockedDrop || m.blockedWhileSent || m.wasBlocked)
+      ) {
+        m.status = 'sent';
+        m.isBlockedDrop = true;
+        m.blockedWhileSent = true;
+      }
     }
 
     combined.sort((a, b) => Number(b.ts) - Number(a.ts));

@@ -1,0 +1,98 @@
+import prisma from '../../lib/prisma.js';
+import { decodePageCursor, encodePageCursor, parsePageLimit } from '../../utils/cursorPagination.js';
+import { THREE_MINUTES_MS } from './eventRegistrationConstants.js';
+import { purgeExpiredUnconfirmedEventRegistrations } from './eventRegistrationLifecycleController.js';
+import { renderTimerBadgeSvg } from '../comms/timerBadgeRenderer.js';
+
+// ─── GET /events (public listing) ────────────────────────────────────────────
+export async function listPublicEvents(req, res, next) {
+  try {
+    purgeExpiredUnconfirmedEventRegistrations().catch(() => {});
+
+    const limit = parsePageLimit(req.query.limit, 50, 100);
+    const cursor = decodePageCursor(req.query.cursor);
+    if (limit === null || cursor === false) {
+      return res.status(400).json({ error: 'Pagination limit or cursor is invalid.' });
+    }
+
+    const events = await prisma.event.findMany({
+      where: {
+        status: { not: 'DRAFT' },
+        ...(cursor && {
+          AND: [{
+            OR: [
+              { regStartTime: { gt: cursor.at } },
+              { regStartTime: cursor.at, id: { gt: cursor.id } },
+            ],
+          }],
+        }),
+      },
+      orderBy: [{ regStartTime: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
+      select: {
+        id: true, title: true, description: true, displayPhotoUrl: true,
+        location: true, regStartTime: true, regEndTime: true,
+        sessionOptions: true, price: true, quota: true, status: true,
+        _count: { select: { registrations: true } },
+      },
+    });
+    const hasMore = events.length > limit;
+    const pageEvents = events.slice(0, limit);
+    const lastEvent = pageEvents.at(-1);
+    const nextCursor = hasMore && lastEvent
+      ? encodePageCursor({ id: lastEvent.id, at: lastEvent.regStartTime })
+      : null;
+
+    res.json({ events: pageEvents, nextCursor });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── GET /events/:eventId (public detail) ────────────────────────────────────
+export async function getPublicEvent(req, res, next) {
+  try {
+    const event = await prisma.event.findFirst({
+      where: { id: req.params.eventId, status: { not: 'DRAFT' } },
+      include: { _count: { select: { registrations: true } } },
+    });
+    if (!event) return res.status(404).json({ error: 'Event not found.' });
+    res.json({ event });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── GET /events/registration/:id/timer.svg (Dynamic Email Timer & Status Badge) ─
+export async function getEventRegistrationTimerBadge(req, res, next) {
+  try {
+    const { id } = req.params;
+    const registration = await prisma.eventRegistration.findUnique({
+      where: { id },
+      select: { paymentStatus: true, createdAt: true },
+    });
+    if (!registration) {
+      const svg = renderTimerBadgeSvg({ status: 'NOT_FOUND' });
+      res.setHeader('Content-Type', 'image/svg+xml');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+      return res.send(svg);
+    }
+
+    const elapsedMs = Date.now() - new Date(registration.createdAt).getTime();
+    const svg = renderTimerBadgeSvg({
+      status: registration.paymentStatus,
+      elapsedMs,
+      limitMs: THREE_MINUTES_MS,
+    });
+
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.send(svg);
+  } catch (err) {
+    next(err);
+  }
+}
+
+

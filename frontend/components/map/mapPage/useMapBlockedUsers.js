@@ -25,19 +25,29 @@ export function useMapBlockedUsers() {
   });
 
   useEffect(() => {
-    fetchBlockedUsers()
-      .then((res) => {
-        const blocked = Array.isArray(res?.blockedUsers) ? res.blockedUsers : (Array.isArray(res) ? res : []);
-        const blockedBy = Array.isArray(res?.blockedByUsers) ? res.blockedByUsers : [];
-        if (blocked.length) {
-          setBlockedUserIds((prev) => Array.from(new Set([...prev, ...blocked])));
-        }
-        if (blockedBy.length) {
+    let alive = true;
+    const syncBlocked = () => {
+      fetchBlockedUsers()
+        .then((res) => {
+          if (!alive) return;
+          const blocked = Array.isArray(res?.blockedUsers) ? res.blockedUsers : (Array.isArray(res) ? res : []);
+          const blockedBy = Array.isArray(res?.blockedByUsers) ? res.blockedByUsers : [];
+          setBlockedUserIds(blocked);
           setBlockedByUserIds(blockedBy);
-          try { localStorage.setItem("kalceria_blocked_by_users", JSON.stringify(blockedBy)); } catch {}
-        }
-      })
-      .catch(() => {});
+          try {
+            localStorage.setItem("kalceria_blocked_users", JSON.stringify(blocked));
+            localStorage.setItem("kalceria_blocked_by_users", JSON.stringify(blockedBy));
+          } catch {}
+        })
+        .catch(() => {});
+    };
+
+    syncBlocked();
+    const intervalTimer = setInterval(syncBlocked, 10000);
+    return () => {
+      alive = false;
+      clearInterval(intervalTimer);
+    };
   }, []);
 
   const handleBlockUser = useCallback(async (targetId) => {

@@ -293,7 +293,10 @@ class MemoryRedisFallback {
       const cur = await this.get(k);
       const count = cur ? Number(cur) + 1 : 1;
       await this.set(k, count, 'EX', ttlSec);
-      return [count, ttlSec];
+      if (s.includes('{') && s.includes('count')) {
+        return [count, ttlSec];
+      }
+      return count;
     }
 
     // OTP / Token atomic consume

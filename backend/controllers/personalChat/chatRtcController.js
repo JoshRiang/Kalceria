@@ -35,8 +35,15 @@ export async function sendChatRtcSignal(req, res, next) {
     pipe.sismember(`blocked:${userId}`, targetId);
     pipe.sismember(`blocked:${targetId}`, userId);
     const blockRes = await pipe.exec().catch(() => null);
-    if (Number(unwrapPipeResult(blockRes?.[0], 0)) || Number(unwrapPipeResult(blockRes?.[1], 0))) {
+    const targetBlockedByMe = Number(unwrapPipeResult(blockRes?.[0], 0)) > 0;
+    const meBlockedByTarget = Number(unwrapPipeResult(blockRes?.[1], 0)) > 0;
+
+    if (targetBlockedByMe) {
       return res.status(403).json({ error: 'Blocked user.' });
+    }
+
+    if (meBlockedByTarget) {
+      return res.json({ ok: true, isBlockedDrop: true });
     }
 
     const writePipe = redis.pipeline();

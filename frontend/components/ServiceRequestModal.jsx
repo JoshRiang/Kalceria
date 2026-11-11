@@ -166,10 +166,10 @@ export default function ServiceRequestModal({
           if (err.response?.data?.isConfirmed) {
             setIsConfirmed(true);
           }
-          if (err.response?.data?.isExpired) {
+          if (err.response?.data?.isExpired || err.response?.status === 404) {
             setIsWindowExpired(true);
           }
-          const errMsg = err.response?.data?.error || "Gagal mengonfirmasi pesanan.";
+          const errMsg = err.response?.data?.error || "Batas waktu 3 menit untuk mengonfirmasi pesanan telah berakhir. Pesanan otomatis dibatalkan.";
           setError(errMsg);
           setStep(2);
         })
@@ -251,11 +251,7 @@ export default function ServiceRequestModal({
           setIsWindowExpired(true);
           const errMsg = err.response?.data?.error || "Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.";
           setError(errMsg);
-          if (initialAction === "cancel" || err.response?.data?.isConfirmed) {
-            setStep(2);
-          } else {
-            setStep(1);
-          }
+          setStep(2);
         })
         .finally(() => {
           if (active) setLoading(false);
@@ -277,7 +273,9 @@ export default function ServiceRequestModal({
           const data = event.data;
           if (!data || data.type !== "SERVICE_ACTION_TRIGGERED") return;
           if (data.action === "cancel") {
-            handleCancel();
+            setStep(2);
+          } else if (data.action === "cancelled") {
+            onClose();
           } else if (data.action === "edit") {
             setStep(1);
           } else if (data.action === "confirm") {
@@ -293,7 +291,9 @@ export default function ServiceRequestModal({
         try {
           const parsed = JSON.parse(e.newValue);
           if (parsed?.action === "cancel") {
-            handleCancel();
+            setStep(2);
+          } else if (parsed?.action === "cancelled") {
+            onClose();
           } else if (parsed?.action === "edit") {
             setStep(1);
           } else if (parsed?.action === "confirm") {
@@ -509,6 +509,14 @@ export default function ServiceRequestModal({
       }
       onClose();
     } catch (err) {
+      if (err.response?.status === 404) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("kalceria:service-bookings-updated"));
+        }
+        setIsWindowExpired(true);
+        onClose();
+        return;
+      }
       const errMsg =
         err.response?.data?.error || err.message || "Failed to cancel booking.";
       setError(errMsg);
@@ -673,6 +681,7 @@ export default function ServiceRequestModal({
                     isWindowExpired={isWindowExpired}
                     loading={loading}
                     error={error}
+                    onClose={onClose}
                   />
                 )}
               </AnimatePresence>

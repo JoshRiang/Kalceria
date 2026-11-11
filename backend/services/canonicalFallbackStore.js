@@ -225,7 +225,7 @@ export async function getCanonicalInboxSummary(userId) {
       by: ['senderId'],
       where: {
         recipientId: String(userId),
-        status: { not: 'read' },
+        status: { notIn: ['read', 'blocked_drop'] },
       },
       _count: { _all: true },
     });
@@ -249,6 +249,7 @@ export async function getCanonicalInboxSummary(userId) {
         where: {
           recipientId: String(userId),
           senderId: { in: peerIds },
+          status: { not: 'blocked_drop' },
         },
         orderBy: { ts: 'desc' },
         distinct: ['senderId'],

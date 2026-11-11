@@ -38,6 +38,8 @@ export function useChatRealtimePackets({
   myId,
   targetId,
   isRealPeer,
+  isTargetBlocked = false,
+  isBlockedByTarget = false,
   inputText,
   setMessages,
   setIsPeerTyping,
@@ -53,6 +55,7 @@ export function useChatRealtimePackets({
   const handleRealtimeP2PPacket = useCallback(
     async (packet) => {
       if (!packet || typeof packet !== "object") return;
+      if (isTargetBlocked || isBlockedByTarget) return;
 
       if (packet.type === "e2ee_msg" && packet.envelope) {
         if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
@@ -163,7 +166,7 @@ export function useChatRealtimePackets({
   } = useChatRealtimeChannel({
     myId,
     targetId,
-    enabled: isRealPeer,
+    enabled: isRealPeer && !isTargetBlocked && !isBlockedByTarget,
     onPacket: handleRealtimeP2PPacket,
   });
 

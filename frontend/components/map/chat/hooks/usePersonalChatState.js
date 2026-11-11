@@ -48,6 +48,8 @@ export function usePersonalChatState({
   onOutgoingMessageUpdate,
   initialCallState = null,
   onCallEnded,
+  isTargetBlocked = false,
+  isBlockedByTarget = false,
 }) {
   const myId = String(currentUser?.id || "me");
   const targetId = String(activeChatUser?.id || "");
@@ -200,6 +202,8 @@ export function usePersonalChatState({
     myId,
     targetId,
     isRealPeer,
+    isTargetBlocked,
+    isBlockedByTarget,
     inputText,
     setMessages,
     setIsPeerTyping,

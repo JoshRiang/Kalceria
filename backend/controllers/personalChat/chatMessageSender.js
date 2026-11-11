@@ -109,24 +109,27 @@ export async function sendPersonalChatMessage(req, res, next) {
       replyTo: body.replyTo && typeof body.replyTo === 'object' ? body.replyTo : null,
       ts, // Preserve client signed timestamp so E2EE signature verification matches 100%
       status: blockedByTarget ? 'blocked_drop' : 'sent', // One-sided retention: marked blocked_drop so blocker never sees it
+      isBlockedDrop: Boolean(blockedByTarget),
+      blockedWhileSent: Boolean(blockedByTarget),
+      wasBlocked: Boolean(blockedByTarget),
     };
 
     const packed = packEnvelope(envelope);
     const writePipe = redis.pipeline();
 
-    // Archive 50th entry into cold overflow tier in the same pipeline (zero extra LINDEX RTT!)
-    if (oldestRaw) {
-      writePipe.lpush(coldKey, oldestRaw);
-      writePipe.ltrim(coldKey, 0, COLD_ARCHIVE_MAX_SIZE - 1);
-      writePipe.expire(coldKey, COLD_TTL_SECONDS);
-    }
-
-    writePipe.lpush(hotKey, packed);
-    writePipe.ltrim(hotKey, 0, HOT_RING_BUFFER_SIZE - 1);
-    writePipe.expire(hotKey, HOT_TTL_SECONDS);
-
-    // If sender is blocked by target, do NOT notify or update target's unread counter or inbox watermark
+    // If sender is NOT blocked by target, push into hot ring buffer and update unread counters
     if (!blockedByTarget) {
+      // Archive 50th entry into cold overflow tier in the same pipeline (zero extra LINDEX RTT!)
+      if (oldestRaw) {
+        writePipe.lpush(coldKey, oldestRaw);
+        writePipe.ltrim(coldKey, 0, COLD_ARCHIVE_MAX_SIZE - 1);
+        writePipe.expire(coldKey, COLD_TTL_SECONDS);
+      }
+
+      writePipe.lpush(hotKey, packed);
+      writePipe.ltrim(hotKey, 0, HOT_RING_BUFFER_SIZE - 1);
+      writePipe.expire(hotKey, HOT_TTL_SECONDS);
+
       const metaFields = [
         'lastTs',
         String(envelope.ts),
@@ -186,7 +189,16 @@ export async function sendPersonalChatMessage(req, res, next) {
 
     await Promise.all([writePipe.exec().catch(() => {}), dbWritePromise]);
 
-    res.status(201).json({ ok: true, envelope: { ...envelope, status: 'sent' } });
+    res.status(201).json({
+      ok: true,
+      envelope: {
+        ...envelope,
+        status: 'sent',
+        isBlockedDrop: Boolean(blockedByTarget),
+        blockedWhileSent: Boolean(blockedByTarget),
+        wasBlocked: Boolean(blockedByTarget),
+      },
+    });
   } catch (err) {
     next(err);
   }

@@ -46,7 +46,7 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "x-jit-token", "x-csrf-token", "x-cancel-token", "x-client-fingerprint", "x-machine-tag"],
+    allowedHeaders: ["Content-Type", "x-jit-token", "x-csrf-token", "x-cancel-token", "x-manage-token", "x-client-fingerprint", "x-machine-tag"],
   }),
 );
 
