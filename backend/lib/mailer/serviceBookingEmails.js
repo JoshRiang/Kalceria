@@ -223,9 +223,12 @@ export function buildServiceRequestConfirmedEmailHtml({ booking, slots = [] }) {
 
   return `
       <div style="font-family:Arial,sans-serif;max-width:560px;margin:24px auto;color:#000000;line-height:1.6;">
-        <h2 style="font-size:18px;font-weight:bold;margin:0 0 12px 0;color:#000000;text-transform:uppercase;letter-spacing:0.5px;">RINGKASAN PESANAN</h2>
+        <div style="text-align:center;margin-bottom:20px;">
+          <img src="https://www.kalceria.id/favicon.png?v=2" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
+        </div>
+        <h2 style="font-size:18px;font-weight:bold;margin:0 0 12px 0;color:#000000;text-transform:uppercase;letter-spacing:0.5px;text-align:center;">RINGKASAN PESANAN</h2>
         <!-- Final Booking Summary | Order Confirmed &amp; Persisted -->
-        <p style="font-size:13px;margin:0 0 16px 0;color:#000000;">
+        <p style="font-size:13px;margin:0 0 16px 0;color:#000000;text-align:center;">
           Pesanan layanan kamu telah terkonfirmasi dan resmi tersimpan di sistem operasional Kalceria. Seluruh parameter jadwal dan detail teknis telah terkunci untuk koordinasi pelaksanaan tugas oleh tim kami.
         </p>
 

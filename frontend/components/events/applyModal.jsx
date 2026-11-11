@@ -192,8 +192,8 @@ export function ApplyModal({
     if (step === 1) setIdx((p) => (p - 1 + events.length) % events.length);
   };
 
-  // Step 1: Candidate Buffer Validation (pure state buffer, NO DATABASE INSERTION)
-  function handleSubmit(e) {
+  // Step 1: Candidate Validation & Immediate Registration in DB to Dispatch Email
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     if (!event?.id) return;
@@ -219,16 +219,38 @@ export function ApplyModal({
       return;
     }
 
-    // Synchronize validated candidate buffer
-    setForm((p) => ({
-      ...p,
-      email: emailToValidate,
-      name: nameToValidate,
-      identifier: p.identifier || emailToValidate || nameToValidate,
-    }));
+    setLoading(true);
+    try {
+      const emailVal = emailToValidate;
+      const nameVal = nameToValidate;
+      const contactVal = contactToValidate;
 
-    // Buffer candidate in memory and proceed to Part 2 gracefully!
-    setStep(2);
+      const payload = {
+        eventId: event.id,
+        mode,
+        name: nameVal,
+        email: emailVal,
+        contact: contactVal,
+        identifier: form.identifier || emailVal || nameVal,
+        selectedSession: form.session,
+      };
+
+      const res = await api.post(`/events/${event.id}/register`, payload);
+      setDoneData(res.data);
+      setForm((p) => ({
+        ...p,
+        email: emailVal,
+        name: nameVal,
+        contact: contactVal,
+        identifier: p.identifier || emailVal || nameVal,
+      }));
+      setStep(2);
+    } catch (err) {
+      const errMsg = err.response?.data?.error || err.message || "Registration failed.";
+      setError(errMsg);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const userEmail = form.email || doneData?.registration?.user?.email || "";
@@ -262,60 +284,13 @@ export function ApplyModal({
     return `https://wa.me/628117998790?text=${encodeURIComponent(cleanText)}`;
   }, [event, doneData, form, mode, authUser, userEmail]);
 
-  // Handle WhatsApp action: Store in Backend ONLY when WhatsApp is clicked!
+  // Handle WhatsApp action: Open WhatsApp confirmation link in new window
   const handleConfirmViaWa = async () => {
     const currentWaUrl = doneData?.whatsappUrl || fallbackWaUrl;
-    if (currentWaUrl && hasConfirmedWa) {
-      if (typeof window !== "undefined") {
-        window.open(currentWaUrl, "_blank");
-      }
-      return;
+    if (currentWaUrl && typeof window !== "undefined") {
+      window.open(currentWaUrl, "_blank");
     }
-
-    setLoading(true);
-    setError("");
-
-    let waWin = null;
-    try {
-      if (typeof window !== "undefined") {
-        waWin = window.open("", "_blank");
-      }
-    } catch {}
-
-    try {
-      const emailVal = (form.email || (form.identifier?.includes("@") ? form.identifier : "")).trim();
-      const nameVal = (form.name || form.identifier || "").trim();
-      const contactVal = (form.contact || "").trim();
-
-      const payload = {
-        eventId: event.id,
-        mode,
-        name: nameVal,
-        email: emailVal,
-        contact: contactVal,
-        identifier: form.identifier || emailVal || nameVal,
-        selectedSession: form.session,
-      };
-
-      const res = await api.post(`/events/${event.id}/register`, payload);
-      setDoneData(res.data);
-      setHasConfirmedWa(true);
-
-      const targetWaUrl = res.data?.whatsappUrl || fallbackWaUrl;
-      if (waWin && !waWin.closed && targetWaUrl) {
-        waWin.location.href = targetWaUrl;
-      } else if (targetWaUrl && typeof window !== "undefined") {
-        window.open(targetWaUrl, "_blank");
-      }
-    } catch (err) {
-      if (waWin && !waWin.closed) {
-        try { waWin.close(); } catch {}
-      }
-      const errMsg = err.response?.data?.error || err.message || "Registration failed.";
-      setError(errMsg);
-    } finally {
-      setLoading(false);
-    }
+    setHasConfirmedWa(true);
   };
 
   // User Cancel Action: Dimmed loading buffer screen, delete from backend, auto-close form
@@ -357,7 +332,7 @@ export function ApplyModal({
       <motion.div
         initial={{ scale: isMobile ? 0.78 : 0.9, y: 20 }}
         animate={{ scale: isMobile ? 0.825 : 1, y: 0 }}
-        className="bg-[#0B0C10]/85 border border-white/10 w-full max-w-lg max-h-[85vh] sm:max-h-[88vh] flex flex-col relative overflow-hidden backdrop-blur-2xl shadow-[0_0_100px_rgba(0,0,0,0.8)] p-5 sm:p-6 md:p-8 transition-transform duration-500 my-auto"
+        className="bg-[#0B0C10]/85 border border-white/10 w-full max-w-lg max-h-[85vh] sm:max-h-[88vh] flex flex-col relative overflow-hidden backdrop-blur-2xl shadow-[0_0_100px_rgba(0,0,0,0.8)] transition-transform duration-500 my-auto"
         style={CLIP}
       >
 
@@ -375,8 +350,8 @@ export function ApplyModal({
 
         <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors text-2xl z-40">×</button>
 
-        {/* Scrollable Modal Body (Custom Semi-Transparent Scrollbar, Zero White Bar) */}
-        <div className="relative z-30 flex-1 overflow-y-auto overflow-x-hidden pr-1 sm:pr-1.5 custom-scrollbar">
+        {/* Scrollable Modal Body (Custom Semi-Transparent Scrollbar positioned flush to right edge) */}
+        <div className="relative z-30 flex-1 overflow-y-auto overflow-x-hidden p-5 sm:p-6 md:p-8 custom-scrollbar">
           {/* Mini Carousel Header (Shown ONLY on Step 1: Form Fill) */}
           {step === 1 && (
             <div className="relative z-30 mb-6">
@@ -402,7 +377,7 @@ export function ApplyModal({
                     key={event?.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className={`relative w-full bg-white/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] ${isMobile ? "aspect-square max-h-[140px]" : "aspect-[4/3] max-h-[160px] md:max-h-[175px]"}`}
+                    className={`relative w-full bg-white/5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] ${isMobile ? "aspect-square" : "aspect-[3/4]"}`}
                     style={CLIP_CARD}
                   >
                      <ContentImage src={event?.displayPhotoUrl} className="w-full h-full object-cover" alt="" width={900} height={1200} />

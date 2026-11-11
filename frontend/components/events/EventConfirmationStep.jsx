@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
 
+export const CLIP_CARD = { clipPath: "polygon(30px 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%, 0 30px)" };
+
 export function EventConfirmationStep({
   event,
   form,
@@ -57,7 +59,7 @@ export function EventConfirmationStep({
       className="py-2 sm:py-4 flex flex-col items-center text-center w-full"
     >
       {/* Transmission Header (Exact matching bold typography as Need Our Help) */}
-      <h3 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-black text-white uppercase tracking-tight leading-none text-center">
+      <h3 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight text-center px-2 max-w-full break-words">
         {isCancelMode ? (
           <>
             Cancel<br className="hidden xs:inline" /> Transmission
@@ -168,16 +170,20 @@ export function EventConfirmationStep({
         </div>
       )}
 
-      {/* Foto Event di Tengah (Centered Event Photo without outerbox, clean and responsive) */}
+      {/* Foto Event di Tengah (Centered Event Photo with CLIP_CARD cyber-cut shape matching Part 1) */}
       {(event?.displayPhotoUrl || event?.posterUrl) && (
-        <div className="w-full max-w-[420px] mx-auto my-3 rounded-xl overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.7)] border border-white/10 aspect-[16/9] relative">
+        <div
+          className="w-full max-w-[420px] mx-auto my-3 relative shadow-[0_20px_40px_-10px_rgba(0,0,0,0.7)] aspect-[16/10] sm:aspect-[16/9] bg-white/5"
+          style={CLIP_CARD}
+        >
           <ContentImage
             src={event.displayPhotoUrl || event.posterUrl}
             className="w-full h-full object-cover"
             alt={event.title || "Event Poster"}
             width={900}
-            height={500}
+            height={560}
           />
+          <div className="absolute inset-0 border-2 border-white/10 pointer-events-none" style={CLIP_CARD} />
         </div>
       )}
 
