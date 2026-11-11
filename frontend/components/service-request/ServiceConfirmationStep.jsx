@@ -346,18 +346,12 @@ export function ServiceConfirmationStep({
         </div>
       ) : isConfirmedMode ? (
         <div className="mt-4 pt-2 flex flex-col items-center w-full max-w-[460px]">
-          <div className="inline-flex items-center gap-2 py-2 px-5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-sans font-bold text-xs sm:text-sm uppercase tracking-wider select-none">
-            <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <span>Order Confirmed &amp; Locked</span>
-          </div>
           <button
             type="button"
             onClick={onClose}
-            className="font-sans font-medium text-xs sm:text-sm text-white/70 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-4 focus:outline-none"
+            className="font-sans font-bold text-sm sm:text-base text-white/90 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-2 focus:outline-none"
           >
-            Selesai / Kembali ke Beranda
+            Selesai
           </button>
           <FormErrorBox error={error} />
         </div>
