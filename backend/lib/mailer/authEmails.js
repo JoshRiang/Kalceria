@@ -14,7 +14,7 @@ export async function sendOtpEmail(toEmail, otp) {
     html: `
       <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #eee;border-radius:8px;background:#ffffff;">
         <div style="text-align:center;margin-bottom:20px;">
-          <img src="https://www.kalceria.id/favicon.png" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
+          <img src="https://www.kalceria.id/favicon.png?v=2" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
         </div>
         <h2 style="color:#1a1a1a;">Verifikasi Akun Kalceria</h2>
         <p>Hai Kalcerian!</p>
@@ -57,7 +57,7 @@ export async function sendPasswordResetEmail(toEmail, token, explicitOrigin, fro
     html: `
       <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #eee;border-radius:8px;background:#ffffff;">
         <div style="text-align:center;margin-bottom:20px;">
-          <img src="https://www.kalceria.id/favicon.png" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
+          <img src="https://www.kalceria.id/favicon.png?v=2" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
         </div>
         <h2 style="color:#1a1a1a;margin-top:0;">Reset Password Kalceria</h2>
         <p>Hai Kalcerian!</p>

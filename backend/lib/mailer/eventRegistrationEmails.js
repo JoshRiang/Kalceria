@@ -65,7 +65,7 @@ export function buildEventRegistrationEmailHtml({ event, registration, cancelTok
       </style>
       <div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:28px 24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;color:#1e293b;">
         <div style="text-align:center;margin-bottom:20px;">
-          <img src="https://www.kalceria.id/favicon.png" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
+          <img src="https://www.kalceria.id/favicon.png?v=2" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
         </div>
 
         <h2 style="color:#0a0e27;margin:0 0 8px 0;font-size:22px;text-align:center;font-weight:900;letter-spacing:-0.5px;">Ringkasan Order Event: ${safeTitle}</h2>
@@ -159,7 +159,7 @@ export function buildEventPaymentConfirmedEmailHtml({ event, registration }) {
   return `
       <div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:28px 24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;color:#1e293b;">
         <div style="text-align:center;margin-bottom:20px;">
-          <img src="https://www.kalceria.id/favicon.png" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
+          <img src="https://www.kalceria.id/favicon.png?v=2" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
         </div>
 
         <h2 style="color:#0a0e27;margin:0 0 8px 0;font-size:22px;text-align:center;font-weight:900;letter-spacing:-0.5px;">Tiket Terkonfirmasi / Registration Confirmed &amp; Persisted</h2>
