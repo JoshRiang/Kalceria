@@ -208,7 +208,7 @@ router.post("/mini-events/:id/collab/requests/:requestId/decline", requireAuth, 
 router.post("/services/book", requireAuth, bookingRateLimit, checkServiceBookingDefense, createBooking);
 router.post("/services/request", optionalAuth, bookingRateLimit, checkServiceBookingDefense, createServiceRequest);
 router.get("/services/request/:id", optionalAuth, getServiceRequestForEdit);
-router.put("/services/request/:id", optionalAuth, bookingRateLimit, checkServiceBookingDefense, updateServiceRequest);
+router.put("/services/request/:id", optionalAuth, bookingRateLimit, updateServiceRequest);
 router.get("/services/bookings", listPublicServiceBookings);
 router.get("/services/request/:id/confirm", optionalAuth, confirmServiceRequest);
 router.post("/services/request/:id/confirm", optionalAuth, confirmServiceRequest);

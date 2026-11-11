@@ -36,7 +36,9 @@ export function EventConfirmationStep({
         </div>
         <div className="flex justify-between border-b border-white/10 pb-1.5">
           <span className="text-slate-400 font-medium">Participant:</span>
-          <span className="text-white font-bold">{mode === "account" ? form?.identifier : (form?.name || doneData?.registration?.user?.name || "—")}</span>
+          <span className="text-white font-bold">
+            {form?.name || doneData?.registration?.user?.name || doneData?.registration?.name || (form?.identifier && !form.identifier.includes('@') ? form.identifier : '') || '—'}
+          </span>
         </div>
         <div className="flex justify-between border-b border-white/10 pb-1.5">
           <span className="text-slate-400 font-medium">Email:</span>
@@ -80,7 +82,7 @@ export function EventConfirmationStep({
               className={`font-sans font-bold text-sm sm:text-base py-2 px-6 bg-transparent border-none shadow-none outline-none select-none transition-colors ${
                 isWindowExpired
                   ? "text-white/30 cursor-not-allowed pointer-events-none select-none"
-                  : "text-white hover:text-red-500 cursor-pointer"
+                  : "text-white hover:text-[#dc2626] cursor-pointer"
               }`}
             >
               Cancel
@@ -107,24 +109,34 @@ export function EventConfirmationStep({
           <button
             type="button"
             onClick={onClose}
-            className="font-sans font-bold text-xs sm:text-sm px-6 py-2.5 rounded-lg bg-black text-white border border-white/20 hover:bg-white hover:text-black transition-all cursor-pointer shadow-md select-none mt-2"
+            className="font-sans font-medium text-xs sm:text-sm text-white/70 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-3 focus:outline-none"
           >
             Selesai / Kembali ke Event
           </button>
         </div>
       ) : isWindowExpired ? (
-        /* Expired Window Notice */
-        <div className="space-y-3 pt-2 text-center">
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 font-sans text-xs sm:text-sm">
-            <p>{error || "Batas waktu 3 menit untuk mengonfirmasi pendaftaran event telah berakhir. Pendaftaran yang belum dikonfirmasi telah dibatalkan dan dihapus."}</p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="font-sans font-bold text-xs sm:text-sm px-6 py-2 rounded-lg bg-black text-white border border-white/20 hover:bg-white hover:text-black transition-all cursor-pointer shadow-md select-none mt-3"
-            >
-              Tutup / Kembali ke Event
-            </button>
-          </div>
+        /* Expired Window Notice (Unboxed, White text with Red highlight, Unboxed button) */
+        <div className="space-y-3 pt-2 text-center max-w-[460px] mx-auto">
+          <p className="font-sans text-xs sm:text-sm leading-relaxed text-white">
+            {error?.includes("telah berakhir") || error?.includes("berakhir") ? (
+              <>
+                Batas waktu 3 menit untuk mengonfirmasi pendaftaran event <span className="text-[#dc2626] font-bold">telah berakhir</span>. Pendaftaran yang belum dikonfirmasi telah dibatalkan dan dihapus.
+              </>
+            ) : (
+              error || (
+                <>
+                  Batas waktu 3 menit untuk mengonfirmasi pendaftaran event <span className="text-[#dc2626] font-bold">telah berakhir</span>. Hubungi kami via WhatsApp.
+                </>
+              )
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="font-sans font-medium text-xs sm:text-sm text-white/70 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-3 focus:outline-none"
+          >
+            Tutup / Kembali ke Event
+          </button>
         </div>
       ) : (
         /* Normal Candidate Review Mode (Pre-WA / Post-WA) */
@@ -176,13 +188,13 @@ export function EventConfirmationStep({
                 transition={{ duration: 0.3 }}
                 className="space-y-3"
               >
-                <div className="flex items-center justify-center gap-3 pt-2">
+                <div className="flex items-center justify-center gap-4 pt-2">
                   <button
                     type="button"
                     onClick={handleConfirmViaWa}
                     disabled={loading}
-                    className={`font-sans font-bold text-xs sm:text-sm px-5 py-2.5 rounded-lg bg-black text-white border border-white/20 hover:bg-white hover:text-black transition-all cursor-pointer shadow-md select-none ${
-                      loading ? "opacity-50 cursor-not-allowed" : ""
+                    className={`font-sans font-bold text-xs sm:text-sm py-1.5 px-3 bg-transparent text-white/90 hover:text-white border-none outline-none transition-colors cursor-pointer select-none focus:outline-none ${
+                      loading ? "opacity-50 cursor-not-allowed pointer-events-none" : ""
                     }`}
                   >
                     {loading ? "Securing Spot..." : "Confirm via WhatsApp"}
@@ -191,7 +203,7 @@ export function EventConfirmationStep({
                     type="button"
                     onClick={onEditDetails}
                     disabled={loading}
-                    className="font-sans font-bold text-xs sm:text-sm px-5 py-2.5 rounded-lg bg-black text-white border border-white/20 hover:bg-white hover:text-black transition-all cursor-pointer shadow-md select-none"
+                    className="font-sans font-normal text-xs sm:text-sm py-1.5 px-3 bg-transparent text-white/70 hover:text-white underline underline-offset-2 border-none outline-none transition-colors cursor-pointer select-none focus:outline-none"
                   >
                     Edit Details
                   </button>

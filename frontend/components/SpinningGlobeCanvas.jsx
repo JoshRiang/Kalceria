@@ -229,13 +229,56 @@ function GlobeCoreStrings() {
   );
 }
 
-// Default export wrapper containing the Canvas context
+// Safe WebGL support probe to eliminate headless/unaccelerated crashes
+function isWebGLSupported() {
+  if (typeof window === "undefined") return false;
+  try {
+    const canvas = document.createElement("canvas");
+    return Boolean(
+      window.WebGLRenderingContext &&
+        (canvas.getContext("webgl") || canvas.getContext("experimental-webgl"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+class GlobeErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err) {
+    console.warn("SpinningGlobe WebGL suppressed error:", err);
+  }
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+    return this.props.children;
+  }
+}
+
+// Default export wrapper containing the Canvas context with error boundary & WebGL probe
 export default function SpinningGlobeCanvas() {
+  const [supported, setSupported] = React.useState(false);
+
+  React.useEffect(() => {
+    setSupported(isWebGLSupported());
+  }, []);
+
+  if (!supported) return null;
+
   return (
-    <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }} style={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
-       <ambientLight intensity={0.5} />
-       <pointLight position={[10, 10, 10]} />
-       <SpinningGlobe />
-    </Canvas>
+    <GlobeErrorBoundary>
+      <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }} style={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
+         <ambientLight intensity={0.5} />
+         <pointLight position={[10, 10, 10]} />
+         <SpinningGlobe />
+      </Canvas>
+    </GlobeErrorBoundary>
   );
 }

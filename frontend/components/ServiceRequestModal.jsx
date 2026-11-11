@@ -111,7 +111,7 @@ export default function ServiceRequestModal({
     currentWeekNumber,
     renderGrid,
     bookingSchedule,
-  } = useServiceBookingSchedule({ setError, mounted });
+  } = useServiceBookingSchedule({ setError, mounted, currentBookingId: initialBookingId || done?.bookingId });
 
   // Load existing booking if initialBookingId is provided
   useEffect(() => {
@@ -165,6 +165,38 @@ export default function ServiceRequestModal({
           if (!active) return;
           if (err.response?.data?.isConfirmed) {
             setIsConfirmed(true);
+            if (err.response?.data?.booking) {
+              const b = err.response.data.booking;
+              setForm({
+                serviceType: b.serviceType,
+                serviceName: b.serviceName || "",
+                contactPerson: b.contactPerson || "",
+                whatsapp: b.whatsapp || "",
+                email: b.email || b.requestor?.email || activeEmail || "",
+                location: b.location || "",
+                additionalNotes: b.additionalNotes || "",
+              });
+              setIsLocationVerified(true);
+              const slotsMap = {};
+              (b.slots || []).forEach((s) => {
+                const d = typeof s.date === "string" ? s.date.split("T")[0] : new Date(s.date).toISOString().split("T")[0];
+                const startH = parseInt(String(s.startTime).split(":")[0], 10);
+                const endH = parseInt(String(s.endTime).split(":")[0], 10);
+                if (startH === 0 && endH === 1) {
+                  slotsMap[`${d}-24`] = true;
+                } else {
+                  for (let h = startH; h < (endH === 0 ? 24 : endH); h++) {
+                    slotsMap[`${d}-${h}`] = true;
+                  }
+                }
+              });
+              setSelectedSlots(slotsMap);
+              setDone({
+                bookingId: b.id,
+                cancelToken: initialToken,
+                userEmail: b.email || b.requestor?.email || activeEmail,
+              });
+            }
           }
           if (err.response?.data?.isExpired || err.response?.status === 404) {
             setIsWindowExpired(true);
@@ -184,7 +216,7 @@ export default function ServiceRequestModal({
         .then((res) => {
           if (!active || !res.data?.booking) return;
           const b = res.data.booking;
-          if (b.status === "PROCESSED") {
+          if (b.status === "PROCESSED" || res.data?.isConfirmed) {
             setIsConfirmed(true);
           }
           setForm({
@@ -231,13 +263,13 @@ export default function ServiceRequestModal({
           });
           if (typeof res.data?.remainingSeconds === "number") {
             setRemainingSeconds(res.data.remainingSeconds);
-            if (res.data.remainingSeconds <= 0) {
+            if (res.data.remainingSeconds <= 0 && b.status !== "PROCESSED" && !res.data?.isConfirmed) {
               setIsWindowExpired(true);
               setError("Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.");
             }
           }
 
-          if (initialAction === "cancel" || b.status === "PROCESSED") {
+          if (initialAction === "cancel" || b.status === "PROCESSED" || res.data?.isConfirmed) {
             setStep(2);
           } else {
             setStep(1);
@@ -247,8 +279,41 @@ export default function ServiceRequestModal({
           if (!active) return;
           if (err.response?.data?.isConfirmed) {
             setIsConfirmed(true);
+            if (err.response?.data?.booking) {
+              const b = err.response.data.booking;
+              setForm({
+                serviceType: b.serviceType,
+                serviceName: b.serviceName || "",
+                contactPerson: b.contactPerson || "",
+                whatsapp: b.whatsapp || "",
+                email: b.email || b.requestor?.email || activeEmail || "",
+                location: b.location || "",
+                additionalNotes: b.additionalNotes || "",
+              });
+              setIsLocationVerified(true);
+              const slotsMap = {};
+              (b.slots || []).forEach((s) => {
+                const d = typeof s.date === "string" ? s.date.split("T")[0] : new Date(s.date).toISOString().split("T")[0];
+                const startH = parseInt(String(s.startTime).split(":")[0], 10);
+                const endH = parseInt(String(s.endTime).split(":")[0], 10);
+                if (startH === 0 && endH === 1) {
+                  slotsMap[`${d}-24`] = true;
+                } else {
+                  for (let h = startH; h < (endH === 0 ? 24 : endH); h++) {
+                    slotsMap[`${d}-${h}`] = true;
+                  }
+                }
+              });
+              setSelectedSlots(slotsMap);
+              setDone({
+                bookingId: b.id,
+                cancelToken: initialToken,
+                userEmail: b.email || b.requestor?.email || activeEmail,
+              });
+            }
+          } else {
+            setIsWindowExpired(true);
           }
-          setIsWindowExpired(true);
           const errMsg = err.response?.data?.error || "Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp.";
           setError(errMsg);
           setStep(2);

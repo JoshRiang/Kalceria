@@ -60,7 +60,11 @@ export async function getEventRegistrationForManage(req, res, next) {
 export async function confirmEventRegistration(req, res, next) {
   try {
     const { id } = req.params;
-    const isDirectGet = req.method === 'GET' || req.query?.direct === 'true';
+    const isDirectGet = (req.method === 'GET' || req.query?.direct === 'true') && 
+      (Boolean(req.headers?.accept?.includes('text/html')) || Boolean(req.query?.direct === 'true'));
+
+    const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+    const redirectToken = req.query?.token || req.query?.manage_token || req.headers?.['x-manage-token'] || (typeof req.get === 'function' ? req.get('x-manage-token') : '') || '';
 
     const registration = await prisma.eventRegistration.findUnique({
       where: { id },
@@ -68,11 +72,7 @@ export async function confirmEventRegistration(req, res, next) {
     });
     if (!registration) {
       if (isDirectGet) {
-        return res.status(404).send(renderConfirmResultHtml({
-          status: 'NOT_FOUND',
-          title: 'Pendaftaran Tidak Ditemukan',
-          description: 'Batas waktu 3 menit untuk mengonfirmasi pendaftaran telah berakhir atau pendaftaran telah dibatalkan.',
-        }));
+        return res.redirect(302, `${frontendOrigin}/events?event_action=confirm&registration_id=${encodeURIComponent(id)}&error=expired#see-event`);
       }
       return res.status(404).json({
         error: 'Batas waktu 3 menit untuk mengonfirmasi pendaftaran event telah berakhir. Pendaftaran otomatis dibatalkan atau tidak ditemukan.',
@@ -82,24 +82,14 @@ export async function confirmEventRegistration(req, res, next) {
 
     if (!verifyEventRegistrationAuthorization(registration, req)) {
       if (isDirectGet) {
-        return res.status(403).send(renderConfirmResultHtml({
-          status: 'UNAUTHORIZED',
-          title: 'Akses Tidak Diizinkan',
-          description: 'Token otorisasi pendaftaran tidak valid atau telah kadaluarsa.',
-        }));
+        return res.redirect(302, `${frontendOrigin}/events?event_action=confirm&registration_id=${encodeURIComponent(id)}&error=unauthorized#see-event`);
       }
       return res.status(403).json({ error: 'Unauthorized to confirm this registration.' });
     }
 
     if (registration.paymentStatus === 'CONFIRMED') {
       if (isDirectGet) {
-        return res.status(200).send(renderConfirmResultHtml({
-          status: 'ALREADY_CONFIRMED',
-          title: 'Pendaftaran Sudah Dikonfirmasi',
-          description: 'Pendaftaran event ini sudah berhasil dikonfirmasi sebelumnya dan slot kamu telah terkunci.',
-          registrationId: registration.id,
-          autoClose: true,
-        }));
+        return res.redirect(302, `${frontendOrigin}/events?event_action=confirm&registration_id=${encodeURIComponent(registration.id)}${redirectToken ? `&token=${encodeURIComponent(redirectToken)}` : ''}&anchor=see-event#see-event`);
       }
       return res.json({
         success: true,
@@ -117,12 +107,7 @@ export async function confirmEventRegistration(req, res, next) {
         } catch {}
       }
       if (isDirectGet) {
-        return res.status(403).send(renderConfirmResultHtml({
-          status: 'EXPIRED',
-          title: 'Batas Waktu 3 Menit Telah Berakhir',
-          description: 'Batas waktu 3 menit untuk konfirmasi telah berakhir. Pendaftaran otomatis dibatalkan dan dihapus.',
-          isExpired: true,
-        }));
+        return res.redirect(302, `${frontendOrigin}/events?event_action=confirm&registration_id=${encodeURIComponent(id)}&error=expired#see-event`);
       }
       return res.status(403).json({
         error: 'Batas waktu 3 menit untuk konfirmasi telah berakhir. Pendaftaran telah dibatalkan dan dihapus.',
@@ -143,13 +128,7 @@ export async function confirmEventRegistration(req, res, next) {
     }), 'email-event-confirmed');
 
     if (isDirectGet) {
-      return res.status(200).send(renderConfirmResultHtml({
-        status: 'SUCCESS',
-        title: 'Pendaftaran Event Berhasil Dikonfirmasi & Dipersist',
-        description: 'Slot pendaftaran kamu telah resmi dikonfirmasi dan terkunci ke sistem operasional Kalceria. Kamu dapat menutup tab ini dan kembali ke email.',
-        registrationId: updatedReg.id,
-        autoClose: true,
-      }));
+      return res.redirect(302, `${frontendOrigin}/events?event_action=confirm&registration_id=${encodeURIComponent(updatedReg.id)}${redirectToken ? `&token=${encodeURIComponent(redirectToken)}` : ''}&anchor=see-event#see-event`);
     }
 
     res.json({

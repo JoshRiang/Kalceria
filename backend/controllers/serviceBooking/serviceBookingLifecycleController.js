@@ -31,6 +31,8 @@ export async function getServiceRequestForEdit(req, res, next) {
       return res.status(403).json({
         error: 'Pesanan ini sudah dikonfirmasi dan terkunci. Perubahan tidak dapat dilakukan.',
         isConfirmed: true,
+        booking,
+        remainingSeconds: 0,
       });
     }
 
@@ -99,6 +101,8 @@ export async function updateServiceRequest(req, res, next) {
       return res.status(403).json({
         error: 'Pesanan ini sudah dikonfirmasi dan terkunci. Perubahan tidak dapat dilakukan.',
         isConfirmed: true,
+        booking,
+        remainingSeconds: 0,
       });
     }
 
@@ -339,7 +343,11 @@ export async function deleteOwnServiceRequest(req, res, next) {
 export async function confirmServiceRequest(req, res, next) {
   try {
     const { id } = req.params;
-    const isDirectGet = req.method === 'GET' || req.query?.direct === 'true';
+    const isDirectGet = (req.method === 'GET' || req.query?.direct === 'true') && 
+      (Boolean(req.headers?.accept?.includes('text/html')) || Boolean(req.query?.direct === 'true'));
+
+    const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+    const redirectToken = req.query?.token || req.query?.manage_token || req.headers?.['x-manage-token'] || (typeof req.get === 'function' ? req.get('x-manage-token') : '') || '';
 
     const booking = await prisma.serviceBooking.findUnique({
       where: { id },
@@ -347,11 +355,7 @@ export async function confirmServiceRequest(req, res, next) {
     });
     if (!booking) {
       if (isDirectGet) {
-        return res.status(404).send(renderConfirmResultHtml({
-          status: 'NOT_FOUND',
-          title: 'Pesanan Tidak Ditemukan',
-          description: 'Batas waktu 3 menit untuk memproses pesanan telah berakhir atau pesanan telah dibatalkan.',
-        }));
+        return res.redirect(302, `${frontendOrigin}/?service_action=confirm&booking_id=${encodeURIComponent(id)}&error=expired#need-our-help`);
       }
       return res.status(404).json({
         error: 'Batas waktu 3 menit untuk memproses pesanan telah berakhir. Pesanan otomatis dibatalkan atau tidak ditemukan.',
@@ -361,24 +365,14 @@ export async function confirmServiceRequest(req, res, next) {
 
     if (!verifyServiceBookingAuthorization(booking, req)) {
       if (isDirectGet) {
-        return res.status(403).send(renderConfirmResultHtml({
-          status: 'UNAUTHORIZED',
-          title: 'Akses Tidak Diizinkan',
-          description: 'Token otorisasi pemesanan tidak valid atau telah kadaluarsa.',
-        }));
+        return res.redirect(302, `${frontendOrigin}/?service_action=confirm&booking_id=${encodeURIComponent(id)}&error=unauthorized#need-our-help`);
       }
       return res.status(403).json({ error: 'Unauthorized to confirm this request.' });
     }
 
     if (booking.status === 'PROCESSED') {
       if (isDirectGet) {
-        return res.status(200).send(renderConfirmResultHtml({
-          status: 'ALREADY_CONFIRMED',
-          title: 'Pesanan Sudah Dikonfirmasi',
-          description: 'Pesanan ini sudah berhasil dikonfirmasi dan terkunci di sistem operasional Kalceria.',
-          bookingId: booking.id,
-          autoClose: true,
-        }));
+        return res.redirect(302, `${frontendOrigin}/?service_action=confirm&booking_id=${encodeURIComponent(booking.id)}${redirectToken ? `&token=${encodeURIComponent(redirectToken)}` : ''}&anchor=need-our-help#need-our-help`);
       }
       return res.json({
         success: true,
@@ -397,12 +391,7 @@ export async function confirmServiceRequest(req, res, next) {
         } catch {}
       }
       if (isDirectGet) {
-        return res.status(403).send(renderConfirmResultHtml({
-          status: 'EXPIRED',
-          title: 'Batas Waktu 3 Menit Telah Berakhir',
-          description: 'Batas waktu 3 menit untuk konfirmasi telah berakhir. Pesanan yang belum dikonfirmasi telah dibatalkan dan dihapus.',
-          isExpired: true,
-        }));
+        return res.redirect(302, `${frontendOrigin}/?service_action=confirm&booking_id=${encodeURIComponent(id)}&error=expired#need-our-help`);
       }
       return res.status(403).json({
         error: 'Batas waktu 3 menit untuk konfirmasi telah berakhir. Pesanan yang belum dikonfirmasi telah dibatalkan dan dihapus.',
@@ -433,13 +422,7 @@ export async function confirmServiceRequest(req, res, next) {
     }
 
     if (isDirectGet) {
-      return res.status(200).send(renderConfirmResultHtml({
-        status: 'SUCCESS',
-        title: 'Pesanan Berhasil Dikonfirmasi & Dipersist',
-        description: 'Parameter pesanan kamu telah resmi dikonfirmasi dan terkunci ke sistem operasional Kalceria. Kamu dapat menutup tab ini dan kembali ke email.',
-        bookingId: updatedBooking.id,
-        autoClose: true,
-      }));
+      return res.redirect(302, `${frontendOrigin}/?service_action=confirm&booking_id=${encodeURIComponent(updatedBooking.id)}${redirectToken ? `&token=${encodeURIComponent(redirectToken)}` : ''}&anchor=need-our-help#need-our-help`);
     }
 
     res.json({

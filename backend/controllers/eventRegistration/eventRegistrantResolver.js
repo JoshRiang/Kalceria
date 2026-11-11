@@ -27,7 +27,36 @@ export async function resolveEventRegistrant(req) {
         },
         select: { id: true, name: true, email: true, phone: true },
       });
-    if (!found) return { error: 'ACCOUNT_NOT_FOUND' };
+    if (!found) {
+      const cleanEmail = (raw.includes('@') ? raw : (email || '')).trim().toLowerCase();
+      if (cleanEmail && EMAIL_REGEX.test(cleanEmail)) {
+        const cleanName = typeof name === 'string' && name.trim() ? name.trim() : (raw.includes('@') ? raw.split('@')[0] : raw);
+        const cleanContact = typeof contact === 'string' ? contact.trim() : '';
+        const existing = await prisma.user.findUnique({
+          where: { email: cleanEmail },
+          select: { id: true, name: true, email: true, phone: true },
+        });
+        if (existing) {
+          return { userId: existing.id, guestContact: cleanContact || existing.phone || '', guestName: cleanName || existing.name || '' };
+        }
+        const created = await prisma.user.create({
+          data: {
+            name: cleanName,
+            dob: new Date('2000-01-01'),
+            email: cleanEmail,
+            gender: 'OTHER',
+            phone: cleanContact,
+            passwordHash: await getGuestPlaceholderHash(),
+            domicileLat: 0,
+            domicileLng: 0,
+            isEmailVerified: false,
+          },
+          select: { id: true, name: true, email: true, phone: true },
+        });
+        return { userId: created.id, guestContact: cleanContact, guestName: cleanName };
+      }
+      return { error: 'ACCOUNT_NOT_FOUND' };
+    }
     const cleanContact = typeof contact === 'string' ? contact.trim() : '';
     const cleanName = typeof name === 'string' ? name.trim() : '';
     return {
@@ -91,7 +120,36 @@ export async function resolveEventRegistrant(req) {
         },
         select: { id: true },
       });
-    if (!found) return { error: 'ACCOUNT_NOT_FOUND' };
+    if (!found) {
+      const cleanEmail = (raw.includes('@') ? raw : (email || '')).trim().toLowerCase();
+      if (cleanEmail && EMAIL_REGEX.test(cleanEmail)) {
+        const cleanName = typeof name === 'string' && name.trim() ? name.trim() : (raw.includes('@') ? raw.split('@')[0] : raw);
+        const cleanContact = typeof contact === 'string' ? contact.trim() : '';
+        const existing = await prisma.user.findUnique({
+          where: { email: cleanEmail },
+          select: { id: true, name: true, email: true, phone: true },
+        });
+        if (existing) {
+          return { userId: existing.id, guestContact: cleanContact || existing.phone || '', guestName: cleanName || existing.name || '' };
+        }
+        const created = await prisma.user.create({
+          data: {
+            name: cleanName,
+            dob: new Date('2000-01-01'),
+            email: cleanEmail,
+            gender: 'OTHER',
+            phone: cleanContact,
+            passwordHash: await getGuestPlaceholderHash(),
+            domicileLat: 0,
+            domicileLng: 0,
+            isEmailVerified: false,
+          },
+          select: { id: true, name: true, email: true, phone: true },
+        });
+        return { userId: created.id, guestContact: cleanContact, guestName: cleanName };
+      }
+      return { error: 'ACCOUNT_NOT_FOUND' };
+    }
     return { userId: found.id };
   }
 

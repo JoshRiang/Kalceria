@@ -101,7 +101,9 @@ export async function registerEvent(req, res, next) {
 
     const participantName = guestName || reg.user.name;
     const participantContact = guestContact || reg.user.phone || '';
-    const participantEmail = reg.user.email;
+    const participantEmail = (typeof req.body?.email === 'string' && req.body.email.trim())
+      ? req.body.email.trim().toLowerCase()
+      : reg.user.email;
 
     // Online Payment checkout session (if broker is enabled)
     let paymentCheckout = null;

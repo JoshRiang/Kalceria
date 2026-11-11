@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchBlockedUsers, blockKalcerian, unblockKalcerian } from "@/lib/api";
 
 export function useMapBlockedUsers() {
+  const inFlightActionsRef = useRef(new Map()); // targetId (lowercase) -> "block" | "unblock"
+
   const [blockedUserIds, setBlockedUserIds] = useState(() => {
     if (typeof window !== "undefined") {
       try {
@@ -33,13 +35,21 @@ export function useMapBlockedUsers() {
           const serverBlocked = Array.isArray(res?.blockedUsers) ? res.blockedUsers.map(String) : [];
           const serverBlockedBy = Array.isArray(res?.blockedByUsers) ? res.blockedByUsers.map(String) : [];
 
-          // Merge server blocked users with locally blocked users so no optimistic local block is lost
-          setBlockedUserIds((prev) => {
-            const merged = Array.from(new Set([...(prev || []).map(String), ...serverBlocked]));
+          // Authoritative server list reconciled with active in-flight actions (prevents resurrection and flickering)
+          setBlockedUserIds(() => {
+            const nextSet = new Set(serverBlocked.map((id) => String(id).trim()));
+            inFlightActionsRef.current.forEach((action, id) => {
+              if (action === "block") {
+                nextSet.add(id);
+              } else if (action === "unblock") {
+                nextSet.delete(id);
+              }
+            });
+            const finalized = Array.from(nextSet);
             try {
-              localStorage.setItem("kalceria_blocked_users", JSON.stringify(merged));
+              localStorage.setItem("kalceria_blocked_users", JSON.stringify(finalized));
             } catch {}
-            return merged;
+            return finalized;
           });
 
           setBlockedByUserIds(serverBlockedBy);
@@ -53,7 +63,7 @@ export function useMapBlockedUsers() {
     };
 
     syncBlocked();
-    // Passive background reconciliation that merges without wiping local blocks
+    // Passive background reconciliation that preserves in-flight operations
     const intervalTimer = setInterval(syncBlocked, 30000);
     return () => {
       alive = false;
@@ -64,6 +74,9 @@ export function useMapBlockedUsers() {
   const handleBlockUser = useCallback(async (targetId) => {
     if (!targetId) return;
     const strId = String(targetId).trim();
+    const cleanKey = strId.toLowerCase();
+    inFlightActionsRef.current.set(cleanKey, "block");
+
     setBlockedUserIds((prev) => {
       const next = Array.from(new Set([...(prev || []).map(String), strId]));
       try { localStorage.setItem("kalceria_blocked_users", JSON.stringify(next)); } catch {}
@@ -74,14 +87,19 @@ export function useMapBlockedUsers() {
     }
     try {
       await blockKalcerian(strId);
-    } catch {}
+    } catch {} finally {
+      inFlightActionsRef.current.delete(cleanKey);
+    }
   }, []);
 
   const handleUnblockUser = useCallback(async (targetId) => {
     if (!targetId) return;
     const strId = String(targetId).trim();
+    const cleanKey = strId.toLowerCase();
+    inFlightActionsRef.current.set(cleanKey, "unblock");
+
     setBlockedUserIds((prev) => {
-      const next = (prev || []).filter((id) => String(id).trim().toLowerCase() !== strId.toLowerCase());
+      const next = (prev || []).filter((id) => String(id).trim().toLowerCase() !== cleanKey);
       try { localStorage.setItem("kalceria_blocked_users", JSON.stringify(next)); } catch {}
       return next;
     });
@@ -90,7 +108,9 @@ export function useMapBlockedUsers() {
     }
     try {
       await unblockKalcerian(strId);
-    } catch {}
+    } catch {} finally {
+      inFlightActionsRef.current.delete(cleanKey);
+    }
   }, []);
 
   return {

@@ -187,20 +187,19 @@ export function renderTimerBadgeSvg({
   if (isConfirmed) {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="460" height="46" viewBox="0 0 460 46" fill="none">
-  <rect x="1" y="1" width="458" height="44" rx="8" fill="#0a0e27" stroke="#16a34a" stroke-width="1.5" />
-  <circle cx="28" cy="18" r="4" fill="#22c55e" />
-  <text x="40" y="22" fill="#22c55e" font-family="Arial, -apple-system, sans-serif" font-size="12" font-weight="bold" letter-spacing="0.5">STATUS: RESMI DIKONFIRMASI &amp; DIKUNCI</text>
-  <text x="40" y="37" fill="#8896aa" font-family="Arial, -apple-system, sans-serif" font-size="10">Slot jadwal operasional kamu telah aman dan tersimpan permanen</text>
+  <rect width="460" height="46" fill="#ffffff" />
+  <!-- Theme anchor: #0a0e27 -->
+  <text x="230" y="20" fill="#16a34a" font-family="Arial, -apple-system, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">STATUS: RESMI DIKONFIRMASI &amp; DIKUNCI</text>
+  <text x="230" y="36" fill="#64748b" font-family="Arial, -apple-system, sans-serif" font-size="11" text-anchor="middle">Slot jadwal operasional kamu telah aman dan tersimpan permanen</text>
 </svg>`;
   }
 
   if (isExpired) {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="460" height="46" viewBox="0 0 460 46" fill="none">
-  <rect x="1" y="1" width="458" height="44" rx="8" fill="#0a0e27" stroke="#dc2626" stroke-width="1.5" />
-  <circle cx="28" cy="18" r="4" fill="#ef4444" />
-  <text x="40" y="22" fill="#ef4444" font-family="Arial, -apple-system, sans-serif" font-size="12" font-weight="bold" letter-spacing="0.5">STATUS: KADALUARSA (BATAS WAKTU 3 MENIT HABIS)</text>
-  <text x="40" y="37" fill="#8896aa" font-family="Arial, -apple-system, sans-serif" font-size="10">Tombol di email ini telah dinonaktifkan oleh server Kalceria</text>
+  <rect width="460" height="46" fill="#ffffff" />
+  <text x="230" y="20" fill="#dc2626" font-family="Arial, -apple-system, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">STATUS: KADALUARSA (BATAS 3 MENIT HABIS)</text>
+  <text x="230" y="36" fill="#64748b" font-family="Arial, -apple-system, sans-serif" font-size="11" text-anchor="middle">Tombol di email ini telah dinonaktifkan oleh server Kalceria</text>
 </svg>`;
   }
 
@@ -223,22 +222,17 @@ export function renderTimerBadgeSvg({
     }
 
     const isLast = s === 0;
-    const label = isLast
-      ? 'STATUS: KADALUARSA (BATAS WAKTU 3 MENIT HABIS)'
-      : `SISA WAKTU: ${formatted} (AKSI EMAIL AKTIF)`;
-    const color = isLast ? '#ef4444' : '#00f0ff';
-    const dotColor = isLast ? '#ef4444' : '#00f0ff';
 
     frames.push(
-      `<g visibility="${elapsed === 0 ? 'visible' : 'hidden'}"><circle cx="28" cy="18" r="4" fill="${dotColor}" /><text x="40" y="22" fill="${color}" font-family="Arial, -apple-system, sans-serif" font-size="12" font-weight="bold" letter-spacing="0.5">${label}</text>${smil}</g>`
+      `<g visibility="${elapsed === 0 ? 'visible' : 'hidden'}"><text x="230" y="20" fill="#0a0e27" font-family="Arial, -apple-system, sans-serif" font-size="13" font-weight="bold" text-anchor="middle">${isLast ? '<tspan fill="#dc2626">STATUS: KADALUARSA (BATAS 3 MENIT HABIS)</tspan>' : `SISA WAKTU: <tspan fill="#dc2626">${formatted}</tspan>`}</text>${smil}</g>`
     );
   }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="460" height="46" viewBox="0 0 460 46" fill="none">
-  <rect x="1" y="1" width="458" height="44" rx="8" fill="#0a0e27" stroke="#1e293b" stroke-width="1.5" />
+  <rect width="460" height="46" fill="#ffffff" />
   ${frames.join('\n  ')}
-  <text x="40" y="37" fill="#8896aa" font-family="Arial, -apple-system, sans-serif" font-size="10">Konfirmasi atau batalkan sebelum batas 3 menit berakhir</text>
+  <text x="230" y="36" fill="#64748b" font-family="Arial, -apple-system, sans-serif" font-size="11" text-anchor="middle">Konfirmasi atau batalkan sebelum batas 3 menit berakhir</text>
 </svg>`;
 }
 
@@ -263,15 +257,15 @@ export function renderTimerBadgeGif({
   lsd[6] = 0;
   chunks.push(lsd);
 
-  // Palette: 0: dark bg, 1: cyan, 2: white, 3: slate, 4: red, 5: green, 6: border, 7: black
+  // Palette: 0: white bg, 1: dark slate, 2: red, 3: muted slate, 4: green, 5: black, 6: white, 7: white
   const palette = Buffer.from([
-    0x0a, 0x0e, 0x27, // 0: Dark background (#0a0e27)
-    0x00, 0xf0, 0xff, // 1: Cyan accent (#00f0ff)
-    0xff, 0xff, 0xff, // 2: White text (#ffffff)
-    0x88, 0x96, 0xaa, // 3: Slate gray (#8896aa)
-    0xdc, 0x26, 0x26, // 4: Red (#dc2626)
-    0x16, 0xa3, 0x4a, // 5: Green (#16a34a)
-    0x1e, 0x29, 0x3b, // 6: Card border (#1e293b)
+    0xff, 0xff, 0xff, // 0: White background (#ffffff)
+    0x33, 0x41, 0x55, // 1: Dark Slate text (#334155)
+    0xdc, 0x26, 0x26, // 2: Red digits (#dc2626)
+    0x64, 0x74, 0x8b, // 3: Muted Slate gray (#64748b)
+    0x16, 0xa3, 0x4a, // 4: Green (#16a34a)
+    0x0f, 0x17, 0x2a, // 5: Deep navy (#0f172a)
+    0xff, 0xff, 0xff, // 6: White
     0x00, 0x00, 0x00, // 7: Pure black
   ]);
   chunks.push(palette);
@@ -282,34 +276,34 @@ export function renderTimerBadgeGif({
     0x03, 0x01, 0x00, 0x00, 0x00
   ]));
 
-  const renderSingleFrame = (title, subtitle, titleColor, borderColor, delayHundredths = 500) => {
+  const renderSingleFrame = (parts, subtitle, isRedSubtitle = false, delayHundredths = 500) => {
     const pixels = new Uint8Array(width * height);
-    pixels.fill(0);
+    pixels.fill(0); // Fill with index 0 (white, transparent)
 
-    for (let x = 0; x < width; x++) {
-      pixels[x] = borderColor;
-      pixels[(height - 1) * width + x] = borderColor;
+    let line1Width = 0;
+    for (const p of parts) {
+      line1Width += measureString(p.text);
     }
-    for (let y = 0; y < height; y++) {
-      pixels[y * width] = borderColor;
-      pixels[y * width + (width - 1)] = borderColor;
+    const startX = Math.max(8, Math.floor((width - line1Width) / 2));
+    let curX = startX;
+    for (const p of parts) {
+      drawString(pixels, width, height, p.text, curX, 10, p.color);
+      curX += measureString(p.text);
     }
 
-    const titleWidth = measureString(title);
-    const titleX = Math.max(8, Math.floor((width - titleWidth) / 2));
-    drawString(pixels, width, height, title, titleX, 10, titleColor);
-
-    const subWidth = measureString(subtitle);
-    const subX = Math.max(8, Math.floor((width - subWidth) / 2));
-    drawString(pixels, width, height, subtitle, subX, 24, 3);
+    if (subtitle) {
+      const subWidth = measureString(subtitle);
+      const subX = Math.max(8, Math.floor((width - subWidth) / 2));
+      drawString(pixels, width, height, subtitle, subX, 24, isRedSubtitle ? 2 : 3);
+    }
 
     const gce = Buffer.alloc(8);
     gce[0] = 0x21;
     gce[1] = 0xF9;
     gce[2] = 0x04;
-    gce[3] = 0x08;
+    gce[3] = 0x09; // Transparent Color Flag = 1, Disposal = Do not dispose
     gce.writeUInt16LE(delayHundredths, 4);
-    gce[6] = 0;
+    gce[6] = 0;    // Transparent color index = 0 (white)
     gce[7] = 0x00;
     chunks.push(gce);
 
@@ -327,18 +321,16 @@ export function renderTimerBadgeGif({
 
   if (isConfirmed) {
     renderSingleFrame(
-      'STATUS: RESMI DIKONFIRMASI & DIKUNCI',
+      [{ text: 'STATUS: RESMI DIKONFIRMASI & DIKUNCI', color: 4 }],
       'SLOT JADWAL OPERASIONAL TELAH AMAN & TERKUNCI',
-      5,
-      5,
+      false,
       1000
     );
   } else if (isExpired) {
     renderSingleFrame(
-      'STATUS: KADALUARSA (BATAS 3 MENIT HABIS)',
+      [{ text: 'STATUS: KADALUARSA (BATAS 3 MENIT HABIS)', color: 2 }],
       'TOMBOL DI EMAIL TELAH DINONAKTIFKAN SERVER',
-      4,
-      4,
+      true,
       1000
     );
   } else {
@@ -348,14 +340,18 @@ export function renderTimerBadgeGif({
       const m = Math.floor(s / 60);
       const sec = s % 60;
       const timeStr = `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-      const title = isLast
-        ? 'STATUS: KADALUARSA (BATAS 3 MENIT HABIS)'
-        : `• SISA WAKTU: ${timeStr} (AKSI EMAIL AKTIF)`;
+
+      const parts = isLast
+        ? [{ text: 'STATUS: KADALUARSA (BATAS 3 MENIT HABIS)', color: 2 }]
+        : [
+            { text: 'Sisa waktu : ', color: 1 },
+            { text: timeStr, color: 2 }, // Red font for time digits!
+          ];
       const subtitle = isLast
         ? 'TOMBOL DI EMAIL TELAH DINONAKTIFKAN SERVER'
-        : 'KONFIRMASI ATAU BATALKAN SEBELUM BATAS 3 MENIT BERAKHIR';
+        : 'Konfirmasi atau batalkan sebelum batas 3 menit berakhir';
 
-      renderSingleFrame(title, subtitle, isLast ? 4 : 1, 6, isLast ? 500 : 100);
+      renderSingleFrame(parts, subtitle, isLast, isLast ? 500 : 100);
     }
   }
 

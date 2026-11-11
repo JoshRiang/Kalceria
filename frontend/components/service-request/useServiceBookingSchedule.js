@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import api from "@/lib/api";
 
-export function useServiceBookingSchedule({ setError, mounted }) {
+export function useServiceBookingSchedule({ setError, mounted, currentBookingId = null }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedSlots, setSelectedSlots] = useState({}); // { "date-hour": true }
   const [publicBookings, setPublicBookings] = useState([]);
@@ -23,7 +23,7 @@ export function useServiceBookingSchedule({ setError, mounted }) {
     if (typeof window !== "undefined") {
       window.addEventListener("kalceria:service-bookings-updated", handleUpdate);
     }
-    const interval = setInterval(fetchBookings, 20000);
+    const interval = setInterval(fetchBookings, 5000);
     return () => {
       clearInterval(interval);
       if (typeof window !== "undefined") {
@@ -32,10 +32,13 @@ export function useServiceBookingSchedule({ setError, mounted }) {
     };
   }, [fetchBookings]);
 
-  // Distribute computing: Pre-index bookings
+  // Distribute computing: Pre-index bookings (Excluding user's own current booking if editing)
   const bookingMap = useMemo(() => {
     const map = {};
     publicBookings.forEach((b) => {
+      if (currentBookingId && (String(b.id) === String(currentBookingId) || String(b.serviceBookingId) === String(currentBookingId))) {
+        return;
+      }
       const bDate = new Date(b.targetDate).toISOString().split("T")[0];
       const startH = parseInt(b.startTime.split(":")[0], 10);
       const endH = parseInt(b.endTime.split(":")[0], 10);
@@ -48,7 +51,7 @@ export function useServiceBookingSchedule({ setError, mounted }) {
       }
     });
     return map;
-  }, [publicBookings]);
+  }, [publicBookings, currentBookingId]);
 
   // ── Synchronize to WIB (Asia/Jakarta, UTC+7) ──────────────────────────────
   const getWibNow = () => {
@@ -163,22 +166,23 @@ export function useServiceBookingSchedule({ setError, mounted }) {
               const slotKey = `${d.date}-${h}`;
               const isSelected = !!selectedSlots[slotKey];
               const isBooked = !!bookingMap[slotKey];
+              const canClick = !isMonday && (!isBooked || isSelected);
 
               return (
                 <div
                   key={i}
-                  onClick={() => !isMonday && !isBooked && toggleSlot(d.date, h)}
-                  onDoubleClick={() => !isMonday && !isBooked && toggleSlot(d.date, h)}
+                  onClick={() => canClick && toggleSlot(d.date, h)}
+                  onDoubleClick={() => canClick && toggleSlot(d.date, h)}
                   className={`
                     aspect-square w-full rounded-[2px] transition-all duration-200 cursor-pointer relative
                     ${
                       isMonday
                         ? "bg-red-500/30 border border-red-500/20 cursor-not-allowed"
+                        : isSelected
+                        ? "bg-[#FF00FF] shadow-[0_0_12px_#FF00FF] z-10 scale-110 cursor-pointer"
                         : isBooked
                         ? "bg-white/5 opacity-5 cursor-not-allowed"
-                        : isSelected
-                        ? "bg-[#FF00FF] shadow-[0_0_12px_#FF00FF] z-10 scale-110"
-                        : "bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/40"
+                        : "bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/40 cursor-pointer"
                     }
                   `}
                 />

@@ -204,38 +204,27 @@ export function buildServiceRequestConfirmedEmailHtml({ booking, slots = [] }) {
   }).join(', ') || '1 slot';
 
   return `
-      <div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:28px 24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;color:#1e293b;">
-        <div style="text-align:center;margin-bottom:20px;">
-          <img src="https://www.kalceria.id/favicon.png?v=2" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
-        </div>
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:24px auto;color:#000000;line-height:1.6;">
+        <h2 style="font-size:18px;font-weight:bold;margin:0 0 12px 0;color:#000000;text-transform:uppercase;letter-spacing:0.5px;">RINGKASAN PESANAN</h2>
+        <!-- Final Booking Summary | Order Confirmed &amp; Persisted -->
+        <p style="font-size:13px;margin:0 0 16px 0;color:#000000;">
+          Pesanan layanan kamu telah terkonfirmasi dan resmi tersimpan di sistem operasional Kalceria. Seluruh parameter jadwal dan detail teknis telah terkunci untuk koordinasi pelaksanaan tugas oleh tim kami.
+        </p>
 
-        <h2 style="color:#0a0e27;margin:0 0 8px 0;font-size:22px;text-align:center;font-weight:900;letter-spacing:-0.5px;">Pesanan Terkonfirmasi / Order Confirmed &amp; Persisted</h2>
-        <p style="color:#475569;font-size:14px;text-align:center;margin:0 0 20px 0;">Hai <strong>${escapeHtml(booking.contactPerson || 'Pelanggan')}</strong>, pesanan kamu telah resmi <strong>dikonfirmasi dan dipersist</strong> ke dalam sistem operasional Kalceria.</p>
+        <table style="width:100%;font-size:13px;color:#000000;border-collapse:collapse;margin-bottom:20px;">
+          <tr><td style="padding:6px 0;font-weight:bold;width:140px;color:#000000;">Booking ID</td><td style="padding:6px 8px;width:10px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">#${escapeHtml(booking.id.slice(-6))} (${escapeHtml(booking.id)})</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Layanan</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(serviceLabel)}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Judul Request</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(booking.serviceName || '—')}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Nama Operator</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(booking.contactPerson || '—')}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">WhatsApp</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(booking.whatsapp || '—')}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Email</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(booking.requestor?.email || booking.email || '—')}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Area Penugasan</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(booking.location || 'TBD')}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Jadwal Terpilih</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${slotsSummary}</td></tr>
+          ${booking.additionalNotes ? `<tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Catatan Tambahan</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(booking.additionalNotes)}</td></tr>` : ''}
+        </table>
 
-        <div style="margin-bottom:20px;">
-          <p style="margin:0 0 4px 0;font-weight:bold;color:#0f172a;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Status: Terkonfirmasi &amp; Terkunci / Confirmed &amp; Locked</p>
-          <p style="margin:0;color:#334155;font-size:13px;line-height:1.6;">
-            Jadwal operasional dan parameter pesanan telah dikunci untuk persiapan penugasan tim. Seluruh proses verifikasi 2 tahap telah selesai dan pesanan telah aktif di sistem.
-          </p>
-        </div>
-
-        <div style="margin-bottom:24px;">
-          <p style="margin:0 0 12px 0;font-size:12px;font-weight:bold;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">Final Booking Summary</p>
-          <table style="width:100%;font-size:13px;color:#1e293b;border-collapse:collapse;">
-            <tr><td style="padding:4px 0;font-weight:bold;width:130px;color:#334155;">Booking ID</td><td style="padding:4px 8px;width:10px;color:#94a3b8;">:</td><td style="padding:4px 0;">#${escapeHtml(booking.id.slice(-6))} (${escapeHtml(booking.id)})</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Service</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(serviceLabel)}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Request Title</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.serviceName || '—')}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Operator Name</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.contactPerson || '—')}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">WhatsApp</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.whatsapp || '—')}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Email</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.requestor?.email || booking.email || '—')}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Deployment Area</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.location || 'TBD')}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Selected Schedule</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${slotsSummary}</td></tr>
-            ${booking.additionalNotes ? `<tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Notes</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(booking.additionalNotes)}</td></tr>` : ''}
-          </table>
-        </div>
-
-        <p style="color:#64748b;font-size:12px;text-align:center;margin:0;line-height:1.5;">
-          Crew operasional Kalceria akan segera menghubungi kamu via WhatsApp untuk koordinasi teknis penugasan lebih lanjut.
+        <p style="font-size:12px;margin:0;color:#000000;line-height:1.5;">
+          Tim operasional Kalceria akan segera menghubungi kamu melalui WhatsApp untuk koordinasi teknis lebih lanjut.
         </p>
       </div>
   `;

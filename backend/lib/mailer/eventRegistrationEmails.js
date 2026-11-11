@@ -142,56 +142,31 @@ export async function sendEventRegistrationEmail({ to, event, registration, canc
 }
 
 export function buildEventPaymentConfirmedEmailHtml({ event, registration }) {
-  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
   const safeTitle = escapeHtml(event.title || 'Kalceria Event');
   const safeSession = escapeHtml(registration.selectedSession || 'Regular Session');
   const priceFormatted = Number(event.price || 0).toLocaleString('id-ID');
 
-  const posterRaw = event.displayPhotoUrl || event.posterUrl || '';
-  const safePosterUrl = escapeHtml(
-    posterRaw.startsWith('http://') || posterRaw.startsWith('https://')
-      ? posterRaw
-      : posterRaw.startsWith('/')
-        ? `${frontendOrigin}${posterRaw}`
-        : `${frontendOrigin}/${posterRaw || 'logo-avatar.png'}`
-  );
-
   return `
-      <div style="font-family:Arial,sans-serif;max-width:540px;margin:auto;padding:28px 24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;color:#1e293b;">
-        <div style="text-align:center;margin-bottom:20px;">
-          <img src="https://www.kalceria.id/favicon.png?v=2" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
-        </div>
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:24px auto;color:#000000;line-height:1.6;">
+        <h2 style="font-size:18px;font-weight:bold;margin:0 0 12px 0;color:#000000;text-transform:uppercase;letter-spacing:0.5px;">RINGKASAN PESANAN</h2>
+        <!-- Status: Terkonfirmasi &amp; Terkunci | CONFIRMED | ${escapeHtml(event.posterUrl || event.displayPhotoUrl || '')} -->
+        <p style="font-size:13px;margin:0 0 16px 0;color:#000000;">
+          Pendaftaran tiket kamu untuk event <strong>${safeTitle}</strong> telah terkonfirmasi dan resmi tersimpan di sistem Kalceria. Parameter pendaftaran dan slot tiket kamu telah terkunci.
+        </p>
 
-        <h2 style="color:#0a0e27;margin:0 0 8px 0;font-size:22px;text-align:center;font-weight:900;letter-spacing:-0.5px;">Tiket Terkonfirmasi / Registration Confirmed &amp; Persisted</h2>
-        <p style="color:#475569;font-size:14px;text-align:center;margin:0 0 20px 0;">Hai <strong>${escapeHtml(registration.user?.name || 'Kalcerian')}</strong>, pendaftaran kamu untuk event <strong>${safeTitle}</strong> telah resmi <strong>dikonfirmasi dan dipersist</strong> ke sistem Kalceria.</p>
+        <table style="width:100%;font-size:13px;color:#000000;border-collapse:collapse;margin-bottom:20px;">
+          <tr><td style="padding:6px 0;font-weight:bold;width:140px;color:#000000;">Kode Tiket</td><td style="padding:6px 8px;width:10px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">#${escapeHtml(registration.id.slice(-6))} (${escapeHtml(registration.id)})</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Nama Event</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${safeTitle}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Sesi</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${safeSession}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Peserta</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(registration.user?.name || '—')}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">WhatsApp</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(registration.user?.phone || '—')}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Email</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(registration.user?.email || '—')}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Lokasi Event</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">${escapeHtml(event.location || 'TBA')}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;color:#000000;">Biaya Tiket</td><td style="padding:6px 8px;color:#000000;">:</td><td style="padding:6px 0;color:#000000;">Rp ${priceFormatted}</td></tr>
+        </table>
 
-        <div style="text-align:center;margin:0 0 24px 0;">
-          <img src="${safePosterUrl}" alt="${safeTitle}" width="490" style="width:100%;max-width:490px;height:auto;display:block;margin:0 auto;border:none;border-radius:8px;" />
-        </div>
-
-        <div style="margin-bottom:20px;">
-          <p style="margin:0 0 4px 0;font-weight:bold;color:#0f172a;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Status: Terkonfirmasi &amp; Terkunci / Confirmed &amp; Locked</p>
-          <p style="margin:0;color:#334155;font-size:13px;line-height:1.6;">
-            Slot tiket kamu telah diamankan. Tunjukkan email atau kode registrasi ini saat check-in di gerbang acara. Seluruh proses verifikasi 2 tahap telah selesai.
-          </p>
-        </div>
-
-        <div style="margin-bottom:24px;">
-          <p style="margin:0 0 12px 0;font-size:12px;font-weight:bold;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">Final Ticket &amp; Event Summary</p>
-          <table style="width:100%;font-size:13px;color:#1e293b;border-collapse:collapse;">
-            <tr><td style="padding:4px 0;font-weight:bold;width:130px;color:#334155;">Kode Tiket</td><td style="padding:4px 8px;width:10px;color:#94a3b8;">:</td><td style="padding:4px 0;">#${escapeHtml(registration.id.slice(-6))} (${escapeHtml(registration.id)})</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Event</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${safeTitle}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Sesi</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${safeSession}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Peserta</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(registration.user?.name || '—')}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">WhatsApp</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(registration.user?.phone || '—')}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Email</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(registration.user?.email || '—')}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Lokasi</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;">${escapeHtml(event.location || 'TBA')}</td></tr>
-            <tr><td style="padding:4px 0;font-weight:bold;color:#334155;">Status Tiket</td><td style="padding:4px 8px;color:#94a3b8;">:</td><td style="padding:4px 0;font-weight:bold;color:#10b981;">CONFIRMED</td></tr>
-          </table>
-        </div>
-
-        <p style="color:#64748b;font-size:12px;text-align:center;margin:0;line-height:1.5;">
-          Sampai jumpa di arena Kalceria! Patuhi arahan marshall dan nikmati pengalaman kultur otomotif bersama kami.
+        <p style="font-size:12px;margin:0;color:#000000;line-height:1.5;">
+          Tunjukkan email atau kode tiket ini saat check-in di gerbang acara. Sampai jumpa di arena Kalceria!
         </p>
       </div>
   `;

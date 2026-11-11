@@ -140,8 +140,8 @@ export function ServiceConfirmationStep({
         </p>
       ) : isConfirmedMode ? (
         <div className="w-full max-w-[460px] flex flex-col items-center justify-center mt-3 sm:mt-4">
-          <p className="text-emerald-400 font-sans font-normal text-xs sm:text-sm md:text-base leading-relaxed text-center">
-            Your order has been officially confirmed and persisted into the Kalceria operational system. Our crew will coordinate with you via WhatsApp.
+          <p className="text-white font-sans font-normal text-xs sm:text-sm md:text-base leading-relaxed text-center">
+            Your order has been <span className="text-emerald-400 font-bold">officially confirmed</span> and persisted into the Kalceria operational system. Our crew will coordinate with you via WhatsApp.
           </p>
           <button
             type="button"
@@ -230,14 +230,30 @@ export function ServiceConfirmationStep({
         </div>
       )}
 
-      {/* Expired Window Banner if 3-minute timer has elapsed */}
-      {isWindowExpired && (
-        <div className="w-full max-w-[460px] my-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 font-sans text-xs sm:text-sm text-center">
-          <p>{error || "Batas waktu 3 menit untuk mengedit atau membatalkan pesanan telah berakhir. Hubungi kami via WhatsApp."}</p>
+      {/* Expired Window or Locked Notice (Unboxed, White text with Red highlight, Unboxed button) */}
+      {(isWindowExpired || (isConfirmedMode && error)) && (
+        <div className="w-full max-w-[460px] my-3 flex flex-col items-center text-center">
+          <p className="font-sans text-xs sm:text-sm leading-relaxed text-white">
+            {isConfirmedMode ? (
+              <>
+                Pesanan ini sudah dikonfirmasi dan <span className="text-[#dc2626] font-bold">terkunci</span>. Perubahan tidak dapat dilakukan.
+              </>
+            ) : error?.includes("telah berakhir") || error?.includes("berakhir") ? (
+              <>
+                Batas waktu 3 menit untuk memproses pesanan <span className="text-[#dc2626] font-bold">telah berakhir</span>. Pesanan otomatis dibatalkan atau tidak ditemukan.
+              </>
+            ) : (
+              error || (
+                <>
+                  Batas waktu 3 menit untuk memproses pesanan <span className="text-[#dc2626] font-bold">telah berakhir</span>. Hubungi kami via WhatsApp.
+                </>
+              )
+            )}
+          </p>
           <button
             type="button"
             onClick={onClose}
-            className="font-sans font-bold text-xs sm:text-sm px-6 py-2 rounded-lg bg-black text-white border border-white/20 hover:bg-white hover:text-black transition-all cursor-pointer shadow-md select-none mt-3"
+            className="font-sans font-medium text-xs sm:text-sm text-white/70 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-2.5 focus:outline-none"
           >
             Tutup / Kembali ke Beranda
           </button>
@@ -320,7 +336,7 @@ export function ServiceConfirmationStep({
               className={`font-sans font-bold text-sm sm:text-base py-2 px-6 bg-transparent border-none shadow-none outline-none select-none transition-colors ${
                 isWindowExpired
                   ? "text-white/20 opacity-30 cursor-not-allowed pointer-events-none select-none"
-                  : "text-white hover:text-red-500 cursor-pointer disabled:opacity-50"
+                  : "text-white hover:text-[#dc2626] cursor-pointer disabled:opacity-50"
               }`}
             >
               {isWindowExpired ? "CANCEL (EXPIRED)" : "CANCEL"}
@@ -339,7 +355,7 @@ export function ServiceConfirmationStep({
           <button
             type="button"
             onClick={onClose}
-            className="font-sans font-bold text-xs sm:text-sm px-6 py-2.5 rounded-lg bg-black text-white border border-white/20 hover:bg-white hover:text-black transition-all cursor-pointer shadow-md select-none mt-4"
+            className="font-sans font-medium text-xs sm:text-sm text-white/70 hover:text-white transition-colors bg-transparent border-none outline-none cursor-pointer mt-4 focus:outline-none"
           >
             Selesai / Kembali ke Beranda
           </button>
@@ -369,10 +385,10 @@ export function ServiceConfirmationStep({
               onClick={handleCancel}
               disabled={loading || isWindowExpired}
               style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }}
-              className={`font-normal text-sm sm:text-base py-1.5 focus:outline-none transition-colors ${
+              className={`font-normal text-sm sm:text-base py-1.5 focus:outline-none transition-colors bg-transparent border-none ${
                 isWindowExpired
                   ? "text-white/20 opacity-30 cursor-not-allowed pointer-events-none select-none"
-                  : "text-white/60 hover:text-red-400 cursor-pointer"
+                  : "text-white/60 hover:text-[#dc2626] cursor-pointer"
               }`}
             >
               {loading ? "Cancelling..." : "Cancel"}

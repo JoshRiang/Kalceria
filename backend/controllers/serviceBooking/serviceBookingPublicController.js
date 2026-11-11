@@ -43,8 +43,8 @@ export async function listPublicServiceBookings(req, res, next) {
 
     const response = { bookings: formatted };
 
-    // Cache for 30 seconds (short for "real-time" feel but saves DB hits)
-    await redis.set(cacheKey, JSON.stringify(response), 'EX', 30);
+    // Cache for 5 seconds (rapid near-realtime slot contention during war booking)
+    await redis.set(cacheKey, JSON.stringify(response), 'EX', 5);
 
     res.json(response);
   } catch (err) {
