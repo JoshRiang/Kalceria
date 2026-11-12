@@ -14,7 +14,8 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
   avatarUrl,
   handleAvatarClick,
 }) {
-  const isAnyBlocked = Boolean(isBlocked || isBlockedByTarget);
+  // Only isBlocked renders solid black; the user who blocked still sees the profile photo
+  const isAnyBlocked = Boolean(isBlocked);
 
   return (
     <div className="relative z-10 flex justify-center items-center">
