@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getInstantMapBgUrl } from "@/lib/mapBgCache";
 import { ActionArcSpinner } from "./ActionArcSpinner";
+import { BroadcastMediaSection } from "./statusModal/BroadcastMediaSection";
 import {
   MODAL_GENIE_BACKDROP,
   MODAL_GENIE_SURFACE,
@@ -25,16 +27,31 @@ export function StatusModal({
 }) {
   useModalBackClose(Boolean(show), onClose);
 
-  const isBroadcastValid = Boolean((statusText || "").trim());
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
+  // When modal opens on edit: decouple [MEDIA:...] from display text
+  useEffect(() => {
+    if (show) {
+      const match = String(statusText || "").match(/\[MEDIA:([^\]]+)\]/i);
+      if (match) {
+        setMediaUrl(match[1].trim());
+        const clean = String(statusText || "").replace(/\[MEDIA:[^\]]+\]\s*/gi, "").trim();
+        setStatusText(clean);
+      }
+    } else {
+      setMediaUrl("");
+      setIsUploadingMedia(false);
+    }
+  }, [show]);
+
+  const cleanText = (statusText || "").trim();
+  const isBroadcastValid = Boolean(cleanText || mediaUrl);
   const resolvedBgUrl = getInstantMapBgUrl(
     isModalDark ? BROADCAST_FORM_BG_DARK : BROADCAST_FORM_BG_LIGHT
   );
 
   // 2-Piece Smooth-Trimmed Mask (3 : 1 Top-to-Bottom Proportion with Tight Gap):
-  // - 0% -> 16%: strictly transparent so "Update Status" header stays 100% uncontaminated
-  // - Top Segment (~54% span: 18.5% -> 72.5% midpoint-to-midpoint) = 3 parts
-  // - Tight Smooth Gap (75% -> 79%, narrower than Create Mini Event)
-  // - Bottom Segment (~18% span: 81% -> 99% midpoint-to-midpoint) = 1 part (54% : 18% = 3 : 1)
   const smoothTwoBandMask =
     "linear-gradient(to bottom, transparent 0%, transparent 16%, black 21%, black 71%, transparent 75%, transparent 79%, black 83%, black 100%)";
 
@@ -108,11 +125,10 @@ export function StatusModal({
             {/* Form */}
             <form
               onSubmit={(e) => {
-                if (!isBroadcastValid) {
-                  e.preventDefault();
-                  return;
-                }
-                saveBroadcast(e);
+                e.preventDefault();
+                if (isUploadingMedia || !isBroadcastValid) return;
+                const clean = (statusText || "").replace(/\[MEDIA:[^\]]+\]\s*/gi, "").trim();
+                saveBroadcast(e, { message: clean, mediaUrl });
               }}
               className="relative z-10 p-5 sm:p-6 flex-1 overflow-y-auto flex flex-col gap-4 sm:gap-5 custom-scrollbar"
             >
@@ -133,7 +149,7 @@ export function StatusModal({
                   Broadcast <span className="text-[#ef4444]">*</span>
                 </label>
                 <textarea
-                  className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm outline-none min-h-[90px] sm:min-h-[120px] transition-all resize-none ${
+                  className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm outline-none min-h-[90px] sm:min-h-[110px] transition-all resize-none ${
                     isModalDark
                       ? "bg-[#0a0c10]/90 border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
                       : "bg-[#f6f8fa]/94 border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
@@ -145,13 +161,23 @@ export function StatusModal({
                 />
               </div>
 
+              {/* Broadcast Media Attachment (Live Media Feed) */}
+              <BroadcastMediaSection
+                mediaUrl={mediaUrl}
+                setMediaUrl={setMediaUrl}
+                isModalDark={isModalDark}
+                busy={busy}
+                isUploadingMedia={isUploadingMedia}
+                setIsUploadingMedia={setIsUploadingMedia}
+              />
+
               {isEditing ? (
                 <div className="flex items-center justify-between mt-auto pt-3 shrink-0 px-1">
                   {/* Left: Red Trashcan Icon Button with hollow transparent interior */}
                   <button
                     type="button"
                     onClick={onPromptDeleteBroadcast}
-                    disabled={busy}
+                    disabled={busy || isUploadingMedia}
                     title="Delete Broadcast"
                     aria-label="Delete Broadcast"
                     className="p-1.5 transition-transform hover:scale-110 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400 cursor-pointer group flex items-center justify-center"
@@ -160,11 +186,8 @@ export function StatusModal({
                       <defs>
                         <mask id="hollow-trashcan-mask-broadcast">
                           <rect x="0" y="0" width="24" height="24" fill="#ffffff" />
-                          {/* Hollow handle opening */}
                           <rect x="9.6" y="4.2" width="4.8" height="1.8" rx="0.6" fill="#000000" />
-                          {/* Hollow lid separation line */}
                           <line x1="5" y1="6.4" x2="19" y2="6.4" stroke="#000000" strokeWidth="1.2" strokeLinecap="round" />
-                          {/* Hollow interior vertical slits */}
                           <line x1="9.5" y1="9.5" x2="9.5" y2="17" stroke="#000000" strokeWidth="1.7" strokeLinecap="round" />
                           <line x1="14.5" y1="9.5" x2="14.5" y2="17" stroke="#000000" strokeWidth="1.7" strokeLinecap="round" />
                         </mask>
@@ -186,14 +209,14 @@ export function StatusModal({
                   {/* Right: Box button with Update font, trimmed to the right */}
                   <button
                     type="submit"
-                    disabled={busy || !isBroadcastValid}
+                    disabled={busy || isUploadingMedia || !isBroadcastValid}
                     className={`min-w-[96px] min-h-[40px] flex items-center justify-center px-6 py-2.5 sm:py-3 border text-xs font-bold tracking-wider rounded-xl transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer ${
                       isModalDark
                         ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
                         : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
                     }`}
                   >
-                    {busy ? (
+                    {busy || isUploadingMedia ? (
                       <ActionArcSpinner className="w-4 h-4" label="Updating broadcast" />
                     ) : (
                       "Update"
@@ -209,9 +232,9 @@ export function StatusModal({
                         ? "bg-[#ffffff] text-[#000000] border-[#ffffff] hover:bg-[#f0f6fc] shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
                         : "bg-[#000000] text-[#ffffff] border-[#000000] hover:bg-[#1f2328] shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
                     }`}
-                    disabled={busy || !isBroadcastValid}
+                    disabled={busy || isUploadingMedia || !isBroadcastValid}
                   >
-                    {busy ? (
+                    {busy || isUploadingMedia ? (
                       <ActionArcSpinner className="w-4 h-4" label="Posting status" />
                     ) : (
                       "Post"

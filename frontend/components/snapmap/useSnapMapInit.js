@@ -76,6 +76,13 @@ export function useSnapMapInit({
         if (popupEl) {
           popupEl.classList.remove("popup-shrinking");
           initEventPopupCarouselsFromRoot(popupEl, e.popup);
+          const bcastViewEl = popupEl.querySelector?.("[data-broadcast-view-count]");
+          if (bcastViewEl) {
+            const bcastId = bcastViewEl.getAttribute("data-broadcast-view-count");
+            if (bcastId && typeof window !== "undefined" && window.__kalceriaRecordBroadcastView) {
+              window.__kalceriaRecordBroadcastView(bcastId);
+            }
+          }
         }
       });
 

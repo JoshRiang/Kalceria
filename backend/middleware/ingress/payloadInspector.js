@@ -23,15 +23,20 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
 
   if (!obj || typeof obj !== 'object') {
     if (typeof obj === 'string') {
-      const limit = state.maxStringLen || MAX_STRING_INSPECT_LEN;
+      const isDataUrl = /^data:(?:image|video|audio)\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+$/i.test(obj) || obj.startsWith('data:image/') || obj.startsWith('data:video/') || obj.startsWith('data:audio/');
+      const limit = (isDataUrl || state.maxStringLen) ? Math.max(state.maxStringLen || 0, 16_000_000) : MAX_STRING_INSPECT_LEN;
       if (obj.length > limit) {
         return { safe: false, reason: 'Field length exceeds maximum security limit.' };
       }
-      if (!state.skipPatternRegex) {
-        if (XSS_SCRIPT_PATTERN.test(obj)) {
+      if (!state.skipPatternRegex && !isDataUrl) {
+        let textToInspect = obj;
+        if (textToInspect.includes(';base64,')) {
+          textToInspect = textToInspect.replace(/data:(?:image|video|audio)\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+/gi, '');
+        }
+        if (XSS_SCRIPT_PATTERN.test(textToInspect)) {
           return { safe: false, reason: 'Disallowed script injection detected.' };
         }
-        if (SQL_INJECTION_PATTERN.test(obj) || SQL_LOGIC_BYPASS_PATTERN.test(obj)) {
+        if (SQL_INJECTION_PATTERN.test(textToInspect) || SQL_LOGIC_BYPASS_PATTERN.test(textToInspect)) {
           return { safe: false, reason: 'Disallowed SQL injection pattern detected.' };
         }
       }
@@ -57,16 +62,22 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
     const isLargeMediaField =
       key === 'ciphertext' ||
       key === 'mediaUrl' ||
+      key === 'mediaUrls' ||
+      key === 'url' ||
+      key === 'displayPhotoUrl' ||
+      key === 'posterUrl' ||
       key === 'encryptedPayload' ||
       key === 'rtcPayload' ||
       key === 'description' ||
+      key === 'message' ||
       key === 'profilePicture' ||
       key === 'coverImage' ||
-      key === 'coverUrl';
+      key === 'coverUrl' ||
+      key === 'mediaItems' ||
+      key === 'media';
     const isBase64MediaDataUrl =
-      (key === 'profilePicture' || key === 'coverImage' || key === 'coverUrl') &&
       typeof obj[key] === 'string' &&
-      /^data:(?:image|video)\/(?:webp|png|jpeg|jpg|gif|mp4|webm);base64,[A-Za-z0-9+/=\s]+$/i.test(obj[key]);
+      /^data:(?:image|video|audio)\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+$/i.test(obj[key]);
     const isOpaqueCryptoField =
       key === 'ciphertext' ||
       key === 'iv' ||
@@ -78,6 +89,10 @@ export function inspectPayloadSafety(obj, depth = 0, state = { nodes: 0, maxStri
       key === 'encryptedPayload' ||
       key === 'rtcPayload' ||
       key === 'mediaUrl' ||
+      key === 'mediaUrls' ||
+      key === 'url' ||
+      key === 'displayPhotoUrl' ||
+      key === 'posterUrl' ||
       isBase64MediaDataUrl;
     const childState = {
       ...state,

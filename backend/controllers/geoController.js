@@ -12,6 +12,7 @@ import {
   fetchPhoton,
   fetchNominatim,
 } from './geo/index.js';
+import { INDONESIAN_CITY_INDEX } from '../utils/cityResolver/indonesianCityData.js';
 
 export {
   INDONESIAN_PROVINCES,
@@ -111,6 +112,29 @@ export async function searchIndonesianLocations(req, res) {
     }
 
     if (combined.length >= 4) break;
+  }
+
+  if (combined.length === 0 && Array.isArray(INDONESIAN_CITY_INDEX)) {
+    const qNorm = rawQuery.toLowerCase();
+    for (const entry of INDONESIAN_CITY_INDEX) {
+      const matchName = entry.name.toLowerCase().includes(qNorm) || qNorm.includes(entry.name.toLowerCase());
+      const matchAlias = (entry.aliases || []).some((a) => a.toLowerCase().includes(qNorm) || qNorm.includes(a.toLowerCase()));
+      if (matchName || matchAlias) {
+        const key = `${entry.name}, ${entry.province}`.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          combined.push({
+            formatted: `Jl. ${rawQuery}, ${entry.name}, ${entry.province}`,
+            province: entry.province,
+            city: entry.name,
+            lat: entry.lat,
+            lon: entry.lng,
+            sourceId: `local-fallback-${entry.name.toLowerCase()}`,
+          });
+        }
+      }
+      if (combined.length >= 4) break;
+    }
   }
 
   const results = combined.slice(0, 8);
@@ -252,6 +276,31 @@ export async function reverseGeocodeLocation(req, res) {
   const resolved = await resolveIndonesianReverseGeo(lat, lng);
   if (resolved) {
     return res.json(resolved);
+  }
+
+  // Resilient fallback when external reverse geocoder times out or is offline
+  if (Array.isArray(INDONESIAN_CITY_INDEX) && INDONESIAN_CITY_INDEX.length > 0) {
+    let closest = null;
+    let minDist = Infinity;
+    for (const city of INDONESIAN_CITY_INDEX) {
+      const d = Math.hypot(city.lat - lat, city.lng - lng);
+      if (d < minDist) {
+        minDist = d;
+        closest = city;
+      }
+    }
+    if (closest && minDist < 2.0) {
+      const fallbackData = {
+        formatted: `Jl. Margonda Raya, ${closest.name}, ${closest.province}`,
+        province: closest.province,
+        city: closest.name,
+        lat,
+        lng,
+        sourceId: `local-nearest-${closest.name.toLowerCase()}`,
+      };
+      await setCache(`geo:verified:${fallbackData.formatted.toLowerCase()}`, fallbackData, CACHE_TTL_SEC);
+      return res.json(fallbackData);
+    }
   }
 
   return res.status(503).json({

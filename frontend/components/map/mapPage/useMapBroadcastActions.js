@@ -58,9 +58,15 @@ export function useMapBroadcastActions({
   }, [currentUser, mapUsersData, handleOpenItemOnMap]);
 
   // Real broadcast save (disabled when self is offline) - non-memo (IL-6)
-  async function saveBroadcast(e) {
+  async function saveBroadcast(e, payloadOverride = null) {
     if (e?.preventDefault) e.preventDefault();
-    if (isSelfOffline || !statusText.trim()) return;
+    if (isSelfOffline) return;
+    const finalPayload =
+      payloadOverride ||
+      (typeof e === "object" && e && (e.message !== undefined || e.mediaUrl !== undefined) ? e : null);
+    const textToSave = (finalPayload?.message !== undefined ? finalPayload.message : (statusText || "")).trim();
+    const mediaToSave = (finalPayload?.mediaUrl !== undefined ? finalPayload.mediaUrl : "").trim();
+    if (!textToSave && !mediaToSave) return;
     setBusy(true);
     try {
       // update location first if browser supports it
@@ -74,10 +80,13 @@ export function useMapBroadcastActions({
         );
       }
       // create or update broadcast
+      const broadcastPayload = mediaToSave
+        ? { message: `[MEDIA:${mediaToSave}] ${textToSave}`.trim(), mediaUrl: mediaToSave }
+        : { message: textToSave };
       if (currentUser?.broadcast) {
-        await putBroadcast(statusText.trim());
+        await putBroadcast(broadcastPayload);
       } else {
-        await postBroadcast(statusText.trim());
+        await postBroadcast(broadcastPayload);
       }
       // refresh user data
       const user = await fetchMe();

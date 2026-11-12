@@ -45,7 +45,7 @@ import {
   getLiveKitCallToken,
 } from "../controllers/personalChatController.js";
 import { getMinigameStatus, recordMinigameScore } from "../controllers/minigameController.js";
-import { getMyBroadcast, createBroadcast, updateBroadcast, deleteBroadcast } from "../controllers/broadcastController.js";
+import { getMyBroadcast, createBroadcast, updateBroadcast, deleteBroadcast, recordBroadcastView } from "../controllers/broadcastController.js";
 import { redirectEvent } from "../controllers/redirectController.js";
 import { cleanupExpiredBroadcasts } from "../utils/cronWorker.js";
 import { requireAuth, optionalAuth } from "../middleware/auth.js";
@@ -257,6 +257,7 @@ router.post("/broadcast", requireAuth, createBroadcast);
 router.get("/broadcast/me", requireAuth, getMyBroadcast);
 router.put("/broadcast", requireAuth, updateBroadcast);
 router.delete("/broadcast", requireAuth, deleteBroadcast);
+router.post("/broadcast/:id/view", optionalAuth, recordBroadcastView);
 
 // ─── Redirect ────────────────────────────────────────────────────────────────
 router.get("/redirect/event/:eventId", redirectEvent);

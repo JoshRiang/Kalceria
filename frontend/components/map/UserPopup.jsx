@@ -1,5 +1,5 @@
 // UserPopup.jsx
-// Minimalist 2D broadcast message box for Leaflet markers (with real-time live duration, 24h purge, and Edit/Reply actions)
+// Minimalist 2D broadcast message box for Leaflet markers (with real-time live duration, 24h purge, attached media feed, and Edit/Reply actions)
 
 function esc(value) {
   return String(value || "")
@@ -50,10 +50,27 @@ export function formatBroadcastDuration(diffMs) {
 export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser = null) {
   const displayName = user?.name || user?.displayName || user?.nickname || "Kalcerian";
   const safeName = esc(displayName);
-  const rawMessage = typeof user?.broadcast === "string" ? user.broadcast : user?.broadcast?.message;
-  const safeMessage = esc(rawMessage || "");
+  const avatarUrl = user?.profilePicture || user?.avatarUrl || user?.image || "/logo-avatar.png";
 
-  const rawCreated = user?.broadcast?.createdAt || user?.broadcastCreatedAt || user?.updatedAt || user?.createdAt;
+  const rawBroadcast = user?.broadcast;
+  const broadcastObj = typeof rawBroadcast === "object" ? rawBroadcast : null;
+  const broadcastId = broadcastObj?.id || user?.id || "";
+  const rawMessage = typeof rawBroadcast === "string" ? rawBroadcast : broadcastObj?.message;
+
+  const mediaMatch = String(rawMessage || "").match(/\[MEDIA:([^\]]+)\]/i);
+  const mediaUrl = broadcastObj?.mediaUrl || (mediaMatch ? mediaMatch[1].trim() : null);
+  const cleanMessage = String(rawMessage || "").replace(/\[MEDIA:[^\]]+\]\s*/gi, "").trim();
+  const safeMessage = esc(cleanMessage);
+
+  const viewCount = Number.isFinite(Number(broadcastObj?.viewCount)) ? Number(broadcastObj.viewCount) : 0;
+
+  const isVideo =
+    typeof mediaUrl === "string" &&
+    (/\.(mp4|m4v|mov|webm)(\?.*)?$/i.test(mediaUrl) ||
+      /^data:video\//i.test(mediaUrl) ||
+      mediaUrl.includes("video"));
+
+  const rawCreated = broadcastObj?.createdAt || user?.broadcastCreatedAt || user?.updatedAt || user?.createdAt;
   const createdAtMs = rawCreated ? new Date(rawCreated).getTime() : Date.now();
   const elapsedMs = Math.max(0, Date.now() - createdAtMs);
 
@@ -86,11 +103,14 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
     ? "0 4px 20px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.4)"
     : "0 4px 16px rgba(0, 0, 0, 0.18)";
 
+  const boxWidth = mediaUrl ? "280px" : "250px";
+  const maxBoxWidth = mediaUrl ? "min(320px, 86vw)" : "min(280px, 82vw)";
+
   return `
     <div class="broadcast-popup-box broadcast-box" style="
       position: relative;
-      width: 250px;
-      max-width: min(280px, 82vw);
+      width: ${boxWidth};
+      max-width: ${maxBoxWidth};
       padding: 12px 14px 10px 14px;
       background: ${bgColor};
       border: 1.5px solid ${borderColor};
@@ -101,8 +121,9 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
       box-sizing: border-box;
       font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       text-align: left;
+      transition: width 0.2s ease, max-width 0.2s ease;
     ">
-      <!-- Header Row: User Display Name (Bold + Truncated) on Left, Edit / Reply Button on Right -->
+      <!-- Header Row: User Avatar + Display Name on Left, Edit / Reply Button on Right -->
       <div style="
         display: flex;
         align-items: center;
@@ -111,19 +132,42 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
         gap: 8px;
       ">
         <div style="
-          font-family: Arial, sans-serif;
-          font-size: 14px;
-          font-weight: 700;
-          line-height: 1.25;
-          color: ${textColor};
-          letter-spacing: -0.01em;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          max-width: 195px;
+          display: flex;
+          align-items: center;
+          gap: 7px;
           flex: 1;
           min-width: 0;
-        " title="${safeName}">${safeName}</div>
+        ">
+          <!-- Circular User Profile Picture: Border Adapting to Mode -->
+          <img
+            src="${esc(avatarUrl)}"
+            alt="${safeName}"
+            style="
+              width: 22px;
+              height: 22px;
+              border-radius: 50%;
+              object-fit: cover;
+              flex-shrink: 0;
+              border: 1.5px solid ${borderColor};
+              background: ${isMapDark ? "#111111" : "#eeeeee"};
+              display: block;
+            "
+            onerror="this.onerror=null;this.src='/logo-avatar.png';"
+          />
+          <div style="
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.25;
+            color: ${textColor};
+            letter-spacing: -0.01em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+          " title="${safeName}">${safeName}</div>
+        </div>
 
         ${
           isOwner
@@ -161,10 +205,132 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
         }
       </div>
 
+      ${
+        mediaUrl
+          ? `
+      <!-- Media Feed Container with Flexible Aspect Ratio & Rounded Corners -->
+      <div style="
+        position: relative;
+        width: 100%;
+        margin-top: 8px;
+        margin-bottom: 6px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #000000;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      ">
+        ${
+          isVideo
+            ? `
+          <video
+            src="${esc(mediaUrl)}"
+            autoplay
+            loop
+            muted
+            playsinline
+            webkit-playsinline
+            style="width: 100%; max-height: 240px; object-fit: contain; display: block; background: #000000;"
+          ></video>
+        `
+            : `
+          <img
+            src="${esc(mediaUrl)}"
+            alt="Broadcast Media"
+            loading="eager"
+            draggable="false"
+            style="width: 100%; max-height: 240px; object-fit: contain; display: block; background: #000000; user-select: none;"
+          />
+        `
+        }
+
+        <!-- Top White Line Indicator -->
+        <div style="
+          position: absolute;
+          top: 6px;
+          left: 8px;
+          right: 8px;
+          z-index: 10;
+          display: flex;
+          pointer-events: none;
+        ">
+          <div style="
+            flex: 1;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 9999px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+          "></div>
+        </div>
+
+        <!-- Top-Left Badge: Search / Loop Icon + View Count Number + Reply Action (NO Author Avatar) -->
+        <div
+          style="
+            position: absolute;
+            top: 12px;
+            left: 8px;
+            z-index: 12;
+            display: flex;
+            align-items: center;
+            pointer-events: auto;
+          "
+          onpointerdown="event.stopPropagation();"
+        >
+          <div
+            style="
+              display: inline-flex;
+              align-items: center;
+              gap: 5px;
+              padding: 2.5px 7px 2.5px 6px;
+              border-radius: 9999px;
+              background: rgba(0, 0, 0, 0.62);
+              backdrop-filter: blur(8px);
+              -webkit-backdrop-filter: blur(8px);
+              border: 1px solid rgba(255, 255, 255, 0.22);
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+              color: #ffffff;
+              pointer-events: auto;
+            "
+          >
+            <!-- Loop icon (Light mode: white fill border black; Dark mode: black fill border white) -->
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink: 0; display: block;">
+              <circle cx="10" cy="10" r="6.5" fill="${isMapDark ? "#000000" : "#ffffff"}" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.5" />
+              <path d="M15 15L20.5 20.5" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.8" stroke-linecap="round" />
+            </svg>
+            <span
+              data-broadcast-view-count="${esc(broadcastId)}"
+              style="font-family: Arial, -apple-system, sans-serif; font-size: 11px; font-weight: 700; color: #ffffff; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums;"
+            >
+              ${viewCount}
+            </span>
+            <span style="width: 1px; height: 10px; background: rgba(255, 255, 255, 0.28); margin: 0 1px;"></span>
+            <button
+              type="button"
+              title="Balas broadcast ini"
+              onpointerdown="event.stopPropagation();"
+              onclick="event.stopPropagation(); window.__kalceriaReplyBroadcast?.('${esc(user.id)}');"
+              style="background: transparent; border: none; padding: 2px 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #ffffff; opacity: 0.9; transition: opacity 0.15s ease;"
+              onmouseenter="this.style.opacity='1';"
+              onmouseleave="this.style.opacity='0.9';"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+                <polyline points="9 17 4 12 9 7"></polyline>
+                <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      `
+          : ""
+      }
+
       <!-- Message Text (Arial no bold and firm, not all capital) -->
+      ${
+        safeMessage
+          ? `
       <div style="
         font-family: Arial, sans-serif;
-        margin-top: 6px;
+        margin-top: ${mediaUrl ? "4px" : "6px"};
         margin-bottom: 8px;
         font-size: 13.5px;
         font-weight: 400;
@@ -173,6 +339,9 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
         word-break: break-word;
         white-space: pre-wrap;
       ">${safeMessage}</div>
+      `
+          : ""
+      }
 
       <!-- Bottom Row: Real-time Live Duration Uptime on Left, Release Time on Right -->
       <div style="

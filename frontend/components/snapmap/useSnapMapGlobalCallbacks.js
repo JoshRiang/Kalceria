@@ -126,6 +126,9 @@ export function useSnapMapGlobalCallbacks({
         typeof targetUser.broadcast === "string"
           ? targetUser.broadcast
           : targetUser.broadcast?.message || "";
+      const mediaMatch = String(broadcastMsg || "").match(/\[MEDIA:([^\]]+)\]/i);
+      const broadcastMediaUrl = targetUser.broadcast?.mediaUrl || (mediaMatch ? mediaMatch[1].trim() : null);
+      const cleanBroadcastMsg = String(broadcastMsg || "").replace(/\[MEDIA:[^\]]+\]\s*/gi, "").trim();
       const rawCreated =
         targetUser.broadcast?.createdAt ||
         targetUser.broadcastCreatedAt ||
@@ -145,9 +148,10 @@ export function useSnapMapGlobalCallbacks({
         senderId: targetUser.id,
         userId: targetUser.id,
         creatorId: targetUser.id,
-        text: broadcastMsg,
-        broadcastMessage: broadcastMsg,
+        text: cleanBroadcastMsg,
+        broadcastMessage: cleanBroadcastMsg,
         broadcastDuration: durationStr,
+        mediaUrl: broadcastMediaUrl,
         lat: targetUser.lat,
         lng: targetUser.lng,
         createdAt: rawCreated,
@@ -292,6 +296,48 @@ export function useSnapMapGlobalCallbacks({
       } catch (_) {}
     };
 
+    const recordedBroadcastSession = new Set();
+    window.__kalceriaRecordBroadcastView = async (broadcastId, broadcastUserId) => {
+      if (!broadcastId) return;
+      const sessionKey = `bcast:${broadcastId}`;
+      if (recordedBroadcastSession.has(sessionKey)) return;
+      recordedBroadcastSession.add(sessionKey);
+
+      try {
+        const res = await fetch(`/api/broadcast/${encodeURIComponent(broadcastId)}/view`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && typeof data.viewCount === "number") {
+          const countEls = document.querySelectorAll(`[data-broadcast-view-count="${broadcastId}"]`);
+          countEls.forEach((el) => {
+            const currentVal = parseInt(el.textContent, 10) || 0;
+            const targetVal = data.viewCount;
+            if (targetVal > currentVal) {
+              const startTime = performance.now();
+              const duration = 400;
+              const animate = (now) => {
+                const elapsed = now - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                const val = Math.round(currentVal + (targetVal - currentVal) * progress);
+                el.textContent = String(val);
+                if (progress < 1) {
+                  requestAnimationFrame(animate);
+                } else {
+                  el.textContent = String(targetVal);
+                }
+              };
+              requestAnimationFrame(animate);
+            } else {
+              el.textContent = String(targetVal);
+            }
+          });
+        }
+      } catch (_) {}
+    };
+
     window.__kalceriaReplyEventMedia = (safeId, clipId, clipIndex) => {
       const { isSelfOffline, events, users, mapRef } = latestRef.current;
       if (isSelfOffline) return;
@@ -388,6 +434,7 @@ export function useSnapMapGlobalCallbacks({
       delete window.__kalceriaReplyEvent;
       delete window.__kalceriaReplyEventMedia;
       delete window.__kalceriaRecordMediaView;
+      delete window.__kalceriaRecordBroadcastView;
     };
   }, []);
 }

@@ -196,8 +196,10 @@ export const fetchCallSignals = (params = {}) => api.get('/map/call/signals', { 
 export const clearCallSignals = () => api.delete('/map/call/signals').then(r => r.data || { ok: false }).catch(() => ({ ok: false }));
 export const fetchLiveKitCallToken = (targetId, params = {}) =>
   api.get(`/map/call/${targetId}/livekit-token`, { params }).then(r => r.data || { ok: false }).catch(() => ({ ok: false }));
-export const postBroadcast = (message) => api.post('/broadcast', { message });
-export const putBroadcast = (message) => api.put('/broadcast', { message });
+export const postBroadcast = (payload) =>
+  api.post('/broadcast', typeof payload === 'string' ? { message: payload } : payload);
+export const putBroadcast = (payload) =>
+  api.put('/broadcast', typeof payload === 'string' ? { message: payload } : payload);
 export const delBroadcast = () => api.delete('/broadcast');
 export const postLocation = (lat, lng) => api.post('/location/update', { lat, lng });
 export const patchVisibility = (allow) => api.patch('/location/visibility', { allowLiveLocation: allow });
