@@ -36,11 +36,8 @@ export function useMapBlockedUsers() {
           const serverBlockedBy = Array.isArray(res?.blockedByUsers) ? res.blockedByUsers.map(String) : [];
 
           // Authoritative server list reconciled with active in-flight actions (prevents resurrection and flickering)
-          setBlockedUserIds((prev) => {
-            const nextSet = new Set([
-              ...(Array.isArray(prev) ? prev.map((id) => String(id).trim()) : []),
-              ...serverBlocked.map((id) => String(id).trim()),
-            ]);
+          setBlockedUserIds(() => {
+            const nextSet = new Set(serverBlocked.map((id) => String(id).trim()));
             inFlightActionsRef.current.forEach((action, id) => {
               if (action === "block") {
                 nextSet.add(id);

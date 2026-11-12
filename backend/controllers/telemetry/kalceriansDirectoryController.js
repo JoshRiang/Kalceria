@@ -51,7 +51,7 @@ export async function getAllKalcerians(req, res, next) {
           { email: { contains: "mock" } },
           { name: { contains: "Mobile User" } },
           { name: { contains: "Laptop User" } },
-          { name: { in: ["Otniel", "Josh", "Reinathan"] } },
+          { name: { in: ["Otniel", "Josh"] } },
         ],
       },
       select: {

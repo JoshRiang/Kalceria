@@ -71,17 +71,6 @@ export async function resolveEventRegistrant(req) {
           select: { id: true, name: true, email: true, phone: true },
         });
         if (existing) {
-          if (cleanName && (!existing.name || existing.name.includes('@') || existing.name !== cleanName)) {
-            try {
-              await prisma.user.update({
-                where: { id: existing.id },
-                data: {
-                  name: cleanName,
-                  ...(cleanContact ? { phone: cleanContact } : {}),
-                },
-              });
-            } catch {}
-          }
           return { userId: existing.id, guestContact: cleanContact || existing.phone || '', guestName: cleanName || existing.name || '' };
         }
         const created = await prisma.user.create({
@@ -130,17 +119,6 @@ export async function resolveEventRegistrant(req) {
       select: { id: true, name: true, phone: true },
     });
     if (existing) {
-      if (cleanName && (!existing.name || existing.name.includes('@') || existing.name !== cleanName)) {
-        try {
-          await prisma.user.update({
-            where: { id: existing.id },
-            data: {
-              name: cleanName,
-              ...(cleanContact ? { phone: cleanContact } : {}),
-            },
-          });
-        } catch {}
-      }
       return { userId: existing.id, guestContact: cleanContact || existing.phone, guestName: cleanName };
     }
 
@@ -186,17 +164,6 @@ export async function resolveEventRegistrant(req) {
           select: { id: true, name: true, email: true, phone: true },
         });
         if (existing) {
-          if (cleanName && (!existing.name || existing.name.includes('@') || existing.name !== cleanName)) {
-            try {
-              await prisma.user.update({
-                where: { id: existing.id },
-                data: {
-                  name: cleanName,
-                  ...(cleanContact ? { phone: cleanContact } : {}),
-                },
-              });
-            } catch {}
-          }
           return { userId: existing.id, guestContact: cleanContact || existing.phone || '', guestName: cleanName || existing.name || '' };
         }
         const created = await prisma.user.create({

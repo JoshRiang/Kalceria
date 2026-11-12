@@ -51,6 +51,8 @@ export async function blockUser(req, res, next) {
       redis.sadd("blocked_by:" + cleanTargetId, cleanUserId).catch(() => {}),
       redis.del(getChatRtcSignalKey(cleanUserId, cleanTargetId)).catch(() => {}),
       redis.del(getChatRtcSignalKey(cleanTargetId, cleanUserId)).catch(() => {}),
+      redis.del('cache:all_kalcerians', 'cache:map_users:global', 'cache:map_users_enriched').catch(() => {}),
+      redis.del(`cache:map_users:${cleanUserId}`, `cache:map_users:${cleanTargetId}`).catch(() => {}),
       persistCanonicalUserBlock(cleanUserId, cleanTargetId),
     ]);
 
@@ -142,6 +144,8 @@ export async function unblockUser(req, res, next) {
     await Promise.all([
       redis.srem("blocked:" + cleanUserId, cleanTargetId).catch(() => {}),
       redis.srem("blocked_by:" + cleanTargetId, cleanUserId).catch(() => {}),
+      redis.del('cache:all_kalcerians', 'cache:map_users:global', 'cache:map_users_enriched').catch(() => {}),
+      redis.del(`cache:map_users:${cleanUserId}`, `cache:map_users:${cleanTargetId}`).catch(() => {}),
       removeCanonicalUserBlock(cleanUserId, cleanTargetId),
     ]);
     res.json({ ok: true, unblockedUserId: cleanTargetId });

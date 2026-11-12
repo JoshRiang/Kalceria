@@ -29,29 +29,33 @@ export function renderSingleMedia(mediaEntry, { index = 0 } = {}) {
 
   if (isVideo) {
     return `
-      <video
-        src="${esc(url)}"
-        ${index === 0 ? "autoplay" : ""}
-        preload="auto"
-        muted
-        playsinline
-        webkit-playsinline
-        x5-playsinline
-        disablepictureinpicture
-        disableremoteplayback
-        style="width: 100%; height: 100%; object-fit: contain; display: block; background: transparent; pointer-events: none;"
-      ></video>
+      <div style="width: 100%; height: 100%; padding-top: 44px; box-sizing: border-box;">
+        <video
+          src="${esc(url)}"
+          ${index === 0 ? "autoplay" : ""}
+          preload="auto"
+          muted
+          playsinline
+          webkit-playsinline
+          x5-playsinline
+          disablepictureinpicture
+          disableremoteplayback
+          style="width: 100%; height: 100%; object-fit: contain; display: block; background: transparent; pointer-events: none;"
+        ></video>
+      </div>
     `;
   }
 
   return `
-    <img
-      src="${esc(url)}"
-      alt="Event Live Feed"
-      loading="${index <= 1 ? "eager" : "lazy"}"
-      draggable="false"
-      style="width: 100%; height: 100%; object-fit: contain; display: block; background: transparent; pointer-events: none; user-select: none;"
-    />
+    <div style="width: 100%; height: 100%; padding-top: 44px; box-sizing: border-box;">
+      <img
+        src="${esc(url)}"
+        alt="Event Live Feed"
+        loading="${index <= 1 ? "eager" : "lazy"}"
+        draggable="false"
+        style="width: 100%; height: 100%; object-fit: contain; display: block; background: transparent; pointer-events: none; user-select: none;"
+      />
+    </div>
   `;
 }
 
@@ -90,7 +94,7 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
 
       const overlayBadgeHtml = `
         <div
-          style="position: absolute; top: 12px; left: 10px; z-index: 16; display: flex; align-items: center; gap: 6px; pointer-events: auto;"
+          style="position: absolute; top: 14px; left: 10px; z-index: 16; display: flex; align-items: center; gap: 6px; pointer-events: auto;"
           onpointerdown="event.stopPropagation();"
         >
           <div

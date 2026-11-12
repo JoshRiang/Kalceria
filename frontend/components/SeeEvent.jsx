@@ -359,7 +359,7 @@ export default function SeeEvent() {
                   <Image src="/stikermobil_4.webp" alt="" width={2730} height={1536} sizes="(min-width: 1280px) 224px, (min-width: 768px) 144px, 112px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-32 md:w-36 xl:w-56 -bottom-24 md:-bottom-28 xl:-bottom-48 -left-6 md:-left-8 xl:-left-16 opacity-90 drop-shadow-2xl pointer-events-none transition-transform duration-700" style={{ transform: "rotate(-3deg)" }} />
                 )}
                 {isMobile && (
-                  <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="144px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-22 xs:w-24 sm:w-32 -top-20 xs:-top-22 sm:-top-26 -right-2 xs:right-0 opacity-85 drop-shadow-2xl pointer-events-none rotate-[6deg]" />
+                  <Image src="/stikermobil_3.webp" alt="" width={2679} height={1408} sizes="144px" quality={75} loading="lazy" decoding="async" className="absolute z-30 w-22 xs:w-24 sm:w-32 -top-24 xs:-top-28 sm:-top-32 right-0 xs:right-2 opacity-85 drop-shadow-2xl pointer-events-none rotate-[6deg]" />
                 )}
                 
                 <div className="relative w-full h-full rounded-2xl overflow-hidden border border-gray-800">

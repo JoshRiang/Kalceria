@@ -30,6 +30,8 @@ export default function KalcerianProfileCard({
   isBlockedByTarget = false,
 }) {
   const isAnyBlocked = Boolean(isBlocked || isBlockedByTarget);
+  const isBlackoutAvatar = Boolean(isBlockedByTarget);
+  const isDimmedBlocker = Boolean(isBlocked);
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -40,18 +42,19 @@ export default function KalcerianProfileCard({
   const cleanUsername = String(rawUsername).replace(/^@/, '');
   const joinedText = formatJoinedDate(user?.createdAt);
 
-  // 24-hour broadcast freshness check
+  // 24-hour broadcast freshness check (stripping [MEDIA:...] tags so raw base64 never leaks into bio)
   const b = user?.broadcast;
   const rawBroadcast = typeof b === "string" ? b.trim() : (b?.message || "").trim();
+  const cleanBroadcastText = rawBroadcast.replace(/\[MEDIA:[^\]]+\]\s*/gi, "").trim();
   let activeBroadcastMsg = null;
-  if (rawBroadcast) {
+  if (cleanBroadcastText) {
     if (b?.createdAt) {
       const age = Date.now() - new Date(b.createdAt).getTime();
       if (age <= 24 * 60 * 60 * 1000 && age >= 0) {
-        activeBroadcastMsg = rawBroadcast;
+        activeBroadcastMsg = cleanBroadcastText;
       }
     } else {
-      activeBroadcastMsg = rawBroadcast;
+      activeBroadcastMsg = cleanBroadcastText;
     }
   }
 
@@ -155,7 +158,7 @@ export default function KalcerianProfileCard({
               isMapDark ? "border-[#161b22] bg-[#161b22]" : "border-white bg-white"
             }`}
           >
-            {isAnyBlocked ? (
+            {isBlackoutAvatar ? (
               <div className="w-full h-full bg-[#000000]" />
             ) : (
               <Image
@@ -164,7 +167,7 @@ export default function KalcerianProfileCard({
                 width={88}
                 height={88}
                 unoptimized
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover ${isDimmedBlocker ? "opacity-75" : ""}`}
               />
             )}
           </div>

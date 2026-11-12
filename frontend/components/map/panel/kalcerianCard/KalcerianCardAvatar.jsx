@@ -14,8 +14,10 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
   avatarUrl,
   handleAvatarClick,
 }) {
-  // Only isBlocked renders solid black; the user who blocked still sees the profile photo
-  const isAnyBlocked = Boolean(isBlocked);
+  // Target who blocked current user sees solid black; Blocker still sees photo profile dimmed/offline
+  const isBlackoutAvatar = Boolean(isBlockedByTarget);
+  const isDimmedBlocker = Boolean(isBlocked);
+  const isAnyBlocked = Boolean(isBlocked || isBlockedByTarget);
 
   return (
     <div className="relative z-10 flex justify-center items-center">
@@ -26,10 +28,14 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
       >
         <div
           className={`w-11 h-11 sm:w-12 sm:h-12 border overflow-hidden rounded-full transition-all relative ${
-            isAnyBlocked
+            isBlackoutAvatar
               ? "border-[#30363d]/80 bg-[#000000]"
               : isExpanded
               ? "border-white ring-2 ring-white/50"
+              : isDimmedBlocker
+              ? isMapDark
+                ? "border-[#30363d] opacity-50 group-hover/avatar:scale-105"
+                : "border-[#d0d7de] opacity-60 group-hover/avatar:scale-105"
               : user.isOnline
               ? isMapDark
                 ? "border-[#3fb950] group-hover/avatar:scale-105"
@@ -39,12 +45,12 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
               : "border-[#d0d7de] opacity-60 group-hover/avatar:scale-105"
           }`}
         >
-          {isAnyBlocked ? (
+          {isBlackoutAvatar ? (
             <div className="w-full h-full bg-[#000000]" />
           ) : (
             <ContentImage
               className={`w-full h-full object-cover transition-all ${
-                isExpanded ? "blur-[2.5px] brightness-50" : ""
+                isExpanded ? "blur-[2.5px] brightness-50" : isDimmedBlocker ? "opacity-75" : ""
               }`}
               src={avatarUrl(user)}
               alt={user.nickname || user.name}
