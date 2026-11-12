@@ -359,6 +359,8 @@ export function useSnapMapGlobalCallbacks({
         lat: targetEvent.lat,
         lng: targetEvent.lng,
         createdAt: clip.uploadedAt || Date.now(),
+        uploadedAt: clip.uploadedAt || null,
+        expiresAt: clip.expiresAt || null,
       };
 
       setTimeout(() => {

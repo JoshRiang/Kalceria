@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../../lib/prisma.js';
 import { safeNotify, sendEventPaymentConfirmedEmail, sendEventRegistrationUpdatedEmail } from '../../lib/mailer.js';
-import { clearEventRegistrationCooldown } from '../../middleware/ingressDefense.js';
+import { setEventRegistrationCooldown, clearEventRegistrationCooldown } from '../../middleware/ingressDefense.js';
 import { renderConfirmResultHtml } from '../comms/confirmResultHtml.js';
 import { WA_ADMIN, THREE_MINUTES_MS } from './eventRegistrationConstants.js';
 import { verifyEventRegistrationAuthorization } from './eventRegistrationAuth.js';
@@ -223,11 +223,14 @@ export async function confirmEventRegistration(req, res, next) {
       include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
     });
 
-    await safeNotify(() => sendEventPaymentConfirmedEmail({
-      to: updatedReg.user.email,
-      event: updatedReg.event,
-      registration: updatedReg,
-    }), 'email-event-confirmed');
+    await Promise.allSettled([
+      safeNotify(() => sendEventPaymentConfirmedEmail({
+        to: updatedReg.user.email,
+        event: updatedReg.event,
+        registration: updatedReg,
+      }), 'email-event-confirmed'),
+      setEventRegistrationCooldown(req, updatedReg.eventId, updatedReg.userId, updatedReg.user.email),
+    ]);
 
     if (isDirectGet) {
       return res.redirect(302, `${frontendOrigin}/events?event_action=confirm&registration_id=${encodeURIComponent(updatedReg.id)}${redirectToken ? `&token=${encodeURIComponent(redirectToken)}` : ''}&anchor=see-event#see-event`);

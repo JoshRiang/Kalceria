@@ -78,15 +78,22 @@ export function useMapBlockedUsers() {
     if (!targetId) return;
     const strId = String(targetId).trim();
     const cleanKey = strId.toLowerCase();
+    const blockTs = Date.now();
     inFlightActionsRef.current.set(cleanKey, "block");
 
     setBlockedUserIds((prev) => {
       const next = Array.from(new Set([...(prev || []).map(String), strId]));
-      try { localStorage.setItem("kalceria_blocked_users", JSON.stringify(next)); } catch {}
+      try {
+        localStorage.setItem("kalceria_blocked_users", JSON.stringify(next));
+        localStorage.setItem(`kalceria:chat_block_ts:${cleanKey}`, String(blockTs));
+        const storedEvts = JSON.parse(localStorage.getItem(`kalceria:chat_block_events:${strId}`) || "[]");
+        storedEvts.push({ id: `block_evt_${blockTs}`, type: "block", ts: blockTs });
+        localStorage.setItem(`kalceria:chat_block_events:${strId}`, JSON.stringify(storedEvts));
+      } catch {}
       return next;
     });
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("kalceria:user-block-changed", { detail: { targetId: strId, action: "block" } }));
+      window.dispatchEvent(new CustomEvent("kalceria:user-block-changed", { detail: { targetId: strId, action: "block", ts: blockTs } }));
     }
     try {
       await blockKalcerian(strId);

@@ -255,7 +255,7 @@ export async function checkEventRegistrationDefense(req, res, next) {
   return next();
 }
 
-export async function setEventRegistrationCooldown(req, eventId, userId, email) {
+export async function setEventRegistrationCooldown(req, eventId, userId, email, ttlSeconds = EVENT_REG_COOLDOWN_SECONDS) {
   const ip = resolveClientIp(req);
   const { machineTag, fingerprint } = resolveClientFingerprint(req);
 
@@ -268,10 +268,11 @@ export async function setEventRegistrationCooldown(req, eventId, userId, email) 
   const cleanEmail = typeof email === 'string' && email.includes('@') ? email.trim().toLowerCase() : null;
   if (cleanEmail) keys.push(`event-reg:cooldown:ev:${eventId}:email:${cleanEmail}`);
 
+  const effectiveTtl = Math.max(1, Number(ttlSeconds) || EVENT_REG_COOLDOWN_SECONDS);
   for (const key of keys) {
     await safeRedisCall(
-      () => redis.set(key, '1', 'EX', EVENT_REG_COOLDOWN_SECONDS),
-      () => setMem(key, '1', EVENT_REG_COOLDOWN_SECONDS)
+      () => redis.set(key, '1', 'EX', effectiveTtl),
+      () => setMem(key, '1', effectiveTtl)
     );
   }
 }

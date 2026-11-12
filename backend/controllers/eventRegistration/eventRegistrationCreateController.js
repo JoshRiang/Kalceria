@@ -96,8 +96,8 @@ export async function registerEvent(req, res, next) {
     }
     const { event, reg, isReused } = result;
 
-    // Set 24-hour registration cooldown per event & device/account/email
-    await setEventRegistrationCooldown(req, eventId, userId, reg.user.email);
+    // Set short 3-minute pending buffer cooldown (escalated to 24-hours upon confirmation)
+    await setEventRegistrationCooldown(req, eventId, userId, reg.user.email, 180);
 
     const participantName = guestName || reg.user.name;
     const participantContact = guestContact || reg.user.phone || '';
@@ -169,7 +169,15 @@ export async function registerEvent(req, res, next) {
     ]);
 
     res.status(201).json({
-      registration: reg,
+      registration: {
+        ...reg,
+        user: {
+          ...reg.user,
+          name: participantName || reg.user?.name,
+          phone: participantContact || reg.user?.phone,
+          email: participantEmail || reg.user?.email,
+        },
+      },
       whatsappUrl,
       paymentCheckout,
       paymentToken,

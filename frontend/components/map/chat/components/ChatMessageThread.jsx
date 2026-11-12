@@ -106,11 +106,18 @@ export function ChatMessageThread({
       isTargetBlocked ||
       (blockEvents && blockEvents.some((e) => e.type === "block"))
     );
-    const earliestBlockTs = (blockEvents || [])
+    let earliestBlockTs = (blockEvents || [])
       .filter((e) => e.type === "block")
       .map((e) => Number(e.ts) || 0)
       .filter((ts) => ts > 0)
       .sort((a, b) => a - b)[0] || 0;
+
+    if (!earliestBlockTs && isTargetCurrentlyBlocked && typeof window !== "undefined") {
+      try {
+        const storedTs = Number(localStorage.getItem(`kalceria:chat_block_ts:${String(targetId).toLowerCase()}`));
+        if (storedTs > 0) earliestBlockTs = storedTs;
+      } catch {}
+    }
 
     (groupedMessages || []).forEach((item) => {
       if (item.type === "date_divider") {
@@ -130,7 +137,10 @@ export function ChatMessageThread({
             item.status === "blocked_drop" ||
             item.isBlockedDrop ||
             item.blockedWhileSent ||
-            item.wasBlocked
+            item.wasBlocked ||
+            item.isCall ||
+            item.msgType === "call" ||
+            item.callMode
           ) {
             return;
           }

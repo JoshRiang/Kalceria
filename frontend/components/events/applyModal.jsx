@@ -403,7 +403,7 @@ export function ApplyModal({
         `}</style>
 
         {/* Scrollable Modal Body (Custom Semi-Transparent Scrollbar positioned flush to right edge) */}
-        <div className="relative z-30 flex-1 overflow-y-auto overflow-x-hidden p-5 sm:p-6 md:p-8 custom-scrollbar">
+        <div className="relative z-30 flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 md:px-8 py-5 sm:py-6 md:py-8 custom-scrollbar">
           {/* Mini Carousel Header (Shown ONLY on Step 1: Form Fill) */}
           {step === 1 && (
             <div className="relative z-30 mb-6">

@@ -65,7 +65,11 @@ export function ChatComposerBar({
             const foundClip = targetEvent.mediaItems.find(
               (c) => (clipId && String(c.id) === String(clipId)) || (activeMediaUrl && String(c.url) === String(activeMediaUrl))
             );
-            if (!foundClip) {
+            const clipUploadTs = Number(foundClip?.uploadedAt || replyingTo.uploadedAt || replyingTo.createdAt || 0);
+            const clipExpireTs = Number(foundClip?.expiresAt || 0);
+            const is24hExpired = (clipExpireTs > 0 && Date.now() >= clipExpireTs) ||
+                                 (clipUploadTs > 0 && Date.now() - clipUploadTs >= 24 * 60 * 60 * 1000);
+            if (!foundClip || is24hExpired) {
               isMediaDeleted = true;
             } else {
               activeMediaUrl = foundClip.url;

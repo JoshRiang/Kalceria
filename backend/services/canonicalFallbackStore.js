@@ -419,7 +419,7 @@ export async function isUserBlockedCanonical(blockerId, blockedId) {
   await ensureUserBlocksTable();
   try {
     const rows = await prisma.$queryRawUnsafe(
-      'SELECT 1 FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2 LIMIT 1',
+      'SELECT 1 FROM user_blocks WHERE (blocker_id = $1 OR LOWER(blocker_id) = LOWER($1)) AND (blocked_id = $2 OR LOWER(blocked_id) = LOWER($2)) LIMIT 1',
       String(blockerId).trim(),
       String(blockedId).trim()
     );

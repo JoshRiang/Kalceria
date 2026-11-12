@@ -34,6 +34,8 @@ export function buildReplyPayload(currentReply) {
     clipId: currentReply.clipId || null,
     clipIndex: currentReply.clipIndex !== undefined ? currentReply.clipIndex : null,
     isVideo: Boolean(currentReply.isVideo),
+    uploadedAt: currentReply.uploadedAt || currentReply.createdAt || null,
+    expiresAt: currentReply.expiresAt || null,
   };
 }
 
@@ -78,6 +80,8 @@ export function buildReplyDraft(msg, myId, activeChatUser, inferReplyMediaTypeFn
     clipId,
     clipIndex,
     isVideo,
+    uploadedAt: msg.uploadedAt || msg.createdAt || null,
+    expiresAt: msg.expiresAt || null,
   };
 }
 

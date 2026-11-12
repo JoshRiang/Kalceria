@@ -59,7 +59,7 @@ export function EventConfirmationStep({
       className="py-2 sm:py-4 flex flex-col items-center text-center w-full"
     >
       {/* Transmission Header (Exact matching bold typography as Need Our Help) */}
-      <h3 className="text-2xl xs:text-3xl sm:text-4xl font-black text-white uppercase tracking-tight leading-tight text-center px-2 max-w-full break-words">
+      <h3 className="text-2xl xs:text-3xl sm:text-4xl font-black text-white uppercase tracking-tight leading-tight text-center px-4 max-w-[420px] mx-auto break-words">
         {isCancelMode ? (
           <>
             Cancel<br className="hidden xs:inline" /> Transmission
