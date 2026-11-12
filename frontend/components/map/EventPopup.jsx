@@ -172,7 +172,12 @@ export function eventPopup(
     isMapDark,
   });
 
-  const firstMedia = mediaItems[0] || null;
+  const hasMedia = mediaItems.length > 0;
+  const firstMedia = hasMedia ? mediaItems[0] : null;
+  const firstClipId = firstMedia && typeof firstMedia === "object" && firstMedia.id ? String(firstMedia.id) : "clip_0";
+  const firstAvatarUrl = (firstMedia && typeof firstMedia === "object" && firstMedia.authorAvatarUrl) || creatorAvatarUrl || "";
+  const firstAuthorName = (firstMedia && typeof firstMedia === "object" && firstMedia.authorName) || rawCreatorDisplayName || "Kalcerian";
+  const firstViewCount = firstMedia && typeof firstMedia === "object" && Number.isFinite(Number(firstMedia.viewCount)) ? Number(firstMedia.viewCount) : 0;
   const initialGeometry =
     mediaItems.length === 0
       ? computeEmptyCardGeometry()
@@ -239,6 +244,104 @@ export function eventPopup(
           <span style="color: ${authorColor}; font-size: 11.5px; margin-top: 3px; font-weight: 400; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">${byAuthorLineHtml}</span>
         </div>
       </div>
+
+      ${
+        hasMedia
+          ? `
+      <!-- Action Row Above Media Box (OUTSIDE): Avatar Logo, Search Icon, View Count, Reply Arrow (NO outer oval pill, NO divider line) -->
+      <div
+        style="
+          position: relative;
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 7px;
+          margin: 4px 14px 4px 14px;
+          pointer-events: auto;
+        "
+        onpointerdown="event.stopPropagation();"
+      >
+        <!-- Author Avatar / Logo for Event Media -->
+        <div
+          data-media-author-avatar-wrap="${esc(safeId)}"
+          style="
+            width: 22px;
+            height: 22px;
+            border-radius: 9999px;
+            overflow: hidden;
+            border: 1.5px solid ${isMapDark ? "#ffffff" : "#000000"};
+            flex-shrink: 0;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+            background: ${isMapDark ? "#000000" : "#ffffff"};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          "
+          title="${esc(firstAuthorName)}"
+        >
+          <img
+            data-media-author-avatar="${esc(safeId)}"
+            src="${esc(firstAvatarUrl)}"
+            alt="${esc(firstAuthorName)}"
+            style="width: 100%; height: 100%; object-fit: cover; display: block;"
+            draggable="false"
+          />
+        </div>
+
+        <!-- Search icon (matches Broadcast Box & toggles dark/light) -->
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink: 0; display: block;">
+          <circle cx="10" cy="10" r="6.5" fill="${isMapDark ? "#000000" : "#ffffff"}" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.5" />
+          <path d="M15 15L20.5 20.5" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.8" stroke-linecap="round" />
+        </svg>
+
+        <!-- View count (toggles dark/light) -->
+        <span
+          data-media-view-count="${esc(firstClipId)}"
+          style="
+            font-family: Arial, -apple-system, sans-serif;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: ${isMapDark ? "#ffffff" : "#000000"};
+            line-height: 1;
+            letter-spacing: -0.01em;
+            font-variant-numeric: tabular-nums;
+          "
+        >
+          ${firstViewCount}
+        </span>
+
+        <!-- Reply button (toggles dark/light) -->
+        <button
+          type="button"
+          data-media-reply-btn="${esc(safeId)}"
+          title="Balas feed media ini"
+          onpointerdown="event.stopPropagation();"
+          onclick="event.stopPropagation(); window.__kalceriaReplyEventMedia?.('${esc(safeId)}', '${esc(firstClipId)}', 0);"
+          style="
+            background: transparent;
+            border: none;
+            padding: 2px 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: ${isMapDark ? "#ffffff" : "#000000"};
+            opacity: 0.9;
+            transition: opacity 0.15s ease;
+          "
+          onmouseenter="this.style.opacity='1';"
+          onmouseleave="this.style.opacity='0.9';"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+            <polyline points="9 17 4 12 9 7"></polyline>
+            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+          </svg>
+        </button>
+      </div>
+      `
+          : ""
+      }
 
       <!-- Framed Media Screen: width/height follow the real clip aspect ratio (portrait ↔ 16:9 landscape), dark backdrop so no white flash -->
       <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; transition: height ${geometryTransition}; margin: 2px 12px 8px 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">

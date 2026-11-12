@@ -51,6 +51,45 @@ export function setFillProgress(state, idx, progress) {
   if (fill) fill.style.transform = `scaleX(${Math.min(1, Math.max(0, progress)).toFixed(4)})`;
 }
 
+export function syncActionRow(state, incomingEl) {
+  if (!state || !incomingEl) return;
+  try {
+    const cardEl =
+      state.containerEl?.closest?.(`[data-event-card-id="${state.safeId}"]`) ||
+      (typeof document !== "undefined"
+        ? document.querySelector(`[data-event-card-id="${state.safeId}"]`)
+        : null);
+    if (!cardEl) return;
+
+    const avatarEl = cardEl.querySelector(`[data-media-author-avatar="${state.safeId}"]`);
+    if (avatarEl && incomingEl.dataset.authorAvatar) {
+      avatarEl.src = incomingEl.dataset.authorAvatar;
+      if (incomingEl.dataset.authorName) {
+        avatarEl.alt = incomingEl.dataset.authorName;
+        const wrapEl = cardEl.querySelector(`[data-media-author-avatar-wrap="${state.safeId}"]`);
+        if (wrapEl) wrapEl.title = incomingEl.dataset.authorName;
+      }
+    }
+
+    const countEl = cardEl.querySelector(`[data-media-view-count]`);
+    if (countEl && incomingEl.dataset.clipId) {
+      countEl.setAttribute("data-media-view-count", incomingEl.dataset.clipId);
+      if (incomingEl.dataset.viewCount != null) {
+        countEl.textContent = incomingEl.dataset.viewCount;
+      }
+    }
+
+    const replyBtn = cardEl.querySelector(`[data-media-reply-btn="${state.safeId}"]`);
+    if (replyBtn && incomingEl.dataset.clipId) {
+      const clipIdx = Number(incomingEl.dataset.carouselSlide) || 0;
+      replyBtn.onclick = (e) => {
+        e.stopPropagation();
+        window.__kalceriaReplyEventMedia?.(state.safeId, incomingEl.dataset.clipId, clipIdx);
+      };
+    }
+  } catch (_) {}
+}
+
 export function positionSlides(state, incomingEl, outgoingEl, { animate, direction }) {
   const hideSlide = (el) => {
     el.style.transition = "none";
@@ -72,6 +111,7 @@ export function positionSlides(state, incomingEl, outgoingEl, { animate, directi
         hideSlide(slideEl);
       }
     });
+    syncActionRow(state, incomingEl);
     return;
   }
 
@@ -100,6 +140,8 @@ export function positionSlides(state, incomingEl, outgoingEl, { animate, directi
   incomingEl.style.transition = ease;
   outgoingEl.style.transform = `translateX(${exitTo})`;
   incomingEl.style.transform = "translateX(0%)";
+
+  syncActionRow(state, incomingEl);
 
   state.hideOutgoingTimerId = setTimeout(() => {
     if (state.destroyed) return;

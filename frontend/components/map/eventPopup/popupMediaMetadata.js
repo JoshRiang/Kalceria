@@ -65,6 +65,9 @@ export function extractMediaItemsNormalized(item) {
           duration: Number.isFinite(dur) && dur > 0 ? dur : null,
           authorId: entry.authorId || null,
           authorName: entry.authorName || null,
+          authorAvatarUrl: entry.authorAvatarUrl || null,
+          viewCount:
+            Number.isFinite(Number(entry.viewCount)) ? Number(entry.viewCount) : 0,
         };
       })
       .filter(Boolean);
@@ -99,6 +102,8 @@ export function extractMediaItemsNormalized(item) {
       duration: null,
       authorId: null,
       authorName: null,
+      authorAvatarUrl: null,
+      viewCount: 0,
     }));
 }
 

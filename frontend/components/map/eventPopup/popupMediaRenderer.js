@@ -29,7 +29,7 @@ export function renderSingleMedia(mediaEntry, { index = 0 } = {}) {
 
   if (isVideo) {
     return `
-      <div style="width: 100%; height: 100%; padding-top: 44px; box-sizing: border-box;">
+      <div style="width: 100%; height: 100%; box-sizing: border-box;">
         <video
           src="${esc(url)}"
           ${index === 0 ? "autoplay" : ""}
@@ -47,7 +47,7 @@ export function renderSingleMedia(mediaEntry, { index = 0 } = {}) {
   }
 
   return `
-    <div style="width: 100%; height: 100%; padding-top: 44px; box-sizing: border-box;">
+    <div style="width: 100%; height: 100%; box-sizing: border-box;">
       <img
         src="${esc(url)}"
         alt="Event Live Feed"
@@ -92,54 +92,6 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
       const initialVisibility = i === 0 ? "visible" : "hidden";
       const initialZ = i === 0 ? "4" : "1";
 
-      const overlayBadgeHtml = `
-        <div
-          style="position: absolute; top: 14px; left: 10px; z-index: 16; display: flex; align-items: center; gap: 6px; pointer-events: auto;"
-          onpointerdown="event.stopPropagation();"
-        >
-          <div
-            style="width: 25px; height: 25px; border-radius: 9999px; overflow: hidden; border: 1.5px solid ${isMapDark ? "#ffffff" : "#000000"}; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); background: ${isMapDark ? "#000000" : "#ffffff"};"
-            title="${esc(authorName)}"
-          >
-            <img
-              src="${esc(avatarUrl)}"
-              alt="${esc(authorName)}"
-              style="width: 100%; height: 100%; object-fit: cover; display: block;"
-              draggable="false"
-            />
-          </div>
-          <div
-            style="display: inline-flex; align-items: center; gap: 5px; padding: 2.5px 7px 2.5px 6px; border-radius: 9999px; background: ${isMapDark ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.88)"}; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid ${isMapDark ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.18)"}; box-shadow: ${isMapDark ? "0 2px 8px rgba(0, 0, 0, 0.45)" : "0 2px 8px rgba(0, 0, 0, 0.15)"}; color: ${isMapDark ? "#ffffff" : "#000000"}; pointer-events: auto;"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink: 0; display: block;">
-              <circle cx="10" cy="10" r="6.5" fill="${isMapDark ? "#000000" : "#ffffff"}" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.5" />
-              <path d="M15 15L20.5 20.5" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.8" stroke-linecap="round" />
-            </svg>
-            <span
-              data-media-view-count="${esc(clipId)}"
-              style="font-family: Arial, -apple-system, sans-serif; font-size: 11px; font-weight: 700; color: ${isMapDark ? "#ffffff" : "#000000"}; line-height: 1; letter-spacing: -0.01em;"
-            >
-              ${viewCount}
-            </span>
-            <span style="width: 1px; height: 10px; background: ${isMapDark ? "rgba(255, 255, 255, 0.28)" : "rgba(0, 0, 0, 0.18)"}; margin: 0 1px;"></span>
-            <button
-              type="button"
-              title="Balas feed media ini"
-              onpointerdown="event.stopPropagation();"
-              onclick="event.stopPropagation(); window.__kalceriaReplyEventMedia?.('${esc(safeId)}', '${esc(clipId)}', ${i});"
-              style="background: transparent; border: none; padding: 2px 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: ${isMapDark ? "#ffffff" : "#000000"}; opacity: 0.9; transition: opacity 0.15s ease;"
-              onmouseenter="this.style.opacity='1';"
-              onmouseleave="this.style.opacity='0.9';"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-                <polyline points="9 17 4 12 9 7"></polyline>
-                <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-      `;
-
       return `
         <div
           data-carousel-slide="${i}"
@@ -148,10 +100,12 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
           data-media-w="${esc(wAttr)}"
           data-media-h="${esc(hAttr)}"
           data-media-duration="${esc(dAttr)}"
+          data-author-avatar="${esc(avatarUrl)}"
+          data-author-name="${esc(authorName)}"
+          data-view-count="${viewCount}"
           style="position: absolute; inset: 0; width: 100%; height: 100%; ${FEED_GRADIENT_BG} transform: ${initialTransform}; visibility: ${initialVisibility}; z-index: ${initialZ}; pointer-events: none; will-change: transform;"
         >
           ${renderSingleMedia(entry, { index: i })}
-          ${overlayBadgeHtml}
         </div>
       `;
     })

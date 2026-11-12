@@ -208,7 +208,7 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
       ${
         mediaUrl
           ? `
-      <!-- Media Section: Whiteline Progress Bar + Action Row Above the Media Box -->
+      <!-- Media Section: Action Row Above Media Box (OUTSIDE) + Media Box with Inner Whiteline -->
       <div
         id="broadcast-carousel-${esc(user.id)}"
         data-carousel-container="bcast_${esc(user.id)}"
@@ -218,77 +218,53 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
         style="
           position: relative;
           width: 100%;
-          margin-top: 8px;
+          margin-top: 6px;
           margin-bottom: 6px;
           display: flex;
           flex-direction: column;
           gap: 6px;
         "
       >
-        <!-- 1. Whiteline Indicator: exact same functionality and structure as Event Card -->
-        <div style="width: 100%; display: flex; pointer-events: auto;">
+        <!-- 1. Action Bar Row Above Media Box (OUTSIDE): Search Icon, View Count, Reply Arrow (NO outer oval box, NO divider line) -->
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 7px;
+            padding: 0 2px;
+            pointer-events: auto;
+          "
+          onpointerdown="event.stopPropagation();"
+        >
+          <!-- Search icon (matches Event Card & toggles dark/light) -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink: 0; display: block;">
+            <circle cx="10" cy="10" r="6.5" fill="${isMapDark ? "#000000" : "#ffffff"}" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.5" />
+            <path d="M15 15L20.5 20.5" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.8" stroke-linecap="round" />
+          </svg>
+          <span
+            data-broadcast-view-count="${esc(broadcastId)}"
+            style="font-family: Arial, -apple-system, sans-serif; font-size: 11.5px; font-weight: 700; color: ${isMapDark ? "#ffffff" : "#000000"}; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums;"
+          >
+            ${viewCount}
+          </span>
           <button
             type="button"
-            data-carousel-indicator="0"
-            title="Clip 1"
+            title="Balas broadcast ini"
             onpointerdown="event.stopPropagation();"
-            onclick="event.stopPropagation(); window.__kalceriaSwitchEventMedia?.('bcast_${esc(user.id)}', 0);"
-            style="flex: 1 1 0; min-width: 0; padding: 2px 0 4px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
+            onclick="event.stopPropagation(); window.__kalceriaReplyBroadcast?.('${esc(user.id)}');"
+            style="background: transparent; border: none; padding: 2px 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: ${isMapDark ? "#ffffff" : "#000000"}; opacity: 0.9; transition: opacity 0.15s ease;"
+            onmouseenter="this.style.opacity='1';"
+            onmouseleave="this.style.opacity='0.9';"
           >
-            <span style="display: block; width: 100%; height: 3px; border-radius: 3px; background: ${isMapDark ? "rgba(255, 255, 255, 0.32)" : "rgba(0, 0, 0, 0.15)"}; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,${isMapDark ? "0.45" : "0.15"});">
-              <span data-carousel-fill="0" style="display: block; width: 100%; height: 100%; background: ${isMapDark ? "#ffffff" : "#000000"}; transform: scaleX(0); transform-origin: left center; will-change: transform;"></span>
-            </span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+              <polyline points="9 17 4 12 9 7"></polyline>
+              <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+            </svg>
           </button>
         </div>
 
-        <!-- 2. Action Bar Row Above Media Box: Search Icon, View Count, Divider, Reply Arrow (NO inner outerbox, NO author avatar) -->
-        <div style="display: flex; align-items: center; justify-content: flex-start; pointer-events: auto;" onpointerdown="event.stopPropagation();">
-          <div
-            style="
-              display: inline-flex;
-              align-items: center;
-              gap: 5px;
-              padding: 2.5px 7px 2.5px 6px;
-              border-radius: 9999px;
-              background: ${isMapDark ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.88)"};
-              backdrop-filter: blur(8px);
-              -webkit-backdrop-filter: blur(8px);
-              border: 1px solid ${isMapDark ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.18)"};
-              box-shadow: ${isMapDark ? "0 2px 8px rgba(0, 0, 0, 0.45)" : "0 2px 8px rgba(0, 0, 0, 0.12)"};
-              color: ${isMapDark ? "#ffffff" : "#000000"};
-              pointer-events: auto;
-            "
-          >
-            <!-- Search icon (matching Event Card) -->
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink: 0; display: block;">
-              <circle cx="10" cy="10" r="6.5" fill="${isMapDark ? "#000000" : "#ffffff"}" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.5" />
-              <path d="M15 15L20.5 20.5" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.8" stroke-linecap="round" />
-            </svg>
-            <span
-              data-broadcast-view-count="${esc(broadcastId)}"
-              style="font-family: Arial, -apple-system, sans-serif; font-size: 11px; font-weight: 700; color: ${isMapDark ? "#ffffff" : "#000000"}; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums;"
-            >
-              ${viewCount}
-            </span>
-            <span style="width: 1px; height: 10px; background: ${isMapDark ? "rgba(255, 255, 255, 0.28)" : "rgba(0, 0, 0, 0.18)"}; margin: 0 1px;"></span>
-            <button
-              type="button"
-              title="Balas broadcast ini"
-              onpointerdown="event.stopPropagation();"
-              onclick="event.stopPropagation(); window.__kalceriaReplyBroadcast?.('${esc(user.id)}');"
-              style="background: transparent; border: none; padding: 2px 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: ${isMapDark ? "#ffffff" : "#000000"}; opacity: 0.9; transition: opacity 0.15s ease;"
-              onmouseenter="this.style.opacity='1';"
-              onmouseleave="this.style.opacity='0.9';"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-                <polyline points="9 17 4 12 9 7"></polyline>
-                <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- 3. Picture / Video Box with clean gap above and NO inner badge clutter -->
+        <!-- 2. Picture / Video Box with Inner Whiteline Progress Bar -->
         <div style="
           position: relative;
           width: 100%;
@@ -297,6 +273,22 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
           background: #000000;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
         ">
+          <!-- Whiteline Indicator inside the inner box, strictly WHITE -->
+          <div style="position: absolute; top: 6px; left: 8px; right: 8px; z-index: 20; display: flex; pointer-events: auto;">
+            <button
+              type="button"
+              data-carousel-indicator="0"
+              title="Clip 1"
+              onpointerdown="event.stopPropagation();"
+              onclick="event.stopPropagation(); window.__kalceriaSwitchEventMedia?.('bcast_${esc(user.id)}', 0);"
+              style="flex: 1 1 0; min-width: 0; padding: 2px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
+            >
+              <span style="display: block; width: 100%; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.32); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.45);">
+                <span data-carousel-fill="0" style="display: block; width: 100%; height: 100%; background: #ffffff; transform: scaleX(0); transform-origin: left center; will-change: transform;"></span>
+              </span>
+            </button>
+          </div>
+
           <div
             data-carousel-slide="0"
             data-clip-id="bcast_${esc(broadcastId || user.id)}"
