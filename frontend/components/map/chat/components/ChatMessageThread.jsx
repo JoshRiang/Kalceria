@@ -38,9 +38,9 @@ export function ChatMessageThread({
   const messageRefs = useRef({});
   const nudgeTimerRef = useRef(null);
 
-  // Realtime block / unblock system event pills
+  // Realtime block system event pill
   const [blockEvents, setBlockEvents] = useState(() => {
-    if (typeof window !== "undefined" && targetId) {
+    if (typeof window !== "undefined" && targetId && isTargetBlocked) {
       try {
         const stored = localStorage.getItem(`kalceria:chat_block_events:${targetId}`);
         if (stored) return JSON.parse(stored);
@@ -49,31 +49,45 @@ export function ChatMessageThread({
     return [];
   });
 
+  // When unblocked or peer not blocked, purge stale block events & timestamps from memory and localStorage
+  useEffect(() => {
+    if (!isTargetBlocked && typeof window !== "undefined" && targetId) {
+      setBlockEvents([]);
+      try {
+        localStorage.removeItem(`kalceria:chat_block_events:${targetId}`);
+        localStorage.removeItem(`kalceria:chat_block_ts:${String(targetId).toLowerCase()}`);
+      } catch {}
+    }
+  }, [isTargetBlocked, targetId]);
+
   useEffect(() => {
     const handleBlockChange = (e) => {
       const { targetId: changedTargetId, action } = e.detail || {};
       if (String(changedTargetId) === String(targetId)) {
-        setBlockEvents((prev) => {
-          const next = [...prev, { id: `block_evt_${Date.now()}`, type: action, ts: Date.now() }];
+        if (action === "unblock") {
+          setBlockEvents([]);
           try {
-            localStorage.setItem(`kalceria:chat_block_events:${targetId}`, JSON.stringify(next));
+            localStorage.removeItem(`kalceria:chat_block_events:${targetId}`);
+            localStorage.removeItem(`kalceria:chat_block_ts:${String(targetId).toLowerCase()}`);
           } catch {}
-          return next;
-        });
+          return;
+        }
+        const singleEvt = [{ id: `block_evt_${Date.now()}`, type: action, ts: Date.now() }];
+        setBlockEvents(singleEvt);
+        try {
+          localStorage.setItem(`kalceria:chat_block_events:${targetId}`, JSON.stringify(singleEvt));
+        } catch {}
       }
     };
     window.addEventListener("kalceria:user-block-changed", handleBlockChange);
     return () => window.removeEventListener("kalceria:user-block-changed", handleBlockChange);
   }, [targetId]);
 
-  // Derived active block events list (synthesizes initial block if user is currently blocked without logged events)
+  // Derived active block events list: ONLY render single pill when user is currently blocked
   const displayBlockEvents = useMemo(() => {
-    if (blockEvents.length > 0) return blockEvents;
-    if (isTargetBlocked) {
-      return [{ id: `init_blocked_${targetId}`, type: "block", ts: Date.now() }];
-    }
-    return [];
-  }, [blockEvents, isTargetBlocked, targetId]);
+    if (!isTargetBlocked) return [];
+    return [{ id: `init_blocked_${targetId}`, type: "block", ts: Date.now() }];
+  }, [isTargetBlocked, targetId]);
 
   const handleJumpToMessage = useCallback((targetId) => {
     if (!targetId) return;
@@ -102,17 +116,10 @@ export function ChatMessageThread({
   const daySections = useMemo(() => {
     const sections = [];
     let current = null;
-    const isTargetCurrentlyBlocked = Boolean(
-      isTargetBlocked ||
-      (blockEvents && blockEvents.some((e) => e.type === "block"))
-    );
-    let earliestBlockTs = (blockEvents || [])
-      .filter((e) => e.type === "block")
-      .map((e) => Number(e.ts) || 0)
-      .filter((ts) => ts > 0)
-      .sort((a, b) => a - b)[0] || 0;
+    const isTargetCurrentlyBlocked = Boolean(isTargetBlocked);
+    let earliestBlockTs = 0;
 
-    if (!earliestBlockTs && isTargetCurrentlyBlocked && typeof window !== "undefined") {
+    if (isTargetCurrentlyBlocked && typeof window !== "undefined") {
       try {
         const storedTs = Number(localStorage.getItem(`kalceria:chat_block_ts:${String(targetId).toLowerCase()}`));
         if (storedTs > 0) earliestBlockTs = storedTs;
@@ -269,8 +276,8 @@ export function ChatMessageThread({
           </div>
         ))}
 
-        {/* Realtime Block / Unblock System Event Pills (matching size, placement & behaviour of Today 8:59 am) */}
-        {displayBlockEvents.map((evt) => (
+        {/* Realtime Block System Event Pill (matching size, placement & behaviour of Today 8:59 am, ONLY when isTargetBlocked) */}
+        {isTargetBlocked && displayBlockEvents.map((evt) => (
           <div key={evt.id} className="flex justify-center my-1.5 pointer-events-none">
             <span
               className={`px-3 py-0.5 rounded-md text-[10.5px] font-medium border shadow-md backdrop-blur-md pointer-events-auto ${
@@ -279,7 +286,7 @@ export function ChatMessageThread({
                   : "bg-white/95 border-black text-black shadow-[0_2px_8px_rgba(0,0,0,0.1)]"
               }`}
             >
-              You <span className="text-[#ef4444] font-semibold">{evt.type === "block" ? "blocked" : "unblocked"}</span> {displayName}
+              You <span className="text-[#ef4444] font-semibold">blocked</span> {displayName}
             </span>
           </div>
         ))}

@@ -107,7 +107,12 @@ export function useMapBlockedUsers() {
 
     setBlockedUserIds((prev) => {
       const next = (prev || []).filter((id) => String(id).trim().toLowerCase() !== cleanKey);
-      try { localStorage.setItem("kalceria_blocked_users", JSON.stringify(next)); } catch {}
+      try {
+        localStorage.setItem("kalceria_blocked_users", JSON.stringify(next));
+        localStorage.removeItem(`kalceria:chat_block_ts:${cleanKey}`);
+        localStorage.removeItem(`kalceria:chat_block_events:${strId}`);
+        localStorage.removeItem(`kalceria:chat_block_events:${cleanKey}`);
+      } catch {}
       return next;
     });
     if (typeof window !== "undefined") {

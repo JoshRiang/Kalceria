@@ -71,16 +71,17 @@ export function truncateWithEllipsis(str, maxLen) {
   return s.slice(0, maxLen).trimEnd() + "...";
 }
 
-// 24-hour broadcast freshness check
+// 24-hour broadcast freshness check (stripping [MEDIA:...] tags so raw base64 never leaks into card status)
 export function getActiveBroadcast(user) {
   const b = user?.broadcast;
   if (!b) return null;
-  const msg = typeof b === "string" ? b.trim() : (b.message || "").trim();
-  if (!msg) return null;
+  const rawMsg = typeof b === "string" ? b.trim() : (b.message || "").trim();
+  if (!rawMsg) return null;
   if (b.expiresAt && new Date(b.expiresAt).getTime() < Date.now()) return null;
   if (b.createdAt) {
     const age = Date.now() - new Date(b.createdAt).getTime();
     if (age > 24 * 60 * 60 * 1000) return null;
   }
-  return msg;
+  const cleanMsg = cleanDesc(rawMsg);
+  return cleanMsg || null;
 }

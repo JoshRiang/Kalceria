@@ -76,11 +76,14 @@ export default function KalcerianProfileCard({
     { isAdit, isAhmad, fallbackCover }
   );
 
-  // Bio / Alasan masuk Kalceria (Arial, non-bold, not all-caps)
-  const bioText =
+  // Bio / Alasan masuk Kalceria (Arial, non-bold, not all-caps, stripping any accidental [MEDIA:...] tags)
+  const rawBio =
     user?.reason ||
     user?.bio ||
     user?.alasanMasuk ||
+    "Automotive enthusiast seeking camaraderie, spirited night runs, and shared passion with the Kalceria community.";
+  const bioText =
+    String(rawBio).replace(/\[MEDIA:[^\]]+\]\s*/gi, "").trim() ||
     "Automotive enthusiast seeking camaraderie, spirited night runs, and shared passion with the Kalceria community.";
 
   // Social Links resolution (Adit has registered WA and IG; Ahmad has unregistered WA and IG)

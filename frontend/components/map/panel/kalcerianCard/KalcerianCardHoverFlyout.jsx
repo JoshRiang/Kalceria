@@ -52,7 +52,7 @@ export const KalcerianCardHoverFlyout = memo(function KalcerianCardHoverFlyout({
         </div>
       </div>
 
-      {(userEvent?.description || user.broadcast?.message) && (
+      {Boolean(cleanDesc(userEvent?.description || user.broadcast?.message)) && (
         <p
           className={`text-[11px] border-l-2 pl-2 line-clamp-2 ${
             isMapDark
