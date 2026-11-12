@@ -232,6 +232,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
               activeChatUser={activeChatUser}
               currentUser={currentUser}
               isMapDark={isMapDark}
+              events={events}
               avatarUrl={avatarUrl}
               isFavourite={favouriteUserIds.includes(String(activeChatUser.id))}
               isMuted={mutedUserIds.includes(String(activeChatUser.id))}

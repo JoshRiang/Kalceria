@@ -7,6 +7,7 @@ import { getReplyDisplayInfo } from "./messageBubble/replyHelpers";
 
 export function ChatComposerBar({
   isMapDark,
+  events = [],
   inputText,
   setInputText,
   placeholderText,
@@ -47,6 +48,32 @@ export function ChatComposerBar({
       {/* Reply Banner when user is replying to a message */}
       {replyingTo && (() => {
         const replyInfo = getReplyDisplayInfo(replyingTo);
+        const isEventMedia = Boolean(replyInfo.isEventMedia || replyingTo.isEventMedia);
+        let isMediaDeleted = false;
+        let activeMediaUrl = replyInfo.mediaUrl || replyingTo.mediaUrl;
+        let isVideo = Boolean(replyInfo.isVideo || replyingTo.isVideo);
+
+        if (isEventMedia) {
+          const evId = replyingTo.eventId || replyInfo.eventId;
+          const clipId = replyingTo.clipId || replyInfo.clipId;
+          const targetEvent = (events || []).find(
+            (e) => String(e.id) === String(evId) || String(e.id) === String(evId).replace(/^event_/, "")
+          );
+          if (!targetEvent || !Array.isArray(targetEvent.mediaItems)) {
+            isMediaDeleted = true;
+          } else {
+            const foundClip = targetEvent.mediaItems.find(
+              (c) => (clipId && String(c.id) === String(clipId)) || (activeMediaUrl && String(c.url) === String(activeMediaUrl))
+            );
+            if (!foundClip) {
+              isMediaDeleted = true;
+            } else {
+              activeMediaUrl = foundClip.url;
+              isVideo = Boolean(foundClip.isVideo);
+            }
+          }
+        }
+
         return (
           <div
             className={`relative flex items-stretch justify-between text-xs select-none border-t border-b transition-all ${
@@ -139,8 +166,45 @@ export function ChatComposerBar({
               ) : null}
             </div>
 
-            {/* Right: Cancel Button */}
-            <div className="flex items-center pr-3 shrink-0 self-stretch">
+            {/* Right: Media Preview (if event media) + Cancel Button */}
+            <div className="flex items-center gap-2 pr-2.5 shrink-0 self-stretch my-1">
+              {isEventMedia && (
+                isMediaDeleted ? (
+                  <div
+                    className={`w-[38px] h-[38px] rounded-[6px] bg-[#6b7280]/60 backdrop-blur-md flex items-center justify-center shrink-0 select-none shadow-sm ${
+                      isMapDark ? "text-black" : "text-white"
+                    }`}
+                    title="Media telah dihapus"
+                  >
+                    <span className="font-bold text-sm leading-none">?</span>
+                  </div>
+                ) : (
+                  <div className="w-[38px] h-[38px] rounded-[6px] overflow-hidden shrink-0 bg-black/40 flex items-center justify-center shadow-sm">
+                    {isVideo ? (
+                      <video
+                        src={activeMediaUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover pointer-events-none"
+                        onTimeUpdate={(e) => {
+                          if (e.target.currentTime >= 4) {
+                            e.target.currentTime = 0;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <img
+                        src={activeMediaUrl}
+                        alt=""
+                        className="w-full h-full object-cover pointer-events-none select-none"
+                        draggable={false}
+                      />
+                    )}
+                  </div>
+                )
+              )}
               <button
                 type="button"
                 onClick={onCancelReply}

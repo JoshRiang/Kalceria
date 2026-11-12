@@ -9,6 +9,7 @@ export function ChatMessageThread({
   myId,
   targetId,
   displayName = "Kalcerian",
+  events = [],
   isTargetBlocked = false,
   isBlockedByTarget = false,
   isMapDark,
@@ -240,6 +241,7 @@ export function ChatMessageThread({
                 <ChatMessageBubble
                   item={item}
                   myId={myId}
+                  events={events}
                   isMapDark={isMapDark}
                   selectMode={selectMode}
                   selectedMsgIds={selectedMsgIds}

@@ -29,6 +29,11 @@ export function buildReplyPayload(currentReply) {
     callMode: currentReply.callMode || null,
     callDuration: currentReply.callDuration !== undefined ? currentReply.callDuration : null,
     callTimestamp: currentReply.callTimestamp || null,
+    isEventMedia: Boolean(currentReply.isEventMedia),
+    eventId: currentReply.eventId || null,
+    clipId: currentReply.clipId || null,
+    clipIndex: currentReply.clipIndex !== undefined ? currentReply.clipIndex : null,
+    isVideo: Boolean(currentReply.isVideo),
   };
 }
 
@@ -48,6 +53,11 @@ export function buildReplyDraft(msg, myId, activeChatUser, inferReplyMediaTypeFn
   const callMode = msg.callMode || (msg.text?.toLowerCase().includes('video') ? 'video' : 'voice');
   const callDuration = msg.callDuration !== undefined ? msg.callDuration : null;
   const callTimestamp = msg.ts || msg.createdAt || Date.now();
+  const isEventMedia = Boolean(msg.isEventMedia);
+  const eventId = msg.eventId || null;
+  const clipId = msg.clipId || null;
+  const clipIndex = msg.clipIndex !== undefined ? msg.clipIndex : null;
+  const isVideo = Boolean(msg.isVideo);
 
   return {
     id: msg.id,
@@ -63,6 +73,11 @@ export function buildReplyDraft(msg, myId, activeChatUser, inferReplyMediaTypeFn
     callMode,
     callDuration,
     callTimestamp,
+    isEventMedia,
+    eventId,
+    clipId,
+    clipIndex,
+    isVideo,
   };
 }
 

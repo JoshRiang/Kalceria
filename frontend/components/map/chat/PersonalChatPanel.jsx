@@ -18,6 +18,7 @@ export function PersonalChatPanel({
   currentUser,
   isMapDark,
   avatarUrl,
+  events = [],
   isFavourite = false,
   isMuted = false,
   isBlockedByTarget = false,
@@ -192,6 +193,7 @@ export function PersonalChatPanel({
             myId={myId}
             targetId={targetId}
             displayName={displayName}
+            events={events}
             isTargetBlocked={isTargetBlocked}
             isBlockedByTarget={isBlockedByTarget}
             isMapDark={isMapDark}
@@ -223,6 +225,7 @@ export function PersonalChatPanel({
           ) : (
             <ChatComposerBar
               isMapDark={isMapDark}
+              events={events}
               inputText={inputText}
               setInputText={setInputText}
               placeholderText={starterPlaceholder}

@@ -64,6 +64,9 @@ export function formatCallDurationDetailed(totalSeconds = 0) {
  */
 export function inferReplyMediaType(replyObj) {
   if (!replyObj) return "text";
+  if (replyObj.isEventMedia) {
+    return replyObj.isVideo ? "video" : "photo";
+  }
   if (
     replyObj.msgType === "event" ||
     Boolean(replyObj.isEvent) ||
@@ -122,6 +125,7 @@ export function getReplyDisplayInfo(replyObj) {
   const senderName = replyObj.senderName || "Kalcerian";
   const mediaType = inferReplyMediaType(replyObj);
 
+  let info;
   if (mediaType === "call") {
     const isVideo =
       replyObj.callMode === "video" ||
@@ -136,7 +140,7 @@ export function getReplyDisplayInfo(replyObj) {
         : 0
     );
 
-    return {
+    info = {
       senderName,
       typeLabel: launchedTime ? `${callTypePrefix} ${launchedTime}` : callTypePrefix,
       callTypePrefix,
@@ -146,12 +150,10 @@ export function getReplyDisplayInfo(replyObj) {
       isCall: true,
       isBroadcast: false,
     };
-  }
-
-  if (mediaType === "broadcast") {
+  } else if (mediaType === "broadcast") {
     const rawCaption = replyObj.broadcastMessage || replyObj.caption || replyObj.text || "";
     const duration = replyObj.broadcastDuration || "0m";
-    return {
+    info = {
       senderName,
       typeLabel: `Broadcast ${duration}`,
       broadcastDuration: duration,
@@ -160,9 +162,7 @@ export function getReplyDisplayInfo(replyObj) {
       isCall: false,
       caption: rawCaption ? String(rawCaption).trim() : null,
     };
-  }
-
-  if (mediaType === "event") {
+  } else if (mediaType === "event") {
     const rawName =
       replyObj.eventName ||
       replyObj.title ||
@@ -170,7 +170,7 @@ export function getReplyDisplayInfo(replyObj) {
       replyObj.caption ||
       replyObj.text ||
       "Event";
-    return {
+    info = {
       senderName,
       typeLabel: "Event",
       caption: String(rawName).trim(),
@@ -181,64 +181,67 @@ export function getReplyDisplayInfo(replyObj) {
       isBroadcast: false,
       isCall: false,
     };
-  }
-
-  if (mediaType === "voice") {
+  } else if (mediaType === "voice") {
     const textStr = String(replyObj.text || "").trim();
     if (/^voice message\s+\d{1,2}:\d{2}$/i.test(textStr)) {
       const match = textStr.match(/\d{1,2}:\d{2}/);
       const formatted = match ? formatVoiceDuration(match[0]) : "00:07";
-      return {
+      info = {
         senderName,
         typeLabel: `Voice message ${formatted}`,
         caption: null,
         isBroadcast: false,
         isCall: false,
       };
+    } else {
+      const durSec = replyObj.voiceDuration || 7;
+      info = {
+        senderName,
+        typeLabel: `Voice message ${formatVoiceDuration(durSec)}`,
+        caption: null,
+        isBroadcast: false,
+        isCall: false,
+      };
     }
-    const durSec = replyObj.voiceDuration || 7;
-    return {
-      senderName,
-      typeLabel: `Voice message ${formatVoiceDuration(durSec)}`,
-      caption: null,
-      isBroadcast: false,
-      isCall: false,
-    };
-  }
-
-  if (mediaType === "video") {
+  } else if (mediaType === "video") {
     const rawCaption = replyObj.caption || replyObj.text || "";
     const isGenericText =
       !rawCaption ||
       /^(video|📹 video|media|photo|📷 media)$/i.test(rawCaption.trim());
-    return {
+    info = {
       senderName,
       typeLabel: "Video",
       caption: isGenericText ? null : rawCaption.trim(),
       isBroadcast: false,
       isCall: false,
     };
-  }
-
-  if (mediaType === "photo") {
+  } else if (mediaType === "photo") {
     const rawCaption = replyObj.caption || replyObj.text || "";
     const isGenericText =
       !rawCaption ||
       /^(photo|📷 media|media|video|📹 video)$/i.test(rawCaption.trim());
-    return {
+    info = {
       senderName,
       typeLabel: "Photo",
       caption: isGenericText ? null : rawCaption.trim(),
       isBroadcast: false,
       isCall: false,
     };
+  } else {
+    info = {
+      senderName,
+      typeLabel: replyObj.text || "Message",
+      caption: null,
+      isBroadcast: false,
+      isCall: false,
+    };
   }
 
-  return {
-    senderName,
-    typeLabel: replyObj.text || "Message",
-    caption: null,
-    isBroadcast: false,
-    isCall: false,
-  };
+  info.isEventMedia = Boolean(replyObj.isEventMedia);
+  info.mediaUrl = replyObj.mediaUrl || null;
+  info.isVideo = Boolean(replyObj.isVideo);
+  info.clipId = replyObj.clipId || null;
+  info.eventId = replyObj.eventId || null;
+  info.clipIndex = replyObj.clipIndex !== undefined ? replyObj.clipIndex : null;
+  return info;
 }

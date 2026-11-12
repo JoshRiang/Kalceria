@@ -152,6 +152,9 @@ function startClip(state, targetIdx, { trigger = "user", direction = "next", res
     setFeedState(state, "playing");
     syncGeometry(state, incomingEl);
     preloadNeighbor(state, idx + 1);
+    if (typeof window !== "undefined" && window.__kalceriaRecordMediaView && incomingEl?.dataset?.clipId) {
+      window.__kalceriaRecordMediaView(state.safeId, incomingEl.dataset.clipId, idx);
+    }
 
     const vid = incomingEl.querySelector("video");
     if (vid) {

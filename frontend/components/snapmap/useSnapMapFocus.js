@@ -262,6 +262,12 @@ export function useSnapMapFocus({
           if (targetMarker && targetMarker.openPopup) {
             targetMarker.openPopup();
             tickAllEventUptimeElements();
+            if (e.detail?.mediaIndex !== undefined && e.detail.mediaIndex !== null) {
+              const safeId = targetMarker?.options?.userData?.id || cleanEventId;
+              setTimeout(() => {
+                window.__kalceriaSwitchEventMedia?.(safeId, e.detail.mediaIndex);
+              }, 120);
+            }
           }
         } catch (_) {}
       };

@@ -32,6 +32,9 @@ class MemoryRedisFallback {
       if (a === 'EX') {
         const sec = Number(args[++i]);
         if (Number.isFinite(sec)) exp = Date.now() + sec * 1000;
+      } else if (a === 'PX') {
+        const ms = Number(args[++i]);
+        if (Number.isFinite(ms)) exp = Date.now() + ms;
       } else if (a === 'NX') {
         nx = true;
       }
@@ -119,6 +122,11 @@ class MemoryRedisFallback {
   async smembers(key) {
     const set = this.sets.get(key);
     return set ? Array.from(set) : [];
+  }
+
+  async scard(key) {
+    const set = this.sets.get(key);
+    return set ? set.size : 0;
   }
 
   async sismember(key, member) {
@@ -326,6 +334,8 @@ class MemoryRedisFallback {
       expire: (k, t) => { operations.push(() => this.expire(k, t)); return proxy; },
       sadd: (k, ...m) => { operations.push(() => this.sadd(k, ...m)); return proxy; },
       srem: (k, ...m) => { operations.push(() => this.srem(k, ...m)); return proxy; },
+      scard: (k) => { operations.push(() => this.scard(k)); return proxy; },
+      smembers: (k) => { operations.push(() => this.smembers(k)); return proxy; },
       sismember: (k, m) => { operations.push(() => this.sismember(k, m)); return proxy; },
       zadd: (k, ...a) => { operations.push(() => this.zadd(k, ...a)); return proxy; },
       zrem: (k, ...m) => { operations.push(() => this.zrem(k, ...m)); return proxy; },
@@ -409,21 +419,38 @@ export const redis = new Proxy(rawRedis, {
     if (prop === 'pipeline' || prop === 'multi') {
       if (isQuotaExceeded) return () => memoryStore.pipeline();
       return (...args) => {
+        const recorded = [];
         try {
           const pipe = target[prop](...args);
-          const origExec = pipe.exec.bind(pipe);
-          pipe.exec = async () => {
-            try {
-              return await origExec();
-            } catch (err) {
-              if (String(err?.message || '').includes('max requests limit exceeded') || err?.name === 'MaxRetriesPerRequestError' || String(err?.message || '').includes('Connection is closed')) {
-                markFallback(err);
-                return memoryStore.pipeline().exec();
+          const proxyPipe = new Proxy(pipe, {
+            get(pipeTarget, pipeProp) {
+              if (pipeProp === 'exec') {
+                return async () => {
+                  try {
+                    return await pipeTarget.exec();
+                  } catch (err) {
+                    markFallback(err);
+                    const memPipe = memoryStore.pipeline();
+                    for (const [cmd, cmdArgs] of recorded) {
+                      if (typeof memPipe[cmd] === 'function') {
+                        memPipe[cmd](...cmdArgs);
+                      }
+                    }
+                    return await memPipe.exec();
+                  }
+                };
               }
-              throw err;
-            }
-          };
-          return pipe;
+              if (typeof pipeTarget[pipeProp] === 'function') {
+                return (...callArgs) => {
+                  recorded.push([pipeProp, callArgs]);
+                  pipeTarget[pipeProp](...callArgs);
+                  return proxyPipe;
+                };
+              }
+              return pipeTarget[pipeProp];
+            },
+          });
+          return proxyPipe;
         } catch (err) {
           markFallback(err);
           return memoryStore.pipeline();

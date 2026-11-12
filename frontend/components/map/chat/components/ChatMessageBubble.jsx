@@ -18,6 +18,7 @@ export function ChatMessageBubble({
   item,
   myId,
   isMapDark,
+  events = [],
   selectMode,
   selectedMsgIds,
   handleToggleSelectMsg,
@@ -182,11 +183,40 @@ export function ChatMessageBubble({
           {/* Reply Reference Card (standard Line/WA/IG quote) */}
           {item.replyTo && (() => {
             const quoteInfo = getReplyDisplayInfo(item.replyTo);
+            const isEventMedia = Boolean(quoteInfo.isEventMedia || item.replyTo?.isEventMedia);
+            let isMediaDeleted = false;
+            let activeMediaUrl = quoteInfo.mediaUrl || item.replyTo?.mediaUrl;
+            let isVideo = Boolean(quoteInfo.isVideo || item.replyTo?.isVideo);
+            let targetClipIndex = item.replyTo?.clipIndex !== undefined ? item.replyTo.clipIndex : null;
+
+            if (isEventMedia) {
+              const evId = item.replyTo?.eventId || quoteInfo.eventId;
+              const clipId = item.replyTo?.clipId || quoteInfo.clipId;
+              const targetEvent = (events || []).find(
+                (e) => String(e.id) === String(evId) || String(e.id) === String(evId).replace(/^event_/, "")
+              );
+              if (!targetEvent || !Array.isArray(targetEvent.mediaItems)) {
+                isMediaDeleted = true;
+              } else {
+                const foundClip = targetEvent.mediaItems.find(
+                  (c) => (clipId && String(c.id) === String(clipId)) || (activeMediaUrl && String(c.url) === String(activeMediaUrl))
+                );
+                if (!foundClip) {
+                  isMediaDeleted = true;
+                } else {
+                  activeMediaUrl = foundClip.url;
+                  isVideo = Boolean(foundClip.isVideo);
+                  targetClipIndex = targetEvent.mediaItems.indexOf(foundClip);
+                }
+              }
+            }
+
             return (
               <div
                 onClick={(e) => {
                   e.stopPropagation();
                   if (
+                    isEventMedia ||
                     quoteInfo.isEvent ||
                     item.replyTo?.isEvent ||
                     item.replyTo?.msgType === "event"
@@ -205,6 +235,7 @@ export function ChatMessageBubble({
                             item.replyTo.caption,
                           lat: item.replyTo.lat,
                           lng: item.replyTo.lng,
+                          mediaIndex: isMediaDeleted ? null : targetClipIndex,
                         },
                       })
                     );
@@ -244,64 +275,105 @@ export function ChatMessageBubble({
                     : "Ketuk untuk menuju pesan asli"
                 }
               >
-                <p
-                  style={{ fontFamily: "Arial, sans-serif" }}
-                  className="font-bold text-[9.5px] opacity-85 leading-tight truncate"
-                >
-                  {quoteInfo.senderName}
-                </p>
-                {quoteInfo.isCall ? (
-                  <p
-                    style={{ fontFamily: "Arial, sans-serif" }}
-                    className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
-                  >
-                    {quoteInfo.callTypePrefix}{" "}
-                    <span className="font-bold">{quoteInfo.callLaunchedTime}</span>
-                  </p>
-                ) : quoteInfo.isBroadcast ? (
-                  <p
-                    style={{ fontFamily: "Arial, sans-serif" }}
-                    className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
-                  >
-                    Broadcast <span className="font-bold">{quoteInfo.broadcastDuration || "0m"}</span>
-                  </p>
-                ) : quoteInfo.isEvent ? (
-                  <p
-                    style={{ fontFamily: "Arial, sans-serif" }}
-                    className="text-[10px] opacity-80 leading-tight truncate mt-0.5 font-normal not-italic"
-                  >
-                    Event
-                  </p>
-                ) : (
-                  <p
-                    style={{ fontFamily: "Arial, sans-serif" }}
-                    className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
-                  >
-                    {quoteInfo.typeLabel}
-                  </p>
-                )}
-                {quoteInfo.isCall && quoteInfo.callDurationText ? (
-                  <p
-                    style={{ fontFamily: "Arial, sans-serif" }}
-                    className="text-[10px] opacity-85 leading-tight truncate mt-0.5 font-normal not-italic"
-                  >
-                    {quoteInfo.callDurationText}
-                  </p>
-                ) : quoteInfo.isEvent && quoteInfo.caption ? (
-                  <p
-                    style={{ fontFamily: "Arial, sans-serif" }}
-                    className="text-[10px] italic font-bold opacity-85 leading-tight truncate mt-0.5"
-                  >
-                    &ldquo;{quoteInfo.caption}&rdquo;
-                  </p>
-                ) : quoteInfo.caption ? (
-                  <p
-                    style={{ fontFamily: "Arial, sans-serif" }}
-                    className="text-[10px] italic opacity-85 leading-tight truncate mt-0.5 font-normal"
-                  >
-                    &ldquo;{quoteInfo.caption}&rdquo;
-                  </p>
-                ) : null}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p
+                      style={{ fontFamily: "Arial, sans-serif" }}
+                      className="font-bold text-[9.5px] opacity-85 leading-tight truncate"
+                    >
+                      {quoteInfo.senderName}
+                    </p>
+                    {quoteInfo.isCall ? (
+                      <p
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                        className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
+                      >
+                        {quoteInfo.callTypePrefix}{" "}
+                        <span className="font-bold">{quoteInfo.callLaunchedTime}</span>
+                      </p>
+                    ) : quoteInfo.isBroadcast ? (
+                      <p
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                        className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
+                      >
+                        Broadcast <span className="font-bold">{quoteInfo.broadcastDuration || "0m"}</span>
+                      </p>
+                    ) : quoteInfo.isEvent ? (
+                      <p
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                        className="text-[10px] opacity-80 leading-tight truncate mt-0.5 font-normal not-italic"
+                      >
+                        Event
+                      </p>
+                    ) : (
+                      <p
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                        className="text-[10px] opacity-80 leading-tight truncate mt-0.5"
+                      >
+                        {quoteInfo.typeLabel}
+                      </p>
+                    )}
+                    {quoteInfo.isCall && quoteInfo.callDurationText ? (
+                      <p
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                        className="text-[10px] opacity-85 leading-tight truncate mt-0.5 font-normal not-italic"
+                      >
+                        {quoteInfo.callDurationText}
+                      </p>
+                    ) : quoteInfo.isEvent && quoteInfo.caption ? (
+                      <p
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                        className="text-[10px] italic font-bold opacity-85 leading-tight truncate mt-0.5"
+                      >
+                        &ldquo;{quoteInfo.caption}&rdquo;
+                      </p>
+                    ) : quoteInfo.caption ? (
+                      <p
+                        style={{ fontFamily: "Arial, sans-serif" }}
+                        className="text-[10px] italic opacity-85 leading-tight truncate mt-0.5 font-normal"
+                      >
+                        &ldquo;{quoteInfo.caption}&rdquo;
+                      </p>
+                    ) : null}
+                  </div>
+                  {isEventMedia && (
+                    isMediaDeleted ? (
+                      <div
+                        className={`w-[36px] h-[36px] rounded-[5px] bg-[#6b7280]/60 backdrop-blur-md flex items-center justify-center shrink-0 select-none shadow-sm ${
+                          isMapDark ? "text-black" : "text-white"
+                        }`}
+                        title="Media telah dihapus"
+                      >
+                        <span className="font-bold text-sm leading-none">?</span>
+                      </div>
+                    ) : (
+                      <div className="w-[36px] h-[36px] rounded-[5px] overflow-hidden shrink-0 bg-black/40 flex items-center justify-center shadow-sm">
+                        {isVideo ? (
+                          <video
+                            src={activeMediaUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-full h-full object-cover pointer-events-none"
+                            onTimeUpdate={(e) => {
+                              if (e.target.currentTime >= 4) {
+                                e.target.currentTime = 0;
+                              }
+                            }}
+                          />
+                        ) : (
+                          <img
+                            src={activeMediaUrl}
+                            alt=""
+                            className="w-full h-full object-cover pointer-events-none select-none"
+                            draggable={false}
+                          />
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
             );
           })()}

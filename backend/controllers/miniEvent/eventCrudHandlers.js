@@ -55,11 +55,34 @@ export async function hydrateFullMiniEvent(ev) {
     ev.creator = await ensurePersistentUserProfile(ev.creator);
   }
   const creatorName = ev.creator?.displayName || ev.creator?.name || null;
+  const creatorAvatarUrl = ev.creator?.profilePicture || null;
   const tags = extractEncodedTags(ev.description);
   const [mediaData, collabData] = await Promise.all([
-    hydrateAndPruneEventMedia(ev, creatorName),
+    hydrateAndPruneEventMedia(ev, creatorName, creatorAvatarUrl),
     hydrateEventCollabSummary(ev, tags.collaborators),
   ]);
+
+  const profileMap = new Map();
+  if (ev.creator) {
+    profileMap.set(String(ev.creator.id), ev.creator);
+  }
+  if (Array.isArray(collabData.collaboratorProfiles)) {
+    for (const p of collabData.collaboratorProfiles) {
+      profileMap.set(String(p.id), p);
+    }
+  }
+  if (Array.isArray(mediaData.mediaItems)) {
+    for (const clip of mediaData.mediaItems) {
+      const author = profileMap.get(String(clip.authorId || ev.creatorId));
+      if (author) {
+        if (!clip.authorAvatarUrl) clip.authorAvatarUrl = author.profilePicture || null;
+        if (!clip.authorName) clip.authorName = author.displayName || author.name || null;
+      } else if (!clip.authorAvatarUrl && ev.creator?.profilePicture) {
+        clip.authorAvatarUrl = ev.creator.profilePicture;
+      }
+    }
+  }
+
   return formatMiniEventResponse(ev, { ...mediaData, ...collabData });
 }
 
@@ -94,6 +117,7 @@ export async function createMiniEvent(req, res, next) {
       mediaItems: req.body.mediaItems,
       authorId: creatorId,
       authorName: creatorProfile?.name || null,
+      authorAvatarUrl: creatorProfile?.profilePicture || null,
     });
     if (!parsedMedia.valid) {
       return res.status(400).json({ error: parsedMedia.error || 'Format URL media tidak valid.' });

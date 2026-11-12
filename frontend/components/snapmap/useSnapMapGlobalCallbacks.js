@@ -242,6 +242,137 @@ export function useSnapMapGlobalCallbacks({
       }, 120);
     };
 
+    const recordedMediaSession = new Set();
+    window.__kalceriaRecordMediaView = async (safeId, clipId, clipIndex) => {
+      const cleanEventId = String(safeId || "").replace(/^event_/, "");
+      const sessionKey = `${cleanEventId}:${clipId}`;
+      if (recordedMediaSession.has(sessionKey)) return;
+      recordedMediaSession.add(sessionKey);
+
+      try {
+        const res = await fetch(`/api/mini-events/${encodeURIComponent(cleanEventId)}/media/${encodeURIComponent(clipId)}/view`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && typeof data.viewCount === "number") {
+          const countEls = document.querySelectorAll(`[data-media-view-count="${clipId}"]`);
+          countEls.forEach((el) => {
+            const currentVal = parseInt(el.textContent, 10) || 0;
+            const targetVal = data.viewCount;
+            if (targetVal > currentVal) {
+              const startTime = performance.now();
+              const duration = 400;
+              const animate = (now) => {
+                const elapsed = now - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                const val = Math.round(currentVal + (targetVal - currentVal) * progress);
+                el.textContent = String(val);
+                if (progress < 1) {
+                  requestAnimationFrame(animate);
+                } else {
+                  el.textContent = String(targetVal);
+                }
+              };
+              requestAnimationFrame(animate);
+            } else {
+              el.textContent = String(targetVal);
+            }
+          });
+
+          const ev = (latestRef.current.events || []).find(
+            (e) => String(e.id) === String(cleanEventId)
+          );
+          if (ev && Array.isArray(ev.mediaItems)) {
+            const c = ev.mediaItems.find((item) => String(item.id) === String(clipId));
+            if (c) c.viewCount = data.viewCount;
+          }
+        }
+      } catch (_) {}
+    };
+
+    window.__kalceriaReplyEventMedia = (safeId, clipId, clipIndex) => {
+      const { isSelfOffline, events, users, mapRef } = latestRef.current;
+      if (isSelfOffline) return;
+      const cleanEventId = String(safeId || "").replace(/^event_/, "");
+      const targetEvent = (events || []).find(
+        (e) => String(e.id) === String(safeId) || String(e.id) === String(cleanEventId)
+      );
+      if (!targetEvent) return;
+
+      const mediaItems = Array.isArray(targetEvent.mediaItems) ? targetEvent.mediaItems : [];
+      const clip =
+        mediaItems.find((c) => String(c.id) === String(clipId)) ||
+        mediaItems[clipIndex];
+      if (!clip) return;
+
+      if (mapRef?.current) {
+        try {
+          mapRef.current.closePopup();
+        } catch (_) {}
+      }
+
+      const authorId = clip.authorId || targetEvent.creatorId || targetEvent.creator?.id;
+      let targetAuthorUser = (users || []).find((u) => String(u.id) === String(authorId));
+      if (!targetAuthorUser) {
+        const collabProfile = (targetEvent.collaboratorProfiles || []).find(
+          (c) => String(c.id) === String(authorId)
+        );
+        if (collabProfile) {
+          targetAuthorUser = collabProfile;
+        } else if (String(authorId) === String(targetEvent.creatorId) && targetEvent.creator) {
+          targetAuthorUser = targetEvent.creator;
+        } else {
+          targetAuthorUser = {
+            id: authorId,
+            name: clip.authorName || "Kalcerian",
+            displayName: clip.authorName || "Kalcerian",
+            nickname: clip.authorName || "Kalcerian",
+            profilePicture: clip.authorAvatarUrl || null,
+          };
+        }
+      }
+
+      const authorName =
+        clip.authorName ||
+        targetAuthorUser?.displayName ||
+        targetAuthorUser?.name ||
+        targetAuthorUser?.nickname ||
+        "Kalcerian";
+
+      const replyPayload = {
+        id: `media_${clip.id || clipId}_${Date.now()}`,
+        eventId: targetEvent.id,
+        clipId: clip.id || clipId,
+        clipIndex: clipIndex !== undefined ? clipIndex : mediaItems.indexOf(clip),
+        msgType: clip.isVideo ? "video" : "photo",
+        isEventMedia: true,
+        mediaUrl: clip.url,
+        isVideo: Boolean(clip.isVideo),
+        videoDuration: clip.duration || null,
+        senderName: authorName,
+        senderId: authorId,
+        userId: authorId,
+        text: clip.isVideo ? "Video" : "Photo",
+        caption: targetEvent.title || "Event Feed",
+        lat: targetEvent.lat,
+        lng: targetEvent.lng,
+        createdAt: clip.uploadedAt || Date.now(),
+      };
+
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("kalceria:start-event-reply", {
+            detail: {
+              targetUser: targetAuthorUser,
+              replyPayload,
+            },
+          })
+        );
+      }, 120);
+    };
+
     return () => {
       delete window.__kalceriaEditEvent;
       delete window.__kalceriaRequestCollab;
@@ -253,6 +384,8 @@ export function useSnapMapGlobalCallbacks({
       delete window.__kalceriaEditBroadcast;
       delete window.__kalceriaReplyBroadcast;
       delete window.__kalceriaReplyEvent;
+      delete window.__kalceriaReplyEventMedia;
+      delete window.__kalceriaRecordMediaView;
     };
   }, []);
 }

@@ -4,6 +4,7 @@ import { cleanText, extractEncodedTags } from './eventFormatting.js';
 import {
   appendClipsToEventMedia,
   parseSubmittedMediaItems,
+  recordClipView,
   removeClipFromEventMedia,
 } from './eventMediaStore.js';
 import { getAcceptedCollaboratorIds } from './eventCollabStore.js';
@@ -43,7 +44,7 @@ export async function addMiniEventMedia(req, res, next) {
 
       const uploader = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, nickname: true },
+        select: { id: true, name: true, nickname: true, profilePicture: true },
       });
 
       const parsedMedia = parseSubmittedMediaItems({
@@ -56,6 +57,7 @@ export async function addMiniEventMedia(req, res, next) {
         }] : undefined),
         authorId: userId,
         authorName: uploader?.name || uploader?.nickname || 'Kalcerian',
+        authorAvatarUrl: uploader?.profilePicture || null,
       });
 
       if (!parsedMedia.valid || parsedMedia.clips.length === 0) {
@@ -110,6 +112,26 @@ export async function deleteMiniEventMedia(req, res, next) {
       const formatted = await hydrateFullMiniEvent(event);
       return res.json({ event: formatted });
     });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function recordEventMediaView(req, res, next) {
+  try {
+    const { id: eventId, clipId } = req.params;
+    const userId = req.user?.userId || null;
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'anon';
+    const viewerKey = userId ? `u:${userId}` : `ip:${ip}`;
+
+    const viewCount = await recordClipView({
+      eventId,
+      clipId,
+      viewerKey,
+      viewerUserId: userId,
+    });
+
+    return res.json({ success: true, clipId, viewCount });
   } catch (err) {
     return next(err);
   }

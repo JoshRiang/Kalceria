@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import prisma from '../../lib/prisma.js';
+import { redis } from '../../lib/redis.js';
 import { sanitizeAndNormalizeMediaUrl } from '../../utils/urlSecurity.js';
 import {
   MINI_EVENT_CLIP_TTL_MS,
@@ -8,11 +9,13 @@ import {
   extractUrlsFromLegacyMediaString,
 } from './eventFormatting.js';
 import {
+  clipKey,
   deleteLegacyEventClips,
   purgeAllEventClips,
   readEventClips,
   readLegacyEventClips,
   removeEventClipIds,
+  viewKey,
   writeEventClips,
 } from './eventMediaPersistence.js';
 
@@ -74,6 +77,8 @@ export function buildClipRecord({
   duration = null,
   authorId = null,
   authorName = null,
+  authorAvatarUrl = null,
+  viewCount = 0,
   uploadedAt = Date.now(),
 }) {
   const ts = Number.isFinite(uploadedAt) && uploadedAt > 0 ? uploadedAt : Date.now();
@@ -91,6 +96,8 @@ export function buildClipRecord({
     duration: isVideo ? normalizeDuration(duration) : IMAGE_CLIP_DURATION_SECONDS,
     authorId: authorId || null,
     authorName: authorName || null,
+    authorAvatarUrl: authorAvatarUrl || null,
+    viewCount: Number(viewCount) || 0,
     uploadedAt: ts,
     expiresAt: ts + MINI_EVENT_CLIP_TTL_MS,
   };
@@ -101,6 +108,7 @@ export function parseSubmittedMediaItems({
   mediaItems,
   authorId,
   authorName,
+  authorAvatarUrl = null,
 }) {
   const parsedClips = [];
   const now = Date.now();
@@ -122,6 +130,7 @@ export function parseSubmittedMediaItems({
             duration: typeof entry === 'object' ? entry?.duration : null,
             authorId,
             authorName,
+            authorAvatarUrl: (typeof entry === 'object' ? entry?.authorAvatarUrl : null) || authorAvatarUrl,
             uploadedAt: part.uploadedAt || now,
           })
         );
@@ -141,6 +150,7 @@ export function parseSubmittedMediaItems({
             url: part.url,
             authorId,
             authorName,
+            authorAvatarUrl,
             uploadedAt: part.uploadedAt || now,
           })
         );
@@ -196,7 +206,7 @@ export async function syncEventDescriptionMedia(event, activeUrls) {
   return nextDesc;
 }
 
-function deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, now) {
+function deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, creatorAvatarUrl, now) {
   const clips = [];
   let droppedExpired = false;
   const entries = extractUrlsFromLegacyMediaString(tags.mediaStr || ev.mediaUrl || '');
@@ -212,6 +222,7 @@ function deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, now)
         url: entry.url,
         authorId: ev.creatorId,
         authorName: creatorName || null,
+        authorAvatarUrl: creatorAvatarUrl || null,
         uploadedAt,
       }),
       expiresAt,
@@ -220,7 +231,7 @@ function deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, now)
   return { clips, droppedExpired };
 }
 
-async function initializeFromLegacySources(ev, tags, createdMs, creatorName, now) {
+async function initializeFromLegacySources(ev, tags, createdMs, creatorName, creatorAvatarUrl, now) {
   let legacy = null;
   try {
     legacy = await readLegacyEventClips(ev.id);
@@ -244,7 +255,7 @@ async function initializeFromLegacySources(ev, tags, createdMs, creatorName, now
     });
     clips = clips.map((clip) => ({ ...clip, id: clip.id || crypto.randomUUID() }));
   } else {
-    const derived = deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, now);
+    const derived = deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, creatorAvatarUrl, now);
     clips = derived.clips;
     dropped = derived.droppedExpired;
   }
@@ -259,7 +270,7 @@ async function initializeFromLegacySources(ev, tags, createdMs, creatorName, now
   return clips;
 }
 
-export async function hydrateAndPruneEventMedia(ev, creatorName = null) {
+export async function hydrateAndPruneEventMedia(ev, creatorName = null, creatorAvatarUrl = null) {
   const now = Date.now();
   const createdMs = ev?.createdAt ? new Date(ev.createdAt).getTime() : now;
   const tags = extractEncodedTags(ev?.description);
@@ -273,11 +284,11 @@ export async function hydrateAndPruneEventMedia(ev, creatorName = null) {
 
   // Storage unreachable: serve what the description records, never mutate anything.
   if (stored === null) {
-    return toMediaResult(deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, now).clips);
+    return toMediaResult(deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, creatorAvatarUrl, now).clips);
   }
 
   if (!stored.initialized) {
-    return toMediaResult(await initializeFromLegacySources(ev, tags, createdMs, creatorName, now));
+    return toMediaResult(await initializeFromLegacySources(ev, tags, createdMs, creatorName, creatorAvatarUrl, now));
   }
 
   const active = [];
@@ -294,6 +305,20 @@ export async function hydrateAndPruneEventMedia(ev, creatorName = null) {
   if (idsToRemove.length > 0) {
     await removeEventClipIds(ev.id, idsToRemove).catch(() => {});
     await syncEventDescriptionMedia(ev, active.map((c) => c.url));
+  }
+
+  if (active.length > 0) {
+    try {
+      const vPipe = redis.multi();
+      for (const clip of active) {
+        vPipe.scard(viewKey(clip.id));
+      }
+      const viewResults = await vPipe.exec().catch(() => []);
+      active.forEach((clip, idx) => {
+        const item = viewResults?.[idx];
+        clip.viewCount = item && !item[0] ? Number(item[1]) || 0 : (clip.viewCount || 0);
+      });
+    } catch {}
   }
 
   return toMediaResult(active);
@@ -403,4 +428,57 @@ export async function removeClipFromEventMedia(ev, { clipId, url }, userId) {
 
 export async function purgeEventMediaByIds(eventIds) {
   await purgeAllEventClips(eventIds);
+}
+
+export async function recordClipView({ eventId, clipId, viewerKey, viewerUserId = null }) {
+  if (!clipId) return 0;
+  const k = viewKey(clipId);
+
+  // Read clip info to check author
+  let clip = null;
+  try {
+    const raw = await redis.get(clipKey(clipId));
+    if (raw) clip = JSON.parse(raw);
+  } catch {}
+
+  // If clip not found in individual key, check event
+  if (!clip && eventId) {
+    try {
+      const stored = await readEventClips(eventId);
+      clip = (stored?.clips || []).find((c) => String(c.id) === String(clipId));
+    } catch {}
+  }
+
+  // Check if viewer is author: author of that media clip cannot increment the count
+  let isAuthor = false;
+  if (viewerUserId) {
+    if (clip?.authorId) {
+      isAuthor = String(clip.authorId) === String(viewerUserId);
+    } else if (eventId) {
+      try {
+        const ev = await prisma.miniEvent.findUnique({
+          where: { id: String(eventId) },
+          select: { creatorId: true },
+        });
+        if (ev?.creatorId && String(ev.creatorId) === String(viewerUserId)) {
+          isAuthor = true;
+        }
+      } catch {}
+    }
+  }
+
+  // Only add unique view if viewer is NOT the author
+  if (!isAuthor && viewerKey) {
+    try {
+      await redis.sadd(k, viewerKey);
+      await redis.expire(k, 7 * 24 * 60 * 60);
+    } catch {}
+  }
+
+  try {
+    const count = await redis.scard(k);
+    return Number(count) || 0;
+  } catch {
+    return 0;
+  }
 }
