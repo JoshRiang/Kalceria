@@ -59,16 +59,10 @@ export async function getMapUsers(req, res, next) {
       }
     });
 
-    let canonicalPresences = null;
-    let fallbackActiveIds = [];
-    if (!activeMembers.length) {
-      canonicalPresences = await getActiveCanonicalPresences();
-      if (canonicalPresences && canonicalPresences.size > 0) {
-        fallbackActiveIds = Array.from(canonicalPresences.keys());
-      }
-    }
-
-    const effectiveActiveIds = activeMembers.length ? activeMembers : fallbackActiveIds;
+    let canonicalPresences = await getActiveCanonicalPresences().catch(() => new Map());
+    const canonicalActiveIds = canonicalPresences ? Array.from(canonicalPresences.keys()) : [];
+    const effectiveActiveSet = new Set([...activeMembers, ...canonicalActiveIds]);
+    const effectiveActiveIds = Array.from(effectiveActiveSet);
 
     // Strict Online Rule: Only users actively present in Redis `active_users` OR unexpired Canonical Store appear on the map
     if (!effectiveActiveIds.length) {
@@ -132,10 +126,9 @@ export async function getMapUsers(req, res, next) {
       ? await redis.geopos("active_users", ...userIds).catch(() => [])
       : [];
 
-    // Fallback: If Redis active_users is down or empty, fetch real active presences from PostgreSQL
-    const hasAnyRedisPos = positions.some((p) => p && p[0] && Number.isFinite(parseFloat(p[0])));
-    if (!hasAnyRedisPos && userIds.length > 0 && !canonicalPresences) {
-      canonicalPresences = await getActiveCanonicalPresences(userIds);
+    // Fallback: If any positions are missing, ensure canonical presences are loaded for those users
+    if (userIds.length > 0 && (!canonicalPresences || canonicalPresences.size === 0)) {
+      canonicalPresences = await getActiveCanonicalPresences(userIds).catch(() => new Map());
     }
 
     const now = new Date();

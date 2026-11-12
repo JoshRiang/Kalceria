@@ -279,6 +279,7 @@ export function PersonalChatPanel({
               <KalcerianProfileCard
                 user={activeChatUser}
                 isMapDark={isMapDark}
+                isBlocked={isTargetBlocked}
                 isBlockedByTarget={isBlockedByTarget}
                 showMobileClose={true}
                 onClose={() => setShowContactInfo(false)}

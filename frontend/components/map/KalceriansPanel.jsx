@@ -202,13 +202,14 @@ export const KalceriansPanel = memo(function KalceriansPanel({
 
   const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;
 
-  const blockedUserIdsRef = useRef(blockedUserIds);
-  blockedUserIdsRef.current = blockedUserIds;
+  const blockedRef = useRef({ out: blockedUserIds, in: blockedByUserIds });
+  blockedRef.current = { out: blockedUserIds, in: blockedByUserIds };
 
   const handleAvatarClick = useCallback((e, user) => {
     if (e?.stopPropagation) e.stopPropagation();
-    if ((blockedUserIdsRef.current || []).some((id) => String(id).toLowerCase() === String(user.id).toLowerCase())) return;
-    if (Boolean(user?.isOnline && user?.allowLiveLocation !== false)) {
+    const isBlocked = (blockedRef.current.out || []).some((id) => String(id).toLowerCase() === String(user.id).toLowerCase());
+    const isBlockedByTarget = (blockedRef.current.in || []).some((id) => String(id).toLowerCase() === String(user.id).toLowerCase());
+    if (!isBlocked && !isBlockedByTarget && Boolean(user?.isOnline && user?.allowLiveLocation !== false)) {
       focusUser(user);
     }
     // On all device families, keep drawer open and smoothly elongate profile card inline

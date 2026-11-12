@@ -74,10 +74,9 @@ export async function getAllKalcerians(req, res, next) {
     });
 
     const now = new Date();
-    let canonicalPresences = null;
-    if (onlineSet.size === 0 && users.length > 0) {
-      canonicalPresences = await getActiveCanonicalPresences(users.map((u) => u.id));
-    }
+    const canonicalPresences = users.length > 0
+      ? await getActiveCanonicalPresences(users.map((u) => u.id)).catch(() => new Map())
+      : new Map();
 
     const rawResult = users.map((u) => {
       // Strictly online ONLY when present in Redis active_users OR unexpired canonical presences AND allowLiveLocation is enabled

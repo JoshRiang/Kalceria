@@ -5,15 +5,17 @@ import ContentImage from "@/components/ui/ContentImage";
 
 export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
   user,
-  isBlocked,
+  isBlocked = false,
   isBlockedByTarget = false,
-  isExpanded,
+  isExpanded = false,
   isMapDark,
-  isFavourite,
-  isMuted,
+  isFavourite = false,
+  isMuted = false,
   avatarUrl,
   handleAvatarClick,
 }) {
+  const isAnyBlocked = Boolean(isBlocked || isBlockedByTarget);
+
   return (
     <div className="relative z-10 flex justify-center items-center">
       <div
@@ -23,10 +25,8 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
       >
         <div
           className={`w-11 h-11 sm:w-12 sm:h-12 border overflow-hidden rounded-full transition-all relative ${
-            isBlockedByTarget
+            isAnyBlocked
               ? "border-[#30363d]/80 bg-[#000000]"
-              : isBlocked
-              ? "grayscale-[80%] border-[#8b949e]/40"
               : isExpanded
               ? "border-white ring-2 ring-white/50"
               : user.isOnline
@@ -38,7 +38,7 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
               : "border-[#d0d7de] opacity-60 group-hover/avatar:scale-105"
           }`}
         >
-          {isBlockedByTarget ? (
+          {isAnyBlocked ? (
             <div className="w-full h-full bg-[#000000]" />
           ) : (
             <ContentImage
@@ -62,9 +62,9 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
           )}
         </div>
 
-        {/* Bottom-right Avatar Badges: Favourite (Love) & Mute (Speaker + Cross) Stacked Horizontally, with Active Green Dot at Lowest Stack Layer (z-[5]) */}
-        {!isExpanded && !isBlockedByTarget && (
-          !isBlocked && (isFavourite || isMuted) ? (
+        {/* Bottom-right Avatar Badges: Completely hidden when user is blocked (neither online nor offline dot visible) */}
+        {!isExpanded && !isAnyBlocked && (
+          (isFavourite || isMuted) ? (
             <div className="absolute -bottom-0.5 -right-1.5 z-20 flex items-center pointer-events-none">
               {isFavourite && (
                 <span
@@ -127,7 +127,7 @@ export const KalcerianCardAvatar = memo(function KalcerianCardAvatar({
             <span
               className={`absolute bottom-0 right-0 w-3 h-3 border-2 rounded-full ${
                 isMapDark ? "border-[#161b22]" : "border-white"
-              } ${isBlocked ? "bg-[#8b949e]/50" : user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
+              } ${user.isOnline ? "bg-[#3fb950]" : "bg-[#8b949e]"}`}
             />
           )
         )}

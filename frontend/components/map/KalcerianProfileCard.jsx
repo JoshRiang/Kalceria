@@ -26,8 +26,10 @@ export default function KalcerianProfileCard({
   isOwnProfile = false,
   onEditProfile,
   inline = false,
+  isBlocked = false,
   isBlockedByTarget = false,
 }) {
+  const isAnyBlocked = Boolean(isBlocked || isBlockedByTarget);
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function KalcerianProfileCard({
       <div className={`relative w-full aspect-square max-h-[250px] sm:max-h-[270px] mx-auto overflow-hidden ${
         isMapDark ? "bg-[#0a0e27]" : "bg-[#f3f4f6]"
       }`}>
-        {isBlockedByTarget ? (
+        {isAnyBlocked ? (
           <div className="w-full h-full bg-[#000000]" />
         ) : (
           <NormalizedMediaCover
@@ -153,7 +155,7 @@ export default function KalcerianProfileCard({
               isMapDark ? "border-[#161b22] bg-[#161b22]" : "border-white bg-white"
             }`}
           >
-            {isBlockedByTarget ? (
+            {isAnyBlocked ? (
               <div className="w-full h-full bg-[#000000]" />
             ) : (
               <Image
@@ -244,7 +246,7 @@ export default function KalcerianProfileCard({
       </div>
 
       {/* Broadcast Status (if user released active 24h broadcast) */}
-      {!isBlockedByTarget && activeBroadcastMsg && (
+      {!isAnyBlocked && activeBroadcastMsg && (
         <div className="text-center mt-1.5 px-4">
           <p
             className={`text-[11.5px] sm:text-[12px] font-normal normal-case leading-snug line-clamp-2 ${
@@ -265,12 +267,13 @@ export default function KalcerianProfileCard({
           }`}
           style={{ fontFamily: "Arial, sans-serif" }}
         >
-          {bioText}
+          {isAnyBlocked ? "Profile details hidden." : bioText}
         </p>
       </div>
 
-      {/* 6. Bottom Social Section: Clean borderless depth, NO line and NO grid, size 46 standard */}
-      <div className="flex items-center justify-center gap-8 py-3.5 mt-1">
+      {/* 6. Bottom Social Section: Clean borderless depth, NO line and NO grid, size 46 standard (hidden if blocked) */}
+      {!isAnyBlocked && (
+        <div className="flex items-center justify-center gap-8 py-3.5 mt-1">
         {/* Left: Instagram */}
         {igUrl ? (
           <a
@@ -311,6 +314,7 @@ export default function KalcerianProfileCard({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

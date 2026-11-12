@@ -4,7 +4,7 @@ import prisma from '../lib/prisma.js';
 const CALL_SIGNAL_TTL_MS = 60_000;
 const CALL_LOCK_TTL_MS = 35_000;
 const EVENT_NOTIF_TTL_MS = 86_400_000;
-const PRESENCE_ACTIVE_WINDOW_MS = 25_000;
+const PRESENCE_ACTIVE_WINDOW_MS = 90_000;
 
 // ─── Ephemeral Pruning Throttler ──────────────────────────────────────────────
 let lastPruneTs = 0;

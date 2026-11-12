@@ -6,7 +6,7 @@ import {
   removeCanonicalLivePresence,
 } from '../services/canonicalFallbackStore.js';
 
-const LIVE_TTL_SECONDS = 15;
+const LIVE_TTL_SECONDS = 60;
 const UPDATE_COOLDOWN_SECONDS = 3;
 
 function parseCoordinate(value) {
@@ -42,13 +42,17 @@ export async function updateLiveLocation(req, res, next) {
       return res.status(400).json({ error: 'Valid lat and lng are required.' });
     }
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { id: userId },
       select: { allowLiveLocation: true },
     });
 
     if (!user?.allowLiveLocation) {
-      return res.status(403).json({ error: 'Live location is disabled for this account.' });
+      user = await prisma.user.update({
+        where: { id: userId },
+        data: { allowLiveLocation: true },
+        select: { allowLiveLocation: true },
+      });
     }
 
     const cooldownKey = `live:cooldown:${userId}`;

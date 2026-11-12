@@ -82,23 +82,24 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
       }`}
     >
       <div
-        className={`relative w-full grid grid-cols-[52px_1fr_54px] items-center gap-2 px-3 py-2.5 text-left transition-[filter] duration-200 ease-out group outline-none ${
-          isBlocked
-            ? "cursor-default"
-            : "cursor-pointer active:scale-[0.99]"
-        } ${isConfirming ? "blur-[3.5px] pointer-events-none select-none" : "blur-0"}`}
+        className={`relative w-full grid grid-cols-[52px_1fr_54px] items-center gap-2 px-3 py-2.5 text-left transition-[filter] duration-200 ease-out group outline-none cursor-pointer active:scale-[0.99] ${
+          isConfirming ? "blur-[3.5px] pointer-events-none select-none" : "blur-0"
+        }`}
         onMouseEnter={() => !isBlocked && !isBlockedByTarget && !isConfirming && setHoveredKalcerian(user.id)}
         onMouseLeave={() => !isBlocked && !isBlockedByTarget && !isConfirming && setHoveredKalcerian(null)}
         onClick={() => {
-          if (isBlocked || isBlockedByTarget || isConfirming) return;
-          const isUserActivelyOnline = Boolean(user?.isOnline && user?.allowLiveLocation !== false);
-          if (isUserActivelyOnline) {
-            if (userEvent) {
-              focusUser(userEvent);
-            } else {
-              setFocusedUserId(user.id);
-              focusUser(user);
-              scheduleTimeout(() => setFocusedUserId(null), 100);
+          if (isConfirming) return;
+          const isAnyBlocked = Boolean(isBlocked || isBlockedByTarget);
+          if (!isAnyBlocked) {
+            const isUserActivelyOnline = Boolean(user?.isOnline && user?.allowLiveLocation !== false);
+            if (isUserActivelyOnline) {
+              if (userEvent) {
+                focusUser(userEvent);
+              } else {
+                setFocusedUserId(user.id);
+                focusUser(user);
+                scheduleTimeout(() => setFocusedUserId(null), 100);
+              }
             }
           }
           setExpandedUserId((prev) => (prev === user.id ? null : user.id));
@@ -224,6 +225,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
             <KalcerianProfileCard
               user={user}
               isMapDark={isMapDark}
+              isBlocked={isBlocked}
               isBlockedByTarget={isBlockedByTarget}
               showMobileClose={deviceFamily === "hp" || deviceFamily === "tab"}
               onClose={() => setExpandedUserId(null)}
