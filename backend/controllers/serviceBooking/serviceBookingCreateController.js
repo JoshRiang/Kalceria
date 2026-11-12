@@ -88,7 +88,7 @@ export async function createBooking(req, res, next) {
 
       const whatsappUrl = buildWaUrl(booking, user);
 
-      await setServiceBookingCooldown(req, userId);
+      await setServiceBookingCooldown(req, userId, user?.email);
       res.status(201).json({ bookingId: booking.id, totalAmount, whatsappUrl });
     } finally {
       // Release lock immediately after DB write
@@ -197,11 +197,10 @@ export async function createServiceRequest(req, res, next) {
       include: { slots: true, requestor: true }
     });
 
+    const targetEmail = effectiveEmail || user.email;
     // Invalidate public bookings cache & enforce 24-hour rate limit cooldown
     await redis.del('cache:public_bookings');
-    await setServiceBookingCooldown(req, user.id);
-
-    const targetEmail = effectiveEmail || user.email;
+    await setServiceBookingCooldown(req, user.id, targetEmail);
     const senderLabel = targetEmail.endsWith('@guest.kalceria.local')
       ? `${contactPerson || user.name} (Guest)`
       : `${user.name || contactPerson} (${targetEmail})`;

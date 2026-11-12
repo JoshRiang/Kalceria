@@ -172,16 +172,25 @@ export async function handlePaymentWebhook(req, res, next) {
     }
 
     if (status === 'CONFIRMED') {
-      const updated = await prisma.eventRegistration.update({
-        where: { id: registrationId },
-        data: {
-          paymentStatus: 'CONFIRMED',
-          version: { increment: 1 },
-        },
-        include: {
-          event: true,
-          user: { select: { id: true, name: true, email: true, phone: true } },
-        },
+      const updated = await prisma.$transaction(async (tx) => {
+        const reg = await tx.eventRegistration.update({
+          where: { id: registrationId },
+          data: {
+            paymentStatus: 'CONFIRMED',
+            version: { increment: 1 },
+          },
+          include: {
+            event: true,
+            user: { select: { id: true, name: true, email: true, phone: true } },
+          },
+        });
+        if (reg.eventId) {
+          await tx.event.updateMany({
+            where: { id: reg.eventId, quota: { gt: 0 } },
+            data: { quota: { decrement: 1 } },
+          });
+        }
+        return reg;
       });
 
       await createLog('SYSTEM_WEBHOOK', 'ONLINE_PAYMENT_CONFIRMED', `Payment of Rp ${amount} confirmed for registration ${registrationId} via ${provider}.`);

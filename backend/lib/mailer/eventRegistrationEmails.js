@@ -145,7 +145,7 @@ export async function sendEventRegistrationEmail({ to, event, registration, canc
   return sendEmail({
     to,
     channel: 'notif',
-    subject: `[Pendaftaran Event] ${safeTitle} (#${escapeHtml(registration.id.slice(-6))}) - Kalceria`,
+    subject: `[Pendaftaran Event] Booking Confirmation: ${safeTitle} (#${escapeHtml(registration.id.slice(-6))})`,
     html,
   });
 }
@@ -279,6 +279,12 @@ export function buildEventPaymentConfirmedEmailHtml({ event, registration }) {
           Pendaftaran tiket kamu untuk event <strong>${safeTitle}</strong> telah terkonfirmasi dan resmi tersimpan di sistem Kalceria. Parameter pendaftaran dan slot tiket kamu telah terkunci.
         </p>
 
+        <div style="text-align:center;margin:16px 0 20px 0;">
+          <span style="display:inline-block;padding:8px 22px;border-radius:9999px;border:1px solid #10b981;background:#064e3b;color:#34d399;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;letter-spacing:0.5px;text-transform:uppercase;">
+            &#10003; ORDER CONFIRMED &amp; LOCKED
+          </span>
+        </div>
+
         ${safePosterUrl ? `
           <div style="text-align:center;margin:0 0 20px 0;">
             <img src="${safePosterUrl}" alt="${safeTitle}" width="260" style="width:260px;max-width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;display:block;margin:0 auto;border:none;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.25);" />
@@ -313,7 +319,7 @@ export async function sendEventPaymentConfirmedEmail({ to, event, registration }
   return sendEmail({
     to,
     channel: 'notif',
-    subject: `[Tiket Terkonfirmasi] ${safeTitle} (#${escapeHtml(registration.id.slice(-6))}) - Kalceria`,
+    subject: `[Pendaftaran Event] Order Confirmed & Persisted: ${safeTitle} (#${escapeHtml(registration.id.slice(-6))})`,
     html,
   });
 }

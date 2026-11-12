@@ -33,6 +33,9 @@ import {
   checkEventRegistrationDefense,
   setEventRegistrationCooldown,
   clearEventRegistrationCooldown,
+  checkServiceBookingDefense,
+  setServiceBookingCooldown,
+  clearServiceBookingCooldown,
 } from '../middleware/ingressDefense.js';
 import prisma from '../lib/prisma.js';
 import jwt from 'jsonwebtoken';
@@ -985,15 +988,34 @@ describe('Service Request: Comms Channel & Location Verification', () => {
         assert.doesNotMatch(html, />CANCEL</);
       });
 
-      it('confirmEventRegistration persists registration to CONFIRMED and is idempotent', async () => {
+      it('confirmEventRegistration persists registration to CONFIRMED, decrements event quota by 1, and is idempotent', async () => {
         const originalFindUnique = prisma.eventRegistration.findUnique;
-        const originalUpdate = prisma.eventRegistration.update;
+        const originalTransaction = prisma.$transaction;
 
         let updatedStatus = null;
+        let quotaDecrementedCount = 0;
+        let decrementedQuotaEventId = null;
+
         prisma.eventRegistration.findUnique = async () => ({ ...mockReg });
-        prisma.eventRegistration.update = async ({ data }) => {
-          updatedStatus = data.paymentStatus;
-          return { ...mockReg, paymentStatus: data.paymentStatus };
+        prisma.$transaction = async (cb) => {
+          const mockTx = {
+            eventRegistration: {
+              update: async ({ data }) => {
+                updatedStatus = data.paymentStatus;
+                return { ...mockReg, paymentStatus: data.paymentStatus };
+              },
+            },
+            event: {
+              updateMany: async ({ where, data }) => {
+                decrementedQuotaEventId = where.id;
+                if (data.quota?.decrement) {
+                  quotaDecrementedCount += data.quota.decrement;
+                }
+                return { count: 1 };
+              },
+            },
+          };
+          return cb(mockTx);
         };
 
         try {
@@ -1009,16 +1031,19 @@ describe('Service Request: Comms Channel & Location Verification', () => {
           assert.equal(res.body.success, true);
           assert.equal(res.body.isConfirmed, true);
           assert.equal(updatedStatus, 'CONFIRMED');
+          assert.equal(decrementedQuotaEventId, mockReg.eventId);
+          assert.equal(quotaDecrementedCount, 1);
 
-          // Idempotency: Calling confirm when already CONFIRMED succeeds without error
+          // Idempotency: Calling confirm when already CONFIRMED succeeds without error and does NOT double-decrement quota
           prisma.eventRegistration.findUnique = async () => ({ ...mockReg, paymentStatus: 'CONFIRMED' });
           const resIdempotent = createMockRes();
           await confirmEventRegistration(req, resIdempotent, () => {});
           assert.equal(resIdempotent.statusCode, 200);
           assert.equal(resIdempotent.body.isConfirmed, true);
+          assert.equal(quotaDecrementedCount, 1); // Quota count remains 1, no duplicate decrement!
         } finally {
           prisma.eventRegistration.findUnique = originalFindUnique;
-          prisma.eventRegistration.update = originalUpdate;
+          prisma.$transaction = originalTransaction;
         }
       });
 
@@ -1157,6 +1182,40 @@ describe('Service Request: Comms Channel & Location Verification', () => {
         passed = false;
         const res3 = createMockRes();
         await checkEventRegistrationDefense(fakeReq, res3, () => { passed = true; });
+        assert.equal(passed, true);
+      });
+
+      it('checkServiceBookingDefense enforces cooldown on email address to prevent spam flooding', async () => {
+        const fakeReq = {
+          ip: '198.51.100.55',
+          get: (h) => (h === 'x-forwarded-for' ? '198.51.100.55' : ''),
+          body: {
+            email: 'spammer-svc@target.test',
+          },
+        };
+
+        // 1. Initial request passes defense
+        let passed = false;
+        const res1 = createMockRes();
+        await checkServiceBookingDefense(fakeReq, res1, () => { passed = true; });
+        assert.equal(passed, true);
+
+        // 2. Set cooldown for this email
+        await setServiceBookingCooldown(fakeReq, null, 'spammer-svc@target.test');
+
+        // 3. Subsequent request with same email is blocked with 429
+        passed = false;
+        const res2 = createMockRes();
+        await checkServiceBookingDefense(fakeReq, res2, () => { passed = true; });
+        assert.equal(passed, false);
+        assert.equal(res2.statusCode, 429);
+        assert.match(res2.body.error, /cooldown active/i);
+
+        // 4. Clearing cooldown releases the restriction
+        await clearServiceBookingCooldown(fakeReq, null, 'spammer-svc@target.test');
+        passed = false;
+        const res3 = createMockRes();
+        await checkServiceBookingDefense(fakeReq, res3, () => { passed = true; });
         assert.equal(passed, true);
       });
 

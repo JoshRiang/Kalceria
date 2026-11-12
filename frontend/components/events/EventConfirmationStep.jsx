@@ -112,7 +112,11 @@ export function EventConfirmationStep({
                 className="flex flex-col items-center text-center w-full"
               >
                 <p className="text-white font-sans font-normal text-xs sm:text-sm md:text-base leading-relaxed text-center">
-                  System link established. Redirecting to operational headquarters via WhatsApp:
+                  System link established. Pastikan seluruh detail pendaftaran sudah sesuai —{" "}
+                  <span className="text-[#dc2626] font-bold">
+                    periksa kembali parameter tiket dan edit sebelum menekan konfirmasi via WhatsApp
+                  </span>
+                  . Redirecting to operational headquarters:
                 </p>
                 <button
                   type="button"
@@ -327,10 +331,10 @@ export function EventConfirmationStep({
               <button
                 type="button"
                 onClick={onEditDetails}
-                disabled={loading || isWindowExpired}
+                disabled={loading || isWindowExpired || hasConfirmedWa}
                 style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }}
                 className={`font-normal text-sm sm:text-base py-1.5 focus:outline-none underline underline-offset-2 transition-colors ${
-                  isWindowExpired
+                  isWindowExpired || hasConfirmedWa
                     ? "text-white/20 opacity-30 cursor-not-allowed pointer-events-none select-none"
                     : "text-white/70 hover:text-white cursor-pointer"
                 }`}

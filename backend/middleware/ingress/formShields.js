@@ -49,6 +49,13 @@ export async function checkServiceBookingDefense(req, res, next) {
   // 24-Hour Cooldown Verification
   const userId = req.user?.userId;
   const { machineTag, fingerprint } = resolveClientFingerprint(req);
+  const rawEmail = typeof req.body?.email === 'string'
+    ? req.body.email.trim().toLowerCase()
+    : (typeof req.body?.requestorEmail === 'string' && req.body.requestorEmail.includes('@')
+      ? req.body.requestorEmail.trim().toLowerCase()
+      : (typeof req.body?.identifier === 'string' && req.body.identifier.includes('@')
+        ? req.body.identifier.trim().toLowerCase()
+        : null));
 
   const keysToCheck = [
     `booking:cooldown:ip:${ip}`,
@@ -56,6 +63,7 @@ export async function checkServiceBookingDefense(req, res, next) {
   ];
   if (machineTag) keysToCheck.push(`booking:cooldown:tag:${machineTag}`);
   if (userId) keysToCheck.push(`booking:cooldown:user:${userId}`);
+  if (rawEmail) keysToCheck.push(`booking:cooldown:email:${rawEmail}`);
 
   let activeCooldown = false;
   let maxRemainingTtl = 0;
@@ -82,7 +90,7 @@ export async function checkServiceBookingDefense(req, res, next) {
     const retrySec = Math.max(1, maxRemainingTtl);
     res.setHeader('Retry-After', String(retrySec));
     return res.status(429).json({
-      error: 'Booking cooldown active. Only one service booking is permitted every 24 hours per user/network to ensure fair scheduling.',
+      error: 'Booking cooldown active. Only one service booking is permitted every 24 hours per device/network/email to ensure fair scheduling.',
       retryAfter: retrySec,
     });
   }
@@ -90,7 +98,7 @@ export async function checkServiceBookingDefense(req, res, next) {
   return next();
 }
 
-export async function setServiceBookingCooldown(req, userId) {
+export async function setServiceBookingCooldown(req, userId, email, ttlSeconds = BOOKING_COOLDOWN_SECONDS) {
   const { ip, machineTag, fingerprint } = resolveClientFingerprint(req);
 
   const keys = [
@@ -99,16 +107,19 @@ export async function setServiceBookingCooldown(req, userId) {
   ];
   if (machineTag) keys.push(`booking:cooldown:tag:${machineTag}`);
   if (userId) keys.push(`booking:cooldown:user:${userId}`);
+  const cleanEmail = typeof email === 'string' && email.includes('@') ? email.trim().toLowerCase() : null;
+  if (cleanEmail) keys.push(`booking:cooldown:email:${cleanEmail}`);
 
+  const effectiveTtl = Math.max(1, Number(ttlSeconds) || BOOKING_COOLDOWN_SECONDS);
   for (const key of keys) {
     await safeRedisCall(
-      () => redis.set(key, '1', 'EX', BOOKING_COOLDOWN_SECONDS),
-      () => setMem(key, '1', BOOKING_COOLDOWN_SECONDS)
+      () => redis.set(key, '1', 'EX', effectiveTtl),
+      () => setMem(key, '1', effectiveTtl)
     );
   }
 }
 
-export async function clearServiceBookingCooldown(req, userId) {
+export async function clearServiceBookingCooldown(req, userId, email) {
   const { ip, machineTag, fingerprint } = resolveClientFingerprint(req);
 
   const keys = [
@@ -117,6 +128,8 @@ export async function clearServiceBookingCooldown(req, userId) {
   ];
   if (machineTag) keys.push(`booking:cooldown:tag:${machineTag}`);
   if (userId) keys.push(`booking:cooldown:user:${userId}`);
+  const cleanEmail = typeof email === 'string' && email.includes('@') ? email.trim().toLowerCase() : null;
+  if (cleanEmail) keys.push(`booking:cooldown:email:${cleanEmail}`);
 
   for (const key of keys) {
     delMem(key);
@@ -247,7 +260,7 @@ export async function checkEventRegistrationDefense(req, res, next) {
     const retrySec = Math.max(1, maxRemainingTtl);
     res.setHeader('Retry-After', String(retrySec));
     return res.status(429).json({
-      error: 'Registration cooldown active. Only one registration is permitted per device/network to ensure fair scheduling.',
+      error: 'Registration cooldown active. Only one registration is permitted every 24 hours per device/network/email to ensure fair scheduling.',
       retryAfter: retrySec,
     });
   }

@@ -241,7 +241,8 @@ export async function updateServiceRequest(req, res, next) {
       await redis.del('cache:public_bookings');
     } catch {}
     try {
-      await setServiceBookingCooldown(req, booking.requestorId);
+      const emailForCooldown = booking.email || booking.requestor?.email;
+      await setServiceBookingCooldown(req, booking.requestorId, emailForCooldown);
     } catch {}
 
     const cancelSecret = process.env.JWT_SECRET || 'kalceria-service-cancel-fallback-secret';
@@ -332,7 +333,7 @@ export async function deleteOwnServiceRequest(req, res, next) {
 
     await prisma.serviceBooking.delete({ where: { id } });
     await redis.del('cache:public_bookings');
-    await clearServiceBookingCooldown(req, booking.requestorId);
+    await clearServiceBookingCooldown(req, booking.requestorId, booking.email || booking.requestor?.email);
     res.json({ message: 'Request deleted successfully.' });
   } catch (err) {
     next(err);
@@ -411,6 +412,10 @@ export async function confirmServiceRequest(req, res, next) {
     const targetEmail = booking.requestor?.email && !booking.requestor.email.endsWith('@guest.kalceria.local')
       ? booking.requestor.email
       : booking.email || '';
+
+    try {
+      await setServiceBookingCooldown(req, booking.requestorId, targetEmail);
+    } catch {}
 
     if (targetEmail) {
       await safeNotify(() => sendServiceRequestConfirmedEmail({

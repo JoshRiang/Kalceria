@@ -217,19 +217,35 @@ export async function confirmEventRegistration(req, res, next) {
       });
     }
 
-    const updatedReg = await prisma.eventRegistration.update({
-      where: { id: registration.id },
-      data: { paymentStatus: 'CONFIRMED', version: { increment: 1 } },
-      include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
+    const updatedReg = await prisma.$transaction(async (tx) => {
+      const reg = await tx.eventRegistration.update({
+        where: { id: registration.id },
+        data: { paymentStatus: 'CONFIRMED', version: { increment: 1 } },
+        include: { event: true, user: { select: { id: true, name: true, email: true, phone: true } } },
+      });
+
+      // Atomically decrement event quota by 1 (preserving non-negative floor)
+      if (registration.eventId) {
+        await tx.event.updateMany({
+          where: { id: registration.eventId, quota: { gt: 0 } },
+          data: { quota: { decrement: 1 } },
+        });
+      }
+
+      return reg;
     });
 
+    const recipientEmail = updatedReg.user?.email || registration.user?.email;
+
     await Promise.allSettled([
-      safeNotify(() => sendEventPaymentConfirmedEmail({
-        to: updatedReg.user.email,
-        event: updatedReg.event,
-        registration: updatedReg,
-      }), 'email-event-confirmed'),
-      setEventRegistrationCooldown(req, updatedReg.eventId, updatedReg.userId, updatedReg.user.email),
+      recipientEmail
+        ? safeNotify(() => sendEventPaymentConfirmedEmail({
+          to: recipientEmail,
+          event: updatedReg.event,
+          registration: updatedReg,
+        }), 'email-event-confirmed')
+        : Promise.resolve(),
+      setEventRegistrationCooldown(req, updatedReg.eventId, updatedReg.userId, recipientEmail),
     ]);
 
     if (isDirectGet) {

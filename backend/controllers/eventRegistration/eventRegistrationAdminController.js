@@ -31,10 +31,19 @@ export async function confirmRegistrationPayment(req, res, next) {
     if (version === undefined || version === null || !Number.isInteger(Number(version)) || Number(version) < 0) {
       return res.status(400).json({ error: 'Optimistic Concurrency Control: Version is required.' });
     }
-    const reg = await prisma.eventRegistration.update({
-      where: { id: req.params.id, version: Number(version) },
-      data: { paymentStatus: status, version: { increment: 1 } },
-      include: { user: { select: { id: true, name: true, email: true, phone: true } }, event: true },
+    const reg = await prisma.$transaction(async (tx) => {
+      const updated = await tx.eventRegistration.update({
+        where: { id: req.params.id, version: Number(version) },
+        data: { paymentStatus: status, version: { increment: 1 } },
+        include: { user: { select: { id: true, name: true, email: true, phone: true } }, event: true },
+      });
+      if (status === 'CONFIRMED' && updated.eventId) {
+        await tx.event.updateMany({
+          where: { id: updated.eventId, quota: { gt: 0 } },
+          data: { quota: { decrement: 1 } },
+        });
+      }
+      return updated;
     });
 
     if (status === 'CONFIRMED') {
