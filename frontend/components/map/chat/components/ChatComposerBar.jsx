@@ -3,7 +3,10 @@
 import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SmoothWaveform } from "./composer/SmoothWaveform";
-import { getReplyDisplayInfo } from "./messageBubble/replyHelpers";
+import {
+  getReplyDisplayInfo,
+  resolveEventMediaQuoteStatus,
+} from "./messageBubble/replyHelpers";
 
 export function ChatComposerBar({
   isMapDark,
@@ -48,35 +51,13 @@ export function ChatComposerBar({
       {/* Reply Banner when user is replying to a message */}
       {replyingTo && (() => {
         const replyInfo = getReplyDisplayInfo(replyingTo);
-        const isEventMedia = Boolean(replyInfo.isEventMedia || replyingTo.isEventMedia);
-        let isMediaDeleted = false;
-        let activeMediaUrl = replyInfo.mediaUrl || replyingTo.mediaUrl;
-        let isVideo = Boolean(replyInfo.isVideo || replyingTo.isVideo);
-
-        if (isEventMedia) {
-          const evId = replyingTo.eventId || replyInfo.eventId;
-          const clipId = replyingTo.clipId || replyInfo.clipId;
-          const targetEvent = (events || []).find(
-            (e) => String(e.id) === String(evId) || String(e.id) === String(evId).replace(/^event_/, "")
-          );
-          if (!targetEvent || !Array.isArray(targetEvent.mediaItems)) {
-            isMediaDeleted = true;
-          } else {
-            const foundClip = targetEvent.mediaItems.find(
-              (c) => (clipId && String(c.id) === String(clipId)) || (activeMediaUrl && String(c.url) === String(activeMediaUrl))
-            );
-            const clipUploadTs = Number(foundClip?.uploadedAt || replyingTo.uploadedAt || replyingTo.createdAt || 0);
-            const clipExpireTs = Number(foundClip?.expiresAt || 0);
-            const is24hExpired = (clipExpireTs > 0 && Date.now() >= clipExpireTs) ||
-                                 (clipUploadTs > 0 && Date.now() - clipUploadTs >= 24 * 60 * 60 * 1000);
-            if (!foundClip || is24hExpired) {
-              isMediaDeleted = true;
-            } else {
-              activeMediaUrl = foundClip.url;
-              isVideo = Boolean(foundClip.isVideo);
-            }
-          }
-        }
+        const quoteStatus = resolveEventMediaQuoteStatus({
+          replyTo: replyingTo,
+          quoteInfo: replyInfo,
+          events,
+        });
+        const { isEventMedia, isMediaDeleted, isVideo } = quoteStatus;
+        const activeMediaUrl = quoteStatus.activeMediaUrl;
 
         return (
           <div
@@ -178,7 +159,7 @@ export function ChatComposerBar({
                     className={`w-[38px] h-[38px] rounded-[6px] bg-[#6b7280]/60 backdrop-blur-md flex items-center justify-center shrink-0 select-none shadow-sm ${
                       isMapDark ? "text-black" : "text-white"
                     }`}
-                    title="Media telah dihapus"
+                    title="Media telah berakhir atau dihapus"
                   >
                     <span className="font-bold text-sm leading-none">?</span>
                   </div>

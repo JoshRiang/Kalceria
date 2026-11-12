@@ -6,7 +6,10 @@ import { ChatMediaCard } from "./ChatMediaCard";
 import {
   formatCallDurationTwoUnits,
 } from "./messageBubble/bubbleHelpers";
-import { getReplyDisplayInfo } from "./messageBubble/replyHelpers";
+import {
+  getReplyDisplayInfo,
+  resolveEventMediaQuoteStatus,
+} from "./messageBubble/replyHelpers";
 import { ChatCallLogBubble } from "./messageBubble/ChatCallLogBubble";
 import { ChatVoiceNoteBubble } from "./messageBubble/ChatVoiceNoteBubble";
 import { ChatStatusIndicator } from "./messageBubble/ChatStatusIndicator";
@@ -183,37 +186,13 @@ export function ChatMessageBubble({
           {/* Reply Reference Card (standard Line/WA/IG quote) */}
           {item.replyTo && (() => {
             const quoteInfo = getReplyDisplayInfo(item.replyTo);
-            const isEventMedia = Boolean(quoteInfo.isEventMedia || item.replyTo?.isEventMedia);
-            let isMediaDeleted = false;
-            let activeMediaUrl = quoteInfo.mediaUrl || item.replyTo?.mediaUrl;
-            let isVideo = Boolean(quoteInfo.isVideo || item.replyTo?.isVideo);
-            let targetClipIndex = item.replyTo?.clipIndex !== undefined ? item.replyTo.clipIndex : null;
-
-            if (isEventMedia) {
-              const evId = item.replyTo?.eventId || quoteInfo.eventId;
-              const clipId = item.replyTo?.clipId || quoteInfo.clipId;
-              const targetEvent = (events || []).find(
-                (e) => String(e.id) === String(evId) || String(e.id) === String(evId).replace(/^event_/, "")
-              );
-              if (!targetEvent || !Array.isArray(targetEvent.mediaItems)) {
-                isMediaDeleted = true;
-              } else {
-                const foundClip = targetEvent.mediaItems.find(
-                  (c) => (clipId && String(c.id) === String(clipId)) || (activeMediaUrl && String(c.url) === String(activeMediaUrl))
-                );
-                const clipUploadTs = Number(foundClip?.uploadedAt || item.replyTo?.uploadedAt || item.replyTo?.createdAt || 0);
-                const clipExpireTs = Number(foundClip?.expiresAt || 0);
-                const is24hExpired = (clipExpireTs > 0 && Date.now() >= clipExpireTs) ||
-                                     (clipUploadTs > 0 && Date.now() - clipUploadTs >= 24 * 60 * 60 * 1000);
-                if (!foundClip || is24hExpired) {
-                  isMediaDeleted = true;
-                } else {
-                  activeMediaUrl = foundClip.url;
-                  isVideo = Boolean(foundClip.isVideo);
-                  targetClipIndex = targetEvent.mediaItems.indexOf(foundClip);
-                }
-              }
-            }
+            const quoteStatus = resolveEventMediaQuoteStatus({
+              replyTo: item.replyTo,
+              quoteInfo,
+              events,
+            });
+            const { isEventMedia, isMediaDeleted, isVideo, targetClipIndex } = quoteStatus;
+            const activeMediaUrl = quoteStatus.activeMediaUrl;
 
             return (
               <div
@@ -346,7 +325,7 @@ export function ChatMessageBubble({
                         className={`w-[36px] h-[36px] rounded-[5px] bg-[#6b7280]/60 backdrop-blur-md flex items-center justify-center shrink-0 select-none shadow-sm ${
                           isMapDark ? "text-black" : "text-white"
                         }`}
-                        title="Media telah dihapus"
+                        title="Media telah berakhir atau dihapus"
                       >
                         <span className="font-bold text-sm leading-none">?</span>
                       </div>

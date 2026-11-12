@@ -243,5 +243,9 @@ export function getReplyDisplayInfo(replyObj) {
   info.clipId = replyObj.clipId || null;
   info.eventId = replyObj.eventId || null;
   info.clipIndex = replyObj.clipIndex !== undefined ? replyObj.clipIndex : null;
+  info.uploadedAt = replyObj.uploadedAt || replyObj.createdAt || null;
+  info.expiresAt = replyObj.expiresAt || null;
   return info;
 }
+
+export { toEpochMs, resolveEventMediaQuoteStatus } from "../../hooks/personalChat/replyPayload";

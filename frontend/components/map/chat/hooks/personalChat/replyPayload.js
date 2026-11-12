@@ -85,3 +85,76 @@ export function buildReplyDraft(msg, myId, activeChatUser, inferReplyMediaTypeFn
   };
 }
 
+export function toEpochMs(val) {
+  if (!val) return 0;
+  if (typeof val === 'number' && Number.isFinite(val)) return val;
+  const num = Number(val);
+  if (Number.isFinite(num) && num > 0) return num;
+  const parsed = new Date(val).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function resolveEventMediaQuoteStatus({
+  replyTo,
+  quoteInfo,
+  events = [],
+  now = Date.now(),
+  clipTtlMs = 24 * 60 * 60 * 1000,
+}) {
+  const isEventMedia = Boolean(quoteInfo?.isEventMedia || replyTo?.isEventMedia);
+  if (!isEventMedia) {
+    return {
+      isEventMedia: false,
+      isMediaDeleted: false,
+      activeMediaUrl: quoteInfo?.mediaUrl || replyTo?.mediaUrl || null,
+      isVideo: Boolean(quoteInfo?.isVideo || replyTo?.isVideo),
+      targetClipIndex: null,
+    };
+  }
+
+  const evId = replyTo?.eventId || quoteInfo?.eventId;
+  const clipId = replyTo?.clipId || quoteInfo?.clipId;
+  const activeMediaUrl = quoteInfo?.mediaUrl || replyTo?.mediaUrl;
+
+  const targetEvent = (events || []).find(
+    (e) => String(e?.id) === String(evId) || String(e?.id) === String(evId).replace(/^event_/, '')
+  );
+
+  const eventClips = Array.isArray(targetEvent?.mediaItems)
+    ? targetEvent.mediaItems
+    : Array.isArray(targetEvent?.mediaUrls)
+    ? targetEvent.mediaUrls.map((u) => ({ url: u }))
+    : [];
+
+  const foundClip = eventClips.find(
+    (c) => (clipId && String(c?.id) === String(clipId)) || (activeMediaUrl && String(c?.url) === String(activeMediaUrl))
+  );
+
+  const clipUploadTs = toEpochMs(
+    foundClip?.uploadedAt || replyTo?.uploadedAt || quoteInfo?.uploadedAt || targetEvent?.createdAt || replyTo?.createdAt
+  );
+  const clipExpireTs = toEpochMs(
+    foundClip?.expiresAt || replyTo?.expiresAt || quoteInfo?.expiresAt
+  );
+
+  const is24hExpired =
+    (clipExpireTs > 0 && now >= clipExpireTs) ||
+    (clipUploadTs > 0 && now - clipUploadTs >= clipTtlMs);
+
+  const isMediaDeleted = Boolean(!targetEvent || !foundClip || is24hExpired);
+
+  const resolvedUrl = foundClip?.url || activeMediaUrl;
+  const isVideo = Boolean(
+    foundClip?.isVideo !== undefined ? foundClip.isVideo : (quoteInfo?.isVideo || replyTo?.isVideo)
+  );
+  const targetClipIndex = foundClip && eventClips.length > 0 ? eventClips.indexOf(foundClip) : null;
+
+  return {
+    isEventMedia: true,
+    isMediaDeleted,
+    activeMediaUrl: resolvedUrl,
+    isVideo,
+    targetClipIndex: isMediaDeleted ? null : targetClipIndex,
+  };
+}
+
