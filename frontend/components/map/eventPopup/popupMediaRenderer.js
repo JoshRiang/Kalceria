@@ -109,7 +109,7 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
             />
           </div>
           <div
-            style="display: inline-flex; align-items: center; gap: 5px; padding: 2.5px 7px 2.5px 6px; border-radius: 9999px; background: rgba(0, 0, 0, 0.62); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.22); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45); color: #ffffff; pointer-events: auto;"
+            style="display: inline-flex; align-items: center; gap: 5px; padding: 2.5px 7px 2.5px 6px; border-radius: 9999px; background: ${isMapDark ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.88)"}; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid ${isMapDark ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.18)"}; box-shadow: ${isMapDark ? "0 2px 8px rgba(0, 0, 0, 0.45)" : "0 2px 8px rgba(0, 0, 0, 0.15)"}; color: ${isMapDark ? "#ffffff" : "#000000"}; pointer-events: auto;"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink: 0; display: block;">
               <circle cx="10" cy="10" r="6.5" fill="${isMapDark ? "#000000" : "#ffffff"}" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.5" />
@@ -117,21 +117,21 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
             </svg>
             <span
               data-media-view-count="${esc(clipId)}"
-              style="font-family: Arial, -apple-system, sans-serif; font-size: 11px; font-weight: 700; color: #ffffff; line-height: 1; letter-spacing: -0.01em;"
+              style="font-family: Arial, -apple-system, sans-serif; font-size: 11px; font-weight: 700; color: ${isMapDark ? "#ffffff" : "#000000"}; line-height: 1; letter-spacing: -0.01em;"
             >
               ${viewCount}
             </span>
-            <span style="width: 1px; height: 10px; background: rgba(255, 255, 255, 0.28); margin: 0 1px;"></span>
+            <span style="width: 1px; height: 10px; background: ${isMapDark ? "rgba(255, 255, 255, 0.28)" : "rgba(0, 0, 0, 0.18)"}; margin: 0 1px;"></span>
             <button
               type="button"
               title="Balas feed media ini"
               onpointerdown="event.stopPropagation();"
               onclick="event.stopPropagation(); window.__kalceriaReplyEventMedia?.('${esc(safeId)}', '${esc(clipId)}', ${i});"
-              style="background: transparent; border: none; padding: 2px 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #ffffff; opacity: 0.9; transition: opacity 0.15s ease;"
+              style="background: transparent; border: none; padding: 2px 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: ${isMapDark ? "#ffffff" : "#000000"}; opacity: 0.9; transition: opacity 0.15s ease;"
               onmouseenter="this.style.opacity='1';"
               onmouseleave="this.style.opacity='0.9';"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
                 <polyline points="9 17 4 12 9 7"></polyline>
                 <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
               </svg>

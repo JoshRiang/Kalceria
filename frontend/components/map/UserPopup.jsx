@@ -235,8 +235,8 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
             onclick="event.stopPropagation(); window.__kalceriaSwitchEventMedia?.('bcast_${esc(user.id)}', 0);"
             style="flex: 1 1 0; min-width: 0; padding: 2px 0 4px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
           >
-            <span style="display: block; width: 100%; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.32); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.45);">
-              <span data-carousel-fill="0" style="display: block; width: 100%; height: 100%; background: #ffffff; transform: scaleX(0); transform-origin: left center; will-change: transform;"></span>
+            <span style="display: block; width: 100%; height: 3px; border-radius: 3px; background: ${isMapDark ? "rgba(255, 255, 255, 0.32)" : "rgba(0, 0, 0, 0.15)"}; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,${isMapDark ? "0.45" : "0.15"});">
+              <span data-carousel-fill="0" style="display: block; width: 100%; height: 100%; background: ${isMapDark ? "#ffffff" : "#000000"}; transform: scaleX(0); transform-origin: left center; will-change: transform;"></span>
             </span>
           </button>
         </div>
@@ -250,12 +250,12 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
               gap: 5px;
               padding: 2.5px 7px 2.5px 6px;
               border-radius: 9999px;
-              background: rgba(0, 0, 0, 0.62);
+              background: ${isMapDark ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.88)"};
               backdrop-filter: blur(8px);
               -webkit-backdrop-filter: blur(8px);
-              border: 1px solid rgba(255, 255, 255, 0.22);
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-              color: #ffffff;
+              border: 1px solid ${isMapDark ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.18)"};
+              box-shadow: ${isMapDark ? "0 2px 8px rgba(0, 0, 0, 0.45)" : "0 2px 8px rgba(0, 0, 0, 0.12)"};
+              color: ${isMapDark ? "#ffffff" : "#000000"};
               pointer-events: auto;
             "
           >
@@ -266,21 +266,21 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
             </svg>
             <span
               data-broadcast-view-count="${esc(broadcastId)}"
-              style="font-family: Arial, -apple-system, sans-serif; font-size: 11px; font-weight: 700; color: #ffffff; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums;"
+              style="font-family: Arial, -apple-system, sans-serif; font-size: 11px; font-weight: 700; color: ${isMapDark ? "#ffffff" : "#000000"}; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums;"
             >
               ${viewCount}
             </span>
-            <span style="width: 1px; height: 10px; background: rgba(255, 255, 255, 0.28); margin: 0 1px;"></span>
+            <span style="width: 1px; height: 10px; background: ${isMapDark ? "rgba(255, 255, 255, 0.28)" : "rgba(0, 0, 0, 0.18)"}; margin: 0 1px;"></span>
             <button
               type="button"
               title="Balas broadcast ini"
               onpointerdown="event.stopPropagation();"
               onclick="event.stopPropagation(); window.__kalceriaReplyBroadcast?.('${esc(user.id)}');"
-              style="background: transparent; border: none; padding: 2px 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #ffffff; opacity: 0.9; transition: opacity 0.15s ease;"
+              style="background: transparent; border: none; padding: 2px 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: ${isMapDark ? "#ffffff" : "#000000"}; opacity: 0.9; transition: opacity 0.15s ease;"
               onmouseenter="this.style.opacity='1';"
               onmouseleave="this.style.opacity='0.9';"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
                 <polyline points="9 17 4 12 9 7"></polyline>
                 <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
               </svg>
