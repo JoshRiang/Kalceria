@@ -274,14 +274,14 @@ export function buildEventPaymentConfirmedEmailHtml({ event, registration }) {
           <img src="https://www.kalceria.id/favicon.png?v=2" alt="Kalceria" width="56" height="50" style="display:inline-block;border:none;outline:none;" />
         </div>
         <h2 style="font-size:18px;font-weight:bold;margin:0 0 12px 0;color:#000000;text-transform:uppercase;letter-spacing:0.5px;text-align:center;">RINGKASAN PESANAN</h2>
-        <!-- Status: Terkonfirmasi &amp; Terkunci | CONFIRMED -->
+        <!-- Status: Terkonfirmasi &amp; Terkunci | CONFIRMED | Order Confirmed -->
         <p style="font-size:13px;margin:0 0 16px 0;color:#000000;text-align:center;">
           Pendaftaran tiket kamu untuk event <strong>${safeTitle}</strong> telah terkonfirmasi dan resmi tersimpan di sistem Kalceria. Parameter pendaftaran dan slot tiket kamu telah terkunci.
         </p>
 
-        <div style="text-align:center;margin:16px 0 20px 0;">
-          <span style="display:inline-block;padding:8px 22px;border-radius:9999px;border:1px solid #10b981;background:#064e3b;color:#34d399;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;letter-spacing:0.5px;text-transform:uppercase;">
-            &#10003; ORDER CONFIRMED &amp; LOCKED
+        <div style="text-align:center;margin:12px 0 18px 0;">
+          <span style="display:inline-block;color:#16a34a;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;letter-spacing:0.3px;">
+            Order Confirmed
           </span>
         </div>
 
