@@ -12,7 +12,41 @@ export async function resolveEventRegistrant(req) {
   const { identifier, name, email, contact, mode } = req.body || {};
 
   // 1) Explicit "By Account" mode
-  if (mode === 'account' || (identifier && !name && !contact)) {
+  if (mode === 'account') {
+    const authId = req.user?.userId;
+    const raw = (identifier || email || '').trim();
+    if (!authId && !raw) {
+      return { error: 'LOGIN_REQUIRED' };
+    }
+    const found = authId
+      ? await prisma.user.findUnique({ where: { id: authId }, select: { id: true, name: true, email: true, phone: true } })
+      : (raw.includes('@')
+          ? await prisma.user.findUnique({ where: { email: raw.toLowerCase() }, select: { id: true, name: true, email: true, phone: true } })
+          : await prisma.user.findFirst({
+              where: {
+                OR: [
+                  { name: { equals: raw, mode: 'insensitive' } },
+                  { nickname: { equals: raw, mode: 'insensitive' } },
+                ],
+              },
+              select: { id: true, name: true, email: true, phone: true },
+            }));
+
+    if (!found) {
+      return { error: 'LOGIN_REQUIRED' };
+    }
+    const cleanContact = typeof contact === 'string' ? contact.trim() : '';
+    const cleanName = typeof name === 'string' ? name.trim() : '';
+    return {
+      userId: found.id,
+      guestContact: cleanContact || found.phone || '',
+      guestName: cleanName || found.name || '',
+      email: found.email,
+    };
+  }
+
+  // 1b) Legacy identifier mode (without explicit name & contact)
+  if (identifier && !name && !contact) {
     const raw = (identifier || email || '').trim();
     if (!raw) return { error: 'MISSING_IDENTITY' };
     if (raw.length > 254) return { error: 'ACCOUNT_NOT_FOUND' };

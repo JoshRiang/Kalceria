@@ -39,9 +39,10 @@ export function ApplyModal({
   const activeEmail = authUser?.email || "";
   const activeName = authUser?.displayName || authUser?.name || authUser?.nickname || "";
   const activePhone = authUser?.phone || "";
+  const isLoggedIn = Boolean(hasUserSession() || authUser?.id || activeEmail);
 
   const [idx, setIdx] = useState(startIndex);
-  const [mode, setMode] = useState(hasUserSession() || activeEmail ? "account" : "guest");
+  const [mode, setMode] = useState(isLoggedIn ? "account" : "guest");
   const [step, setStep] = useState(initialRegistrationId ? 2 : 1); // 1: Form Fill, 2: Review / Confirm / Cancel
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(
@@ -220,11 +221,26 @@ export function ApplyModal({
     if (step === 1) setIdx((p) => (p - 1 + events.length) % events.length);
   };
 
+  const handleModeSelect = (m) => {
+    if (m === "account" && !isLoggedIn) {
+      setMode("account");
+      setError("Login First.");
+      return;
+    }
+    setMode(m);
+    setError("");
+  };
+
   // Step 1: Candidate Validation & Immediate Registration in DB to Dispatch Email
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     if (!event?.id) return;
+
+    if (mode === "account" && !isLoggedIn) {
+      setError("Login First.");
+      return;
+    }
 
     const emailToValidate = (form.email || (mode === "account" && form.identifier?.includes("@") ? form.identifier : "")).trim();
     const nameToValidate = (form.name || (mode === "account" ? form.identifier : "")).trim();
@@ -503,7 +519,7 @@ export function ApplyModal({
                   <button
                     key={m}
                     type="button"
-                    onClick={() => { setMode(m); setError(""); }}
+                    onClick={() => handleModeSelect(m)}
                     className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${mode === m ? "bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]" : "text-slate-500 hover:text-white"}`}
                   >
                     {m === "account" ? "By Account" : "As Guest"}

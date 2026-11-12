@@ -238,6 +238,26 @@ describe('Service Request: Comms Channel & Location Verification', () => {
   });
 
   describe('5. Backend createServiceRequest Endpoint Hardening', () => {
+    it('rejects service request in "user" mode when unauthenticated with 401 Login First.', async () => {
+      const req = {
+        body: {
+          mode: 'user',
+          serviceType: 'EO',
+          serviceName: 'Valid Event Name',
+          contactPerson: 'Jawa Operator',
+          whatsapp: '+6281234567890',
+          location: 'Jl. Margonda Raya, Kota Depok, Jawa Barat',
+          slots: [{ date: '2026-11-05', startTime: '10:00', endTime: '11:00' }],
+        },
+      };
+      const res = createMockRes();
+
+      await createServiceRequest(req, res, () => {});
+
+      assert.equal(res.statusCode, 401);
+      assert.equal(res.body.error, 'Login First.');
+    });
+
     it('rejects service request with invalid phone number (e.g. 645645465) with 400 Bad Request', async () => {
       const req = {
         body: {

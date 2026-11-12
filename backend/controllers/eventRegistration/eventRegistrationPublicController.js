@@ -141,9 +141,10 @@ export async function checkEventEmailRegistration(req, res, next) {
     });
 
     return res.json({
-      isRegistered: Boolean(existing),
+      isRegistered: Boolean(existing && existing.paymentStatus === 'CONFIRMED'),
       paymentStatus: existing?.paymentStatus || null,
       isConfirmed: existing?.paymentStatus === 'CONFIRMED',
+      isPending: Boolean(existing && existing.paymentStatus === 'PENDING'),
     });
   } catch (err) {
     next(err);

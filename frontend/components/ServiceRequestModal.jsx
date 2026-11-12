@@ -27,7 +27,9 @@ export default function ServiceRequestModal({
   const authUser = useAuthStore((s) => s.user);
   const activeEmail = userEmail || authUser?.email || "";
   const activeName = userName || authUser?.displayName || authUser?.name || authUser?.nickname || "";
+  const isLoggedIn = Boolean(hasUserSession() || authUser?.id || activeEmail);
 
+  const [mode, setMode] = useState(isLoggedIn ? "user" : "guest");
   const [step, setStep] = useState(initialBookingId ? 1 : 0); // 0: Type, 1: Details, 2: Done
   const modalScrollRef = useRef(null);
 
@@ -446,8 +448,30 @@ export default function ServiceRequestModal({
     setStep(1);
   };
 
+  const handleModeSelect = (m) => {
+    if (m === "user" && !isLoggedIn) {
+      setMode("user");
+      setError("Login First.");
+      return;
+    }
+    setMode(m);
+    setError("");
+    if (m === "user" && isLoggedIn) {
+      setForm((p) => ({
+        ...p,
+        contactPerson: p.contactPerson || activeName,
+        email: p.email || activeEmail,
+        whatsapp: p.whatsapp || (authUser?.phone ? `+62${authUser.phone.replace(/^\+?62/, '').replace(/^0+/, '')}` : ""),
+      }));
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (mode === "user" && !isLoggedIn) {
+      setError("Login First.");
+      return;
+    }
     if (!form.serviceName || form.serviceName.trim().length < 2) {
       setError("Please provide a valid request title.");
       return;
@@ -542,6 +566,7 @@ export default function ServiceRequestModal({
         endpoint,
         {
           ...form,
+          mode,
           slots: slotsToSend,
         },
         {
@@ -724,6 +749,10 @@ export default function ServiceRequestModal({
                     setForm={setForm}
                     setField={setField}
                     handleSubmit={handleSubmit}
+                    mode={mode}
+                    setMode={setMode}
+                    handleModeSelect={handleModeSelect}
+                    isLoggedIn={isLoggedIn}
                     isLocationVerified={isLocationVerified}
                     setIsLocationVerified={setIsLocationVerified}
                     setError={setError}

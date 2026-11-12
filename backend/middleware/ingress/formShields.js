@@ -125,6 +125,7 @@ export async function clearServiceBookingCooldown(req, userId, email) {
   const keys = [
     `booking:cooldown:ip:${ip}`,
     `booking:cooldown:fp:${fingerprint}`,
+    `booking:burst:${ip}`,
   ];
   if (machineTag) keys.push(`booking:cooldown:tag:${machineTag}`);
   if (userId) keys.push(`booking:cooldown:user:${userId}`);
@@ -297,6 +298,7 @@ export async function clearEventRegistrationCooldown(req, eventId, userId, email
   const keys = [
     `event-reg:cooldown:ev:${eventId}:ip:${ip}`,
     `event-reg:cooldown:ev:${eventId}:fp:${fingerprint}`,
+    `event-reg:burst:${eventId}:${ip}`,
   ];
   if (machineTag) keys.push(`event-reg:cooldown:ev:${eventId}:tag:${machineTag}`);
   if (userId) keys.push(`event-reg:cooldown:ev:${eventId}:user:${userId}`);

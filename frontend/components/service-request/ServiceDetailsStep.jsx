@@ -11,6 +11,10 @@ export function ServiceDetailsStep({
   setForm,
   setField,
   handleSubmit,
+  mode = "guest",
+  setMode,
+  handleModeSelect,
+  isLoggedIn = false,
   isLocationVerified,
   setIsLocationVerified,
   setError,
@@ -46,6 +50,25 @@ export function ServiceDetailsStep({
             style={CLIP}
           >
             <div className="relative z-10 space-y-1">
+              <div className="flex bg-black/60 p-1 rounded-lg border border-white/10 backdrop-blur-md shadow-inner mb-3">
+                {[
+                  { id: "user", label: "As User" },
+                  { id: "guest", label: "As Guest" },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => (handleModeSelect ? handleModeSelect(m.id) : setMode?.(m.id))}
+                    className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${
+                      mode === m.id
+                        ? "bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                        : "text-slate-500 hover:text-white"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
               <Field
                 id="serviceName"
                 label="Request Title"

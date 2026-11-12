@@ -105,7 +105,11 @@ export async function createBooking(req, res, next) {
 export async function createServiceRequest(req, res, next) {
   try {
     const body = req.body || {};
-    const { serviceType, serviceName, contactPerson, whatsapp, location, additionalNotes, slots } = body;
+    const { serviceType, serviceName, contactPerson, whatsapp, location, additionalNotes, slots, mode } = body;
+
+    if (mode === 'user' && !req.user?.userId) {
+      return res.status(401).json({ error: 'Login First.' });
+    }
 
     if (!req.user?.userId && (!contactPerson || !whatsapp)) {
       return res.status(401).json({ error: 'Please sign in or provide contact details.' });
@@ -198,9 +202,9 @@ export async function createServiceRequest(req, res, next) {
     });
 
     const targetEmail = effectiveEmail || user.email;
-    // Invalidate public bookings cache & enforce 24-hour rate limit cooldown
+    // Invalidate public bookings cache & enforce 3-minute pending buffer cooldown (escalated to 24h upon confirmation)
     await redis.del('cache:public_bookings');
-    await setServiceBookingCooldown(req, user.id, targetEmail);
+    await setServiceBookingCooldown(req, user.id, targetEmail, 180);
     const senderLabel = targetEmail.endsWith('@guest.kalceria.local')
       ? `${contactPerson || user.name} (Guest)`
       : `${user.name || contactPerson} (${targetEmail})`;

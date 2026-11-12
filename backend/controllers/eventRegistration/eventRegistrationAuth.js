@@ -28,12 +28,12 @@ export function verifyEventRegistrationAuthorization(registration, req) {
 
   const authorizedByUser = Boolean(userId && registration.userId === userId);
   const authorizedByToken = Boolean(validTokenRegId && validTokenRegId === registration.id);
-  const isRecentGuest = Boolean(
-    registration.user?.email?.endsWith('@guest.kalceria.local') &&
+  const isRecentPending = Boolean(
+    registration.paymentStatus === 'PENDING' &&
     Date.now() - new Date(registration.createdAt).getTime() <= THREE_MINUTES_MS
   );
 
   req._eventTokenExpired = isTokenExpired;
-  return authorizedByUser || authorizedByToken || isRecentGuest;
+  return authorizedByUser || authorizedByToken || isRecentPending;
 }
 

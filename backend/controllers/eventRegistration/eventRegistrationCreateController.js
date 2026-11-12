@@ -15,6 +15,9 @@ export async function registerEvent(req, res, next) {
     const { selectedSession } = req.body || {};
 
     const registrant = await resolveEventRegistrant(req);
+    if (registrant.error === 'LOGIN_REQUIRED') {
+      return res.status(401).json({ error: 'Login First.' });
+    }
     if (registrant.error === 'MISSING_IDENTITY') {
       return res.status(401).json({ error: 'Please provide your account email/username or guest details.' });
     }

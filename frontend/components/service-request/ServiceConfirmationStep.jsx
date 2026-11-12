@@ -376,7 +376,7 @@ export function ServiceConfirmationStep({
             )}
             <button
               type="button"
-              onClick={handleCancel}
+              onClick={handleConfirmCancel}
               disabled={loading || isWindowExpired}
               style={{ fontFamily: "Arial, sans-serif", fontWeight: "normal", textTransform: "none" }}
               className={`font-normal text-sm sm:text-base py-1.5 focus:outline-none transition-colors bg-transparent border-none ${
