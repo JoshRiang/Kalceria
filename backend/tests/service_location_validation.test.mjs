@@ -22,6 +22,7 @@ import {
 } from '../controllers/serviceController.js';
 import {
   registerEvent,
+  checkEventEmailRegistration,
   buildEventRegistrationWaMessage,
   getEventRegistrationForManage,
   confirmEventRegistration,
@@ -1298,6 +1299,7 @@ describe('Service Request: Comms Channel & Location Verification', () => {
             eventRegistration: {
               deleteMany: async () => ({ count: 0 }),
               findUnique: async () => null,
+              findFirst: async () => null,
               count: async () => 1,
               create: async ({ data }) => ({
                 id: 'reg-new-uuid-888',
@@ -1354,6 +1356,109 @@ describe('Service Request: Comms Channel & Location Verification', () => {
           prisma.$transaction = originalTransaction;
           prisma.user.findUnique = originalUserFindUnique;
           prisma.user.create = originalUserCreate;
+        }
+      });
+
+      it('checkEventEmailRegistration detects existing registrations and prunes expired ones', async () => {
+        const originalFind = prisma.eventRegistration.findFirst;
+        const originalDeleteMany = prisma.eventRegistration.deleteMany;
+
+        prisma.eventRegistration.deleteMany = async () => ({ count: 0 });
+        prisma.eventRegistration.findFirst = async ({ where }) => {
+          if (where.eventId === 'evt-1' && where.user?.email === 'varsikurniawan@gmail.com') {
+            return { id: 'reg-varsi-1', paymentStatus: 'CONFIRMED' };
+          }
+          return null;
+        };
+
+        try {
+          const reqMatch = { params: { eventId: 'evt-1' }, query: { email: 'VarsiKurniawan@gmail.com' } };
+          const resMatch = createMockRes();
+          await checkEventEmailRegistration(reqMatch, resMatch, () => {});
+          assert.equal(resMatch.statusCode, 200);
+          assert.equal(resMatch.body.isRegistered, true);
+          assert.equal(resMatch.body.isConfirmed, true);
+
+          const reqNoMatch = { params: { eventId: 'evt-2' }, query: { email: 'varsikurniawan@gmail.com' } };
+          const resNoMatch = createMockRes();
+          await checkEventEmailRegistration(reqNoMatch, resNoMatch, () => {});
+          assert.equal(resNoMatch.statusCode, 200);
+          assert.equal(resNoMatch.body.isRegistered, false);
+        } finally {
+          prisma.eventRegistration.findFirst = originalFind;
+          prisma.eventRegistration.deleteMany = originalDeleteMany;
+        }
+      });
+
+      it('registerEvent rejects duplicate registration for same event with 409 but allows different event', async () => {
+        const originalTransaction = prisma.$transaction;
+        const originalUserFindUnique = prisma.user.findUnique;
+
+        prisma.user.findUnique = async () => ({
+          id: 'user-varsi-123',
+          name: 'Varsi Kurniawan',
+          email: 'varsikurniawan@gmail.com',
+          phone: '+628117998790',
+        });
+
+        prisma.$transaction = async (cb) => {
+          const mockTx = {
+            $queryRaw: async () => [],
+            event: {
+              findUnique: async () => ({
+                id: 'evt-1',
+                status: 'OPEN',
+                regStartTime: new Date(Date.now() - 3600000),
+                regEndTime: new Date(Date.now() + 3600000),
+                sessionOptions: ['Midnight Session 23:00'],
+                quota: 200,
+              }),
+            },
+            eventRegistration: {
+              deleteMany: async () => ({ count: 0 }),
+              findFirst: async ({ where }) => {
+                if (where.eventId === 'evt-1') {
+                  return {
+                    id: 'existing-reg-1',
+                    paymentStatus: 'CONFIRMED',
+                    selectedSession: 'Midnight Session 23:00',
+                    user: { name: 'Varsi', email: 'varsikurniawan@gmail.com', phone: '+628117998790' },
+                    event: { id: 'evt-1', title: 'Midnight Mechanics' },
+                  };
+                }
+                return null;
+              },
+              count: async () => 1,
+              create: async ({ data }) => ({
+                id: 'new-reg-different-event',
+                ...data,
+                user: { name: 'Varsi', email: 'varsikurniawan@gmail.com', phone: '+628117998790' },
+                event: { id: data.eventId, title: 'Different Event' },
+              }),
+            },
+          };
+          return cb(mockTx);
+        };
+
+        try {
+          const reqDup = {
+            params: { eventId: 'evt-1' },
+            body: {
+              name: 'Varsi Kurniawan',
+              email: 'varsikurniawan@gmail.com',
+              contact: '+628117998790',
+              selectedSession: 'Midnight Session 23:00',
+              mode: 'account',
+            },
+            get: () => '',
+          };
+          const resDup = createMockRes();
+          await registerEvent(reqDup, resDup, () => {});
+          assert.equal(resDup.statusCode, 409);
+          assert.equal(resDup.body.error, 'Email sudah terdaftar untuk event ini.');
+        } finally {
+          prisma.$transaction = originalTransaction;
+          prisma.user.findUnique = originalUserFindUnique;
         }
       });
 

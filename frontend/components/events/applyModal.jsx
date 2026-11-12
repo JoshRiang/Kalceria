@@ -78,6 +78,33 @@ export function ApplyModal({
     }
   }, [activeEmail, activeName, activePhone, form.email, form.name, form.contact]);
 
+  // Automatic check if email is already registered for this event (Form Part 1)
+  useEffect(() => {
+    const emailToTest = (form.email || (mode === "account" && form.identifier?.includes("@") ? form.identifier : "")).trim().toLowerCase();
+    if (!event?.id || !emailToTest || !EMAIL_REGEX.test(emailToTest) || isEditing || step !== 1) {
+      return;
+    }
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get(`/events/${event.id}/check-email`, {
+          params: { email: emailToTest },
+        });
+        if (!active) return;
+        if (res.data?.isRegistered) {
+          setError("Email sudah terdaftar untuk event ini");
+        } else if (error === "Email sudah terdaftar untuk event ini") {
+          setError("");
+        }
+      } catch {}
+    }, 400);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [form.email, form.identifier, mode, event?.id, isEditing, step, error]);
+
   // Handle incoming initialAction (cancel or confirm from email magic link)
   useEffect(() => {
     if (!initialRegistrationId) return;
@@ -319,6 +346,7 @@ export function ApplyModal({
 
   // User Cancel Action: Dimmed loading buffer screen, delete from backend, auto-close form
   const handleCancelRegistration = async () => {
+    if (isConfirmed) return;
     const regId = initialRegistrationId || doneData?.registration?.id;
     const token = initialToken || doneData?.cancelToken;
     if (!regId) {

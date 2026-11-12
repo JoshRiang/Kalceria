@@ -53,27 +53,29 @@ export async function registerEvent(req, res, next) {
         },
       });
 
-      // Active Registration Deduplication (Reuse pending registration to prevent Resend quota burn)
-      const existingReg = await tx.eventRegistration.findUnique({
-        where: { userId_eventId: { userId, eventId } },
-        include: { user: { select: { name: true, email: true, phone: true } }, event: true },
-      });
+      // One email on one event can only register once (active PENDING or CONFIRMED)
+      const targetEmail = (registrant.email || req.body?.email || '').trim().toLowerCase();
+      const existingReg = tx.eventRegistration.findFirst
+        ? await tx.eventRegistration.findFirst({
+            where: {
+              eventId,
+              OR: [
+                { userId },
+                ...(targetEmail ? [{ user: { email: targetEmail } }] : []),
+              ],
+            },
+            include: { user: { select: { name: true, email: true, phone: true } }, event: true },
+          })
+        : await tx.eventRegistration.findUnique({
+            where: { userId_eventId: { userId, eventId } },
+            include: { user: { select: { name: true, email: true, phone: true } }, event: true },
+          });
 
       if (existingReg) {
-        if (existingReg.paymentStatus === 'CONFIRMED') {
-          return { error: 'ALREADY_CONFIRMED' };
-        }
-        let reg = existingReg;
-        if (tx.eventRegistration.update && selectedSession && existingReg.selectedSession !== selectedSession) {
-          try {
-            reg = await tx.eventRegistration.update({
-              where: { id: existingReg.id },
-              data: { selectedSession },
-              include: { user: { select: { name: true, email: true, phone: true } }, event: true },
-            });
-          } catch {}
-        }
-        return { event, reg, isReused: true };
+        return {
+          error: 'ALREADY_REGISTERED',
+          isConfirmed: existingReg.paymentStatus === 'CONFIRMED',
+        };
       }
 
       const count = await tx.eventRegistration.count({ where: { eventId } });
@@ -91,8 +93,11 @@ export async function registerEvent(req, res, next) {
     if (result.error === 'WINDOW') return res.status(400).json({ error: 'Registration is not in active window.' });
     if (result.error === 'SESSION') return res.status(400).json({ error: 'Please select a valid event session.' });
     if (result.error === 'FULL') return res.status(400).json({ error: 'Event is full.' });
-    if (result.error === 'ALREADY_CONFIRMED') {
-      return res.status(409).json({ error: 'Pendaftaran untuk event ini sudah terkonfirmasi dan terkunci.', isConfirmed: true });
+    if (result.error === 'ALREADY_REGISTERED' || result.error === 'ALREADY_CONFIRMED') {
+      return res.status(409).json({
+        error: 'Email sudah terdaftar untuk event ini.',
+        isConfirmed: result.isConfirmed || false,
+      });
     }
     const { event, reg, isReused } = result;
 

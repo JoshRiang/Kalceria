@@ -58,7 +58,7 @@ import {
   createMerch, listMerch, listPublicMerch, updateMerch, toggleSoldOut, deleteMerch, recordMerchSale,
 } from "../controllers/adminMerchController.js";
 import {
-  registerEvent, listPublicEvents, getPublicEvent,
+  registerEvent, listPublicEvents, getPublicEvent, checkEventEmailRegistration,
   listRegistrations, confirmRegistrationPayment, deleteRegistration, markPdfExported,
   getEventRegistrationForManage, updateEventRegistration, confirmEventRegistration, deleteOwnEventRegistration,
   getEventRegistrationTimerBadge,
@@ -167,6 +167,7 @@ router.post("/auth/password/change", requireAuth, changePassword);
 // ─── Events (Public) ─────────────────────────────────────────────────────────
 router.get("/events", listPublicEvents);
 router.get("/events/:eventId", getPublicEvent);
+router.get("/events/:eventId/check-email", checkEventEmailRegistration);
 
 // ─── Event Registration (Auth optional / 2-step verification) ───────────────
 router.post("/events/:eventId/register", optionalAuth, bookingRateLimit, eventRegistrationDefense, registerEvent);

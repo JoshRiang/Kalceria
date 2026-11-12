@@ -113,4 +113,42 @@ export async function getEventRegistrationTimerBadge(req, res, next) {
   }
 }
 
+// ─── GET /events/:eventId/check-email (Check if email is already registered) ──
+export async function checkEventEmailRegistration(req, res, next) {
+  try {
+    const { eventId } = req.params;
+    const rawEmail = typeof req.query?.email === 'string' ? req.query.email.trim().toLowerCase() : '';
+    if (!eventId || !rawEmail) {
+      return res.json({ isRegistered: false });
+    }
+
+    // Lazy prune unconfirmed registrations older than 3 minutes
+    const cutoff = new Date(Date.now() - THREE_MINUTES_MS);
+    await prisma.eventRegistration.deleteMany({
+      where: {
+        eventId,
+        paymentStatus: 'PENDING',
+        createdAt: { lt: cutoff },
+      },
+    }).catch(() => {});
+
+    const existing = await prisma.eventRegistration.findFirst({
+      where: {
+        eventId,
+        user: { email: rawEmail },
+      },
+      select: { id: true, paymentStatus: true },
+    });
+
+    return res.json({
+      isRegistered: Boolean(existing),
+      paymentStatus: existing?.paymentStatus || null,
+      isConfirmed: existing?.paymentStatus === 'CONFIRMED',
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
 
