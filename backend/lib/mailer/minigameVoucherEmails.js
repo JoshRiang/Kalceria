@@ -25,6 +25,11 @@ function resolveAbsolutePosterUrl(event, frontendOrigin) {
     url = url.replace(/\.webp$/i, '.jpg');
   }
 
+  // Ensure query versioning to bust any CDN/proxy negative cache
+  if (!url.includes('?')) {
+    url = `${url}?v=kalceria`;
+  }
+
   return url;
 }
 
