@@ -2,11 +2,30 @@ import { sendEmail } from './emailClient.js';
 import { escapeHtml } from './emailUtils.js';
 
 function resolveAbsolutePosterUrl(event, frontendOrigin) {
+  const publicBase = (frontendOrigin && !frontendOrigin.includes('localhost') && frontendOrigin.startsWith('https://'))
+    ? frontendOrigin
+    : 'https://www.kalceria.id';
+
   const posterRaw = String(event?.displayPhotoUrl || event?.posterUrl || '').trim();
-  if (!posterRaw) return `${frontendOrigin}/logo-avatar.png`;
-  if (posterRaw.startsWith('http://') || posterRaw.startsWith('https://')) return posterRaw;
-  if (posterRaw.startsWith('/')) return `${frontendOrigin}${posterRaw}`;
-  return `${frontendOrigin}/${posterRaw}`;
+  let url = posterRaw;
+  if (!url) {
+    url = `${publicBase}/event_3.jpg`;
+  } else if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.includes('localhost')) {
+      url = url.replace(/^http:\/\/localhost(:\d+)?/i, 'https://www.kalceria.id');
+    }
+  } else if (url.startsWith('/')) {
+    url = `${publicBase}${url}`;
+  } else {
+    url = `${publicBase}/${url}`;
+  }
+
+  // Convert .webp to .jpg for universal email proxy rendering (Gmail GoogleImageProxy)
+  if (url.endsWith('.webp')) {
+    url = url.replace(/\.webp$/i, '.jpg');
+  }
+
+  return url;
 }
 
 function formatWibIssuedAt(isoDate) {
@@ -26,7 +45,10 @@ function formatWibIssuedAt(isoDate) {
 }
 
 export function buildMinigameVoucherEmailHtml({ event = {}, voucher = {}, registration = {}, user = {} }) {
-  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+  const rawOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+  const frontendOrigin = (rawOrigin.includes('localhost') || !rawOrigin.startsWith('https://'))
+    ? 'https://www.kalceria.id'
+    : rawOrigin;
   const safeTitle = escapeHtml(event.title || voucher.eventTitle || 'Kalceria Event');
   const safePosterUrl = escapeHtml(resolveAbsolutePosterUrl(event, frontendOrigin));
 
@@ -57,7 +79,7 @@ export function buildMinigameVoucherEmailHtml({ event = {}, voucher = {}, regist
 
         ${safePosterUrl ? `
           <div style="text-align:center;margin:0 0 24px 0;">
-            <img src="${safePosterUrl}" alt="${safeTitle}" width="260" style="width:260px;max-width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;display:block;margin:0 auto;border:none;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.25);" />
+            <img src="${safePosterUrl}" alt="${safeTitle}" width="260" height="347" style="width:260px;max-width:100%;height:auto;display:block;margin:0 auto;border:none;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.25);" />
           </div>
         ` : ''}
 

@@ -34,7 +34,10 @@ export async function sendEventNotificationEmail(toEmail, eventDetail, eventId) 
 }
 
 export function buildEventRegistrationEmailHtml({ event, registration, cancelToken, paymentCheckoutUrl }) {
-  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+  const rawOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+  const frontendOrigin = (rawOrigin.includes('localhost') || !rawOrigin.startsWith('https://'))
+    ? 'https://www.kalceria.id'
+    : rawOrigin;
   const token = cancelToken || '';
   const confirmUrl = `${frontendOrigin}/api/events/registration/${encodeURIComponent(registration.id)}/confirm?event_action=confirm&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}`;
   const cancelUrl = `${frontendOrigin}/events?event_action=cancel&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}&anchor=see-event#see-event`;
@@ -45,13 +48,15 @@ export function buildEventRegistrationEmailHtml({ event, registration, cancelTok
   const priceFormatted = Number(event.price || 0).toLocaleString('id-ID');
 
   const posterRaw = event.displayPhotoUrl || event.posterUrl || '';
-  const safePosterUrl = escapeHtml(
-    posterRaw.startsWith('http://') || posterRaw.startsWith('https://')
-      ? posterRaw
-      : posterRaw.startsWith('/')
-        ? `${frontendOrigin}${posterRaw}`
-        : `${frontendOrigin}/${posterRaw || 'logo-avatar.png'}`
-  );
+  let resolvedPoster = posterRaw.startsWith('http://') || posterRaw.startsWith('https://')
+    ? posterRaw
+    : posterRaw.startsWith('/')
+      ? `${frontendOrigin}${posterRaw}`
+      : `${frontendOrigin}/${posterRaw || 'logo-avatar.png'}`;
+  if (resolvedPoster.includes('localhost')) {
+    resolvedPoster = resolvedPoster.replace(/^http:\/\/localhost(:\d+)?/i, 'https://www.kalceria.id');
+  }
+  const safePosterUrl = escapeHtml(resolvedPoster);
 
   return `
       <style>
