@@ -5,12 +5,23 @@
  * Rules:
  * - Reply Icon replaced with Trashcan Icon (same 13x13 size, theme stroke).
  * - On tap, the media box transitions into a fade-in blur layer.
- * - Typography: Arial non-bold, not all capital (like Allow Camera, smaller size).
+ * - Carousel playback (whiteline progress and video/image duration) pauses on open.
+ * - Typography:
  *   - "Erase" is Bold Red (#ef4444).
  *   - "this Feed by" is normal weight.
- *   - "<X>" is user display name in Bold.
- * - "Yes" and "No" buttons with zero outer box, inheriting Allow Camera / Allow Mic behavior.
+ *   - "You" is user display identity in Bold.
+ * - On "No": Fade out blur overlay, resume carousel progress line until media finishes naturally.
+ * - On "Yes": Blur remains, transitions to a compact Arc Spinner buffer (Logging Out style),
+ *   executes deletion, gracefully fades out with aesthetic slide motion & whiteline recalibration.
  */
+
+function triggerCarouselHold(targetBoxEl, hold) {
+  if (typeof window === "undefined" || !targetBoxEl) return;
+  const safeId = resolveCarouselSafeId(targetBoxEl);
+  if (safeId) {
+    window.dispatchEvent(new CustomEvent("kalceria:carousel-hold", { detail: { safeId, hold } }));
+  }
+}
 
 export function getTrashIconSvg(isMapDark) {
   const stroke = isMapDark ? "#ffffff" : "#000000";
@@ -20,6 +31,15 @@ export function getTrashIconSvg(isMapDark) {
 export function getReplyIconSvg(isMapDark) {
   const stroke = isMapDark ? "#ffffff" : "#000000";
   return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>`;
+}
+
+function resolveCarouselSafeId(targetBoxEl) {
+  if (!targetBoxEl || typeof targetBoxEl.querySelector !== "function") return null;
+  const container =
+    (targetBoxEl.getAttribute?.("data-carousel-container") || targetBoxEl.hasAttribute?.("data-carousel-container"))
+      ? targetBoxEl
+      : targetBoxEl.querySelector?.("[data-carousel-container]") || targetBoxEl.closest?.("[data-carousel-container]");
+  return container?.getAttribute?.("data-carousel-container") || null;
 }
 
 export function showFeedDeletePrompt({
@@ -37,6 +57,9 @@ export function showFeedDeletePrompt({
   if (!prevPosition || prevPosition === "static") {
     targetBoxEl.style.position = "relative";
   }
+
+  // Freeze carousel playback & whiteline progress while decision prompt is active
+  triggerCarouselHold(targetBoxEl, true);
 
   const overlay = document.createElement("div");
   overlay.setAttribute("data-feed-delete-overlay", "true");
@@ -62,33 +85,40 @@ export function showFeedDeletePrompt({
 
   const textColor = isMapDark ? "#ffffff" : "#000000";
   const nameColor = isMapDark ? "#ffffff" : "#000000";
-  const safeName = String(authorDisplayName || "You")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  // The creator/author deleting their own media is displayed as "You"
+  const safeName = "You";
 
   overlay.innerHTML = `
-    <div style="font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13.5px; font-weight: normal; color: ${textColor}; text-align: center; padding: 0 16px; margin-bottom: 14px; line-height: 1.35; text-transform: none; pointer-events: none; text-shadow: ${isMapDark ? "0 2px 10px rgba(0,0,0,0.85)" : "0 1px 6px rgba(255,255,255,0.9)"};">
-      <strong style="color: #ef4444; font-weight: 700;">Erase</strong> this Feed by <strong style="color: ${nameColor}; font-weight: 700;">${safeName}</strong>?
-    </div>
-    <div style="display: flex; align-items: center; justify-content: center; gap: 32px; pointer-events: auto;">
-      <button
-        type="button"
-        data-action="yes"
-        style="background: transparent; border: none; padding: 4px 10px; cursor: pointer; outline: none; font-family: Arial, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; font-weight: normal; color: #ef4444; transition: transform 0.16s ease, color 0.16s ease; text-shadow: ${isMapDark ? "0 2px 10px rgba(0,0,0,0.8)" : "0 1px 6px rgba(255,255,255,0.9)"};"
-      >
-        Yes
-      </button>
-      <button
-        type="button"
-        data-action="no"
-        style="background: transparent; border: none; padding: 4px 10px; cursor: pointer; outline: none; font-family: Arial, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; font-weight: normal; color: ${textColor}; transition: transform 0.16s ease, color 0.16s ease; text-shadow: ${isMapDark ? "0 2px 10px rgba(0,0,0,0.8)" : "0 1px 6px rgba(255,255,255,0.9)"};"
-      >
-        No
-      </button>
+    <style>
+      @keyframes kalceriaDeleteSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    </style>
+    <div data-feed-delete-content style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; transition: opacity 140ms ease, transform 140ms ease;">
+      <div style="font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13.5px; font-weight: normal; color: ${textColor}; text-align: center; padding: 0 16px; margin-bottom: 14px; line-height: 1.35; text-transform: none; pointer-events: none; text-shadow: ${isMapDark ? "0 2px 10px rgba(0,0,0,0.85)" : "0 1px 6px rgba(255,255,255,0.9)"};">
+        <strong style="color: #ef4444; font-weight: 700;">Erase</strong> this Feed by <strong style="color: ${nameColor}; font-weight: 700;">${safeName}</strong>?
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 32px; pointer-events: auto;">
+        <button
+          type="button"
+          data-action="yes"
+          style="background: transparent; border: none; padding: 4px 10px; cursor: pointer; outline: none; font-family: Arial, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; font-weight: normal; color: #ef4444; transition: transform 0.16s ease, color 0.16s ease; text-shadow: ${isMapDark ? "0 2px 10px rgba(0,0,0,0.8)" : "0 1px 6px rgba(255,255,255,0.9)"};"
+        >
+          Yes
+        </button>
+        <button
+          type="button"
+          data-action="no"
+          style="background: transparent; border: none; padding: 4px 10px; cursor: pointer; outline: none; font-family: Arial, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; font-weight: normal; color: ${textColor}; transition: transform 0.16s ease, color 0.16s ease; text-shadow: ${isMapDark ? "0 2px 10px rgba(0,0,0,0.8)" : "0 1px 6px rgba(255,255,255,0.9)"};"
+        >
+          No
+        </button>
+      </div>
     </div>
   `;
 
+  const contentEl = overlay.querySelector('[data-feed-delete-content]');
   const yesBtn = overlay.querySelector('[data-action="yes"]');
   const noBtn = overlay.querySelector('[data-action="no"]');
 
@@ -108,22 +138,79 @@ export function showFeedDeletePrompt({
   if (noBtn) {
     noBtn.onclick = (e) => {
       e.stopPropagation();
-      noBtn.style.transform = "scale(1.22)";
+      noBtn.style.transform = "scale(0.95)";
+      overlay.style.opacity = "0";
+
       setTimeout(() => {
-        hideFeedDeletePrompt(targetBoxEl);
+        overlay.remove();
+        // Resume carousel whiteline progress until clip ends naturally
+        triggerCarouselHold(targetBoxEl, false);
         onCancel?.();
-      }, 160);
+      }, 180);
     };
   }
 
   if (yesBtn) {
-    yesBtn.onclick = (e) => {
+    yesBtn.onclick = async (e) => {
       e.stopPropagation();
-      yesBtn.style.transform = "scale(1.22)";
+      yesBtn.style.transform = "scale(0.92)";
+
+      // 1. Smoothly fade out confirmation text/buttons while KEEPING blur active
+      if (contentEl) {
+        contentEl.style.opacity = "0";
+        contentEl.style.transform = "scale(0.95)";
+      }
+
+      // 2. Render small Logging Out style arc spinner buffer
+      const spinnerEl = document.createElement("div");
+      spinnerEl.setAttribute("data-feed-delete-spinner", "true");
+      spinnerEl.style.position = "absolute";
+      spinnerEl.style.inset = "0";
+      spinnerEl.style.display = "flex";
+      spinnerEl.style.alignItems = "center";
+      spinnerEl.style.justifyContent = "center";
+      spinnerEl.style.pointerEvents = "none";
+      spinnerEl.style.opacity = "0";
+      spinnerEl.style.transition = "opacity 160ms ease";
+
+      spinnerEl.innerHTML = `
+        <div style="width: 28px; height: 28px; position: relative; display: flex; align-items: center; justify-content: center;">
+          <svg style="width: 100%; height: 100%; animation: kalceriaDeleteSpin 0.85s linear infinite; display: block;" viewBox="0 0 100 100">
+            <circle
+              cx="50"
+              cy="50"
+              r="42"
+              fill="none"
+              stroke="${isMapDark ? "#ffffff" : "#000000"}"
+              stroke-width="8"
+              stroke-dasharray="70 200"
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
+      `;
+
+      overlay.appendChild(spinnerEl);
+      requestAnimationFrame(() => {
+        spinnerEl.style.opacity = "1";
+      });
+
+      // 3. Execute deletion and allow aesthetic slack for organic non-jitter motion
+      const minSlackPromise = new Promise((resolve) => setTimeout(resolve, 360));
+      const confirmPromise = Promise.resolve().then(() => onConfirm?.());
+
+      try {
+        await Promise.all([confirmPromise, minSlackPromise]);
+      } catch (err) {
+        console.warn("[popupFeedDeletePrompt] Deletion error:", err);
+      }
+
+      // 4. Graceful fade out and remove overlay
+      overlay.style.transition = "opacity 200ms ease";
+      overlay.style.opacity = "0";
       setTimeout(() => {
-        hideFeedDeletePrompt(targetBoxEl);
-        onConfirm?.();
-      }, 160);
+        overlay.remove();
+      }, 200);
     };
   }
 

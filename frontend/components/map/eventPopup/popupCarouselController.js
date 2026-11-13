@@ -48,13 +48,7 @@ function emitWindowEvent(name, detail) {
 
 function snapshotForResume(state) {
   if (!state || state.activeIdx === null) return null;
-  return {
-    sig: state.sig,
-    idx: state.activeIdx,
-    seconds: state.currentSeconds || 0,
-    feedEnded: state.feedEnded,
-    at: performance.now(),
-  };
+  return { sig: state.sig, idx: state.activeIdx, seconds: state.currentSeconds || 0, feedEnded: state.feedEnded, at: performance.now() };
 }
 
 function destroyCarouselState(safeId, { keepSnapshot = false } = {}) {
@@ -281,6 +275,12 @@ export function initEventPopupCarouselsFromRoot(rootEl, popupInstance = null) {
       );
     }
 
+    const onHold = (e) => {
+      if (e.detail?.safeId === safeId) (e.detail.hold ? holdPause(state) : holdResume(state));
+    };
+    window.addEventListener("kalceria:carousel-hold", onHold);
+    state.persistentCleanup.push(() => window.removeEventListener("kalceria:carousel-hold", onHold));
+
     const handleWindowResize = () => syncGeometry(state, state.slides[state.activeIdx ?? 0]);
     window.addEventListener("resize", handleWindowResize);
     state.persistentCleanup.push(() => window.removeEventListener("resize", handleWindowResize));
@@ -314,9 +314,8 @@ function finishFeedSilently(state) {
 
 export function cleanupEventPopupCarouselsFromRoot(rootEl) {
   if (!rootEl) return;
-  const containers = rootEl.querySelectorAll("[data-carousel-container]");
-  containers.forEach((containerEl) => {
-    const safeId = containerEl.getAttribute("data-carousel-container");
+  rootEl.querySelectorAll("[data-carousel-container]").forEach((el) => {
+    const safeId = el.getAttribute("data-carousel-container");
     if (safeId) destroyCarouselState(safeId);
   });
 }
@@ -343,4 +342,9 @@ export function stepEventCarouselSlide(safeId, delta) {
     return;
   }
   stepFeed(state, Number(delta));
+}
+
+export function setCarouselHold(safeId, hold) {
+  const s = activeCarousels.get(safeId);
+  if (s && !s.destroyed) (hold ? holdPause(s) : holdResume(s));
 }

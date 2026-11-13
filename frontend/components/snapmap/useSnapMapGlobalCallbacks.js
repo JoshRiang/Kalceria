@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import api from "@/lib/api";
-import { delBroadcast, removeEventMedia } from "@/lib/api";
+import { delBroadcast, putBroadcast, removeEventMedia } from "@/lib/api";
 import {
   stepEventCarouselSlide,
   switchEventCarouselSlide,
@@ -458,20 +458,24 @@ export function useSnapMapGlobalCallbacks({
       const targetBoxEl = cardEl?.querySelector(".popup-video");
       if (!targetBoxEl) return;
 
-      const authorDisplayName =
-        clip?.authorName ||
-        currentUser?.displayName ||
-        currentUser?.name ||
-        currentUser?.nickname ||
-        "You";
-
       showFeedDeletePrompt({
         targetBoxEl,
         isMapDark,
-        authorDisplayName,
+        authorDisplayName: "You",
         onConfirm: async () => {
           try {
+            // Smoothly slide out the deleted media slide element
+            const slideEl =
+              targetBoxEl.querySelector(`[data-clip-id="${clip?.id || clipId}"]`) ||
+              targetBoxEl.querySelector(`[data-carousel-slide="${clipIndex}"]`);
+            if (slideEl) {
+              slideEl.style.transition = "transform 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 260ms ease";
+              slideEl.style.transform = "translateX(-100%)";
+              slideEl.style.opacity = "0";
+            }
+
             await removeEventMedia(cleanEventId, { clipId: clip?.id || clipId });
+            await new Promise((resolve) => setTimeout(resolve, 240));
             window.dispatchEvent(new CustomEvent("kalceria:refresh-events"));
           } catch (err) {
             console.error("[useSnapMapGlobalCallbacks] Failed to remove event media:", err);
@@ -500,27 +504,49 @@ export function useSnapMapGlobalCallbacks({
         document.querySelector(".broadcast-popup-box");
       if (!targetBoxEl) return;
 
-      const authorDisplayName =
-        currentUser?.displayName ||
-        currentUser?.name ||
-        currentUser?.nickname ||
-        "You";
-
       showFeedDeletePrompt({
         targetBoxEl,
         isMapDark,
-        authorDisplayName,
+        authorDisplayName: "You",
         onConfirm: async () => {
           try {
-            await delBroadcast();
-            if (currentUser) {
-              currentUser.broadcast = null;
+            // Check if broadcast has text beyond the media tag
+            const rawMessage = typeof currentUser?.broadcast === "object" ? currentUser.broadcast?.message : currentUser?.broadcast;
+            const cleanText = String(rawMessage || "").replace(/\[MEDIA:[^\]]+\]\s*/gi, "").trim();
+
+            if (cleanText) {
+              // Strip media from broadcast, preserving clean text
+              await putBroadcast({ message: cleanText });
+              if (currentUser) {
+                if (typeof currentUser.broadcast === "object" && currentUser.broadcast) {
+                  currentUser.broadcast.message = cleanText;
+                  currentUser.broadcast.mediaUrl = null;
+                } else {
+                  currentUser.broadcast = cleanText;
+                }
+              }
+            } else {
+              // No text left: delete entire broadcast
+              await delBroadcast();
+              if (currentUser) {
+                currentUser.broadcast = null;
+              }
             }
-            if (mapRef?.current) {
-              try {
-                mapRef.current.closePopup();
-              } catch (_) {}
+
+            // Smoothly collapse the inner media box so it disappears seamlessly
+            if (targetBoxEl) {
+              targetBoxEl.style.transition = "max-height 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 260ms ease, margin 280ms ease";
+              targetBoxEl.style.maxHeight = "0px";
+              targetBoxEl.style.opacity = "0";
+              targetBoxEl.style.margin = "0px";
             }
+
+            await new Promise((resolve) => setTimeout(resolve, 240));
+
+            if (!cleanText && mapRef?.current) {
+              try { mapRef.current.closePopup(); } catch (_) {}
+            }
+
             window.dispatchEvent(
               new CustomEvent("kalceria:open-edit-broadcast", {
                 detail: { userId, action: "deleted" },
