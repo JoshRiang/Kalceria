@@ -44,7 +44,7 @@ import {
   clearCallSignals,
   getLiveKitCallToken,
 } from "../controllers/personalChatController.js";
-import { getMinigameStatus, recordMinigameScore } from "../controllers/minigameController.js";
+import { getMinigameStatus, recordMinigameScore, getMyMinigameVoucher, finalizeMinigameChallenge } from "../controllers/minigameController.js";
 import { getMyBroadcast, createBroadcast, updateBroadcast, deleteBroadcast, recordBroadcastView } from "../controllers/broadcastController.js";
 import { redirectEvent } from "../controllers/redirectController.js";
 import { cleanupExpiredBroadcasts } from "../utils/cronWorker.js";
@@ -52,8 +52,10 @@ import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import { requireAdmin, requireJIT } from "../middleware/admin.js";
 import { requireEmailAuth, requirePublicSignup } from "../middleware/authAvailability.js";
 import {
-  createEvent, listEvents, updateEvent, deleteEvent,
+  createEvent, listEvents, updateEvent, deleteEvent, setEventTarget,
+  getEventVouchers, drawEventVouchers,
 } from "../controllers/adminEventController.js";
+import { uploadEventVideo, deleteEventVideo } from "../controllers/eventVideoController.js";
 import {
   createMerch, listMerch, listPublicMerch, updateMerch, toggleSoldOut, deleteMerch, recordMerchSale,
 } from "../controllers/adminMerchController.js";
@@ -222,7 +224,9 @@ router.delete("/services/request/:id", optionalAuth, deleteOwnServiceRequest);
 
 // ─── Minigame (Daily Attempt & Score Tracking) ─────────────────────────────────
 router.get("/minigame/status", optionalAuth, getMinigameStatus);
+router.get("/minigame/my-voucher", requireAuth, getMyMinigameVoucher);
 router.post("/minigame/score", requireAuth, recordMinigameScore);
+router.post("/minigame/finalize", optionalAuth, finalizeMinigameChallenge);
 
 // ─── Telemetry & Map ─────────────────────────────────────────────────────────
 router.post("/map/telemetry", requireAuth, saveTelemetry);
@@ -270,6 +274,11 @@ router.post('/admin/verify-jit', requireAdmin, jitRateLimit, verifyJitPassword);
 router.get("/admin/events", requireAdmin, listEvents);
 router.post("/admin/events", requireAdmin, createEvent);
 router.put("/admin/events/:id", requireAdmin, updateEvent);
+router.put("/admin/events/:id/target", requireAdmin, setEventTarget);
+router.get("/admin/events/:id/vouchers", requireAdmin, getEventVouchers);
+router.post("/admin/events/:id/vouchers/draw", requireAdmin, drawEventVouchers);
+router.post("/admin/events/:id/video", requireAdmin, uploadEventVideo);
+router.delete("/admin/events/:id/video", requireAdmin, deleteEventVideo);
 router.delete("/admin/events/:id", requireAdmin, requireJIT, deleteEvent);
 
 // ─── Admin: Merch ────────────────────────────────────────────────────────────

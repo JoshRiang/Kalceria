@@ -7,6 +7,11 @@ import {
   validateAndNormalizeMediaUrlClient,
 } from "@/lib/urlSecurity";
 import {
+  formatMediaDisplayName,
+  normalizeUploadErrorMessage,
+  validateMediaUploadFile,
+} from "@/lib/mediaUploadHelpers";
+import {
   inferIsVideoMediaUrl,
   probeMediaFileMetadata,
 } from "../../eventPopup/popupMediaMetadata";
@@ -23,6 +28,9 @@ export function EventMediaSection({
 }) {
   const fileInputRef = useRef(null);
   const fileNamesRef = useRef({});
+  const latestMediaUrlRef = useRef(eventForm.mediaUrl || "");
+  latestMediaUrlRef.current = eventForm.mediaUrl || "";
+
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [localIsUploadingMedia, setLocalIsUploadingMedia] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -30,10 +38,10 @@ export function EventMediaSection({
   const isUploadingMedia = externalIsUploading !== undefined ? externalIsUploading : localIsUploadingMedia;
   const setIsUploadingMedia = externalSetIsUploading || setLocalIsUploadingMedia;
 
-  // Clean up in-memory blob URLs when modal unmounts to prevent memory leaks
+  // Clean up any remaining in-memory blob URLs when modal unmounts to prevent memory leaks
   useEffect(() => {
     return () => {
-      const urls = splitMediaUrlListClient(eventForm.mediaUrl || "");
+      const urls = splitMediaUrlListClient(latestMediaUrlRef.current || "");
       urls.forEach((u) => {
         if (u && u.startsWith("blob:")) {
           try { URL.revokeObjectURL(u); } catch {}
@@ -45,22 +53,21 @@ export function EventMediaSection({
   const handleMediaUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 4.5 * 1024 * 1024) {
-      setUploadError("Ukuran file melebihi 4.5 MB. Maksimal ukuran file adalah 4.5 MB.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-    const ext = (file.name.split(".").pop() || "").toLowerCase();
-    if (!["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"].includes(ext)) {
-      setUploadError("Hanya file gambar (.png, .jpeg, .webp) dan video (.mp4, .m4v, .mov, .webm) yang diizinkan");
+
+    const validation = validateMediaUploadFile(file);
+    if (!validation.valid) {
+      setUploadError(validation.error);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    const isVideoFile = file.type.startsWith("video/") || ["mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"].includes(ext);
+    const isVideoFile = validation.isVideo;
     // Instant 0ms latency local preview
     const instantObjUrl = URL.createObjectURL(file);
     fileNamesRef.current[instantObjUrl] = file.name;
+
+    const currentBeforeInsert = splitMediaUrlListClient(latestMediaUrlRef.current || "");
+    const insertedIdx = currentBeforeInsert.length;
 
     setEventForm((f) => {
       const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
@@ -69,6 +76,7 @@ export function EventMediaSection({
       nextMeta[instantObjUrl] = { isVideo: isVideoFile };
       return { ...f, mediaUrl: nextUrls, mediaMetadataByUrl: nextMeta };
     });
+    setSelectedIdx(insertedIdx);
 
     setIsUploadingMedia(true);
     setUploadError("");
@@ -80,10 +88,12 @@ export function EventMediaSection({
       }));
       const res = await uploadBlobMedia(file, { purpose: "event-clip" });
       if (res?.url) {
-        // Revoke the temporary local preview blob URL once the uploaded permanent URL is ready
         try { URL.revokeObjectURL(instantObjUrl); } catch {}
         fileNamesRef.current[res.url] = file.name;
-        fileNamesRef.current[instantObjUrl] = file.name;
+        delete fileNamesRef.current[instantObjUrl];
+
+        const latestList = splitMediaUrlListClient(latestMediaUrlRef.current || "");
+        const replacedIdx = latestList.findIndex((u) => u === instantObjUrl);
 
         setEventForm((f) => {
           const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
@@ -94,17 +104,19 @@ export function EventMediaSection({
             ...(meta || {}),
             isVideo: isVideoFile,
           };
-          const targetIdx = existingUrls.findIndex((u) => u === instantObjUrl);
-          if (targetIdx !== -1) {
-            setSelectedIdx(targetIdx);
-          }
           return { ...f, mediaUrl: nextUrls, mediaMetadataByUrl: nextMeta };
         });
+        if (replacedIdx !== -1) {
+          setSelectedIdx(replacedIdx);
+        }
       }
     } catch (err) {
-      // Revert optimistic local preview and revoke memory if upload permanently fails
+      // Revert optimistic local preview and revoke memory if upload fails
       try { URL.revokeObjectURL(instantObjUrl); } catch {}
       delete fileNamesRef.current[instantObjUrl];
+
+      const latestList = splitMediaUrlListClient(latestMediaUrlRef.current || "");
+      const remainingCount = latestList.filter((u) => u !== instantObjUrl).length;
 
       setEventForm((f) => {
         const existingUrls = splitMediaUrlListClient(f.mediaUrl || "");
@@ -113,7 +125,8 @@ export function EventMediaSection({
         delete nextMeta[instantObjUrl];
         return { ...f, mediaUrl: nextUrls, mediaMetadataByUrl: nextMeta };
       });
-      setUploadError(err.message || "Failed to upload media");
+      setSelectedIdx((prev) => Math.max(0, Math.min(prev, remainingCount - 1)));
+      setUploadError(normalizeUploadErrorMessage(err));
     } finally {
       setIsUploadingMedia(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -121,6 +134,9 @@ export function EventMediaSection({
   };
 
   const handleRemoveCarouselMedia = (indexToRemove) => {
+    const currentUrls = splitMediaUrlListClient(eventForm.mediaUrl || "");
+    const nextLength = Math.max(0, currentUrls.length - 1);
+
     setEventForm((f) => {
       const urls = splitMediaUrlListClient(f.mediaUrl || "");
       const removedUrl = urls[indexToRemove];
@@ -134,9 +150,9 @@ export function EventMediaSection({
       if (removedUrl && nextMeta[removedUrl]) {
         delete nextMeta[removedUrl];
       }
-      setSelectedIdx((prev) => Math.max(0, Math.min(prev, urls.length - 2)));
       return { ...f, mediaUrl: updated, mediaMetadataByUrl: nextMeta };
     });
+    setSelectedIdx((prev) => Math.max(0, Math.min(prev, nextLength - 1)));
   };
 
   const handleClearAll = () => {
@@ -147,56 +163,23 @@ export function EventMediaSection({
       delete fileNamesRef.current[u];
     });
     setSelectedIdx(0);
+    setUploadError("");
     setEventForm((f) => ({ ...f, mediaUrl: "", mediaMetadataByUrl: {} }));
   };
 
   const parsedUrls = splitMediaUrlListClient(eventForm.mediaUrl || "");
-
-  // Format internal blob / server URL into clean original filename
-  const cleanFilename = (rawName) => {
-    if (!rawName) return "media-file";
-    if (rawName.startsWith("data:") || rawName.includes(";base64")) return "uploaded-media";
-    let decoded = rawName;
-    try {
-      decoded = decodeURIComponent(rawName);
-    } catch {}
-    // Strip standard UUID prefix (e.g. 7b5088fb-f360-4983-b1d1-732f56baa279- or _):
-    decoded = decoded.replace(
-      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[-_]/i,
-      ""
-    );
-    // Strip timestamp or numeric prefix (e.g. 1731174928123- or 1731174928123_):
-    decoded = decoded.replace(/^\d{9,}[-_]/, "");
-    // Strip Vercel Blob or random hash suffix before file extension (e.g. -xgFrwk6LKlT00nvx20bHRZ5v9QPR3W before .png):
-    decoded = decoded.replace(/-[a-zA-Z0-9_-]{16,40}(?=\.[a-zA-Z0-9]+$)/, "");
-    return decoded || "media-file";
-  };
-
-  const getDisplayFilename = (url) => {
-    if (!url) return "";
-    if (fileNamesRef.current[url]) return fileNamesRef.current[url];
-    if (url.startsWith("blob:") || url.startsWith("data:") || url.includes(";base64")) return "uploaded-media";
-    if (url.includes("/api/blob/raw")) {
-      try {
-        const inner = new URL(url, "https://kalceria.internal").searchParams.get("url") || "";
-        const parts = inner.split("/");
-        const last = parts[parts.length - 1];
-        return cleanFilename(last);
-      } catch {
-        return "uploaded-media";
-      }
-    }
-    try {
-      const u = new URL(url, "https://kalceria.internal");
-      const name = u.pathname.split("/").pop();
-      if (name) return cleanFilename(name);
-    } catch {}
-    return cleanFilename(url);
-  };
+  const getDisplayFilename = (url) => formatMediaDisplayName(url, fileNamesRef.current);
 
   const activeIdx = Math.min(selectedIdx, Math.max(0, parsedUrls.length - 1));
   const activeUrl = parsedUrls[activeIdx] || "";
-  const displayFilenameText = parsedUrls.length > 0
+  const isLockedAttachment =
+    parsedUrls.length > 1 ||
+    (parsedUrls.length === 1 &&
+      (activeUrl.startsWith("blob:") ||
+        activeUrl.startsWith("data:") ||
+        activeUrl.startsWith("/api/blob/") ||
+        Boolean(fileNamesRef.current[activeUrl])));
+  const displayFilenameText = isLockedAttachment
     ? getDisplayFilename(activeUrl)
     : (eventForm.mediaUrl || "");
 
@@ -238,21 +221,21 @@ export function EventMediaSection({
       <div className="flex gap-2">
         <input
           type="text"
-          readOnly={parsedUrls.length > 0}
+          readOnly={isLockedAttachment}
           className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all ${
             isModalDark
               ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff]"
               : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da]"
-          } ${parsedUrls.length > 0 ? "cursor-default select-all font-mono text-[11px]" : ""}`}
+          } ${isLockedAttachment ? "cursor-default select-all font-mono text-[11px]" : ""}`}
           value={displayFilenameText}
           onChange={(e) => {
-            if (parsedUrls.length === 0) {
+            if (!isLockedAttachment) {
               setEventForm((f) => ({ ...f, mediaUrl: e.target.value }));
               setUploadError("");
             }
           }}
           onBlur={() => {
-            if (parsedUrls.length === 0) {
+            if (!isLockedAttachment) {
               const raw = (eventForm.mediaUrl || "").trim();
               if (raw) {
                 const check = validateAndNormalizeMediaUrlClient(raw);

@@ -30,14 +30,18 @@ export async function listPublicEvents(req, res, next) {
       orderBy: [{ regStartTime: 'asc' }, { id: 'asc' }],
       take: limit + 1,
       select: {
-        id: true, title: true, description: true, displayPhotoUrl: true,
+        id: true, title: true, description: true, displayPhotoUrl: true, videoUrl: true,
         location: true, regStartTime: true, regEndTime: true,
         sessionOptions: true, price: true, quota: true, status: true,
+        isMinigameTarget: true,
         _count: { select: { registrations: true } },
       },
     });
     const hasMore = events.length > limit;
-    const pageEvents = events.slice(0, limit);
+    const pageEvents = events.slice(0, limit).map((e) => ({
+      ...e,
+      isTarget: Boolean(e.isMinigameTarget),
+    }));
     const lastEvent = pageEvents.at(-1);
     const nextCursor = hasMore && lastEvent
       ? encodePageCursor({ id: lastEvent.id, at: lastEvent.regStartTime })
@@ -57,7 +61,7 @@ export async function getPublicEvent(req, res, next) {
       include: { _count: { select: { registrations: true } } },
     });
     if (!event) return res.status(404).json({ error: 'Event not found.' });
-    res.json({ event });
+    res.json({ event: { ...event, isTarget: Boolean(event.isMinigameTarget) } });
   } catch (err) {
     next(err);
   }

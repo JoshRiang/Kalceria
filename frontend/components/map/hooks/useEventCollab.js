@@ -12,6 +12,10 @@ import {
 } from "@/lib/api";
 import { cleanEventDesc } from "../mockMiniEvents";
 import { probeMediaFileMetadata } from "../eventPopup/popupMediaMetadata";
+import {
+  normalizeUploadErrorMessage,
+  validateMediaUploadFile,
+} from "@/lib/mediaUploadHelpers";
 
 export function useEventCollab({ events, setEvents, setNotice }) {
   const [requestedEventId, setRequestedEventId] = useState(() => {
@@ -305,18 +309,11 @@ export function useEventCollab({ events, setEvents, setNotice }) {
       input.onchange = async (e) => {
         const file = e.target?.files?.[0];
         if (!file) return;
-        if (file.size > 4.5 * 1024 * 1024) {
+        const validation = validateMediaUploadFile(file);
+        if (!validation.valid) {
           setCollaboratorUploadState({
             status: "error",
-            errorMessage: "Upload media gagal: Ukuran media melebihi 4.5 MB",
-          });
-          return;
-        }
-        const ext = (file.name.split(".").pop() || "").toLowerCase();
-        if (!["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"].includes(ext)) {
-          setCollaboratorUploadState({
-            status: "error",
-            errorMessage: "Upload media gagal: Format file tidak didukung (gunakan PNG, JPG, WEBP, atau MP4/MOV)",
+            errorMessage: `Upload media gagal: ${validation.error}`,
           });
           return;
         }
@@ -360,7 +357,7 @@ export function useEventCollab({ events, setEvents, setNotice }) {
         } catch (err) {
           setCollaboratorUploadState({
             status: "error",
-            errorMessage: err?.response?.data?.error || err?.message || "Upload media Gagal/Ukuran Media melebihi 10 MB",
+            errorMessage: normalizeUploadErrorMessage(err, "Upload media gagal. Silakan coba lagi."),
           });
         }
       };

@@ -28,6 +28,7 @@ import {
   computeEmptyCardGeometry,
 } from "./eventPopup/popupGeometry";
 import { renderMediaCarousel } from "./eventPopup/popupMediaRenderer";
+import { getTrashIconSvg, getReplyIconSvg } from "./eventPopup/popupFeedDeletePrompt.js";
 import {
   renderDoubleMessageIconButton,
   renderRequestOrEnvelopeButton,
@@ -84,7 +85,7 @@ export function eventPopup(
   const bgImage = getInstantMapBgUrl(rawBgImage);
   const bgCssVar = isMapDark ? "--kalceria-event-bg-dark" : "--kalceria-event-bg-light";
   const cardBaseBg = isMapDark ? "#1b1c1e" : "#ffffff";
-  const bgOpacity = isMapDark ? 0.45 : 0.58;
+  const bgOpacity = isMapDark ? 0.22 : 0.28;
   const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.14)";
   const cardShadow = isMapDark
     ? "0 18px 46px rgba(0, 0, 0, 0.78), inset 0 1px 1px rgba(255, 255, 255, 0.16)"
@@ -175,6 +176,8 @@ export function eventPopup(
   const hasMedia = mediaItems.length > 0;
   const firstMedia = hasMedia ? mediaItems[0] : null;
   const firstClipId = firstMedia && typeof firstMedia === "object" && firstMedia.id ? String(firstMedia.id) : "clip_0";
+  const firstAuthorId = (firstMedia && typeof firstMedia === "object" && firstMedia.authorId) || eventCreatorId || null;
+  const isFirstSlideSelfAuthor = Boolean(curId && firstAuthorId && String(curId) === String(firstAuthorId));
   const firstAvatarUrl = (firstMedia && typeof firstMedia === "object" && firstMedia.authorAvatarUrl) || creatorAvatarUrl || "";
   const firstAuthorName = (firstMedia && typeof firstMedia === "object" && firstMedia.authorName) || rawCreatorDisplayName || "Kalcerian";
   const firstViewCount = firstMedia && typeof firstMedia === "object" && Number.isFinite(Number(firstMedia.viewCount)) ? Number(firstMedia.viewCount) : 0;
@@ -217,7 +220,7 @@ export function eventPopup(
   const videoFrameBg = mediaItems.length === 0 ? (isMapDark ? "#000000" : "#ffffff") : "#0b0d14";
 
   return `
-    <div class="tactical-card event-card ${isMapDark ? "event-card-dark" : "event-card-light"}" data-event-card-id="${esc(safeId)}" data-feed-orientation="${esc(initialGeometry.orientation || "unknown")}" style="position: relative; overflow: hidden; width: ${initialGeometry.cardWidth}px; transition: width ${geometryTransition}; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
+    <div class="tactical-card event-card ${isMapDark ? "event-card-dark" : "event-card-light"}" data-event-card-id="${esc(safeId)}" data-current-user-id="${esc(curId || "")}" data-feed-orientation="${esc(initialGeometry.orientation || "unknown")}" style="position: relative; overflow: hidden; width: ${initialGeometry.cardWidth}px; transition: width ${geometryTransition}; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
       <!-- Seamless background strip: mirrored tiles share edges, so the portrait artwork extends to any card width without gaps -->
       <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; display: flex; flex-direction: row; justify-content: center; align-items: stretch; overflow: hidden; opacity: ${bgOpacity}; transform: translateZ(0);">
         <div style="flex: 0 0 auto; height: 100%; aspect-ratio: var(--kalceria-event-bg-aspect, 0.5578); transform: scaleX(-1); background-image: var(${bgCssVar}, url('${bgImage}')); background-size: 100% 100%; background-repeat: no-repeat;"></div>
@@ -306,18 +309,26 @@ export function eventPopup(
             line-height: 1;
             letter-spacing: -0.01em;
             font-variant-numeric: tabular-nums;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 14px;
+            overflow: hidden;
+            position: relative;
+            vertical-align: middle;
+            min-width: 8px;
           "
         >
           ${firstViewCount}
         </span>
 
-        <!-- Reply button (toggles dark/light) -->
+        <!-- Action button: Trashcan when current user posted this clip, Reply otherwise (toggles dark/light) -->
         <button
           type="button"
           data-media-reply-btn="${esc(safeId)}"
-          title="Balas feed media ini"
+          title="${isFirstSlideSelfAuthor ? "Hapus feed media ini" : "Balas feed media ini"}"
           onpointerdown="event.stopPropagation();"
-          onclick="event.stopPropagation(); window.__kalceriaReplyEventMedia?.('${esc(safeId)}', '${esc(firstClipId)}', 0);"
+          onclick="event.stopPropagation(); window.__kalceriaHandleMediaAction?.('${esc(safeId)}', '${esc(firstClipId)}', 0);"
           style="
             background: transparent;
             border: none;
@@ -333,19 +344,16 @@ export function eventPopup(
           onmouseenter="this.style.opacity='1';"
           onmouseleave="this.style.opacity='0.9';"
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-            <polyline points="9 17 4 12 9 7"></polyline>
-            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
-          </svg>
+          ${isFirstSlideSelfAuthor ? getTrashIconSvg(isMapDark) : getReplyIconSvg(isMapDark)}
         </button>
       </div>
       `
           : ""
       }
 
-      <!-- Framed Media Screen: width/height follow the real clip aspect ratio (portrait ↔ 16:9 landscape), dark backdrop so no white flash -->
+      <!-- Framed Media Screen: width/height follow the real clip aspect ratio (portrait ↔ 16:9 landscape), transparent backdrop -->
       <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; transition: height ${geometryTransition}; margin: 2px 12px 8px 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
-        ${renderMediaCarousel(mediaItems, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId)}
+        ${renderMediaCarousel(mediaItems, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId, eventCreatorId || "")}
       </div>
 
       <!-- Footer: dynamic expanding/contracting white/dark box with user briefing positioned cleanly above the location link -->

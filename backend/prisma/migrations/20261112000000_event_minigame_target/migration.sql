@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "isMinigameTarget" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS "targetAssignedAt" TIMESTAMP(3);

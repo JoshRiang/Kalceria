@@ -25,6 +25,11 @@ export function buildEffectiveDatabaseUrl(rawUrl = process.env.DATABASE_URL, ove
   try {
     const parsed = new URL(trimmed);
 
+    // Neon connection strings sometimes include channel_binding=require, which Prisma's query engine rejects
+    if (parsed.searchParams.has('channel_binding')) {
+      parsed.searchParams.delete('channel_binding');
+    }
+
     // Apply connection_limit if not already explicitly specified
     if (!parsed.searchParams.has('connection_limit')) {
       const limit = overrides.connection_limit ?? DEFAULT_SERVERLESS_CONNECTION_LIMIT;

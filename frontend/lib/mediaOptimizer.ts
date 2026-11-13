@@ -100,12 +100,15 @@ export async function optimizeUploadMedia(
   // 2. Handle Static Images (PNG, JPG, WebP)
   if (isStaticImage) {
     try {
-      const image = sharp(inputBuffer);
-      const meta = await image.metadata();
-      const width = meta.width || 0;
-      const needsResize = width > 800;
+      // Auto-orient pixels according to EXIF before measuring or resizing so portrait photos stay portrait
+      let pipeline = sharp(inputBuffer).rotate();
+      const meta = await pipeline.metadata();
+      const rawWidth = meta.width || 0;
+      const rawHeight = meta.height || 0;
+      const isSwappedOrientation = Boolean(meta.orientation && meta.orientation >= 5 && meta.orientation <= 8);
+      const orientedWidth = isSwappedOrientation ? rawHeight : rawWidth;
+      const needsResize = orientedWidth > 800;
 
-      let pipeline = sharp(inputBuffer);
       if (needsResize) {
         pipeline = pipeline.resize({
           width: 800,
@@ -113,23 +116,24 @@ export async function optimizeUploadMedia(
         });
       }
 
-      let processed: Buffer;
+      let result: { data: Buffer; info: sharp.OutputInfo };
       let contentType = declaredMimeType;
 
       if (meta.format === "png") {
-        processed = await pipeline.png({ compressionLevel: 9, effort: 7 }).toBuffer();
+        result = await pipeline.png({ compressionLevel: 6, effort: 4 }).toBuffer({ resolveWithObject: true });
         contentType = "image/png";
       } else if (meta.format === "jpeg" || meta.format === "jpg") {
-        processed = await pipeline.jpeg({ quality: 90, mozjpeg: true }).toBuffer();
+        result = await pipeline.jpeg({ quality: 90, mozjpeg: true }).toBuffer({ resolveWithObject: true });
         contentType = "image/jpeg";
       } else if (meta.format === "webp") {
-        processed = await pipeline.webp({ quality: 90, effort: 6 }).toBuffer();
+        result = await pipeline.webp({ quality: 90, effort: 5 }).toBuffer({ resolveWithObject: true });
         contentType = "image/webp";
       } else {
-        processed = await pipeline.toBuffer();
+        result = await pipeline.toBuffer({ resolveWithObject: true });
       }
 
-      const shouldAdopt = processed.length < originalSize || needsResize;
+      const processed = result.data;
+      const shouldAdopt = processed.length < originalSize || needsResize || isSwappedOrientation;
       const finalBuffer = shouldAdopt ? processed : inputBuffer;
       const finalSize = finalBuffer.length;
       const reduction = originalSize > 0
@@ -145,8 +149,8 @@ export async function optimizeUploadMedia(
         reductionPercent: reduction,
         isOptimized: shouldAdopt,
         dimensions: {
-          width: needsResize ? 800 : width,
-          height: meta.height,
+          width: shouldAdopt ? result.info.width : orientedWidth,
+          height: shouldAdopt ? result.info.height : (isSwappedOrientation ? rawWidth : rawHeight),
         },
       };
     } catch (imgErr) {

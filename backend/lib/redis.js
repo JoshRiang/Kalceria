@@ -46,6 +46,39 @@ class MemoryRedisFallback {
     return 'OK';
   }
 
+  async incr(key) {
+    const item = this.kv.get(key);
+    let current = 0;
+    let exp = null;
+    if (item) {
+      if (this._isExpired(item)) {
+        this.kv.delete(key);
+      } else {
+        current = Number(item.val) || 0;
+        exp = item.exp;
+      }
+    }
+    const nextVal = current + 1;
+    this.kv.set(key, { val: String(nextVal), exp });
+    return nextVal;
+  }
+
+  async type(key) {
+    if (this.sets.has(key)) return 'set';
+    if (this.zsets.has(key)) return 'zset';
+    if (this.hashes.has(key)) return 'hash';
+    if (this.lists.has(key)) return 'list';
+    const item = this.kv.get(key);
+    if (item) {
+      if (this._isExpired(item)) {
+        this.kv.delete(key);
+        return 'none';
+      }
+      return 'string';
+    }
+    return 'none';
+  }
+
   async setex(key, seconds, val) {
     return this.set(key, val, 'EX', seconds);
   }
@@ -330,6 +363,8 @@ class MemoryRedisFallback {
       set: (k, v, ...a) => { operations.push(() => this.set(k, v, ...a)); return proxy; },
       setex: (k, s, v) => { operations.push(() => this.setex(k, s, v)); return proxy; },
       get: (k) => { operations.push(() => this.get(k)); return proxy; },
+      incr: (k) => { operations.push(() => this.incr(k)); return proxy; },
+      type: (k) => { operations.push(() => this.type(k)); return proxy; },
       del: (...k) => { operations.push(() => this.del(...k)); return proxy; },
       expire: (k, t) => { operations.push(() => this.expire(k, t)); return proxy; },
       sadd: (k, ...m) => { operations.push(() => this.sadd(k, ...m)); return proxy; },

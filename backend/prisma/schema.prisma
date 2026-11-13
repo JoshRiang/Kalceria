@@ -250,6 +250,11 @@ model Event {
   createdAt       DateTime    @default(now())
   version         Int         @default(1)
 
+  isMinigameTarget Boolean   @default(false)
+  targetAssignedAt DateTime?
+  videoUrl         String?
+  videoMeta        Json?
+
   registrations EventRegistration[]
 
   @@map("events")

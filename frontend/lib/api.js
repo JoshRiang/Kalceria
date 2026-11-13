@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { clearSession, touchSession } from './session';
+import { normalizeUploadErrorMessage } from './mediaUploadHelpers';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const apiBaseUrl = isProduction
@@ -230,6 +231,8 @@ const MIME_EXT_MAP = {
   "audio/mp3": "mp3",
 };
 
+const UPLOAD_TIMEOUT_MS = 45000;
+
 export const uploadBlobMedia = async (file, { purpose } = {}) => {
   if (file && file.size > MAX_UPLOAD_BYTES) {
     throw new Error("Ukuran file melebihi batas 4.5 MB. Mohon gunakan file dengan ukuran lebih kecil.");
@@ -248,7 +251,15 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
   if (purpose) formData.append("purpose", purpose);
 
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const timeoutId = controller ? setTimeout(() => controller.abort(), 8000) : null;
+  const timeoutId = controller
+    ? setTimeout(() => {
+        try {
+          controller.abort(new Error("Waktu unggah habis. Silakan coba lagi."));
+        } catch {
+          controller.abort();
+        }
+      }, UPLOAD_TIMEOUT_MS)
+    : null;
   try {
     const res = await fetch("/api/blob/upload", {
       method: "POST",
@@ -263,6 +274,8 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
       throw new Error(err.error || "Gagal mengunggah file media.");
     }
     return await res.json();
+  } catch (err) {
+    throw new Error(normalizeUploadErrorMessage(err, "Gagal mengunggah file media."));
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }

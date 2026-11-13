@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
+import { incrementViewCounter, readViewCounter } from '../utils/viewCounter.js';
 
 async function invalidateKalceriansCache() {
   try {
@@ -35,12 +36,7 @@ function validateBroadcastInput(text, mediaUrl) {
 
 export async function getBroadcastViewCount(broadcastId) {
   if (!broadcastId) return 0;
-  try {
-    const count = await redis.scard(`broadcast:views:${broadcastId}`);
-    return Number(count) || 0;
-  } catch {
-    return 0;
-  }
+  return readViewCounter(`broadcast:views:${broadcastId}`);
 }
 
 export async function formatBroadcastItem(broadcast) {
@@ -176,20 +172,16 @@ export async function recordBroadcastView(req, res, next) {
     }
 
     const viewerUserId = req.user?.userId || null;
-    const clientIp = req.clientIp || req.ip || 'anonymous';
-    const viewerKey = viewerUserId ? `u:${viewerUserId}` : `ip:${clientIp}`;
-
     const isAuthor = Boolean(viewerUserId && String(broadcast.userId) === String(viewerUserId));
     const k = `broadcast:views:${broadcast.id}`;
 
-    if (!isAuthor && viewerKey) {
-      try {
-        await redis.sadd(k, viewerKey);
-        await redis.expire(k, 7 * 24 * 60 * 60);
-      } catch {}
+    let viewCount = 0;
+    if (!isAuthor) {
+      viewCount = await incrementViewCounter(k);
+    } else {
+      viewCount = await readViewCounter(k);
     }
 
-    const viewCount = await getBroadcastViewCount(broadcast.id);
     return res.json({ success: true, viewCount });
   } catch (err) {
     next(err);

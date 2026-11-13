@@ -30,10 +30,14 @@ export function useMapViewport({
   showStartup,
   setIsRecentering,
   setIsMapEngineReady,
+  hasInitialCenteredRef = null,
 }) {
   const recenterMap = useCallback(() => {
     if (!mapRef.current) return;
     setIsRecentering(true);
+    if (hasInitialCenteredRef) {
+      hasInitialCenteredRef.current = true;
+    }
     const me = mapUsersData.find((u) => u.id === currentUser?.id);
     if (me && me.isOnline !== false && hasValidCoordinates(me.lat, me.lng)) {
       const mLat = Number(me.lat);
@@ -68,7 +72,7 @@ export function useMapViewport({
         easeLinearity: 0.25,
       });
     }
-  }, [mapUsersData, currentUser, selfLiveCoords]);
+  }, [mapUsersData, currentUser, selfLiveCoords, hasInitialCenteredRef]);
 
   // Map Event Tracking
   const handleMapReady = useCallback((mapInstance) => {
@@ -82,7 +86,19 @@ export function useMapViewport({
     mapInstance.on("moveend", () => {
       setIsRecentering(false);
     });
-  }, []);
+
+    // Mark initial centering as done if user manually drags or zooms the map
+    mapInstance.on("dragstart", () => {
+      if (hasInitialCenteredRef) {
+        hasInitialCenteredRef.current = true;
+      }
+    });
+    mapInstance.on("zoomstart", (e) => {
+      if (!e?.fromSetView && hasInitialCenteredRef) {
+        hasInitialCenteredRef.current = true;
+      }
+    });
+  }, [hasInitialCenteredRef]);
 
   // Guarantee tile loading & viewport synchronization when startup sequence completes
   useEffect(() => {
@@ -104,17 +120,31 @@ export function useMapViewport({
   }, [currentUser, selfLiveCoords]);
 
   useEffect(() => {
-    if (showStartup && mapRef.current) {
+    if (showStartup && mapRef.current && !hasInitialCenteredRef?.current) {
+      const isPopupOpen =
+        typeof document !== "undefined" &&
+        Boolean(
+          document.querySelector(
+            ".leaflet-popup, .event-tactical-popup, .broadcast-tactical-popup, .broadcast-popup-box"
+          )
+        );
+      if (isPopupOpen) return;
+
       const coords =
         selfLiveCoords ||
         (hasValidCoordinates(currentUser?.domicileLat, currentUser?.domicileLng)
           ? { lat: Number(currentUser.domicileLat), lng: Number(currentUser.domicileLng) }
           : null);
       if (coords && hasValidCoordinates(coords.lat, coords.lng)) {
-        mapRef.current.setView([coords.lat, coords.lng], 15, { animate: false });
+        try {
+          mapRef.current.setView([coords.lat, coords.lng], 15, { animate: false });
+          if (hasInitialCenteredRef) {
+            hasInitialCenteredRef.current = true;
+          }
+        } catch (_) {}
       }
     }
-  }, [showStartup, selfLiveCoords, currentUser]);
+  }, [showStartup, selfLiveCoords, currentUser, hasInitialCenteredRef]);
 
   return {
     recenterMap,

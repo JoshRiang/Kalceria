@@ -92,20 +92,33 @@ export async function POST(req: NextRequest) {
           options.token = blobToken;
         }
 
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Vercel Blob put operation timed out after 5000ms")), 5000)
-        );
+        const putWithTimeout = async (putOptions: typeof options) => {
+          let timerId: ReturnType<typeof setTimeout> | null = null;
+          try {
+            return await Promise.race([
+              put(safeFilename, optimized.buffer, putOptions),
+              new Promise<never>((_, reject) => {
+                timerId = setTimeout(
+                  () => reject(new Error("Vercel Blob put operation timed out after 25000ms")),
+                  25000
+                );
+              }),
+            ]);
+          } finally {
+            if (timerId) clearTimeout(timerId);
+          }
+        };
 
         let blob;
         let isPrivate = false;
         try {
-          blob = await Promise.race([put(safeFilename, optimized.buffer, options), timeoutPromise]);
+          blob = await putWithTimeout(options);
         } catch (firstErr: unknown) {
           const msg = firstErr instanceof Error ? firstErr.message : "";
           // If store is configured with private access, seamlessly retry with private access
           if (msg.includes("Cannot use public access on a private store") || msg.includes("private store")) {
             options.access = "private";
-            blob = await Promise.race([put(safeFilename, optimized.buffer, options), timeoutPromise]);
+            blob = await putWithTimeout(options);
             isPrivate = true;
           } else {
             throw firstErr;

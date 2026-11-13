@@ -9,8 +9,10 @@ import {
   MicroParticles,
   DecorativeCard,
   ResetTimer,
+  DueTimer,
   MinigameTrailerModal,
   MinigameRulesModal,
+  MinigameVoucherModal,
 } from "./client";
 
 const FlipGame = dynamic(() => import("@/app/minigame/FlipGame"), { ssr: false });
@@ -20,6 +22,9 @@ export default function MinigamePage() {
   const [showTrailer, setShowTrailer] = useState(false);
   const [gamePhase, setGamePhase] = useState("idle");
   const [attempt, setAttempt] = useState(1); // 1 = has attempt, 0 = used up
+  const [targetEvent, setTargetEvent] = useState(null);
+  const [userVoucher, setUserVoucher] = useState(null);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
   const videoRef = useRef(null);
   const [gameSeed, setGameSeed] = useState("");
   const scheduleTimeout = useTimeoutRegistry();
@@ -32,6 +37,12 @@ export default function MinigamePage() {
         if (typeof res.data?.attempt === "number") {
           setAttempt(res.data.attempt);
         }
+        if (res.data?.targetEvent) {
+          setTargetEvent(res.data.targetEvent);
+        }
+        if (res.data?.voucher) {
+          setUserVoucher(res.data.voucher);
+        }
       })
       .catch(() => {});
     return () => { active = false; };
@@ -43,6 +54,14 @@ export default function MinigamePage() {
   const isGameEnding = gamePhase === "ending" || gamePhase === "ending-quit";
   const inGame = gamePhase === "playing" || gamePhase === "ending";
   const showReset = gamePhase === "finished";
+
+  const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60;
+  const isTargetActive = Boolean(targetEvent?.hasTarget && targetEvent?.regEndTime);
+  const targetSecondsLeft = targetEvent?.regEndTime
+    ? Math.max(0, Math.floor((new Date(targetEvent.regEndTime).getTime() - Date.now()) / 1000))
+    : 0;
+  const isTargetWithin7Days = isTargetActive && targetSecondsLeft <= SEVEN_DAYS_SECONDS && targetSecondsLeft > 0;
+  const canPlay = attempt > 0 && isTargetWithin7Days;
 
   useEffect(() => {
     const checkViewport = () => {
@@ -75,7 +94,7 @@ export default function MinigamePage() {
   }, [showTrailer]);
 
   const handlePlayIt = () => {
-    if (attempt === 0) return;
+    if (!canPlay) return;
     const seed = new Uint32Array(1);
     window.crypto.getRandomValues(seed);
     setGameSeed(`minigame-${seed[0]}`);
@@ -96,6 +115,12 @@ export default function MinigamePage() {
       .then((res) => {
         if (typeof res.data?.attempt === "number") {
           setAttempt(res.data.attempt);
+        }
+        if (res.data?.targetEvent) {
+          setTargetEvent(res.data.targetEvent);
+        }
+        if (res.data?.voucher) {
+          setUserVoucher(res.data.voucher);
         }
       })
       .catch(() => {});
@@ -229,7 +254,7 @@ export default function MinigamePage() {
           <div className="relative group">
             <button
               onClick={handlePlayIt}
-              disabled={attempt === 0}
+              disabled={!canPlay}
               className="relative z-10 text-3xl sm:text-4xl md:text-5xl font-rog font-black text-white tracking-[0.2em] hover:scale-105 transition-transform duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
                 textShadow: "0px 1px 0px #999, 0px 2px 0px #888, 0px 3px 0px #777, 0px 4px 0px #666, 0px 5px 30px rgba(0,0,0,0.9)"
@@ -238,8 +263,8 @@ export default function MinigamePage() {
               PLAY IT
             </button>
 
-            {/* Hand Icon - Pointing to the button */}
-            {attempt > 0 && (
+            {/* Hand Icon - Only points when game is playable in JIT period */}
+            {canPlay && (
               <motion.div
                 animate={{ y: [0, 8, 0, 5, 0], scale: [1, 1.08, 1, 1.04, 1] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
@@ -257,9 +282,9 @@ export default function MinigamePage() {
               <span className="text-white font-sans text-base sm:text-xl tracking-tighter">{attempt}</span>
             </div>
 
-            {/* Reset Countdown */}
+            {/* Reset Countdown - Controlled by active target Due period */}
             <AnimatePresence>
-              {(showReset || attempt === 0) && (
+              {(isTargetWithin7Days && (showReset || attempt === 0)) && (
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -272,6 +297,43 @@ export default function MinigamePage() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Due Box */}
+            <div className="flex items-center justify-center gap-4 sm:gap-6 px-5 sm:px-8 py-1.5 sm:py-2 min-w-[180px] sm:min-w-[250px] bg-black/40 backdrop-blur-[20px] rounded-2xl border border-white/10 shadow-2xl">
+              <span className="text-white font-sans text-base sm:text-xl tracking-tighter underline underline-offset-8 decoration-white/20">Due :</span>
+              {isTargetWithin7Days ? (
+                <div className="text-base sm:text-xl font-sans tracking-tighter">
+                  <DueTimer
+                    regEndTime={targetEvent.regEndTime}
+                    onExpire={() => {
+                      const expiredEventId = targetEvent?.id || null;
+                      setTargetEvent((prev) => (prev ? { ...prev, hasTarget: false, isWithin7Days: false } : null));
+                      api.post("/minigame/finalize", { eventId: expiredEventId })
+                        .then((res) => {
+                          if (res.data?.targetEvent) {
+                            setTargetEvent(res.data.targetEvent);
+                          }
+                          if (res.data?.voucher) {
+                            setUserVoucher(res.data.voucher);
+                          }
+                        })
+                        .catch(() => {
+                          api.get("/minigame/status")
+                            .then((res) => {
+                              if (res.data?.targetEvent) setTargetEvent(res.data.targetEvent);
+                              if (res.data?.voucher) setUserVoucher(res.data.voucher);
+                            })
+                            .catch(() => {});
+                        });
+                    }}
+                  />
+                </div>
+              ) : (
+                <span className="text-white font-sans text-base sm:text-xl tracking-tighter">
+                  Not Started
+                </span>
+              )}
+            </div>
           </div>
         </motion.div>
 
@@ -285,6 +347,13 @@ export default function MinigamePage() {
           }}
           className="absolute bottom-3 right-3 xs:bottom-4 xs:right-4 sm:bottom-[4%] sm:right-[2%] z-30 flex items-center justify-center gap-3 sm:gap-6"
         >
+          {userVoucher && (
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowVoucherModal(true)} className="relative group cursor-pointer">
+              <div className="relative py-2 sm:py-3 px-3 sm:px-4 flex items-center justify-center overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-yellow-300 bg-gradient-to-r from-amber-500 to-yellow-600 shadow-[0_0_20px_rgba(234,179,8,0.5)]">
+                <span className="relative z-10 text-xs sm:text-sm font-rog font-black text-white tracking-widest uppercase">MY VOUCHER</span>
+              </div>
+            </motion.div>
+          )}
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowTrailer(true)} className="relative group cursor-pointer">
             <div className="relative w-[140px] sm:w-[180px] py-2 sm:py-3 flex items-center justify-center overflow-hidden rounded-2xl sm:rounded-3xl border-2 border-white bg-[#e60000] shadow-[0_0_25px_rgba(230,0,0,0.5)]">
               <span className="relative z-10 text-base sm:text-xl font-rog font-black text-white tracking-widest" style={{ textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 10px rgba(0,0,0,0.8)" }}>THE EVENT</span>
@@ -315,6 +384,13 @@ export default function MinigamePage() {
       <MinigameRulesModal
         showInfo={showInfo}
         onClose={() => setShowInfo(false)}
+      />
+
+      {/* Voucher Modal */}
+      <MinigameVoucherModal
+        show={showVoucherModal}
+        voucher={userVoucher}
+        onClose={() => setShowVoucherModal(false)}
       />
 
       {/* Initial Blackout */}

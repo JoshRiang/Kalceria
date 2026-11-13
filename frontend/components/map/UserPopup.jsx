@@ -1,6 +1,16 @@
 // UserPopup.jsx
 // Minimalist 2D broadcast message box for Leaflet markers (with real-time live duration, 24h purge, attached media feed, and Edit/Reply actions)
 
+function getTrashIconSvg(isMapDark) {
+  const stroke = isMapDark ? "#ffffff" : "#000000";
+  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+}
+
+function getReplyIconSvg(isMapDark) {
+  const stroke = isMapDark ? "#ffffff" : "#000000";
+  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>`;
+}
+
 function esc(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -104,7 +114,7 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
     : "0 4px 16px rgba(0, 0, 0, 0.18)";
 
   const boxWidth = mediaUrl ? "280px" : "250px";
-  const maxBoxWidth = mediaUrl ? "min(320px, 86vw)" : "min(280px, 82vw)";
+  const maxBoxWidth = mediaUrl ? "min(440px, 92vw)" : "min(280px, 82vw)";
 
   return `
     <div class="broadcast-popup-box broadcast-box" style="
@@ -121,7 +131,7 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
       box-sizing: border-box;
       font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       text-align: left;
-      transition: width 0.2s ease, max-width 0.2s ease;
+      transition: width 440ms cubic-bezier(0.32, 0.72, 0, 1), max-width 0.2s ease;
     ">
       <!-- Header Row: User Avatar + Display Name on Left, Edit / Reply Button on Right -->
       <div style="
@@ -208,13 +218,8 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
       ${
         mediaUrl
           ? `
-      <!-- Media Section: Action Row Above Media Box (OUTSIDE) + Media Box with Inner Whiteline -->
+      <!-- Media Section: Action Row Above Media Box (OUTSIDE) + Dynamic Portrait/Landscape Media Box -->
       <div
-        id="broadcast-carousel-${esc(user.id)}"
-        data-carousel-container="bcast_${esc(user.id)}"
-        data-slide-count="1"
-        data-feed-state="idle"
-        class="popup-carousel-container"
         style="
           position: relative;
           width: 100%;
@@ -225,7 +230,7 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
           gap: 6px;
         "
       >
-        <!-- 1. Action Bar Row Above Media Box (OUTSIDE): Search Icon, View Count, Reply Arrow (NO outer oval box, NO divider line) -->
+        <!-- 1. Action Bar Row Above Media Box (OUTSIDE): Search Icon, View Count, and Reply Arrow (hidden for Creator) -->
         <div
           style="
             display: flex;
@@ -244,85 +249,97 @@ export function getBroadcastMessageBoxHtml(user, isMapDark = false, currentUser 
           </svg>
           <span
             data-broadcast-view-count="${esc(broadcastId)}"
-            style="font-family: Arial, -apple-system, sans-serif; font-size: 11.5px; font-weight: 700; color: ${isMapDark ? "#ffffff" : "#000000"}; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums;"
+            style="font-family: Arial, -apple-system, sans-serif; font-size: 11.5px; font-weight: 700; color: ${isMapDark ? "#ffffff" : "#000000"}; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: center; height: 14px; overflow: hidden; position: relative; vertical-align: middle; min-width: 8px;"
           >
             ${viewCount}
           </span>
           <button
             type="button"
-            title="Balas broadcast ini"
+            data-broadcast-action-btn="${esc(broadcastId)}"
+            title="${isOwner ? "Hapus broadcast ini" : "Balas broadcast ini"}"
             onpointerdown="event.stopPropagation();"
-            onclick="event.stopPropagation(); window.__kalceriaReplyBroadcast?.('${esc(user.id)}');"
+            onclick="event.stopPropagation(); window.__kalceriaHandleBroadcastAction?.('${esc(user.id)}', '${esc(broadcastId)}');"
             style="background: transparent; border: none; padding: 2px 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: ${isMapDark ? "#ffffff" : "#000000"}; opacity: 0.9; transition: opacity 0.15s ease;"
             onmouseenter="this.style.opacity='1';"
             onmouseleave="this.style.opacity='0.9';"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-              <polyline points="9 17 4 12 9 7"></polyline>
-              <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
-            </svg>
+            ${isOwner ? getTrashIconSvg(isMapDark) : getReplyIconSvg(isMapDark)}
           </button>
         </div>
 
-        <!-- 2. Picture / Video Box with Inner Whiteline Progress Bar -->
-        <div style="
-          position: relative;
-          width: 100%;
-          border-radius: 8px;
-          overflow: hidden;
-          background: #000000;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-        ">
-          <!-- Whiteline Indicator inside the inner box, strictly WHITE -->
-          <div style="position: absolute; top: 6px; left: 8px; right: 8px; z-index: 20; display: flex; pointer-events: auto;">
-            <button
-              type="button"
-              data-carousel-indicator="0"
-              title="Clip 1"
-              onpointerdown="event.stopPropagation();"
-              onclick="event.stopPropagation(); window.__kalceriaSwitchEventMedia?.('bcast_${esc(user.id)}', 0);"
-              style="flex: 1 1 0; min-width: 0; padding: 2px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
-            >
-              <span style="display: block; width: 100%; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.32); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.45);">
-                <span data-carousel-fill="0" style="display: block; width: 100%; height: 100%; background: #ffffff; transform: scaleX(0); transform-origin: left center; will-change: transform;"></span>
-              </span>
-            </button>
-          </div>
-
+        <!-- 2. Picture / Video Box: dynamically adapts height & card width to portrait/landscape aspect ratio, zero black lanes -->
+        <div
+          class="popup-video"
+          style="
+            position: relative;
+            width: 100%;
+            height: 189px;
+            transition: height 440ms cubic-bezier(0.32, 0.72, 0, 1);
+            border-radius: 8px;
+            overflow: hidden;
+            background: transparent;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+          "
+        >
           <div
-            data-carousel-slide="0"
-            data-clip-id="bcast_${esc(broadcastId || user.id)}"
-            data-media-url="${esc(mediaUrl)}"
-            style="position: relative; width: 100%; height: 100%;"
+            id="broadcast-carousel-${esc(user.id)}"
+            data-carousel-container="bcast_${esc(user.id)}"
+            data-slide-count="1"
+            data-feed-state="idle"
+            class="popup-carousel-container"
+            style="position: relative; width: 100%; height: 100%; overflow: hidden;"
           >
-            ${
-              isVideo
-                ? `
-              <video
-                src="${esc(mediaUrl)}"
-                autoplay
-                muted
-                playsinline
-                webkit-playsinline
-                style="width: 100%; max-height: 240px; object-fit: contain; display: block; background: #000000;"
-              ></video>
-            `
-                : `
-              <img
-                src="${esc(mediaUrl)}"
-                alt="Broadcast Media"
-                loading="eager"
-                draggable="false"
-                style="width: 100%; max-height: 240px; object-fit: contain; display: block; background: #000000; user-select: none;"
-              />
-            `
-            }
+            <!-- Whiteline Indicator inside the inner box, strictly WHITE -->
+            <div style="position: absolute; top: 6px; left: 8px; right: 8px; z-index: 20; display: flex; pointer-events: auto;">
+              <button
+                type="button"
+                data-carousel-indicator="0"
+                title="Clip 1"
+                onpointerdown="event.stopPropagation();"
+                onclick="event.stopPropagation(); window.__kalceriaSwitchEventMedia?.('bcast_${esc(user.id)}', 0);"
+                style="flex: 1 1 0; min-width: 0; padding: 2px 0; background: transparent; border: none; cursor: pointer; pointer-events: auto; outline: none; display: flex; align-items: center;"
+              >
+                <span style="display: block; width: 100%; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.32); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.45);">
+                  <span data-carousel-fill="0" style="display: block; width: 100%; height: 100%; background: #ffffff; transform: scaleX(0); transform-origin: left center; will-change: transform;"></span>
+                </span>
+              </button>
+            </div>
+
+            <div
+              data-carousel-slide="0"
+              data-clip-id="bcast_${esc(broadcastId || user.id)}"
+              data-media-url="${esc(mediaUrl)}"
+              style="position: relative; width: 100%; height: 100%;"
+            >
+              ${
+                isVideo
+                  ? `
+                <video
+                  src="${esc(mediaUrl)}"
+                  autoplay
+                  muted
+                  playsinline
+                  webkit-playsinline
+                  style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; background: transparent;"
+                ></video>
+              `
+                  : `
+                <img
+                  src="${esc(mediaUrl)}"
+                  alt="Broadcast Media"
+                  loading="eager"
+                  draggable="false"
+                  style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; background: transparent; user-select: none;"
+                />
+              `
+              }
+            </div>
+            <div
+              data-carousel-tap-layer
+              aria-label="Feed navigation: tap to replay, hold to pause"
+              style="position: absolute; inset: 0; z-index: 12; background: transparent; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none;"
+            ></div>
           </div>
-          <div
-            data-carousel-tap-layer
-            aria-label="Feed navigation: tap to replay, hold to pause"
-            style="position: absolute; inset: 0; z-index: 12; background: transparent; cursor: pointer; touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none;"
-          ></div>
         </div>
       </div>
       `

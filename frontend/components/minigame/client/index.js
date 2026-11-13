@@ -5,9 +5,11 @@ export {
   generateDecorativeContent,
   MicroParticles,
   ResetTimer,
+  DueTimer,
   LineParticles,
   DecorativeCard,
 } from "./MinigameVisuals";
 export { MinigameTrailerModal } from "./MinigameTrailerModal";
 export { MinigameRulesModal } from "./MinigameRulesModal";
+export { MinigameVoucherModal } from "./MinigameVoucherModal";
 

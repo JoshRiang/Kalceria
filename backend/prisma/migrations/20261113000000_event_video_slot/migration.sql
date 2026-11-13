@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "videoUrl" TEXT,
+ADD COLUMN IF NOT EXISTS "videoMeta" JSONB;
+

@@ -34,7 +34,13 @@ export function IdeaCommentFormBody({
   const parsedUrls = splitMediaUrlListClient(mediaUrl || "");
   const activeIdx = Math.min(selectedIdx || 0, Math.max(0, parsedUrls.length - 1));
   const activeUrl = parsedUrls[activeIdx] || "";
-  const displayFilenameText = parsedUrls.length > 0
+  const isLockedAttachment =
+    parsedUrls.length > 1 ||
+    (parsedUrls.length === 1 &&
+      (activeUrl.startsWith("blob:") ||
+        activeUrl.startsWith("data:") ||
+        activeUrl.startsWith("/api/blob/")));
+  const displayFilenameText = isLockedAttachment
     ? (getDisplayFilename ? getDisplayFilename(activeUrl) : activeUrl)
     : mediaUrl;
 
@@ -213,19 +219,19 @@ export function IdeaCommentFormBody({
         <div className="flex gap-2">
           <input
             type="text"
-            readOnly={parsedUrls.length > 0}
+            readOnly={isLockedAttachment}
             className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 focus:border-slate-400 font-sans ${
-              parsedUrls.length > 0 ? "cursor-default select-all" : ""
+              isLockedAttachment ? "cursor-default select-all" : ""
             }`}
             value={displayFilenameText}
             onChange={(e) => {
-              if (parsedUrls.length === 0) {
+              if (!isLockedAttachment) {
                 setMediaUrl(e.target.value);
                 setMediaError("");
               }
             }}
             onBlur={() => {
-              if (parsedUrls.length === 0 && mediaUrl.trim()) {
+              if (!isLockedAttachment && mediaUrl.trim()) {
                 const check = validateAndNormalizeMediaUrlClient(mediaUrl.trim());
                 if (!check.valid) {
                   setMediaError(check.error || "Format URL media tidak valid.");

@@ -131,6 +131,8 @@ export default function MapPage() {
     mapRef,
     setSelfLiveCoords,
     setInitialCoordsResolved,
+    showStartup,
+    hasInitialCenteredRef,
   });
 
   const [isStatusBusy, setIsStatusBusy] = useState(false);
@@ -179,6 +181,7 @@ export default function MapPage() {
     showStartup,
     mapRef,
     setSelfLiveCoords,
+    hasInitialCenteredRef,
   });
 
   // Hook Ledger Pos 9: M6 (Offline beacon on pagehide / beforeunload / unmount)
@@ -212,6 +215,7 @@ export default function MapPage() {
     showStartup,
     setIsRecentering,
     setIsMapEngineReady,
+    hasInitialCenteredRef,
   });
 
   // Blocked users state (modularized package hook: synced with localStorage + backend API)

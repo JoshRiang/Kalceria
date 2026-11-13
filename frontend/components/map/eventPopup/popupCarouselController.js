@@ -236,7 +236,7 @@ export function initEventPopupCarouselsFromRoot(rootEl, popupInstance = null) {
     // Re-initialisation after a content refresh keeps the viewer on the clip they were watching.
     destroyCarouselState(safeId, { keepSnapshot: true });
 
-    const cardEl = containerEl.closest(".event-card");
+    const cardEl = containerEl.closest(".event-card, .broadcast-popup-box");
     const frameEl = containerEl.closest(".popup-video");
     const slides = Array.from(containerEl.querySelectorAll("[data-carousel-slide]"));
     const fills = Array.from(containerEl.querySelectorAll("[data-carousel-fill]"));

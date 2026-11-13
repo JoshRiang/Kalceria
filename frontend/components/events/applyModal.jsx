@@ -58,6 +58,7 @@ export function ApplyModal({
   const [isWindowExpired, setIsWindowExpired] = useState(Boolean(initialError === "expired"));
 
   const event = events[idx];
+  const isRegistrationClosed = Boolean(event?.regEndTime && new Date(event.regEndTime).getTime() <= Date.now());
   const [form, setForm] = useState({
     name: activeName,
     email: activeEmail,
@@ -519,15 +520,22 @@ export function ApplyModal({
                   <button
                     key={m}
                     type="button"
+                    disabled={isRegistrationClosed}
                     onClick={() => handleModeSelect(m)}
-                    className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${mode === m ? "bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]" : "text-slate-500 hover:text-white"}`}
+                    className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all ${
+                      isRegistrationClosed
+                        ? "text-slate-600 opacity-40 cursor-not-allowed pointer-events-none"
+                        : mode === m
+                        ? "bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                        : "text-slate-500 hover:text-white"
+                    }`}
                   >
                     {m === "account" ? "By Account" : "As Guest"}
                   </button>
                 ))}
              </div>
 
-             <form onSubmit={handleSubmit} className="space-y-3">
+             <form onSubmit={(e) => { e.preventDefault(); if (isRegistrationClosed) return; handleSubmit(e); }} className="space-y-3">
                 <AnimatePresence mode="wait">
                   {mode === "account" ? (
                     <motion.div key="acc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-3">
@@ -535,10 +543,13 @@ export function ApplyModal({
                         <label className={labelClass}>Gmail / Registered Email</label>
                         <input
                           type="email"
-                          className={inputClass}
+                          disabled={isRegistrationClosed}
+                          readOnly={isRegistrationClosed}
+                          className={`${inputClass} ${isRegistrationClosed ? "opacity-40 cursor-not-allowed select-none" : ""}`}
                           placeholder="user@gmail.com"
                           value={form.email || (form.identifier?.includes("@") ? form.identifier : "")}
                           onChange={(e) => {
+                            if (isRegistrationClosed) return;
                             setForm({ ...form, email: e.target.value, identifier: e.target.value });
                             setError("");
                           }}
@@ -549,10 +560,13 @@ export function ApplyModal({
                         <div>
                           <label className={labelClass}>Username / Name</label>
                           <input
-                            className={inputClass}
+                            disabled={isRegistrationClosed}
+                            readOnly={isRegistrationClosed}
+                            className={`${inputClass} ${isRegistrationClosed ? "opacity-40 cursor-not-allowed select-none" : ""}`}
                             placeholder="username or nickname"
                             value={form.name || (form.identifier && !form.identifier.includes("@") ? form.identifier : "")}
                             onChange={(e) => {
+                              if (isRegistrationClosed) return;
                               setForm({ ...form, name: e.target.value });
                               setError("");
                             }}
@@ -561,16 +575,19 @@ export function ApplyModal({
                         </div>
                         <div>
                           <label className={labelClass}>WhatsApp Contact</label>
-                          <div className="flex items-center w-full bg-white/90 border-none rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-fuchsia-500 transition-all shadow-xl">
+                          <div className={`flex items-center w-full bg-white/90 border-none rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-fuchsia-500 transition-all shadow-xl ${isRegistrationClosed ? "opacity-40 cursor-not-allowed" : ""}`}>
                             <div className="flex items-center pl-2.5 pr-2 py-2 text-black font-sans font-bold text-[11px] select-none border-r border-black/10 bg-black/[0.04] shrink-0">
                               +62
                             </div>
                             <input
                               type="tel"
-                              className="w-full bg-transparent border-none py-2 px-2 text-black outline-none font-sans text-[11px] font-medium placeholder:text-gray-400"
+                              disabled={isRegistrationClosed}
+                              readOnly={isRegistrationClosed}
+                              className={`w-full bg-transparent border-none py-2 px-2 text-black outline-none font-sans text-[11px] font-medium placeholder:text-gray-400 ${isRegistrationClosed ? "cursor-not-allowed select-none" : ""}`}
                               placeholder="8xx-xxxx-xxxx"
                               value={(form.contact || "").replace(/^\+?62/, "").replace(/^0+/, "")}
                               onChange={(e) => {
+                                if (isRegistrationClosed) return;
                                 let raw = (e.target.value || "").replace(/^\+?62/, "").replace(/^0+/, "");
                                 const digits = raw.replace(/\D/g, "");
                                 setForm({ ...form, contact: digits ? `+62${digits}` : "" });
@@ -587,10 +604,16 @@ export function ApplyModal({
                       <div>
                         <label className={labelClass}>Full Name</label>
                         <input
-                          className={inputClass}
+                          disabled={isRegistrationClosed}
+                          readOnly={isRegistrationClosed}
+                          className={`${inputClass} ${isRegistrationClosed ? "opacity-40 cursor-not-allowed select-none" : ""}`}
                           placeholder="Enter your name"
                           value={form.name}
-                          onChange={(e) => { setForm({ ...form, name: e.target.value }); setError(""); }}
+                          onChange={(e) => {
+                            if (isRegistrationClosed) return;
+                            setForm({ ...form, name: e.target.value });
+                            setError("");
+                          }}
                           required
                         />
                       </div>
@@ -599,25 +622,34 @@ export function ApplyModal({
                           <label className={labelClass}>Gmail</label>
                           <input
                             type="email"
-                            className={inputClass}
+                            disabled={isRegistrationClosed}
+                            readOnly={isRegistrationClosed}
+                            className={`${inputClass} ${isRegistrationClosed ? "opacity-40 cursor-not-allowed select-none" : ""}`}
                             placeholder="mail@example.com"
                             value={form.email}
-                            onChange={(e) => { setForm({ ...form, email: e.target.value }); setError(""); }}
+                            onChange={(e) => {
+                              if (isRegistrationClosed) return;
+                              setForm({ ...form, email: e.target.value });
+                              setError("");
+                            }}
                             required
                           />
                         </div>
                         <div>
                           <label className={labelClass}>WhatsApp Contact</label>
-                          <div className="flex items-center w-full bg-white/90 border-none rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-fuchsia-500 transition-all shadow-xl">
+                          <div className={`flex items-center w-full bg-white/90 border-none rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-fuchsia-500 transition-all shadow-xl ${isRegistrationClosed ? "opacity-40 cursor-not-allowed" : ""}`}>
                             <div className="flex items-center pl-2.5 pr-2 py-2 text-black font-sans font-bold text-[11px] select-none border-r border-black/10 bg-black/[0.04] shrink-0">
                               +62
                             </div>
                             <input
                               type="tel"
-                              className="w-full bg-transparent border-none py-2 px-2 text-black outline-none font-sans text-[11px] font-medium placeholder:text-gray-400"
+                              disabled={isRegistrationClosed}
+                              readOnly={isRegistrationClosed}
+                              className={`w-full bg-transparent border-none py-2 px-2 text-black outline-none font-sans text-[11px] font-medium placeholder:text-gray-400 ${isRegistrationClosed ? "cursor-not-allowed select-none" : ""}`}
                               placeholder="8xx-xxxx-xxxx"
                               value={(form.contact || "").replace(/^\+?62/, "").replace(/^0+/, "")}
                               onChange={(e) => {
+                                if (isRegistrationClosed) return;
                                 let raw = (e.target.value || "").replace(/^\+?62/, "").replace(/^0+/, "");
                                 const digits = raw.replace(/\D/g, "");
                                 setForm({ ...form, contact: digits ? `+62${digits}` : "" });
@@ -634,12 +666,20 @@ export function ApplyModal({
 
                 <div>
                   <label className={labelClass}>Select Session</label>
-                  <select className={inputClass} value={form.session} onChange={(e) => setForm({ ...form, session: e.target.value })}>
+                  <select
+                    disabled={isRegistrationClosed}
+                    className={`${inputClass} ${isRegistrationClosed ? "opacity-40 cursor-not-allowed select-none" : ""}`}
+                    value={form.session}
+                    onChange={(e) => {
+                      if (isRegistrationClosed) return;
+                      setForm({ ...form, session: e.target.value });
+                    }}
+                  >
                     {event?.sessionOptions?.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
 
-                {error && (
+                {error && !isRegistrationClosed && (
                   <div 
                     style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
                     className="text-red-500 text-[14px] sm:text-[15px] font-normal tracking-tight py-1 select-none mb-3 text-left"
@@ -648,8 +688,21 @@ export function ApplyModal({
                   </div>
                 )}
 
-                <button type="submit" disabled={loading} className={`w-full py-3 bg-white text-black font-black uppercase tracking-tighter transition-all relative overflow-hidden group shadow-[0_0_30px_rgba(255,255,255,0.2)] ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-200"}`} style={{ clipPath: "polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)" }}>
-                   <motion.div initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.7 }} className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-20deg] z-0" />
+                <button
+                  type="submit"
+                  disabled={loading || isRegistrationClosed}
+                  className={`w-full py-3 bg-white text-black font-black uppercase tracking-tighter transition-all relative overflow-hidden group ${
+                    isRegistrationClosed
+                      ? "opacity-20 cursor-not-allowed pointer-events-none filter brightness-50 shadow-none hover:bg-white"
+                      : loading
+                      ? "opacity-50 cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                      : "hover:bg-slate-200 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                  }`}
+                  style={{ clipPath: "polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)" }}
+                >
+                   {!isRegistrationClosed && (
+                     <motion.div initial={{ x: "-100%" }} whileHover={{ x: "100%" }} transition={{ duration: 0.7 }} className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-20deg] z-0" />
+                   )}
                    <span className="relative z-10 text-lg tracking-tighter">
                      {loading ? (isEditing ? "UPDATING..." : "PROCESSING...") : (isEditing ? "UPDATE REGISTRATION" : "SECURE SPOT")}
                    </span>

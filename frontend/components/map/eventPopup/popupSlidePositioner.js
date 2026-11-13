@@ -2,6 +2,11 @@ import {
   applyCardGeometry,
   computeCardGeometryForMedia,
 } from "./popupGeometry";
+import {
+  getTrashIconSvg,
+  getReplyIconSvg,
+  hideFeedDeletePrompt,
+} from "./popupFeedDeletePrompt";
 
 export const SLIDE_TRANSITION_MS = 320;
 
@@ -30,7 +35,8 @@ export function syncGeometry(state, slideEl) {
   if (!state || state.destroyed || !slideEl) return;
   const { width, height } = getSlideNaturalDimensions(slideEl);
   if (!width || !height) return;
-  applyCardGeometry(state, computeCardGeometryForMedia(width, height));
+  const isBroadcast = Boolean(state.cardEl?.classList?.contains("broadcast-popup-box"));
+  applyCardGeometry(state, computeCardGeometryForMedia(width, height, { isBroadcast }));
 }
 
 export function paintIndicators(state, activeIdx, activeProgress = 0) {
@@ -61,6 +67,9 @@ export function syncActionRow(state, incomingEl) {
         : null);
     if (!cardEl) return;
 
+    // Clean up any pending delete prompt overlay on slide transition
+    hideFeedDeletePrompt(cardEl.querySelector(".popup-video"));
+
     const avatarEl = cardEl.querySelector(`[data-media-author-avatar="${state.safeId}"]`);
     if (avatarEl && incomingEl.dataset.authorAvatar) {
       avatarEl.src = incomingEl.dataset.authorAvatar;
@@ -80,12 +89,25 @@ export function syncActionRow(state, incomingEl) {
     }
 
     const replyBtn = cardEl.querySelector(`[data-media-reply-btn="${state.safeId}"]`);
-    if (replyBtn && incomingEl.dataset.clipId) {
+    if (replyBtn) {
+      const currentUserId = cardEl.dataset?.currentUserId || "";
+      const slideAuthorId = incomingEl.dataset?.authorId || "";
+      const isSelfAuthor = Boolean(
+        currentUserId && slideAuthorId && String(currentUserId) === String(slideAuthorId)
+      );
+      const isMapDark = cardEl.classList.contains("event-card-dark");
       const clipIdx = Number(incomingEl.dataset.carouselSlide) || 0;
-      replyBtn.onclick = (e) => {
-        e.stopPropagation();
-        window.__kalceriaReplyEventMedia?.(state.safeId, incomingEl.dataset.clipId, clipIdx);
-      };
+      const clipId = incomingEl.dataset.clipId;
+
+      replyBtn.style.display = "flex";
+      replyBtn.title = isSelfAuthor ? "Hapus feed media ini" : "Balas feed media ini";
+      replyBtn.innerHTML = isSelfAuthor ? getTrashIconSvg(isMapDark) : getReplyIconSvg(isMapDark);
+      if (clipId) {
+        replyBtn.onclick = (e) => {
+          e.stopPropagation();
+          window.__kalceriaHandleMediaAction?.(state.safeId, clipId, clipIdx);
+        };
+      }
     }
   } catch (_) {}
 }

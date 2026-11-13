@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import prisma from '../../lib/prisma.js';
 import { redis } from '../../lib/redis.js';
+import { incrementViewCounter, readViewCounter } from '../../utils/viewCounter.js';
 import { sanitizeAndNormalizeMediaUrl } from '../../utils/urlSecurity.js';
 import {
   MINI_EVENT_CLIP_TTL_MS,
@@ -309,14 +310,9 @@ export async function hydrateAndPruneEventMedia(ev, creatorName = null, creatorA
 
   if (active.length > 0) {
     try {
-      const vPipe = redis.multi();
-      for (const clip of active) {
-        vPipe.scard(viewKey(clip.id));
-      }
-      const viewResults = await vPipe.exec().catch(() => []);
+      const counts = await Promise.all(active.map((clip) => readViewCounter(viewKey(clip.id))));
       active.forEach((clip, idx) => {
-        const item = viewResults?.[idx];
-        clip.viewCount = item && !item[0] ? Number(item[1]) || 0 : (clip.viewCount || 0);
+        clip.viewCount = counts[idx] ?? clip.viewCount ?? 0;
       });
     } catch {}
   }
@@ -467,18 +463,10 @@ export async function recordClipView({ eventId, clipId, viewerKey, viewerUserId 
     }
   }
 
-  // Only add unique view if viewer is NOT the author
-  if (!isAuthor && viewerKey) {
-    try {
-      await redis.sadd(k, viewerKey);
-      await redis.expire(k, 7 * 24 * 60 * 60);
-    } catch {}
+  // Only increment if viewer is NOT the author
+  if (!isAuthor) {
+    return incrementViewCounter(k);
   }
 
-  try {
-    const count = await redis.scard(k);
-    return Number(count) || 0;
-  } catch {
-    return 0;
-  }
+  return readViewCounter(k);
 }

@@ -76,7 +76,9 @@ export default function SnapMap({
   useSnapMapGlobalCallbacks({
     events,
     users,
+    currentUser,
     mapRef,
+    isMapDark,
     onEditEvent,
     onRequestCollab,
     onPromptCancelRequest,

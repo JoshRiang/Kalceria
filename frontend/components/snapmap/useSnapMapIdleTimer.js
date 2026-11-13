@@ -23,13 +23,20 @@ export function useSnapMapIdleTimer({ mapRef, markerRefs }) {
       );
       if (!activePopups.length) return;
 
-      // The card never closes while its Live Media Feed is still playing; it closes once the
-      // feed reaches its end (or when there is nothing playing and the viewer has gone idle).
+      // The card never closes while its Live Media Feed is still playing, or when a delete confirmation overlay is active
       const hasActivePlayingFeed = Array.from(activePopups).some((el) =>
         Boolean(el.querySelector('[data-feed-state="playing"], [data-feed-state="paused"]'))
       );
       if (hasActivePlayingFeed) {
         resetIdleTimerRef.current?.(3500);
+        return;
+      }
+
+      const hasDeleteOverlay = Array.from(activePopups).some((el) =>
+        Boolean(el.querySelector('[data-feed-delete-overlay]'))
+      );
+      if (hasDeleteOverlay) {
+        resetIdleTimerRef.current?.(8000);
         return;
       }
 

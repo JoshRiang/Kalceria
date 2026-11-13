@@ -13,6 +13,7 @@ import { ServiceModalBackground } from "./service-request/ServiceModalBackground
 import api from "@/lib/api";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { hasUserSession } from "@/lib/session";
 
 export default function ServiceRequestModal({
   onClose,

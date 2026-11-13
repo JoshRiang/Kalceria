@@ -69,6 +69,8 @@ export function useAuthSubmit({
     if (mode !== "login" && mode !== "register") return;
     setError("");
     setSuccess("");
+    let matchedCoord = null;
+    let matchedToken = null;
 
     if (mode === "login") {
       if (!form.email?.trim() || !form.password) {
@@ -99,8 +101,6 @@ export function useAuthSubmit({
 
       // 2. City validation: must be in the known cities list (Indonesia priority + dynamic worldwide)
       let currentCityValid = isKnownCity(form.domicile, verifiedCitiesMap);
-      let matchedCoord = null;
-      let matchedToken = null;
 
       if (!currentCityValid && form.domicile && form.domicile.trim().length >= 2) {
         try {

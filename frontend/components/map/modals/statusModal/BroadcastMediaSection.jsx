@@ -2,6 +2,12 @@
 
 import { useRef, useState, useEffect } from "react";
 import { uploadBlobMedia } from "@/lib/api";
+import { validateAndNormalizeMediaUrlClient } from "@/lib/urlSecurity";
+import {
+  formatMediaDisplayName,
+  normalizeUploadErrorMessage,
+  validateMediaUploadFile,
+} from "@/lib/mediaUploadHelpers";
 import { inferIsVideoMediaUrl } from "../../eventPopup/popupMediaMetadata";
 import { ActionArcSpinner } from "../ActionArcSpinner";
 
@@ -14,41 +20,45 @@ export function BroadcastMediaSection({
   setIsUploadingMedia,
 }) {
   const fileInputRef = useRef(null);
-  const fileNameRef = useRef("");
+  const fileNamesRef = useRef({});
+  const uploadGenRef = useRef(0);
+  const latestMediaUrlRef = useRef(mediaUrl || "");
+  latestMediaUrlRef.current = mediaUrl || "";
+
   const [uploadError, setUploadError] = useState("");
 
-  // Clean up in-memory blob URLs when component unmounts to prevent memory leaks
+  // Clean up any active local blob preview URL on unmount
   useEffect(() => {
     return () => {
-      if (mediaUrl && mediaUrl.startsWith("blob:")) {
-        try {
-          URL.revokeObjectURL(mediaUrl);
-        } catch {}
+      uploadGenRef.current += 1;
+      const cur = latestMediaUrlRef.current;
+      if (cur && cur.startsWith("blob:")) {
+        try { URL.revokeObjectURL(cur); } catch {}
       }
     };
-  }, [mediaUrl]);
+  }, []);
 
   const handleMediaUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 4.5 * 1024 * 1024) {
-      setUploadError("Ukuran file melebihi 4.5 MB. Maksimal ukuran file adalah 4.5 MB.");
+    const validation = validateMediaUploadFile(file);
+    if (!validation.valid) {
+      setUploadError(validation.error);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    const ext = (file.name.split(".").pop() || "").toLowerCase();
-    const allowed = ["png", "jpg", "jpeg", "webp", "mp4", "m4v", "mp4v", "mpg4", "mov", "3gp", "webm"];
-    if (!allowed.includes(ext)) {
-      setUploadError("Hanya file gambar (.png, .jpeg, .webp) dan video (.mp4, .mov, .webm) yang diizinkan");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
+    const gen = ++uploadGenRef.current;
+    // Revoke any previous local blob URL before replacing
+    const prevUrl = latestMediaUrlRef.current;
+    if (prevUrl && prevUrl.startsWith("blob:")) {
+      try { URL.revokeObjectURL(prevUrl); } catch {}
     }
 
     // Instant 0ms latency local preview
     const instantObjUrl = URL.createObjectURL(file);
-    fileNameRef.current = file.name;
+    fileNamesRef.current[instantObjUrl] = file.name;
     setMediaUrl(instantObjUrl);
 
     setIsUploadingMedia(true);
@@ -56,39 +66,52 @@ export function BroadcastMediaSection({
 
     try {
       const res = await uploadBlobMedia(file, { purpose: "event-clip" });
+      if (gen !== uploadGenRef.current) {
+        try { URL.revokeObjectURL(instantObjUrl); } catch {}
+        return;
+      }
       if (res?.url) {
-        try {
-          URL.revokeObjectURL(instantObjUrl);
-        } catch {}
-        fileNameRef.current = file.name;
+        try { URL.revokeObjectURL(instantObjUrl); } catch {}
+        delete fileNamesRef.current[instantObjUrl];
+        fileNamesRef.current[res.url] = file.name;
         setMediaUrl(res.url);
       }
     } catch (err) {
-      try {
-        URL.revokeObjectURL(instantObjUrl);
-      } catch {}
-      fileNameRef.current = "";
+      try { URL.revokeObjectURL(instantObjUrl); } catch {}
+      delete fileNamesRef.current[instantObjUrl];
+      if (gen !== uploadGenRef.current) return;
+
       setMediaUrl("");
-      setUploadError(err.message || "Failed to upload media");
+      setUploadError(normalizeUploadErrorMessage(err));
     } finally {
-      setIsUploadingMedia(false);
+      if (gen === uploadGenRef.current) {
+        setIsUploadingMedia(false);
+      }
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const handleClear = () => {
+    uploadGenRef.current += 1;
     if (mediaUrl && mediaUrl.startsWith("blob:")) {
-      try {
-        URL.revokeObjectURL(mediaUrl);
-      } catch {}
+      try { URL.revokeObjectURL(mediaUrl); } catch {}
     }
-    fileNameRef.current = "";
+    delete fileNamesRef.current[mediaUrl];
     setMediaUrl("");
+    setIsUploadingMedia(false);
     setUploadError("");
   };
 
-  const displayFilename = fileNameRef.current || (mediaUrl ? mediaUrl.split("/").pop()?.split("?")[0] : "");
   const hasMedia = Boolean(mediaUrl && mediaUrl.trim());
+  const isLockedAttachment =
+    hasMedia &&
+    (mediaUrl.startsWith("blob:") ||
+      mediaUrl.startsWith("data:") ||
+      mediaUrl.startsWith("/api/blob/") ||
+      Boolean(fileNamesRef.current[mediaUrl]));
+  const displayFilename = isLockedAttachment
+    ? formatMediaDisplayName(mediaUrl, fileNamesRef.current)
+    : mediaUrl;
   const isVideo = hasMedia && inferIsVideoMediaUrl(mediaUrl);
 
   return (
@@ -129,17 +152,30 @@ export function BroadcastMediaSection({
       <div className="flex gap-2">
         <input
           type="text"
-          readOnly={hasMedia}
+          readOnly={isLockedAttachment}
           className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all ${
             isModalDark
               ? "bg-[#0d1117] border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff]"
               : "bg-[#f6f8fa] border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da]"
-          } ${hasMedia ? "cursor-default select-all font-mono text-[11px]" : ""}`}
+          } ${isLockedAttachment ? "cursor-default select-all font-mono text-[11px]" : ""}`}
           value={displayFilename}
           onChange={(e) => {
-            if (!hasMedia) {
+            if (!isLockedAttachment) {
               setMediaUrl(e.target.value);
               setUploadError("");
+            }
+          }}
+          onBlur={() => {
+            if (!isLockedAttachment) {
+              const raw = (mediaUrl || "").trim();
+              if (raw) {
+                const check = validateAndNormalizeMediaUrlClient(raw);
+                if (!check.valid) {
+                  setUploadError(check.error || "Format URL media tidak valid.");
+                } else if (check.normalized && check.normalized !== mediaUrl) {
+                  setMediaUrl(check.normalized);
+                }
+              }
             }
           }}
           placeholder="Upload media atau tempel link..."
@@ -147,7 +183,7 @@ export function BroadcastMediaSection({
         <input
           type="file"
           ref={fileInputRef}
-          accept=".png,.jpg,.jpeg,.webp,.mp4,.m4v,.mov,.webm,image/png,image/jpeg,image/webp,video/mp4,video/quicktime,video/webm"
+          accept=".png,.jpg,.jpeg,.webp,.mp4,.m4v,.mp4v,.mpg4,.mov,.3gp,.webm,image/png,image/jpeg,image/webp,video/mp4,video/x-m4v,video/mp4v-es,video/quicktime,video/3gpp,video/webm"
           className="hidden"
           onChange={handleMediaUpload}
         />

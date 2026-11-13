@@ -40,7 +40,7 @@ export function renderSingleMedia(mediaEntry, { index = 0 } = {}) {
           x5-playsinline
           disablepictureinpicture
           disableremoteplayback
-          style="width: 100%; height: 100%; object-fit: contain; display: block; background: transparent; pointer-events: none;"
+          style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; background: transparent; pointer-events: none;"
         ></video>
       </div>
     `;
@@ -53,7 +53,7 @@ export function renderSingleMedia(mediaEntry, { index = 0 } = {}) {
         alt="Event Live Feed"
         loading="${index <= 1 ? "eager" : "lazy"}"
         draggable="false"
-        style="width: 100%; height: 100%; object-fit: contain; display: block; background: transparent; pointer-events: none; user-select: none;"
+        style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; background: transparent; pointer-events: none; user-select: none;"
       />
     </div>
   `;
@@ -66,7 +66,14 @@ function resolveIndicatorGapPx(count) {
   return 1;
 }
 
-export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, creatorName, safeId) {
+export function renderMediaCarousel(
+  mediaList,
+  isMapDark,
+  creatorAvatarUrl,
+  creatorName,
+  safeId,
+  fallbackAuthorId = ""
+) {
   const rawList = Array.isArray(mediaList)
     ? mediaList.filter(Boolean)
     : (mediaList ? [mediaList] : []);
@@ -87,6 +94,7 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
       const dAttr = isObject && entry?.duration ? String(entry.duration) : "";
       const avatarUrl = (isObject && entry?.authorAvatarUrl) || creatorAvatarUrl || "";
       const authorName = (isObject && entry?.authorName) || creatorName || "Kalcerian";
+      const authorId = (isObject && entry?.authorId) || fallbackAuthorId || "";
       const viewCount = isObject && Number.isFinite(Number(entry?.viewCount)) ? Number(entry.viewCount) : 0;
       const initialTransform = i === 0 ? "translateX(0%)" : "translateX(100%)";
       const initialVisibility = i === 0 ? "visible" : "hidden";
@@ -100,6 +108,7 @@ export function renderMediaCarousel(mediaList, isMapDark, creatorAvatarUrl, crea
           data-media-w="${esc(wAttr)}"
           data-media-h="${esc(hAttr)}"
           data-media-duration="${esc(dAttr)}"
+          data-author-id="${esc(authorId)}"
           data-author-avatar="${esc(avatarUrl)}"
           data-author-name="${esc(authorName)}"
           data-view-count="${viewCount}"

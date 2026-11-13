@@ -83,6 +83,67 @@ export function ResetTimer() {
   return <span className="text-white font-sans tracking-tighter underline underline-offset-4 decoration-white/20">{h}h {m}m {s}s</span>;
 }
 
+export function DueTimer({ regEndTime, onExpire }) {
+  const calculateSecondsLeft = () => {
+    if (!regEndTime) return 0;
+    const endMs = new Date(regEndTime).getTime();
+    if (!Number.isFinite(endMs)) return 0;
+    return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+  };
+
+  const [secs, setSecs] = useState(calculateSecondsLeft);
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
+  const expiredFiredRef = useRef(false);
+
+  useEffect(() => {
+    expiredFiredRef.current = false;
+    const fireOnce = () => {
+      if (!expiredFiredRef.current) {
+        expiredFiredRef.current = true;
+        if (typeof onExpireRef.current === "function") {
+          onExpireRef.current();
+        }
+      }
+    };
+
+    const initialRemaining = calculateSecondsLeft();
+    setSecs(initialRemaining);
+    if (initialRemaining <= 0) {
+      fireOnce();
+      return undefined;
+    }
+
+    const t = setInterval(() => {
+      const remaining = calculateSecondsLeft();
+      setSecs(remaining);
+      if (remaining <= 0) {
+        clearInterval(t);
+        fireOnce();
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [regEndTime]);
+
+  const d = Math.floor(secs / 86400);
+  const h = String(Math.floor((secs % 86400) / 3600)).padStart(2, "0");
+  const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
+  const s = String(secs % 60).padStart(2, "0");
+
+  const formatted = d > 0
+    ? `${String(d).padStart(2, "0")}d ${h}h ${m}m ${s}s`
+    : `${h}h ${m}m ${s}s`;
+
+  return (
+    <span
+      className="text-[#ff0000] font-sans tracking-tighter underline underline-offset-4 decoration-[#ff0000]/30 select-none"
+      style={{ textShadow: "none", filter: "none" }}
+    >
+      {formatted}
+    </span>
+  );
+}
+
 export function LineParticles() {
   const particles = useMemo(() => {
     const random = createSeededRandom("minigame-line-particles-v1");

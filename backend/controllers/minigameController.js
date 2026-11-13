@@ -2,6 +2,15 @@ import prisma from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { resolveClientFingerprint } from '../middleware/ingressDefense.js';
 import { CANONICAL_USER_SELECT } from '../utils/profileDefaults.js';
+import {
+  getActiveMinigameTargetEvent,
+  getMinigameTargetInfo,
+  getUserTargetStats,
+} from './minigame/minigameTargetService.js';
+import {
+  finalizeExpiredMinigameTargets,
+  getUserAwardedVoucher,
+} from './minigame/minigameVoucherService.js';
 
 // Fallback in-memory store for environments without active Redis
 const minigameMemStore = new Map();
@@ -111,48 +120,31 @@ async function isAttemptUsed(req, userId, userEmail) {
 
 export async function getMinigameStatus(req, res, next) {
   try {
+    await finalizeExpiredMinigameTargets().catch((err) => {
+      console.warn('[Minigame Status] Auto-finalize warning:', err.message);
+    });
+
     const userId = req.user?.userId || null;
     const userEmail = req.user?.email || null;
     const { dateStr, secondsUntilReset } = getWibDateInfo();
     const used = await isAttemptUsed(req, userId, userEmail);
     const remaining = used ? 0 : 1;
 
-    let userStats = { bestScoreMs: null, todayScoreMs: null, totalPlays: 0 };
-    if (userId) {
-      try {
-        const emailLookup = userEmail || `user:${userId}`;
-        const logs = await prisma.auditLog.findMany({
-          where: {
-            adminEmail: { in: [emailLookup, `user:${userId}`] },
-            action: 'MINIGAME_PLAY',
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 50,
-        });
-        userStats.totalPlays = logs.length;
-        let bestMs = Infinity;
-        for (const log of logs) {
-          try {
-            const d = JSON.parse(log.details || '{}');
-            if (d.date === dateStr && Number.isFinite(d.scoreMs)) {
-              userStats.todayScoreMs = d.scoreMs;
-            }
-            if (Number.isFinite(d.scoreMs) && d.scoreMs < bestMs) {
-              bestMs = d.scoreMs;
-            }
-          } catch {}
-        }
-        if (bestMs !== Infinity) userStats.bestScoreMs = bestMs;
-      } catch {}
-    }
+    const targetInfo = await getMinigameTargetInfo();
+    const activeTarget = await getActiveMinigameTargetEvent();
+    const userStats = await getUserTargetStats(userId, userEmail, activeTarget, dateStr);
+    const userVoucher = userId ? await getUserAwardedVoucher(userId, activeTarget?.id) : null;
 
     res.json({
       success: true,
       attempt: remaining,
+      canPlay: remaining > 0 && Boolean(activeTarget?.isWithin7Days),
       hasPlayedToday: used,
       maxDailyAttempts: 1,
       secondsUntilReset,
       stats: userStats,
+      targetEvent: targetInfo,
+      voucher: userVoucher,
     });
   } catch (err) {
     console.error('[Minigame Status Error]', err);
@@ -167,6 +159,13 @@ export async function recordMinigameScore(req, res, next) {
     if (!userId) {
       return res.status(401).json({
         error: 'Please sign in to play the minigame and record your daily score.',
+      });
+    }
+
+    const activeTarget = await getActiveMinigameTargetEvent();
+    if (!activeTarget || !activeTarget.isWithin7Days) {
+      return res.status(403).json({
+        error: 'Minigame challenge is only accessible while the target event Due countdown is active.',
       });
     }
 
@@ -219,6 +218,11 @@ export async function recordMinigameScore(req, res, next) {
       }
     }
 
+    const targetEventId = activeTarget ? activeTarget.id : null;
+    const targetAssignedAt = activeTarget?.targetAssignedAt
+      ? new Date(activeTarget.targetAssignedAt).toISOString()
+      : null;
+
     // Persist to Database AuditLog for 100% durable audit trail
     try {
       await prisma.auditLog.create({
@@ -231,6 +235,8 @@ export async function recordMinigameScore(req, res, next) {
             seed: typeof seed === 'string' || typeof seed === 'number' ? String(seed) : '',
             date: dateStr,
             skipped: Boolean(skipped),
+            targetEventId,
+            targetAssignedAt,
             completedAt: new Date().toISOString(),
           }),
         },
@@ -239,15 +245,61 @@ export async function recordMinigameScore(req, res, next) {
       console.warn('[Minigame] AuditLog create warning:', dbErr.message);
     }
 
+    const targetInfo = await getMinigameTargetInfo();
+
     res.status(201).json({
       success: true,
       attempt: 0,
       hasPlayedToday: true,
       message: 'Minigame score recorded successfully.',
       secondsUntilReset,
+      targetEvent: targetInfo,
     });
   } catch (err) {
     console.error('[Minigame Score Error]', err);
+    next(err);
+  }
+}
+
+export async function getMyMinigameVoucher(req, res, next) {
+  try {
+    await finalizeExpiredMinigameTargets().catch(() => {});
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Please sign in.' });
+    const activeTarget = await getActiveMinigameTargetEvent();
+    const voucher = await getUserAwardedVoucher(userId, activeTarget?.id || null);
+    res.json({ success: true, voucher });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function finalizeMinigameChallenge(req, res, next) {
+  try {
+    const requestedEventId = typeof req.body?.eventId === 'string' && req.body.eventId.trim()
+      ? req.body.eventId.trim()
+      : null;
+
+    const finalization = await finalizeExpiredMinigameTargets({
+      eventId: requestedEventId,
+      sendEmails: true,
+    });
+
+    const userId = req.user?.userId || null;
+    const activeTarget = await getActiveMinigameTargetEvent();
+    const targetInfo = await getMinigameTargetInfo();
+    const userVoucher = userId
+      ? await getUserAwardedVoucher(userId, requestedEventId || activeTarget?.id || null)
+      : null;
+
+    res.json({
+      success: true,
+      finalizedCount: finalization.finalizedCount,
+      targetEvent: targetInfo,
+      voucher: userVoucher,
+    });
+  } catch (err) {
+    console.error('[Minigame Finalize Error]', err);
     next(err);
   }
 }

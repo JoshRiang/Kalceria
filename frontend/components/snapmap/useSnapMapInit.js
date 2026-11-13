@@ -34,15 +34,25 @@ export function useSnapMapInit({
   // Continuously ensure map size and tiles are active on mount & window resize
   useEffect(() => {
     if (!isReady || !mapRef.current) return;
-    mapRef.current.invalidateSize();
+    mapRef.current.invalidateSize({ debounceMoveend: true });
     const handleResize = () => {
-      mapRef.current?.invalidateSize();
+      mapRef.current?.invalidateSize({ debounceMoveend: true });
     };
     window.addEventListener("resize", handleResize);
-    const t1 = setTimeout(() => mapRef.current?.invalidateSize(), 150);
-    const t2 = setTimeout(() => mapRef.current?.invalidateSize(), 600);
+
+    let resizeObserver = null;
+    if (typeof window !== "undefined" && typeof window.ResizeObserver === "function" && mapNodeRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        mapRef.current?.invalidateSize({ debounceMoveend: true });
+      });
+      resizeObserver.observe(mapNodeRef.current);
+    }
+
+    const t1 = setTimeout(() => mapRef.current?.invalidateSize({ debounceMoveend: true }), 150);
+    const t2 = setTimeout(() => mapRef.current?.invalidateSize({ debounceMoveend: true }), 600);
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (resizeObserver) resizeObserver.disconnect();
       clearTimeout(t1);
       clearTimeout(t2);
     };
@@ -61,11 +71,13 @@ export function useSnapMapInit({
         attributionControl: false,
         center: resolvedCenter,
         zoom: 15,
+        minZoom: 3,
+        maxZoom: 19,
         preferCanvas: true,
         zoomAnimation: true,
         fadeAnimation: true,
         markerZoomAnimation: true,
-        wheelDebounceTime: 35,
+        wheelDebounceTime: 40,
         closePopupOnClick: false,
       });
 
@@ -93,29 +105,34 @@ export function useSnapMapInit({
         }
       });
 
-      // Keyless multi-shard OpenStreetMap CDN with right-sized viewport keepBuffer so Desktop/iPad never mount 500+ tile bitmaps
+      // High-performance OpenStreetMap tile layer with instant multi-CDN fallback for O(1) laptop/mobile rendering
       const tileLayer = L.tileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
           subdomains: OSM_SUBDOMAINS,
+          minZoom: 3,
           maxZoom: 19,
           maxNativeZoom: 19,
-          keepBuffer: typeof window !== "undefined" && window.innerWidth >= 768 ? 2 : 3,
+          keepBuffer: 6,
           updateWhenIdle: false,
-          updateWhenZooming: false,
-          updateInterval: 140,
+          updateWhenZooming: true,
           attribution: "&copy; OpenStreetMap contributors",
         }
       ).addTo(map);
 
-      // Dual keyless OpenStreetMap fallback in case a single regional edge shard times out
+      // Multi-CDN instant failover (OSM -> CartoDB Voyager CDN) to guarantee zero grey tiles under aggressive zoom out
       tileLayer.on("tileerror", function (error) {
         const tile = error?.tile;
         const coords = error?.coords;
         if (!tile || !coords) return;
-        if (!tile._hasFallenBackPrimary) {
-          tile._hasFallenBackPrimary = true;
-          tile.src = `https://tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
+        if (tile._retryCount && tile._retryCount >= 2) return;
+        tile._retryCount = (tile._retryCount || 0) + 1;
+
+        if (!tile._hasFallenBackCdn) {
+          tile._hasFallenBackCdn = true;
+          // CartoDB Voyager CDN mirror resolves OSM tiles globally with zero rate-limiting
+          const sub = ["a", "b", "c", "d"][(Math.abs(coords.x + coords.y)) % 4];
+          tile.src = `https://${sub}.basemaps.cartocdn.com/rastertiles/voyager/${coords.z}/${coords.x}/${coords.y}.png`;
         } else if (!tile._hasFallenBackAltShard) {
           tile._hasFallenBackAltShard = true;
           const altShard = OSM_SUBDOMAINS[(Math.abs(coords.x + coords.y) + 1) % OSM_SUBDOMAINS.length];

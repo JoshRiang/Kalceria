@@ -94,9 +94,11 @@ export function startVideoClip(state, gen, slideEl, vid, idx, resumeSeconds, com
     syncGeometry(state, slideEl);
   };
   vid.addEventListener("loadedmetadata", onMeta);
+  vid.addEventListener("loadeddata", onMeta);
   vid.addEventListener("resize", onMeta);
   state.clipCleanup.push(() => {
     vid.removeEventListener("loadedmetadata", onMeta);
+    vid.removeEventListener("loadeddata", onMeta);
     vid.removeEventListener("resize", onMeta);
   });
 
