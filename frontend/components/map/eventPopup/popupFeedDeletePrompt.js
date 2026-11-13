@@ -15,6 +15,15 @@
  *   executes deletion, gracefully fades out with aesthetic slide motion & whiteline recalibration.
  */
 
+function esc(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function triggerCarouselHold(targetBoxEl, hold) {
   if (typeof window === "undefined" || !targetBoxEl) return;
   const safeId = resolveCarouselSafeId(targetBoxEl);
@@ -85,8 +94,8 @@ export function showFeedDeletePrompt({
 
   const textColor = isMapDark ? "#ffffff" : "#000000";
   const nameColor = isMapDark ? "#ffffff" : "#000000";
-  // The creator/author deleting their own media is displayed as "You"
-  const safeName = "You";
+  // X is the display name of the user who posted (bold black / theme adaptive)
+  const safeName = esc(authorDisplayName || "Kalcerian");
 
   overlay.innerHTML = `
     <style>

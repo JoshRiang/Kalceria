@@ -137,8 +137,8 @@ test("Feed Deletion: showFeedDeletePrompt mounts overlay with exact typography a
   assert.match(overlay.innerHTML, /<strong style="color: #ef4444; font-weight: 700;">Erase<\/strong>/);
   // 2. "this Feed by" normal weight
   assert.match(overlay.innerHTML, /this Feed by/);
-  // 3. User display identity bold as "You" (PENTING: bukan display name, melainkan by You)
-  assert.match(overlay.innerHTML, /<strong style="color: #ffffff; font-weight: 700;">You<\/strong>\?/);
+  // 3. User display name in bold
+  assert.match(overlay.innerHTML, /<strong style="color: #ffffff; font-weight: 700;">Rei Nathan<\/strong>\?/);
 
   // Verify buttons without outer box (background transparent, border none)
   assert.match(overlay.innerHTML, /data-action="yes"/);

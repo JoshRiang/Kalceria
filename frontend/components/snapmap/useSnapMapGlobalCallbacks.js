@@ -426,6 +426,10 @@ export function useSnapMapGlobalCallbacks({
       }, 120);
     };
 
+    if (typeof window !== "undefined") {
+      window.__kalceriaCurrentUserId = currentUser?.id ? String(currentUser.id) : "";
+    }
+
     // Dynamic Action Dispatcher for Event Media:
     // If current viewer is the author of this clip -> Prompt deletion confirmation overlay
     // Otherwise -> Dispatch reply to personal chat
@@ -458,10 +462,18 @@ export function useSnapMapGlobalCallbacks({
       const targetBoxEl = cardEl?.querySelector(".popup-video");
       if (!targetBoxEl) return;
 
+      const authorDisplayName =
+        clip?.authorName ||
+        clip?.authorDisplayName ||
+        currentUser?.displayName ||
+        currentUser?.name ||
+        currentUser?.nickname ||
+        "Kalcerian";
+
       showFeedDeletePrompt({
         targetBoxEl,
         isMapDark,
-        authorDisplayName: "You",
+        authorDisplayName,
         onConfirm: async () => {
           try {
             // Smoothly slide out the deleted media slide element
@@ -491,7 +503,15 @@ export function useSnapMapGlobalCallbacks({
     window.__kalceriaHandleBroadcastAction = (userId, broadcastId) => {
       const { isSelfOffline, currentUser, mapRef, isMapDark } = latestRef.current;
       if (isSelfOffline) return;
-      const isOwner = Boolean(currentUser?.id && String(currentUser.id) === String(userId));
+      const curId = currentUser?.id ? String(currentUser.id) : null;
+      const isOwner = Boolean(
+        currentUser &&
+          (curId && userId
+            ? String(userId) === curId
+            : currentUser.nickname &&
+              userId &&
+              currentUser.nickname.trim().toLowerCase() === String(userId).trim().toLowerCase())
+      );
 
       if (!isOwner) {
         return window.__kalceriaReplyBroadcast?.(userId);
@@ -504,10 +524,16 @@ export function useSnapMapGlobalCallbacks({
         document.querySelector(".broadcast-popup-box");
       if (!targetBoxEl) return;
 
+      const authorDisplayName =
+        currentUser?.displayName ||
+        currentUser?.name ||
+        currentUser?.nickname ||
+        "Kalcerian";
+
       showFeedDeletePrompt({
         targetBoxEl,
         isMapDark,
-        authorDisplayName: "You",
+        authorDisplayName,
         onConfirm: async () => {
           try {
             // Check if broadcast has text beyond the media tag

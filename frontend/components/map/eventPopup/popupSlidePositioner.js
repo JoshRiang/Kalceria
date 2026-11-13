@@ -90,7 +90,10 @@ export function syncActionRow(state, incomingEl) {
 
     const replyBtn = cardEl.querySelector(`[data-media-reply-btn="${state.safeId}"]`);
     if (replyBtn) {
-      const currentUserId = cardEl.dataset?.currentUserId || "";
+      const currentUserId =
+        cardEl.dataset?.currentUserId ||
+        (typeof window !== "undefined" ? window.__kalceriaCurrentUserId : "") ||
+        "";
       const slideAuthorId = incomingEl.dataset?.authorId || "";
       const isSelfAuthor = Boolean(
         currentUserId && slideAuthorId && String(currentUserId) === String(slideAuthorId)
