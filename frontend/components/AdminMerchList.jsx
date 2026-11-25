@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import api from "@/lib/api";
+import { useState, useRef } from "react";
+import api, { uploadBlobMedia } from "@/lib/api";
 import ContentImage from "@/components/ui/ContentImage";
 import { JITActionModal } from "@/components/admin/dashboard/modals";
 
@@ -13,6 +13,8 @@ function formatRp(n) {
 export default function AdminMerchList({ merch, onToggle, onDeleted, onCreated }) {
   const [form, setForm] = useState({ name: "", photoUrl: "", link: "", price: "" });
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef(null);
   const [jitDeleteId, setJitDeleteId] = useState(null);
 
   function setField(k, v) { setForm((p) => ({ ...p, [k]: v })); }
@@ -60,7 +62,35 @@ export default function AdminMerchList({ merch, onToggle, onDeleted, onCreated }
         <h3 className="font-semibold text-gray-800 mb-4">Tambah Merch</h3>
         <form onSubmit={handleCreate} className="flex flex-col gap-3">
           <input className={inputClass} placeholder="Nama Merch" value={form.name} onChange={(e) => setField("name", e.target.value)} required />
-          <input className={inputClass} placeholder="URL Foto" value={form.photoUrl} onChange={(e) => setField("photoUrl", e.target.value)} required />
+          <div className="flex gap-2">
+            <input className={inputClass} placeholder="URL Foto" value={form.photoUrl} onChange={(e) => setField("photoUrl", e.target.value)} required />
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setUploadingPhoto(true);
+                try {
+                  const res = await uploadBlobMedia(file, { purpose: "merch" });
+                  if (res?.url) setField("photoUrl", res.url);
+                } catch {} finally {
+                  setUploadingPhoto(false);
+                  if (photoInputRef.current) photoInputRef.current.value = "";
+                }
+              }}
+            />
+            <button
+              type="button"
+              disabled={uploadingPhoto || loading}
+              onClick={() => photoInputRef.current?.click()}
+              className="px-3 py-2 bg-gray-900 text-white rounded-lg text-xs font-semibold hover:bg-gray-700 transition shrink-0 disabled:opacity-40"
+            >
+              {uploadingPhoto ? "..." : "Upload"}
+            </button>
+          </div>
           <input className={inputClass} placeholder="Link Tokped/Shopee" value={form.link} onChange={(e) => setField("link", e.target.value)} required />
           <input className={inputClass} type="number" placeholder="Harga (Rp)" value={form.price} onChange={(e) => setField("price", e.target.value)} required />
           <button type="submit" disabled={loading} className="bg-gray-900 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-700 transition disabled:opacity-40">

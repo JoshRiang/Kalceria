@@ -2,8 +2,12 @@
 // Eliminates HTTP revalidation round-trips and bitmap decode stalls when Leaflet
 // injects Event Card popups via innerHTML.
 
-export const EVENT_CARD_BG_LIGHT = "/BG_IMPROVE_FOR_MAP/BG_EventCardLight.webp";
-export const EVENT_CARD_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_EventCardDark.webp";
+export const EVENT_CARD_BG_LIGHT = "/BG_IMPROVE_FOR_MAP/BG_EventCardLight.webp?v=53";
+export const EVENT_CARD_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_EventCardDark.webp?v=53";
+export const VOICE_CALL_BG_LIGHT = "/BG_IMPROVE_FOR_MAP/BG_VoiceCall_Light.webp?v=53";
+export const VOICE_CALL_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_VoiceCall_Dark.webp?v=53";
+export const EDIT_PROFILE_BG_LIGHT = "/BG_IMPROVE_FOR_MAP/BG_EditProfile_Light.webp?v=53";
+export const EDIT_PROFILE_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_EditProfile_Dark.webp?v=53";
 
 // Event Card backgrounds are listed first for highest network + decode priority.
 export const MAP_BG_WEBP_ASSETS = [
@@ -17,9 +21,20 @@ export const MAP_BG_WEBP_ASSETS = [
   "/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp?v=52",
   "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Light.webp?v=52",
   "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Dark.webp?v=52",
-  "/BG_PersonalChat_Light.webp?v=52",
-  "/BG_PersonalChat_Dark.webp?v=52",
-  "/BG_IMPROVE_FOR_MAP/CokiEditProfile.webp",
+  VOICE_CALL_BG_LIGHT,
+  VOICE_CALL_BG_DARK,
+  EDIT_PROFILE_BG_LIGHT,
+  EDIT_PROFILE_BG_DARK,
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_1_Light.webp?v=53",
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_1_Dark.webp?v=53",
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_2_Light.webp?v=53",
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_2_Dark.webp?v=53",
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_3_Light.webp?v=53",
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_3_Dark.webp?v=53",
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_4_Light.webp?v=53",
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_4_Dark.webp?v=53",
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_5_Light.webp?v=53",
+  "/BG_IMPROVE_FOR_MAP/BG_PersonalChat_5_Dark.webp?v=53",
 ];
 
 const BLOB_URL_MAP = new Map();

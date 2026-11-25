@@ -98,6 +98,24 @@ export function cleanMediaFilename(rawName) {
   return decoded || "media-file";
 }
 
+export function isKalceriaManagedMediaUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (trimmed.startsWith("/api/blob/")) return true;
+  try {
+    const host = new URL(trimmed).hostname.toLowerCase();
+    return (
+      host === "cdn.kalceria.id" ||
+      host === "media.kalceria.id" ||
+      host.endsWith(".r2.dev") ||
+      host === "blob.vercel-storage.com" ||
+      host.endsWith(".blob.vercel-storage.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Formats a persisted or preview media URL into a clean display filename.
  */

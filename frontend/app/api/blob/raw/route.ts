@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { get } from "@vercel/blob";
+import { isTrustedR2Host } from "@/lib/r2Storage";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +15,55 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });
     }
 
-    // Strip any client-side #t=start,end media fragments so blob lookup never 404s
+    // Strip any client-side #t=start,end media fragments so lookup never 404s
     const blobUrl = rawBlobUrl.split("#")[0];
     const safeFilename = rawFilename
       ? rawFilename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120)
       : "";
+
+    // Fast path for trusted Cloudflare R2 CDN URLs (e.g. same-origin attachment downloads & Range proxy)
+    let parsedTarget: URL | null = null;
+    try {
+      parsedTarget = new URL(blobUrl);
+    } catch {
+      parsedTarget = null;
+    }
+
+    if (
+      parsedTarget &&
+      parsedTarget.protocol === "https:" &&
+      isTrustedR2Host(parsedTarget.hostname)
+    ) {
+      const fetchHeaders: Record<string, string> = {};
+      const incomingRange = req.headers.get("range");
+      if (incomingRange) {
+        fetchHeaders["Range"] = incomingRange;
+      }
+      const upstream = await fetch(parsedTarget.href, { headers: fetchHeaders });
+      if ((upstream.ok || upstream.status === 206) && upstream.body) {
+        const upstreamHeaders: Record<string, string> = {
+          "Content-Type": upstream.headers.get("content-type") || "application/octet-stream",
+          "Cache-Control": "public, max-age=31536000, immutable",
+          "Accept-Ranges": "bytes",
+        };
+        const upstreamLen = upstream.headers.get("content-length");
+        if (upstreamLen) upstreamHeaders["Content-Length"] = upstreamLen;
+        const contentRange = upstream.headers.get("content-range");
+        if (contentRange) upstreamHeaders["Content-Range"] = contentRange;
+        if (isDownload) {
+          const dlName = safeFilename || parsedTarget.pathname.split("/").pop() || "kalceria-media";
+          upstreamHeaders["Content-Disposition"] = `attachment; filename="${dlName}"`;
+        }
+        return new NextResponse(upstream.body, {
+          status: upstream.status,
+          headers: upstreamHeaders,
+        });
+      }
+      return NextResponse.json(
+        { error: "Media object not found" },
+        { status: upstream.status === 404 ? 404 : 502, headers: { "Cache-Control": "no-store" } }
+      );
+    }
 
     const options: { access: "private"; token?: string } = { access: "private" };
     if (process.env.BLOB_READ_WRITE_TOKEN) {

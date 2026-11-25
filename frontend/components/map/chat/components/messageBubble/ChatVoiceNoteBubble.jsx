@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { formatMessageTime } from "../../hooks/usePersonalChatState";
 import { getFallbackWaveform } from "./bubbleHelpers";
@@ -84,7 +83,7 @@ export function ChatVoiceNoteBubble({
     ? item.voiceWaveform
     : getFallbackWaveform(item.id, getFiniteSec(item.voiceDuration) || 4);
 
-  // Compact 14 bars matching Coki width perfectly
+  // Compact 14 bars matching voice note width cleanly
   const displayWaveform = (() => {
     if (!rawWaveform.length) return [];
     if (rawWaveform.length === 14) return rawWaveform;
@@ -104,18 +103,6 @@ export function ChatVoiceNoteBubble({
     const s = sec % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
   };
-
-  // Syllable flap calculation for natural speech cadence
-  const isSpeakingNow = (() => {
-    if (!isPlaying || !audioRef.current) return false;
-    const dur = getFiniteSec(audioRef.current.duration) || totalDuration || 4;
-    const cur = getFiniteSec(audioRef.current.currentTime) || (playbackProgress * dur);
-    if (cur < 0.25 || cur > dur - 0.25) return false;
-    const flapCycle = Math.floor(cur * 6.5) % 2 === 0;
-    const currentSampleIdx = Math.floor(playbackProgress * (displayWaveform.length || 1));
-    const currentEnergy = displayWaveform[currentSampleIdx] || 0;
-    return flapCycle && currentEnergy >= 26;
-  })();
 
   // Audio Playback Controller & Instance Management
   const getOrCreateAudio = useCallback(() => {
@@ -339,25 +326,9 @@ export function ChatVoiceNoteBubble({
           isSelected ? "scale-[1.04] z-10" : "scale-100"
         } ${isReplyingTarget ? "opacity-50" : "opacity-100"}`}
       >
-        {/* Main Voice Note Unit: Coki mascot centered above voice line */}
+        {/* Main Voice Note Unit */}
         <div className="flex flex-col items-center">
-          {/* Coki Mascot (+35% larger width: ~65px) centered directly above waveform */}
-          <motion.div
-            animate={{ y: [0, -2.5, 0] }}
-            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-            className="relative w-[65px] h-[76px] -mb-1 select-none pointer-events-none drop-shadow-sm flex items-center justify-center"
-          >
-            <Image
-              src={isSpeakingNow ? "/ForChat/Coki_Speak_Trimmed.png" : "/ForChat/Coki_Idle_Trimmed.png"}
-              alt="Coki Voice Mascot"
-              width={65}
-              height={76}
-              className="w-full h-full object-contain"
-              priority
-            />
-          </motion.div>
-
-          {/* Voice Control Row: Play Button, Waveform centered under Coki, and Time Running */}
+          {/* Voice Control Row: Play Button, Waveform, and Time Running */}
           <div className="flex items-center gap-2 py-0.5 select-none">
             {/* 1. Play Button */}
             <button

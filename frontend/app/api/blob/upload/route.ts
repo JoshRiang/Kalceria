@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { optimizeUploadMedia } from "@/lib/mediaOptimizer";
 import { EVENT_CLIP_PREFIX, EVENT_CLIP_PURPOSE } from "@/lib/eventClipStorage";
+import { buildR2ObjectKey, isR2Configured, putR2Object } from "@/lib/r2Storage";
 
 export const dynamic = "force-dynamic";
 
@@ -63,15 +64,44 @@ export async function POST(req: NextRequest) {
     const optimized = await optimizeUploadMedia(rawBuffer, filename, declaredMimeType);
 
     // Event Live Media Feed clips live in their own dated prefix so the 24h reaper can only ever
-    // touch clips; every other upload (avatars, covers, chat media) keeps the long-lived prefix.
+    // touch clips; every other upload (avatars, covers, comments, chat, admin events, merch) uses its scoped prefix.
     const purpose = String(formData.get("purpose") || "").trim().toLowerCase();
     const storedName = optimized.filename.replace(/[^a-zA-Z0-9.-]/g, "_");
     const safeFilename =
       purpose === EVENT_CLIP_PURPOSE
-        ? `${EVENT_CLIP_PREFIX}${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${storedName}`
-        : `events/${Date.now()}-${storedName}`;
+        ? buildR2ObjectKey(EVENT_CLIP_PURPOSE, storedName, EVENT_CLIP_PREFIX)
+        : buildR2ObjectKey(purpose || "events", storedName, EVENT_CLIP_PREFIX);
 
-    // Support both modern Vercel OIDC (BLOB_STORE_ID / Vercel runtime) and static BLOB_READ_WRITE_TOKEN
+    // 1. Primary persistent edge storage: Cloudflare R2 (zero egress, global CDN, native Range 206)
+    if (isR2Configured()) {
+      try {
+        const r2 = await putR2Object({
+          key: safeFilename,
+          body: optimized.buffer,
+          contentType: optimized.contentType,
+          timeoutMs: 25_000,
+        });
+        return NextResponse.json({
+          success: true,
+          url: r2.url,
+          rawBlobUrl: r2.url,
+          access: "public",
+          provider: "cloudflare-r2",
+          key: r2.key,
+          optimization: {
+            originalSize: optimized.originalSize,
+            optimizedSize: optimized.optimizedSize,
+            reductionPercent: optimized.reductionPercent,
+            dimensions: optimized.dimensions,
+          },
+        });
+      } catch (r2Err: unknown) {
+        const errMsg = r2Err instanceof Error ? r2Err.message : "Cloudflare R2 upload failed";
+        console.warn("Cloudflare R2 put failed, falling back:", errMsg);
+      }
+    }
+
+    // 2. Legacy secondary fallback: Vercel Blob (only if R2 is unavailable or unconfigured)
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     const blobStoreId = process.env.BLOB_STORE_ID;
     const hasBlobCredentials = Boolean(blobToken || blobStoreId);

@@ -98,7 +98,13 @@ function buildSameOriginAttachmentUrl(cleanUrl, filename) {
       return `/api/blob/raw?url=${encodeURIComponent(innerUrl)}&download=1&filename=${encodeURIComponent(filename)}`;
     }
 
-    if (parsed.hostname.toLowerCase().endsWith(".blob.vercel-storage.com")) {
+    const lowerHost = parsed.hostname.toLowerCase();
+    if (
+      lowerHost.endsWith(".blob.vercel-storage.com") ||
+      lowerHost === "cdn.kalceria.id" ||
+      lowerHost === "media.kalceria.id" ||
+      lowerHost.endsWith(".r2.dev")
+    ) {
       return `/api/blob/raw?url=${encodeURIComponent(cleanUrl)}&download=1&filename=${encodeURIComponent(filename)}`;
     }
   } catch {}

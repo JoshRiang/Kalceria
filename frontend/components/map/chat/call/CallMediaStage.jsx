@@ -2,22 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import ContentImage from "@/components/ui/ContentImage";
+import { VOICE_CALL_BG_DARK, VOICE_CALL_BG_LIGHT, getInstantMapBgUrl } from "@/lib/mapBgCache";
 import { formatCallDuration } from "../hooks/usePersonalCallState";
-
-// Sparse (~45% reduced) organically distributed mini Coki faces across the stage
-// Positioned strictly below the sleek solid top header so zero faces are ever cut in half.
-const STATIC_COKI_VOICE_BG = [
-  { top: "23%", left: "20%", rotate: -15 },
-  { top: "27%", left: "78%", rotate: 14 },
-  { top: "41%", left: "52%", rotate: -9 },
-  { top: "49%", left: "16%", rotate: 18 },
-  { top: "56%", left: "83%", rotate: -16 },
-  { top: "69%", left: "34%", rotate: 11 },
-  { top: "78%", left: "74%", rotate: -12 },
-  { top: "88%", left: "22%", rotate: 16 },
-];
 
 export function CallMediaStage({
   targetUser,
@@ -176,56 +163,29 @@ export function CallMediaStage({
           )}
         </div>
       ) : (
-        /* Voice Call: Solid 100% Opaque Base Layer (White in Light Mode, Obsidian Dark in Dark Mode) + Clear Coki Faces Pattern below sleek header */
+        /* Voice Call ONLY: Unified V5.3 HD Editorial Background (Video Call background remains untouched) */
         <>
-          {/* 1. Pure Opaque Base: Absolutely zero leakage from chat/map underneath */}
           <div
             className={`absolute inset-0 z-0 pointer-events-none transition-colors duration-200 ${
-              isMapDark ? "bg-[#0f1014]" : "bg-white"
+              isMapDark ? "bg-[#080a11]" : "bg-[#f4efe9]"
             }`}
           />
-
-          {/* 2. Pattern Layer: Organically distributed Mini Coki faces — natural face preserved in Dark Mode (never inverted!) */}
-          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-            {STATIC_COKI_VOICE_BG.map((pos, idx) => (
-              <div
-                key={`coki-bg-${idx}`}
-                style={{
-                  position: "absolute",
-                  top: pos.top,
-                  left: pos.left,
-                  transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
-                  filter: isMapDark
-                    ? "brightness(1.08) drop-shadow(0 0 1.2px rgba(255,255,255,0.62)) drop-shadow(0 0 9px rgba(255,255,255,0.15))"
-                    : "contrast(1.18)",
-                }}
-                className={`w-10 h-13 pointer-events-none select-none ${
-                  isMapDark ? "opacity-[0.36]" : "opacity-[0.42]"
-                }`}
-              >
-                <Image
-                  src="/ForChat/BackgroundVoiceTrimmed.png"
-                  alt=""
-                  width={40}
-                  height={52}
-                  className="w-full h-full object-contain"
-                  priority={idx < 4}
-                />
-              </div>
-            ))}
-          </div>
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300"
+            style={{
+              backgroundImage: `url("${getInstantMapBgUrl(isMapDark ? VOICE_CALL_BG_DARK : VOICE_CALL_BG_LIGHT)}")`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              opacity: isMapDark ? 0.92 : 0.95,
+            }}
+          />
         </>
       )}
 
-      {/* TOP BAR: Sleek Solid Header for Voice Call (White in Light Mode, Dark in Dark Mode), Transparent Overlay for Video Call */}
+      {/* TOP BAR: Clean Seamless Header over V5.3 Voice Call Background & Transparent Overlay for Video Call */}
       <div
-        className={`relative z-10 w-full pt-5 pb-3.5 px-4 flex flex-col items-center text-center transition-colors duration-200 ${
-          mode === "voice"
-            ? isMapDark
-              ? "bg-[#0f1014]"
-              : "bg-white"
-            : ""
-        }`}
+        className="relative z-10 w-full pt-5 pb-3.5 px-4 flex flex-col items-center text-center transition-colors duration-200"
       >
         <h3
           className={`font-sans font-bold text-base sm:text-lg tracking-tight truncate max-w-[260px] ${

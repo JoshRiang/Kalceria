@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import api from "@/lib/api";
+import api, { uploadBlobMedia } from "@/lib/api";
 import { useDebounce, CARD, LABEL, INPUT, BTN_PRIMARY, CLIP_BTN, ExpandableSearch } from './primitives';
 import { JITActionModal } from './modals';
 
@@ -73,6 +73,8 @@ export function EventsPanel({ initialEvents = [], onRefresh }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ title: "", description: "", displayPhotoUrl: "", location: "", regStartTime: "", regEndTime: "", price: "", quota: 100, status: "OPEN", sessionOptions: [""] });
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef(null);
   const [jitDeleteId, setJitDeleteId] = useState(null);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -159,7 +161,42 @@ export function EventsPanel({ initialEvents = [], onRefresh }) {
             ].map(({ k, label, ph }) => (
               <div key={k}>
                 <label className={LABEL}>{label}</label>
-                <input className={INPUT} placeholder={ph} value={form[k]} onChange={(e) => setField(k, e.target.value)} required={k !== "location"} />
+                {k === "displayPhotoUrl" ? (
+                  <div className="flex gap-2">
+                    <input className={INPUT} placeholder={ph} value={form[k]} onChange={(e) => setField(k, e.target.value)} required />
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploadingPhoto(true);
+                        setError("");
+                        try {
+                          const res = await uploadBlobMedia(file, { purpose: "admin-event" });
+                          if (res?.url) setField("displayPhotoUrl", res.url);
+                        } catch (err) {
+                          setError(err?.message || "Failed to upload poster photo.");
+                        } finally {
+                          setUploadingPhoto(false);
+                          if (photoInputRef.current) photoInputRef.current.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingPhoto || loading}
+                      onClick={() => photoInputRef.current?.click()}
+                      className="px-3 py-2 bg-slate-800 border border-white/20 text-white text-[11px] font-mono font-bold uppercase tracking-wider rounded hover:bg-slate-700 transition-colors shrink-0 disabled:opacity-50"
+                    >
+                      {uploadingPhoto ? "..." : "Upload"}
+                    </button>
+                  </div>
+                ) : (
+                  <input className={INPUT} placeholder={ph} value={form[k]} onChange={(e) => setField(k, e.target.value)} required={k !== "location"} />
+                )}
               </div>
             ))}
             <div>

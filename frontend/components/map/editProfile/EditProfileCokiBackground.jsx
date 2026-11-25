@@ -1,41 +1,29 @@
 "use client";
 
-import { EDIT_PROFILE_COKI_PATTERN } from "./editProfileHelpers";
+import { EDIT_PROFILE_BG_DARK, EDIT_PROFILE_BG_LIGHT, getInstantMapBgUrl } from "@/lib/mapBgCache";
 
 export function EditProfileCokiBackground({ isModalDark }) {
+  const bgUrl = getInstantMapBgUrl(isModalDark ? EDIT_PROFILE_BG_DARK : EDIT_PROFILE_BG_LIGHT);
+
   return (
     <div
       aria-hidden="true"
-      className="absolute inset-x-0 top-[54px] bottom-0 z-0 pointer-events-none select-none overflow-hidden"
-      style={{
-        maskImage: "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.5) 14px, black 30px)",
-        WebkitMaskImage: "linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.5) 14px, black 30px)",
-      }}
+      className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
     >
-      {EDIT_PROFILE_COKI_PATTERN.map((item, idx) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={idx}
-          src="/BG_IMPROVE_FOR_MAP/CokiEditProfile.webp"
-          alt=""
-          decoding="sync"
-          draggable={false}
-          style={{
-            position: "absolute",
-            top: item.top,
-            left: item.left,
-            width: `${item.size}px`,
-            height: `${item.size}px`,
-            transform: `rotate(${item.rotate})`,
-            filter: isModalDark
-              ? "brightness(1.08) drop-shadow(0 0 1.2px rgba(255,255,255,0.62)) drop-shadow(0 0 9px rgba(255,255,255,0.15))"
-              : "contrast(1.18)",
-          }}
-          className={`object-contain transition-opacity duration-300 ${
-            isModalDark ? "opacity-[0.34]" : "opacity-[0.38]"
-          }`}
-        />
-      ))}
+      <div
+        className="absolute inset-0 transition-opacity duration-300"
+        style={{
+          backgroundImage: `url("${bgUrl}")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          opacity: isModalDark ? 0.9 : 0.94,
+        }}
+      />
+      <div
+        className={`absolute inset-0 pointer-events-none ${
+          isModalDark ? "bg-[#080a11]/18" : "bg-[#f4efe9]/12"
+        }`}
+      />
     </div>
   );
 }

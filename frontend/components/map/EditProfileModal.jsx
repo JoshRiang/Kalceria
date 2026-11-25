@@ -220,12 +220,12 @@ export function EditProfileModal({
 
       let finalAvatar = profilePicture || resolvePersistentAvatarUrl(currentUser);
       if (finalAvatar && String(finalAvatar).startsWith("data:")) {
-        finalAvatar = await uploadDataUrlViaBlob(finalAvatar, `avatar-${cleanUsername}`);
+        finalAvatar = await uploadDataUrlViaBlob(finalAvatar, `avatar-${cleanUsername}`, "avatar");
       }
 
       let finalCover = coverImage || defaultBaseColor;
       if (pendingCoverFileRef.current) {
-        const uploadedCover = await uploadBlobMedia(pendingCoverFileRef.current);
+        const uploadedCover = await uploadBlobMedia(pendingCoverFileRef.current, { purpose: "cover" });
         if (!uploadedCover?.url) {
           throw new Error("Failed to upload cover video.");
         }
@@ -234,7 +234,7 @@ export function EditProfileModal({
         // CRITICAL: Keep coverPreview holding the local preview during Genie exit animation
         // so the card never flashes green before unmounting.
       } else if (finalCover && String(finalCover).startsWith("data:")) {
-        finalCover = await uploadDataUrlViaBlob(finalCover, `cover-${cleanUsername}`);
+        finalCover = await uploadDataUrlViaBlob(finalCover, `cover-${cleanUsername}`, "cover");
         setCoverImage(finalCover);
       }
 

@@ -2,28 +2,10 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import ContentImage from "@/components/ui/ContentImage";
 import { resolvePersistentAvatarUrl } from "@/lib/profileIdentity";
+import { VOICE_CALL_BG_DARK, VOICE_CALL_BG_LIGHT, getInstantMapBgUrl } from "@/lib/mapBgCache";
 import { HardwarePermissionModal } from "./HardwarePermissionModal";
-
-// Static distributed mini Coki faces with fixed random tilt angles (constant across all calls)
-// Notice: The top center area (Name, Calling/Ringing status) is naturally kept completely clean and trimmed
-const STATIC_COKI_VOICE_BG = [
-  { top: "7%", left: "12%", rotate: -14 },
-  { top: "7%", left: "84%", rotate: -8 },
-  { top: "25%", left: "28%", rotate: 22 },
-  { top: "27%", left: "72%", rotate: -18 },
-  { top: "42%", left: "9%", rotate: 12 },
-  { top: "44%", left: "88%", rotate: -15 },
-  { top: "58%", left: "22%", rotate: -20 },
-  { top: "60%", left: "74%", rotate: 18 },
-  { top: "76%", left: "12%", rotate: 10 },
-  { top: "78%", left: "48%", rotate: -12 },
-  { top: "80%", left: "84%", rotate: 24 },
-  { top: "92%", left: "30%", rotate: -6 },
-  { top: "93%", left: "68%", rotate: 15 },
-];
 
 export function IncomingCallModal({
   incomingCall,
@@ -142,59 +124,29 @@ export function IncomingCallModal({
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
           </div>
         ) : (
-          /* Voice Call: Solid 100% Opaque Base Layer + Coki Faces Pattern trimmed naturally around top header */
+          /* Voice Call ONLY: Unified V5.3 HD Editorial Background (Incoming Video Call remains untouched) */
           <>
-            {/* 1. Pure Opaque Base: Absolutely zero leakage from chat/map underneath */}
             <div
               className={`absolute inset-0 z-0 pointer-events-none ${
-                isMapDark ? "bg-[#0f1014]" : "bg-white"
+                isMapDark ? "bg-[#080a11]" : "bg-[#f4efe9]"
               }`}
             />
-
-            {/* 2. Pattern Layer: Mini Coki faces masked away cleanly from top header */}
             <div
-              className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
+              aria-hidden="true"
+              className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300"
               style={{
-                WebkitMaskImage:
-                  "radial-gradient(ellipse 180px 100px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
-                maskImage:
-                  "radial-gradient(ellipse 180px 100px at 50% 9%, transparent 0%, transparent 65%, black 100%)",
+                backgroundImage: `url("${getInstantMapBgUrl(isMapDark ? VOICE_CALL_BG_DARK : VOICE_CALL_BG_LIGHT)}")`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                opacity: isMapDark ? 0.92 : 0.95,
               }}
-            >
-              {STATIC_COKI_VOICE_BG.map((pos, idx) => (
-                <div
-                  key={`coki-bg-${idx}`}
-                  style={{
-                    position: "absolute",
-                    top: pos.top,
-                    left: pos.left,
-                    transform: `translate(-50%, -50%) rotate(${pos.rotate}deg)`,
-                  }}
-                  className={`w-10 h-13 pointer-events-none select-none ${
-                    isMapDark
-                      ? "opacity-[0.38] invert brightness-115 contrast-125"
-                      : "opacity-[0.42] contrast-125"
-                  }`}
-                >
-                  <Image
-                    src="/ForChat/BackgroundVoiceTrimmed.png"
-                    alt=""
-                    width={40}
-                    height={52}
-                    className="w-full h-full object-contain"
-                    priority={idx < 4}
-                  />
-                </div>
-              ))}
-            </div>
+            />
           </>
         )}
 
         {/* TOP BAR: Caller Display Name Mid-Center & Calling Status */}
         <div
-          className={`relative z-10 pt-5 pb-3 px-4 flex flex-col items-center text-center ${
-            !isVideo ? (isMapDark ? "bg-[#0f1014]" : "bg-white") : ""
-          }`}
+          className="relative z-10 pt-5 pb-3 px-4 flex flex-col items-center text-center"
         >
           <h3
             className={`font-sans font-bold text-lg sm:text-xl tracking-tight truncate max-w-[260px] ${

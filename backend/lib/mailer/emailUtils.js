@@ -50,8 +50,11 @@ export function resolveEmailPosterUrl(event, rawFrontendUrl = process.env.FRONTE
     url = `${publicBase}/${url}`;
   }
 
-  // Convert .webp to .jpg for universal email proxy rendering (Gmail GoogleImageProxy)
-  if (/\.webp(\?.*)?$/i.test(url)) {
+  // Convert static local Kalceria .webp posters to .jpg for universal email proxy rendering (Gmail GoogleImageProxy);
+  // keep external CDN/R2 URLs intact so uploaded .webp objects never 404.
+  const isLocalStaticPoster =
+    url.startsWith(`${publicBase}/`) || url.startsWith(`${CANONICAL_PUBLIC_ORIGIN}/`);
+  if (isLocalStaticPoster && /\.webp(\?.*)?$/i.test(url)) {
     url = url.replace(/\.webp(\?.*)?$/i, '.jpg$1');
   }
 

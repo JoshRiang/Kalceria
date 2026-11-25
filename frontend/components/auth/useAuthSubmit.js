@@ -1,6 +1,6 @@
 "use client";
 
-import api from "@/lib/api";
+import api, { uploadBlobMedia } from "@/lib/api";
 import { EMAIL_AUTH_ENABLED, PUBLIC_SIGNUP_ENABLED } from "@/lib/authConfig";
 import { establishSession } from "@/lib/session";
 import { persistProfileIdentityCache } from "@/lib/profileIdentity";
@@ -152,7 +152,20 @@ export function useAuthSubmit({
         const registeredEmail = form.email.trim();
         const registeredPassword = form.password;
         const registeredName = form.name.trim();
-        const profilePicture = await optimizeAvatarForBackend(croppedAvatar);
+        let profilePicture = await optimizeAvatarForBackend(croppedAvatar);
+        if (profilePicture && profilePicture.startsWith("data:image/")) {
+          try {
+            const avatarBlob = await fetch(profilePicture).then((r) => r.blob());
+            const ext = (avatarBlob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
+            const avatarFile = new File([avatarBlob], `avatar-${Date.now()}.${ext}`, {
+              type: avatarBlob.type || "image/jpeg",
+            });
+            const uploaded = await uploadBlobMedia(avatarFile, { purpose: "avatar" });
+            if (uploaded?.url && !String(uploaded.url).startsWith("data:")) {
+              profilePicture = uploaded.url;
+            }
+          } catch {}
+        }
         const birthDateIso = `${String(form.dob).trim()}-01-01`;
 
         // Store credentials & cropped profile photo in ref until registration completes at Choose Username Done

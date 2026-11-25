@@ -96,7 +96,10 @@ function isTrustedVercelBlobHost(hostname) {
   const lower = String(hostname || '').toLowerCase();
   return (
     lower === 'blob.vercel-storage.com' ||
-    lower.endsWith('.blob.vercel-storage.com')
+    lower.endsWith('.blob.vercel-storage.com') ||
+    lower === 'cdn.kalceria.id' ||
+    lower === 'media.kalceria.id' ||
+    lower.endsWith('.r2.dev')
   );
 }
 

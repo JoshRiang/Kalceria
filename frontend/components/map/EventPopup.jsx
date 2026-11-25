@@ -79,13 +79,13 @@ export function eventPopup(
   const hasRequestedThisEvent = Boolean(requestedEventId && String(requestedEventId) === String(item.id));
   const hasActiveRequestElsewhere = Boolean(requestedEventId && String(requestedEventId) !== String(item.id));
 
-  // BG_EventCardLight.webp (#ffffff) / BG_EventCardDark.webp (#1b1c1e)
-  // Pre-decoded RAM blob: URL + 3 horizontal concatenated panels so background stays crisp
+  // BG_EventCardLight.webp (#f4efe9) / BG_EventCardDark.webp (#080a11)
+  // Pre-decoded RAM blob: URL + 3 horizontal concatenated panels; top 34% kept clean for unblurred header
   const rawBgImage = isMapDark ? EVENT_CARD_BG_DARK : EVENT_CARD_BG_LIGHT;
   const bgImage = getInstantMapBgUrl(rawBgImage);
   const bgCssVar = isMapDark ? "--kalceria-event-bg-dark" : "--kalceria-event-bg-light";
-  const cardBaseBg = isMapDark ? "#1b1c1e" : "#ffffff";
-  const bgOpacity = isMapDark ? 0.22 : 0.28;
+  const cardBaseBg = isMapDark ? "#080a11" : "#f4efe9";
+  const bgOpacity = isMapDark ? 0.92 : 0.95;
   const cardBorder = isMapDark ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.14)";
   const cardShadow = isMapDark
     ? "0 18px 46px rgba(0, 0, 0, 0.78), inset 0 1px 1px rgba(255, 255, 255, 0.16)"
@@ -228,8 +228,8 @@ export function eventPopup(
         <div style="flex: 0 0 auto; height: 100%; aspect-ratio: var(--kalceria-event-bg-aspect, 0.5578); transform: scaleX(-1); background-image: var(${bgCssVar}, url('${bgImage}')); background-size: 100% 100%; background-repeat: no-repeat;"></div>
       </div>
 
-      <!-- Upper Space: Elongated Header with blur & flexible elasticity -->
-      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 10px 14px; background: transparent !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; border: none !important;">
+      <!-- Upper Space: Clean Unblurred Header over Spotless Top Composition Zone -->
+      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 10px 14px; background: transparent !important; border: none !important;">
         <!-- Top Row: Dynamic Avatar Stack on Left (Creator on top, Collaborators nested to right), Action Icons on Right -->
         <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%;">
           ${avatarStackHtml}

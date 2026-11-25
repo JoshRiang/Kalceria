@@ -8,6 +8,7 @@ import {
 } from "@/lib/urlSecurity";
 import {
   formatMediaDisplayName,
+  isKalceriaManagedMediaUrl,
   normalizeUploadErrorMessage,
   validateMediaUploadFile,
 } from "@/lib/mediaUploadHelpers";
@@ -177,7 +178,7 @@ export function EventMediaSection({
     (parsedUrls.length === 1 &&
       (activeUrl.startsWith("blob:") ||
         activeUrl.startsWith("data:") ||
-        activeUrl.startsWith("/api/blob/") ||
+        isKalceriaManagedMediaUrl(activeUrl) ||
         Boolean(fileNamesRef.current[activeUrl])));
   const displayFilenameText = isLockedAttachment
     ? getDisplayFilename(activeUrl)

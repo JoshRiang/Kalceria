@@ -59,7 +59,7 @@ export function useIdeaCommentMedia() {
 
     setIsUploadingMedia(true);
     try {
-      const res = await uploadBlobMedia(file);
+      const res = await uploadBlobMedia(file, { purpose: "comment" });
       if (res?.url) {
         try { URL.revokeObjectURL(instantObjUrl); } catch {}
         fileNamesRef.current[res.url] = file.name;

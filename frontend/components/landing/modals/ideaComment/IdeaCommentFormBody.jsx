@@ -2,6 +2,7 @@
 
 import { COMMENT_TYPES, CATEGORIES } from "./constants";
 import { validateAndNormalizeMediaUrlClient, splitMediaUrlListClient } from "@/lib/urlSecurity";
+import { isKalceriaManagedMediaUrl } from "@/lib/mediaUploadHelpers";
 
 export function IdeaCommentFormBody({
   handleSubmit,
@@ -39,7 +40,7 @@ export function IdeaCommentFormBody({
     (parsedUrls.length === 1 &&
       (activeUrl.startsWith("blob:") ||
         activeUrl.startsWith("data:") ||
-        activeUrl.startsWith("/api/blob/")));
+        isKalceriaManagedMediaUrl(activeUrl)));
   const displayFilenameText = isLockedAttachment
     ? (getDisplayFilename ? getDisplayFilename(activeUrl) : activeUrl)
     : mediaUrl;

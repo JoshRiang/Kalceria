@@ -8,6 +8,7 @@
 import prisma from '../lib/prisma.js';
 import { createLog } from './auditController.js';
 import { optimizeVideoBuffer } from '../utils/videoOptimizer.js';
+import { isR2Configured, putR2Object } from '../lib/r2Storage.js';
 
 const MAX_RAW_VIDEO_BYTES = 25 * 1024 * 1024; // 25 MB input limit (matches Express JSON limit)
 const MAX_INLINE_DATA_URL_BYTES = 6 * 1024 * 1024; // 6 MB compressed inline DB fallback ceiling
@@ -59,9 +60,30 @@ export function parseBase64VideoPayload({ videoDataUrl, base64, mimeType, filena
 }
 
 async function storeOptimizedVideoAsset(eventId, optimized) {
+  const safeEventId = String(eventId || 'event').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const safeName = optimized.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+  // 1. Primary persistent edge storage: Cloudflare R2
+  if (isR2Configured()) {
+    const key = `admin-events/${safeEventId}-${Date.now()}-${safeName}`;
+    try {
+      const r2 = await putR2Object({
+        key,
+        body: optimized.buffer,
+        contentType: optimized.contentType,
+        timeoutMs: 30_000,
+      });
+      if (r2?.url) {
+        return { url: r2.url, provider: 'cloudflare-r2' };
+      }
+    } catch (err) {
+      console.warn('[EventVideo] Cloudflare R2 upload warning, falling back cleanly:', err.message);
+    }
+  }
+
+  // 2. Legacy secondary fallback: Vercel Blob
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
   if (blobToken) {
-    const safeName = optimized.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     const pathname = `event-videos/${encodeURIComponent(eventId)}/${Date.now()}-${safeName}`;
     try {
       const uploadRes = await fetch(`https://blob.vercel-storage.com/${pathname}`, {

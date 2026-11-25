@@ -16,7 +16,7 @@ export async function uploadMediaWithPersistFallback(blobOrFile) {
   if (!blobOrFile) return null;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const res = await uploadBlobMedia(blobOrFile);
+      const res = await uploadBlobMedia(blobOrFile, { purpose: "chat" });
       if (res?.url && !String(res.url).startsWith("blob:")) {
         return res.url;
       }
