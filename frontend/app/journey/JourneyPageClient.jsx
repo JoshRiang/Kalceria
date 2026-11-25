@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useIsMobileViewport, useIsMobileOrTabletViewport } from '@/hooks/useIsMobileViewport';
 import JourneySection4 from '../../components/JourneySection4';
 import JourneyRightHalf, { JourneySlider, JourneyDescriptionBox } from '../../components/JourneyRightHalf';
+import { JourneySegmentBackdrop } from '../../components/journey/JourneySegmentBackdrop';
 
 export default function JourneyPageClient() {
   const [isIntroActive, setIsIntroActive] = useState(true);
@@ -146,20 +147,7 @@ export default function JourneyPageClient() {
       >
         {/* Section 1 - Mist */}
         <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isMobileOrTablet ? "flex-col justify-center pt-0" : "pt-[7vh]"}`}>
-          {/* Background Layer with Graceful Blur / Unblur */}
-          <div
-            className="absolute inset-0 bg-cover bg-center transition-all duration-700 ease-in-out pointer-events-none"
-            style={{
-              backgroundImage: isMobileOrTablet ? "url('/hp/bgj_1_hp_arcade.webp')" : "url('/bgj_1_arcade.webp')",
-              filter: isFlipped1 ? "blur(18px) brightness(0.82)" : "blur(0px) brightness(1)",
-              transform: isFlipped1 ? "scale(1.05)" : "scale(1)",
-              willChange: "filter, transform",
-            }}
-          />
-          <div
-            className="absolute inset-0 bg-black/35 transition-opacity duration-700 pointer-events-none"
-            style={{ opacity: isFlipped1 ? 1 : 0 }}
-          />
+          <JourneySegmentBackdrop segmentIndex={1} isMobileOrTablet={isMobileOrTablet} isFlipped={isFlipped1} />
 
           <div className="container mx-auto px-6 md:px-12 flex flex-col items-center justify-center relative z-20">
             {/* Center Stack for Mobile and iPad / Tablet Family */}
@@ -200,20 +188,7 @@ export default function JourneyPageClient() {
 
         {/* Section 2 - UI Racing Team */}
         <section className="relative w-full h-screen flex flex-col items-center justify-center overflow-hidden">
-          {/* Background Layer with Graceful Blur / Unblur */}
-          <div
-            className="absolute inset-0 bg-cover bg-center transition-all duration-700 ease-in-out pointer-events-none"
-            style={{
-              backgroundImage: isMobileOrTablet ? "url('/hp/bgj_2_hp.webp')" : "url('/bgj_2.webp')",
-              filter: isFlipped2 ? "blur(18px) brightness(0.82)" : "blur(0px) brightness(1)",
-              transform: isFlipped2 ? "scale(1.05)" : "scale(1)",
-              willChange: "filter, transform",
-            }}
-          />
-          <div
-            className="absolute inset-0 bg-black/35 transition-opacity duration-700 pointer-events-none"
-            style={{ opacity: isFlipped2 ? 1 : 0 }}
-          />
+          <JourneySegmentBackdrop segmentIndex={2} isMobileOrTablet={isMobileOrTablet} isFlipped={isFlipped2} />
 
           <div className="container mx-auto px-6 md:px-12 relative z-20 flex flex-col items-center">
             <div className="w-full flex flex-col items-center justify-center gap-3 sm:gap-4 z-30">
@@ -237,20 +212,7 @@ export default function JourneyPageClient() {
 
         {/* Section 3 - Dream Shift Labs */}
         <section className={`relative w-full h-screen flex items-center justify-center overflow-hidden ${isMobileOrTablet ? "flex-col justify-center pt-0" : "pt-[7vh]"}`}>
-          {/* Background Layer with Graceful Blur / Unblur */}
-          <div
-            className="absolute inset-0 bg-cover bg-center transition-all duration-700 ease-in-out pointer-events-none"
-            style={{
-              backgroundImage: isMobileOrTablet ? "url('/hp/bgj_3_hp_arcade.webp')" : "url('/bgj_3.webp')",
-              filter: isFlipped3 ? "blur(18px) brightness(0.82)" : "blur(0px) brightness(1)",
-              transform: isFlipped3 ? "scale(1.05)" : "scale(1)",
-              willChange: "filter, transform",
-            }}
-          />
-          <div
-            className="absolute inset-0 bg-black/35 transition-opacity duration-700 pointer-events-none"
-            style={{ opacity: isFlipped3 ? 1 : 0 }}
-          />
+          <JourneySegmentBackdrop segmentIndex={3} isMobileOrTablet={isMobileOrTablet} isFlipped={isFlipped3} />
 
           <div className="container mx-auto px-6 md:px-12 flex flex-col items-center justify-center relative z-20">
             {/* Center Stack for Mobile and iPad / Tablet Family */}

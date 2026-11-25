@@ -1,7 +1,5 @@
 "use client";
 
-import { EditProfileActionBackdrop } from "./EditProfileActionBackdrop";
-
 export function EditProfileSocialFields({
   phone,
   setPhone,
@@ -15,8 +13,6 @@ export function EditProfileSocialFields({
   iconStroke,
   inputBgClass,
 }) {
-  const isModalDark = iconFg === "#ffffff";
-
   return (
     <>
       {/* WhatsApp */}
@@ -41,19 +37,16 @@ export function EditProfileSocialFields({
           </div>
 
           {phone.trim() ? (
-            <span className="relative inline-flex items-center justify-center">
-              <EditProfileActionBackdrop isModalDark={isModalDark} compact />
-              <button
-                type="button"
-                onClick={() => setPhone("")}
-                title="Omit WhatsApp number"
-                className="relative z-10 w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-400 transition-colors cursor-pointer"
-              >
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#ef4444" aria-hidden="true">
-                  <path d="M9 3h6a1 1 0 0 1 1 1v1h4a1 1 0 1 1 0 2h-1v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h4V4a1 1 0 0 1 1-1z" />
-                </svg>
-              </button>
-            </span>
+            <button
+              type="button"
+              onClick={() => setPhone("")}
+              title="Omit WhatsApp number"
+              className="w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-400 transition-colors cursor-pointer"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#ef4444" aria-hidden="true">
+                <path d="M9 3h6a1 1 0 0 1 1 1v1h4a1 1 0 1 1 0 2h-1v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h4V4a1 1 0 0 1 1-1z" />
+              </svg>
+            </button>
           ) : (
             <button
               type="button"
@@ -100,19 +93,16 @@ export function EditProfileSocialFields({
           </div>
 
           {instagram.trim() ? (
-            <span className="relative inline-flex items-center justify-center">
-              <EditProfileActionBackdrop isModalDark={isModalDark} compact />
-              <button
-                type="button"
-                onClick={() => setInstagram("")}
-                title="Omit Instagram handle"
-                className="relative z-10 w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-400 transition-colors cursor-pointer"
-              >
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#ef4444" aria-hidden="true">
-                  <path d="M9 3h6a1 1 0 0 1 1 1v1h4a1 1 0 1 1 0 2h-1v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h4V4a1 1 0 0 1 1-1z" />
-                </svg>
-              </button>
-            </span>
+            <button
+              type="button"
+              onClick={() => setInstagram("")}
+              title="Omit Instagram handle"
+              className="w-5 h-5 flex items-center justify-center text-red-500 hover:text-red-400 transition-colors cursor-pointer"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#ef4444" aria-hidden="true">
+                <path d="M9 3h6a1 1 0 0 1 1 1v1h4a1 1 0 1 1 0 2h-1v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h4V4a1 1 0 0 1 1-1z" />
+              </svg>
+            </button>
           ) : (
             <button
               type="button"

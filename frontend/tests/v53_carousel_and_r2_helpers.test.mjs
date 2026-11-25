@@ -102,6 +102,7 @@ test('Event Box removes header blur, Edit Profile uses solid red trash fill, Voi
   const popupSrc = fs.readFileSync(path.join(FE_ROOT, 'components/map/EventPopup.jsx'), 'utf8');
   const headerLine = popupSrc.split('\n').find((l) => l.includes('class="popup-profile"')) || '';
   assert.equal(headerLine.includes('backdrop-filter'), false);
+  assert.equal(popupSrc.includes('class="popup-footer-fade"'), true, 'EventPopup must seamlessly fade background into footer');
 
   const socialSrc = fs.readFileSync(
     path.join(FE_ROOT, 'components/map/editProfile/EditProfileSocialFields.jsx'),
@@ -109,8 +110,7 @@ test('Event Box removes header blur, Edit Profile uses solid red trash fill, Voi
   );
   const redFillMatches = socialSrc.match(/fill="#ef4444"/g) || [];
   assert.equal(redFillMatches.length, 2, 'Both WhatsApp and Instagram trash icons must use full solid red fill');
-  const socialBackdropMatches = socialSrc.match(/<EditProfileActionBackdrop/g) || [];
-  assert.equal(socialBackdropMatches.length, 2, 'Both trashcan buttons must render seamless borderless blur backdrop');
+  assert.equal(socialSrc.includes('EditProfileActionBackdrop'), false, 'Trashcan icons must NOT have blur box backdrop');
 
   const dangerSrc = fs.readFileSync(
     path.join(FE_ROOT, 'components/map/editProfile/EditProfileDangerZone.jsx'),

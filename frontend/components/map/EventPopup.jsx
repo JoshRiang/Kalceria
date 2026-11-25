@@ -98,6 +98,9 @@ export function eventPopup(
   const authorColor = isMapDark ? "#ffffff" : "#000000";
   const descColor = isMapDark ? "#ffffff" : "#0f172a";
   const footerBg = isMapDark ? "#000000" : "#ffffff";
+  const footerFadeGradient = isMapDark
+    ? "linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.28) 32%, rgba(0, 0, 0, 0.76) 70%, #000000 100%)"
+    : "linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.30) 32%, rgba(255, 255, 255, 0.78) 70%, #ffffff 100%)";
   const footerTextColor = isMapDark ? "#ffffff" : "#000000";
 
   const iconFg = isMapDark ? "#ffffff" : "#000000";
@@ -229,7 +232,7 @@ export function eventPopup(
       </div>
 
       <!-- Upper Space: Clean Unblurred Header over Spotless Top Composition Zone -->
-      <div class="popup-profile" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 10px 14px; background: transparent !important; border: none !important;">
+      <div class="popup-profile" style="position: relative; z-index: 3; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 10px 14px; background: transparent !important; border: none !important;">
         <!-- Top Row: Dynamic Avatar Stack on Left (Creator on top, Collaborators nested to right), Action Icons on Right -->
         <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%;">
           ${avatarStackHtml}
@@ -255,7 +258,7 @@ export function eventPopup(
       <div
         style="
           position: relative;
-          z-index: 2;
+          z-index: 3;
           display: flex;
           align-items: center;
           justify-content: flex-start;
@@ -352,12 +355,13 @@ export function eventPopup(
       }
 
       <!-- Framed Media Screen: width/height follow the real clip aspect ratio (portrait ↔ 16:9 landscape), transparent backdrop -->
-      <div class="popup-video" style="position: relative; z-index: 2; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; transition: height ${geometryTransition}; margin: 2px 12px 8px 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
+      <div class="popup-video" style="position: relative; z-index: 3; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; transition: height ${geometryTransition}; margin: 2px 12px 8px 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
         ${renderMediaCarousel(mediaItems, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId, eventCreatorId || "")}
       </div>
 
-      <!-- Footer: dynamic expanding/contracting white/dark box with user briefing positioned cleanly above the location link -->
+      <!-- Footer: seamless faded melt from upper artwork into footer (zero sharp dividing seam) -->
       <div class="popup-footer" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 10px 14px; background: ${footerBg} !important; border-bottom-left-radius: 17px; border-bottom-right-radius: 17px; font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; border: none !important;">
+        <div class="popup-footer-fade" aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: calc(100% - 1px); height: 48px; pointer-events: none; background: ${footerFadeGradient};"></div>
         ${displayDesc ? `
           <div class="popup-briefing" style="margin: 0 0 3px 0; line-height: 1.4; word-break: break-word;">
             <p style="margin: 0; font-size: 12px; line-height: 1.42; font-weight: 400; color: ${footerTextColor}; font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.01em;">${esc(displayDesc)}</p>

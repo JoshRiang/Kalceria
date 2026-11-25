@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image, { getImageProps } from "next/image";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import api from "@/lib/api";
+import { MINIGAME_BG_THEMES } from "@/lib/pageBgAssets";
 import {
   MicroParticles,
   DecorativeCard,
@@ -131,23 +132,7 @@ export default function MinigamePage() {
     }, 2800); // Sequential timing to match the exit animation layers
   };
 
-  const heroCommon = { alt: "", quality: 75, sizes: "100vw" };
-  const {
-    props: { srcSet: desktopHeroSrcSet, ...desktopHeroRest },
-  } = getImageProps({
-    ...heroCommon,
-    width: 2816,
-    height: 1502,
-    src: "/bg_game.webp",
-  });
-  const {
-    props: { srcSet: mobileHeroSrcSet },
-  } = getImageProps({
-    ...heroCommon,
-    width: 2048,
-    height: 2048,
-    src: "/hp/bg_game_hp.webp",
-  });
+  const isPlayDarkTheme = isGameStarting && !isGameEnding;
 
   return (
     <main className="relative w-full h-[100dvh] max-h-[100dvh] bg-black overflow-hidden select-none">
@@ -159,27 +144,70 @@ export default function MinigamePage() {
         )}
       </AnimatePresence>
 
-      {/* Background */}
-      <motion.div
-        animate={{ 
-          opacity: isGameStarting ? (isGameEnding ? 1 : 0.4) : 1,
-          transition: { duration: 2.5, ease: "easeInOut" } 
-        }}
-        className="absolute inset-0 z-0"
-      >
-        <picture className="block w-full h-full">
-          <source media="(max-width: 767px)" srcSet={mobileHeroSrcSet} sizes="100vw" />
-          <source media="(min-width: 768px)" srcSet={desktopHeroSrcSet} sizes="100vw" />
-          <img
-            {...desktopHeroRest}
-            alt=""
-            fetchPriority="high"
-            decoding="sync"
-            className="w-full h-full object-cover object-center"
-          />
-        </picture>
-        <div className="absolute inset-0 bg-black/10" />
-      </motion.div>
+      {/* Dual-Scheme HD Background: White + Gold/Blue (Idle) -> Smooth Fade to Black + Pink/Gold (Playing) */}
+      <div aria-hidden="true" className="absolute inset-0 z-0 pointer-events-none bg-black">
+        {/* Playing Layer: Black base + Pink & Gold (fades in smoothly during active play) */}
+        <motion.div
+          initial={false}
+          animate={{
+            opacity: isPlayDarkTheme ? 0.9 : 0,
+            transition: { duration: 2.2, ease: "easeInOut" },
+          }}
+          className="absolute inset-0"
+        >
+          <picture className="block w-full h-full">
+            <source media="(max-width: 767px)" srcSet={MINIGAME_BG_THEMES.dark.mobile} />
+            <source media="(min-width: 768px)" srcSet={MINIGAME_BG_THEMES.dark.desktop} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={MINIGAME_BG_THEMES.dark.desktop}
+              alt=""
+              loading="eager"
+              decoding="async"
+              onError={(e) => {
+                if (e.currentTarget.dataset.fallbackApplied) return;
+                e.currentTarget.dataset.fallbackApplied = "1";
+                e.currentTarget.parentElement?.querySelectorAll("source").forEach((s) => s.remove());
+                e.currentTarget.src = isMobile
+                  ? MINIGAME_BG_THEMES.dark.localMobile
+                  : MINIGAME_BG_THEMES.dark.localDesktop;
+              }}
+              className="w-full h-full object-cover object-center"
+            />
+          </picture>
+        </motion.div>
+
+        {/* Idle Layer: White base + Gold & Royal Blue (fades out slowly into dark base as user plays) */}
+        <motion.div
+          initial={false}
+          animate={{
+            opacity: isPlayDarkTheme ? 0 : 1,
+            transition: { duration: 2.2, ease: "easeInOut" },
+          }}
+          className="absolute inset-0"
+        >
+          <picture className="block w-full h-full">
+            <source media="(max-width: 767px)" srcSet={MINIGAME_BG_THEMES.light.mobile} />
+            <source media="(min-width: 768px)" srcSet={MINIGAME_BG_THEMES.light.desktop} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={MINIGAME_BG_THEMES.light.desktop}
+              alt=""
+              fetchPriority="high"
+              decoding="sync"
+              onError={(e) => {
+                if (e.currentTarget.dataset.fallbackApplied) return;
+                e.currentTarget.dataset.fallbackApplied = "1";
+                e.currentTarget.parentElement?.querySelectorAll("source").forEach((s) => s.remove());
+                e.currentTarget.src = isMobile
+                  ? MINIGAME_BG_THEMES.light.localMobile
+                  : MINIGAME_BG_THEMES.light.localDesktop;
+              }}
+              className="w-full h-full object-cover object-center"
+            />
+          </picture>
+        </motion.div>
+      </div>
 
       {/* Magenta Bleed Effect */}
       <AnimatePresence>
