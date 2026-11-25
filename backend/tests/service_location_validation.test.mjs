@@ -987,7 +987,8 @@ describe('Service Request: Comms Channel & Location Verification', () => {
         assert.match(html, /Speed Hunter/);
         assert.match(html, /speed@kalceria\.id/);
         assert.match(html, /150\.000/);
-        assert.match(html, /event_1\.webp/);
+        assert.match(html, /https:\/\/www\.kalceria\.id\/event_1\.jpg\?v=kalceria/);
+        assert.doesNotMatch(html, /localhost/i);
         assert.match(html, /Ketentuan Waktu &amp; Pembatalan \(3 Menit\)/);
         assert.match(html, />CONFIRM</);
         assert.match(html, />CANCEL</);
@@ -1002,7 +1003,8 @@ describe('Service Request: Comms Channel & Location Verification', () => {
         });
 
         assert.match(html, /Neon Horizon Night Meet/);
-        assert.match(html, /event_1\.webp/);
+        assert.match(html, /https:\/\/www\.kalceria\.id\/event_1\.jpg\?v=kalceria/);
+        assert.doesNotMatch(html, /localhost/i);
         assert.match(html, /Status: Terkonfirmasi &amp; Terkunci/);
         assert.match(html, /CONFIRMED/);
         assert.doesNotMatch(html, />CONFIRM</);
