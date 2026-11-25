@@ -1,46 +1,72 @@
-// ─── In-Memory Blob Video Pool (Eliminates Chromium HTTP 206 Range-Cache Deadlock) ───
-export const INTRO_VIDEO_PATHS = ["/vid_login1.mp4", "/vid_login2.mp4", "/vid_login3.mp4"];
+import {
+  INTRO_CAR_VIDEO_POOL,
+  selectSessionIntroVideos,
+} from "./introVideoGridLayout";
+
+// ─── Cloudflare Edge CDN Car Video Pool (Lean Hardware Decoders + In-Memory Blob Cache) ───
+export const INTRO_VIDEO_PATHS = INTRO_CAR_VIDEO_POOL;
+
 let sharedVideoElements = null;
+let sharedVideoUrls = [];
 let sharedVideoBlobUrls = [];
 let sharedVideoInitPromise = null;
 let activeCanvasSubscribers = 0;
 
-export function ensureIntroVideoPool() {
+function createAutoplayVideoElement(srcPath) {
+  const v = document.createElement("video");
+  v.crossOrigin = "anonymous";
+  v.muted = true;
+  v.defaultMuted = true;
+  v.loop = true;
+  v.playsInline = true;
+  v.preload = "auto";
+  v.setAttribute("crossorigin", "anonymous");
+  v.setAttribute("muted", "");
+  v.setAttribute("playsinline", "");
+  const tryPlay = () => {
+    v.play().catch(() => {});
+  };
+  v.addEventListener("loadeddata", tryPlay);
+  v.addEventListener("canplay", tryPlay);
+  v.src = srcPath;
+  tryPlay();
+  return v;
+}
+
+/**
+ * Initializes or reuses a lean subset (4-8 decoders) sampled from the 15-clip
+ * Cloudflare Edge CDN car video pool so intro playback stays 60fps across all devices.
+ */
+export function ensureIntroVideoPool(targetCount = 8) {
   if (typeof window === "undefined") return [];
-  if (sharedVideoElements && sharedVideoElements.length === INTRO_VIDEO_PATHS.length) {
+
+  const desiredCount = Math.max(1, Math.min(INTRO_VIDEO_PATHS.length, Number(targetCount) || 8));
+
+  if (sharedVideoElements && sharedVideoElements.length > 0) {
+    // Expand gently only if viewport grew (e.g., portrait -> desktop resize)
+    if (sharedVideoElements.length < desiredCount) {
+      const remaining = INTRO_VIDEO_PATHS.filter((u) => !sharedVideoUrls.includes(u));
+      const extras = selectSessionIntroVideos(remaining, desiredCount - sharedVideoElements.length);
+      extras.forEach((srcPath) => {
+        sharedVideoUrls.push(srcPath);
+        sharedVideoElements.push(createAutoplayVideoElement(srcPath));
+      });
+    }
     sharedVideoElements.forEach((v) => {
       if (v.paused && v.src) v.play().catch(() => {});
     });
     return sharedVideoElements;
   }
 
-  const elements = INTRO_VIDEO_PATHS.map((srcPath) => {
-    const v = document.createElement("video");
-    v.muted = true;
-    v.defaultMuted = true;
-    v.loop = true;
-    v.playsInline = true;
-    v.preload = "auto";
-    v.setAttribute("muted", "");
-    v.setAttribute("playsinline", "");
-    const tryPlay = () => {
-      v.play().catch(() => {});
-    };
-    v.addEventListener("loadeddata", tryPlay);
-    v.addEventListener("canplay", tryPlay);
-    // Attach direct source immediately for instant t=0 decode, then upgrade to full in-memory Blob URL if needed
-    v.src = srcPath;
-    tryPlay();
-    return v;
-  });
-
+  sharedVideoUrls = selectSessionIntroVideos(INTRO_VIDEO_PATHS, desiredCount);
+  const elements = sharedVideoUrls.map((srcPath) => createAutoplayVideoElement(srcPath));
   sharedVideoElements = elements;
 
   if (!sharedVideoInitPromise) {
     sharedVideoInitPromise = Promise.all(
-      INTRO_VIDEO_PATHS.map(async (srcPath, idx) => {
+      sharedVideoUrls.map(async (srcPath, idx) => {
         try {
-          const res = await fetch(srcPath, { cache: "no-cache" });
+          const res = await fetch(srcPath, { mode: "cors", cache: "force-cache" });
           if (!res.ok) return;
           const blob = await res.blob();
           if (!blob || blob.size === 0) return;
@@ -53,7 +79,7 @@ export function ensureIntroVideoPool() {
             vid.play().catch(() => {});
           }
         } catch {
-          // Direct video element fallback remains active
+          // Direct Cloudflare CDN video element remains active
         }
       })
     );

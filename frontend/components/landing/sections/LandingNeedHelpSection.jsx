@@ -84,32 +84,8 @@ export function LandingNeedHelpSection({
         viewport={{ once: true }}
         className="relative z-20 flex flex-col items-center justify-center w-full px-4 text-center my-auto pb-20 xs:pb-24 sm:pb-28 md:pb-16 lg:pb-0"
       >
-        {/* Title Area with Mobile & Half-Desktop Cokineed Face ABOVE "NEED OUR HELP?" */}
+        {/* Title Area — Clean across all device families */}
         <div className="relative flex flex-col items-center justify-center mb-8 sm:mb-10 md:mb-12 w-full">
-          {/* Cokineed face above NEED OUR HELP? on mobile & half desktop, bigger and non-overlapping */}
-          {isMobileOrTablet && (
-            <motion.div
-              className="relative -mb-2 xs:-mb-3 sm:-mb-4 z-20 flex justify-center items-center pointer-events-none select-none"
-              animate={{
-                rotate: [-8, 8, -8],
-                y: [0, -6, 0],
-              }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <Image
-                src="/hp/cokineed_hp.webp"
-                alt="Cokineed HP"
-                width={300}
-                height={300}
-                unoptimized
-                loading="lazy"
-                decoding="async"
-                className="w-24 xs:w-28 sm:w-32 md:w-36 h-auto object-contain select-none filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.22)]"
-                draggable={false}
-              />
-            </motion.div>
-          )}
-
           <h2 className="relative text-4xl xs:text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-mono font-black uppercase tracking-tighter text-black text-center select-none leading-none">
             <Typewriter text="NEED OUR HELP?" mode="none" delay={400} skipAnim={false} />
           </h2>
@@ -130,7 +106,7 @@ export function LandingNeedHelpSection({
         </button>
       </motion.div>
 
-      {/* Mobile & Half-Desktop / Tab Family: Bounded responsive camera hands at bottom middle */}
+      {/* Mobile Family: Bounded responsive camera hands at bottom middle (enlarged +28%) */}
       {isMobile && (
         <div className="absolute bottom-0 left-0 w-full pointer-events-none z-10 overflow-hidden flex justify-center items-end">
           <Image
@@ -141,7 +117,7 @@ export function LandingNeedHelpSection({
             unoptimized
             loading="lazy"
             decoding="async"
-            className="w-[180px] xs:w-[200px] sm:w-[230px] max-w-[60vw] max-h-[13vh] xs:max-h-[15vh] sm:max-h-[17vh] h-auto object-contain select-none translate-y-[2px]"
+            className="w-[230px] xs:w-[256px] sm:w-[294px] max-w-[77vw] max-h-[17vh] xs:max-h-[19.5vh] sm:max-h-[22vh] h-auto object-contain select-none translate-y-[2px]"
             draggable={false}
           />
         </div>

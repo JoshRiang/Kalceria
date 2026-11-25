@@ -3,10 +3,16 @@
 import { useEffect, useRef } from "react";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 import {
+  computeCoverCropRect,
+  computeResponsiveIntroGrid,
+} from "./introVideoGridLayout";
+import {
   ensureIntroVideoPool,
   subscribeIntroVideoPool,
   releaseIntroVideoPoolSubscriber,
 } from "./videoPool";
+
+const TARGET_FRAME_INTERVAL_MS = 33; // Smooth ~30fps canvas video blit to keep mobile & desktop ice-cold
 
 export function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
   const canvasRef = useRef(null);
@@ -16,71 +22,110 @@ export function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) return;
+
+    const random = createRuntimeSeededRandom(`intro-car-grid-v2-${seedSalt}`);
+    let grid = computeResponsiveIntroGrid(window.innerWidth, window.innerHeight);
+
+    subscribeIntroVideoPool();
+    let videos = ensureIntroVideoPool(grid.activeVideoCount);
+
+    const buildAssignments = (totalCells, videoCount) =>
+      Array.from({ length: totalCells }, (_, idx) =>
+        videoCount > 0 ? (idx + Math.floor(random() * videoCount)) % videoCount : 0
+      );
+
+    let cellAssignments = buildAssignments(grid.totalCells, videos.length);
+
     const updateSize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      canvas.width = w;
+      canvas.height = h;
+      const nextGrid = computeResponsiveIntroGrid(w, h);
+      if (nextGrid.cols !== grid.cols || nextGrid.rows !== grid.rows) {
+        grid = nextGrid;
+        videos = ensureIntroVideoPool(grid.activeVideoCount);
+        cellAssignments = buildAssignments(grid.totalCells, videos.length);
+      }
     };
     updateSize();
     window.addEventListener("resize", updateSize);
 
-    subscribeIntroVideoPool();
-    const videos = ensureIntroVideoPool();
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const switchInterval = prefersReducedMotion
+      ? null
+      : setInterval(() => {
+          if (!videos.length) return;
+          // Gently swap 1-2 car nodes per beat so clips remain legible and cinematic
+          const flips = Math.min(2, Math.max(1, Math.floor(random() * 2) + 1));
+          for (let i = 0; i < flips; i++) {
+            const cellIdx = Math.floor(random() * grid.totalCells);
+            cellAssignments[cellIdx] = Math.floor(random() * videos.length);
+          }
+        }, 850);
 
     let raf;
-    const cols = window.innerWidth > 768 ? 7 : 6;
-    const rows = window.innerWidth > 768 ? 6 : 7;
-    const totalCells = cols * rows;
-    const random = createRuntimeSeededRandom(`intro-video-grid-v1-${seedSalt}`);
+    let lastDrawTime = 0;
 
-    const cellAssignments = Array.from({ length: totalCells }).map((_, idx) =>
-      videos.length > 0 ? (idx + Math.floor(random() * videos.length)) % videos.length : 0
-    );
+    const draw = (now = 0) => {
+      if (now - lastDrawTime >= TARGET_FRAME_INTERVAL_MS || lastDrawTime === 0) {
+        lastDrawTime = now;
+        const w = canvas.width;
+        const h = canvas.height;
+        const { cols, rows } = grid;
+        const cellW = w / cols;
+        const cellH = h / rows;
 
-    const switchInterval = setInterval(() => {
-      if (!videos.length) return;
-      const flips = Math.floor(random() * 6) + 1;
-      for (let i = 0; i < flips; i++) {
-        const cellIdx = Math.floor(random() * totalCells);
-        cellAssignments[cellIdx] = Math.floor(random() * videos.length);
-      }
-    }, 150);
+        ctx.fillStyle = "#050a14";
+        ctx.fillRect(0, 0, w, h);
 
-    const draw = () => {
-      const w = canvas.width;
-      const h = canvas.height;
-      const cellW = w / cols;
-      const cellH = h / rows;
+        let cellIdx = 0;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            let v = videos[cellAssignments[cellIdx]];
+            if (!v || v.readyState < 2) {
+              v = videos.find((vid) => vid && vid.readyState >= 2);
+            } else if (v.paused && !prefersReducedMotion) {
+              v.play().catch(() => {});
+            }
 
-      ctx.clearRect(0, 0, w, h);
+            const dx = c * cellW;
+            const dy = r * cellH;
 
-      let cellIdx = 0;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          let v = videos[cellAssignments[cellIdx]];
-          if (!v || v.readyState < 2) {
-            v = videos.find((vid) => vid && vid.readyState >= 2);
-          } else if (v.paused) {
-            v.play().catch(() => {});
+            if (v && v.videoWidth > 0 && v.videoHeight > 0) {
+              const { sx, sy, sw, sh } = computeCoverCropRect(
+                v.videoWidth,
+                v.videoHeight,
+                cellW,
+                cellH
+              );
+              try {
+                ctx.drawImage(v, sx, sy, sw, sh, dx, dy, cellW, cellH);
+              } catch {
+                // Skip transient decode frame cleanly
+              }
+            }
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(dx, dy, cellW, cellH);
+            cellIdx++;
           }
-
-          if (v) {
-            ctx.drawImage(v, c * cellW, r * cellH, cellW, cellH);
-          }
-
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-          ctx.lineWidth = 1;
-          ctx.strokeRect(c * cellW, r * cellH, cellW, cellH);
-          cellIdx++;
         }
       }
       raf = requestAnimationFrame(draw);
     };
-    draw();
+    raf = requestAnimationFrame(draw);
 
     return () => {
       window.removeEventListener("resize", updateSize);
-      clearInterval(switchInterval);
+      if (switchInterval) clearInterval(switchInterval);
       cancelAnimationFrame(raf);
       releaseIntroVideoPoolSubscriber();
     };

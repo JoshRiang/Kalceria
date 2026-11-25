@@ -181,14 +181,8 @@ export default function SeeEvent() {
         {/* Foreground Content Container - Left aligned on iPad family and Desktop (`md:items-start md:text-left`) */}
         <div className="relative z-10 container mx-auto px-6 md:px-12 flex flex-col items-center text-center justify-center md:items-start md:text-left md:h-full">
           
-          {/* Top: See Event Title + Coki Logo */}
+          {/* Top: See Event Title */}
           <div className="relative inline-block text-center flex flex-col items-center justify-center md:text-left md:items-start mb-2 md:mb-4">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className="relative mb-3 md:mb-4 w-max flex items-end justify-center group mx-auto md:ml-0 md:mr-0">
-               <Image src="/coki_event.webp" alt="Coki Event" width={1536} height={2304} sizes="(min-width: 768px) 144px, 80px" quality={75} loading="eager" decoding="async" className="w-20 md:w-36 block relative z-10 drop-shadow-2xl" />
-               <div className="absolute left-0 bottom-0 w-[4px] h-[50%] bg-white z-20" />
-               <div className="absolute left-0 bottom-0 h-[4px] w-full bg-white z-20" />
-            </motion.div>
-
             <motion.h1 initial={{ scale: 0.92, opacity: 0.01 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }} className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-white drop-shadow-2xl font-rog mb-2 md:mb-4 relative z-10 text-center md:text-left" style={{ WebkitTextStroke: "1px rgba(255,255,255,0.2)" }}>
               SEE EVENT
             </motion.h1>
