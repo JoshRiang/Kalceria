@@ -143,6 +143,11 @@ export function EditProfileCoverAndAvatar({
                 <img
                   src={activeAvatarSrc}
                   alt="Avatar"
+                  onError={(e) => {
+                    if (e.currentTarget.dataset.fallbackApplied) return;
+                    e.currentTarget.dataset.fallbackApplied = "1";
+                    e.currentTarget.src = defaultDicebearUrl;
+                  }}
                   style={{
                     width: "100%",
                     height: "100%",

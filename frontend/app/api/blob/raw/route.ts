@@ -114,10 +114,50 @@ export async function GET(req: NextRequest) {
           });
         }
       }
+      // 1. Auto-heal check: if legacy Vercel Blob file was migrated to Cloudflare R2 under the same key, stream from R2
+      if (parsedTarget && parsedHost.endsWith(".blob.vercel-storage.com")) {
+        const cleanKey = parsedTarget.pathname.replace(/^\/+/, "");
+        if (cleanKey && !cleanKey.includes("..")) {
+          const r2Base = String(process.env.R2_PUBLIC_BASE_URL || "https://cdn.kalceria.id").trim().replace(/\/+$/, "");
+          try {
+            const r2Headers: Record<string, string> = {};
+            const incomingRange = req.headers.get("range");
+            if (incomingRange) r2Headers["Range"] = incomingRange;
+            const r2Res = await fetch(`${r2Base}/${cleanKey}`, { headers: r2Headers });
+            if ((r2Res.ok || r2Res.status === 206) && r2Res.body) {
+              const outHeaders: Record<string, string> = {
+                "Content-Type": r2Res.headers.get("content-type") || "application/octet-stream",
+                "Cache-Control": "public, max-age=31536000, immutable",
+                "Accept-Ranges": "bytes",
+              };
+              const uLen = r2Res.headers.get("content-length");
+              if (uLen) outHeaders["Content-Length"] = uLen;
+              const cRange = r2Res.headers.get("content-range");
+              if (cRange) outHeaders["Content-Range"] = cRange;
+              if (isDownload) {
+                const dlName = safeFilename || cleanKey.split("/").pop() || "kalceria-media";
+                outHeaders["Content-Disposition"] = `attachment; filename="${dlName}"`;
+              }
+              return new NextResponse(r2Res.body, { status: r2Res.status, headers: outHeaders });
+            }
+          } catch {}
+        }
+      }
+
       const isStoreSuspended = Boolean(
-        blobStoreError && /suspend|inactive|quota|limit|payment|402|503|forbidden|access/i.test(blobStoreError)
+        blobStoreError && /suspend|inactive|quota|limit|payment|402|503|forbidden|access|blocked/i.test(blobStoreError)
       );
       if (isStoreSuspended) {
+        // Prevent broken <img> icons for legacy suspended Vercel Blob avatars until the user re-uploads to R2
+        const cleanPath = (parsedTarget?.pathname || "").replace(/^\/+/, "");
+        if (!isDownload && /(?:^|\/)avatars?\b|avatar-/i.test(cleanPath)) {
+          const rawSeed = (cleanPath.split("/").pop() || "kalcerian").replace(/\.[a-z0-9]+$/i, "");
+          const safeSeed = rawSeed.replace(/[^a-zA-Z0-9._-]/g, "").slice(0, 64) || "kalcerian";
+          return NextResponse.redirect(
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(safeSeed)}`,
+            { status: 302, headers: { "Cache-Control": "no-store" } }
+          );
+        }
         console.warn("[BlobRaw] Upstream Vercel Blob store unavailable:", blobStoreError);
         return NextResponse.json(
           { error: "Media storage temporarily unavailable", code: "BLOB_STORE_UNAVAILABLE" },

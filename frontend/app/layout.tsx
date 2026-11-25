@@ -69,6 +69,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${pixelFont.variable} ${rogFont.variable} h-full antialiased`}
     >
       <head>
+        <link rel="preconnect" href="https://cdn.kalceria.id" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://cdn.kalceria.id" />
         <link rel="preload" as="image" href="/logointofadein.webp" media="(min-width: 768px)" fetchPriority="high" />
         <link rel="preload" as="image" href="/hp/logointro_hp.webp" media="(max-width: 767px)" fetchPriority="high" />
       </head>

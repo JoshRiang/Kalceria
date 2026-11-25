@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toSmartTitleCase } from "@/lib/titleCase";
+import { MINI_EVENT_FORM_BG_DARK, MINI_EVENT_FORM_BG_LIGHT, getInstantMapBgUrl } from "@/lib/mapBgCache";
 import { LocationAutocomplete } from "@/components/service-request/LocationAutocomplete";
 
 import { EVENT_CATEGORIES_GRID } from "./eventForm/eventCategories";
@@ -96,9 +97,7 @@ export function EventFormModal({
           <div
             className="w-full h-full"
             style={{
-              backgroundImage: isModalDark
-                ? "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp?v=52')"
-                : "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.webp?v=52')",
+              backgroundImage: `url("${getInstantMapBgUrl(isModalDark ? MINI_EVENT_FORM_BG_DARK : MINI_EVENT_FORM_BG_LIGHT)}")`,
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",

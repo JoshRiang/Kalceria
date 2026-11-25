@@ -23,7 +23,7 @@ const BLOCKED_HOST_PATTERNS = [
   /instance-data/i,
 ];
 
-const VALID_MEDIA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.mp4', '.webm', '.mov', '.m4v'];
+const VALID_MEDIA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.webm', '.mov', '.m4v', '.3gp'];
 const MAX_MEDIA_URLS = 100;
 const MAX_SINGLE_URL_LENGTH = 2048;
 const MAX_TOTAL_URL_LIST_LENGTH = 16 * 1024 * 1024; // 16 MB to allow base64 fallback data URLs

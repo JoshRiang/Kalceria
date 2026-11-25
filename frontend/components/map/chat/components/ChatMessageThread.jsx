@@ -4,11 +4,9 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { ChatMessageContextMenu } from "./ChatMessageContextMenu";
 import {
-  CHAT_BG_AUTO_ROTATE_MS,
   CHAT_BG_CAROUSEL_SLIDES,
-  CHAT_BG_STORAGE_KEY,
-  getNextChatBgSlideIndex,
   normalizeChatBgSlideIndex,
+  pickRandomChatBgSlideIndex,
 } from "./chatBackgroundCarousel";
 import { getInstantMapBgUrl } from "@/lib/mapBgCache";
 
@@ -46,31 +44,17 @@ export function ChatMessageThread({
   const messageRefs = useRef({});
   const nudgeTimerRef = useRef(null);
 
-  // 5-slide Nongskuy Chat Box Background Carousel (persisted preference + gentle auto-cycle)
-  const [bgSlideIdx, setBgSlideIdx] = useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = window.localStorage.getItem(CHAT_BG_STORAGE_KEY);
-        if (saved !== null) return normalizeChatBgSlideIndex(Number(saved));
-      } catch {}
+  // 5-slide Nongskuy Chat Box Background: uniform 1/5 random selection on open or chat switch,
+  // persisted seamlessly for the entire duration the chatbox remains open (no manual dots).
+  const [bgSlideIdx, setBgSlideIdx] = useState(() => pickRandomChatBgSlideIndex());
+  const prevBgTargetIdRef = useRef(targetId);
+
+  useEffect(() => {
+    if (prevBgTargetIdRef.current !== targetId) {
+      prevBgTargetIdRef.current = targetId;
+      setBgSlideIdx(pickRandomChatBgSlideIndex());
     }
-    return 0;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(CHAT_BG_STORAGE_KEY, String(bgSlideIdx));
-    } catch {}
-  }, [bgSlideIdx]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (typeof document !== "undefined" && document.hidden) return;
-      setBgSlideIdx((prev) => getNextChatBgSlideIndex(prev, 1));
-    }, CHAT_BG_AUTO_ROTATE_MS);
-    return () => clearInterval(timer);
-  }, []);
+  }, [targetId]);
 
   // Realtime block system event pill
   const [blockEvents, setBlockEvents] = useState(() => {
@@ -220,31 +204,28 @@ export function ChatMessageThread({
     setContextMenu((prev) => ({ ...prev, isOpen: false }));
   };
 
+  const activeBgSlide =
+    CHAT_BG_CAROUSEL_SLIDES[normalizeChatBgSlideIndex(bgSlideIdx)] || CHAT_BG_CAROUSEL_SLIDES[0];
+  const activeBgUrl = getInstantMapBgUrl(isMapDark ? activeBgSlide.dark : activeBgSlide.light);
+
   return (
     <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-      {/* Background Layer: 5-Slide Nongskuy V5.3 HD Crossfade Carousel (Dark & Light Parity) */}
+      {/* Background Layer: Randomly Selected 1/5 Nongskuy V5.3 HD Scene (persists while chat is open) */}
       <div
         aria-hidden="true"
         className={`absolute inset-0 z-0 pointer-events-none overflow-hidden ${
           isMapDark ? "bg-[#080a11]" : "bg-[#f4efe9]"
         }`}
       >
-        {CHAT_BG_CAROUSEL_SLIDES.map((slide, idx) => {
-          const isActive = idx === bgSlideIdx;
-          const slideUrl = getInstantMapBgUrl(isMapDark ? slide.dark : slide.light);
-          return (
-            <div
-              key={slide.id}
-              className="absolute inset-0 transition-opacity duration-1000 ease-in-out transform-gpu"
-              style={{
-                backgroundImage: `url("${slideUrl}")`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                opacity: isActive ? (isMapDark ? 0.9 : 0.94) : 0,
-              }}
-            />
-          );
-        })}
+        <div
+          className="absolute inset-0 transform-gpu"
+          style={{
+            backgroundImage: `url("${activeBgUrl}")`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: isMapDark ? 0.9 : 0.94,
+          }}
+        />
       </div>
       {/* Subtle Theme Contrast Veil */}
       <div
@@ -252,30 +233,6 @@ export function ChatMessageThread({
           isMapDark ? "bg-[#0b141a]/16" : "bg-[#f4efe9]/8"
         }`}
       />
-      {/* Discreet 5-Slide Theme Switcher Pill (top-right, low-profile, never blocks messages) */}
-      <div className="absolute top-2 right-2.5 z-30 flex items-center gap-1 px-1.5 py-1 rounded-full backdrop-blur-md transition-opacity duration-200 opacity-45 hover:opacity-100 focus-within:opacity-100 select-none border border-black/10 dark:border-white/15 bg-white/60 dark:bg-[#0e131b]/65">
-        {CHAT_BG_CAROUSEL_SLIDES.map((slide, idx) => {
-          const isActive = idx === bgSlideIdx;
-          return (
-            <button
-              key={slide.id}
-              type="button"
-              onClick={() => setBgSlideIdx(idx)}
-              title={`Theme ${idx + 1}/5: ${slide.label}`}
-              aria-label={`Switch chat background to ${slide.label}`}
-              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                isActive
-                  ? isMapDark
-                    ? "w-4 bg-[#ff4798]"
-                    : "w-4 bg-[#d42270]"
-                  : isMapDark
-                    ? "w-1.5 bg-white/40 hover:bg-white/75"
-                    : "w-1.5 bg-black/30 hover:bg-black/65"
-              }`}
-            />
-          );
-        })}
-      </div>
 
       {/* Scrollable Message Thread: Optimized with GPU acceleration & low-latency scrolling */}
       <div

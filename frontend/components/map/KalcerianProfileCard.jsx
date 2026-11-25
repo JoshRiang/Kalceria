@@ -33,10 +33,12 @@ export default function KalcerianProfileCard({
   const isBlackoutAvatar = Boolean(isBlockedByTarget);
   const isDimmedBlocker = Boolean(isBlocked);
   const [imgError, setImgError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   useEffect(() => {
     setImgError(false);
-  }, [user?.id, user?.coverImage, user?.coverUrl]);
+    setAvatarError(false);
+  }, [user?.id, user?.coverImage, user?.coverUrl, user?.profilePicture]);
   const displayName = user?.displayName || user?.name || user?.nickname || "Kalcerian";
   const rawUsername = user?.nickname || user?.username || (user?.name ? user.name.toLowerCase().replace(/\s+/g, '_') : "kalcerian");
   const cleanUsername = String(rawUsername).replace(/^@/, '');
@@ -165,11 +167,16 @@ export default function KalcerianProfileCard({
               <div className="w-full h-full bg-[#000000]" />
             ) : (
               <Image
-                src={getAvatarUrl(user)}
+                src={
+                  avatarError
+                    ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(cleanUsername || "anon")}`
+                    : getAvatarUrl(user)
+                }
                 alt={displayName}
                 width={88}
                 height={88}
                 unoptimized
+                onError={() => setAvatarError(true)}
                 className={`w-full h-full object-cover ${isDimmedBlocker ? "opacity-75" : ""}`}
               />
             )}

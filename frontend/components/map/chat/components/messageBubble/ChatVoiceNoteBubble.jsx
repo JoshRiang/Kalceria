@@ -339,7 +339,7 @@ export function ChatVoiceNoteBubble({
                 setPlayingVoiceId((prev) => (prev === item.id ? null : item.id));
               }}
               className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 border border-black ${
-                !item.mediaUrl && item.status !== "sending"
+                (!item.mediaUrl && item.status !== "sending") || audioError
                   ? "opacity-45 cursor-not-allowed"
                   : "cursor-pointer hover:scale-105 active:scale-95"
               } ${
@@ -348,7 +348,9 @@ export function ChatVoiceNoteBubble({
                   : "bg-[#f0f2f5] text-black shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),inset_0_-1px_1px_rgba(0,0,0,0.06),0_1.5px_4px_rgba(0,0,0,0.08)]"
               }`}
               title={
-                !item.mediaUrl && item.status !== "sending"
+                audioError
+                  ? "Audio tidak tersedia (arsip lama)"
+                  : !item.mediaUrl && item.status !== "sending"
                   ? "Audio tidak tersedia"
                   : isPlaying
                   ? "Pause"
@@ -402,16 +404,20 @@ export function ChatVoiceNoteBubble({
               })}
             </div>
 
-            {/* 3. Time Running */}
+            {/* 3. Time Running / Unavailable Indicator */}
             <span
               style={{ fontFamily: "Arial, sans-serif" }}
               className={`text-[8.5px] font-black tracking-tight leading-none select-none shrink-0 ${
-                isMapDark
+                audioError
+                  ? "text-red-500"
+                  : isMapDark
                   ? "text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]"
                   : "text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]"
               }`}
             >
-              {isPlaying || playbackProgress > 0
+              {audioError
+                ? "Unavailable"
+                : isPlaying || playbackProgress > 0
                 ? formatSec(currentPlaybackSec)
                 : formatSec(totalDuration)}
             </span>

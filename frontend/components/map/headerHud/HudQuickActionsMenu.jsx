@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { CREATION_BOX_BG_DARK, CREATION_BOX_BG_LIGHT, getInstantMapBgUrl } from "@/lib/mapBgCache";
 
 export const HudQuickActionsMenu = memo(function HudQuickActionsMenu({
   isMapDark,
@@ -30,9 +31,7 @@ export const HudQuickActionsMenu = memo(function HudQuickActionsMenu({
         aria-hidden="true"
         className="absolute inset-0 z-0 pointer-events-none select-none"
         style={{
-          backgroundImage: isMapDark
-            ? "url('/BG_IMPROVE_FOR_MAP/BG_BroadscastBoxDark.webp?v=52')"
-            : "url('/BG_IMPROVE_FOR_MAP/BG_BroadcastBoxLight.webp?v=52')",
+          backgroundImage: `url("${getInstantMapBgUrl(isMapDark ? CREATION_BOX_BG_DARK : CREATION_BOX_BG_LIGHT)}")`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",

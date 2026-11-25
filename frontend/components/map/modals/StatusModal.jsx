@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { getInstantMapBgUrl } from "@/lib/mapBgCache";
+import {
+  BROADCAST_FORM_BG_DARK,
+  BROADCAST_FORM_BG_LIGHT,
+  getInstantMapBgUrl,
+} from "@/lib/mapBgCache";
 import { ActionArcSpinner } from "./ActionArcSpinner";
 import { BroadcastMediaSection } from "./statusModal/BroadcastMediaSection";
 import {
@@ -10,9 +14,6 @@ import {
   MODAL_GENIE_SURFACE,
   useModalBackClose,
 } from "./modalMotion";
-
-const BROADCAST_FORM_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Dark.webp?v=52";
-const BROADCAST_FORM_BG_LIGHT = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Light.webp?v=52";
 
 export function StatusModal({
   show,

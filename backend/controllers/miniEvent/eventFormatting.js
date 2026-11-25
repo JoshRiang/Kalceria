@@ -106,6 +106,25 @@ export function buildEncodedDescription({
   return parts.join(' ').trim();
 }
 
+function extractEmbeddedTimestampFromUrl(rawUrl) {
+  const str = String(rawUrl || '').trim();
+  if (!str) return null;
+  let candidatePath = str;
+  try {
+    const parsed = new URL(str, 'https://kalceria.internal');
+    if (parsed.pathname === '/api/blob/raw') {
+      const inner = parsed.searchParams.get('url');
+      if (inner) candidatePath = new URL(inner).pathname;
+    } else {
+      candidatePath = parsed.pathname;
+    }
+  } catch {}
+  const match = candidatePath.match(/(?:^|\/)(\d{13})-[a-zA-Z0-9._-]+/);
+  if (!match) return null;
+  const ts = Number(match[1]);
+  return Number.isFinite(ts) && ts > 1_600_000_000_000 && ts < 4_102_444_800_000 ? ts : null;
+}
+
 export function extractUrlsFromLegacyMediaString(rawMediaStr) {
   if (!rawMediaStr || typeof rawMediaStr !== 'string') return [];
   return splitMediaUrlList(rawMediaStr)
@@ -120,7 +139,8 @@ export function extractUrlsFromLegacyMediaString(rawMediaStr) {
           };
         }
       }
-      return { url: entry.trim(), uploadedAt: null };
+      const cleanUrl = entry.trim();
+      return { url: cleanUrl, uploadedAt: extractEmbeddedTimestampFromUrl(cleanUrl) };
     })
     .filter((item) => Boolean(item.url));
 }

@@ -25,6 +25,7 @@ import {
   getEventPendingRequests,
 } from "./hooks/useMapChatAndNotifications";
 import { prewarmVideoBatch, prewarmVideoUrl } from "@/lib/videoPrewarmer";
+import { KALCERIANS_PANEL_BG_DARK, KALCERIANS_PANEL_BG_LIGHT, getInstantMapBgUrl } from "@/lib/mapBgCache";
 
 export const KalceriansPanel = memo(function KalceriansPanel({
   scheduleTimeout,
@@ -299,9 +300,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
         <div
           className="w-full h-full"
           style={{
-            backgroundImage: isMapDark
-              ? "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Dark.webp?v=52')"
-              : "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Light.webp?v=52')",
+            backgroundImage: `url("${getInstantMapBgUrl(isMapDark ? KALCERIANS_PANEL_BG_DARK : KALCERIANS_PANEL_BG_LIGHT)}")`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",

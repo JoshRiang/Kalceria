@@ -210,12 +210,14 @@ export async function syncEventDescriptionMedia(event, activeUrls) {
 function deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, creatorAvatarUrl, now) {
   const clips = [];
   let droppedExpired = false;
+  let droppedExplicitExpired = false;
   const entries = extractUrlsFromLegacyMediaString(tags.mediaStr || ev.mediaUrl || '');
   for (const entry of entries) {
     const uploadedAt = entry.uploadedAt || createdMs;
     const expiresAt = uploadedAt + MINI_EVENT_CLIP_TTL_MS;
     if (now >= expiresAt) {
       droppedExpired = true;
+      if (entry.uploadedAt) droppedExplicitExpired = true;
       continue;
     }
     clips.push({
@@ -229,7 +231,7 @@ function deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, crea
       expiresAt,
     });
   }
-  return { clips, droppedExpired };
+  return { clips, droppedExpired, droppedExplicitExpired };
 }
 
 async function initializeFromLegacySources(ev, tags, createdMs, creatorName, creatorAvatarUrl, now) {
@@ -242,6 +244,7 @@ async function initializeFromLegacySources(ev, tags, createdMs, creatorName, cre
 
   let clips;
   let dropped = false;
+  let shouldSyncDescription = false;
   if (Array.isArray(legacy)) {
     clips = legacy.filter((clip) => {
       if (!clip || !clip.url) {
@@ -255,17 +258,21 @@ async function initializeFromLegacySources(ev, tags, createdMs, creatorName, cre
       return true;
     });
     clips = clips.map((clip) => ({ ...clip, id: clip.id || crypto.randomUUID() }));
+    shouldSyncDescription = dropped;
   } else {
     const derived = deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, creatorAvatarUrl, now);
     clips = derived.clips;
     dropped = derived.droppedExpired;
+    // When Upstash Redis is running on ephemeral quota fallback, never wipe untimestamped description
+    // clips on a cold lambda; only prune entries whose explicit/embedded timestamp has genuinely expired.
+    shouldSyncDescription = redis.isQuotaExceeded ? derived.droppedExplicitExpired : dropped;
   }
 
   try {
     await writeEventClips(ev.id, clips, now);
     if (Array.isArray(legacy)) await deleteLegacyEventClips(ev.id);
   } catch {}
-  if (dropped) {
+  if (shouldSyncDescription) {
     await syncEventDescriptionMedia(ev, clips.map((c) => c.url));
   }
   return clips;

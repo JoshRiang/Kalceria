@@ -110,7 +110,8 @@ export function buildR2ObjectKey(purpose: string, storedFilename: string, eventC
 
   if (cleanPurpose === "event-clip") {
     const day = new Date().toISOString().slice(0, 10);
-    return `${eventClipPrefix}${day}/${crypto.randomUUID()}-${safeName}`;
+    const shortId = crypto.randomUUID().slice(0, 8);
+    return `${eventClipPrefix}${day}/${Date.now()}-${shortId}-${safeName}`;
   }
 
   const shortId = crypto.randomUUID().slice(0, 8);
@@ -380,3 +381,4 @@ export async function deleteR2Objects(keys: string[]): Promise<number> {
   const data = (await res.json().catch(() => ({}))) as { deleted?: number };
   return typeof data.deleted === "number" ? data.deleted : cleanKeys.length;
 }
+
