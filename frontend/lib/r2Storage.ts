@@ -243,32 +243,44 @@ export async function putR2Object({
   const gw = getGatewayConfig();
 
   if (gw.configured) {
-    const res = await fetchWithTimeout(
-      `${gw.gatewayUrl}/${cleanKey}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${gw.gatewayToken}`,
-          "Content-Type": contentType || "application/octet-stream",
-        },
-        body: Buffer.from(body),
-      },
-      timeoutMs
-    );
+    let lastErr: Error | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetchWithTimeout(
+          `${gw.gatewayUrl}/${cleanKey}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${gw.gatewayToken}`,
+              "Content-Type": contentType || "application/octet-stream",
+            },
+            body: Buffer.from(body),
+          },
+          timeoutMs
+        );
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(`Cloudflare R2 Gateway PUT failed (${res.status}): ${errText.slice(0, 180)}`);
+        if (res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { etag?: string; size?: number; url?: string };
+          return {
+            url: `${gw.publicBaseUrl}/${cleanKey}`,
+            key: cleanKey,
+            size: typeof data.size === "number" ? data.size : body.byteLength,
+            etag: data.etag || null,
+            provider: "cloudflare-r2",
+          };
+        }
+
+        const errText = await res.text().catch(() => "");
+        lastErr = new Error(`Cloudflare R2 Gateway PUT failed (${res.status}): ${errText.slice(0, 180)}`);
+        if (res.status < 500) break;
+      } catch (e: unknown) {
+        lastErr = e instanceof Error ? e : new Error("Cloudflare R2 Gateway PUT failed");
+      }
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
     }
-
-    const data = (await res.json().catch(() => ({}))) as { etag?: string; size?: number; url?: string };
-    return {
-      url: `${gw.publicBaseUrl}/${cleanKey}`,
-      key: cleanKey,
-      size: typeof data.size === "number" ? data.size : body.byteLength,
-      etag: data.etag || null,
-      provider: "cloudflare-r2",
-    };
+    throw lastErr || new Error("Cloudflare R2 Gateway PUT failed");
   }
 
   const s3 = getS3Config();

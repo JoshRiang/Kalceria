@@ -59,12 +59,12 @@ export async function optimizeUploadMedia(
           });
         }
 
-        // Apply maximum lossless-perceptual GIF compression
+        // Fast GIF compression (effort 4 keeps serverless latency low)
         const processed = await pipeline
           .gif({
-            effort: 7,
+            effort: 4,
             reuse: true,
-            dither: 1.0,
+            dither: 0.8,
             interFrameMaxError: 0,
           })
           .toBuffer();
@@ -97,21 +97,49 @@ export async function optimizeUploadMedia(
     }
   }
 
-  // 2. Handle Static Images (PNG, JPG, WebP)
+  // 2. Handle Static Images (PNG, JPG, WebP) with fast-path pass-through
   if (isStaticImage) {
     try {
-      // Auto-orient pixels according to EXIF before measuring or resizing so portrait photos stay portrait
-      let pipeline = sharp(inputBuffer).rotate();
-      const meta = await pipeline.metadata();
+      const probe = sharp(inputBuffer);
+      const meta = await probe.metadata();
       const rawWidth = meta.width || 0;
       const rawHeight = meta.height || 0;
+      const hasExifRotation = Boolean(meta.orientation && meta.orientation !== 1);
       const isSwappedOrientation = Boolean(meta.orientation && meta.orientation >= 5 && meta.orientation <= 8);
       const orientedWidth = isSwappedOrientation ? rawHeight : rawWidth;
-      const needsResize = orientedWidth > 800;
+      const orientedHeight = isSwappedOrientation ? rawWidth : rawHeight;
+
+      // Fast-path: already-compact, correctly oriented image skips heavy serverless re-encoding (~0ms CPU)
+      const isAlreadyCompact =
+        originalSize <= 650 * 1024 &&
+        orientedWidth <= 1280 &&
+        !hasExifRotation &&
+        (meta.format === "jpeg" || meta.format === "webp" || meta.format === "png");
+      if (isAlreadyCompact) {
+        const fastType =
+          meta.format === "png"
+            ? "image/png"
+            : meta.format === "webp"
+              ? "image/webp"
+              : "image/jpeg";
+        return {
+          buffer: inputBuffer,
+          contentType: fastType,
+          filename: originalFilename,
+          originalSize,
+          optimizedSize: originalSize,
+          reductionPercent: 0,
+          isOptimized: false,
+          dimensions: { width: orientedWidth, height: orientedHeight },
+        };
+      }
+
+      let pipeline = hasExifRotation ? sharp(inputBuffer).rotate() : sharp(inputBuffer);
+      const needsResize = orientedWidth > 1080;
 
       if (needsResize) {
         pipeline = pipeline.resize({
-          width: 800,
+          width: 1080,
           withoutEnlargement: true,
         });
       }
@@ -119,21 +147,22 @@ export async function optimizeUploadMedia(
       let result: { data: Buffer; info: sharp.OutputInfo };
       let contentType = declaredMimeType;
 
+      // Fast serverless encoding presets (5-10x faster than mozjpeg/effort-5 while keeping crisp HD)
       if (meta.format === "png") {
-        result = await pipeline.png({ compressionLevel: 6, effort: 4 }).toBuffer({ resolveWithObject: true });
+        result = await pipeline.png({ compressionLevel: 3, effort: 2 }).toBuffer({ resolveWithObject: true });
         contentType = "image/png";
       } else if (meta.format === "jpeg" || meta.format === "jpg") {
-        result = await pipeline.jpeg({ quality: 90, mozjpeg: true }).toBuffer({ resolveWithObject: true });
+        result = await pipeline.jpeg({ quality: 84, mozjpeg: false }).toBuffer({ resolveWithObject: true });
         contentType = "image/jpeg";
       } else if (meta.format === "webp") {
-        result = await pipeline.webp({ quality: 90, effort: 5 }).toBuffer({ resolveWithObject: true });
+        result = await pipeline.webp({ quality: 84, effort: 2 }).toBuffer({ resolveWithObject: true });
         contentType = "image/webp";
       } else {
         result = await pipeline.toBuffer({ resolveWithObject: true });
       }
 
       const processed = result.data;
-      const shouldAdopt = processed.length < originalSize || needsResize || isSwappedOrientation;
+      const shouldAdopt = processed.length < originalSize || needsResize || hasExifRotation;
       const finalBuffer = shouldAdopt ? processed : inputBuffer;
       const finalSize = finalBuffer.length;
       const reduction = originalSize > 0
@@ -150,7 +179,7 @@ export async function optimizeUploadMedia(
         isOptimized: shouldAdopt,
         dimensions: {
           width: shouldAdopt ? result.info.width : orientedWidth,
-          height: shouldAdopt ? result.info.height : (isSwappedOrientation ? rawWidth : rawHeight),
+          height: shouldAdopt ? result.info.height : orientedHeight,
         },
       };
     } catch (imgErr) {

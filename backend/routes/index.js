@@ -16,7 +16,6 @@ import {
   deleteMiniEvent,
   addMiniEventMedia,
   deleteMiniEventMedia,
-  recordEventMediaView,
   addMiniEventCollaborator,
   requestMiniEventCollab,
   cancelMiniEventCollabRequest,
@@ -202,7 +201,6 @@ router.put("/mini-events/:id", requireAuth, miniEventRateLimit, miniEventDefense
 router.delete("/mini-events/:id", requireAuth, miniEventRateLimit, deleteMiniEvent);
 router.post("/mini-events/:id/media", requireAuth, miniEventRateLimit, addMiniEventMedia);
 router.delete("/mini-events/:id/media", requireAuth, miniEventRateLimit, deleteMiniEventMedia);
-router.post("/mini-events/:id/media/:clipId/view", optionalAuth, recordEventMediaView);
 router.post("/mini-events/:id/collaborators", requireAuth, miniEventRateLimit, addMiniEventCollaborator);
 router.post("/mini-events/:id/collab/request", requireAuth, miniEventRateLimit, requestMiniEventCollab);
 router.delete("/mini-events/:id/collab/request", requireAuth, miniEventRateLimit, cancelMiniEventCollabRequest);

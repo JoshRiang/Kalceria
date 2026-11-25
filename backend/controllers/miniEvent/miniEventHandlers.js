@@ -16,7 +16,6 @@ export {
 export {
   addMiniEventMedia,
   deleteMiniEventMedia,
-  recordEventMediaView,
 } from './eventMediaHandlers.js';
 
 export {

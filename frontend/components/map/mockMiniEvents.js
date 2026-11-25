@@ -17,6 +17,7 @@ export const cleanEventDesc = (item) => {
   const locMatch = raw.match(/\[LOC:([^\]]+)\]/i);
   const cleanDescription = raw
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+    .replace(/\[CMETA:[^\]]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
     .replace(/\[LOC:[^\]]+\]\s*/gi, "")
     .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")

@@ -33,8 +33,8 @@ function triggerCarouselHold(targetBoxEl, hold) {
 }
 
 export function getTrashIconSvg(isMapDark) {
-  const stroke = isMapDark ? "#ffffff" : "#000000";
-  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+  const fill = isMapDark ? "#ffffff" : "#000000";
+  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="${fill}" style="display: block;" aria-hidden="true"><path d="M9 3h6a1 1 0 0 1 1 1v1h4a1 1 0 1 1 0 2h-1v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4a1 1 0 1 1 0-2h4V4a1 1 0 0 1 1-1z" /></svg>`;
 }
 
 export function getReplyIconSvg(isMapDark) {

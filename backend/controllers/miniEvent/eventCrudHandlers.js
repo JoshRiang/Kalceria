@@ -49,7 +49,7 @@ export async function invalidateMiniEventsCache() {
   } catch {}
 }
 
-export async function hydrateFullMiniEvent(ev) {
+export async function hydrateFullMiniEvent(ev, { prehydratedClips = null } = {}) {
   if (!ev) return null;
   if (ev.creator) {
     ev.creator = await ensurePersistentUserProfile(ev.creator);
@@ -57,8 +57,15 @@ export async function hydrateFullMiniEvent(ev) {
   const creatorName = ev.creator?.displayName || ev.creator?.name || null;
   const creatorAvatarUrl = ev.creator?.profilePicture || null;
   const tags = extractEncodedTags(ev.description);
+  const mediaPromise = Array.isArray(prehydratedClips)
+    ? Promise.resolve({
+        mediaItems: prehydratedClips,
+        mediaUrl: prehydratedClips.length > 0 ? prehydratedClips.map((c) => c.url).join(', ') : null,
+      })
+    : hydrateAndPruneEventMedia(ev, creatorName, creatorAvatarUrl);
+
   const [mediaData, collabData] = await Promise.all([
-    hydrateAndPruneEventMedia(ev, creatorName, creatorAvatarUrl),
+    mediaPromise,
     hydrateEventCollabSummary(ev, tags.collaborators),
   ]);
 
@@ -127,6 +134,7 @@ export async function createMiniEvent(req, res, next) {
       category,
       location,
       mediaUrls: parsedMedia.clips.map((c) => c.url),
+      mediaClips: parsedMedia.clips,
       plainDescription: extracted.plainDescription,
     });
 
@@ -172,7 +180,7 @@ export async function createMiniEvent(req, res, next) {
     }
 
     await invalidateMiniEventsCache();
-    const formatted = await hydrateFullMiniEvent(event);
+    const formatted = await hydrateFullMiniEvent(event, { prehydratedClips: parsedMedia.clips });
     return res.status(201).json({ event: formatted });
   } catch (err) {
     return next(err);
@@ -192,7 +200,9 @@ export async function getActiveMiniEvents(req, res, next) {
     let hydratedEvents = null;
     let nextCursor = null;
 
-    if (isDefaultFirstPage) {
+    // Bypass per-lambda local cache during Redis quota fallback to prevent cross-lambda flicker
+    const useListCache = isDefaultFirstPage && !redis.isQuotaExceeded;
+    if (useListCache) {
       try {
         const cached = await redis.get(cacheKey);
         if (cached) {
@@ -240,7 +250,7 @@ export async function getActiveMiniEvents(req, res, next) {
         ? encodePageCursor({ id: lastEvent.id, at: lastEvent.createdAt })
         : null;
 
-      if (isDefaultFirstPage) {
+      if (useListCache) {
         await redis.set(cacheKey, JSON.stringify({ events: hydratedEvents, nextCursor }), 'EX', 4).catch(() => {});
       }
     }
@@ -322,6 +332,7 @@ export async function updateMiniEvent(req, res, next) {
         category,
         location,
         mediaUrls: finalClips.map((c) => c.url),
+        mediaClips: finalClips,
         plainDescription: inputTags.plainDescription,
       });
 
@@ -345,7 +356,7 @@ export async function updateMiniEvent(req, res, next) {
       }
 
       await invalidateMiniEventsCache();
-      const formatted = await hydrateFullMiniEvent(event);
+      const formatted = await hydrateFullMiniEvent(event, { prehydratedClips: finalClips });
       return res.json({ event: formatted });
     });
   } catch (err) {

@@ -91,15 +91,13 @@ export function startVideoClip(state, gen, slideEl, vid, idx, resumeSeconds, com
   const hintedDuration = readNumberAttr(slideEl, "data-media-duration");
   const onMeta = () => {
     if (state.destroyed || state.genId !== gen) return;
-    syncGeometry(state, slideEl);
+    if (idx === 0 || state.cardEl?.classList?.contains("broadcast-popup-box")) {
+      syncGeometry(state, slideEl);
+    }
   };
-  vid.addEventListener("loadedmetadata", onMeta);
-  vid.addEventListener("loadeddata", onMeta);
-  vid.addEventListener("resize", onMeta);
+  vid.addEventListener("loadedmetadata", onMeta, { once: true });
   state.clipCleanup.push(() => {
     vid.removeEventListener("loadedmetadata", onMeta);
-    vid.removeEventListener("loadeddata", onMeta);
-    vid.removeEventListener("resize", onMeta);
   });
 
   try {
@@ -175,7 +173,7 @@ export function startImageClip(state, gen, slideEl, idx, resumeSeconds, complete
   let elapsedMs = Math.max(0, (resumeSeconds || 0) * 1000);
   let lastTick = performance.now();
 
-  if (img && !img.complete) {
+  if (img && !img.complete && (idx === 0 || state.cardEl?.classList?.contains("broadcast-popup-box"))) {
     const onLoad = () => {
       if (state.destroyed || state.genId !== gen) return;
       syncGeometry(state, slideEl);

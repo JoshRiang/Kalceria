@@ -260,51 +260,6 @@ export function useSnapMapGlobalCallbacks({
       }, 120);
     };
 
-    const inFlightMediaViews = new Set();
-    const mediaViewCooldown = new Map();
-    window.__kalceriaRecordMediaView = async (safeId, clipId, clipIndex) => {
-      if (String(safeId || "").startsWith("bcast_")) {
-        const bcastId = String(clipId || "").replace(/^bcast_/, "");
-        return window.__kalceriaRecordBroadcastView?.(bcastId);
-      }
-
-      const cleanEventId = String(safeId || "").replace(/^event_/, "");
-      if (!cleanEventId || !clipId) return;
-
-      const sessionKey = `${cleanEventId}:${clipId}`;
-      if (inFlightMediaViews.has(sessionKey)) return;
-      if (Date.now() - (mediaViewCooldown.get(sessionKey) || 0) < 600) return;
-      inFlightMediaViews.add(sessionKey);
-      mediaViewCooldown.set(sessionKey, Date.now());
-
-      try {
-        const res = await api.post(`/mini-events/${encodeURIComponent(cleanEventId)}/media/${encodeURIComponent(clipId)}/view`);
-        const data = res?.data;
-        if (data?.success && typeof data.viewCount === "number") {
-          const countEls = document.querySelectorAll(`[data-media-view-count="${clipId}"]`);
-          countEls.forEach((el) => {
-            animateViewCountSlideDown(el, data.viewCount);
-          });
-
-          const slideEls = document.querySelectorAll(`[data-carousel-slide][data-clip-id="${clipId}"]`);
-          slideEls.forEach((slide) => {
-            slide.dataset.viewCount = String(data.viewCount);
-          });
-
-          const ev = (latestRef.current.events || []).find(
-            (e) => String(e.id) === String(cleanEventId)
-          );
-          if (ev && Array.isArray(ev.mediaItems)) {
-            const c = ev.mediaItems.find((item) => String(item.id) === String(clipId));
-            if (c) c.viewCount = data.viewCount;
-          }
-        }
-      } catch (_) {
-      } finally {
-        inFlightMediaViews.delete(sessionKey);
-      }
-    };
-
     const inFlightBroadcastViews = new Set();
     const broadcastViewCooldown = new Map();
     window.__kalceriaRecordBroadcastView = async (broadcastId, broadcastUserId) => {
@@ -601,7 +556,6 @@ export function useSnapMapGlobalCallbacks({
       delete window.__kalceriaReplyEventMedia;
       delete window.__kalceriaHandleMediaAction;
       delete window.__kalceriaHandleBroadcastAction;
-      delete window.__kalceriaRecordMediaView;
       delete window.__kalceriaRecordBroadcastView;
     };
   }, []);

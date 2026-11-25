@@ -1,4 +1,4 @@
-import { splitMediaUrlListClient } from "@/lib/urlSecurity";
+import { splitMediaUrlListClient } from "../../../lib/urlSecurity.js";
 
 export function esc(value) {
   return String(value || "")
@@ -13,6 +13,7 @@ export function cleanDesc(value) {
   return String(value || "")
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
+    .replace(/\[CMETA:[^\]]+\]\s*/gi, "")
     .replace(/\[LOC:[^\]]+\]\s*/gi, "")
     .replace(/\[COLLABS:[^\]]+\]\s*/gi, "")
     .trim();
@@ -64,13 +65,13 @@ export function extractMediaList(item) {
 }
 
 export function calculateUptime(createdAt) {
-  if (!createdAt) return "00:00:00";
+  if (!createdAt) return "0h 00m 00s";
   const diffMs = Math.max(0, Date.now() - new Date(createdAt).getTime());
   const totalSec = Math.floor(diffMs / 1000);
-  const h = String(Math.floor(totalSec / 3600)).padStart(2, "0");
+  const h = Math.floor(totalSec / 3600);
   const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
   const s = String(totalSec % 60).padStart(2, "0");
-  return `${h}:${m}:${s}`;
+  return `${h}h ${m}m ${s}s`;
 }
 
 export function formatReleaseTime(createdAt) {

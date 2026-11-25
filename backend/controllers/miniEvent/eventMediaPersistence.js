@@ -3,10 +3,9 @@ import { redis } from '../../lib/redis.js';
 const initKey = (eventId) => `mini_event:media:init:${eventId}`;
 const indexKey = (eventId) => `mini_event:media:idx:${eventId}`;
 const clipKey = (clipId) => `mini_event:media:clip:${clipId}`;
-const viewKey = (clipId) => `mini_event:media:views:${clipId}`;
 const legacyKey = (eventId) => `mini_event:media:${eventId}`;
 
-export { clipKey, viewKey };
+export { clipKey };
 
 // Each clip key outlives its logical expiry so the pruner can still read the URL it removes.
 const CLIP_KEY_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -54,7 +53,6 @@ export async function removeEventClipIds(eventId, clipIds) {
   const pipeline = redis.multi();
   pipeline.zrem(indexKey(eventId), ...ids);
   pipeline.del(...ids.map(clipKey));
-  pipeline.del(...ids.map(viewKey));
   assertPipelineOk(await pipeline.exec());
 }
 
@@ -122,7 +120,6 @@ export async function purgeAllEventClips(eventIds) {
         indexKey(eventId),
         legacyKey(eventId),
         ...clipIds.map(clipKey),
-        ...clipIds.map(viewKey),
       ];
       await redis.del(...keys);
     })

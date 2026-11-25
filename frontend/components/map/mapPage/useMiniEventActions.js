@@ -113,11 +113,12 @@ export function useMiniEventActions({
       let currentLat = eventForm.lat ? Number(eventForm.lat) : (me?.lat || currentUser?.domicileLat || -6.2715);
       let currentLng = eventForm.lng ? Number(eventForm.lng) : (me?.lng || currentUser?.domicileLng || 106.7135);
 
-      if (!eventForm.lat && typeof navigator !== "undefined" && navigator.geolocation) {
+      const hasKnownCoords = Boolean(eventForm.lat || me?.lat || currentUser?.domicileLat);
+      if (!hasKnownCoords && typeof navigator !== "undefined" && navigator.geolocation) {
         try {
           const pos = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
-              timeout: 2000,
+              timeout: 1200,
               maximumAge: 60000,
               enableHighAccuracy: false,
             });
@@ -207,22 +208,12 @@ export function useMiniEventActions({
         });
       }
 
-      const refreshedMeta = await fetchMiniEventsWithMeta().catch(() => null);
-      if (refreshedMeta?.events && refreshedMeta.events.length > 0) {
-        const merged = mergeEvents(refreshedMeta.events);
-        setEvents(merged);
-        syncCollabStateFromServer(merged, refreshedMeta.requestedEventId ?? null);
-        const serverMatched = (eventIdToUpdate ? merged.find((ev) => String(ev.id) === String(eventIdToUpdate)) : null) ||
-          (currentUser?.id ? merged.find((ev) => String(ev.creator?.id) === String(currentUser.id)) : null);
-        if (serverMatched) {
-          savedEventObj = serverMatched;
-        }
-      } else if (savedEventObj) {
+      if (savedEventObj) {
         setEvents((prev) => {
           const exists = prev.some((ev) => String(ev.id) === String(savedEventObj.id));
           return exists
             ? prev.map((ev) => (String(ev.id) === String(savedEventObj.id) ? { ...ev, ...savedEventObj } : ev))
-            : [savedEventObj, ...prev];
+            : [savedEventObj, ...prev.filter((ev) => String(ev.creator?.id) !== String(currentUser?.id))];
         });
       }
 
@@ -232,12 +223,22 @@ export function useMiniEventActions({
       setShowEventModal(false);
       triggerToolbarRetractCycle();
 
-      // Deletion/update completed fully with clean server state before redirecting to auto-open event card once
       if (savedEventObj) {
         setTimeout(() => {
           handleOpenItemOnMap(savedEventObj, "event");
-        }, 150);
+        }, 120);
       }
+
+      // Reconcile full active event list silently in background without blocking modal close
+      fetchMiniEventsWithMeta()
+        .then((refreshedMeta) => {
+          if (refreshedMeta?.events && refreshedMeta.events.length > 0) {
+            const merged = mergeEvents(refreshedMeta.events);
+            setEvents(merged);
+            syncCollabStateFromServer(merged, refreshedMeta.requestedEventId ?? null);
+          }
+        })
+        .catch(() => {});
     } catch (err) {
       const errorMsg = err?.response?.data?.error || err?.message || "Failed to save mini event.";
       setNotice(errorMsg);

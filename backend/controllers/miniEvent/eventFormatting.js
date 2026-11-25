@@ -65,20 +65,54 @@ export function stripEncodedTags(raw) {
   return String(raw || '')
     .replace(/\[CAT:[a-z_]+\]\s*/gi, '')
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, '')
+    .replace(/\[CMETA:[^\]]+\]\s*/gi, '')
     .replace(/\[LOC:[^\]]+\]\s*/gi, '')
     .replace(/\[COLLABS:[^\]]+\]\s*/gi, '')
     .trim();
+}
+
+export function encodeClipMetaTag(clips) {
+  const safe = Array.isArray(clips) ? clips.filter((c) => c && c.url) : [];
+  if (safe.length === 0) return '';
+  const compact = safe.map((c) => {
+    const entry = {
+      i: c.id || '',
+      u: c.url,
+      t: Number(c.uploadedAt) || Date.now(),
+    };
+    if (Number.isFinite(Number(c.width)) && Number(c.width) > 0) entry.w = Math.round(Number(c.width));
+    if (Number.isFinite(Number(c.height)) && Number(c.height) > 0) entry.h = Math.round(Number(c.height));
+    if (Number.isFinite(Number(c.duration)) && Number(c.duration) > 0) entry.d = Number(Number(c.duration).toFixed(3));
+    if (c.authorId) entry.a = String(c.authorId);
+    if (c.authorName) entry.n = String(c.authorName).slice(0, 60);
+    if (c.authorAvatarUrl) entry.p = String(c.authorAvatarUrl);
+    return entry;
+  });
+  return Buffer.from(JSON.stringify(compact), 'utf8').toString('base64url');
+}
+
+export function decodeClipMetaTag(rawBase64) {
+  if (!rawBase64 || typeof rawBase64 !== 'string') return null;
+  try {
+    const json = Buffer.from(rawBase64.trim(), 'base64url').toString('utf8');
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 export function extractEncodedTags(raw) {
   const text = String(raw || '');
   const catMatch = text.match(/\[CAT:([a-z_]+)\]/i);
   const mediaMatch = text.match(/\[MEDIA:([^\]]+)\]/i);
+  const clipMetaMatch = text.match(/\[CMETA:([^\]]+)\]/i);
   const locMatch = text.match(/\[LOC:([^\]]+)\]/i);
   const collabsMatch = text.match(/\[COLLABS:([^\]]+)\]/i);
   return {
     category: catMatch ? catMatch[1].toLowerCase() : null,
     mediaStr: mediaMatch ? mediaMatch[1] : '',
+    clipMetaStr: clipMetaMatch ? clipMetaMatch[1] : '',
     location: locMatch ? locMatch[1].trim() : null,
     collaborators: collabsMatch
       ? collabsMatch[1].split(',').map((s) => s.trim()).filter(Boolean)
@@ -91,6 +125,7 @@ export function buildEncodedDescription({
   category,
   location,
   mediaUrls = [],
+  mediaClips = null,
   plainDescription = '',
 }) {
   const parts = [];
@@ -98,8 +133,15 @@ export function buildEncodedDescription({
   parts.push(`[CAT:${cleanCat}]`);
   const cleanLoc = cleanText(location);
   if (cleanLoc) parts.push(`[LOC:${cleanLoc}]`);
-  if (Array.isArray(mediaUrls) && mediaUrls.length > 0) {
-    parts.push(`[MEDIA:${mediaUrls.join(', ')}]`);
+  const urls = Array.isArray(mediaClips) && mediaClips.length > 0
+    ? mediaClips.map((c) => c?.url).filter(Boolean)
+    : (Array.isArray(mediaUrls) ? mediaUrls.filter(Boolean) : []);
+  if (urls.length > 0) {
+    parts.push(`[MEDIA:${urls.join(', ')}]`);
+  }
+  if (Array.isArray(mediaClips) && mediaClips.length > 0) {
+    const encoded = encodeClipMetaTag(mediaClips);
+    if (encoded) parts.push(`[CMETA:${encoded}]`);
   }
   const cleanPlain = cleanText(plainDescription);
   if (cleanPlain) parts.push(cleanPlain);

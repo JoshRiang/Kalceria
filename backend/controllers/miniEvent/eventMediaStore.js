@@ -1,22 +1,20 @@
 import crypto from 'node:crypto';
 import prisma from '../../lib/prisma.js';
 import { redis } from '../../lib/redis.js';
-import { incrementViewCounter, readViewCounter } from '../../utils/viewCounter.js';
 import { sanitizeAndNormalizeMediaUrl } from '../../utils/urlSecurity.js';
 import {
   MINI_EVENT_CLIP_TTL_MS,
   buildEncodedDescription,
+  decodeClipMetaTag,
   extractEncodedTags,
   extractUrlsFromLegacyMediaString,
 } from './eventFormatting.js';
 import {
-  clipKey,
   deleteLegacyEventClips,
   purgeAllEventClips,
   readEventClips,
   readLegacyEventClips,
   removeEventClipIds,
-  viewKey,
   writeEventClips,
 } from './eventMediaPersistence.js';
 
@@ -72,6 +70,7 @@ export function classifyClipOrientation(width, height) {
 }
 
 export function buildClipRecord({
+  id = null,
   url,
   width = null,
   height = null,
@@ -79,15 +78,14 @@ export function buildClipRecord({
   authorId = null,
   authorName = null,
   authorAvatarUrl = null,
-  viewCount = 0,
   uploadedAt = Date.now(),
 }) {
-  const ts = Number.isFinite(uploadedAt) && uploadedAt > 0 ? uploadedAt : Date.now();
+  const ts = Number.isFinite(Number(uploadedAt)) && Number(uploadedAt) > 0 ? Number(uploadedAt) : Date.now();
   const isVideo = inferIsVideoUrl(url);
   const safeWidth = normalizeDimension(width);
   const safeHeight = normalizeDimension(height);
   return {
-    id: crypto.randomUUID(),
+    id: id || crypto.randomUUID(),
     url,
     isVideo,
     width: safeWidth,
@@ -98,7 +96,6 @@ export function buildClipRecord({
     authorId: authorId || null,
     authorName: authorName || null,
     authorAvatarUrl: authorAvatarUrl || null,
-    viewCount: Number(viewCount) || 0,
     uploadedAt: ts,
     expiresAt: ts + MINI_EVENT_CLIP_TTL_MS,
   };
@@ -175,6 +172,10 @@ function clipExpiryMs(clip, fallbackBaseMs) {
 
 export async function saveEventMediaItems(eventId, clips) {
   const safeClips = Array.isArray(clips) ? clips.filter((c) => c && c.url) : [];
+  if (redis.isQuotaExceeded) {
+    // Postgres [CMETA] is authoritative during Redis fallback; skip split-brain local RAM caching
+    return safeClips;
+  }
   const keepIds = new Set(safeClips.map((c) => c.id));
   const stored = await readEventClips(eventId).catch(() => null);
   if (stored) {
@@ -182,18 +183,21 @@ export async function saveEventMediaItems(eventId, clips) {
       ...stored.clips.filter((c) => !keepIds.has(c.id)).map((c) => c.id),
       ...stored.orphanIds,
     ];
-    await removeEventClipIds(eventId, staleIds);
+    await removeEventClipIds(eventId, staleIds).catch(() => {});
   }
-  await writeEventClips(eventId, safeClips);
+  await writeEventClips(eventId, safeClips).catch(() => {});
   return safeClips;
 }
 
-export async function syncEventDescriptionMedia(event, activeUrls) {
+export async function syncEventDescriptionMedia(event, activeClipsOrUrls) {
   const tags = extractEncodedTags(event.description);
+  const list = Array.isArray(activeClipsOrUrls) ? activeClipsOrUrls : [];
+  const hasObjects = list.some((item) => item && typeof item === 'object' && item.url);
   const nextDesc = buildEncodedDescription({
     category: tags.category || 'cafe',
     location: tags.location || '',
-    mediaUrls: activeUrls,
+    mediaUrls: hasObjects ? list.map((c) => c?.url).filter(Boolean) : list,
+    mediaClips: hasObjects ? list.filter((c) => c && c.url) : null,
     plainDescription: tags.plainDescription,
   });
   if (nextDesc !== (event.description || '')) {
@@ -207,10 +211,52 @@ export async function syncEventDescriptionMedia(event, activeUrls) {
   return nextDesc;
 }
 
-function deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, creatorAvatarUrl, now) {
+/**
+ * Derives authoritative clips from Postgres `MiniEvent.description`:
+ * - Prefers structured `[CMETA:...]` manifest (retains exact id, uploadedAt, dimensions, duration, author across all lambdas)
+ * - Falls back cleanly to legacy `[MEDIA:...]` tag for pre-CMETA events.
+ */
+export function deriveAuthoritativeClipsFromDescription(
+  ev,
+  tags,
+  createdMs,
+  creatorName,
+  creatorAvatarUrl,
+  now
+) {
   const clips = [];
   let droppedExpired = false;
   let droppedExplicitExpired = false;
+
+  const decodedMeta = decodeClipMetaTag(tags.clipMetaStr);
+  if (Array.isArray(decodedMeta) && decodedMeta.length > 0) {
+    for (const raw of decodedMeta) {
+      if (!raw || !raw.u) continue;
+      const uploadedAt = Number(raw.t) || createdMs;
+      const expiresAt = uploadedAt + MINI_EVENT_CLIP_TTL_MS;
+      if (now >= expiresAt) {
+        droppedExpired = true;
+        droppedExplicitExpired = true;
+        continue;
+      }
+      clips.push({
+        ...buildClipRecord({
+          id: raw.i || null,
+          url: raw.u,
+          width: raw.w ?? null,
+          height: raw.h ?? null,
+          duration: raw.d ?? null,
+          authorId: raw.a || ev.creatorId,
+          authorName: raw.n || creatorName || null,
+          authorAvatarUrl: raw.p || creatorAvatarUrl || null,
+          uploadedAt,
+        }),
+        expiresAt,
+      });
+    }
+    return { clips, droppedExpired, droppedExplicitExpired, hasStructuredMeta: true };
+  }
+
   const entries = extractUrlsFromLegacyMediaString(tags.mediaStr || ev.mediaUrl || '');
   for (const entry of entries) {
     const uploadedAt = entry.uploadedAt || createdMs;
@@ -231,57 +277,35 @@ function deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, crea
       expiresAt,
     });
   }
-  return { clips, droppedExpired, droppedExplicitExpired };
+  return { clips, droppedExpired, droppedExplicitExpired, hasStructuredMeta: false };
 }
 
-async function initializeFromLegacySources(ev, tags, createdMs, creatorName, creatorAvatarUrl, now) {
-  let legacy = null;
-  try {
-    legacy = await readLegacyEventClips(ev.id);
-  } catch {
-    legacy = null;
-  }
-
-  let clips;
-  let dropped = false;
-  let shouldSyncDescription = false;
-  if (Array.isArray(legacy)) {
-    clips = legacy.filter((clip) => {
-      if (!clip || !clip.url) {
-        dropped = true;
-        return false;
-      }
-      if (now >= clipExpiryMs(clip, createdMs)) {
-        dropped = true;
-        return false;
-      }
-      return true;
-    });
-    clips = clips.map((clip) => ({ ...clip, id: clip.id || crypto.randomUUID() }));
-    shouldSyncDescription = dropped;
-  } else {
-    const derived = deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, creatorAvatarUrl, now);
-    clips = derived.clips;
-    dropped = derived.droppedExpired;
-    // When Upstash Redis is running on ephemeral quota fallback, never wipe untimestamped description
-    // clips on a cold lambda; only prune entries whose explicit/embedded timestamp has genuinely expired.
-    shouldSyncDescription = redis.isQuotaExceeded ? derived.droppedExplicitExpired : dropped;
-  }
-
-  try {
-    await writeEventClips(ev.id, clips, now);
-    if (Array.isArray(legacy)) await deleteLegacyEventClips(ev.id);
-  } catch {}
-  if (shouldSyncDescription) {
-    await syncEventDescriptionMedia(ev, clips.map((c) => c.url));
-  }
-  return clips;
+function clipUrlSignature(clips) {
+  return (Array.isArray(clips) ? clips : []).map((c) => `${c?.id || ''}:${c?.url || ''}`).join('|');
 }
 
 export async function hydrateAndPruneEventMedia(ev, creatorName = null, creatorAvatarUrl = null) {
   const now = Date.now();
   const createdMs = ev?.createdAt ? new Date(ev.createdAt).getTime() : now;
   const tags = extractEncodedTags(ev?.description);
+
+  const pgDerived = deriveAuthoritativeClipsFromDescription(
+    ev,
+    tags,
+    createdMs,
+    creatorName,
+    creatorAvatarUrl,
+    now
+  );
+
+  // When Redis is in local-RAM quota fallback (split-brain across serverless lambdas),
+  // ALWAYS treat Postgres as the single source of truth so media never flickers.
+  if (redis.isQuotaExceeded) {
+    if (pgDerived.droppedExplicitExpired) {
+      await syncEventDescriptionMedia(ev, pgDerived.clips);
+    }
+    return toMediaResult(pgDerived.clips);
+  }
 
   let stored = null;
   try {
@@ -290,13 +314,60 @@ export async function hydrateAndPruneEventMedia(ev, creatorName = null, creatorA
     stored = null;
   }
 
-  // Storage unreachable: serve what the description records, never mutate anything.
+  // Redis unreachable: serve Postgres SSOT cleanly without mutating
   if (stored === null) {
-    return toMediaResult(deriveActiveClipsFromDescription(ev, tags, createdMs, creatorName, creatorAvatarUrl, now).clips);
+    return toMediaResult(pgDerived.clips);
   }
 
+  // If Postgres has structured [CMETA] clips, ensure Redis never serves stale clips
+  if (pgDerived.hasStructuredMeta) {
+    const pgSig = clipUrlSignature(pgDerived.clips);
+    const redisActive = stored.clips.filter((c) => now < clipExpiryMs(c, createdMs));
+    if (!stored.initialized || clipUrlSignature(redisActive) !== pgSig) {
+      await saveEventMediaItems(ev.id, pgDerived.clips).catch(() => {});
+    }
+    if (pgDerived.droppedExpired) {
+      await syncEventDescriptionMedia(ev, pgDerived.clips);
+    }
+    return toMediaResult(pgDerived.clips);
+  }
+
+  // Legacy event without [CMETA] yet: initialize from Redis legacy or Postgres [MEDIA]
   if (!stored.initialized) {
-    return toMediaResult(await initializeFromLegacySources(ev, tags, createdMs, creatorName, creatorAvatarUrl, now));
+    let legacy = null;
+    try {
+      legacy = await readLegacyEventClips(ev.id);
+    } catch {
+      legacy = null;
+    }
+
+    let clips;
+    let shouldSyncDesc = false;
+    if (Array.isArray(legacy)) {
+      let dropped = false;
+      clips = legacy
+        .filter((clip) => {
+          if (!clip || !clip.url || now >= clipExpiryMs(clip, createdMs)) {
+            dropped = true;
+            return false;
+          }
+          return true;
+        })
+        .map((clip) => ({ ...clip, id: clip.id || crypto.randomUUID() }));
+      shouldSyncDesc = dropped || clips.length > 0;
+    } else {
+      clips = pgDerived.clips;
+      shouldSyncDesc = pgDerived.droppedExpired || clips.length > 0;
+    }
+
+    try {
+      await writeEventClips(ev.id, clips, now);
+      if (Array.isArray(legacy)) await deleteLegacyEventClips(ev.id);
+    } catch {}
+    if (shouldSyncDesc) {
+      await syncEventDescriptionMedia(ev, clips);
+    }
+    return toMediaResult(clips);
   }
 
   const active = [];
@@ -312,16 +383,7 @@ export async function hydrateAndPruneEventMedia(ev, creatorName = null, creatorA
   const idsToRemove = [...expiredIds, ...stored.orphanIds];
   if (idsToRemove.length > 0) {
     await removeEventClipIds(ev.id, idsToRemove).catch(() => {});
-    await syncEventDescriptionMedia(ev, active.map((c) => c.url));
-  }
-
-  if (active.length > 0) {
-    try {
-      const counts = await Promise.all(active.map((clip) => readViewCounter(viewKey(clip.id))));
-      active.forEach((clip, idx) => {
-        clip.viewCount = counts[idx] ?? clip.viewCount ?? 0;
-      });
-    } catch {}
+    await syncEventDescriptionMedia(ev, active);
   }
 
   return toMediaResult(active);
@@ -339,13 +401,25 @@ export function planEventMediaSelection(currentClips, submittedClips, syncedAt =
   for (const clip of submittedClips) {
     if (!clip?.url || seenUrls.has(clip.url)) continue;
     seenUrls.add(clip.url);
-    finalClips.push(currentByUrl.get(clip.url) || clip);
+    const existing = currentByUrl.get(clip.url);
+    if (existing) {
+      // Reuse existing record while backfilling any newly supplied width/height/duration
+      finalClips.push({
+        ...existing,
+        width: existing.width || clip.width || null,
+        height: existing.height || clip.height || null,
+        aspectRatio: existing.aspectRatio || clip.aspectRatio || null,
+        orientation: existing.orientation || clip.orientation || null,
+        duration: existing.duration || clip.duration || null,
+      });
+    } else {
+      finalClips.push(clip);
+    }
   }
 
   const syncedAtMs = Number(syncedAt);
   if (Number.isFinite(syncedAtMs) && syncedAtMs > 0) {
     for (const clip of currentClips) {
-      // Only preserve concurrent clips uploaded by another collaborator while editor was open
       const isOtherAuthor = editorAuthorId ? String(clip.authorId) !== String(editorAuthorId) : true;
       if (!seenUrls.has(clip.url) && Number(clip.uploadedAt) > syncedAtMs && isOtherAuthor) {
         seenUrls.add(clip.url);
@@ -364,8 +438,11 @@ export function planEventMediaSelection(currentClips, submittedClips, syncedAt =
 }
 
 export async function persistEventMediaSelection(eventId, plan) {
-  await removeEventClipIds(eventId, plan.removedIds);
-  await writeEventClips(eventId, plan.finalClips);
+  if (redis.isQuotaExceeded) {
+    return plan.finalClips;
+  }
+  await removeEventClipIds(eventId, plan.removedIds).catch(() => {});
+  await writeEventClips(eventId, plan.finalClips).catch(() => {});
   return plan.finalClips;
 }
 
@@ -380,15 +457,15 @@ export async function appendClipsToEventMedia(ev, newClips, fallbackCreatorName 
     accepted.push(clip);
   }
 
-  // Only the new clips are written; existing clips are never rewritten, so concurrent uploads coexist.
-  if (accepted.length > 0) {
-    await writeEventClips(ev.id, accepted);
-  }
-
   const combined = [...current.mediaItems, ...accepted].sort(
     (a, b) => (Number(a.uploadedAt) || 0) - (Number(b.uploadedAt) || 0)
   );
-  const updatedDesc = await syncEventDescriptionMedia(ev, combined.map((c) => c.url));
+  // Write authoritative Postgres manifest FIRST so every serverless lambda sees it immediately
+  const updatedDesc = await syncEventDescriptionMedia(ev, combined);
+  if (accepted.length > 0 && !redis.isQuotaExceeded) {
+    await writeEventClips(ev.id, accepted).catch(() => {});
+  }
+
   return {
     ...toMediaResult(combined),
     updatedDescription: updatedDesc,
@@ -420,8 +497,11 @@ export async function removeClipFromEventMedia(ev, { clipId, url }, userId) {
     return { notFound: true, mediaItems: current.mediaItems };
   }
 
-  await removeEventClipIds(ev.id, [removedClip.id]);
-  const updatedDesc = await syncEventDescriptionMedia(ev, remaining.map((c) => c.url));
+  // Update Postgres manifest FIRST so deletion is 100% durable across all lambdas
+  const updatedDesc = await syncEventDescriptionMedia(ev, remaining);
+  if (!redis.isQuotaExceeded) {
+    await removeEventClipIds(ev.id, [removedClip.id]).catch(() => {});
+  }
   return {
     removed: true,
     ...toMediaResult(remaining),
@@ -430,50 +510,6 @@ export async function removeClipFromEventMedia(ev, { clipId, url }, userId) {
 }
 
 export async function purgeEventMediaByIds(eventIds) {
-  await purgeAllEventClips(eventIds);
-}
-
-export async function recordClipView({ eventId, clipId, viewerKey, viewerUserId = null }) {
-  if (!clipId) return 0;
-  const k = viewKey(clipId);
-
-  // Read clip info to check author
-  let clip = null;
-  try {
-    const raw = await redis.get(clipKey(clipId));
-    if (raw) clip = JSON.parse(raw);
-  } catch {}
-
-  // If clip not found in individual key, check event
-  if (!clip && eventId) {
-    try {
-      const stored = await readEventClips(eventId);
-      clip = (stored?.clips || []).find((c) => String(c.id) === String(clipId));
-    } catch {}
-  }
-
-  // Check if viewer is author: author of that media clip cannot increment the count
-  let isAuthor = false;
-  if (viewerUserId) {
-    if (clip?.authorId) {
-      isAuthor = String(clip.authorId) === String(viewerUserId);
-    } else if (eventId) {
-      try {
-        const ev = await prisma.miniEvent.findUnique({
-          where: { id: String(eventId) },
-          select: { creatorId: true },
-        });
-        if (ev?.creatorId && String(ev.creatorId) === String(viewerUserId)) {
-          isAuthor = true;
-        }
-      } catch {}
-    }
-  }
-
-  // Only increment if viewer is NOT the author
-  if (!isAuthor) {
-    return incrementViewCounter(k);
-  }
-
-  return readViewCounter(k);
+  if (redis.isQuotaExceeded) return;
+  await purgeAllEventClips(eventIds).catch(() => {});
 }

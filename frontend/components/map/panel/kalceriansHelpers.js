@@ -36,6 +36,7 @@ export const titleLetterVariant = {
 export function cleanDesc(value) {
   return String(value || "")
     .replace(/\[CAT:[a-z_]+\]\s*/gi, "")
+    .replace(/\[CMETA:[^\]]+\]\s*/gi, "")
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, "")
     .trim();
 }

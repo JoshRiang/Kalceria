@@ -22,11 +22,7 @@ import {
   renderByAuthorLine,
 } from "./eventPopup/popupMediaMetadata";
 import { computeCardGeometryForMedia } from "./eventPopup/popupCarouselController";
-import {
-  GEOMETRY_TRANSITION_EASING,
-  GEOMETRY_TRANSITION_MS,
-  computeEmptyCardGeometry,
-} from "./eventPopup/popupGeometry";
+import { computeEmptyCardGeometry } from "./eventPopup/popupGeometry";
 import { renderMediaCarousel } from "./eventPopup/popupMediaRenderer";
 import { getTrashIconSvg, getReplyIconSvg } from "./eventPopup/popupFeedDeletePrompt.js";
 import {
@@ -183,16 +179,13 @@ export function eventPopup(
   const isFirstSlideSelfAuthor = Boolean(curId && firstAuthorId && String(curId) === String(firstAuthorId));
   const firstAvatarUrl = (firstMedia && typeof firstMedia === "object" && firstMedia.authorAvatarUrl) || creatorAvatarUrl || "";
   const firstAuthorName = (firstMedia && typeof firstMedia === "object" && firstMedia.authorName) || rawCreatorDisplayName || "Kalcerian";
-  const firstViewCount = firstMedia && typeof firstMedia === "object" && Number.isFinite(Number(firstMedia.viewCount)) ? Number(firstMedia.viewCount) : 0;
   const initialGeometry =
     mediaItems.length === 0
       ? computeEmptyCardGeometry()
       : computeCardGeometryForMedia(firstMedia?.width, firstMedia?.height);
-  const geometryTransition = `${GEOMETRY_TRANSITION_MS}ms ${GEOMETRY_TRANSITION_EASING}`;
 
   // Device-aware Navigation Link & Indonesian Location
   const rawLoc = extractLocation(item) || "Bintaro Jaya, Tangerang Selatan";
-  const displayLoc = rawLoc.length > 36 ? rawLoc.slice(0, 33).trim() + "..." : rawLoc;
   const isIOS = typeof navigator !== "undefined" && (
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
@@ -205,25 +198,38 @@ export function eventPopup(
         ? `https://maps.apple.com/?q=${encodeURIComponent(rawLoc)}`
         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawLoc)}`);
 
-  const linkColor = isMapDark ? "#38bdf8" : "#0284c7";
-  const locationHtml = `
-    <div style="width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25;">
-      <a
-        href="${esc(mapNavUrl)}"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Open in Maps: ${esc(rawLoc)}"
-        onclick="event.stopPropagation();"
-        style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; color: ${linkColor}; text-decoration: underline; text-underline-offset: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 100%; cursor: pointer;"
-      >${esc(displayLoc)}</a>
-    </div>
+  // Solid Google-Maps-style pin icon with transparent center hole (black in Light mode, white in Dark mode)
+  const pinFill = isMapDark ? "#ffffff" : "#000000";
+  const locationPinHtml = `
+    <a
+      href="${esc(mapNavUrl)}"
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Open in Maps: ${esc(rawLoc)}"
+      aria-label="Open in Maps: ${esc(rawLoc)}"
+      data-event-location-pin="${esc(safeId)}"
+      onpointerdown="event.stopPropagation();"
+      onclick="event.stopPropagation();"
+      style="display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 1px; cursor: pointer; text-decoration: none; transition: opacity 0.15s ease;"
+      onmouseenter="this.style.opacity='0.72';"
+      onmouseleave="this.style.opacity='1';"
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="display: block; flex-shrink: 0;" aria-hidden="true">
+        <path
+          fill-rule="evenodd"
+          clip-rule="evenodd"
+          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"
+          fill="${pinFill}"
+        />
+      </svg>
+    </a>
   `;
 
   const videoFrameBorder = isMapDark ? "1px solid rgba(255, 255, 255, 0.14)" : "1px solid rgba(0, 0, 0, 0.1)";
   const videoFrameBg = mediaItems.length === 0 ? (isMapDark ? "#000000" : "#ffffff") : "#0b0d14";
 
   return `
-    <div class="tactical-card event-card ${isMapDark ? "event-card-dark" : "event-card-light"}" data-event-card-id="${esc(safeId)}" data-current-user-id="${esc(curId || "")}" data-feed-orientation="${esc(initialGeometry.orientation || "unknown")}" style="position: relative; overflow: hidden; width: ${initialGeometry.cardWidth}px; transition: width ${geometryTransition}; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
+    <div class="tactical-card event-card ${isMapDark ? "event-card-dark" : "event-card-light"}" data-event-card-id="${esc(safeId)}" data-current-user-id="${esc(curId || "")}" data-feed-orientation="${esc(initialGeometry.orientation || "unknown")}" style="position: relative; overflow: hidden; width: ${initialGeometry.cardWidth}px; border: 1px solid ${cardBorder} !important; border-radius: 18px !important; background: ${cardBaseBg} !important; box-shadow: ${cardShadow} !important;">
       <!-- Seamless background strip: mirrored tiles share edges, so the portrait artwork extends to any card width without gaps -->
       <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; display: flex; flex-direction: row; justify-content: center; align-items: stretch; overflow: hidden; opacity: ${bgOpacity}; transform: translateZ(0);">
         <div style="flex: 0 0 auto; height: 100%; aspect-ratio: var(--kalceria-event-bg-aspect, 0.5578); transform: scaleX(-1); background-image: var(${bgCssVar}, url('${bgImage}')); background-size: 100% 100%; background-repeat: no-repeat;"></div>
@@ -254,7 +260,7 @@ export function eventPopup(
       ${
         hasMedia
           ? `
-      <!-- Action Row Above Media Box (OUTSIDE): Avatar Logo, Search Icon, View Count, Reply Arrow (NO outer oval pill, NO divider line) -->
+      <!-- Action Row Above Media Box (OUTSIDE): Author Avatar & Solid Trash/Reply Action -->
       <div
         style="
           position: relative;
@@ -295,37 +301,7 @@ export function eventPopup(
           />
         </div>
 
-        <!-- Search icon (matches Broadcast Box & toggles dark/light) -->
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex-shrink: 0; display: block;">
-          <circle cx="10" cy="10" r="6.5" fill="${isMapDark ? "#000000" : "#ffffff"}" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.5" />
-          <path d="M15 15L20.5 20.5" stroke="${isMapDark ? "#ffffff" : "#000000"}" stroke-width="2.8" stroke-linecap="round" />
-        </svg>
-
-        <!-- View count (toggles dark/light) -->
-        <span
-          data-media-view-count="${esc(firstClipId)}"
-          style="
-            font-family: Arial, -apple-system, sans-serif;
-            font-size: 11.5px;
-            font-weight: 700;
-            color: ${isMapDark ? "#ffffff" : "#000000"};
-            line-height: 1;
-            letter-spacing: -0.01em;
-            font-variant-numeric: tabular-nums;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            height: 14px;
-            overflow: hidden;
-            position: relative;
-            vertical-align: middle;
-            min-width: 8px;
-          "
-        >
-          ${firstViewCount}
-        </span>
-
-        <!-- Action button: Trashcan when current user posted this clip, Reply otherwise (toggles dark/light) -->
+        <!-- Action button: Solid Trashcan when current user posted this clip, Reply otherwise (toggles dark/light) -->
         <button
           type="button"
           data-media-reply-btn="${esc(safeId)}"
@@ -354,8 +330,8 @@ export function eventPopup(
           : ""
       }
 
-      <!-- Framed Media Screen: width/height follow the real clip aspect ratio (portrait ↔ 16:9 landscape), transparent backdrop -->
-      <div class="popup-video" style="position: relative; z-index: 3; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; transition: height ${geometryTransition}; margin: 2px 12px 8px 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
+      <!-- Framed Media Screen: locked stably to the first uploaded clip's aspect ratio -->
+      <div class="popup-video" style="position: relative; z-index: 3; width: calc(100% - 24px); height: ${initialGeometry.frameHeight}px; margin: 2px 12px 8px 12px; border-radius: 12px; overflow: hidden; border: ${videoFrameBorder} !important; padding: 0; background: ${videoFrameBg}; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);">
         ${renderMediaCarousel(mediaItems, isMapDark, creatorAvatarUrl, rawCreatorDisplayName, safeId, eventCreatorId || "")}
       </div>
 
@@ -367,28 +343,10 @@ export function eventPopup(
             <p style="margin: 0; font-size: 12px; line-height: 1.42; font-weight: 400; color: ${footerTextColor}; font-family: Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; letter-spacing: -0.01em;">${esc(displayDesc)}</p>
           </div>
         ` : ""}
-        ${locationHtml}
 
         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <svg width="15" height="15" viewBox="0 0 24 24" style="overflow: visible; flex-shrink: 0; display: block;">
-              <circle
-                cx="12"
-                cy="12"
-                r="9.5"
-                fill="${isMapDark ? "#ffffff" : "#000000"}"
-                stroke="${isMapDark ? "#000000" : "#ffffff"}"
-                stroke-width="1.8"
-              />
-              <path
-                d="M 12 6.5 L 12 12 L 15.5 15.5"
-                fill="none"
-                stroke="${isMapDark ? "#000000" : "#ffffff"}"
-                stroke-width="2.2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+          <div style="display: flex; align-items: center; gap: 7px;">
+            ${locationPinHtml}
             <span id="event-uptime-${safeId}" data-event-uptime="${createdAtMs}" style="font-family: Arial, sans-serif; font-size: 11px; font-weight: normal; font-style: normal; color: ${footerTextColor}; letter-spacing: 0.02em; font-variant-numeric: tabular-nums;">${uptimeString}</span>
           </div>
 

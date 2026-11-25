@@ -38,6 +38,7 @@ export function buildMiniEventPayload(
   const mediaItemsPayload = buildMediaItemsPayload(mediaUrl, eventForm.mediaMetadataByUrl, splitMediaUrlListClientFn);
   const cleanDesc = (eventForm.description || '')
     .replace(/\[CAT:[a-z_]+\]\s*/gi, '')
+    .replace(/\[CMETA:[^\]]+\]\s*/gi, '')
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, '')
     .replace(/\[LOC:[^\]]+\]\s*/gi, '')
     .replace(/\[COLLABS:[^\]]+\]\s*/gi, '')

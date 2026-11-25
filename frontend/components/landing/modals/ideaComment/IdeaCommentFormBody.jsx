@@ -1,8 +1,8 @@
 "use client";
 
 import { COMMENT_TYPES, CATEGORIES } from "./constants";
-import { validateAndNormalizeMediaUrlClient, splitMediaUrlListClient } from "@/lib/urlSecurity";
-import { isKalceriaManagedMediaUrl } from "@/lib/mediaUploadHelpers";
+import { splitMediaUrlListClient } from "@/lib/urlSecurity";
+import { MediaDropzoneBox } from "@/components/ui/MediaDropzoneBox";
 
 export function IdeaCommentFormBody({
   handleSubmit,
@@ -21,29 +21,19 @@ export function IdeaCommentFormBody({
   selectedIdx = 0,
   setSelectedIdx,
   fileInputRef,
-  handleMediaUpload,
+  handleMediaFiles,
   isUploadingMedia,
   isSubmitting,
   mediaError,
-  setMediaError,
   handleRemoveMedia,
   handleClearAll,
   getDisplayFilename,
+  isVideoMediaUrl,
   isFormValid,
   setError,
 }) {
   const parsedUrls = splitMediaUrlListClient(mediaUrl || "");
   const activeIdx = Math.min(selectedIdx || 0, Math.max(0, parsedUrls.length - 1));
-  const activeUrl = parsedUrls[activeIdx] || "";
-  const isLockedAttachment =
-    parsedUrls.length > 1 ||
-    (parsedUrls.length === 1 &&
-      (activeUrl.startsWith("blob:") ||
-        activeUrl.startsWith("data:") ||
-        isKalceriaManagedMediaUrl(activeUrl)));
-  const displayFilenameText = isLockedAttachment
-    ? (getDisplayFilename ? getDisplayFilename(activeUrl) : activeUrl)
-    : mediaUrl;
 
   return (
     <form
@@ -217,89 +207,23 @@ export function IdeaCommentFormBody({
           )}
         </div>
 
-        <div className="flex gap-2">
-          <input
-            type="text"
-            readOnly={isLockedAttachment}
-            className={`flex-1 border rounded-lg p-2 sm:p-2.5 text-xs outline-none transition-all bg-white/[0.03] border-white/10 text-white placeholder:text-white/30 focus:border-slate-400 font-sans ${
-              isLockedAttachment ? "cursor-default select-all" : ""
-            }`}
-            value={displayFilenameText}
-            onChange={(e) => {
-              if (!isLockedAttachment) {
-                setMediaUrl(e.target.value);
-                setMediaError("");
-              }
-            }}
-            onBlur={() => {
-              if (!isLockedAttachment && mediaUrl.trim()) {
-                const check = validateAndNormalizeMediaUrlClient(mediaUrl.trim());
-                if (!check.valid) {
-                  setMediaError(check.error || "Format URL media tidak valid.");
-                } else if (check.normalized && check.normalized !== mediaUrl) {
-                  setMediaUrl(check.normalized);
-                }
-              }
-            }}
-            placeholder="Upload media atau tempel link..."
-          />
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept=".png,.jpg,.jpeg,.webp,.mp4,.m4v,.mp4v,.mpg4,.mov,.3gp,.webm,image/png,image/jpeg,image/webp,video/mp4,video/x-m4v,video/mp4v-es,video/quicktime,video/3gpp,video/webm"
-            className="hidden"
-            onChange={handleMediaUpload}
-          />
-          <button
-            type="button"
-            disabled={isUploadingMedia || isSubmitting}
-            onClick={() => fileInputRef.current?.click()}
-            className="px-3.5 py-2 border rounded-lg flex items-center justify-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/30 disabled:opacity-40 font-sans select-none"
-          >
-            {isUploadingMedia ? (
-              <>
-                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 60" />
-                </svg>
-                <span>Uploading...</span>
-              </>
-            ) : (
-              <>
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-3.5 h-3.5"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                <span>Upload</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Surface Error Box in Consolas Red, No Outer Box */}
-        {mediaError && (
-          <div
-            style={{ fontFamily: "Consolas, 'Courier New', monospace" }}
-            className="text-red-500 text-[13px] sm:text-[14px] font-normal tracking-tight py-0.5 select-none"
-          >
-            {mediaError}
-          </div>
-        )}
+        <MediaDropzoneBox
+          fileInputRef={fileInputRef}
+          theme="glass"
+          disabled={isSubmitting}
+          isUploading={isUploadingMedia}
+          error={mediaError}
+          onFilesSelected={handleMediaFiles}
+          promptText="Drag & drop or choose photo / video (max 4.5 MB)"
+        />
 
         {/* Media Thumbnails (Zero outer box, matching Event Card real appearance) */}
         {parsedUrls.length > 0 && (
           <div className="flex items-center gap-2.5 overflow-x-auto py-1.5 px-0.5 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20">
             {parsedUrls.map((url, idx) => {
-              const isVideo =
-                /\.(mp4|webm|mov|m4v|3gp)($|\?)/i.test(url) || /^data:video/i.test(url);
+              const isVideo = isVideoMediaUrl
+                ? isVideoMediaUrl(url)
+                : /\.(mp4|webm|mov|m4v|3gp)($|\?)/i.test(url) || /^data:video/i.test(url);
               const isSelected = idx === activeIdx;
               const displayName = getDisplayFilename ? getDisplayFilename(url) : `Media ${idx + 1}`;
               return (
@@ -307,10 +231,10 @@ export function IdeaCommentFormBody({
                   key={`${idx}-${url.slice(0, 32)}`}
                   onClick={() => setSelectedIdx && setSelectedIdx(idx)}
                   title={`Pilih media: ${displayName}`}
-                  className={`relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm transition-all duration-200 transform cursor-pointer ${
+                  className={`relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm transition-colors duration-150 cursor-pointer ${
                     isSelected
-                      ? "scale-105 ring-2 ring-white ring-offset-2 ring-offset-black/80 shadow-white/10 shadow-lg z-10 opacity-100"
-                      : "hover:scale-102 opacity-70 hover:opacity-100 border border-white/20"
+                      ? "ring-2 ring-white ring-offset-2 ring-offset-black/80 shadow-white/10 shadow-lg z-10 opacity-100"
+                      : "opacity-75 hover:opacity-100 border border-white/20"
                   }`}
                 >
                   {isVideo ? (
@@ -336,8 +260,9 @@ export function IdeaCommentFormBody({
                       e.stopPropagation();
                       handleRemoveMedia(idx);
                     }}
+                    aria-label={`Remove ${displayName}`}
                     title="Remove this media"
-                    className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:scale-110 active:scale-90 transition-transform cursor-pointer border border-black/15 leading-none"
+                    className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:bg-neutral-200 transition-colors cursor-pointer border border-black/15 leading-none"
                   >
                     ×
                   </button>

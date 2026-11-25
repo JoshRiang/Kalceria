@@ -33,8 +33,8 @@ export function getInstantInitialCenter(currentUser = null) {
 export function stripDynamicUptime(html) {
   return String(html || "")
     .replace(
-      /(data-event-uptime="[^"]+"[^>]*>)\d{2}:\d{2}:\d{2}(<\/span>)/g,
-      "$100:00:00$2"
+      /(data-event-uptime="[^"]+"[^>]*>)(?:\d+h \d{2}m \d{2}s|\d{2,}:\d{2}:\d{2})(<\/span>)/g,
+      "$10h 00m 00s$2"
     )
     .replace(
       /(data-broadcast-uptime="[^"]+"[^>]*>)[^<]*(<\/span>)/g,
@@ -46,17 +46,17 @@ export function tickAllEventUptimeElements() {
   if (typeof document === "undefined") return;
   const now = Date.now();
 
-  // 1. Event uptime elements (hh:mm:ss)
+  // 1. Event uptime elements (24h 13m 06s realtime)
   const eventNodes = document.querySelectorAll("[data-event-uptime]");
   if (eventNodes && eventNodes.length > 0) {
     eventNodes.forEach((el) => {
       const startMs = Number(el.getAttribute("data-event-uptime"));
       if (!Number.isFinite(startMs) || startMs <= 0) return;
       const diffSec = Math.max(0, Math.floor((now - startMs) / 1000));
-      const h = String(Math.floor(diffSec / 3600)).padStart(2, "0");
+      const h = Math.floor(diffSec / 3600);
       const m = String(Math.floor((diffSec % 3600) / 60)).padStart(2, "0");
       const s = String(diffSec % 60).padStart(2, "0");
-      const nextText = `${h}:${m}:${s}`;
+      const nextText = `${h}h ${m}m ${s}s`;
       if (el.textContent !== nextText) {
         el.textContent = nextText;
       }

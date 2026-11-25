@@ -12,6 +12,8 @@ import {
 export function useIdeaCommentMedia() {
   const fileInputRef = useRef(null);
   const fileNamesRef = useRef({});
+  const videoUrlsRef = useRef(new Set());
+  const activeUploadsRef = useRef(0);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [mediaUrl, setMediaUrl] = useState("");
   const latestMediaUrlRef = useRef("");
@@ -20,7 +22,6 @@ export function useIdeaCommentMedia() {
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [mediaError, setMediaError] = useState("");
 
-  // Clean up any remaining in-memory blob URLs when modal unmounts
   useEffect(() => {
     return () => {
       const urls = splitMediaUrlListClient(latestMediaUrlRef.current || "");
@@ -34,55 +35,56 @@ export function useIdeaCommentMedia() {
 
   const getDisplayFilename = (url) => formatMediaDisplayName(url, fileNamesRef.current);
 
-  const handleMediaUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMediaError("");
+  const isVideoMediaUrl = (url) =>
+    Boolean(
+      url &&
+        (videoUrlsRef.current.has(url) ||
+          /\.(mp4|webm|mov|m4v|3gp)($|\?)/i.test(url) ||
+          /^data:video/i.test(url))
+    );
 
-    const validation = validateMediaUploadFile(file);
-    if (!validation.valid) {
-      setMediaError(validation.error);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    // Instant 0ms latency local preview
+  const uploadSingleCommentFile = async (file, validation) => {
     const instantObjUrl = URL.createObjectURL(file);
     fileNamesRef.current[instantObjUrl] = file.name;
-    const insertedIdx = splitMediaUrlListClient(latestMediaUrlRef.current || "").length;
+    if (validation.isVideo) videoUrlsRef.current.add(instantObjUrl);
 
+    const insertedIdx = splitMediaUrlListClient(latestMediaUrlRef.current || "").length;
     setMediaUrl((prev) => {
       const existing = splitMediaUrlListClient(prev || "");
       return [...existing, instantObjUrl].join(", ");
     });
     setSelectedIdx(insertedIdx);
 
+    activeUploadsRef.current += 1;
     setIsUploadingMedia(true);
     try {
       const res = await uploadBlobMedia(file, { purpose: "comment" });
-      if (res?.url) {
-        try { URL.revokeObjectURL(instantObjUrl); } catch {}
-        fileNamesRef.current[res.url] = file.name;
-        delete fileNamesRef.current[instantObjUrl];
+      if (!res?.url) throw new Error("Upload gagal mengembalikan URL media.");
 
-        const latestExisting = splitMediaUrlListClient(latestMediaUrlRef.current || "");
-        const targetIdx = latestExisting.findIndex((u) => u === instantObjUrl);
-
-        setMediaUrl((prev) => {
-          const existing = splitMediaUrlListClient(prev || "");
-          return existing.map((u) => (u === instantObjUrl ? res.url : u)).join(", ");
-        });
-        if (targetIdx !== -1) {
-          setSelectedIdx(targetIdx);
-        }
+      try { URL.revokeObjectURL(instantObjUrl); } catch {}
+      fileNamesRef.current[res.url] = file.name;
+      delete fileNamesRef.current[instantObjUrl];
+      if (validation.isVideo) {
+        videoUrlsRef.current.delete(instantObjUrl);
+        videoUrlsRef.current.add(res.url);
       }
+
+      const targetIdx = splitMediaUrlListClient(latestMediaUrlRef.current || "").findIndex(
+        (u) => u === instantObjUrl
+      );
+      setMediaUrl((prev) => {
+        const existing = splitMediaUrlListClient(prev || "");
+        return existing.map((u) => (u === instantObjUrl ? res.url : u)).join(", ");
+      });
+      if (targetIdx !== -1) setSelectedIdx(targetIdx);
     } catch (err) {
       try { URL.revokeObjectURL(instantObjUrl); } catch {}
       delete fileNamesRef.current[instantObjUrl];
+      videoUrlsRef.current.delete(instantObjUrl);
 
-      const latestExisting = splitMediaUrlListClient(latestMediaUrlRef.current || "");
-      const remainingCount = latestExisting.filter((u) => u !== instantObjUrl).length;
-
+      const remainingCount = splitMediaUrlListClient(latestMediaUrlRef.current || "").filter(
+        (u) => u !== instantObjUrl
+      ).length;
       setMediaUrl((prev) => {
         const existing = splitMediaUrlListClient(prev || "");
         return existing.filter((u) => u !== instantObjUrl).join(", ");
@@ -90,9 +92,39 @@ export function useIdeaCommentMedia() {
       setSelectedIdx((p) => Math.max(0, Math.min(p, remainingCount - 1)));
       setMediaError(normalizeUploadErrorMessage(err));
     } finally {
-      setIsUploadingMedia(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      activeUploadsRef.current = Math.max(0, activeUploadsRef.current - 1);
+      if (activeUploadsRef.current === 0) {
+        setIsUploadingMedia(false);
+      }
     }
+  };
+
+  const handleMediaFiles = async (rawFiles) => {
+    const files = Array.from(rawFiles || []).filter(Boolean);
+    if (files.length === 0) return;
+
+    const validPairs = [];
+    let firstError = "";
+    for (const file of files) {
+      const validation = validateMediaUploadFile(file);
+      if (!validation.valid) {
+        if (!firstError) firstError = validation.error;
+      } else {
+        validPairs.push({ file, validation });
+      }
+    }
+
+    setMediaError(firstError);
+    if (validPairs.length === 0) return;
+
+    await Promise.allSettled(
+      validPairs.map(({ file, validation }) => uploadSingleCommentFile(file, validation))
+    );
+  };
+
+  const handleMediaUpload = async (e) => {
+    await handleMediaFiles(e?.target?.files);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleRemoveMedia = (indexToRemove) => {
@@ -106,6 +138,7 @@ export function useIdeaCommentMedia() {
         try { URL.revokeObjectURL(removedUrl); } catch {}
       }
       delete fileNamesRef.current[removedUrl];
+      videoUrlsRef.current.delete(removedUrl);
       return urls.filter((_, idx) => idx !== indexToRemove).join(", ");
     });
     setSelectedIdx((p) => Math.max(0, Math.min(p, nextCount - 1)));
@@ -118,6 +151,7 @@ export function useIdeaCommentMedia() {
         try { URL.revokeObjectURL(u); } catch {}
       }
       delete fileNamesRef.current[u];
+      videoUrlsRef.current.delete(u);
     });
     setSelectedIdx(0);
     setMediaError("");
@@ -135,10 +169,11 @@ export function useIdeaCommentMedia() {
     setIsUploadingMedia,
     mediaError,
     setMediaError,
+    handleMediaFiles,
     handleMediaUpload,
     handleRemoveMedia,
     handleClearAll,
     getDisplayFilename,
+    isVideoMediaUrl,
   };
 }
-

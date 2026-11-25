@@ -29,10 +29,11 @@ export function IdeaCommentModal({ onClose }) {
     isUploadingMedia,
     mediaError,
     setMediaError,
-    handleMediaUpload,
+    handleMediaFiles,
     handleRemoveMedia,
     handleClearAll,
     getDisplayFilename,
+    isVideoMediaUrl,
   } = useIdeaCommentMedia();
 
   // Pre-fill active signed-in user's name if authenticated
@@ -151,7 +152,7 @@ export function IdeaCommentModal({ onClose }) {
         headers: clientTag ? { "x-client-fingerprint": clientTag } : {},
       });
 
-      const minDelay = new Promise((resolve) => setTimeout(resolve, 1100));
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 250));
       await Promise.all([submitPromise, minDelay]);
       onClose();
     } catch (err) {
@@ -272,14 +273,14 @@ export function IdeaCommentModal({ onClose }) {
               selectedIdx={selectedIdx}
               setSelectedIdx={setSelectedIdx}
               fileInputRef={fileInputRef}
-              handleMediaUpload={handleMediaUpload}
+              handleMediaFiles={handleMediaFiles}
               isUploadingMedia={isUploadingMedia}
               isSubmitting={isSubmitting}
               mediaError={mediaError}
-              setMediaError={setMediaError}
               handleRemoveMedia={handleRemoveMedia}
               handleClearAll={handleClearAll}
               getDisplayFilename={getDisplayFilename}
+              isVideoMediaUrl={isVideoMediaUrl}
               isFormValid={isFormValid}
               setError={setError}
             />

@@ -95,7 +95,6 @@ export function renderMediaCarousel(
       const avatarUrl = (isObject && entry?.authorAvatarUrl) || creatorAvatarUrl || "";
       const authorName = (isObject && entry?.authorName) || creatorName || "Kalcerian";
       const authorId = (isObject && entry?.authorId) || fallbackAuthorId || "";
-      const viewCount = isObject && Number.isFinite(Number(entry?.viewCount)) ? Number(entry.viewCount) : 0;
       const initialTransform = i === 0 ? "translateX(0%)" : "translateX(100%)";
       const initialVisibility = i === 0 ? "visible" : "hidden";
       const initialZ = i === 0 ? "4" : "1";
@@ -111,7 +110,6 @@ export function renderMediaCarousel(
           data-author-id="${esc(authorId)}"
           data-author-avatar="${esc(avatarUrl)}"
           data-author-name="${esc(authorName)}"
-          data-view-count="${viewCount}"
           style="position: absolute; inset: 0; width: 100%; height: 100%; ${FEED_GRADIENT_BG} transform: ${initialTransform}; visibility: ${initialVisibility}; z-index: ${initialZ}; pointer-events: none; will-change: transform;"
         >
           ${renderSingleMedia(entry, { index: i })}

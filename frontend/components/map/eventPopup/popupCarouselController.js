@@ -146,8 +146,8 @@ function startClip(state, targetIdx, { trigger = "user", direction = "next", res
     setFeedState(state, "playing");
     syncGeometry(state, incomingEl);
     preloadNeighbor(state, idx + 1);
-    if (typeof window !== "undefined" && window.__kalceriaRecordMediaView && incomingEl?.dataset?.clipId) {
-      window.__kalceriaRecordMediaView(state.safeId, incomingEl.dataset.clipId, idx);
+    if (typeof window !== "undefined" && String(state.safeId || "").startsWith("bcast_") && incomingEl?.dataset?.clipId) {
+      window.__kalceriaRecordBroadcastView?.(incomingEl.dataset.clipId.replace(/^bcast_/, ""));
     }
 
     const vid = incomingEl.querySelector("video");
@@ -248,6 +248,7 @@ export function initEventPopupCarouselsFromRoot(rootEl, popupInstance = null) {
       layoutTrackRaf: null,
       layoutTrackUntil: 0,
       geometryKey: null,
+      lockedSourceDims: null,
       activeIdx: null,
       currentSeconds: 0,
       holdPaused: false,
@@ -281,17 +282,13 @@ export function initEventPopupCarouselsFromRoot(rootEl, popupInstance = null) {
     window.addEventListener("kalceria:carousel-hold", onHold);
     state.persistentCleanup.push(() => window.removeEventListener("kalceria:carousel-hold", onHold));
 
-    const handleWindowResize = () => syncGeometry(state, state.slides[state.activeIdx ?? 0]);
+    const handleWindowResize = () => syncGeometry(state, state.slides[state.activeIdx ?? 0], { forceResize: true });
     window.addEventListener("resize", handleWindowResize);
     state.persistentCleanup.push(() => window.removeEventListener("resize", handleWindowResize));
 
     const snapshot = resumeSnapshots.get(safeId);
     resumeSnapshots.delete(safeId);
-    const canResume =
-      snapshot &&
-      snapshot.sig === state.sig &&
-      performance.now() - snapshot.at < RESUME_MAX_AGE_MS &&
-      snapshot.idx < slides.length;
+    const canResume = snapshot && snapshot.sig === state.sig && performance.now() - snapshot.at < RESUME_MAX_AGE_MS && snapshot.idx < slides.length;
 
     if (canResume && snapshot.feedEnded) {
       state.activeIdx = snapshot.idx;
@@ -322,12 +319,8 @@ export function cleanupEventPopupCarouselsFromRoot(rootEl) {
 
 export function switchEventCarouselSlide(safeId, targetIdx) {
   const state = activeCarousels.get(safeId);
-  if (state && !state.destroyed) {
-    jumpToClip(state, targetIdx);
-    return;
-  }
-  const fallbackEl =
-    typeof document !== "undefined" ? document.getElementById(`event-carousel-${safeId}`) : null;
+  if (state && !state.destroyed) { jumpToClip(state, targetIdx); return; }
+  const fallbackEl = typeof document !== "undefined" ? document.getElementById(`event-carousel-${safeId}`) : null;
   if (fallbackEl) {
     initEventPopupCarouselsFromRoot(fallbackEl.parentElement || fallbackEl);
     const initialized = activeCarousels.get(safeId);

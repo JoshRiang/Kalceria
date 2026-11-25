@@ -31,12 +31,36 @@ export function getSlideNaturalDimensions(slideEl) {
   };
 }
 
-export function syncGeometry(state, slideEl) {
-  if (!state || state.destroyed || !slideEl) return;
+export function syncGeometry(state, slideEl, { forceResize = false } = {}) {
+  if (!state || state.destroyed) return;
+  const isBroadcast = Boolean(state.cardEl?.classList?.contains("broadcast-popup-box"));
+
+  // Event Cards lock their frame geometry stably to the FIRST uploaded clip (slides[0])
+  // so multi-clip feeds never stretch, shrink, or jitter mid-playback.
+  if (!isBroadcast) {
+    if (state.lockedSourceDims) {
+      if (!forceResize) return;
+      applyCardGeometry(
+        state,
+        computeCardGeometryForMedia(state.lockedSourceDims.width, state.lockedSourceDims.height, {
+          isBroadcast: false,
+        })
+      );
+      return;
+    }
+    const anchorSlide = state.slides?.[0] || slideEl;
+    if (!anchorSlide) return;
+    const { width, height } = getSlideNaturalDimensions(anchorSlide);
+    if (!width || !height) return;
+    state.lockedSourceDims = { width, height };
+    applyCardGeometry(state, computeCardGeometryForMedia(width, height, { isBroadcast: false }));
+    return;
+  }
+
+  if (!slideEl) return;
   const { width, height } = getSlideNaturalDimensions(slideEl);
   if (!width || !height) return;
-  const isBroadcast = Boolean(state.cardEl?.classList?.contains("broadcast-popup-box"));
-  applyCardGeometry(state, computeCardGeometryForMedia(width, height, { isBroadcast }));
+  applyCardGeometry(state, computeCardGeometryForMedia(width, height, { isBroadcast: true }));
 }
 
 export function paintIndicators(state, activeIdx, activeProgress = 0) {
@@ -77,14 +101,6 @@ export function syncActionRow(state, incomingEl) {
         avatarEl.alt = incomingEl.dataset.authorName;
         const wrapEl = cardEl.querySelector(`[data-media-author-avatar-wrap="${state.safeId}"]`);
         if (wrapEl) wrapEl.title = incomingEl.dataset.authorName;
-      }
-    }
-
-    const countEl = cardEl.querySelector(`[data-media-view-count]`);
-    if (countEl && incomingEl.dataset.clipId) {
-      countEl.setAttribute("data-media-view-count", incomingEl.dataset.clipId);
-      if (incomingEl.dataset.viewCount != null) {
-        countEl.textContent = incomingEl.dataset.viewCount;
       }
     }
 

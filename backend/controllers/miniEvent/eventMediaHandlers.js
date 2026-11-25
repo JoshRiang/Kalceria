@@ -4,7 +4,6 @@ import { cleanText, extractEncodedTags } from './eventFormatting.js';
 import {
   appendClipsToEventMedia,
   parseSubmittedMediaItems,
-  recordClipView,
   removeClipFromEventMedia,
 } from './eventMediaStore.js';
 import { getAcceptedCollaboratorIds } from './eventCollabStore.js';
@@ -72,7 +71,7 @@ export async function addMiniEventMedia(req, res, next) {
       event.description = result.updatedDescription;
 
       await invalidateMiniEventsCache();
-      const formatted = await hydrateFullMiniEvent(event);
+      const formatted = await hydrateFullMiniEvent(event, { prehydratedClips: result.mediaItems });
       return res.json({ event: formatted });
     });
   } catch (err) {
@@ -109,29 +108,9 @@ export async function deleteMiniEventMedia(req, res, next) {
 
       event.description = removal.updatedDescription;
       await invalidateMiniEventsCache();
-      const formatted = await hydrateFullMiniEvent(event);
+      const formatted = await hydrateFullMiniEvent(event, { prehydratedClips: removal.mediaItems });
       return res.json({ event: formatted });
     });
-  } catch (err) {
-    return next(err);
-  }
-}
-
-export async function recordEventMediaView(req, res, next) {
-  try {
-    const { id: eventId, clipId } = req.params;
-    const userId = req.user?.userId || null;
-    const ip = req.ip || req.headers['x-forwarded-for'] || 'anon';
-    const viewerKey = userId ? `u:${userId}` : `ip:${ip}`;
-
-    const viewCount = await recordClipView({
-      eventId,
-      clipId,
-      viewerKey,
-      viewerUserId: userId,
-    });
-
-    return res.json({ success: true, clipId, viewCount });
   } catch (err) {
     return next(err);
   }
