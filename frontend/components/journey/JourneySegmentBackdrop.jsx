@@ -1,21 +1,24 @@
 "use client";
 
 import { getJourneySegmentBgUrls } from "@/lib/pageBgAssets";
+import { useResponsiveBgFamily } from "@/hooks/useResponsiveBgFamily";
 
 /**
- * Dual-scheme HD background backdrop for SeeJourney top 3 segments.
- * Default state renders the Light (white base) editorial artwork; tapping the card
- * (`isFlipped === true`) smoothly crossfades into the Dark (black base) twin while
- * preserving the exact original blur(18px) / brightness / scale focus logic intact.
+ * Dual-scheme HD unified cinema backdrop for SeeJourney top 3 segments.
+ * Responsive across ALL 4 device families (desktop, half-desktop/landscape-tablet,
+ * portrait tablet/iPad/Fold, and portrait mobile) so car + city framing never crops awkwardly.
+ * Preserves the exact original blur(18px) / brightness / scale / dark focus veil logic intact.
  */
 export function JourneySegmentBackdrop({
   segmentIndex,
   isMobileOrTablet,
   isFlipped,
 }) {
+  const { family } = useResponsiveBgFamily();
+  const resolvedFamily = family || (isMobileOrTablet ? "mobile" : "desktop");
   const { light, dark, localLight, localDark } = getJourneySegmentBgUrls(
     segmentIndex,
-    isMobileOrTablet
+    resolvedFamily
   );
 
   return (
@@ -23,6 +26,7 @@ export function JourneySegmentBackdrop({
       {/* Background Layer with Graceful Blur / Unblur (existing blur logic 100% preserved) */}
       <div
         aria-hidden="true"
+        data-journey-bg-family={resolvedFamily}
         className="absolute inset-0 transition-all duration-700 ease-in-out pointer-events-none"
         style={{
           filter: isFlipped ? "blur(18px) brightness(0.82)" : "blur(0px) brightness(1)",
@@ -38,7 +42,7 @@ export function JourneySegmentBackdrop({
             backgroundImage: `url("${dark}"), url("${localDark}")`,
           }}
         />
-        {/* Light Layer (Default crisp white-base editorial artwork; crossfades out on flip) */}
+        {/* Light Layer (Default crisp white-base cinema artwork; crossfades out on flip) */}
         <div
           className="absolute inset-0 bg-cover bg-center transition-opacity duration-700 ease-in-out"
           style={{

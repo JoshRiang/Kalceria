@@ -5,7 +5,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useTimeoutRegistry } from "@/hooks/useTimeoutRegistry";
 import api from "@/lib/api";
-import { MINIGAME_BG_THEMES } from "@/lib/pageBgAssets";
+import { MinigameEditorialBackdrop } from "./MinigameEditorialBackdrop";
 import {
   MicroParticles,
   DecorativeCard,
@@ -144,70 +144,8 @@ export default function MinigamePage() {
         )}
       </AnimatePresence>
 
-      {/* Dual-Scheme HD Background: White + Gold/Blue (Idle) -> Smooth Fade to Black + Pink/Gold (Playing) */}
-      <div aria-hidden="true" className="absolute inset-0 z-0 pointer-events-none bg-black">
-        {/* Playing Layer: Black base + Pink & Gold (fades in smoothly during active play) */}
-        <motion.div
-          initial={false}
-          animate={{
-            opacity: isPlayDarkTheme ? 0.9 : 0,
-            transition: { duration: 2.2, ease: "easeInOut" },
-          }}
-          className="absolute inset-0"
-        >
-          <picture className="block w-full h-full">
-            <source media="(max-width: 767px)" srcSet={MINIGAME_BG_THEMES.dark.mobile} />
-            <source media="(min-width: 768px)" srcSet={MINIGAME_BG_THEMES.dark.desktop} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={MINIGAME_BG_THEMES.dark.desktop}
-              alt=""
-              loading="eager"
-              decoding="async"
-              onError={(e) => {
-                if (e.currentTarget.dataset.fallbackApplied) return;
-                e.currentTarget.dataset.fallbackApplied = "1";
-                e.currentTarget.parentElement?.querySelectorAll("source").forEach((s) => s.remove());
-                e.currentTarget.src = isMobile
-                  ? MINIGAME_BG_THEMES.dark.localMobile
-                  : MINIGAME_BG_THEMES.dark.localDesktop;
-              }}
-              className="w-full h-full object-cover object-center"
-            />
-          </picture>
-        </motion.div>
-
-        {/* Idle Layer: White base + Gold & Royal Blue (fades out slowly into dark base as user plays) */}
-        <motion.div
-          initial={false}
-          animate={{
-            opacity: isPlayDarkTheme ? 0 : 1,
-            transition: { duration: 2.2, ease: "easeInOut" },
-          }}
-          className="absolute inset-0"
-        >
-          <picture className="block w-full h-full">
-            <source media="(max-width: 767px)" srcSet={MINIGAME_BG_THEMES.light.mobile} />
-            <source media="(min-width: 768px)" srcSet={MINIGAME_BG_THEMES.light.desktop} />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={MINIGAME_BG_THEMES.light.desktop}
-              alt=""
-              fetchPriority="high"
-              decoding="sync"
-              onError={(e) => {
-                if (e.currentTarget.dataset.fallbackApplied) return;
-                e.currentTarget.dataset.fallbackApplied = "1";
-                e.currentTarget.parentElement?.querySelectorAll("source").forEach((s) => s.remove());
-                e.currentTarget.src = isMobile
-                  ? MINIGAME_BG_THEMES.light.localMobile
-                  : MINIGAME_BG_THEMES.light.localDesktop;
-              }}
-              className="w-full h-full object-cover object-center"
-            />
-          </picture>
-        </motion.div>
-      </div>
+      {/* Dual-Scheme HD Responsive Backdrop: White + Gold/Blue (Idle) -> Smooth Fade to Black + Pink/Gold (Playing) */}
+      <MinigameEditorialBackdrop isPlayDarkTheme={isPlayDarkTheme} />
 
       {/* Magenta Bleed Effect */}
       <AnimatePresence>
