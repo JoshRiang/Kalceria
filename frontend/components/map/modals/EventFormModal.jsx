@@ -81,28 +81,28 @@ export function EventFormModal({
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-        {/* 3-Piece Smooth-Trimmed Background (BGCreateMini_Light / BGCreateMini_Dark) with clear reading gaps */}
+        {/* Smooth Header-Trimmed Background (BGCreateMini_Light / BGCreateMini_Dark) */}
         <div
           aria-hidden="true"
           className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
           style={{
             backgroundColor: isModalDark ? "#010101" : "#ffffff",
             maskImage:
-              "linear-gradient(to bottom, transparent 0%, transparent 13%, black 19%, black 34%, transparent 40%, transparent 55%, black 60%, black 67%, transparent 72%, transparent 83%, black 88%, black 100%)",
+              "linear-gradient(to bottom, transparent 0%, transparent 10%, black 16%, black 100%)",
             WebkitMaskImage:
-              "linear-gradient(to bottom, transparent 0%, transparent 13%, black 19%, black 34%, transparent 40%, transparent 55%, black 60%, black 67%, transparent 72%, transparent 83%, black 88%, black 100%)",
+              "linear-gradient(to bottom, transparent 0%, transparent 10%, black 16%, black 100%)",
           }}
         >
           <div
             className="w-full h-full"
             style={{
               backgroundImage: isModalDark
-                ? "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp')"
-                : "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.webp')",
+                ? "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Dark.webp?v=52')"
+                : "url('/BG_IMPROVE_FOR_MAP/BGCreateMini_Light.webp?v=52')",
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
-              opacity: isModalDark ? 0.45 : 0.58,
+              opacity: isModalDark ? 0.78 : 0.86,
             }}
           />
         </div>

@@ -31,12 +31,12 @@ export const HudQuickActionsMenu = memo(function HudQuickActionsMenu({
         className="absolute inset-0 z-0 pointer-events-none select-none"
         style={{
           backgroundImage: isMapDark
-            ? "url('/BG_IMPROVE_FOR_MAP/BG_BroadscastBoxDark.webp')"
-            : "url('/BG_IMPROVE_FOR_MAP/BG_BroadcastBoxLight.webp')",
+            ? "url('/BG_IMPROVE_FOR_MAP/BG_BroadscastBoxDark.webp?v=52')"
+            : "url('/BG_IMPROVE_FOR_MAP/BG_BroadcastBoxLight.webp?v=52')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
-          opacity: isMapDark ? 0.45 : 0.58,
+          opacity: isMapDark ? 0.85 : 0.9,
         }}
       />
 

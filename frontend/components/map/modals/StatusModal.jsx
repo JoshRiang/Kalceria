@@ -11,8 +11,8 @@ import {
   useModalBackClose,
 } from "./modalMotion";
 
-const BROADCAST_FORM_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Dark.webp";
-const BROADCAST_FORM_BG_LIGHT = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Light.webp";
+const BROADCAST_FORM_BG_DARK = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Dark.webp?v=52";
+const BROADCAST_FORM_BG_LIGHT = "/BG_IMPROVE_FOR_MAP/BG_Broadcast_Light.webp?v=52";
 
 export function StatusModal({
   show,
@@ -51,9 +51,9 @@ export function StatusModal({
     isModalDark ? BROADCAST_FORM_BG_DARK : BROADCAST_FORM_BG_LIGHT
   );
 
-  // 2-Piece Smooth-Trimmed Mask (3 : 1 Top-to-Bottom Proportion with Tight Gap):
+  // Smooth Header-Trimmed Mask preserving both top-left and bottom-right V5.2 art zones:
   const smoothTwoBandMask =
-    "linear-gradient(to bottom, transparent 0%, transparent 16%, black 21%, black 71%, transparent 75%, transparent 79%, black 83%, black 100%)";
+    "linear-gradient(to bottom, transparent 0%, transparent 12%, black 18%, black 100%)";
 
   return (
     <AnimatePresence>
@@ -91,7 +91,7 @@ export function StatusModal({
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                   backgroundRepeat: "no-repeat",
-                  opacity: isModalDark ? 0.45 : 0.58,
+                  opacity: isModalDark ? 0.8 : 0.88,
                 }}
               />
             </div>

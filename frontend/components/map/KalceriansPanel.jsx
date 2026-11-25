@@ -300,12 +300,12 @@ export const KalceriansPanel = memo(function KalceriansPanel({
           className="w-full h-full"
           style={{
             backgroundImage: isMapDark
-              ? "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Dark.webp')"
-              : "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Light.webp')",
+              ? "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Dark.webp?v=52')"
+              : "url('/BG_IMPROVE_FOR_MAP/BGOtherKalcerian_Light.webp?v=52')",
             backgroundSize: "cover",
-            backgroundPosition: "top center",
+            backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
-            opacity: isMapDark ? 0.45 : 0.58,
+            opacity: isMapDark ? 0.82 : 0.88,
           }}
         />
       </div>

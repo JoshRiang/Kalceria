@@ -174,7 +174,7 @@ export async function ensurePersistentUserProfile(user) {
     changedMeta = true;
   }
 
-  if (changedMeta) {
+  if (changedMeta && !redis.isQuotaExceeded) {
     try {
       await redis.set(metaKey, JSON.stringify(meta));
     } catch {}
@@ -385,7 +385,7 @@ export async function ensurePersistentUserProfilesBatch(users) {
     };
   });
 
-  if (pipelineUpdates.length > 0) {
+  if (pipelineUpdates.length > 0 && !redis.isQuotaExceeded) {
     Promise.allSettled(
       pipelineUpdates.map(([k, v]) => redis.set(k, v))
     ).catch(() => {});

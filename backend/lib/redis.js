@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { isL1HotKey, l1Del, l1Get, l1Set } from './l1HotCache.js';
 
 class MemoryRedisFallback {
   constructor() {
@@ -494,21 +495,47 @@ export const redis = new Proxy(rawRedis, {
     }
     if (typeof target[prop] === 'function') {
       return (...args) => {
+        if (prop === 'get' && args.length >= 1 && isL1HotKey(args[0])) {
+          const hit = l1Get(args[0]);
+          if (hit !== undefined) return Promise.resolve(hit);
+        }
+        if (prop === 'del' && args.length >= 1) {
+          l1Del(...args);
+        }
+        if (prop === 'set' && args.length >= 2 && isL1HotKey(args[0])) {
+          let exSec = null;
+          for (let i = 2; i < args.length; i++) {
+            if (String(args[i]).toUpperCase() === 'EX' && i + 1 < args.length) {
+              exSec = Number(args[i + 1]);
+            }
+          }
+          l1Set(args[0], args[1], exSec);
+        }
+        if (prop === 'setex' && args.length >= 3 && isL1HotKey(args[0])) {
+          l1Set(args[0], args[2], Number(args[1]));
+        }
         if (isQuotaExceeded && typeof memoryStore[prop] === 'function') {
           return memoryStore[prop](...args);
         }
         try {
           const result = target[prop](...args);
           if (result && typeof result.then === 'function') {
-            return result.catch((err) => {
-              if (String(err?.message || '').includes('max requests limit exceeded') || err?.name === 'MaxRetriesPerRequestError' || String(err?.message || '').includes('Connection is closed')) {
-                markFallback(err);
-                if (typeof memoryStore[prop] === 'function') {
-                  return memoryStore[prop](...args);
+            return result
+              .then((resolved) => {
+                if (prop === 'get' && args.length >= 1 && resolved !== null && resolved !== undefined && isL1HotKey(args[0])) {
+                  l1Set(args[0], resolved);
                 }
-              }
-              throw err;
-            });
+                return resolved;
+              })
+              .catch((err) => {
+                if (String(err?.message || '').includes('max requests limit exceeded') || err?.name === 'MaxRetriesPerRequestError' || String(err?.message || '').includes('Connection is closed')) {
+                  markFallback(err);
+                  if (typeof memoryStore[prop] === 'function') {
+                    return memoryStore[prop](...args);
+                  }
+                }
+                throw err;
+              });
           }
           return result;
         } catch (err) {

@@ -72,6 +72,18 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: '/BG_PersonalChat_Dark.webp',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/BG_PersonalChat_Light.webp',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
         source: '/Subtitute_NeedOurHelp.webp',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },

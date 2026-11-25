@@ -188,20 +188,22 @@ export function ChatMessageThread({
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-      {/* Background Layer: Keep BG_PersonalChat.webp always visible with subtle contrast veil */}
+      {/* Background Layer: Dedicated Dark / Light V5.2 HD Chat Box artwork */}
       <div
         className="absolute inset-0 z-0 pointer-events-none transition-all duration-300"
         style={{
-          backgroundImage: "url('/BG_PersonalChat.webp')",
+          backgroundImage: isMapDark
+            ? "url('/BG_PersonalChat_Dark.webp?v=52')"
+            : "url('/BG_PersonalChat_Light.webp?v=52')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: isMapDark ? 0.45 : 0.58,
+          opacity: isMapDark ? 0.88 : 0.92,
         }}
       />
       {/* Subtle Theme Contrast Veil */}
       <div
         className={`absolute inset-0 z-0 pointer-events-none ${
-          isMapDark ? "bg-[#0b141a]/45" : "bg-white/30"
+          isMapDark ? "bg-[#0b141a]/18" : "bg-white/10"
         }`}
       />
 

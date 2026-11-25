@@ -26,10 +26,12 @@ export async function GET(req: NextRequest) {
     }
 
     let result: Awaited<ReturnType<typeof get>> | null = null;
+    let blobStoreError: string | null = null;
     try {
       result = await get(blobUrl, options);
-    } catch {
+    } catch (err: unknown) {
       result = null;
+      blobStoreError = err instanceof Error ? `${err.name}: ${err.message}` : String(err || "");
     }
 
     // Safe fallback for public Vercel Blob URLs (strictly allowlisted to *.blob.vercel-storage.com)
@@ -40,7 +42,7 @@ export async function GET(req: NextRequest) {
       } catch {
         parsedHost = "";
       }
-      if (parsedHost.endsWith(".blob.vercel-storage.com")) {
+      if (parsedHost.endsWith(".blob.vercel-storage.com") && !parsedHost.includes(".private.")) {
         const fetchHeaders: Record<string, string> = {};
         const incomingRange = req.headers.get("range");
         if (incomingRange) {
@@ -67,7 +69,20 @@ export async function GET(req: NextRequest) {
           });
         }
       }
-      return NextResponse.json({ error: "Blob not found" }, { status: 404 });
+      const isStoreSuspended = Boolean(
+        blobStoreError && /suspend|inactive|quota|limit|payment|402|503|forbidden|access/i.test(blobStoreError)
+      );
+      if (isStoreSuspended) {
+        console.warn("[BlobRaw] Upstream Vercel Blob store unavailable:", blobStoreError);
+        return NextResponse.json(
+          { error: "Media storage temporarily unavailable", code: "BLOB_STORE_UNAVAILABLE" },
+          { status: 503, headers: { "Cache-Control": "no-store" } }
+        );
+      }
+      return NextResponse.json(
+        { error: "Blob not found" },
+        { status: 404, headers: { "Cache-Control": "no-store" } }
+      );
     }
 
     const totalSize = Number(result.blob.size) || 0;

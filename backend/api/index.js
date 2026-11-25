@@ -66,10 +66,13 @@ app.get("/api/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     let redisPing = 'PONG';
+    let redisMode = redis.isQuotaExceeded ? 'memory-fallback' : 'connected';
     try {
       redisPing = await redis.ping();
+      if (redis.isQuotaExceeded) redisMode = 'memory-fallback';
     } catch {
       redisPing = 'PONG';
+      redisMode = 'memory-fallback';
     }
     const authConfigured = typeof process.env.JWT_SECRET === 'string' && process.env.JWT_SECRET.length >= 32;
     const productionOriginsConfigured = process.env.NODE_ENV !== 'production'
@@ -79,7 +82,7 @@ app.get("/api/health", async (_req, res) => {
     if (!authConfigured || !productionOriginsConfigured) {
       return res.status(503).json({ status: 'degraded', error: 'A required service is unavailable.' });
     }
-    res.json({ status: "ok", db: "connected", redis: redisPing || 'PONG' });
+    res.json({ status: "ok", db: "connected", redis: redisPing || 'PONG', redisMode });
   } catch {
     res.status(503).json({ status: "degraded", error: "A required service is unavailable." });
   }
