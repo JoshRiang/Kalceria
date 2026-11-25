@@ -1,11 +1,11 @@
 /**
  * Pure Page Background Asset Registry for Minigame & SeeJourney (Top 3 Segments).
- * Served globally from Cloudflare R2 Edge CDN (`https://cdn.kalceria.id/media/page-bg/v56/...`)
+ * Served globally from Cloudflare R2 Edge CDN (`https://cdn.kalceria.id/media/page-bg/v57/...`)
  * with automatic local fallback (`/BG_IMPROVE_FOR_MAP/...`).
  * Zero React/DOM/alias dependencies so it executes natively in both Next.js and Node --test.
  */
 
-export const PAGE_BG_CDN_BASE = "https://cdn.kalceria.id/media/page-bg/v56";
+export const PAGE_BG_CDN_BASE = "https://cdn.kalceria.id/media/page-bg/v57";
 export const PAGE_BG_LOCAL_BASE = "/BG_IMPROVE_FOR_MAP";
 
 function makePair(desktopFile, mobileFile) {

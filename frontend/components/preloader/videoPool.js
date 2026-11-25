@@ -102,3 +102,62 @@ export function releaseIntroVideoPoolSubscriber() {
     });
   }
 }
+
+/**
+ * Waits until at least `minReady` car clips in the shared pool have decoded a real
+ * paintable frame (`readyState >= 2 && videoWidth > 0`) so the K-silhouette canvas
+ * is already pre-rendered before opacity fades in, bounded by `maxWaitMs`.
+ */
+export function waitForIntroVideoPoolReady(
+  targetCount = 4,
+  minReady = 2,
+  maxWaitMs = 1800
+) {
+  if (typeof window === "undefined") return Promise.resolve();
+  const elements = ensureIntroVideoPool(targetCount);
+  if (!elements.length) return Promise.resolve();
+
+  const required = Math.max(1, Math.min(elements.length, Number(minReady) || 1));
+  const isVideoFrameReady = (v) => Boolean(v && v.readyState >= 2 && v.videoWidth > 0);
+
+  if (elements.filter(isVideoFrameReady).length >= required) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let timer = null;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      elements.forEach((v) => {
+        v.removeEventListener("loadeddata", checkReady);
+        v.removeEventListener("canplay", checkReady);
+        v.removeEventListener("playing", checkReady);
+      });
+    };
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve();
+    };
+
+    const checkReady = () => {
+      if (elements.filter(isVideoFrameReady).length >= required) {
+        finish();
+      }
+    };
+
+    elements.forEach((v) => {
+      v.addEventListener("loadeddata", checkReady);
+      v.addEventListener("canplay", checkReady);
+      v.addEventListener("playing", checkReady);
+      if (v.paused && v.src) v.play().catch(() => {});
+    });
+
+    timer = setTimeout(finish, Math.max(200, Number(maxWaitMs) || 1800));
+    checkReady();
+  });
+}

@@ -11,6 +11,7 @@ import {
   computeCoverCropRect,
   selectSessionIntroVideos,
 } from '../components/preloader/introVideoGridLayout.js';
+import { INTRO_TIMELINE } from '../components/preloader/introTimelineConfig.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FE_ROOT = path.resolve(__dirname, '..');
@@ -90,7 +91,7 @@ test('SeeEvent purges coki_event character and its white L-border across all dev
   assert.equal(src.includes('SEE EVENT'), true, 'SEE EVENT hero title must stay intact');
 });
 
-test('IntroPreloader renders car collage on all devices and Marvel 120% -> 100% shrink with WakingUpText clearance', () => {
+test('IntroPreloader renders car collage on all devices, pre-warms HP K-silhouette with >=3s slack, and slows ONLY desktop title Marvel zoom by 50%', () => {
   const src = fs.readFileSync(path.join(FE_ROOT, 'components/IntroPreloader.jsx'), 'utf8');
   assert.equal(src.includes('useReducedMotion'), true, 'must respect prefers-reduced-motion');
   assert.equal(src.includes('1.2'), true, 'must start title fade-in at 120% scale');
@@ -98,6 +99,23 @@ test('IntroPreloader renders car collage on all devices and Marvel 120% -> 100% 
   assert.equal(src.includes('marginTop: "24px"'), true, 'must preserve clear gap above WakingUpText');
   assert.equal(src.includes('<WakingUpText />'), true, 'WakingUpText must remain intact on desktop');
   assert.equal(src.includes('MOBILE_K_CLIP_PATH'), true, 'Mobile/other devices must render responsive car collage');
+  assert.equal(src.includes('waitForIntroVideoPoolReady'), true, 'Mobile intro must wait for decoded K-silhouette video frames before revealing');
+  assert.equal(src.includes('preloadAndDecodeImage'), true, 'Mobile intro must decode HP logo before revealing');
   assert.equal(src.includes('{!isMobile && (\n        <div className="absolute inset-0 z-0'), false, 'Car collage must not be desktop-only');
+
+  // Verify >= 3s extra hold padding on HP intro (old window = 2500ms, new >= 5500ms)
+  assert.ok(
+    INTRO_TIMELINE.mobile.visibleHoldMs - 2500 >= 3000,
+    `Expected >=3000ms extra hold on mobile intro, got +${INTRO_TIMELINE.mobile.visibleHoldMs - 2500}ms`
+  );
+  // Non-desktop Marvel zoom duration unchanged (1.15s)
+  assert.equal(INTRO_TIMELINE.mobile.logoZoomDurationSec, 1.15);
+  // Desktop Marvel zoom slowed by exact 50% speed (1.4s -> 2.8s), all other desktop timings unchanged
+  assert.equal(INTRO_TIMELINE.desktop.logoZoomDurationSec, 2.8);
+  assert.equal(INTRO_TIMELINE.desktop.logoStartMs, 1000);
+  assert.equal(INTRO_TIMELINE.desktop.subtitleStartMs, 2500);
+  assert.equal(INTRO_TIMELINE.desktop.laserStartMs, 9500);
+  assert.equal(INTRO_TIMELINE.desktop.collageFadeDurationSec, 2.6);
+  assert.equal(INTRO_TIMELINE.desktop.subtitleFadeDurationSec, 0.8);
 });
 

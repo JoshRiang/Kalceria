@@ -14,7 +14,8 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FE_ROOT = path.resolve(__dirname, '..');
 
-test('All 16 Minigame & Journey HD background assets point to Cloudflare CDN and have existing local fallbacks', () => {
+test('All 16 Minigame & Journey HD background assets point to Cloudflare CDN v57 and have existing local fallbacks', () => {
+  assert.equal(PAGE_BG_CDN_BASE.endsWith('/media/page-bg/v57'), true, 'Must serve v57 full-form natural HD CDN bundle');
   const allPairs = [
     MINIGAME_BG_THEMES.light,
     MINIGAME_BG_THEMES.dark,
