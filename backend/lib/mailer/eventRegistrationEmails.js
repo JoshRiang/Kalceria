@@ -1,5 +1,5 @@
 import { sendEmail } from './emailClient.js';
-import { escapeHtml, safeHttpsUrl } from './emailUtils.js';
+import { escapeHtml, resolvePublicFrontendOrigin, resolveEmailPosterUrl } from './emailUtils.js';
 
 // ─── Channel B: Notifications (Uses Notification Domain) ─────────────────────
 
@@ -7,11 +7,11 @@ export async function sendEventNotificationEmail(toEmail, eventDetail, eventId) 
   if (process.env.ENABLE_EMAIL_NOTIF !== 'true') {
     return { skipped: true, reason: 'EMAIL_NOTIF_DISABLED' };
   }
-  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://kalceria.id';
+  const frontendOrigin = resolvePublicFrontendOrigin(process.env.FRONTEND_URL);
   const redirectUrl = `${frontendOrigin}/events/${encodeURIComponent(eventId)}`;
   const safeTitle = escapeHtml(eventDetail.title || 'Kalceria Event');
   const safeDescription = escapeHtml(eventDetail.description || '');
-  const safePosterUrl = safeHttpsUrl(eventDetail.posterUrl || eventDetail.displayPhotoUrl) || `${frontendOrigin}/favicon.ico`;
+  const safePosterUrl = escapeHtml(resolveEmailPosterUrl(eventDetail, process.env.FRONTEND_URL, '/favicon.png'));
   return sendEmail({
     to: toEmail,
     channel: 'notif',
@@ -23,7 +23,7 @@ export async function sendEventNotificationEmail(toEmail, eventDetail, eventId) 
         <h3 style="color:#4F46E5;">${safeTitle}</h3>
         <p style="color:#444;line-height:1.6;">${safeDescription}</p>
         <a href="${redirectUrl}">
-          <img src="${safePosterUrl}" alt="${safeTitle}" style="width:100%;border-radius:8px;margin:16px 0;" />
+          <img src="${safePosterUrl}" alt="${safeTitle}" width="260" height="347" style="width:260px;max-width:100%;height:auto;display:block;margin:16px auto;border:none;border-radius:8px;" />
         </a>
         <a href="${redirectUrl}" style="display:inline-block;background:#4F46E5;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">
           Daftar Sekarang
@@ -34,10 +34,7 @@ export async function sendEventNotificationEmail(toEmail, eventDetail, eventId) 
 }
 
 export function buildEventRegistrationEmailHtml({ event, registration, cancelToken, paymentCheckoutUrl }) {
-  const rawOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
-  const frontendOrigin = (rawOrigin.includes('localhost') || !rawOrigin.startsWith('https://'))
-    ? 'https://www.kalceria.id'
-    : rawOrigin;
+  const frontendOrigin = resolvePublicFrontendOrigin(process.env.FRONTEND_URL);
   const token = cancelToken || '';
   const confirmUrl = `${frontendOrigin}/api/events/registration/${encodeURIComponent(registration.id)}/confirm?event_action=confirm&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}`;
   const cancelUrl = `${frontendOrigin}/events?event_action=cancel&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}&anchor=see-event#see-event`;
@@ -46,17 +43,7 @@ export function buildEventRegistrationEmailHtml({ event, registration, cancelTok
   const safeTitle = escapeHtml(event.title || 'Kalceria Event');
   const safeSession = escapeHtml(registration.selectedSession || 'Regular Session');
   const priceFormatted = Number(event.price || 0).toLocaleString('id-ID');
-
-  const posterRaw = event.displayPhotoUrl || event.posterUrl || '';
-  let resolvedPoster = posterRaw.startsWith('http://') || posterRaw.startsWith('https://')
-    ? posterRaw
-    : posterRaw.startsWith('/')
-      ? `${frontendOrigin}${posterRaw}`
-      : `${frontendOrigin}/${posterRaw || 'logo-avatar.png'}`;
-  if (resolvedPoster.includes('localhost')) {
-    resolvedPoster = resolvedPoster.replace(/^http:\/\/localhost(:\d+)?/i, 'https://www.kalceria.id');
-  }
-  const safePosterUrl = escapeHtml(resolvedPoster);
+  const safePosterUrl = escapeHtml(resolveEmailPosterUrl(event, process.env.FRONTEND_URL, '/logo-avatar.png'));
 
   return `
       <style>
@@ -86,7 +73,7 @@ export function buildEventRegistrationEmailHtml({ event, registration, cancelTok
         <p style="color:#475569;font-size:14px;text-align:center;margin:0 0 20px 0;">Hai <strong>${escapeHtml(registration.user?.name || 'Kalcerian')}</strong>, pendaftaran tiket event kamu telah tercatat di buffer sistem kami.</p>
 
         <div style="text-align:center;margin:0 0 24px 0;">
-          <img src="${safePosterUrl}" alt="${safeTitle}" width="260" style="width:260px;max-width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;display:block;margin:0 auto;border:none;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.25);" />
+          <img src="${safePosterUrl}" alt="${safeTitle}" width="260" height="347" style="width:260px;max-width:100%;height:auto;display:block;margin:0 auto;border:none;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.25);" />
         </div>
 
         <div style="margin-bottom:24px;">
@@ -156,7 +143,7 @@ export async function sendEventRegistrationEmail({ to, event, registration, canc
 }
 
 export function buildEventRegistrationUpdatedEmailHtml({ event, registration, cancelToken, paymentCheckoutUrl }) {
-  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
+  const frontendOrigin = resolvePublicFrontendOrigin(process.env.FRONTEND_URL);
   const token = cancelToken || '';
   const confirmUrl = `${frontendOrigin}/api/events/registration/${encodeURIComponent(registration.id)}/confirm?event_action=confirm&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}`;
   const cancelUrl = `${frontendOrigin}/events?event_action=cancel&registration_id=${encodeURIComponent(registration.id)}${token ? `&token=${encodeURIComponent(token)}&manage_token=${encodeURIComponent(token)}` : ''}&anchor=see-event#see-event`;
@@ -165,15 +152,7 @@ export function buildEventRegistrationUpdatedEmailHtml({ event, registration, ca
   const safeTitle = escapeHtml(event.title || 'Kalceria Event');
   const safeSession = escapeHtml(registration.selectedSession || 'Regular Session');
   const priceFormatted = Number(event.price || 0).toLocaleString('id-ID');
-
-  const posterRaw = event.displayPhotoUrl || event.posterUrl || '';
-  const safePosterUrl = escapeHtml(
-    posterRaw.startsWith('http://') || posterRaw.startsWith('https://')
-      ? posterRaw
-      : posterRaw.startsWith('/')
-        ? `${frontendOrigin}${posterRaw}`
-        : `${frontendOrigin}/${posterRaw || 'logo-avatar.png'}`
-  );
+  const safePosterUrl = escapeHtml(resolveEmailPosterUrl(event, process.env.FRONTEND_URL, '/logo-avatar.png'));
 
   return `
       <style>
@@ -203,7 +182,7 @@ export function buildEventRegistrationUpdatedEmailHtml({ event, registration, ca
         <p style="color:#475569;font-size:14px;text-align:center;margin:0 0 20px 0;">Hai <strong>${escapeHtml(registration.user?.name || 'Kalcerian')}</strong>, perubahan parameter pendaftaran event kamu telah diperbarui di sistem buffer kami.</p>
 
         <div style="text-align:center;margin:0 0 24px 0;">
-          <img src="${safePosterUrl}" alt="${safeTitle}" width="260" style="width:260px;max-width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;display:block;margin:0 auto;border:none;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.25);" />
+          <img src="${safePosterUrl}" alt="${safeTitle}" width="260" height="347" style="width:260px;max-width:100%;height:auto;display:block;margin:0 auto;border:none;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.25);" />
         </div>
 
         <div style="margin-bottom:24px;">
@@ -262,16 +241,7 @@ export function buildEventPaymentConfirmedEmailHtml({ event, registration }) {
   const safeTitle = escapeHtml(event.title || 'Kalceria Event');
   const safeSession = escapeHtml(registration.selectedSession || 'Regular Session');
   const priceFormatted = Number(event.price || 0).toLocaleString('id-ID');
-
-  const posterRaw = event.displayPhotoUrl || event.posterUrl || '';
-  const frontendOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
-  const safePosterUrl = escapeHtml(
-    posterRaw.startsWith('http://') || posterRaw.startsWith('https://')
-      ? posterRaw
-      : posterRaw.startsWith('/')
-        ? `${frontendOrigin}${posterRaw}`
-        : `${frontendOrigin}/${posterRaw || 'logo-avatar.png'}`
-  );
+  const safePosterUrl = escapeHtml(resolveEmailPosterUrl(event, process.env.FRONTEND_URL, '/logo-avatar.png'));
 
   return `
       <div style="font-family:Arial,sans-serif;max-width:560px;margin:24px auto;color:#000000;line-height:1.6;">
@@ -292,7 +262,7 @@ export function buildEventPaymentConfirmedEmailHtml({ event, registration }) {
 
         ${safePosterUrl ? `
           <div style="text-align:center;margin:0 0 20px 0;">
-            <img src="${safePosterUrl}" alt="${safeTitle}" width="260" style="width:260px;max-width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;display:block;margin:0 auto;border:none;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.25);" />
+            <img src="${safePosterUrl}" alt="${safeTitle}" width="260" height="347" style="width:260px;max-width:100%;height:auto;display:block;margin:0 auto;border:none;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.25);" />
           </div>
         ` : ''}
 

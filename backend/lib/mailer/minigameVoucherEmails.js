@@ -1,37 +1,5 @@
 import { sendEmail } from './emailClient.js';
-import { escapeHtml } from './emailUtils.js';
-
-function resolveAbsolutePosterUrl(event, frontendOrigin) {
-  const publicBase = (frontendOrigin && !frontendOrigin.includes('localhost') && frontendOrigin.startsWith('https://'))
-    ? frontendOrigin
-    : 'https://www.kalceria.id';
-
-  const posterRaw = String(event?.displayPhotoUrl || event?.posterUrl || '').trim();
-  let url = posterRaw;
-  if (!url) {
-    url = `${publicBase}/event_3.jpg`;
-  } else if (url.startsWith('http://') || url.startsWith('https://')) {
-    if (url.includes('localhost')) {
-      url = url.replace(/^http:\/\/localhost(:\d+)?/i, 'https://www.kalceria.id');
-    }
-  } else if (url.startsWith('/')) {
-    url = `${publicBase}${url}`;
-  } else {
-    url = `${publicBase}/${url}`;
-  }
-
-  // Convert .webp to .jpg for universal email proxy rendering (Gmail GoogleImageProxy)
-  if (url.endsWith('.webp')) {
-    url = url.replace(/\.webp$/i, '.jpg');
-  }
-
-  // Ensure query versioning to bust any CDN/proxy negative cache
-  if (!url.includes('?')) {
-    url = `${url}?v=kalceria`;
-  }
-
-  return url;
-}
+import { escapeHtml, resolveEmailPosterUrl } from './emailUtils.js';
 
 function formatWibIssuedAt(isoDate) {
   try {
@@ -50,12 +18,8 @@ function formatWibIssuedAt(isoDate) {
 }
 
 export function buildMinigameVoucherEmailHtml({ event = {}, voucher = {}, registration = {}, user = {} }) {
-  const rawOrigin = process.env.FRONTEND_URL?.split(',')[0]?.trim() || 'https://www.kalceria.id';
-  const frontendOrigin = (rawOrigin.includes('localhost') || !rawOrigin.startsWith('https://'))
-    ? 'https://www.kalceria.id'
-    : rawOrigin;
   const safeTitle = escapeHtml(event.title || voucher.eventTitle || 'Kalceria Event');
-  const safePosterUrl = escapeHtml(resolveAbsolutePosterUrl(event, frontendOrigin));
+  const safePosterUrl = escapeHtml(resolveEmailPosterUrl(event, process.env.FRONTEND_URL, '/event_3.jpg'));
 
   const regId = String(registration?.id || voucher?.registrationId || '').trim();
   const regCode = regId ? `#${escapeHtml(regId.slice(-6))} (${escapeHtml(regId)})` : '—';
