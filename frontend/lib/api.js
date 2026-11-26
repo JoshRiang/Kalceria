@@ -457,3 +457,38 @@ export const updateGroupBlendState = (eventId, payload = {}) =>
   api
     .patch(`/map/group-chat/${encodeURIComponent(eventId)}/blend/state`, payload)
     .then((r) => r.data);
+
+// AI Voice Navigation Co-Pilot (Pulau Jawa Vector-Attention + MIT Piper Neural TTS)
+export const fetchVoiceNavBundle = () =>
+  api
+    .get("/map/voice-nav/bundle")
+    .then((r) => r.data)
+    .catch(() => null);
+
+export const fetchVoiceNavTtsHealth = () =>
+  api
+    .get("/map/voice-nav/tts-health")
+    .then((r) => r.data)
+    .catch(() => ({ ok: false, activeMode: "browser_speech_fallback" }));
+
+export const requestVoiceNavSpeak = async (payload = {}) => {
+  const response = await api.post("/map/voice-nav/speak", payload, {
+    responseType: "arraybuffer",
+    timeout: 4500,
+  });
+  const contentType = String(response.headers?.["content-type"] || "").toLowerCase();
+  if (contentType.includes("audio/wav")) {
+    return {
+      ok: true,
+      mode: "neural_wav",
+      wavBuffer: response.data,
+      cacheStatus: response.headers?.["x-kalceria-tts-cache"] || "synthesized",
+    };
+  }
+  try {
+    const text = new TextDecoder("utf-8").decode(new Uint8Array(response.data));
+    return JSON.parse(text);
+  } catch {
+    return { ok: true, mode: "browser_speech_fallback" };
+  }
+};

@@ -45,6 +45,13 @@ export function toggleSoundMuted() {
   return next;
 }
 
+function getVoiceNavDuckingFactor() {
+  if (typeof window !== "undefined" && window.__kalceriaVoiceNavSpeaking) {
+    return 0.28;
+  }
+  return 1.0;
+}
+
 // ─── Sound 1: Event Collaboration Notification (Futuristic Ascending Tactical Chime) ───
 export function playEventCollabSound() {
   if (isSoundMuted()) return;
@@ -53,7 +60,7 @@ export function playEventCollabSound() {
     if (ctx && ctx.state !== "closed") {
       const now = ctx.currentTime;
       const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.32, now);
+      masterGain.gain.setValueAtTime(0.32 * getVoiceNavDuckingFactor(), now);
       masterGain.connect(ctx.destination);
 
       // Notes: C5 (523.25Hz), E5 (659.25Hz), C6 (1046.50Hz)
@@ -96,7 +103,7 @@ export function playChatMessageSound() {
     if (ctx && ctx.state !== "closed") {
       const now = ctx.currentTime;
       const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.35, now);
+      masterGain.gain.setValueAtTime(0.35 * getVoiceNavDuckingFactor(), now);
       masterGain.connect(ctx.destination);
 
       // Notes: A5 (880Hz), E6 (1318.51Hz)

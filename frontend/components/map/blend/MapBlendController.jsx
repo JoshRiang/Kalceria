@@ -9,6 +9,7 @@ import {
 import { createBlendMapRenderer } from "./blendLeafletRenderer";
 import { BlendFocusHud } from "./BlendFocusHud";
 import { cycleFocusIndex, smoothAngleDegrees } from "./gpsCurator";
+import { useBlendVoiceCoPilot } from "./voiceNav/useBlendVoiceCoPilot";
 
 export function MapBlendController({
   mapRef,
@@ -159,6 +160,7 @@ export function MapBlendController({
   const participants = Array.isArray(activeBlend?.participants) ? activeBlend.participants : [];
   const safeIndex = participants.length > 0 ? focusedIndex % participants.length : 0;
   const focusedParticipant = participants[safeIndex] || null;
+  const voiceCoPilot = useBlendVoiceCoPilot({ activeBlend, isFocusMode });
 
   // Render Leaflet Blend Layer (routes, traffic congestion, dotted transit transfers, moving avatars + 2D cone)
   useEffect(() => {
@@ -209,6 +211,7 @@ export function MapBlendController({
 
   const handleToggleFocusMode = (nextFocus) => {
     if (nextFocus) {
+      voiceCoPilot.unlockAudio?.();
       const selfIdx = participants.findIndex((p) => p.isSelf);
       if (selfIdx >= 0) setFocusedIndex(selfIdx);
     }
@@ -270,6 +273,7 @@ export function MapBlendController({
       onCycleFocus={handleCycleFocus}
       onChangeTransportMode={handleChangeTransportMode}
       onLeaveBlend={handleLeaveBlend}
+      voiceCoPilot={voiceCoPilot}
     />
   );
 }
