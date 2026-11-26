@@ -77,29 +77,46 @@ test("Event Popup geometry locks stably to first slide aspect ratio", () => {
   );
 });
 
-test("Live Media Feed & Comment Form replace text/button upload with shared dashed MediaDropzoneBox + 4.5MB validation", () => {
+test("Live Media Feed & Comment Form use ONE unified dashed MediaDropzoneBox with n+1 '+' tile, compact 'Photo/Video Max 10 MB' label, and 10MB validation", () => {
   const dropzoneSrc = readFe("components/ui/MediaDropzoneBox.jsx");
   const eventMediaSrc = readFe("components/map/modals/eventForm/EventMediaSection.jsx");
   const commentBodySrc = readFe("components/landing/modals/ideaComment/IdeaCommentFormBody.jsx");
+  const uploadRouteSrc = readFe("app/api/blob/upload/route.ts");
+  const editProfileSrc = readFe("components/map/EditProfileModal.jsx");
 
   assert.ok(dropzoneSrc.includes("border-dashed"), "Dropzone must use dashed border");
-  assert.ok(dropzoneSrc.includes("italic"), "Dropzone must use italic muted copy");
+  assert.ok(dropzoneSrc.includes('data-media-add-slot="true"'), "Dropzone must always render n+1 inner dashed '+' tile");
+  assert.ok(dropzoneSrc.includes("flex-wrap"), "Dropzone must flexibly wrap n+1 tile to next row when filled");
+  assert.ok(dropzoneSrc.includes('mediaTypeLabel = "Photo/Video"'), "Dropzone must use compact Photo/Video label");
+  assert.ok(dropzoneSrc.includes('maxSizeLabel = "Max 10 MB"'), "Dropzone must show Max 10 MB beside n+1 tile");
   assert.ok(dropzoneSrc.includes('role="alert"'), "Dropzone must surface upload errors inside the box");
   assert.ok(dropzoneSrc.includes("onDrop"), "Dropzone must support drag and drop");
 
+  // Zero double outer dashed boxes on EventMediaSection & IdeaCommentFormBody
   assert.ok(eventMediaSrc.includes("MediaDropzoneBox"), "EventMediaSection must render MediaDropzoneBox");
+  assert.ok(!eventMediaSrc.includes("border-2 border-dashed"), "EventMediaSection must NOT render a second outer dashed preview box");
   assert.ok(!eventMediaSrc.includes("Upload media atau tempel link"), "Old text link box must be removed from EventMediaSection");
 
   assert.ok(commentBodySrc.includes("MediaDropzoneBox"), "IdeaCommentFormBody must render MediaDropzoneBox");
   assert.ok(!commentBodySrc.includes("Upload media atau tempel link"), "Old text link box must be removed from IdeaCommentFormBody");
 
-  // 4.5 MB client validation security still enforced
+  // 10 MB direct & chunked R2 support across upload route, EditProfile, and client validator
+  assert.ok(uploadRouteSrc.includes("chunkAction"), "Upload route must support stateless chunked R2 upload up to 10 MB");
+  assert.ok(editProfileSrc.includes("10 * 1024 * 1024"), "EditProfileModal cover & avatar must allow up to 10 MB");
+
+  const valid8Mb = validateMediaUploadFile({
+    name: "clip.mp4",
+    size: 8 * 1024 * 1024,
+    type: "video/mp4",
+  });
+  assert.equal(valid8Mb.valid, true, "8 MB video must be accepted under new 10 MB limit");
+
   const oversized = validateMediaUploadFile({
     name: "huge.mp4",
-    size: 5 * 1024 * 1024,
+    size: 11 * 1024 * 1024,
     type: "video/mp4",
   });
   assert.equal(oversized.valid, false);
-  assert.match(oversized.error, /4\.5 MB/i);
+  assert.match(oversized.error, /10 MB/i);
 });
 

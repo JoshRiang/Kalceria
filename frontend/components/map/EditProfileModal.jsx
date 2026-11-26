@@ -164,8 +164,8 @@ export function EditProfileModal({
   const handleBgFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 4.5 * 1024 * 1024) {
-      setFileError("Ukuran file melebihi 4.5 MB. Maksimal ukuran file adalah 4.5 MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      setFileError("Ukuran file melebihi 10 MB. Maksimal ukuran file adalah 10 MB.");
       e.target.value = "";
       return;
     }

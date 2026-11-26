@@ -1,41 +1,77 @@
 /**
- * Pure Nous Research Hermes-inspired continuous architectural wire routing engine.
- * Connects all 5 Minigame artifacts in 5 distinct sequential loop segments (1 -> 2 -> 3 -> 4 -> 5)
- * tailored per device family (mobile, tablet/iPad, half-desktop, desktop, landscape).
- * Strictly continuous curves only — zero slop (+, -, stray particles).
+ * Pure Nous Research Hermes-inspired continuous dual-rail closed-loop wire routing engine.
+ * Two parallel continuous curves start at Point A (behind Artifact 1), weave smoothly
+ * behind every artifact in clockwise perimeter order (1 -> 2 -> 3 -> 4 -> 5 -> Point A),
+ * and close seamlessly back at Point A with C1 tangent continuity and ZERO endpoint dots.
+ * Responsive across all device families (mobile, tablet/iPad, half-desktop, desktop, landscape).
  */
-
-function edgePoint(slot, rx, ry) {
-  return {
-    x: slot.leftPx + slot.widthPx * rx,
-    y: slot.topPx + slot.heightPx * ry,
-  };
-}
 
 function fmt(n) {
   return Number(n).toFixed(1);
 }
 
-function quad(p0, c, p1) {
-  return `M ${fmt(p0.x)} ${fmt(p0.y)} Q ${fmt(c.x)} ${fmt(c.y)} ${fmt(p1.x)} ${fmt(p1.y)}`;
+function centerOf(slot) {
+  return {
+    x: slot.leftPx + slot.widthPx * 0.5,
+    y: slot.topPx + slot.heightPx * 0.5,
+  };
 }
 
-function cubic(p0, c1, c2, p1) {
-  return `M ${fmt(p0.x)} ${fmt(p0.y)} C ${fmt(c1.x)} ${fmt(c1.y)}, ${fmt(c2.x)} ${fmt(c2.y)}, ${fmt(p1.x)} ${fmt(p1.y)}`;
+/**
+ * Computes C1-continuous closed cubic Bezier segments through a cyclic ring of points
+ * using Catmull-Rom spline conversion, offset slightly outward/inward from the centroid
+ * so two distinct parallel closed loops orbit behind all 5 artifacts and return to Point A.
+ */
+function buildClosedLoopSegments(points, centroid, radialOffsetPx, tension = 0.28) {
+  const n = points.length;
+  if (n < 3) return [];
+
+  const offsetPts = points.map((p) => {
+    const dx = p.x - centroid.x;
+    const dy = p.y - centroid.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return {
+      x: p.x + (dx / len) * radialOffsetPx,
+      y: p.y + (dy / len) * radialOffsetPx,
+    };
+  });
+
+  const segments = [];
+  for (let i = 0; i < n; i++) {
+    const pPrev = offsetPts[(i - 1 + n) % n];
+    const p0 = offsetPts[i];
+    const p1 = offsetPts[(i + 1) % n];
+    const pNext = offsetPts[(i + 2) % n];
+
+    const c1 = {
+      x: p0.x + (p1.x - pPrev.x) * tension,
+      y: p0.y + (p1.y - pPrev.y) * tension,
+    };
+    const c2 = {
+      x: p1.x - (pNext.x - p0.x) * tension,
+      y: p1.y - (pNext.y - p0.y) * tension,
+    };
+
+    segments.push({
+      segment: i + 1,
+      d: `M ${fmt(p0.x)} ${fmt(p0.y)} C ${fmt(c1.x)} ${fmt(c1.y)}, ${fmt(c2.x)} ${fmt(c2.y)}, ${fmt(p1.x)} ${fmt(p1.y)}`,
+    });
+  }
+  return segments;
 }
 
-// 5 sequential step delays so each inter-element segment draws in cleanly one after another
+// 5 crisp sequential step delays so the dual closed circuit traces from Point A back to Point A
 const SEGMENT_DELAYS = {
-  1: 0.85,
-  2: 1.32,
-  3: 1.79,
-  4: 2.26,
-  5: 2.73,
+  1: 0.42,
+  2: 0.76,
+  3: 1.1,
+  4: 1.44,
+  5: 1.78,
 };
 
 /**
- * Generates clean, continuous Hermes routing wires connecting the 5 artifact slots
- * across 5 ordered segments (`segment: 1..5`).
+ * Generates two unbroken, C1-continuous closed loops passing behind all 5 Minigame artifacts
+ * across 5 ordered segments (`segment: 1..5`). Always returns `junctions: []` (zero endpoint dots).
  */
 export function buildHermesWireGraph(slots, viewportWidth, viewportHeight) {
   const byId = {};
@@ -50,310 +86,51 @@ export function buildHermesWireGraph(slots, viewportWidth, viewportHeight) {
   const profile = slots[0]?.profile || "desktop";
   const isPortrait = profile === "mobile" || profile === "tablet";
 
+  // Ordered clockwise ring starting at Point A and closing seamlessly back at Point A
+  const ringSlots = isPortrait
+    ? [book, compass, globe, cards, lantern]
+    : [lantern, globe, compass, cards, book];
+
+  const centers = ringSlots.map(centerOf);
+  const centroid = {
+    x: centers.reduce((acc, p) => acc + p.x, 0) / centers.length,
+    y: centers.reduce((acc, p) => acc + p.y, 0) / centers.length,
+  };
+
+  // Scale rail separation proportionally to viewport so dual loops stay crisp across HP, iPad, Half, and Desktop
+  const minDim = Math.min(W, H);
+  const outerOffset = Math.max(7, Math.min(20, minDim * 0.018));
+  const innerOffset = -Math.max(7, Math.min(20, minDim * 0.018));
+  const tension = isPortrait ? 0.25 : 0.27;
+
+  const railOuter = buildClosedLoopSegments(centers, centroid, outerOffset, tension);
+  const railInner = buildClosedLoopSegments(centers, centroid, innerOffset, tension);
+
+  const prefix = isPortrait ? "p" : "d";
   const wires = [];
-  const junctions = [];
 
-  if (isPortrait) {
-    // 5-segment closed clockwise circuit (HP & iPad Portrait):
-    // Seg 1: Book -> Compass | Seg 2: Compass -> Globe | Seg 3: Globe -> Cards | Seg 4: Cards -> Lantern | Seg 5: Lantern -> Book
-    const bR = edgePoint(book, 0.96, 0.48);
-    const bB = edgePoint(book, 0.42, 0.96);
-    const cL = edgePoint(compass, 0.04, 0.48);
-    const cB = edgePoint(compass, 0.58, 0.96);
-    const lT = edgePoint(lantern, 0.46, 0.04);
-    const lB = edgePoint(lantern, 0.62, 0.96);
-    const gT = edgePoint(globe, 0.54, 0.04);
-    const gB = edgePoint(globe, 0.38, 0.96);
-    const kL = edgePoint(cards, 0.06, 0.54);
-    const kR = edgePoint(cards, 0.94, 0.54);
-
-    // Segment 1: Book -> Compass
+  for (let i = 0; i < 5; i++) {
+    const segNum = i + 1;
+    const baseDelay = SEGMENT_DELAYS[segNum];
     wires.push({
-      id: "p-seg1-main",
-      segment: 1,
-      d: quad(bR, { x: W * 0.5, y: Math.max(6, Math.min(bR.y, cL.y) - H * 0.024) }, cL),
-      weight: 1.25,
-      tone: "A",
-      delay: SEGMENT_DELAYS[1],
+      id: `${prefix}-seg${segNum}-main`,
+      segment: segNum,
+      rail: "outer",
+      d: railOuter[i].d,
+      weight: isPortrait ? 1.2 : 1.3,
+      tone: segNum % 2 === 1 ? "A" : "B",
+      delay: baseDelay,
     });
     wires.push({
-      id: "p-seg1-echo",
-      segment: 1,
-      d: quad(
-        edgePoint(book, 0.94, 0.62),
-        { x: W * 0.5, y: Math.max(12, Math.min(bR.y, cL.y) - H * 0.008) },
-        edgePoint(compass, 0.06, 0.62)
-      ),
-      weight: 0.75,
-      tone: "B",
-      delay: SEGMENT_DELAYS[1] + 0.08,
+      id: `${prefix}-seg${segNum}-echo`,
+      segment: segNum,
+      rail: "inner",
+      d: railInner[i].d,
+      weight: 0.85,
+      tone: segNum % 2 === 1 ? "B" : "A",
+      delay: Number((baseDelay + 0.07).toFixed(2)),
     });
-
-    // Segment 2: Compass -> Globe
-    wires.push({
-      id: "p-seg2-main",
-      segment: 2,
-      d: cubic(
-        cB,
-        { x: Math.min(W - 6, cB.x + W * 0.06), y: cB.y + (gT.y - cB.y) * 0.32 },
-        { x: Math.min(W - 6, gT.x + W * 0.05), y: cB.y + (gT.y - cB.y) * 0.7 },
-        gT
-      ),
-      weight: 1.25,
-      tone: "B",
-      delay: SEGMENT_DELAYS[2],
-    });
-    wires.push({
-      id: "p-seg2-echo",
-      segment: 2,
-      d: cubic(
-        edgePoint(compass, 0.44, 0.96),
-        { x: cB.x - W * 0.02, y: cB.y + (gT.y - cB.y) * 0.35 },
-        { x: gT.x - W * 0.03, y: cB.y + (gT.y - cB.y) * 0.68 },
-        edgePoint(globe, 0.38, 0.06)
-      ),
-      weight: 0.75,
-      tone: "A",
-      delay: SEGMENT_DELAYS[2] + 0.08,
-    });
-
-    // Segment 3: Globe -> Cards
-    wires.push({
-      id: "p-seg3-main",
-      segment: 3,
-      d: quad(gB, { x: gB.x - (gB.x - kR.x) * 0.25, y: kR.y + H * 0.02 }, kR),
-      weight: 1.25,
-      tone: "B",
-      delay: SEGMENT_DELAYS[3],
-    });
-    wires.push({
-      id: "p-seg3-echo",
-      segment: 3,
-      d: quad(
-        edgePoint(globe, 0.26, 0.92),
-        { x: gB.x - (gB.x - kR.x) * 0.4, y: kR.y - H * 0.015 },
-        edgePoint(cards, 0.92, 0.42)
-      ),
-      weight: 0.75,
-      tone: "A",
-      delay: SEGMENT_DELAYS[3] + 0.08,
-    });
-
-    // Segment 4: Cards -> Lantern
-    wires.push({
-      id: "p-seg4-main",
-      segment: 4,
-      d: quad(kL, { x: lB.x + (kL.x - lB.x) * 0.25, y: kL.y + H * 0.02 }, lB),
-      weight: 1.25,
-      tone: "A",
-      delay: SEGMENT_DELAYS[4],
-    });
-    wires.push({
-      id: "p-seg4-echo",
-      segment: 4,
-      d: quad(
-        edgePoint(cards, 0.08, 0.42),
-        { x: lB.x + (kL.x - lB.x) * 0.4, y: kL.y - H * 0.015 },
-        edgePoint(lantern, 0.74, 0.92)
-      ),
-      weight: 0.75,
-      tone: "B",
-      delay: SEGMENT_DELAYS[4] + 0.08,
-    });
-
-    // Segment 5: Lantern -> Book (closes the 5-segment circuit)
-    wires.push({
-      id: "p-seg5-main",
-      segment: 5,
-      d: cubic(
-        lT,
-        { x: Math.max(6, lT.x - W * 0.05), y: bB.y + (lT.y - bB.y) * 0.7 },
-        { x: Math.max(6, bB.x - W * 0.06), y: bB.y + (lT.y - bB.y) * 0.32 },
-        bB
-      ),
-      weight: 1.25,
-      tone: "A",
-      delay: SEGMENT_DELAYS[5],
-    });
-    wires.push({
-      id: "p-seg5-echo",
-      segment: 5,
-      d: cubic(
-        edgePoint(lantern, 0.62, 0.06),
-        { x: lT.x + W * 0.03, y: bB.y + (lT.y - bB.y) * 0.68 },
-        { x: bB.x + W * 0.02, y: bB.y + (lT.y - bB.y) * 0.35 },
-        edgePoint(book, 0.56, 0.96)
-      ),
-      weight: 0.75,
-      tone: "B",
-      delay: SEGMENT_DELAYS[5] + 0.08,
-    });
-
-    junctions.push(
-      { ...bR, tone: "A", delay: SEGMENT_DELAYS[1] },
-      { ...cL, tone: "B", delay: SEGMENT_DELAYS[1] + 0.32 },
-      { ...gT, tone: "B", delay: SEGMENT_DELAYS[2] + 0.32 },
-      { ...kR, tone: "B", delay: SEGMENT_DELAYS[3] + 0.32 },
-      { ...lB, tone: "A", delay: SEGMENT_DELAYS[4] + 0.32 },
-      { ...bB, tone: "A", delay: SEGMENT_DELAYS[5] + 0.32 }
-    );
-  } else {
-    // 5-segment closed clockwise circuit (Desktop, Half-Desktop, iPad Landscape, HP Landscape):
-    // Seg 1: Lantern -> Globe | Seg 2: Globe -> Compass | Seg 3: Compass -> Cards | Seg 4: Cards -> Book | Seg 5: Book -> Lantern
-    const lR = edgePoint(lantern, 0.96, 0.42);
-    const lB = edgePoint(lantern, 0.48, 0.96);
-    const gL = edgePoint(globe, 0.04, 0.42);
-    const gB = edgePoint(globe, 0.52, 0.96);
-    const bT = edgePoint(book, 0.42, 0.05);
-    const bR = edgePoint(book, 0.96, 0.52);
-    const cT = edgePoint(compass, 0.56, 0.05);
-    const cL = edgePoint(compass, 0.04, 0.54);
-    const kL = edgePoint(cards, 0.04, 0.56);
-    const kR = edgePoint(cards, 0.96, 0.56);
-
-    // Segment 1: Lantern -> Globe
-    wires.push({
-      id: "d-seg1-main",
-      segment: 1,
-      d: quad(lR, { x: W * 0.5, y: Math.max(8, Math.min(lR.y, gL.y) - H * 0.1) }, gL),
-      weight: 1.3,
-      tone: "A",
-      delay: SEGMENT_DELAYS[1],
-    });
-    wires.push({
-      id: "d-seg1-echo",
-      segment: 1,
-      d: quad(
-        edgePoint(lantern, 0.95, 0.56),
-        { x: W * 0.5, y: Math.max(16, Math.min(lR.y, gL.y) - H * 0.06) },
-        edgePoint(globe, 0.05, 0.56)
-      ),
-      weight: 0.75,
-      tone: "B",
-      delay: SEGMENT_DELAYS[1] + 0.08,
-    });
-
-    // Segment 2: Globe -> Compass
-    wires.push({
-      id: "d-seg2-main",
-      segment: 2,
-      d: cubic(
-        gB,
-        { x: Math.min(W - 8, gB.x + W * 0.03), y: gB.y + (cT.y - gB.y) * 0.35 },
-        { x: Math.min(W - 8, cT.x + W * 0.03), y: gB.y + (cT.y - gB.y) * 0.68 },
-        cT
-      ),
-      weight: 1.3,
-      tone: "B",
-      delay: SEGMENT_DELAYS[2],
-    });
-    wires.push({
-      id: "d-seg2-echo",
-      segment: 2,
-      d: cubic(
-        edgePoint(globe, 0.36, 0.95),
-        { x: gB.x - W * 0.025, y: gB.y + (cT.y - gB.y) * 0.38 },
-        { x: cT.x - W * 0.028, y: gB.y + (cT.y - gB.y) * 0.65 },
-        edgePoint(compass, 0.42, 0.06)
-      ),
-      weight: 0.75,
-      tone: "A",
-      delay: SEGMENT_DELAYS[2] + 0.08,
-    });
-
-    // Segment 3: Compass -> Cards
-    wires.push({
-      id: "d-seg3-main",
-      segment: 3,
-      d: cubic(
-        cL,
-        { x: kR.x + (cL.x - kR.x) * 0.62, y: cL.y - H * 0.04 },
-        { x: kR.x + (cL.x - kR.x) * 0.38, y: kR.y + H * 0.04 },
-        kR
-      ),
-      weight: 1.3,
-      tone: "B",
-      delay: SEGMENT_DELAYS[3],
-    });
-    wires.push({
-      id: "d-seg3-echo",
-      segment: 3,
-      d: cubic(
-        edgePoint(compass, 0.06, 0.7),
-        { x: kR.x + (cL.x - kR.x) * 0.66, y: cL.y + H * 0.04 },
-        { x: kR.x + (cL.x - kR.x) * 0.34, y: kR.y - H * 0.025 },
-        edgePoint(cards, 0.95, 0.7)
-      ),
-      weight: 0.75,
-      tone: "A",
-      delay: SEGMENT_DELAYS[3] + 0.08,
-    });
-
-    // Segment 4: Cards -> Book
-    wires.push({
-      id: "d-seg4-main",
-      segment: 4,
-      d: cubic(
-        kL,
-        { x: bR.x + (kL.x - bR.x) * 0.62, y: kL.y + H * 0.04 },
-        { x: bR.x + (kL.x - bR.x) * 0.42, y: bR.y - H * 0.04 },
-        bR
-      ),
-      weight: 1.3,
-      tone: "A",
-      delay: SEGMENT_DELAYS[4],
-    });
-    wires.push({
-      id: "d-seg4-echo",
-      segment: 4,
-      d: cubic(
-        edgePoint(cards, 0.05, 0.7),
-        { x: bR.x + (kL.x - bR.x) * 0.68, y: kL.y - H * 0.025 },
-        { x: bR.x + (kL.x - bR.x) * 0.38, y: bR.y + H * 0.04 },
-        edgePoint(book, 0.94, 0.68)
-      ),
-      weight: 0.75,
-      tone: "B",
-      delay: SEGMENT_DELAYS[4] + 0.08,
-    });
-
-    // Segment 5: Book -> Lantern (closes the 5-segment circuit)
-    wires.push({
-      id: "d-seg5-main",
-      segment: 5,
-      d: cubic(
-        bT,
-        { x: Math.max(8, bT.x - W * 0.03), y: lB.y + (bT.y - lB.y) * 0.68 },
-        { x: Math.max(8, lB.x - W * 0.03), y: lB.y + (bT.y - lB.y) * 0.35 },
-        lB
-      ),
-      weight: 1.3,
-      tone: "A",
-      delay: SEGMENT_DELAYS[5],
-    });
-    wires.push({
-      id: "d-seg5-echo",
-      segment: 5,
-      d: cubic(
-        edgePoint(book, 0.56, 0.06),
-        { x: bT.x + W * 0.028, y: lB.y + (bT.y - lB.y) * 0.65 },
-        { x: lB.x + W * 0.025, y: lB.y + (bT.y - lB.y) * 0.38 },
-        edgePoint(lantern, 0.64, 0.95)
-      ),
-      weight: 0.75,
-      tone: "B",
-      delay: SEGMENT_DELAYS[5] + 0.08,
-    });
-
-    junctions.push(
-      { ...lR, tone: "A", delay: SEGMENT_DELAYS[1] },
-      { ...gL, tone: "B", delay: SEGMENT_DELAYS[1] + 0.34 },
-      { ...cT, tone: "B", delay: SEGMENT_DELAYS[2] + 0.34 },
-      { ...kR, tone: "B", delay: SEGMENT_DELAYS[3] + 0.34 },
-      { ...bR, tone: "A", delay: SEGMENT_DELAYS[4] + 0.34 },
-      { ...lB, tone: "A", delay: SEGMENT_DELAYS[5] + 0.34 }
-    );
   }
 
-  return { wires, junctions };
+  return { wires, junctions: [] };
 }

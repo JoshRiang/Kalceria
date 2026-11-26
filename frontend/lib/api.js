@@ -208,7 +208,9 @@ export const postMiniEvent = (data) => api.post('/mini-events', data);
 export const putMiniEvent = (id, data) => api.put(`/mini-events/${id}`, data);
 export const delMiniEvent = (id) => api.delete(`/mini-events/${id}`);
 
-const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024; // 4.5 MB (native Vercel OIDC limit)
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB via R2 direct & chunked edge upload
+const SINGLE_SHOT_THRESHOLD_BYTES = 3.4 * 1024 * 1024; // Safely under Vercel's 4.5 MB incoming request cap
+const UPLOAD_CHUNK_BYTES = 3.2 * 1024 * 1024;
 
 const MIME_EXT_MAP = {
   "image/jpeg": "jpg",
@@ -231,24 +233,19 @@ const MIME_EXT_MAP = {
   "audio/mp3": "mp3",
 };
 
-const UPLOAD_TIMEOUT_MS = 45000;
+const UPLOAD_TIMEOUT_MS = 90000;
 
 export const uploadBlobMedia = async (file, { purpose } = {}) => {
   if (file && file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("Ukuran file melebihi batas 4.5 MB. Mohon gunakan file dengan ukuran lebih kecil.");
+    throw new Error("Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil.");
   }
 
   let filename = file?.name || "";
+  const rawType = (file?.type || "").split(";")[0].trim().toLowerCase();
   if (!filename || filename === "blob" || !filename.includes(".")) {
-    const rawType = (file?.type || "").split(";")[0].trim().toLowerCase();
     const ext = MIME_EXT_MAP[rawType] || (rawType.startsWith("video/") ? "mp4" : "bin");
     filename = `upload-${Date.now()}.${ext}`;
   }
-
-  // Native Vercel OIDC multipart upload
-  const formData = new FormData();
-  formData.append("file", file, filename);
-  if (purpose) formData.append("purpose", purpose);
 
   const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timeoutId = controller
@@ -260,15 +257,73 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
         }
       }, UPLOAD_TIMEOUT_MS)
     : null;
+
   try {
+    // Chunked R2 staging path for files > 3.4 MB up to 10 MB (never hits Vercel 4.5 MB 413!)
+    if (file && typeof file.slice === "function" && file.size > SINGLE_SHOT_THRESHOLD_BYTES) {
+      const uploadId = `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+      const totalChunks = Math.ceil(file.size / UPLOAD_CHUNK_BYTES);
+
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const start = chunkIndex * UPLOAD_CHUNK_BYTES;
+        const end = Math.min(file.size, start + UPLOAD_CHUNK_BYTES);
+        const slice = file.slice(start, end);
+        const partForm = new FormData();
+        partForm.append("chunkAction", "part");
+        partForm.append("uploadId", uploadId);
+        partForm.append("chunkIndex", String(chunkIndex));
+        partForm.append("file", slice, `part-${chunkIndex}.bin`);
+
+        const partRes = await fetch("/api/blob/upload", {
+          method: "POST",
+          body: partForm,
+          signal: controller ? controller.signal : undefined,
+        });
+        if (!partRes.ok) {
+          if (partRes.status === 413) {
+            throw new Error("Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil.");
+          }
+          const err = await partRes.json().catch(() => ({}));
+          throw new Error(err.error || "Gagal mengunggah potongan file media.");
+        }
+      }
+
+      const completeForm = new FormData();
+      completeForm.append("chunkAction", "complete");
+      completeForm.append("uploadId", uploadId);
+      completeForm.append("totalChunks", String(totalChunks));
+      completeForm.append("filename", filename);
+      completeForm.append("contentType", file.type || "application/octet-stream");
+      if (purpose) completeForm.append("purpose", purpose);
+
+      const completeRes = await fetch("/api/blob/upload", {
+        method: "POST",
+        body: completeForm,
+        signal: controller ? controller.signal : undefined,
+      });
+      if (!completeRes.ok) {
+        if (completeRes.status === 413) {
+          throw new Error("Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil.");
+        }
+        const err = await completeRes.json().catch(() => ({}));
+        throw new Error(err.error || "Gagal menyelesaikan unggahan file media.");
+      }
+      return await completeRes.json();
+    }
+
+    // Standard 1-request fast path (<= 3.4 MB)
+    const formData = new FormData();
+    formData.append("file", file, filename);
+    if (purpose) formData.append("purpose", purpose);
+
     const res = await fetch("/api/blob/upload", {
       method: "POST",
       body: formData,
       signal: controller ? controller.signal : undefined,
     });
     if (!res.ok) {
-      if (res.status === 413 || (file && file.size > 4.2 * 1024 * 1024)) {
-        throw new Error("Ukuran file melebihi batas 4.5 MB. Mohon gunakan file dengan ukuran lebih kecil.");
+      if (res.status === 413) {
+        throw new Error("Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil.");
       }
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || "Gagal mengunggah file media.");

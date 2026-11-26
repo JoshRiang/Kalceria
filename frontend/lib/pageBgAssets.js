@@ -84,6 +84,23 @@ export const MINIGAME_TRAILER_CHARACTERS = {
   },
 };
 
+export const JOURNEY_INTRO_CDN_BASE = "https://cdn.kalceria.id/media/journey-intro";
+
+export const JOURNEY_INTRO_VIDEOS = {
+  // 1280x720 compressed HD B&W road-trip convoy video for Desktop & Half-Desktop landscape
+  desktop: `${JOURNEY_INTRO_CDN_BASE}/journey-intro-desktop-bw.mp4`,
+  // 720x1280 compressed HD B&W curvy-road sports car trip video for Mobile & Portrait Tablet
+  portrait: `${JOURNEY_INTRO_CDN_BASE}/journey-intro-portrait-bw.mp4`,
+  localFallback: "/vid_abt1.mp4",
+};
+
+export function getJourneyIntroVideoUrl(family = "desktop") {
+  if (family === "mobile" || family === "tablet") {
+    return JOURNEY_INTRO_VIDEOS.portrait;
+  }
+  return JOURNEY_INTRO_VIDEOS.desktop;
+}
+
 export const JOURNEY_SEGMENT_BG_THEMES = {
   // Segment 1 (Mist): Unified Ferrari 488 + Budapest Chain Bridge — Navy Blue + Bright Green
   1: {

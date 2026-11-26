@@ -229,70 +229,18 @@ export function EventMediaSection({
         isUploading={isUploadingMedia}
         error={uploadError}
         onFilesSelected={handleMediaFiles}
-        promptText="Drag & drop or choose photo / video (max 4.5 MB)"
+        items={parsedUrls.map((url, idx) => ({
+          key: `${idx}-${url.slice(0, 32)}`,
+          url,
+          isVideo: inferIsVideoMediaUrl(url, eventForm.mediaMetadataByUrl?.[url]),
+          label: getDisplayFilename(url) || `Media ${idx + 1}`,
+        }))}
+        selectedIdx={activeIdx}
+        onSelectItem={setSelectedIdx}
+        onRemoveItem={handleRemoveCarouselMedia}
+        mediaTypeLabel="Photo/Video"
+        maxSizeLabel="Max 10 MB"
       />
-
-      {parsedUrls.length > 0 && (
-        <div
-          className={`mt-1.5 p-2.5 rounded-2xl border-2 border-dashed flex flex-col gap-1.5 ${
-            isModalDark ? "border-[#30363d] bg-[#0d1117]/60" : "border-[#d0d7de] bg-[#f6f8fa]/80"
-          }`}
-        >
-          <div className="flex items-center gap-3 overflow-x-auto py-1.5 px-1 custom-scrollbar">
-            {parsedUrls.map((url, idx) => {
-              const isVideo = inferIsVideoMediaUrl(url, eventForm.mediaMetadataByUrl?.[url]);
-              const isSelected = idx === activeIdx;
-              const label = getDisplayFilename(url);
-              return (
-                <div
-                  key={`${idx}-${url.slice(0, 32)}`}
-                  onClick={() => setSelectedIdx(idx)}
-                  title={`Pilih klip: ${label}`}
-                  className={`relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm transition-colors duration-150 cursor-pointer ${
-                    isSelected
-                      ? isModalDark
-                        ? "ring-2 ring-white ring-offset-2 ring-offset-black/80 shadow-white/10 shadow-lg z-10 opacity-100"
-                        : "ring-2 ring-black ring-offset-2 ring-offset-white shadow-black/10 shadow-lg z-10 opacity-100"
-                      : isModalDark
-                        ? "opacity-75 hover:opacity-100 border border-white/20"
-                        : "opacity-75 hover:opacity-100 border border-black/20"
-                  }`}
-                >
-                  {isVideo ? (
-                    <video
-                      src={url}
-                      muted
-                      autoPlay
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover pointer-events-none"
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={url}
-                      alt={label || `Media ${idx + 1}`}
-                      className="w-full h-full object-cover pointer-events-none"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveCarouselMedia(idx);
-                    }}
-                    aria-label={`Remove ${label || `media ${idx + 1}`}`}
-                    title="Remove this media"
-                    className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:bg-neutral-200 transition-colors cursor-pointer border border-black/15 leading-none"
-                  >
-                    ×
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

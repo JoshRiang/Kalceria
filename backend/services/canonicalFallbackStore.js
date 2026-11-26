@@ -57,10 +57,11 @@ export async function fetchCanonicalCallSignals(userId, { clear = false } = {}) 
     const rows = await prisma.callSignal.findMany({
       where: {
         toUserId: String(userId),
+        NOT: { callId: { startsWith: 'chat_rtc:' } },
         expiresAt: { gt: nowDate },
       },
       orderBy: { createdAt: 'asc' },
-      take: 20,
+      take: 30,
     });
 
     if (clear && rows.length > 0) {
@@ -85,9 +86,69 @@ export async function clearCanonicalCallSignals(userId) {
   if (!userId) return;
   try {
     await prisma.callSignal.deleteMany({
-      where: { toUserId: String(userId) },
+      where: {
+        toUserId: String(userId),
+        NOT: { callId: { startsWith: 'chat_rtc:' } },
+      },
     });
   } catch {}
+}
+
+// ─── 1b. Chat P2P WebRTC Signals (Shared Serverless Realtime Fallback) ────────
+export async function storeCanonicalChatRtcSignal(convHash, packet) {
+  if (!convHash || !packet || !packet.toUserId) return;
+  opportunisticPrune().catch(() => {});
+  const id = `rtc_${crypto.randomUUID()}`;
+  const expiresAt = new Date(Date.now() + CALL_SIGNAL_TTL_MS);
+  try {
+    await prisma.callSignal.create({
+      data: {
+        id,
+        callId: `chat_rtc:${String(convHash)}`,
+        fromUserId: String(packet.fromUserId || ''),
+        toUserId: String(packet.toUserId),
+        signalType: String(packet.signalType || 'rtc-ice'),
+        packetJson: JSON.stringify(packet),
+        expiresAt,
+      },
+    });
+  } catch (err) {
+    console.warn('[CanonicalStore] storeCanonicalChatRtcSignal error:', err?.message);
+  }
+}
+
+export async function fetchCanonicalChatRtcSignals(userId, targetId, convHash) {
+  if (!userId || !targetId || !convHash) return [];
+  opportunisticPrune().catch(() => {});
+  const nowDate = new Date();
+  try {
+    const rows = await prisma.callSignal.findMany({
+      where: {
+        callId: `chat_rtc:${String(convHash)}`,
+        toUserId: String(userId),
+        fromUserId: String(targetId),
+        expiresAt: { gt: nowDate },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 40,
+    });
+
+    if (rows.length > 0) {
+      const ids = rows.map((r) => r.id);
+      prisma.callSignal.deleteMany({ where: { id: { in: ids } } }).catch(() => {});
+    }
+
+    const packets = [];
+    for (const r of rows) {
+      try {
+        packets.push(JSON.parse(r.packetJson));
+      } catch {}
+    }
+    return packets;
+  } catch (err) {
+    console.warn('[CanonicalStore] fetchCanonicalChatRtcSignals error:', err?.message);
+    return [];
+  }
 }
 
 export async function acquireCanonicalCallLock({ userId, targetId, callId, mode }) {

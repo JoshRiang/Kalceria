@@ -1,6 +1,9 @@
 import { redis } from '../../lib/redis.js';
 import prisma from '../../lib/prisma.js';
-import { isUserBlockedCanonical } from '../../services/canonicalFallbackStore.js';
+import {
+  isUserBlockedCanonical,
+  fetchCanonicalChatRtcSignals,
+} from '../../services/canonicalFallbackStore.js';
 import {
   HOT_RING_BUFFER_SIZE,
   COLD_ARCHIVE_MAX_SIZE,
@@ -53,6 +56,7 @@ export async function getPersonalChatMessages(req, res, next) {
       isTargetBlockedByMe = await isUserBlockedCanonical(userId, targetId);
     }
 
+    const redisDegraded = Boolean(redis.isDegraded || redis.isQuotaExceeded);
     let rtcSignals = [];
     if (includeRtc && !isTargetBlockedByMe) {
       const rawRtc = unwrapPipeResult(metaPipeRes?.[2], []);
@@ -66,19 +70,37 @@ export async function getPersonalChatMessages(req, res, next) {
         })
         .filter(Boolean)
         .reverse();
+
+      if (redisDegraded || rtcSignals.length === 0) {
+        const canonicalRtc = await fetchCanonicalChatRtcSignals(userId, targetId, convHash);
+        if (canonicalRtc.length > 0) {
+          const seen = new Set(
+            rtcSignals.map((s) => `${s.signalType}:${s.ts}:${s.sessionId || ''}:${String(s.payload || '').slice(0, 24)}`)
+          );
+          for (const c of canonicalRtc) {
+            const k = `${c.signalType}:${c.ts}:${c.sessionId || ''}:${String(c.payload || '').slice(0, 24)}`;
+            if (!seen.has(k)) {
+              seen.add(k);
+              rtcSignals.push(c);
+            }
+          }
+          rtcSignals.sort((a, b) => Number(a.ts || 0) - Number(b.ts || 0));
+        }
+      }
     }
 
     const metaLastTs = Number(meta.lastTs || 0);
     const myReadUpTo = Number(meta[`readUpTo:${userId}`] || 0);
-    const peerReadUpTo = Number(meta[`readUpTo:${targetId}`] || 0);
+    let peerReadUpTo = Number(meta[`readUpTo:${targetId}`] || 0);
     const deleteRev = Number(meta.deleteRev || 0);
     const hasPendingUnreadForMe =
       !isPeekOnly &&
       meta.lastSender === String(targetId) &&
       metaLastTs > myReadUpTo;
 
-    // 2. O(1) Delta Short-Circuit: If client has latest watermark, zero LRANGE & zero DB queries!
+    // 2. O(1) Delta Short-Circuit: ONLY trust Redis metadata when Redis is healthy (never stale per-lambda RAM)
     if (
+      !redisDegraded &&
       sinceTs > 0 &&
       !isCursorPagination &&
       (meta.emptyConfirmed === '1' || metaLastTs > 0) &&
@@ -100,7 +122,9 @@ export async function getPersonalChatMessages(req, res, next) {
       });
     }
 
-    const rawHot = await redis.lrange(hotKey, 0, HOT_RING_BUFFER_SIZE - 1).catch(() => []);
+    const rawHot = redisDegraded
+      ? []
+      : await redis.lrange(hotKey, 0, HOT_RING_BUFFER_SIZE - 1).catch(() => []);
     const hotMsgs = (Array.isArray(rawHot) ? rawHot : [])
       .map(unpackEnvelope)
       .filter(Boolean);
@@ -110,7 +134,7 @@ export async function getPersonalChatMessages(req, res, next) {
       byId.set(m.id, m);
     }
 
-    // 3. Smart Read-Through: ONLY hit PostgreSQL on cold miss / eviction, cursor pagination, or one-time backfill
+    // 3. Smart Read-Through: hit PostgreSQL on degraded Redis (shared cross-lambda SSOT), cold miss, cursor, or backfill
     const isColdOrEvicted = hotMsgs.length === 0 && meta.emptyConfirmed !== '1';
     const needsInitialBackfill =
       hotMsgs.length > 0 &&
@@ -118,7 +142,7 @@ export async function getPersonalChatMessages(req, res, next) {
       meta.backfilled !== '1' &&
       !sinceTs;
 
-    if (isCursorPagination || isColdOrEvicted || needsInitialBackfill) {
+    if (redisDegraded || isCursorPagination || isColdOrEvicted || needsInitialBackfill) {
       try {
         if (prisma?.personalChatMessage) {
           const dbRows = await prisma.personalChatMessage.findMany({
@@ -143,7 +167,13 @@ export async function getPersonalChatMessages(req, res, next) {
             ) {
               continue;
             }
-            if (row.status === 'read') unpacked.status = 'read';
+            if (row.status === 'read') {
+              unpacked.status = 'read';
+              if (String(unpacked.senderId) === String(userId)) {
+                const rowTs = Number(unpacked.ts || row.ts || 0);
+                if (rowTs > peerReadUpTo) peerReadUpTo = rowTs;
+              }
+            }
             // One-sided retention for sender: sender can still see their own message
             if (
               String(unpacked.senderId) === String(userId) &&

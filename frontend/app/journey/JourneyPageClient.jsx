@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useIsMobileViewport, useIsMobileOrTabletViewport } from '@/hooks/useIsMobileViewport';
+import { useResponsiveBgFamily } from '@/hooks/useResponsiveBgFamily';
+import { getJourneyIntroVideoUrl, JOURNEY_INTRO_VIDEOS } from '@/lib/pageBgAssets';
 import JourneySection4 from '../../components/JourneySection4';
 import JourneyRightHalf, { JourneySlider, JourneyDescriptionBox } from '../../components/JourneyRightHalf';
 import { JourneySegmentBackdrop } from '../../components/journey/JourneySegmentBackdrop';
@@ -19,6 +21,8 @@ export default function JourneyPageClient() {
 
   const isMobile = useIsMobileViewport();
   const isMobileOrTablet = useIsMobileOrTabletViewport();
+  const { family: bgFamily } = useResponsiveBgFamily();
+  const introVideoSrc = getJourneyIntroVideoUrl(bgFamily);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -30,16 +34,16 @@ export default function JourneyPageClient() {
     
     let i = 0;
     let introTimeout;
+    // Standard 3.4s intro cadence (18 chars x 85ms = 1.53s typing + 1.85s hold -> smooth fade to See Journey)
     const typingInterval = setInterval(() => {
       if (i < fullText.length) {
         setDisplayedText(fullText.slice(0, i + 1));
         i++;
       } else {
         clearInterval(typingInterval);
-        // Wait longer after typing for a more cinematic feel
-        introTimeout = setTimeout(() => setIsIntroActive(false), 2000);
+        introTimeout = setTimeout(() => setIsIntroActive(false), 1850);
       }
-    }, 100);
+    }, 85);
 
     return () => {
       clearInterval(typingInterval);
@@ -83,27 +87,34 @@ export default function JourneyPageClient() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 2.5, ease: "easeInOut" }}
-            className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none bg-black/80 backdrop-blur-3xl overflow-hidden"
+            transition={{ duration: 0.75, ease: "easeInOut" }}
+            data-journey-intro-family={bgFamily}
+            className="fixed inset-0 z-[1000] flex items-center justify-center pointer-events-none bg-black/85 backdrop-blur-2xl overflow-hidden"
           >
-            {/* Marvel-style Background Video */}
+            {/* HD Black-and-White Car Trip Background Video (Desktop Landscape vs Portrait Mobile/Tablet) */}
             <motion.div 
-              initial={{ opacity: 0, scale: 1.1 }}
-              animate={{ opacity: isMobile ? 0.5 : 0.7, scale: 1 }}
+              initial={{ opacity: 0, scale: 1.06 }}
+              animate={{ opacity: isMobile ? 0.62 : 0.76, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ 
-                opacity: { duration: 2.5, ease: "easeInOut" },
-                scale: { duration: 4, ease: "easeOut" }
+                opacity: { duration: 0.85, ease: "easeOut" },
+                scale: { duration: 3.4, ease: "easeOut" }
               }}
-              className="absolute inset-0 z-0 grayscale contrast-[1.2] brightness-[0.8]"
+              className="absolute inset-0 z-0 grayscale contrast-[1.15] brightness-[0.82]"
             >
               <video 
-                src="/vid_abt1.mp4" 
+                key={introVideoSrc}
+                src={introVideoSrc}
                 autoPlay 
                 loop 
                 muted 
                 playsInline 
-                preload="metadata"
+                preload="auto"
+                onError={(e) => {
+                  if (e.currentTarget.dataset.fallbackApplied) return;
+                  e.currentTarget.dataset.fallbackApplied = "1";
+                  e.currentTarget.src = JOURNEY_INTRO_VIDEOS.localFallback;
+                }}
                 className="w-full h-full object-cover"
               />
             </motion.div>

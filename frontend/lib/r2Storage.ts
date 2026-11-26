@@ -366,6 +366,50 @@ export async function listR2Objects({
   };
 }
 
+export async function getR2ObjectBuffer(
+  key: string,
+  timeoutMs = DEFAULT_UPLOAD_TIMEOUT_MS
+): Promise<Buffer> {
+  const cleanKey = key.replace(/^\/+/, "");
+  const gw = getGatewayConfig();
+  if (gw.configured) {
+    const res = await fetchWithTimeout(
+      `${gw.gatewayUrl}/${cleanKey}`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${gw.gatewayToken}` },
+      },
+      timeoutMs
+    );
+    if (!res.ok) {
+      throw new Error(`Cloudflare R2 Gateway GET failed (${res.status}) for ${cleanKey}`);
+    }
+    return Buffer.from(await res.arrayBuffer());
+  }
+
+  const s3 = getS3Config();
+  if (!s3.configured) {
+    throw new Error("Cloudflare R2 storage is not configured.");
+  }
+  const host = `${s3.accountId}.r2.cloudflarestorage.com`;
+  const encodedPath = cleanKey.split("/").map(encodeURIComponent).join("/");
+  const canonicalUri = `/${encodeURIComponent(s3.bucketName)}/${encodedPath}`;
+  const payloadHash = sha256Hex("");
+  const headers = buildSigV4Headers({
+    method: "GET",
+    host,
+    canonicalUri,
+    payloadHash,
+    accessKeyId: s3.accessKeyId,
+    secretAccessKey: s3.secretAccessKey,
+  });
+  const res = await fetchWithTimeout(`https://${host}${canonicalUri}`, { method: "GET", headers }, timeoutMs);
+  if (!res.ok) {
+    throw new Error(`Cloudflare R2 S3 GET failed (${res.status}) for ${cleanKey}`);
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
 export async function deleteR2Objects(keys: string[]): Promise<number> {
   const cleanKeys = (keys || []).map((k) => String(k || "").replace(/^\/+/, "")).filter(Boolean);
   if (cleanKeys.length === 0) return 0;

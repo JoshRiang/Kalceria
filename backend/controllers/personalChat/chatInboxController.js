@@ -66,11 +66,12 @@ export async function getPersonalChatInboxSummary(req, res, next) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    const redisDegraded = Boolean(redis.isDegraded || redis.isQuotaExceeded);
     const sinceVer = typeof req.query?.sinceVer === 'string' ? req.query.sinceVer.trim() : '';
     const verKey = `chat:inbox_ver:${userId}`;
-    const currentVer = (await redis.get(verKey).catch(() => null)) || '0';
+    const currentVer = redisDegraded ? '0' : (await redis.get(verKey).catch(() => null)) || '0';
 
-    if (sinceVer && currentVer !== '0' && sinceVer === currentVer) {
+    if (!redisDegraded && sinceVer && currentVer !== '0' && sinceVer === currentVer) {
       return res.json({ ok: true, unchanged: true, ver: currentVer });
     }
 
@@ -129,16 +130,29 @@ export async function getPersonalChatInboxSummary(req, res, next) {
         return true;
       });
 
-    // Complementary Fallback: If Redis unread or event notifications were empty (cold lambda or Redis fallback),
-    // hydrate canonical unread counters & notifications directly from PostgreSQL
-    if (Object.keys(peers).length === 0 || eventNotifications.length === 0) {
+    // Always hydrate shared PostgreSQL Canonical Store when Redis is degraded or empty across cold serverless lambdas
+    if (redisDegraded || Object.keys(peers).length === 0 || eventNotifications.length === 0) {
       const canonical = await getCanonicalInboxSummary(userId);
-      if (Object.keys(peers).length === 0 && Object.keys(canonical.peers).length > 0) {
-        Object.assign(peers, canonical.peers);
+      if (redisDegraded) {
+        // Canonical Postgres is authoritative when Redis is in per-lambda memory fallback
+        for (const k of Object.keys(peers)) delete peers[k];
+        for (const [peerId, info] of Object.entries(canonical.peers || {})) {
+          if (!blockedSet.has(String(peerId))) {
+            peers[peerId] = info;
+          }
+        }
+      } else if (Object.keys(peers).length === 0 && Object.keys(canonical.peers).length > 0) {
+        for (const [peerId, info] of Object.entries(canonical.peers)) {
+          if (!blockedSet.has(String(peerId))) {
+            peers[peerId] = info;
+          }
+        }
       }
-      if (eventNotifications.length === 0 && Array.isArray(canonical.rawEventNotifs) && canonical.rawEventNotifs.length > 0) {
+      if ((redisDegraded || eventNotifications.length === 0) && Array.isArray(canonical.rawEventNotifs) && canonical.rawEventNotifs.length > 0) {
+        const seenIds = new Set(eventNotifications.map((n) => n?.id).filter(Boolean));
         const canonicalFiltered = canonical.rawEventNotifs.filter((notif) => {
           if (!notif) return false;
+          if (notif.id && seenIds.has(notif.id)) return false;
           const senderId = notif.user?.id || notif.userId || notif.payload?.userId || notif.senderId;
           if (senderId && blockedSet.has(String(senderId))) return false;
           return true;

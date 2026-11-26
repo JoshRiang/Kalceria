@@ -3,7 +3,7 @@
  * Zero framework/alias dependencies so it runs natively in both Next.js and Node --test.
  */
 
-export const MAX_MEDIA_UPLOAD_BYTES = 4.5 * 1024 * 1024;
+export const MAX_MEDIA_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 export const ALLOWED_MEDIA_EXTENSIONS = [
   "png",
@@ -45,7 +45,7 @@ export function validateMediaUploadFile(file) {
   if (typeof file.size === "number" && file.size > MAX_MEDIA_UPLOAD_BYTES) {
     return {
       valid: false,
-      error: "Ukuran file melebihi batas 4.5 MB. Maksimal ukuran file adalah 4.5 MB.",
+      error: "Ukuran file melebihi batas 10 MB. Maksimal ukuran file adalah 10 MB.",
     };
   }
 
@@ -153,7 +153,7 @@ export function normalizeUploadErrorMessage(
 ) {
   const status = err?.response?.status || err?.status;
   if (status === 413) {
-    return "Ukuran file melebihi batas 4.5 MB. Mohon gunakan file dengan ukuran lebih kecil.";
+    return "Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil.";
   }
 
   const raw = String(err?.response?.data?.error || err?.message || "").trim();

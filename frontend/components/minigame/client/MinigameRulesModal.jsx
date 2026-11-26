@@ -81,16 +81,15 @@ export function MinigameRulesModal({ showInfo, onClose }) {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  background: "linear-gradient(90deg, #124cc6 0%, #c98a0a 100%)",
-                }}
-                className="mt-8 w-full py-3.5 rounded-lg font-sans font-black uppercase text-xs tracking-widest text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#124cc6]/60 transition-opacity duration-150 cursor-pointer shadow-[0_8px_24px_rgba(18,76,198,0.22)]"
-              >
-                Understood
-              </button>
+              <div className="mt-8 flex justify-center">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-9 py-2.5 rounded-lg bg-[#0a0c12] hover:bg-[#1a1f2e] text-white font-sans font-black uppercase text-xs tracking-widest border border-black shadow-[0_8px_22px_rgba(0,0,0,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/50 transition-colors duration-150 cursor-pointer"
+                >
+                  Understood
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>

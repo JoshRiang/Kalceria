@@ -11,8 +11,10 @@ import {
   MINIGAME_ELEMENT_IDS,
   MINIGAME_ELEMENTS,
   MINIGAME_TRAILER_CHARACTERS,
+  JOURNEY_INTRO_VIDEOS,
   JOURNEY_SEGMENT_BG_THEMES,
   getMinigameBaseBgUrls,
+  getJourneyIntroVideoUrl,
   getJourneySegmentBgUrls,
 } from '../lib/pageBgAssets.js';
 import { MINIGAME_DOT_CONTOURS } from '../lib/minigameDotContours.js';
@@ -132,9 +134,18 @@ test('V6.0 Minigame micro-dots are dense (>=90) & 50% smaller (r<=3), with ZERO 
       `Minigame elements/dots overlapped on ${label} (${vw}x${vh}): ${JSON.stringify(slots)}`
     );
     const graph = buildHermesWireGraph(slots, vw, vh);
-    assert.ok(graph.wires.length >= 10, `${label} must unite elements with 5 dual-stroke Hermes wire segments`);
+    assert.equal(graph.wires.length, 10, `${label} must unite elements with 2 continuous closed rails across 5 segments`);
+    assert.equal(graph.junctions.length, 0, `${label} must have ZERO endpoint junction dots`);
     const segs = new Set(graph.wires.map((w) => w.segment));
     assert.deepEqual([...segs].sort((a, b) => a - b), [1, 2, 3, 4, 5], `${label} must contain all 5 sequential segments 1..5`);
+    // Verify closed-loop continuity: segment 5 ends at exact Point A where segment 1 starts on both rails
+    for (const suffix of ['-main', '-echo']) {
+      const seg1 = graph.wires.find((w) => w.segment === 1 && w.id.endsWith(suffix));
+      const seg5 = graph.wires.find((w) => w.segment === 5 && w.id.endsWith(suffix));
+      const startPt = seg1.d.match(/^M\s+([-\d.]+\s+[-\d.]+)/)?.[1];
+      const endPt = seg5.d.match(/([-\d.]+\s+[-\d.]+)$/)?.[1];
+      assert.equal(endPt, startPt, `${label} (${suffix}) closed loop must return cleanly to Point A (${startPt} vs ${endPt})`);
+    }
     const mainDelays = [1, 2, 3, 4, 5].map(
       (s) => graph.wires.find((w) => w.segment === s && w.id.endsWith('-main')).delay
     );
@@ -169,10 +180,13 @@ test('MinigameClient uses black no-glow bevel UI, borderless Attempt/Due/THE EVE
   assert.equal(clientSrc.includes('<FlipGame'), true);
   assert.equal(clientSrc.includes('handlePlayIt'), true);
 
-  // Progressive circular draw-in micro-dots + Light-only sequential 5-segment Hermes wire layer
+  // Optimized single-path progressive micro-dots + pure CSS Light-only 5-segment closed Hermes wire layer (zero endpoint dots)
   assert.equal(backdropSrc.includes('kalceriaDotDrawIn'), true, 'Dots must animate progressively (. .. ... -> closed)');
+  assert.equal(backdropSrc.includes('buildContourPathData'), true, 'Micro-dot rings must use optimized single-path contour rendering');
+  assert.equal(backdropSrc.includes('darkLayerReady'), true, 'Dark layer must idle-defer so initial Light intro paint is fast');
   assert.equal(backdropSrc.includes('buildHermesWireGraph'), true, 'Must render united Hermes connecting wires');
   assert.equal(backdropSrc.includes('data-wire-segment'), true, 'Hermes wires must tag segments 1..5');
+  assert.equal(backdropSrc.includes('graph.junctions'), false, 'Endpoint junction dots must be completely removed');
   assert.equal(backdropSrc.includes('isLight ?'), true, 'Sequential wire animation must be scoped to Light layer');
   assert.equal(backdropSrc.includes('prefers-reduced-motion'), true);
 
@@ -185,7 +199,7 @@ test('MinigameClient uses black no-glow bevel UI, borderless Attempt/Due/THE EVE
   );
   assert.equal(flipSrc.includes('bg-black/80'), false, 'Opaque bg-black/80 exit wall must be removed from FlipGame so Light fade is graceful');
 
-  // Rules modal Light Blue-Gold gradient (zero indigo/purple)
+  // Rules modal Light Blue-Gold card gradient + compact centered black Understood button with white text
   const rulesSrc = fs.readFileSync(
     path.join(FE_ROOT, 'components/minigame/client/MinigameRulesModal.jsx'),
     'utf8'
@@ -194,6 +208,10 @@ test('MinigameClient uses black no-glow bevel UI, borderless Attempt/Due/THE EVE
   assert.equal(rulesSrc.includes('#124cc6'), true, 'Rules modal must use Royal Cobalt Blue accent');
   assert.equal(rulesSrc.includes('#d6920c'), true, 'Rules modal must use Luminous Gold accent');
   assert.equal(/indigo-|purple-/.test(rulesSrc), false, 'Rules modal must not contain random purple/indigo gradients');
+  assert.equal(rulesSrc.includes('flex justify-center'), true, 'Understood button must be centered');
+  assert.equal(rulesSrc.includes('bg-[#0a0c12]'), true, 'Understood button must have solid black outer box');
+  assert.equal(rulesSrc.includes('text-white'), true, 'Understood button must have white text');
+  assert.equal(rulesSrc.includes('mt-8 w-full'), false, 'Understood button must be compact (not full-width)');
 
   // Event trailer modal: 4 corner faces purged, 2 peeking bottom slide-up characters gazing opposite directions
   assert.equal(trailerSrc.includes('/ge_1.webp'), false, 'Legacy corner face ge_1 must be purged from trailer');
@@ -217,6 +235,13 @@ test('JourneyPageClient applies 4-family responsive backdrops to top 3 segments 
   assert.equal(pageSrc.includes('segmentIndex={3}'), true);
   assert.equal(pageSrc.includes('segmentIndex={4}'), false);
   assert.equal(pageSrc.includes('<JourneySection4 isMobile={isMobile} />'), true);
+  assert.equal(pageSrc.includes('getJourneyIntroVideoUrl'), true, 'Journey intro must select orientation-appropriate B&W HD car trip video');
+  assert.equal(JOURNEY_INTRO_VIDEOS.desktop.endsWith('journey-intro-desktop-bw.mp4'), true);
+  assert.equal(JOURNEY_INTRO_VIDEOS.portrait.endsWith('journey-intro-portrait-bw.mp4'), true);
+  assert.equal(getJourneyIntroVideoUrl('desktop'), JOURNEY_INTRO_VIDEOS.desktop);
+  assert.equal(getJourneyIntroVideoUrl('half'), JOURNEY_INTRO_VIDEOS.desktop);
+  assert.equal(getJourneyIntroVideoUrl('mobile'), JOURNEY_INTRO_VIDEOS.portrait);
+  assert.equal(getJourneyIntroVideoUrl('tablet'), JOURNEY_INTRO_VIDEOS.portrait);
 
   const backdropSrc = fs.readFileSync(
     path.join(FE_ROOT, 'components/journey/JourneySegmentBackdrop.jsx'),

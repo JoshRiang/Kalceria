@@ -1,8 +1,13 @@
 import { redis } from '../../lib/redis.js';
-import { isUserBlockedCanonical } from '../../services/canonicalFallbackStore.js';
+import {
+  isUserBlockedCanonical,
+  storeCanonicalChatRtcSignal,
+  fetchCanonicalChatRtcSignals,
+} from '../../services/canonicalFallbackStore.js';
 import {
   CHAT_RTC_TTL_SECONDS,
   sanitizeTargetId,
+  getConversationHash,
   getChatRtcSignalKey,
   unwrapPipeResult,
 } from './chatConstants.js';
@@ -22,15 +27,17 @@ export async function sendChatRtcSignal(req, res, next) {
       return res.status(400).json({ error: 'Invalid chat RTC signal.' });
     }
 
+    const convHash = getConversationHash(userId, targetId);
     const rtcKey = getChatRtcSignalKey(targetId, userId);
-    const packet = JSON.stringify({
+    const packetObj = {
       fromUserId: String(userId),
       toUserId: String(targetId),
       sessionId: typeof sessionId === 'string' ? sessionId.slice(0, 48) : null,
       signalType,
       payload: rawSignalPayload,
       ts: Date.now(),
-    });
+    };
+    const packet = JSON.stringify(packetObj);
 
     const pipe = redis.pipeline();
     pipe.sismember(`blocked:${userId}`, targetId);
@@ -57,7 +64,10 @@ export async function sendChatRtcSignal(req, res, next) {
     writePipe.lpush(rtcKey, packet);
     writePipe.ltrim(rtcKey, 0, 39);
     writePipe.expire(rtcKey, CHAT_RTC_TTL_SECONDS);
-    await writePipe.exec().catch(() => {});
+    await Promise.allSettled([
+      writePipe.exec(),
+      storeCanonicalChatRtcSignal(convHash, packetObj),
+    ]);
 
     res.json({ ok: true });
   } catch (err) {
@@ -79,14 +89,16 @@ export async function getChatRtcSignals(req, res, next) {
       return res.json({ ok: true, signals: [] });
     }
 
+    const convHash = getConversationHash(userId, targetId);
     const rtcKey = getChatRtcSignalKey(userId, targetId);
+    const redisDegraded = Boolean(redis.isDegraded || redis.isQuotaExceeded);
     const pipe = redis.pipeline();
     pipe.lrange(rtcKey, 0, -1);
     pipe.del(rtcKey);
     const pipeRes = await pipe.exec().catch(() => null);
     const rawList = unwrapPipeResult(pipeRes?.[0], []);
 
-    const signals = (Array.isArray(rawList) ? rawList : [])
+    let signals = (Array.isArray(rawList) ? rawList : [])
       .map((item) => {
         try {
           return typeof item === 'string' ? JSON.parse(item) : item;
@@ -96,6 +108,23 @@ export async function getChatRtcSignals(req, res, next) {
       })
       .filter(Boolean)
       .reverse();
+
+    if (redisDegraded || signals.length === 0) {
+      const canonical = await fetchCanonicalChatRtcSignals(userId, targetId, convHash);
+      if (canonical.length > 0) {
+        const seen = new Set(
+          signals.map((s) => `${s.signalType}:${s.ts}:${s.sessionId || ''}:${String(s.payload || '').slice(0, 24)}`)
+        );
+        for (const c of canonical) {
+          const k = `${c.signalType}:${c.ts}:${c.sessionId || ''}:${String(c.payload || '').slice(0, 24)}`;
+          if (!seen.has(k)) {
+            seen.add(k);
+            signals.push(c);
+          }
+        }
+        signals.sort((a, b) => Number(a.ts || 0) - Number(b.ts || 0));
+      }
+    }
 
     res.json({ ok: true, signals });
   } catch (err) {

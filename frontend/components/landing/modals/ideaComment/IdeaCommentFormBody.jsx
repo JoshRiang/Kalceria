@@ -214,63 +214,20 @@ export function IdeaCommentFormBody({
           isUploading={isUploadingMedia}
           error={mediaError}
           onFilesSelected={handleMediaFiles}
-          promptText="Drag & drop or choose photo / video (max 4.5 MB)"
+          items={parsedUrls.map((url, idx) => ({
+            key: `${idx}-${url.slice(0, 32)}`,
+            url,
+            isVideo: isVideoMediaUrl
+              ? isVideoMediaUrl(url)
+              : /\.(mp4|webm|mov|m4v|3gp)($|\?)/i.test(url) || /^data:video/i.test(url),
+            label: getDisplayFilename ? getDisplayFilename(url) : `Media ${idx + 1}`,
+          }))}
+          selectedIdx={activeIdx}
+          onSelectItem={setSelectedIdx}
+          onRemoveItem={handleRemoveMedia}
+          mediaTypeLabel="Photo/Video"
+          maxSizeLabel="Max 10 MB"
         />
-
-        {/* Media Thumbnails (Zero outer box, matching Event Card real appearance) */}
-        {parsedUrls.length > 0 && (
-          <div className="flex items-center gap-2.5 overflow-x-auto py-1.5 px-0.5 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20">
-            {parsedUrls.map((url, idx) => {
-              const isVideo = isVideoMediaUrl
-                ? isVideoMediaUrl(url)
-                : /\.(mp4|webm|mov|m4v|3gp)($|\?)/i.test(url) || /^data:video/i.test(url);
-              const isSelected = idx === activeIdx;
-              const displayName = getDisplayFilename ? getDisplayFilename(url) : `Media ${idx + 1}`;
-              return (
-                <div
-                  key={`${idx}-${url.slice(0, 32)}`}
-                  onClick={() => setSelectedIdx && setSelectedIdx(idx)}
-                  title={`Pilih media: ${displayName}`}
-                  className={`relative w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-xl overflow-hidden shadow-sm transition-colors duration-150 cursor-pointer ${
-                    isSelected
-                      ? "ring-2 ring-white ring-offset-2 ring-offset-black/80 shadow-white/10 shadow-lg z-10 opacity-100"
-                      : "opacity-75 hover:opacity-100 border border-white/20"
-                  }`}
-                >
-                  {isVideo ? (
-                    <video
-                      src={url}
-                      muted
-                      autoPlay
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover pointer-events-none"
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={url}
-                      alt={displayName}
-                      className="w-full h-full object-cover pointer-events-none"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveMedia(idx);
-                    }}
-                    aria-label={`Remove ${displayName}`}
-                    title="Remove this media"
-                    className="absolute top-1 right-1 z-20 w-5 h-5 rounded-full bg-white text-black shadow-md flex items-center justify-center text-xs font-bold hover:bg-neutral-200 transition-colors cursor-pointer border border-black/15 leading-none"
-                  >
-                    ×
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* Submit Action Button (Clean Unboxed Action Button) */}

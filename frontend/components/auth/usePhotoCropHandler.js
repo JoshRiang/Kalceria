@@ -29,8 +29,8 @@ export function usePhotoCropHandler() {
       e.target.value = "";
       return;
     }
-    if (file.size > 4.5 * 1024 * 1024) {
-      setPhotoError("Ukuran file melebihi batas 4.5 MB");
+    if (file.size > 10 * 1024 * 1024) {
+      setPhotoError("Ukuran file melebihi batas 10 MB");
       e.target.value = "";
       return;
     }

@@ -100,7 +100,19 @@ export async function sendCallSignal(req, res, next) {
     if (!isTargetBlockedByCaller) {
       isTargetBlockedByCaller = await isUserBlockedCanonical(userId, targetId);
     }
-    const existingTargetLock = checkLockNeeded ? unwrapPipeResult(preRes?.[3], null) : null;
+    const redisDegraded = Boolean(redis.isDegraded || redis.isQuotaExceeded);
+    let existingTargetLock = checkLockNeeded ? unwrapPipeResult(preRes?.[3], null) : null;
+    if (checkLockNeeded && !existingTargetLock && redisDegraded) {
+      const canonicalLock = await getCanonicalCallLock(targetId);
+      if (canonicalLock) {
+        existingTargetLock = JSON.stringify({
+          callId: canonicalLock.callId,
+          callerId: canonicalLock.callerId,
+          calleeId: canonicalLock.calleeId,
+          mode: canonicalLock.mode,
+        });
+      }
+    }
 
     if (nonceReply !== 'OK') {
       return res.status(409).json({ error: 'Duplicate call signal nonce rejected.' });
@@ -248,12 +260,26 @@ export async function getCallSignals(req, res, next) {
       .filter(Boolean)
       .reverse();
 
-    // Complementary Fallback: If Redis returned empty signals (e.g. across cold serverless instances),
-    // fetch unexpired signals from the shared PostgreSQL Canonical Store
-    if (signals.length === 0) {
+    // Always read & merge shared PostgreSQL Canonical Store when Redis is degraded or empty across cold serverless lambdas
+    const redisDegraded = Boolean(redis.isDegraded || redis.isQuotaExceeded);
+    if (redisDegraded || signals.length === 0) {
       const canonicalSignals = await fetchCanonicalCallSignals(userId, { clear: shouldClear });
       if (canonicalSignals.length > 0) {
-        signals = canonicalSignals;
+        if (signals.length === 0) {
+          signals = canonicalSignals;
+        } else {
+          const seen = new Set(
+            signals.map((s) => `${s.callId || ''}:${s.signalType || ''}:${s.ts || 0}:${s.fromUserId || ''}`)
+          );
+          for (const cs of canonicalSignals) {
+            const key = `${cs.callId || ''}:${cs.signalType || ''}:${cs.ts || 0}:${cs.fromUserId || ''}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              signals.push(cs);
+            }
+          }
+          signals.sort((a, b) => Number(a.ts || 0) - Number(b.ts || 0));
+        }
       }
     }
 
