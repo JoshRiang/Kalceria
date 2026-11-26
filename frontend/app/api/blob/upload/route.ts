@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
       if (chunkBuf.byteLength === 0 || chunkBuf.byteLength > MAX_CHUNK_BYTES) {
         return NextResponse.json({ error: "Chunk size out of bounds." }, { status: 413 });
       }
-      const partKey = `_tmp-uploads/${uploadId}/part-${chunkIndex}`;
+      const partKey = `event-clips/chunks/${uploadId}/part-${chunkIndex}`;
       await putR2Object({
         key: partKey,
         body: chunkBuf,
@@ -271,7 +271,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const partKeys = Array.from({ length: totalChunks }, (_, idx) => `_tmp-uploads/${uploadId}/part-${idx}`);
+      const partKeys = Array.from({ length: totalChunks }, (_, idx) => `event-clips/chunks/${uploadId}/part-${idx}`);
       try {
         const partBuffers = await Promise.all(partKeys.map((k) => getR2ObjectBuffer(k, 25_000)));
         const assembled = Buffer.concat(partBuffers);

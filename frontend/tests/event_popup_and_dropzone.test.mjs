@@ -112,8 +112,10 @@ test("Live Media Feed & Comment Form use ONE unified dashed MediaDropzoneBox wit
   assert.ok(commentBodySrc.includes("MediaDropzoneBox"), "IdeaCommentFormBody must render MediaDropzoneBox");
   assert.ok(!commentBodySrc.includes("Upload media atau tempel link"), "Old text link box must be removed from IdeaCommentFormBody");
 
-  // 10 MB direct & chunked R2 support across upload route, EditProfile, and client validator
+  // 10 MB direct & chunked R2 support across upload route (whitelisted event-clips/chunks/ prefix), EditProfile, and client validator
   assert.ok(uploadRouteSrc.includes("chunkAction"), "Upload route must support stateless chunked R2 upload up to 10 MB");
+  assert.ok(uploadRouteSrc.includes("event-clips/chunks/"), "Chunked uploads must stage under whitelisted event-clips/chunks/ R2 prefix");
+  assert.ok(!uploadRouteSrc.includes("_tmp-uploads/"), "Chunked uploads must NOT use unwhitelisted _tmp-uploads/ prefix");
   assert.ok(editProfileSrc.includes("10 * 1024 * 1024"), "EditProfileModal cover & avatar must allow up to 10 MB");
 
   const valid8Mb = validateMediaUploadFile({

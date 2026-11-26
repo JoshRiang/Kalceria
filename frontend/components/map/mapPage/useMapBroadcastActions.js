@@ -106,10 +106,11 @@ export function useMapBroadcastActions({
   const handleOpenEditBroadcast = useCallback(
     (userId) => {
       if (isSelfOffline) return;
+      const b = currentUser?.broadcast;
       const currentMsg =
-        typeof currentUser?.broadcast === "string"
-          ? currentUser.broadcast
-          : currentUser?.broadcast?.message || "";
+        typeof b === "string"
+          ? b
+          : b?.rawMessage || (b?.mediaUrl ? `[MEDIA:${b.mediaUrl}] ${b?.message || ""}`.trim() : b?.message || "");
       setStatusText(currentMsg);
       setIsEditingBroadcast(true);
       setShowStatusModal(true);

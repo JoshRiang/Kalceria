@@ -20,6 +20,7 @@ export function BroadcastMediaSection({
 }) {
   const fileInputRef = useRef(null);
   const fileNamesRef = useRef({});
+  const videoUrlsRef = useRef(new Set());
   const uploadGenRef = useRef(0);
   const latestMediaUrlRef = useRef(mediaUrl || "");
   latestMediaUrlRef.current = mediaUrl || "";
@@ -57,6 +58,7 @@ export function BroadcastMediaSection({
     // Instant 0ms latency local preview
     const instantObjUrl = URL.createObjectURL(file);
     fileNamesRef.current[instantObjUrl] = file.name;
+    if (validation.isVideo) videoUrlsRef.current.add(instantObjUrl);
     setMediaUrl(instantObjUrl);
 
     setIsUploadingMedia(true);
@@ -66,16 +68,22 @@ export function BroadcastMediaSection({
       const res = await uploadBlobMedia(file, { purpose: "event-clip" });
       if (gen !== uploadGenRef.current) {
         try { URL.revokeObjectURL(instantObjUrl); } catch {}
+        videoUrlsRef.current.delete(instantObjUrl);
         return;
       }
       if (!res?.url) throw new Error("Upload gagal mengembalikan URL media.");
       try { URL.revokeObjectURL(instantObjUrl); } catch {}
       delete fileNamesRef.current[instantObjUrl];
       fileNamesRef.current[res.url] = file.name;
+      if (validation.isVideo) {
+        videoUrlsRef.current.delete(instantObjUrl);
+        videoUrlsRef.current.add(res.url);
+      }
       setMediaUrl(res.url);
     } catch (err) {
       try { URL.revokeObjectURL(instantObjUrl); } catch {}
       delete fileNamesRef.current[instantObjUrl];
+      videoUrlsRef.current.delete(instantObjUrl);
       if (gen !== uploadGenRef.current) return;
 
       setMediaUrl("");
@@ -94,6 +102,7 @@ export function BroadcastMediaSection({
       try { URL.revokeObjectURL(mediaUrl); } catch {}
     }
     delete fileNamesRef.current[mediaUrl];
+    videoUrlsRef.current.delete(mediaUrl);
     setMediaUrl("");
     setIsUploadingMedia(false);
     setUploadError("");
@@ -101,7 +110,7 @@ export function BroadcastMediaSection({
 
   const hasMedia = Boolean(mediaUrl && mediaUrl.trim());
   const displayFilename = hasMedia ? formatMediaDisplayName(mediaUrl, fileNamesRef.current) : "";
-  const isVideo = hasMedia && inferIsVideoMediaUrl(mediaUrl);
+  const isVideo = hasMedia && (videoUrlsRef.current.has(mediaUrl) || inferIsVideoMediaUrl(mediaUrl));
 
   return (
     <div className="flex flex-col gap-1.5 sm:gap-2">
