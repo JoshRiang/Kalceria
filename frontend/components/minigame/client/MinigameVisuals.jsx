@@ -80,7 +80,11 @@ export function ResetTimer() {
   const h = String(Math.floor(secs / 3600)).padStart(2, "0");
   const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
   const s = String(secs % 60).padStart(2, "0");
-  return <span className="text-white font-sans tracking-tighter underline underline-offset-4 decoration-white/20">{h}h {m}m {s}s</span>;
+  return (
+    <span className="text-[#0a0c12] font-sans font-semibold tracking-tighter underline underline-offset-4 decoration-black/25">
+      {h}h {m}m {s}s
+    </span>
+  );
 }
 
 export function DueTimer({ regEndTime, onExpire }) {
@@ -136,7 +140,7 @@ export function DueTimer({ regEndTime, onExpire }) {
 
   return (
     <span
-      className="text-[#ff0000] font-sans tracking-tighter underline underline-offset-4 decoration-[#ff0000]/30 select-none"
+      className="text-[#0a0c12] font-sans font-semibold tracking-tighter underline underline-offset-4 decoration-black/25 select-none"
       style={{ textShadow: "none", filter: "none" }}
     >
       {formatted}

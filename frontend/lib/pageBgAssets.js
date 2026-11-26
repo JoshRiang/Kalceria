@@ -1,26 +1,29 @@
 /**
- * Pure Page Background Asset Registry (V5.8) for Minigame & SeeJourney (Top 3 Segments).
- * Served globally from Cloudflare R2 Edge CDN (`https://cdn.kalceria.id/media/page-bg/v58/...`)
- * with automatic local fallback (`/BG_IMPROVE_FOR_MAP/v58/...`).
- *
- * Supports ALL 4 device families:
- * - desktop (1920x1080 widescreen)
- * - half    (1600x1100 landscape tablet / half-desktop)
- * - tablet  (1200x1500 portrait tablet / iPad / Fold)
- * - mobile  (1080x1920 portrait phone)
- *
+ * Pure Page Background Asset Registry for SeeJourney (V5.8) & Minigame (V6.0).
+ * Served globally from Cloudflare R2 Edge CDN with automatic local fallbacks.
  * Zero React/DOM/alias dependencies so it executes natively in both Next.js and Node --test.
  */
 
 export const PAGE_BG_CDN_BASE = "https://cdn.kalceria.id/media/page-bg/v58";
 export const PAGE_BG_LOCAL_BASE = "/BG_IMPROVE_FOR_MAP/v58";
 
-function makeBasePair(desktopFile, portraitFile) {
+export const MINIGAME_V60_CDN_BASE = "https://cdn.kalceria.id/media/page-bg/v60";
+export const MINIGAME_V60_LOCAL_BASE = "/BG_IMPROVE_FOR_MAP/v60";
+
+function makeMinigameBaseSet(modeTag) {
+  const fDesk = `BG_Minigame_Base_Desktop_${modeTag}.webp`;
+  const fHalf = `BG_Minigame_Base_Half_${modeTag}.webp`;
+  const fTab = `BG_Minigame_Base_Tablet_${modeTag}.webp`;
+  const fMob = `BG_Minigame_Base_Mobile_${modeTag}.webp`;
   return {
-    desktop: `${PAGE_BG_CDN_BASE}/${desktopFile}`,
-    mobile: `${PAGE_BG_CDN_BASE}/${portraitFile}`,
-    localDesktop: `${PAGE_BG_LOCAL_BASE}/${desktopFile}`,
-    localMobile: `${PAGE_BG_LOCAL_BASE}/${portraitFile}`,
+    desktop: `${MINIGAME_V60_CDN_BASE}/${fDesk}`,
+    half: `${MINIGAME_V60_CDN_BASE}/${fHalf}`,
+    tablet: `${MINIGAME_V60_CDN_BASE}/${fTab}`,
+    mobile: `${MINIGAME_V60_CDN_BASE}/${fMob}`,
+    localDesktop: `${MINIGAME_V60_LOCAL_BASE}/${fDesk}`,
+    localHalf: `${MINIGAME_V60_LOCAL_BASE}/${fHalf}`,
+    localTablet: `${MINIGAME_V60_LOCAL_BASE}/${fTab}`,
+    localMobile: `${MINIGAME_V60_LOCAL_BASE}/${fMob}`,
   };
 }
 
@@ -46,18 +49,18 @@ function makeElementPair(id) {
   const fDark = `MG_Elem_${id}_Dark.webp`;
   return {
     id,
-    light: `${PAGE_BG_CDN_BASE}/${fLight}`,
-    dark: `${PAGE_BG_CDN_BASE}/${fDark}`,
-    localLight: `${PAGE_BG_LOCAL_BASE}/${fLight}`,
-    localDark: `${PAGE_BG_LOCAL_BASE}/${fDark}`,
+    light: `${MINIGAME_V60_CDN_BASE}/${fLight}`,
+    dark: `${MINIGAME_V60_CDN_BASE}/${fDark}`,
+    localLight: `${MINIGAME_V60_LOCAL_BASE}/${fLight}`,
+    localDark: `${MINIGAME_V60_LOCAL_BASE}/${fDark}`,
   };
 }
 
 export const MINIGAME_BG_THEMES = {
-  // Light Idle Scheme: White base + Gold & Royal Cobalt Blue
-  light: makeBasePair("BG_Minigame_Base_Light.webp", "BG_Minigame_Base_Portrait_Light.webp"),
-  // Dark Playing Scheme: Black base + Neon Pink & Luminous Gold
-  dark: makeBasePair("BG_Minigame_Base_Dark.webp", "BG_Minigame_Base_Portrait_Dark.webp"),
+  // Light Idle Scheme: White base + Gold & Royal Cobalt Blue (4 device families)
+  light: makeMinigameBaseSet("Light"),
+  // Dark Playing Scheme: Black base + Neon Pink & Luminous Gold (4 device families)
+  dark: makeMinigameBaseSet("Dark"),
 };
 
 export const MINIGAME_ELEMENT_IDS = ["book", "compass", "lantern", "globe", "cards"];
@@ -68,6 +71,17 @@ export const MINIGAME_ELEMENTS = {
   lantern: makeElementPair("lantern"),
   globe: makeElementPair("globe"),
   cards: makeElementPair("cards"),
+};
+
+export const MINIGAME_TRAILER_CHARACTERS = {
+  left: {
+    cdn: `${MINIGAME_V60_CDN_BASE}/MG_Trailer_Peek_Left.webp`,
+    local: `${MINIGAME_V60_LOCAL_BASE}/MG_Trailer_Peek_Left.webp`,
+  },
+  right: {
+    cdn: `${MINIGAME_V60_CDN_BASE}/MG_Trailer_Peek_Right.webp`,
+    local: `${MINIGAME_V60_LOCAL_BASE}/MG_Trailer_Peek_Right.webp`,
+  },
 };
 
 export const JOURNEY_SEGMENT_BG_THEMES = {
@@ -95,10 +109,17 @@ const FAMILY_TO_LOCAL_KEY = {
   mobile: "localMobile",
 };
 
-/**
- * Resolves CDN + local fallback Light/Dark URLs for a Journey segment across all 4 device families.
- * Also preserves backwards compatibility if a boolean (`isMobileOrTablet`) is passed.
- */
+export function getMinigameBaseBgUrls(family = "desktop") {
+  const safeFamily = FAMILY_TO_LOCAL_KEY[family] ? family : "desktop";
+  const localKey = FAMILY_TO_LOCAL_KEY[safeFamily];
+  return {
+    light: MINIGAME_BG_THEMES.light[safeFamily],
+    dark: MINIGAME_BG_THEMES.dark[safeFamily],
+    localLight: MINIGAME_BG_THEMES.light[localKey],
+    localDark: MINIGAME_BG_THEMES.dark[localKey],
+  };
+}
+
 export function getJourneySegmentBgUrls(segmentIndex, familyOrMobile = "desktop") {
   const seg = JOURNEY_SEGMENT_BG_THEMES[segmentIndex];
   if (!seg) return { light: "", dark: "", localLight: "", localDark: "" };

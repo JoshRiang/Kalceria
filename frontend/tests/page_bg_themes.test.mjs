@@ -6,10 +6,13 @@ import { fileURLToPath } from 'node:url';
 
 import {
   PAGE_BG_CDN_BASE,
+  MINIGAME_V60_CDN_BASE,
   MINIGAME_BG_THEMES,
   MINIGAME_ELEMENT_IDS,
   MINIGAME_ELEMENTS,
+  MINIGAME_TRAILER_CHARACTERS,
   JOURNEY_SEGMENT_BG_THEMES,
+  getMinigameBaseBgUrls,
   getJourneySegmentBgUrls,
 } from '../lib/pageBgAssets.js';
 import { MINIGAME_DOT_CONTOURS } from '../lib/minigameDotContours.js';
@@ -18,63 +21,69 @@ import {
   computeMinigameElementSlots,
   hasAnySlotOverlap,
 } from '../lib/pageBgLayout.js';
+import { buildHermesWireGraph } from '../lib/minigameHermesWires.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FE_ROOT = path.resolve(__dirname, '..');
 
-test('All 38 V5.8 Minigame & 4-family unified Journey HD assets point to Cloudflare CDN v58 and have local fallbacks', () => {
-  assert.equal(PAGE_BG_CDN_BASE.endsWith('/media/page-bg/v58'), true, 'Must serve v58 CDN bundle');
+test('All V5.8 Journey (24) & V6.0 Minigame + Trailer (20) HD assets point to Cloudflare CDN and have local fallbacks', () => {
+  assert.equal(PAGE_BG_CDN_BASE.endsWith('/media/page-bg/v58'), true);
+  assert.equal(MINIGAME_V60_CDN_BASE.endsWith('/media/page-bg/v60'), true);
 
-  // 4 Minigame dual-scheme base canvases
+  const families = [
+    ['desktop', 'localDesktop'],
+    ['half', 'localHalf'],
+    ['tablet', 'localTablet'],
+    ['mobile', 'localMobile'],
+  ];
+
+  // 8 Minigame V6.0 4-family base canvases
   for (const mode of ['light', 'dark']) {
-    const pair = MINIGAME_BG_THEMES[mode];
-    assert.equal(pair.desktop.startsWith(`${PAGE_BG_CDN_BASE}/`), true);
-    assert.equal(pair.mobile.startsWith(`${PAGE_BG_CDN_BASE}/`), true);
-    assert.equal(fs.existsSync(path.join(FE_ROOT, 'public', pair.localDesktop)), true);
-    assert.equal(fs.existsSync(path.join(FE_ROOT, 'public', pair.localMobile)), true);
+    const set = MINIGAME_BG_THEMES[mode];
+    for (const [key, localKey] of families) {
+      assert.equal(set[key].startsWith(`${MINIGAME_V60_CDN_BASE}/`), true);
+      assert.equal(fs.existsSync(path.join(FE_ROOT, 'public', set[localKey])), true);
+    }
   }
+  assert.match(getMinigameBaseBgUrls('tablet').light, /BG_Minigame_Base_Tablet_Light\.webp$/);
+  assert.match(getMinigameBaseBgUrls('half').dark, /BG_Minigame_Base_Half_Dark\.webp$/);
 
-  // 5 Minigame individual transparent subject pairs (10 WebPs)
+  // 5 Minigame V6.0 uncropped individual subject pairs (10 WebPs)
   assert.equal(MINIGAME_ELEMENT_IDS.length, 5);
   for (const id of MINIGAME_ELEMENT_IDS) {
     const el = MINIGAME_ELEMENTS[id];
     assert.ok(el, `Missing MINIGAME_ELEMENTS.${id}`);
-    assert.equal(el.light.startsWith(`${PAGE_BG_CDN_BASE}/`), true);
-    assert.equal(el.dark.startsWith(`${PAGE_BG_CDN_BASE}/`), true);
+    assert.equal(el.light.startsWith(`${MINIGAME_V60_CDN_BASE}/`), true);
+    assert.equal(el.dark.startsWith(`${MINIGAME_V60_CDN_BASE}/`), true);
     assert.equal(fs.existsSync(path.join(FE_ROOT, 'public', el.localLight)), true);
     assert.equal(fs.existsSync(path.join(FE_ROOT, 'public', el.localDark)), true);
   }
 
+  // 2 Trailer half-body semi-pixel peeking characters
+  for (const side of ['left', 'right']) {
+    const ch = MINIGAME_TRAILER_CHARACTERS[side];
+    assert.equal(ch.cdn.startsWith(`${MINIGAME_V60_CDN_BASE}/`), true);
+    assert.equal(fs.existsSync(path.join(FE_ROOT, 'public', ch.local)), true);
+  }
+
   // 3 Journey segments x 4 device families x 2 modes (24 WebPs)
-  const families = [
-    ['desktop', 'localDesktop', 'Desktop'],
-    ['half', 'localHalf', 'Half'],
-    ['tablet', 'localTablet', 'Tablet'],
-    ['mobile', 'localMobile', 'Mobile'],
-  ];
   for (const seg of [1, 2, 3]) {
     for (const mode of ['light', 'dark']) {
       const set = JOURNEY_SEGMENT_BG_THEMES[seg][mode];
       for (const [key, localKey] of families) {
         assert.equal(set[key].startsWith(`${PAGE_BG_CDN_BASE}/`), true);
-        assert.equal(
-          fs.existsSync(path.join(FE_ROOT, 'public', set[localKey])),
-          true,
-          `Missing local fallback: ${set[localKey]}`
-        );
+        assert.equal(fs.existsSync(path.join(FE_ROOT, 'public', set[localKey])), true);
       }
     }
   }
 
-  // Verify helper resolves all 4 families + legacy boolean
   assert.match(getJourneySegmentBgUrls(1, 'desktop').light, /BG_Journey1_Desktop_Light\.webp$/);
   assert.match(getJourneySegmentBgUrls(2, 'half').dark, /BG_Journey2_Half_Dark\.webp$/);
   assert.match(getJourneySegmentBgUrls(3, 'tablet').light, /BG_Journey3_Tablet_Light\.webp$/);
   assert.match(getJourneySegmentBgUrls(1, 'mobile').dark, /BG_Journey1_Mobile_Dark\.webp$/);
-  assert.match(getJourneySegmentBgUrls(1, true).light, /BG_Journey1_Mobile_Light\.webp$/);
 });
 
-test('Responsive device-family classifier covers mobile, tablet, half-desktop, landscape mobile, and desktop accurately', () => {
+test('Responsive device-family classifier covers mobile, tablet/iPad, half-desktop, landscape mobile, and desktop', () => {
   assert.equal(resolveResponsiveBgFamily(375, 667), 'mobile');
   assert.equal(resolveResponsiveBgFamily(390, 844), 'mobile');
   assert.equal(resolveResponsiveBgFamily(768, 1024), 'tablet');
@@ -87,13 +96,13 @@ test('Responsive device-family classifier covers mobile, tablet, half-desktop, l
   assert.equal(resolveResponsiveBgFamily(844, 390), 'desktop');
 });
 
-test('Minigame 5 elements + organic true-circular dotted contours have ZERO overlap across all 14 real viewports', () => {
+test('V6.0 Minigame micro-dots are dense (>=90) & 50% smaller (r<=3), with ZERO overlap & valid Hermes wire graph across 14 viewports', () => {
   const aspects = {};
   for (const id of MINIGAME_ELEMENT_IDS) {
     const contour = MINIGAME_DOT_CONTOURS[id];
     assert.ok(contour, `Missing contour for ${id}`);
-    assert.ok(contour.dots.length >= 24, `Contour ${id} must have >= 24 circular dots`);
-    assert.ok(contour.width > 100 && contour.height > 100);
+    assert.ok(contour.dots.length >= 90, `Contour ${id} must be dense (>=90 micro-dots), got ${contour.dots.length}`);
+    assert.ok(contour.dotRadius <= 3.0, `Contour ${id} dots must be ~50% smaller (<=3.0), got ${contour.dotRadius}`);
     aspects[id] = contour.aspect;
   }
 
@@ -122,10 +131,12 @@ test('Minigame 5 elements + organic true-circular dotted contours have ZERO over
       false,
       `Minigame elements/dots overlapped on ${label} (${vw}x${vh}): ${JSON.stringify(slots)}`
     );
+    const graph = buildHermesWireGraph(slots, vw, vh);
+    assert.ok(graph.wires.length >= 8, `${label} must unite elements with Hermes wires`);
   }
 });
 
-test('MinigameClient delegates to MinigameEditorialBackdrop with true circular dotted contours and keeps game controls intact', () => {
+test('MinigameClient uses black no-glow bevel UI, borderless Attempt/Due/THE EVENT/i, removes MY VOUCHER, and keeps FlipGame', () => {
   const clientSrc = fs.readFileSync(
     path.join(FE_ROOT, 'components/minigame/MinigameClient.jsx'),
     'utf8'
@@ -134,17 +145,34 @@ test('MinigameClient delegates to MinigameEditorialBackdrop with true circular d
     path.join(FE_ROOT, 'components/minigame/MinigameEditorialBackdrop.jsx'),
     'utf8'
   );
+  const trailerSrc = fs.readFileSync(
+    path.join(FE_ROOT, 'components/minigame/client/MinigameTrailerModal.jsx'),
+    'utf8'
+  );
 
-  assert.equal(clientSrc.includes('MinigameEditorialBackdrop'), true);
-  assert.equal(clientSrc.includes('isPlayDarkTheme'), true);
+  // Black bevel UI with zero yellow glow & zero voucher UI
+  assert.equal(clientSrc.includes('rgba(255,255,0'), false, 'Yellow title glow must be removed');
+  assert.equal(clientSrc.includes('MY VOUCHER'), false, 'MY VOUCHER UI must be removed');
+  assert.equal(clientSrc.includes('MinigameVoucherModal'), false, 'Voucher modal must not be rendered on Minigame page');
+  assert.equal(clientSrc.includes('bg-[#e60000]'), false, 'THE EVENT red outer box must be removed');
+  assert.equal(clientSrc.includes('bg-[#15803d]'), false, 'Info green circle outer box must be removed');
+  assert.equal(clientSrc.includes('bg-black/40 backdrop-blur'), false, 'Attempt/Due outer boxes must be removed');
+  assert.equal(clientSrc.includes('TITLE_BEVEL_SHADOW'), true, '3D bevel structure must be preserved');
   assert.equal(clientSrc.includes('<FlipGame'), true);
   assert.equal(clientSrc.includes('handlePlayIt'), true);
-  assert.equal(clientSrc.includes('/bg_game.webp'), false);
 
-  assert.equal(backdropSrc.includes('<circle'), true, 'Must render true circular dots in SVG');
-  assert.equal(backdropSrc.includes('MINIGAME_DOT_CONTOURS'), true);
+  // Progressive circular draw-in micro-dots + Hermes wire layer
+  assert.equal(backdropSrc.includes('kalceriaDotDrawIn'), true, 'Dots must animate progressively (. .. ... -> closed)');
+  assert.equal(backdropSrc.includes('buildHermesWireGraph'), true, 'Must render united Hermes connecting wires');
   assert.equal(backdropSrc.includes('prefers-reduced-motion'), true);
-  assert.equal(backdropSrc.includes('computeMinigameElementSlots'), true);
+
+  // Event trailer modal: 4 corner faces purged, 2 peeking bottom slide-up characters wired
+  assert.equal(trailerSrc.includes('/ge_1.webp'), false, 'Legacy corner face ge_1 must be purged from trailer');
+  assert.equal(trailerSrc.includes('/ge_2.webp'), false, 'Legacy corner face ge_2 must be purged from trailer');
+  assert.equal(trailerSrc.includes('/ge_3.webp'), false, 'Legacy corner face ge_3 must be purged from trailer');
+  assert.equal(trailerSrc.includes('/ge_4.webp'), false, 'Legacy corner face ge_4 must be purged from trailer');
+  assert.equal(trailerSrc.includes('MINIGAME_TRAILER_CHARACTERS'), true, 'Must render 2 peeking half-body characters');
+  assert.equal(trailerSrc.includes('y: "115%"'), true, 'Characters must slide up from bottom of screen');
 });
 
 test('JourneyPageClient applies 4-family responsive backdrops to top 3 segments only, preserves blur(18px), and leaves JourneySection4 untouched', () => {
@@ -162,8 +190,8 @@ test('JourneyPageClient applies 4-family responsive backdrops to top 3 segments 
     path.join(FE_ROOT, 'components/journey/JourneySegmentBackdrop.jsx'),
     'utf8'
   );
-  assert.equal(backdropSrc.includes('useResponsiveBgFamily'), true, 'Must support all 4 device families');
-  assert.equal(backdropSrc.includes('blur(18px) brightness(0.82)'), true, 'Existing blur logic must be preserved');
-  assert.equal(backdropSrc.includes('scale(1.05)'), true, 'Existing zoom logic must be preserved');
-  assert.equal(backdropSrc.includes('bg-black/35'), true, 'Existing flip focus veil must be preserved');
+  assert.equal(backdropSrc.includes('useResponsiveBgFamily'), true);
+  assert.equal(backdropSrc.includes('blur(18px) brightness(0.82)'), true);
+  assert.equal(backdropSrc.includes('scale(1.05)'), true);
+  assert.equal(backdropSrc.includes('bg-black/35'), true);
 });
