@@ -61,6 +61,7 @@ export async function getMinigameTargetInfo(prismaClient = prisma) {
       regEndTime: null,
       secondsUntilDue: null,
       isWithin7Days: false,
+      isEventActive: false,
       dueStatus: 'NOT_STARTED',
     };
   }
@@ -72,6 +73,7 @@ export async function getMinigameTargetInfo(prismaClient = prisma) {
     regEndTime: activeTarget.regEndTime.toISOString(),
     secondsUntilDue: activeTarget.secondsUntilDue,
     isWithin7Days: activeTarget.isWithin7Days,
+    isEventActive: activeTarget.isWithin7Days,
     dueStatus: activeTarget.isWithin7Days ? 'COUNTDOWN' : 'NOT_STARTED',
   };
 }

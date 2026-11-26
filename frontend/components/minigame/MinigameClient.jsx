@@ -49,10 +49,10 @@ export default function MinigamePage() {
 
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
-  const isGameStarting = gamePhase === "starting" || gamePhase === "playing" || gamePhase === "ending";
+  const isGameStarting = gamePhase === "starting" || gamePhase === "playing";
   const isGameEnding = gamePhase === "ending" || gamePhase === "ending-quit";
-  const inGame = gamePhase === "playing" || gamePhase === "ending";
-  const showReset = gamePhase === "finished";
+  const inGame = gamePhase === "playing";
+  const showReset = gamePhase === "finished" || gamePhase === "ending";
 
   const SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60;
   const isTargetActive = Boolean(targetEvent?.hasTarget && targetEvent?.regEndTime);
@@ -117,7 +117,7 @@ export default function MinigamePage() {
 
     scheduleTimeout(() => {
       setGamePhase("finished");
-    }, 2800);
+    }, 2200);
   };
 
   const isPlayDarkTheme = isGameStarting && !isGameEnding;
@@ -153,55 +153,56 @@ export default function MinigamePage() {
 
       <MicroParticles active={isGameStarting} stopping={isGameEnding} />
 
-      {/* Main Content */}
+      {/* Main Content: Grouped cleanly in the open center stage so perimeter Hermes artifacts stay unobstructed */}
       <motion.div
         initial={{ opacity: 0.01, filter: "blur(28px) brightness(0.5)" }}
         animate={{ opacity: 1, filter: "blur(0px) brightness(1)", transition: { duration: 1.2, ease: [0.16, 1, 0.3, 1] } }}
-        className="relative w-full h-[100dvh] max-h-[100dvh] flex flex-col items-center overflow-hidden"
+        className="relative w-full h-[100dvh] max-h-[100dvh] flex flex-col items-center justify-center overflow-hidden"
       >
-        {/* Title: Crisp Black + 3D Bevel Structure, ZERO Glow */}
-        <motion.div
-          animate={{
-            opacity: isGameStarting ? 0 : 1,
-            filter: isGameStarting ? "blur(30px)" : "blur(0px)",
-            transition: { opacity: { duration: 1 }, filter: { duration: 1 } },
-          }}
-          className="relative z-20 mt-[3vh] xs:mt-[4vh] sm:mt-[10vh] text-center px-4"
-        >
-          <motion.h1
-            initial={{ y: -40, opacity: 0.01 }}
-            animate={{ y: [0, -8, 0], opacity: 1 }}
-            transition={{
-              y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-              opacity: { duration: 1.5, delay: 0.5, ease: "easeOut" },
+        <div className="relative z-20 flex flex-col items-center justify-center gap-4 sm:gap-7 px-4 -translate-y-[2.5vh] sm:-translate-y-[4vh] max-w-[92vw]">
+          {/* Title: Crisp Black + 3D Bevel Structure, ZERO Glow */}
+          <motion.div
+            animate={{
+              opacity: isGameStarting ? 0 : 1,
+              filter: isGameStarting ? "blur(28px)" : "blur(0px)",
+              transition: { opacity: { duration: 1.4, ease: "easeInOut" }, filter: { duration: 1.2, ease: "easeInOut" } },
             }}
-            className="font-black tracking-tighter text-[#0a0c12] font-rog leading-[0.92] sm:leading-none"
-            style={{ textShadow: TITLE_BEVEL_SHADOW }}
+            className="text-center"
           >
-            <span className="block sm:inline text-5xl xs:text-6xl sm:text-7xl md:text-[8rem] lg:text-[9rem]">
-              KALCER&apos;S
-            </span>
-            <span className="block sm:inline text-5xl xs:text-6xl sm:text-7xl md:text-[8rem] lg:text-[9rem] sm:ml-4">
-              GAME
-            </span>
-          </motion.h1>
+            <motion.h1
+              initial={{ y: -32, opacity: 0.01 }}
+              animate={{ y: [0, -7, 0], opacity: 1 }}
+              transition={{
+                y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                opacity: { duration: 1.5, delay: 0.5, ease: "easeOut" },
+              }}
+              className="font-black tracking-tighter text-[#0a0c12] font-rog leading-[0.92] sm:leading-none"
+              style={{ textShadow: TITLE_BEVEL_SHADOW }}
+            >
+              <span className="block sm:inline text-4xl xs:text-5xl sm:text-7xl md:text-[7.2rem] lg:text-[8.2rem]">
+                KALCER&apos;S
+              </span>
+              <span className="block sm:inline text-4xl xs:text-5xl sm:text-7xl md:text-[7.2rem] lg:text-[8.2rem] sm:ml-4">
+                GAME
+              </span>
+            </motion.h1>
 
-          {/* Decorative Cards Area */}
-          <div className="flex justify-center gap-2 sm:gap-4 mt-2 sm:mt-6 h-14 sm:h-20">
-            {[0, 1, 2, 3].map((i) => <DecorativeCard key={i} seed={i} />)}
-          </div>
-        </motion.div>
+            {/* Decorative Cards Area */}
+            <div className="flex justify-center gap-2 sm:gap-4 mt-2.5 sm:mt-5 h-14 sm:h-20">
+              {[0, 1, 2, 3].map((i) => <DecorativeCard key={i} seed={i} />)}
+            </div>
+          </motion.div>
 
-        {/* PLAY IT + Attempt / Reset / Due (All Black Text, No Outer Boxes, 3D Bevel on PLAY IT) */}
-        <motion.div
-          animate={{
-            opacity: isGameStarting ? 0 : 1,
-            filter: isGameStarting ? "blur(20px)" : "blur(0px)",
-            pointerEvents: isGameStarting ? "none" : "auto",
-            transition: { opacity: { duration: 0.8 } },
-          }}
-          className="relative z-20 flex flex-col sm:flex-row items-center gap-4 sm:gap-10 mt-[2vh] xs:mt-[3vh] sm:mt-[6vh]"
-        >
+          {/* PLAY IT + Attempt / Reset / Due (Centered together, All Black Text, No Outer Boxes) */}
+          <motion.div
+            animate={{
+              opacity: isGameStarting ? 0 : 1,
+              filter: isGameStarting ? "blur(20px)" : "blur(0px)",
+              pointerEvents: isGameStarting ? "none" : "auto",
+              transition: { opacity: { duration: 1.35, ease: "easeInOut" }, filter: { duration: 1.15, ease: "easeInOut" } },
+            }}
+            className="flex flex-col sm:flex-row items-center gap-3 sm:gap-10"
+          >
           <div className="relative group">
             <button
               type="button"
@@ -277,6 +278,7 @@ export default function MinigamePage() {
             </div>
           </div>
         </motion.div>
+        </div>
 
         {/* Bottom Right Actions: Borderless Black Text with 3D Bevel (Voucher UI removed; email-only) */}
         <motion.div

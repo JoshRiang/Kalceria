@@ -178,15 +178,15 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
         ms,
         seed
       }).catch(() => {});
-      const minDelay = new Promise(resolve => setTimeout(resolve, 1200));
+      const minDelay = new Promise(resolve => setTimeout(resolve, 900));
       await Promise.all([submitPromise, minDelay]);
       setSubmissionPhase("idle");
       setBlurOut(true);
-      scheduleTimeout(() => onFinish(), 1200);
+      scheduleTimeout(() => onFinish(), 850);
     } catch {
       setSubmissionPhase("idle");
       setBlurOut(true);
-      scheduleTimeout(() => onFinish(), 1200);
+      scheduleTimeout(() => onFinish(), 850);
     }
   };
 
@@ -194,41 +194,17 @@ export default function FlipGame({ seed, onQuit, onFinish }) {
     setShowSave(false);
     api.post("/minigame/score", { ms, seed, skipped: true }).catch(() => {});
     setBlurOut(true);
-    scheduleTimeout(() => onFinish(), 1200);
+    scheduleTimeout(() => onFinish(), 850);
   };
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
-      animate={{ opacity: blurOut ? 0 : 1, filter: blurOut ? "blur(40px)" : "blur(0px)" }}
-      transition={{ duration: 1.2, ease: "easeInOut" }}
+      animate={{ opacity: blurOut ? 0 : 1, filter: blurOut ? "blur(24px)" : "blur(0px)" }}
+      exit={{ opacity: 0, filter: "blur(24px)", transition: { duration: 0.7, ease: "easeInOut" } }}
+      transition={{ duration: 0.85, ease: "easeInOut" }}
       className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-transparent"
     >
-      {/* 3-Layer Sequential Blur Exit Overlay */}
-      <AnimatePresence>
-        {blurOut && (
-          <>
-            <motion.div
-              initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-              animate={{ opacity: 1, backdropFilter: "blur(15px)" }}
-              transition={{ duration: 0.6 }}
-              className="fixed inset-0 z-[5000] bg-black/30"
-            />
-            <motion.div
-              initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-              animate={{ opacity: 1, backdropFilter: "blur(30px)" }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="fixed inset-0 z-[5001] bg-black/50"
-            />
-            <motion.div
-              initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-              animate={{ opacity: 1, backdropFilter: "blur(60px)" }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="fixed inset-0 z-[5002] bg-black/80"
-            />
-          </>
-        )}
-      </AnimatePresence>
       {/* Back Button - Pure Icon Without Outer Box */}
       <button
         type="button"

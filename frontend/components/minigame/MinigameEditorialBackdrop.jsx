@@ -50,37 +50,62 @@ function HermesWireSvg({ graph, width, height, mode }) {
     >
       <defs>
         <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={isLight ? "rgba(18,76,198,0.34)" : "rgba(255,58,154,0.44)"} />
-          <stop offset="100%" stopColor={isLight ? "rgba(204,138,10,0.36)" : "rgba(255,214,64,0.44)"} />
+          <stop offset="0%" stopColor={isLight ? "rgba(18,76,198,0.36)" : "rgba(255,58,154,0.44)"} />
+          <stop offset="100%" stopColor={isLight ? "rgba(204,138,10,0.38)" : "rgba(255,214,64,0.44)"} />
         </linearGradient>
       </defs>
 
-      {graph.wires.map((w) => (
-        <motion.path
-          key={w.id}
-          d={w.d}
-          fill="none"
-          stroke={wireStrokeColor(mode, w.tone, gradId)}
-          strokeWidth={w.weight}
-          strokeLinecap="round"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 1.05, delay: w.delay, ease: [0.22, 1, 0.36, 1] }}
-        />
-      ))}
+      {/* Light mode animates sequentially segment-by-segment (1..5) during intro; Dark stays pre-drawn for smooth crossfade */}
+      {graph.wires.map((w) =>
+        isLight ? (
+          <motion.path
+            key={w.id}
+            data-wire-segment={w.segment}
+            d={w.d}
+            fill="none"
+            stroke={wireStrokeColor(mode, w.tone, gradId)}
+            strokeWidth={w.weight}
+            strokeLinecap="round"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{ duration: 0.44, delay: w.delay, ease: [0.22, 1, 0.36, 1] }}
+          />
+        ) : (
+          <path
+            key={w.id}
+            data-wire-segment={w.segment}
+            d={w.d}
+            fill="none"
+            stroke={wireStrokeColor(mode, w.tone, gradId)}
+            strokeWidth={w.weight}
+            strokeLinecap="round"
+          />
+        )
+      )}
 
-      {graph.junctions.map((pt, i) => (
-        <motion.circle
-          key={i}
-          cx={pt.x}
-          cy={pt.y}
-          r={pt.subtle ? 2 : 2.6}
-          fill={isLight ? (pt.tone === "B" ? "#cc8a0a" : "#124cc6") : (pt.tone === "B" ? "#ffd640" : "#ff3a9a")}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: pt.subtle ? 0.48 : 0.72, scale: 1 }}
-          transition={{ duration: 0.35, delay: pt.delay + 0.55 }}
-        />
-      ))}
+      {graph.junctions.map((pt, i) =>
+        isLight ? (
+          <motion.circle
+            key={i}
+            cx={pt.x}
+            cy={pt.y}
+            r={2.5}
+            fill={pt.tone === "B" ? "#cc8a0a" : "#124cc6"}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 0.78, scale: 1 }}
+            transition={{ duration: 0.28, delay: pt.delay }}
+          />
+        ) : (
+          <circle
+            key={i}
+            cx={pt.x}
+            cy={pt.y}
+            r={2.5}
+            fill={pt.tone === "B" ? "#ffd640" : "#ff3a9a"}
+            opacity={0.78}
+          />
+        )
+      )}
     </svg>
   );
 }

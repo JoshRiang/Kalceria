@@ -10,8 +10,15 @@ import {
   computeResponsiveIntroGrid,
   computeCoverCropRect,
   selectSessionIntroVideos,
+  assignUniqueNodeVideos,
+  swapNodeWithUnusedVideo,
 } from '../components/preloader/introVideoGridLayout.js';
 import { INTRO_TIMELINE } from '../components/preloader/introTimelineConfig.js';
+import {
+  ABOUT_VIDEOS,
+  assignDistinctAboutVideos,
+  pickNextDistinctAboutVideo,
+} from '../components/about/aboutVideoSelector.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FE_ROOT = path.resolve(__dirname, '..');
@@ -47,7 +54,10 @@ test('Responsive intro node grid stays lean (6-12 nodes) and avoids overly portr
   for (const vp of viewports) {
     const g = computeResponsiveIntroGrid(vp.w, vp.h);
     assert.ok(g.totalCells >= 6 && g.totalCells <= 12, `${vp.name}: totalCells=${g.totalCells} out of [6..12]`);
-    assert.ok(g.activeVideoCount >= 4 && g.activeVideoCount <= 8, `${vp.name}: decoders=${g.activeVideoCount}`);
+    assert.ok(
+      g.activeVideoCount >= g.totalCells && g.activeVideoCount <= 15,
+      `${vp.name}: activeVideoCount=${g.activeVideoCount} must cover all ${g.totalCells} nodes uniquely (<=15)`
+    );
     const cellAspect = (vp.w / g.cols) / (vp.h / g.rows);
     assert.ok(
       cellAspect >= 0.95,
@@ -117,5 +127,81 @@ test('IntroPreloader renders car collage on all devices, pre-warms HP K-silhouet
   assert.equal(INTRO_TIMELINE.desktop.laserStartMs, 9500);
   assert.equal(INTRO_TIMELINE.desktop.collageFadeDurationSec, 2.6);
   assert.equal(INTRO_TIMELINE.desktop.subtitleFadeDurationSec, 0.8);
+});
+
+test('Intro preloader assigns strictly unique videos per node across initial render, resize, and swaps (zero duplicate fallback)', () => {
+  let seed = 13;
+  const rng = () => {
+    seed = (seed * 48271) % 2147483647;
+    return seed / 2147483647;
+  };
+
+  for (const [w, h] of [[1920, 1080], [820, 900], [768, 1024], [390, 844], [844, 390]]) {
+    const g = computeResponsiveIntroGrid(w, h);
+    let assigned = assignUniqueNodeVideos(g.totalCells, g.activeVideoCount, rng);
+    assert.equal(assigned.length, g.totalCells);
+    assert.equal(new Set(assigned).size, g.totalCells, `${w}x${h}: initial assignments must have zero duplicates`);
+
+    for (let step = 0; step < 20; step++) {
+      const cellIdx = step % g.totalCells;
+      assigned = swapNodeWithUnusedVideo(assigned, cellIdx, g.activeVideoCount, rng);
+      assert.equal(new Set(assigned).size, g.totalCells, `${w}x${h} step ${step}: swap introduced duplicate video`);
+    }
+  }
+
+  const canvasSrc = fs.readFileSync(
+    path.join(FE_ROOT, 'components/preloader/MCUVideoGridCanvas.jsx'),
+    'utf8'
+  );
+  assert.equal(canvasSrc.includes('assignUniqueNodeVideos'), true, 'MCUVideoGridCanvas must use assignUniqueNodeVideos');
+  assert.equal(canvasSrc.includes('swapNodeWithUnusedVideo'), true, 'MCUVideoGridCanvas must use swapNodeWithUnusedVideo');
+  assert.equal(
+    canvasSrc.includes('videos.find((vid) => vid && vid.readyState >= 2)'),
+    false,
+    'MCUVideoGridCanvas must NOT paste a duplicate fallback video into unready cells'
+  );
+});
+
+test('About Us VideoCollage prepares instantly in-place, preserves glow fallback, and assigns strictly unique videos per node', () => {
+  assert.equal(ABOUT_VIDEOS.length, 8);
+  assert.equal(new Set(ABOUT_VIDEOS).size, 8);
+
+  const desktopPick = assignDistinctAboutVideos(8, ABOUT_VIDEOS, () => 0.37);
+  assert.equal(desktopPick.length, 8);
+  assert.equal(new Set(desktopPick).size, 8);
+
+  const mobilePick = assignDistinctAboutVideos(4, ABOUT_VIDEOS, () => 0.61);
+  assert.equal(mobilePick.length, 4);
+  assert.equal(new Set(mobilePick).size, 4);
+
+  const activeSet = new Set(mobilePick);
+  const rotated = pickNextDistinctAboutVideo(mobilePick[0], activeSet, ABOUT_VIDEOS, () => 0.25);
+  assert.equal(activeSet.has(rotated), false, 'Rotated About Us clip must not collide with active sibling nodes');
+
+  const collageSrc = fs.readFileSync(
+    path.join(FE_ROOT, 'components/about/collage.jsx'),
+    'utf8'
+  );
+  assert.equal(collageSrc.includes('450 + index * 180'), false, 'Artificial stagger mount delay must be removed');
+  assert.equal(collageSrc.includes('preload="auto"'), true, 'About Us videos must prepare immediately in-place');
+  assert.equal(collageSrc.includes('rootMargin: "900px 0px"'), true, 'About Us videos must pre-warm smoothly before scroll');
+  assert.equal(collageSrc.includes('glowColor'), true, 'Traffic-light glow fallback must stay intact underneath videos');
+  assert.equal(collageSrc.includes('assignDistinctAboutVideos'), true, 'VideoCollage must assign strictly distinct videos');
+  assert.equal(collageSrc.includes('pickNextDistinctAboutVideo'), true, 'VideoCollage must rotate without sibling duplicates');
+});
+
+test('DungeonGate purges dgf_2 face, animates LOGIN FIRST with Picture 1 font, and binds event status dot to hasActiveEvent (not attempt)', () => {
+  const gateSrc = fs.readFileSync(
+    path.join(FE_ROOT, 'components/landing/modals/DungeonGate.jsx'),
+    'utf8'
+  );
+  assert.equal(gateSrc.includes('/dgf_2.webp'), false, 'dgf_2 face must be purged from DungeonGate');
+  assert.equal(gateSrc.includes('font-extrabold uppercase tracking-wide'), true, 'LOGIN FIRST must use Picture 1 bold sans uppercase font');
+  assert.equal(gateSrc.includes('LOGIN FIRST'), true, 'LOGIN FIRST label must be present');
+  assert.equal(gateSrc.includes('typedChars'), true, 'LOGIN FIRST must animate via typing effect');
+  assert.equal(gateSrc.includes('/minigame/status'), true, 'DungeonGate must query /minigame/status for active event indicator');
+  assert.equal(gateSrc.includes('data-dungeon-event-dot'), true, 'DungeonGate must expose event indicator dot');
+  assert.equal(gateSrc.includes('hasActiveEvent'), true, 'DungeonGate dot must be driven strictly by hasActiveEvent');
+  assert.equal(gateSrc.includes('isLocked = false'), false, 'Hardcoded dummy lock flag must not exist');
 });
 

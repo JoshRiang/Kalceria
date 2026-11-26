@@ -132,7 +132,15 @@ test('V6.0 Minigame micro-dots are dense (>=90) & 50% smaller (r<=3), with ZERO 
       `Minigame elements/dots overlapped on ${label} (${vw}x${vh}): ${JSON.stringify(slots)}`
     );
     const graph = buildHermesWireGraph(slots, vw, vh);
-    assert.ok(graph.wires.length >= 8, `${label} must unite elements with Hermes wires`);
+    assert.ok(graph.wires.length >= 10, `${label} must unite elements with 5 dual-stroke Hermes wire segments`);
+    const segs = new Set(graph.wires.map((w) => w.segment));
+    assert.deepEqual([...segs].sort((a, b) => a - b), [1, 2, 3, 4, 5], `${label} must contain all 5 sequential segments 1..5`);
+    const mainDelays = [1, 2, 3, 4, 5].map(
+      (s) => graph.wires.find((w) => w.segment === s && w.id.endsWith('-main')).delay
+    );
+    for (let i = 1; i < mainDelays.length; i++) {
+      assert.ok(mainDelays[i] > mainDelays[i - 1], `${label} segment ${i + 1} delay must be strictly greater than segment ${i}`);
+    }
   }
 });
 
@@ -161,18 +169,42 @@ test('MinigameClient uses black no-glow bevel UI, borderless Attempt/Due/THE EVE
   assert.equal(clientSrc.includes('<FlipGame'), true);
   assert.equal(clientSrc.includes('handlePlayIt'), true);
 
-  // Progressive circular draw-in micro-dots + Hermes wire layer
+  // Progressive circular draw-in micro-dots + Light-only sequential 5-segment Hermes wire layer
   assert.equal(backdropSrc.includes('kalceriaDotDrawIn'), true, 'Dots must animate progressively (. .. ... -> closed)');
   assert.equal(backdropSrc.includes('buildHermesWireGraph'), true, 'Must render united Hermes connecting wires');
+  assert.equal(backdropSrc.includes('data-wire-segment'), true, 'Hermes wires must tag segments 1..5');
+  assert.equal(backdropSrc.includes('isLight ?'), true, 'Sequential wire animation must be scoped to Light layer');
   assert.equal(backdropSrc.includes('prefers-reduced-motion'), true);
 
-  // Event trailer modal: 4 corner faces purged, 2 peeking bottom slide-up characters wired
+  // Center-stage HUD grouping + graceful Light fade-in after Save Score (Yes / No)
+  assert.equal(clientSrc.includes('justify-center'), true, 'Title, cards, PLAY IT, and Due/Attempt must group in open center');
+  assert.equal(clientSrc.includes('const inGame = gamePhase === "playing"'), true, 'FlipGame must unmount immediately on ending so Dark->Light fade is visible');
+  const flipSrc = fs.readFileSync(
+    path.join(FE_ROOT, 'app/minigame/FlipGame.jsx'),
+    'utf8'
+  );
+  assert.equal(flipSrc.includes('bg-black/80'), false, 'Opaque bg-black/80 exit wall must be removed from FlipGame so Light fade is graceful');
+
+  // Rules modal Light Blue-Gold gradient (zero indigo/purple)
+  const rulesSrc = fs.readFileSync(
+    path.join(FE_ROOT, 'components/minigame/client/MinigameRulesModal.jsx'),
+    'utf8'
+  );
+  assert.equal(rulesSrc.includes('data-rules-theme="blue-gold"'), true, 'Rules modal must use Light blue-gold theme');
+  assert.equal(rulesSrc.includes('#124cc6'), true, 'Rules modal must use Royal Cobalt Blue accent');
+  assert.equal(rulesSrc.includes('#d6920c'), true, 'Rules modal must use Luminous Gold accent');
+  assert.equal(/indigo-|purple-/.test(rulesSrc), false, 'Rules modal must not contain random purple/indigo gradients');
+
+  // Event trailer modal: 4 corner faces purged, 2 peeking bottom slide-up characters gazing opposite directions
   assert.equal(trailerSrc.includes('/ge_1.webp'), false, 'Legacy corner face ge_1 must be purged from trailer');
   assert.equal(trailerSrc.includes('/ge_2.webp'), false, 'Legacy corner face ge_2 must be purged from trailer');
   assert.equal(trailerSrc.includes('/ge_3.webp'), false, 'Legacy corner face ge_3 must be purged from trailer');
   assert.equal(trailerSrc.includes('/ge_4.webp'), false, 'Legacy corner face ge_4 must be purged from trailer');
   assert.equal(trailerSrc.includes('MINIGAME_TRAILER_CHARACTERS'), true, 'Must render 2 peeking half-body characters');
   assert.equal(trailerSrc.includes('y: "115%"'), true, 'Characters must slide up from bottom of screen');
+  assert.equal(trailerSrc.includes('data-peek-gaze="up-right"'), true, 'Left peeking character must gaze up-right');
+  assert.equal(trailerSrc.includes('data-peek-gaze="up-left"'), true, 'Right peeking character must gaze up-left');
+  assert.equal(trailerSrc.includes('transform: "scaleX(-1)"'), true, 'Left peeking character must mirror horizontally via explicit scaleX(-1)');
 });
 
 test('JourneyPageClient applies 4-family responsive backdrops to top 3 segments only, preserves blur(18px), and leaves JourneySection4 untouched', () => {

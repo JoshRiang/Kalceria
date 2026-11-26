@@ -116,15 +116,17 @@ export function MinigameTrailerModal({
               transition={{ duration: 0.95, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
               className="transform-gpu will-change-transform flex items-end"
             >
+              {/* Left character mirrored horizontally via explicit inline transform so he gazes UP-RIGHT toward the video */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={MINIGAME_TRAILER_CHARACTERS.left.cdn}
                 alt=""
                 loading="eager"
                 decoding="async"
+                data-peek-gaze="up-right"
                 onError={swapFallback(MINIGAME_TRAILER_CHARACTERS.left.local)}
-                className="h-[20dvh] xs:h-[22dvh] sm:h-[23dvh] md:h-[24dvh] max-h-[220px] min-h-[104px] w-auto object-contain -scale-x-100 drop-shadow-[0_6px_18px_rgba(0,0,0,0.85)] select-none"
-                style={{ imageRendering: "pixelated" }}
+                className="h-[20dvh] xs:h-[22dvh] sm:h-[23dvh] md:h-[24dvh] max-h-[220px] min-h-[104px] w-auto object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.85)] select-none"
+                style={{ transform: "scaleX(-1)", imageRendering: "pixelated" }}
               />
             </motion.div>
 
@@ -135,12 +137,14 @@ export function MinigameTrailerModal({
               transition={{ duration: 1.05, delay: 0.36, ease: [0.22, 1, 0.36, 1] }}
               className="transform-gpu will-change-transform flex items-end"
             >
+              {/* Right character gazes UP-LEFT toward the video */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={MINIGAME_TRAILER_CHARACTERS.right.cdn}
                 alt=""
                 loading="eager"
                 decoding="async"
+                data-peek-gaze="up-left"
                 onError={swapFallback(MINIGAME_TRAILER_CHARACTERS.right.local)}
                 className="h-[20dvh] xs:h-[22dvh] sm:h-[23dvh] md:h-[24dvh] max-h-[220px] min-h-[104px] w-auto object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.85)] select-none"
                 style={{ imageRendering: "pixelated" }}

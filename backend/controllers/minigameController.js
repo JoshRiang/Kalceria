@@ -135,10 +135,14 @@ export async function getMinigameStatus(req, res, next) {
     const userStats = await getUserTargetStats(userId, userEmail, activeTarget, dateStr);
     const userVoucher = userId ? await getUserAwardedVoucher(userId, activeTarget?.id) : null;
 
+    const hasActiveEvent = Boolean(activeTarget?.isWithin7Days);
+
     res.json({
       success: true,
       attempt: remaining,
-      canPlay: remaining > 0 && Boolean(activeTarget?.isWithin7Days),
+      canPlay: remaining > 0 && hasActiveEvent,
+      hasActiveEvent,
+      gateIndicator: hasActiveEvent ? 'green' : 'red',
       hasPlayedToday: used,
       maxDailyAttempts: 1,
       secondsUntilReset,

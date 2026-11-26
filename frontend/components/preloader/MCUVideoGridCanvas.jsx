@@ -3,8 +3,10 @@
 import { useEffect, useRef } from "react";
 import { createRuntimeSeededRandom } from "@/lib/seededRandom";
 import {
+  assignUniqueNodeVideos,
   computeCoverCropRect,
   computeResponsiveIntroGrid,
+  swapNodeWithUnusedVideo,
 } from "./introVideoGridLayout";
 import {
   ensureIntroVideoPool,
@@ -12,7 +14,7 @@ import {
   releaseIntroVideoPoolSubscriber,
 } from "./videoPool";
 
-const TARGET_FRAME_INTERVAL_MS = 33; // Smooth ~30fps canvas video blit to keep mobile & desktop ice-cold
+const TARGET_FRAME_INTERVAL_MS = 33;
 
 export function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
   const canvasRef = useRef(null);
@@ -25,18 +27,13 @@ export function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
-    const random = createRuntimeSeededRandom(`intro-car-grid-v2-${seedSalt}`);
+    const random = createRuntimeSeededRandom(`intro-car-grid-v3-${seedSalt}`);
     let grid = computeResponsiveIntroGrid(window.innerWidth, window.innerHeight);
 
     subscribeIntroVideoPool();
     let videos = ensureIntroVideoPool(grid.activeVideoCount);
-
-    const buildAssignments = (totalCells, videoCount) =>
-      Array.from({ length: totalCells }, (_, idx) =>
-        videoCount > 0 ? (idx + Math.floor(random() * videoCount)) % videoCount : 0
-      );
-
-    let cellAssignments = buildAssignments(grid.totalCells, videos.length);
+    // Strict unique per-node assignment: zero duplicate videos across cells
+    let cellAssignments = assignUniqueNodeVideos(grid.totalCells, videos.length, random);
 
     const updateSize = () => {
       const w = window.innerWidth;
@@ -47,7 +44,7 @@ export function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
       if (nextGrid.cols !== grid.cols || nextGrid.rows !== grid.rows) {
         grid = nextGrid;
         videos = ensureIntroVideoPool(grid.activeVideoCount);
-        cellAssignments = buildAssignments(grid.totalCells, videos.length);
+        cellAssignments = assignUniqueNodeVideos(grid.totalCells, videos.length, random);
       }
     };
     updateSize();
@@ -62,11 +59,10 @@ export function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
       ? null
       : setInterval(() => {
           if (!videos.length) return;
-          // Gently swap 1-2 car nodes per beat so clips remain legible and cinematic
           const flips = Math.min(2, Math.max(1, Math.floor(random() * 2) + 1));
           for (let i = 0; i < flips; i++) {
             const cellIdx = Math.floor(random() * grid.totalCells);
-            cellAssignments[cellIdx] = Math.floor(random() * videos.length);
+            cellAssignments = swapNodeWithUnusedVideo(cellAssignments, cellIdx, videos.length, random);
           }
         }, 850);
 
@@ -88,17 +84,14 @@ export function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
         let cellIdx = 0;
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
-            let v = videos[cellAssignments[cellIdx]];
-            if (!v || v.readyState < 2) {
-              v = videos.find((vid) => vid && vid.readyState >= 2);
-            } else if (v.paused && !prefersReducedMotion) {
-              v.play().catch(() => {});
-            }
-
+            const v = videos[cellAssignments[cellIdx]];
             const dx = c * cellW;
             const dy = r * cellH;
 
-            if (v && v.videoWidth > 0 && v.videoHeight > 0) {
+            if (v && v.readyState >= 2 && v.videoWidth > 0 && v.videoHeight > 0) {
+              if (v.paused && !prefersReducedMotion) {
+                v.play().catch(() => {});
+              }
               const { sx, sy, sw, sh } = computeCoverCropRect(
                 v.videoWidth,
                 v.videoHeight,
@@ -107,9 +100,11 @@ export function MCUVideoGridCanvas({ active, seedSalt = "base" }) {
               );
               try {
                 ctx.drawImage(v, sx, sy, sw, sh, dx, dy, cellW, cellH);
-              } catch {
-                // Skip transient decode frame cleanly
-              }
+              } catch {}
+            } else {
+              // Clean dark fallback cell while this node's dedicated unique clip buffers (never duplicate another node's video)
+              ctx.fillStyle = "#080f1e";
+              ctx.fillRect(dx, dy, cellW, cellH);
             }
 
             ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";

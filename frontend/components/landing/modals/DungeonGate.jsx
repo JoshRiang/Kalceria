@@ -1,15 +1,18 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import ContentImage from "@/components/ui/ContentImage";
-import { hasUserSession } from "@/lib/session";
+import api from "@/lib/api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
+const LOGIN_PROMPT_TEXT = "LOGIN FIRST";
+
 export function DungeonGate() {
-  const [isLocked, setIsLocked] = useState(false); // Dummy: Event has started
+  // Dot indicator strictly reflects active event Due status (red when no event / Not Started, green when active)
+  const [hasActiveEvent, setHasActiveEvent] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [, setTimeLeft] = useState("");
+  const [typedChars, setTypedChars] = useState(0);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [isNavigating, setIsNavigating] = useState(false);
   const pendingTimeouts = useRef(new Set());
@@ -33,64 +36,87 @@ export function DungeonGate() {
     };
   }, []);
 
-  // Dummy target: Past date to keep it unlocked
-  const targetDate = useMemo(() => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - 1); // Set to last year
-    return d;
+  // Poll public minigame event status (non-destructive: independent of user attempt count)
+  useEffect(() => {
+    let active = true;
+    const syncEventDot = () => {
+      api
+        .get("/minigame/status")
+        .then((res) => {
+          if (!active) return;
+          const d = res?.data;
+          const eventLive =
+            typeof d?.hasActiveEvent === "boolean"
+              ? d.hasActiveEvent
+              : Boolean(d?.targetEvent?.isWithin7Days && d?.targetEvent?.dueStatus === "COUNTDOWN");
+          setHasActiveEvent(eventLive);
+        })
+        .catch(() => {
+          if (active) setHasActiveEvent(false);
+        });
+    };
+
+    syncEventDot();
+    const interval = setInterval(syncEventDot, 60000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
+  // Typing animation for "LOGIN FIRST" when guest taps the gate
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const diff = targetDate - now;
-      if (diff <= 0) {
-        setIsLocked(false);
-        setTimeLeft("00:00:00:00"); // Reset display for auth check
-      } else {
-        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const m = Math.floor((diff / 1000 / 60) % 60);
-        const s = Math.floor((diff / 1000) % 60);
-        setTimeLeft(`${d}d ${h}h ${m}m ${s}s`);
-      }
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, [targetDate]);
+    if (!showPopup) {
+      setTypedChars(0);
+      return;
+    }
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if (reduced) {
+      setTypedChars(LOGIN_PROMPT_TEXT.length);
+      return;
+    }
+    setTypedChars(0);
+    let idx = 0;
+    const timer = setInterval(() => {
+      idx += 1;
+      setTypedChars(idx);
+      if (idx >= LOGIN_PROMPT_TEXT.length) clearInterval(timer);
+    }, 55);
+    return () => clearInterval(timer);
+  }, [showPopup]);
 
   const handleGateClick = (e) => {
     e.preventDefault();
     if (!isLoggedIn) {
       setShowPopup(true);
-      scheduleTimeout(() => setShowPopup(false), 5000);
-    } else {
-      sessionStorage.setItem("landingScrollTarget", "section-minigame");
-      sessionStorage.setItem("landingScrollY", window.scrollY);
-      // Dramatic Blackout Transition
-      setIsNavigating(true);
-      scheduleTimeout(() => {
-        router.push("/minigame");
-      }, 1000);
-      scheduleTimeout(() => {
-        setIsNavigating(false);
-      }, 2500);
+      scheduleTimeout(() => setShowPopup(false), 4500);
+      return;
     }
+    sessionStorage.setItem("landingScrollTarget", "section-minigame");
+    sessionStorage.setItem("landingScrollY", window.scrollY);
+    setIsNavigating(true);
+    scheduleTimeout(() => {
+      router.push("/minigame");
+    }, 1000);
+    scheduleTimeout(() => {
+      setIsNavigating(false);
+    }, 2500);
   };
 
   return (
     <>
       <AnimatePresence>
         {isNavigating && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="fixed inset-0 z-[3000] bg-black pointer-events-auto"
           />
         )}
         {showPopup && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -102,91 +128,63 @@ export function DungeonGate() {
       <div className="absolute bottom-0 right-4 z-[100] flex flex-col items-end pointer-events-none">
         <AnimatePresence>
           {showPopup && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8, x: 40, filter: "blur(15px)" }}
-              animate={{ opacity: 1, scale: 1, x: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, scale: 0.8, x: 40, filter: "blur(15px)" }}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              className="mb-6 flex items-center gap-3 sm:gap-4 md:gap-5 pointer-events-auto select-none"
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="mb-5 mr-1 pointer-events-auto select-none"
             >
-              {/* Floating dgf_2.webp */}
-              <motion.div
-                animate={{ 
-                  y: [0, -10, 0],
-                  rotate: [-5, 5, -5]
-                }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="relative shrink-0"
+              {/* Matches Hero LOGIN / REGISTER font exactly with crisp typing animation (no floating face) */}
+              <p
+                data-dungeon-login-prompt="true"
+                className="font-sans font-extrabold uppercase tracking-wide text-[14px] xs:text-[15px] sm:text-[17px] md:text-[19px] text-[#f1f5f9] whitespace-nowrap"
               >
-                <ContentImage
-                  src="/dgf_2.webp" 
-                  alt="Guide" 
-                  width={523}
-                  height={675}
-                  className="w-16 xs:w-20 sm:w-24 md:w-28 h-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+                {LOGIN_PROMPT_TEXT.slice(0, typedChars)}
+                <span
+                  aria-hidden="true"
+                  className="inline-block w-[2px] h-[0.95em] ml-1 align-middle bg-[#f1f5f9] animate-pulse"
                 />
-                <div className="absolute -inset-4 bg-red-500/20 blur-2xl rounded-full z-[-1] opacity-50" />
-              </motion.div>
-              
-              {/* Pure LOGIN\nFIRST - No outer box, No clock */}
-              <h4 
-                className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-white leading-tight font-sans whitespace-pre-line text-left"
-                style={{ 
-                  textShadow: "1px 1px 0px #bbb, 2px 2px 0px #999, 3px 3px 0px #777, 4px 4px 12px rgba(0,0,0,0.85)"
-                }}
-              >
-                {"LOGIN\nFIRST"}
-              </h4>
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
 
         <div className="pointer-events-auto transform translate-y-[10%]">
-          {isLocked ? (
-            <button 
-              onClick={() => {
-                setShowPopup(true);
-                scheduleTimeout(() => setShowPopup(false), 5000);
-              }}
-              className="group relative cursor-pointer outline-none border-none ring-0 active:scale-95 transition-transform bg-transparent p-0"
-            >
-              {/* Glow Aura */}
-              <div className="absolute inset-[-20%] bg-red-500/10 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-              
+          <button
+            type="button"
+            onClick={handleGateClick}
+            aria-label={hasActiveEvent ? "Enter Kalcer's Game (Event Active)" : "Enter Kalcer's Game (No Active Event)"}
+            className="outline-none border-none ring-0 no-underline block bg-transparent group cursor-pointer focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg"
+          >
+            <div className="relative cursor-pointer outline-none border-none ring-0 active:scale-95 transition-transform bg-transparent p-0">
+              <motion.div
+                animate={{ opacity: [0.18, 0.36, 0.18], scale: [1, 1.08, 1] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                className={`absolute inset-[-30%] blur-[60px] rounded-full ${
+                  hasActiveEvent ? "bg-yellow-400/20" : "bg-red-500/15"
+                }`}
+              />
+
               <ContentImage
-                src="/dg_1.webp" 
-                alt="Locked Gate" 
+                src="/dg_2.webp"
+                alt="Dungeon Gate"
                 width={2048}
                 height={2048}
-                className="w-16 sm:w-20 md:w-36 h-auto object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] group-hover:brightness-110 transition-all duration-500 border-none outline-none ring-0"
+                className="w-16 sm:w-20 md:w-36 h-auto object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] group-hover:brightness-115 transition-all duration-500 border-none outline-none ring-0"
               />
-              
-              {/* Status Indicator */}
-              <div className="absolute -top-1 -right-1 bg-red-500 w-3 h-3 rounded-full border-2 border-white animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
-            </button>
-          ) : (
-            <button onClick={handleGateClick} className="outline-none border-none ring-0 no-underline block bg-transparent group">
-              <div className="relative cursor-pointer outline-none border-none ring-0 active:scale-95 transition-transform bg-transparent p-0">
-                {/* Golden Glow Aura */}
-                <motion.div 
-                  animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.1, 1] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute inset-[-30%] bg-yellow-400/20 blur-[60px] rounded-full" 
-                />
-                
-                <ContentImage
-                  src="/dg_2.webp" 
-                  alt="Dungeon Gate" 
-                  width={2048}
-                  height={2048}
-                  className="w-16 sm:w-20 md:w-36 h-auto object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] group-hover:scale-110 group-hover:brightness-125 transition-all duration-700 border-none outline-none ring-0"
-                />
-                
-                {/* Ready Indicator */}
-                <div className="absolute -top-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white animate-bounce shadow-[0_0_15px_rgba(34,197,94,0.8)]" />
-              </div>
-            </button>
-          )}
+
+              {/* Event Status Dot: Green when active event Due countdown is running, Red when Not Started */}
+              <div
+                data-dungeon-event-dot={hasActiveEvent ? "green" : "red"}
+                className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white transition-colors duration-300 ${
+                  hasActiveEvent
+                    ? "bg-green-500 animate-bounce shadow-[0_0_15px_rgba(34,197,94,0.8)]"
+                    : "bg-red-500 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.85)]"
+                }`}
+              />
+            </div>
+          </button>
         </div>
       </div>
     </>
