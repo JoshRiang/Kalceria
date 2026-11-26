@@ -12,9 +12,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB hard cap
+const MAX_UPLOAD_BYTES = 64 * 1024 * 1024; // 64 MB ceiling via compressed chunked R2 assembly (duration-gated)
 const MAX_CHUNK_BYTES = 4 * 1024 * 1024; // Each individual chunk stays safely under Vercel's 4.5 MB limit
-const MAX_CHUNK_COUNT = 4;
+const MAX_CHUNK_COUNT = 22;
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -67,7 +67,7 @@ async function persistFinalMediaBuffer(
 ) {
   if (rawBuffer.byteLength > MAX_UPLOAD_BYTES) {
     return NextResponse.json(
-      { error: "Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil." },
+      { error: "File media setelah kompresi masih terlalu besar (maks 64 MB). Coba potong durasi video." },
       { status: 413 }
     );
   }

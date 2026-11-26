@@ -38,6 +38,7 @@ export function buildMiniEventPayload(
   const mediaItemsPayload = buildMediaItemsPayload(mediaUrl, eventForm.mediaMetadataByUrl, splitMediaUrlListClientFn);
   const cleanDesc = (eventForm.description || '')
     .replace(/\[CAT:[a-z_]+\]\s*/gi, '')
+    .replace(/\[VIS:[a-z_]+\]\s*/gi, '')
     .replace(/\[CMETA:[^\]]+\]\s*/gi, '')
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, '')
     .replace(/\[LOC:[^\]]+\]\s*/gi, '')
@@ -45,6 +46,9 @@ export function buildMiniEventPayload(
     .trim();
 
   let encodedDesc = `[CAT:${category}] ${cleanDesc}`.trim();
+  if (eventForm.visibility === 'public') {
+    encodedDesc = `[VIS:public] ${encodedDesc}`.trim();
+  }
   if (locationName) {
     encodedDesc = `[LOC:${locationName}] ${encodedDesc}`.trim();
   }
@@ -57,6 +61,7 @@ export function buildMiniEventPayload(
     title: formattedTitle,
     description: encodedDesc,
     category,
+    ...(eventForm.visibility === 'public' ? { visibility: 'public' } : {}),
     mediaUrl,
     mediaItems: mediaItemsPayload,
     ...(eventForm.mediaSyncedAt ? { mediaSyncedAt: eventForm.mediaSyncedAt } : {}),

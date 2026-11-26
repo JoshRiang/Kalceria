@@ -5,6 +5,7 @@ export const avatarUrl = (user) => resolvePersistentAvatarUrl(user);
 export const FIND_TITLE_LETTERS = "Find Other Peeps".split("");
 export const CHAT_TITLE_LETTERS = "Chat with Others".split("");
 export const MEETING_TITLE_LETTERS = "Assign a Meeting".split("");
+export const REELS_TITLE_LETTERS = "Discover Reels".split("");
 
 export const titleWaveContainer = {
   hidden: { opacity: 0 },

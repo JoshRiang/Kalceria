@@ -22,6 +22,8 @@ import {
   CHAT_PANEL_BG_LIGHT,
   MEETING_PANEL_BG_DARK,
   MEETING_PANEL_BG_LIGHT,
+  REELS_PANEL_BG_DARK,
+  REELS_PANEL_BG_LIGHT,
   getInstantMapBgUrl,
 } from "@/lib/mapBgCache";
 
@@ -236,6 +238,8 @@ export const KalceriansPanel = memo(function KalceriansPanel({
       ? isMapDark ? CHAT_PANEL_BG_DARK : CHAT_PANEL_BG_LIGHT
       : activePanel === "meeting"
       ? isMapDark ? MEETING_PANEL_BG_DARK : MEETING_PANEL_BG_LIGHT
+      : activePanel === "reels"
+      ? isMapDark ? REELS_PANEL_BG_DARK : REELS_PANEL_BG_LIGHT
       : isMapDark ? KALCERIANS_PANEL_BG_DARK : KALCERIANS_PANEL_BG_LIGHT;
   const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;
   const blockedRef = useRef({ out: blockedUserIds, in: blockedByUserIds });
@@ -362,6 +366,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
 
         <KalceriansPanelBody
           activePanel={activePanel}
+          sidebarKalcerians={sidebarKalcerians}
           pinnedMeetingEventIds={pinnedMeetingEventIds}
           groupSummaryMap={groupSummaryMap}
           onOpenGroupChat={(eid) => setActiveGroupEventId(eid)}

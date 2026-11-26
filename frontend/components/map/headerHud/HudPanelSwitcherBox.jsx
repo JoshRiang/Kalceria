@@ -86,6 +86,23 @@ export const HudPanelSwitcherBox = memo(function HudPanelSwitcherBox({
       <div
         className={`relative flex items-center gap-1 sm:gap-1.5 p-1 rounded-b-2xl ${boxBg} border-b-[1.5px] border-x-[1.5px] border-t-0 ${boxBorder} ${boxShadow} overflow-visible`}
       >
+        {/* 0. Reels Icon -> Discover Reels & Moments */}
+        <button
+          type="button"
+          onClick={() => handleSelectPanel("reels")}
+          title="Discover Reels"
+          aria-label="Discover Reels"
+          className={slotClass(activePanel === "reels", false)}
+        >
+          <svg viewBox="0 0 24 24" className="w-[17px] h-[17px]" fill="none" stroke={fg} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="4" />
+            <line x1="3" y1="8.5" x2="21" y2="8.5" />
+            <line x1="8.5" y1="3" x2="10.5" y2="8.5" />
+            <line x1="14.5" y1="3" x2="16.5" y2="8.5" />
+            <polygon points="10,12 16,15 10,18" fill={fg} stroke="none" />
+          </svg>
+        </button>
+
         {/* 1. Chat Icon -> Chat with Others */}
         <button
           type="button"

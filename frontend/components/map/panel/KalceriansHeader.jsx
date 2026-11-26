@@ -5,6 +5,7 @@ import {
   FIND_TITLE_LETTERS,
   CHAT_TITLE_LETTERS,
   MEETING_TITLE_LETTERS,
+  REELS_TITLE_LETTERS,
   titleWaveContainer,
   titleLetterVariant,
 } from "./kalceriansHelpers";
@@ -27,6 +28,8 @@ export function KalceriansHeader({
       ? CHAT_TITLE_LETTERS
       : activePanel === "meeting"
       ? MEETING_TITLE_LETTERS
+      : activePanel === "reels"
+      ? REELS_TITLE_LETTERS
       : FIND_TITLE_LETTERS;
   return (
     <>

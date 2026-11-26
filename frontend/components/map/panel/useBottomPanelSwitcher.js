@@ -32,7 +32,7 @@ export function useBottomPanelSwitcher({
 
   const transitionToPanel = useCallback(
     (nextPanel) => {
-      if (!nextPanel || !["peeps", "chat", "meeting"].includes(nextPanel)) return;
+      if (!nextPanel || !["peeps", "chat", "meeting", "reels"].includes(nextPanel)) return;
       // Single-layer rule: switching HUD tabs always closes any open Personal Chat or Group Chat cleanly
       onCloseChatRef.current?.();
       setActiveGroupEventId(null);

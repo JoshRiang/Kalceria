@@ -3,9 +3,30 @@
 import { KalceriansCardList } from "./KalceriansCardList";
 import { ChatWithOthersList } from "./ChatWithOthersList";
 import { AssignMeetingList } from "./AssignMeetingList";
+import { ReelsDiscoveryList } from "../reels/ReelsDiscoveryList";
 
 export function KalceriansPanelBody(props) {
   const { activePanel } = props;
+
+  if (activePanel === "reels") {
+    return (
+      <ReelsDiscoveryList
+        listContainerRef={props.listContainerRef}
+        isMapDark={props.isMapDark}
+        activeScope={props.activeScope}
+        events={props.events}
+        sidebarKalcerians={props.sidebarKalcerians}
+        currentUser={props.currentUser}
+        isUserFriend={props.isUserFriend}
+        searchQuery={props.searchQuery}
+        isSelfOffline={props.isSelfOffline}
+        onOpenItemOnMap={props.onOpenItemOnMap}
+        focusUser={props.focusUser}
+        setDrawerOpen={props.setDrawerOpen}
+        onOpenPersonalChat={props.handleOpenChatWithTransition}
+      />
+    );
+  }
 
   if (activePanel === "chat") {
     return (

@@ -109,22 +109,16 @@ export async function optimizeUploadMedia(
       const orientedWidth = isSwappedOrientation ? rawHeight : rawWidth;
       const orientedHeight = isSwappedOrientation ? rawWidth : rawHeight;
 
-      // Fast-path: already-compact, correctly oriented image skips heavy serverless re-encoding (~0ms CPU)
+      // Fast-path: already-compact WebP skips heavy serverless re-encoding (~0ms CPU)
       const isAlreadyCompact =
-        originalSize <= 650 * 1024 &&
-        orientedWidth <= 1280 &&
+        originalSize <= 550 * 1024 &&
+        orientedWidth <= 1920 &&
         !hasExifRotation &&
-        (meta.format === "jpeg" || meta.format === "webp" || meta.format === "png");
+        meta.format === "webp";
       if (isAlreadyCompact) {
-        const fastType =
-          meta.format === "png"
-            ? "image/png"
-            : meta.format === "webp"
-              ? "image/webp"
-              : "image/jpeg";
         return {
           buffer: inputBuffer,
-          contentType: fastType,
+          contentType: "image/webp",
           filename: originalFilename,
           originalSize,
           optimizedSize: originalSize,
@@ -135,44 +129,38 @@ export async function optimizeUploadMedia(
       }
 
       let pipeline = hasExifRotation ? sharp(inputBuffer).rotate() : sharp(inputBuffer);
-      const needsResize = orientedWidth > 1080;
+      const needsResize = Math.max(orientedWidth, orientedHeight) > 1920;
 
       if (needsResize) {
         pipeline = pipeline.resize({
-          width: 1080,
+          width: 1920,
+          height: 1920,
+          fit: "inside",
           withoutEnlargement: true,
         });
       }
 
-      let result: { data: Buffer; info: sharp.OutputInfo };
-      let contentType = declaredMimeType;
-
-      // Fast serverless encoding presets (5-10x faster than mozjpeg/effort-5 while keeping crisp HD)
-      if (meta.format === "png") {
-        result = await pipeline.png({ compressionLevel: 3, effort: 2 }).toBuffer({ resolveWithObject: true });
-        contentType = "image/png";
-      } else if (meta.format === "jpeg" || meta.format === "jpg") {
-        result = await pipeline.jpeg({ quality: 84, mozjpeg: false }).toBuffer({ resolveWithObject: true });
-        contentType = "image/jpeg";
-      } else if (meta.format === "webp") {
-        result = await pipeline.webp({ quality: 84, effort: 2 }).toBuffer({ resolveWithObject: true });
-        contentType = "image/webp";
-      } else {
-        result = await pipeline.toBuffer({ resolveWithObject: true });
-      }
+      // Perceptually lossless WebP conversion (50-80% smaller than PNG/JPEG with crisp retina fidelity)
+      const result = await pipeline
+        .webp({ quality: 88, smartSubsample: true, effort: 3 })
+        .toBuffer({ resolveWithObject: true });
 
       const processed = result.data;
       const shouldAdopt = processed.length < originalSize || needsResize || hasExifRotation;
       const finalBuffer = shouldAdopt ? processed : inputBuffer;
       const finalSize = finalBuffer.length;
+      const finalContentType = shouldAdopt ? "image/webp" : declaredMimeType;
+      const finalFilename = shouldAdopt
+        ? `${originalFilename.replace(/\.[^.]+$/, "")}.webp`
+        : originalFilename;
       const reduction = originalSize > 0
         ? Math.max(0, Math.round(((originalSize - finalSize) / originalSize) * 100))
         : 0;
 
       return {
         buffer: finalBuffer,
-        contentType,
-        filename: originalFilename,
+        contentType: finalContentType,
+        filename: finalFilename,
         originalSize,
         optimizedSize: finalSize,
         reductionPercent: reduction,

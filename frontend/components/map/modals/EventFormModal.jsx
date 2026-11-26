@@ -215,6 +215,50 @@ export function EventFormModal({
             </div>
           </div>
 
+          {/* Visibility Toggle Bar: Private (Friends Only - Default) vs Public (Global) */}
+          <div
+            className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+              isModalDark
+                ? "border-white/15 bg-black/35"
+                : "border-black/15 bg-white/75"
+            }`}
+          >
+            <div className="min-w-0">
+              <p className={`text-xs font-bold leading-tight ${isModalDark ? "text-white" : "text-black"}`}>
+                {eventForm.visibility === "public" ? "Public Event (Global)" : "Private Event (Friends Only)"}
+              </p>
+              <p className={`text-[10.5px] leading-snug mt-0.5 ${isModalDark ? "text-[#8b949e]" : "text-[#57606a]"}`}>
+                {eventForm.visibility === "public"
+                  ? "Anyone on Global can discover this event & its Reels."
+                  : "Default: only your mutual friends can see this event."}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={eventForm.visibility === "public"}
+              onClick={() =>
+                setEventForm((f) => ({
+                  ...f,
+                  visibility: f.visibility === "public" ? "private" : "public",
+                }))
+              }
+              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 cursor-pointer outline-none flex items-center ${
+                eventForm.visibility === "public"
+                  ? "bg-gradient-to-r from-[#2563eb] to-[#ec4899]"
+                  : isModalDark
+                  ? "bg-white/20"
+                  : "bg-black/20"
+              }`}
+            >
+              <span
+                className={`block w-[18px] h-[18px] rounded-full bg-white shadow transform transition-transform ${
+                  eventForm.visibility === "public" ? "translate-x-[22px]" : "translate-x-[3px]"
+                }`}
+              />
+            </button>
+          </div>
+
           {/* Event Title */}
           <div className="flex flex-col gap-1.5 sm:gap-2">
             <div className="flex items-center justify-between">

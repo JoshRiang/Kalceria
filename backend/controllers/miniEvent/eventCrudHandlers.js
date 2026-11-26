@@ -100,6 +100,7 @@ export async function createMiniEvent(req, res, next) {
     const rawDescription = cleanText(req.body.description);
     const extracted = extractEncodedTags(rawDescription);
     const category = cleanText(req.body.category) || extracted.category || 'cafe';
+    const visibility = req.body.visibility === 'public' || extracted.visibility === 'public' ? 'public' : 'private';
     const mediaUrlInput = req.body.mediaUrl !== undefined ? cleanText(req.body.mediaUrl) : extracted.mediaStr;
     let location = cleanText(req.body.location) || extracted.location || '';
     const lat = parseCoordinate(req.body.lat);
@@ -132,6 +133,7 @@ export async function createMiniEvent(req, res, next) {
 
     const description = buildEncodedDescription({
       category,
+      visibility,
       location,
       mediaUrls: parsedMedia.clips.map((c) => c.url),
       mediaClips: parsedMedia.clips,
@@ -262,6 +264,8 @@ export async function getActiveMiniEvents(req, res, next) {
 
     const visibleEvents = (hydratedEvents || []).filter((ev) => {
       if (!viewerId) return false;
+      // Public events are visible globally; Private events (default) are strictly visible to maker, friends, & group members
+      if (ev.visibility === 'public') return true;
       const creatorId = String(ev.creatorId || ev.creator?.id || '');
       if (creatorId === viewerId || friendSet.has(creatorId)) return true;
       const collabs = Array.isArray(ev.collaborators) ? ev.collaborators : [];
@@ -303,6 +307,12 @@ export async function updateMiniEvent(req, res, next) {
       const rawDescInput = cleanText(req.body.description);
       const inputTags = extractEncodedTags(rawDescInput);
       const category = cleanText(req.body.category) || inputTags.category || existingTags.category || 'cafe';
+      const visibility =
+        req.body.visibility === 'public' || inputTags.visibility === 'public'
+          ? 'public'
+          : req.body.visibility === 'private'
+          ? 'private'
+          : existingTags.visibility || 'private';
       let location = cleanText(req.body.location) || inputTags.location || '';
       const lat = parseCoordinate(req.body.lat);
       const lng = parseCoordinate(req.body.lng);
@@ -345,6 +355,7 @@ export async function updateMiniEvent(req, res, next) {
 
       const description = buildEncodedDescription({
         category,
+        visibility,
         location,
         mediaUrls: finalClips.map((c) => c.url),
         mediaClips: finalClips,

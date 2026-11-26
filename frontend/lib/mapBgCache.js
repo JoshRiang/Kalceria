@@ -18,6 +18,11 @@ export const PROFILE_CARD_BG_DARK = `${MAP_BG_CDN_BASE}/BG_ProfileCard_Dark.webp
 export const GROUP_PROFILE_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_GroupProfile_Light.webp`;
 export const GROUP_PROFILE_BG_DARK = `${MAP_BG_CDN_BASE}/BG_GroupProfile_Dark.webp`;
 export const DEFAULT_GROUP_AVATAR = `${MAP_BG_CDN_BASE}/DefaultGroupAvatar.webp`;
+export const REELS_BG_CDN_BASE = "https://cdn.kalceria.id/media/ui-bg/v63";
+export const REELS_PANEL_BG_LIGHT = `${REELS_BG_CDN_BASE}/BG_ReelsPanel_Light.webp`;
+export const REELS_PANEL_BG_DARK = `${REELS_BG_CDN_BASE}/BG_ReelsPanel_Dark.webp`;
+export const POST_FORM_BG_LIGHT = `${REELS_BG_CDN_BASE}/BG_PostForm_Light.webp`;
+export const POST_FORM_BG_DARK = `${REELS_BG_CDN_BASE}/BG_PostForm_Dark.webp`;
 export const CREATION_BOX_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_BroadcastBoxLight.webp`;
 export const CREATION_BOX_BG_DARK = `${MAP_BG_CDN_BASE}/BG_BroadscastBoxDark.webp`;
 export const MINI_EVENT_FORM_BG_LIGHT = `${MAP_BG_CDN_BASE}/BGCreateMini_Light.webp`;
@@ -44,6 +49,10 @@ export const MAP_BG_WEBP_ASSETS = [
   GROUP_PROFILE_BG_LIGHT,
   GROUP_PROFILE_BG_DARK,
   DEFAULT_GROUP_AVATAR,
+  REELS_PANEL_BG_LIGHT,
+  REELS_PANEL_BG_DARK,
+  POST_FORM_BG_LIGHT,
+  POST_FORM_BG_DARK,
   CREATION_BOX_BG_LIGHT,
   CREATION_BOX_BG_DARK,
   MINI_EVENT_FORM_BG_LIGHT,
@@ -68,10 +77,12 @@ export const MAP_BG_WEBP_ASSETS = [
 
 export function resolveLocalMapBgFallback(assetPath) {
   if (!assetPath || typeof assetPath !== "string") return "";
-  if (assetPath.startsWith(`${MAP_BG_CDN_BASE}/`)) {
-    const filename = assetPath.slice(MAP_BG_CDN_BASE.length + 1).split("?")[0];
-    if (filename && !filename.includes("/")) {
-      return `/BG_IMPROVE_FOR_MAP/${filename}`;
+  for (const base of [MAP_BG_CDN_BASE, REELS_BG_CDN_BASE]) {
+    if (assetPath.startsWith(`${base}/`)) {
+      const filename = assetPath.slice(base.length + 1).split("?")[0];
+      if (filename && !filename.includes("/")) {
+        return `/BG_IMPROVE_FOR_MAP/${filename}`;
+      }
     }
   }
   return assetPath;

@@ -50,6 +50,14 @@ import {
   leaveEventGroupCallHandler,
 } from "../controllers/eventGroupController.js";
 import {
+  getReelsFeedHandler,
+  createReelsPostHandler,
+  deleteReelsPostHandler,
+  toggleReelsPostLikeHandler,
+  getReelsPostCommentsHandler,
+  addReelsPostCommentHandler,
+} from "../controllers/reelsPostController.js";
+import {
   getPersonalChatMessages,
   sendPersonalChatMessage,
   deletePersonalChatMessages,
@@ -289,6 +297,14 @@ router.post("/map/group-chat/:eventId/members/:targetId/promote", requireAuth, p
 router.delete("/map/group-chat/:eventId/members/:targetId", requireAuth, kickEventGroupMember);
 router.post("/map/group-chat/:eventId/call/start", requireAuth, startEventGroupCall);
 router.post("/map/group-chat/:eventId/call/leave", requireAuth, leaveEventGroupCallHandler);
+
+// ─── Reels & Public/Friends Media Feed (Cursor-Paginated + Likes/Comments) ───
+router.get("/map/reels", requireAuth, getReelsFeedHandler);
+router.post("/map/reels", requireAuth, createReelsPostHandler);
+router.delete("/map/reels/:postId", requireAuth, deleteReelsPostHandler);
+router.post("/map/reels/:postId/like", requireAuth, toggleReelsPostLikeHandler);
+router.get("/map/reels/:postId/comments", requireAuth, getReelsPostCommentsHandler);
+router.post("/map/reels/:postId/comments", requireAuth, addReelsPostCommentHandler);
 
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────

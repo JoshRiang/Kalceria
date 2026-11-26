@@ -64,6 +64,7 @@ export function parseCoordinate(value) {
 export function stripEncodedTags(raw) {
   return String(raw || '')
     .replace(/\[CAT:[a-z_]+\]\s*/gi, '')
+    .replace(/\[VIS:[a-z_]+\]\s*/gi, '')
     .replace(/\[MEDIA:[^\]]+\]\s*/gi, '')
     .replace(/\[CMETA:[^\]]+\]\s*/gi, '')
     .replace(/\[LOC:[^\]]+\]\s*/gi, '')
@@ -105,12 +106,14 @@ export function decodeClipMetaTag(rawBase64) {
 export function extractEncodedTags(raw) {
   const text = String(raw || '');
   const catMatch = text.match(/\[CAT:([a-z_]+)\]/i);
+  const visMatch = text.match(/\[VIS:(public|private)\]/i);
   const mediaMatch = text.match(/\[MEDIA:([^\]]+)\]/i);
   const clipMetaMatch = text.match(/\[CMETA:([^\]]+)\]/i);
   const locMatch = text.match(/\[LOC:([^\]]+)\]/i);
   const collabsMatch = text.match(/\[COLLABS:([^\]]+)\]/i);
   return {
     category: catMatch ? catMatch[1].toLowerCase() : null,
+    visibility: visMatch ? visMatch[1].toLowerCase() : 'private',
     mediaStr: mediaMatch ? mediaMatch[1] : '',
     clipMetaStr: clipMetaMatch ? clipMetaMatch[1] : '',
     location: locMatch ? locMatch[1].trim() : null,
@@ -123,6 +126,7 @@ export function extractEncodedTags(raw) {
 
 export function buildEncodedDescription({
   category,
+  visibility = 'private',
   location,
   mediaUrls = [],
   mediaClips = null,
@@ -131,6 +135,7 @@ export function buildEncodedDescription({
   const parts = [];
   const cleanCat = cleanText(category) || 'cafe';
   parts.push(`[CAT:${cleanCat}]`);
+  if (visibility === 'public') parts.push('[VIS:public]');
   const cleanLoc = cleanText(location);
   if (cleanLoc) parts.push(`[LOC:${cleanLoc}]`);
   const urls = Array.isArray(mediaClips) && mediaClips.length > 0
@@ -227,6 +232,7 @@ export function formatMiniEventResponse(ev, hydrated = {}) {
     ...ev,
     title: ev.title ? toSmartTitleCase(ev.title) : ev.title,
     category: tags.category || ev.category || 'cafe',
+    visibility: tags.visibility === 'public' ? 'public' : 'private',
     mediaUrl,
     mediaItems,
     collaborators,

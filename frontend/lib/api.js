@@ -227,6 +227,18 @@ export const startEventGroupCall = (eventId, mode = 'voice') =>
   api.post(`/map/group-chat/${eventId}/call/start`, { mode }).then(r => r.data);
 export const leaveEventGroupCall = (eventId) =>
   api.post(`/map/group-chat/${eventId}/call/leave`).then(r => r.data).catch(() => ({ ok: false }));
+export const fetchReelsFeed = (params = {}) =>
+  api.get('/map/reels', { params }).then(r => r.data || { posts: [], nextCursor: null, hasMore: false }).catch(() => ({ posts: [], nextCursor: null, hasMore: false }));
+export const createReelsPost = (payload) =>
+  api.post('/map/reels', payload).then(r => r.data);
+export const deleteReelsPost = (postId) =>
+  api.delete(`/map/reels/${postId}`).then(r => r.data);
+export const toggleReelsLike = (postId) =>
+  api.post(`/map/reels/${postId}/like`).then(r => r.data);
+export const fetchReelsComments = (postId) =>
+  api.get(`/map/reels/${postId}/comments`).then(r => r.data?.comments || []).catch(() => []);
+export const postReelsComment = (postId, body) =>
+  api.post(`/map/reels/${postId}/comments`, { body }).then(r => r.data);
 export const postBroadcast = (payload) =>
   api.post('/broadcast', typeof payload === 'string' ? { message: payload } : payload);
 export const putBroadcast = (payload) =>
@@ -238,7 +250,9 @@ export const postMiniEvent = (data) => api.post('/mini-events', data);
 export const putMiniEvent = (id, data) => api.put(`/mini-events/${id}`, data);
 export const delMiniEvent = (id) => api.delete(`/mini-events/${id}`);
 
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB via R2 direct & chunked edge upload
+import { compressMediaForUpload, MAX_ASSEMBLED_MEDIA_BYTES } from "./mediaCompressor";
+
+const MAX_UPLOAD_BYTES = MAX_ASSEMBLED_MEDIA_BYTES; // 64 MB after perceptually-lossless compression (duration-capped 90s)
 const SINGLE_SHOT_THRESHOLD_BYTES = 3.4 * 1024 * 1024; // Safely under Vercel's 4.5 MB incoming request cap
 const UPLOAD_CHUNK_BYTES = 3.2 * 1024 * 1024;
 
@@ -263,11 +277,29 @@ const MIME_EXT_MAP = {
   "audio/mp3": "mp3",
 };
 
-const UPLOAD_TIMEOUT_MS = 90000;
+const UPLOAD_TIMEOUT_MS = 180000;
 
-export const uploadBlobMedia = async (file, { purpose } = {}) => {
+async function uploadSingleThumbnail(thumbFile, { purpose, controller } = {}) {
+  if (!thumbFile) return null;
+  const fd = new FormData();
+  fd.append("file", thumbFile, thumbFile.name || `thumb-${Date.now()}.webp`);
+  if (purpose) fd.append("purpose", purpose);
+  const res = await fetch("/api/blob/upload", {
+    method: "POST",
+    body: fd,
+    signal: controller ? controller.signal : undefined,
+  });
+  if (!res.ok) return null;
+  return res.json().catch(() => null);
+}
+
+export const uploadBlobMedia = async (rawFile, { purpose, includeThumbnail = false } = {}) => {
+  const prepared = await compressMediaForUpload(rawFile);
+  const file = prepared?.file || rawFile;
+  const thumbnailFile = includeThumbnail ? prepared?.thumbnailFile || null : null;
+
   if (file && file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil.");
+    throw new Error("File setelah kompresi masih melebihi batas 64 MB. Mohon perpendek durasi video.");
   }
 
   let filename = file?.name || "";
@@ -288,8 +320,24 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
       }, UPLOAD_TIMEOUT_MS)
     : null;
 
+  const thumbTask = thumbnailFile
+    ? uploadSingleThumbnail(thumbnailFile, { purpose: purpose || "media", controller }).catch(() => null)
+    : Promise.resolve(null);
+
+  const decorateResult = async (data) => {
+    const thumbRes = await thumbTask;
+    return {
+      ...data,
+      thumbnailUrl: thumbRes?.url || null,
+      duration: prepared?.duration || null,
+      width: prepared?.width || data?.optimization?.dimensions?.width || null,
+      height: prepared?.height || data?.optimization?.dimensions?.height || null,
+      compressionStats: prepared?.stats || null,
+    };
+  };
+
   try {
-    // Chunked R2 staging path for files > 3.4 MB up to 10 MB (never hits Vercel 4.5 MB 413!)
+    // Chunked R2 staging path for files > 3.4 MB up to 64 MB (never hits Vercel 4.5 MB 413!)
     if (file && typeof file.slice === "function" && file.size > SINGLE_SHOT_THRESHOLD_BYTES) {
       const uploadId = `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
       const totalChunks = Math.ceil(file.size / UPLOAD_CHUNK_BYTES);
@@ -310,9 +358,6 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
           signal: controller ? controller.signal : undefined,
         });
         if (!partRes.ok) {
-          if (partRes.status === 413) {
-            throw new Error("Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil.");
-          }
           const err = await partRes.json().catch(() => ({}));
           throw new Error(err.error || "Gagal mengunggah potongan file media.");
         }
@@ -332,13 +377,10 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
         signal: controller ? controller.signal : undefined,
       });
       if (!completeRes.ok) {
-        if (completeRes.status === 413) {
-          throw new Error("Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil.");
-        }
         const err = await completeRes.json().catch(() => ({}));
         throw new Error(err.error || "Gagal menyelesaikan unggahan file media.");
       }
-      return await completeRes.json();
+      return await decorateResult(await completeRes.json());
     }
 
     // Standard 1-request fast path (<= 3.4 MB)
@@ -352,13 +394,10 @@ export const uploadBlobMedia = async (file, { purpose } = {}) => {
       signal: controller ? controller.signal : undefined,
     });
     if (!res.ok) {
-      if (res.status === 413) {
-        throw new Error("Ukuran file melebihi batas 10 MB. Mohon gunakan file dengan ukuran lebih kecil.");
-      }
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || "Gagal mengunggah file media.");
     }
-    return await res.json();
+    return await decorateResult(await res.json());
   } catch (err) {
     throw new Error(normalizeUploadErrorMessage(err, "Gagal mengunggah file media."));
   } finally {
