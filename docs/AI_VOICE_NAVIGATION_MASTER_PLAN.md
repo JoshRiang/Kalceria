@@ -1,0 +1,100 @@
+# KALCERIA AI VOICE NAVIGATION — MASTER PLAN (5 ITERATIONS / 5 WAVES)
+
+**Status:** Iteration 1/5 COMPLETE (Architecture, License Audit, Canonical Indonesian Google-Maps Corpus & Pulau Jawa Text Normalizer)  
+**Target Domain:** Pulau Jawa (`java-latest.osm.pbf`, Jabodetabek, Bandung, Semarang, Yogyakarta, Surabaya, Trans-Jawa, KRL/MRT/LRT/TransJakarta)  
+**Core Doctrine:** Hybrid Neuro-Symbolic Vector-Attention (100% Directional Truth Safety + Dynamic Road-Ahead Context Attention + Copyright-Free Neural Indonesian Voice in Docker)
+
+---
+
+## 1. Mengapa Bukan 100% Generative ML / LLM? (Arsitektur Hybrid Neuro-Symbolic)
+
+Untuk navigasi jalan real-time, menggunakan LLM generatif murni sangat berbahaya karena:
+1. **Halusinasi Arah Fatal**: LLM probabilistik bisa mengucapkan *"Belok kiri"* saat geometri jalan sebenarnya belok kanan.
+2. **Latensi Tinggi & Biaya API**: Generasi teks LLM butuh 800–2500 ms, terlalu lambat ketika kendaraan melaju 60 km/jam (16,7 meter per detik).
+
+Oleh karena itu, **Kalceria Voice Nav Engine** menggunakan arsitektur **3-Lapisan Hybrid Neuro-Symbolic**:
+
+```
+[GPS Terkurasi + OSRM/TomTom/Transitous Steps + Live Traffic]
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ LAYER 1: HARD SYMBOLIC SAFETY GUARDRAIL (0% Halusinasi Arah)    │
+│ Mengunci directionLock (left/right/uturn/roundabout/arrival/    │
+│ traffic/transit), moda transportasi, dan slot jarak/nama jalan. │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ Hanya kandidat yang 100% valid secara arah
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ LAYER 2: MULTI-HEAD VECTOR-ATTENTION ENGINE (Static-ML Jawa)    │
+│ Menghitung skor perhatian dinamis konteks jalan (24-dimensi):   │
+│   Attention(Q, K) = softmax( (x · W_Q)(E_corpus · W_K)^T / √dk )│
+│ Memilih frasa Google-Maps-grade paling alami & prosodi urgensi  │
+│ untuk kondisi Pulau Jawa (Tol, Arteri, Gang, Bundaran, Macet,   │
+│ Perlintasan KA, Stasiun KRL, Halte TransJakarta).               │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ Kalimat Indonesia natural + Java Normalizer
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ LAYER 3: COPYRIGHT-FREE NEURAL VOICE TTS (Docker + Fallback)    │
+│ Primary : Piper VITS ONNX `id_ID-news_tts-medium` (MIT License) │
+│           (15.7 MB INT8 ONNX / 63 MB FP32, <120ms CPU, 22.05kHz)│
+│ Cache   : Pre-baked audio frasa statis + LRU cache kalimat      │
+│ Fallback: Browser Web Speech API (`id-ID`) + WebAudio cue       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. Evaluasi Jalan Pintas Model Open-Source Hugging Face (Legal & Aman)
+
+Hasil audit lisensi dan performa CPU Docker terhadap model TTS Bahasa Indonesia di Hugging Face:
+
+| Model Hugging Face | Arsitektur | Lisensi | Aman Komersial / Bebas Copyright? | Ukuran & Kecepatan CPU | Keputusan |
+|---|---|---|---|---|---|
+| **`rhasspy/piper-voices` (`id/id_ID/news_tts/medium`)** & **`okasi/piper-indonesian-news-tts-onnx-q8`** | VITS ONNX (Piper) | **MIT License** | **YA (100% Aman, MIT)** | **~15,7 MB (INT8)** / ~63 MB (FP32), **< 120 ms di CPU**, 22.05 kHz | **DIPILIH (Primary Docker TTS)** |
+| `anak10thn/pocket-tts-indonesian` | Distilled Transformer | CC-BY-4.0 | Perlu atribusi eksplisit | Sedang | Cadangan Opsional |
+| `Ellbendls/csm-1b-indonesian-fine-tuned` | CSM-1B (PyTorch) | Apache 2.0 | Ya | >2 GB, butuh GPU | Terlalu berat untuk CPU VPS |
+| Meta `facebook/mms-tts-ind` | VITS | **CC-BY-NC-4.0** | **TIDAK (Non-Commercial!)** | ~140 MB | **DITOLAK (Pelanggaran Komersial)** |
+
+**Kesimpulan Jalan Pintas**: Kita tidak perlu melatih acoustic vocoder dari nol (yang butuh ribuan jam audio studio & GPU A100). Kita menggunakan **`id_ID-news_tts-medium` (MIT License, Piper ONNX)** di dalam Docker CPU pada Iterasi 4/5, dan memfokuskan seluruh pelatihan ML kita pada **Model Vector-Attention Konteks Jalan Pulau Jawa** (Iterasi 2/5 & 3/5) agar **APA yang diucapkan AI selalu 100% tepat, kontekstual, dan natural seperti Google Maps!**
+
+---
+
+## 3. Pembagian Pekerjaan 5 Iterasi (5 Waves — Setiap Iterasi Wajib & Terukur)
+
+| Iterasi / Wave | Fokus Utama | Output Konkret & File Utama | Status |
+|---|---|---|---|
+| **Iterasi 1/5** | **Arsitektur, Audit Model HF, Database Frasa Google Maps Indonesia & Java Text Normalizer** | `docs/AI_VOICE_NAVIGATION_MASTER_PLAN.md`, `docs/ITERATION_1_VOICE_NAV_CORPUS_AND_METHODOLOGY.md`, `data/voice_nav_java/GOOGLE_MAPS_ID_CORPUS.json` (65+ skenario lengkap), `backend/services/voiceNav/javaTextNormalizer.js`, `corpusRegistry.js`, unit test Gate 3a | **SELESAI (Turn ini)** |
+| **Iterasi 2/5** | **Ekstraksi Step Jalan Real-Time (`steps=true`) + Pipeline Training Vector-Attention Pulau Jawa** | Upgrade `blendRoutingService.js` & `blendTransitService.js` mengekstrak `steps[]` lengkap (maneuver, modifier, roadName, exit, distance, intersections, traffic ahead); Python trainer `ml/voice_nav_java/train_java_attention.py` melatih bobot Multi-Head Vector-Attention (`W_Q`, `W_K`, `E_corpus`) pada 12.000+ skenario sintetis & topologi Pulau Jawa → export bobot ringan `java_attention_weights_v1.json` (<80 KB) + `docs/ITERATION_2_JAVA_ATTENTION_TRAINING.md` | Terjadwal |
+| **Iterasi 3/5** | **Runtime Vector-Attention Inference Engine + Distance Trigger State Machine** | Pure JS/ESM `attentionInferenceEngine.js` (<1ms per inferensi di Node & Browser) + `maneuverTriggerStateMachine.js` (threshold adaptif per kecepatan `1000m → 500m → 200m → 80m → 25m`, anti-spam cooldown, deteksi off-route & reroute, peringatan macet di depan & perlintasan KA) + unit test akurasi 100% arah + `docs/ITERATION_3_INFERENCE_AND_TRIGGERS.md` | Terjadwal |
+| **Iterasi 4/5** | **Docker Neural Voice TTS (`Piper ONNX MIT`) + Audio Pre-Baking & Backend `/api/map/voice-nav/speak`** | `infra/voice-tts-id/Dockerfile`, `docker-compose.yml` (terintegrasi berdampingan dengan `infra/osrm-java/`), HTTP server Piper ONNX CPU + pre-baked static audio cache untuk frasa inti + endpoint backend proxy & fallback aman + `docs/ITERATION_4_DOCKER_NEURAL_TTS.md` | Terjadwal |
+| **Iterasi 5/5** | **Integrasi Penuh AI Voice Co-Pilot ke Focus Mode Map + Audio Ducking + Live Deploy** | `BlendVoiceNavigator.js` & tombol AI Voice (Mute/Unmute, Subtitle Ticker real-time, Preview Voice) di `BlendFocusHud.jsx` & `MapBlendController.jsx`, sinkron dengan `soundEngine.js`, 6-gate full audit (0 Hook Delta di Tier A), deploy production & live probes + `docs/ITERATION_5_COPILOT_PRODUCTION_LAUNCH.md` | Terjadwal |
+
+---
+
+## 4. Spesifikasi Matematis Vector-Attention Pulau Jawa (Ringkasan)
+
+1. **Vektor Fitur Konteks Jalan (`x` ∈ ℝ²⁴)**:
+   - Dim 0..4: One-hot `transport_mode` (`foot`, `motorcycle`, `car`, `bus`, `train`)
+   - Dim 5..9: One-hot `distance_bucket` (`far_1000m`, `prepare_500m`, `approach_200m`, `imminent_80m`, `now_25m`)
+   - Dim 10..15: One-hot `road_class_java` (`tol`, `arteri`, `lokal_gang`, `bundaran`, `flyover_underpass`, `transit_hub`)
+   - Dim 16..19: One-hot `traffic_state` (`FREE`, `MODERATE`, `SLOW`, `JAM`)
+   - Dim 20: `has_street_name` (0/1)
+   - Dim 21: `has_chained_next_turn` (0/1)
+   - Dim 22: `speed_normalized` (`min(1, speed_kmh / 90)`)
+   - Dim 23: `is_convoy_blend_active` (0/1)
+2. **Multi-Head Scaled Dot-Product Attention (`H = 4 heads`, `d_k = 8`)**:
+   - Head 1 (*Urgency & Distance Head*): Memilih keringkasan kalimat (`"Belok kiri sekarang"` vs `"Dalam 500 meter, bersiap belok kiri ke Jalan Sudirman"`).
+   - Head 2 (*Java Road & Mode Context Head*): Membedakan konteks khusus Jawa (larangan tol untuk motor, jalur gang kecil, bundaran besar, flyover/underpass).
+   - Head 3 (*Traffic & Hazard Head*): Memprioritaskan peringatan kemacetan TomTom, perlambatan, atau perlintasan rel kereta api.
+   - Head 4 (*Multimodal Transit & Chaining Head*): Menangani instruksi berangkai (`combineWithNext`) dan transisi jalan kaki ↔ KRL/MRT/TransJakarta.
+3. **Hard Symbolic Invariant (Tidak Bisa Dikalahkan Attention)**:
+   - Sebelum `softmax`, seluruh template dengan `directionLock !== groundTruthDirection` diberi mask $-\infty$. Ini menjamin **akurasi arah 100,00% secara matematis**!
+
+---
+
+## 5. Kepatuhan Arsitektur Kalceria (`AGENTS.md`)
+- **Tier A (`MapPageClient.jsx` & `usePersonalChatState.js`)**: Tetap **0 Hook Delta** di seluruh 5 iterasi (seluruh komponen Voice Nav dipasang di `frontend/components/map/blend/voiceNav/` & dipanggil lewat `MapBlendController.jsx` di `SnapMap.jsx`).
+- **Tier B Ratchets**: Tidak ada file Tier B yang melebihi plafon LOC.
+- **Zero Regression**: Semua 10+ suite backend & 92+ test frontend wajib 100% hijau pada setiap akhir iterasi.
