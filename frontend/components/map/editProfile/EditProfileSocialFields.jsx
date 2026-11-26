@@ -9,6 +9,9 @@ export function EditProfileSocialFields({
   setInstagram,
   igInputRef,
   igValidation,
+  isArchivePrivate = false,
+  setIsArchivePrivate,
+  isModalDark = false,
   iconFg,
   iconStroke,
   inputBgClass,
@@ -137,6 +140,45 @@ export function EditProfileSocialFields({
             Username tidak valid
           </p>
         )}
+      </div>
+
+      {/* Account-Level Event Archive Privacy Toggle */}
+      <div
+        className={`shrink-0 flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 mt-0.5 transition-colors ${
+          isModalDark
+            ? "border-white/15 bg-black/35 text-white"
+            : "border-black/15 bg-white/80 text-black"
+        }`}
+      >
+        <div className="min-w-0">
+          <p className="text-[11.5px] font-bold leading-tight">
+            Private Event Archive
+          </p>
+          <p className={`text-[10px] leading-snug mt-0.5 ${isModalDark ? "text-white/60" : "text-black/60"}`}>
+            {isArchivePrivate
+              ? "Hidden: all your Event Archives are hidden from everyone else."
+              : "Visible: others can view your non-hidden Event Archives."}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={Boolean(isArchivePrivate)}
+          onClick={() => setIsArchivePrivate?.((prev) => !prev)}
+          className={`relative w-11 h-6 rounded-full transition-colors shrink-0 cursor-pointer outline-none flex items-center ${
+            isArchivePrivate
+              ? "bg-gradient-to-r from-[#2563eb] to-[#ec4899]"
+              : isModalDark
+              ? "bg-white/20"
+              : "bg-black/20"
+          }`}
+        >
+          <span
+            className={`block w-[18px] h-[18px] rounded-full bg-white shadow transform transition-transform ${
+              isArchivePrivate ? "translate-x-[22px]" : "translate-x-[3px]"
+            }`}
+          />
+        </button>
       </div>
     </>
   );

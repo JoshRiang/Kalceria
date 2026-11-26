@@ -27,6 +27,7 @@ import {
   hydrateEventCollabSummary,
   purgeEventCollabByIds,
 } from './eventCollabStore.js';
+import { recordEventArchiveMedia } from '../../services/eventArchiveStore.js';
 
 export const CREATOR_SELECT = {
   id: true,
@@ -179,6 +180,15 @@ export async function createMiniEvent(req, res, next) {
 
     if (parsedMedia.clips.length > 0) {
       await saveEventMediaItems(event.id, parsedMedia.clips);
+      await recordEventArchiveMedia({
+        userId: creatorId,
+        eventId: event.id,
+        eventTitle: title,
+        eventCategory: category,
+        eventLocation: location || null,
+        mediaItems: parsedMedia.clips,
+        source: 'event_clip',
+      }).catch(() => {});
     }
 
     await invalidateMiniEventsCache();
@@ -379,6 +389,18 @@ export async function updateMiniEvent(req, res, next) {
 
       if (mediaPlan) {
         await persistEventMediaSelection(id, mediaPlan);
+        const creatorAdded = (finalClips || []).filter((c) => String(c.authorId || creatorId) === String(creatorId));
+        if (creatorAdded.length > 0) {
+          await recordEventArchiveMedia({
+            userId: creatorId,
+            eventId: id,
+            eventTitle: title,
+            eventCategory: category,
+            eventLocation: location || null,
+            mediaItems: creatorAdded,
+            source: 'event_clip',
+          }).catch(() => {});
+        }
       }
 
       await invalidateMiniEventsCache();

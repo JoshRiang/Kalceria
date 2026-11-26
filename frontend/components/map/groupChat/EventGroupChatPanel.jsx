@@ -243,21 +243,28 @@ export function EventGroupChatPanel({
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
               </button>
-              <div className="w-9 h-9 rounded-full overflow-hidden border border-current/25 flex items-center justify-center shrink-0">
-                <ContentImage
-                  src={meta?.avatarUrl || getInstantMapBgUrl(DEFAULT_GROUP_AVATAR)}
-                  alt={event.title}
-                  width={40}
-                  height={40}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold leading-tight truncate">{event.title}</p>
-                <p className={`text-[10.5px] leading-tight truncate mt-0.5 ${isMapDark ? "text-white/65" : "text-black/65"}`}>
-                  {members.length || 1} member{(members.length || 1) > 1 ? "s" : ""}
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowSettings(true)}
+                title="Open Group Profile & Settings"
+                className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer group"
+              >
+                <div className="w-9 h-9 rounded-full overflow-hidden border border-current/25 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <ContentImage
+                    src={meta?.avatarUrl || getInstantMapBgUrl(DEFAULT_GROUP_AVATAR)}
+                    alt={event.title}
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-bold leading-tight truncate group-hover:underline">{event.title}</p>
+                  <p className={`text-[10.5px] leading-tight truncate mt-0.5 ${isMapDark ? "text-white/65" : "text-black/65"}`}>
+                    {members.length || 1} member{(members.length || 1) > 1 ? "s" : ""}
+                  </p>
+                </div>
+              </button>
             </div>
 
             {/* Group Video Call, Group Voice Call, Three-Dot Menu */}

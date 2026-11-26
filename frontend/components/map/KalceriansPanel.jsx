@@ -1,14 +1,11 @@
 "use client";
 
 import { memo, useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChatErrorBoundary } from "./panel/ChatErrorBoundary";
+import { motion } from "framer-motion";
 import { KalceriansHeader } from "./panel/KalceriansHeader";
 import { KalceriansPanelBody } from "./panel/KalceriansPanelBody";
+import { KalceriansOverlayPanels } from "./panel/KalceriansOverlayPanels";
 import { avatarUrl, FAMILY_LIMITS } from "./panel/kalceriansHelpers";
-import { PersonalChatPanel } from "./chat/PersonalChatPanel";
-import { EventGroupChatPanel } from "./groupChat/EventGroupChatPanel";
-import { IncomingCallModal } from "./chat/components/IncomingCallModal";
 import { stopCallRingtone } from "@/lib/soundEngine";
 import { useKalceriansIncomingCall } from "./panel/useKalceriansIncomingCall";
 import { useKalceriansMapEvents } from "./panel/useKalceriansMapEvents";
@@ -128,6 +125,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
   } = useBottomPanelSwitcher({
     setDrawerOpen,
     onCloseActivePersonalChat: resetActivePersonalChat,
+    onClosePeerProfile: () => setExpandedUserId(null),
     personalChatMap,
     events,
     currentUser,
@@ -229,9 +227,12 @@ export const KalceriansPanel = memo(function KalceriansPanel({
         (u) => String(u.id || u.nickname || u.name) === String(activeChatUserId)
       ) || activeChatUserSnapshot
     : null;
+  const expandedProfileUser = expandedUserId
+    ? sidebarKalcerians.find((u) => String(u.id) === String(expandedUserId)) || null
+    : null;
 
   const isKalceriansHiddenForChat = Boolean(
-    isClosingForChat || activeChatUser || activeGroupEvent || incomingCall || isPanelSwitching
+    isClosingForChat || activeChatUser || activeGroupEvent || expandedProfileUser || incomingCall || isPanelSwitching
   );
   const panelBgAsset =
     activePanel === "chat"
@@ -257,59 +258,32 @@ export const KalceriansPanel = memo(function KalceriansPanel({
 
   return (
     <>
-      <AnimatePresence>
-        {activeChatUser && (
-          <ChatErrorBoundary
-            key={`chat-boundary-${activeChatUser.id}`}
-            isMapDark={isMapDark}
-            onCloseChat={() => {
-              setIncomingCallInitialState(null);
-              handleClosePersonalChat();
-            }}
-          >
-            <PersonalChatPanel
-              key={`chat-panel-${activeChatUser.id}`}
-              activeChatUser={activeChatUser}
-              currentUser={currentUser}
-              isMapDark={isMapDark}
-              events={events}
-              avatarUrl={avatarUrl}
-              isFriend={isUserFriend(activeChatUser)}
-              isFavourite={favouriteUserIds.includes(String(activeChatUser.id))}
-              isMuted={mutedUserIds.includes(String(activeChatUser.id))}
-              isBlockedByTarget={(blockedByUserIds || []).some((id) => String(id).toLowerCase() === String(activeChatUser.id).toLowerCase())}
-              isTargetBlocked={(blockedUserIds || []).some((id) => String(id).toLowerCase() === String(activeChatUser.id).toLowerCase())}
-              initialCallState={incomingCallInitialState}
-              onCallEnded={() => setIncomingCallInitialState(null)}
-              onToggleFavourite={onToggleFavourite}
-              onToggleMute={onToggleMute}
-              onBlockUser={onBlockUser}
-              onUnblockUser={onUnblockUser}
-              onCloseChat={() => {
-                setIncomingCallInitialState(null);
-                handleClosePersonalChat();
-              }}
-              onOutgoingMessageUpdate={onOutgoingMessageUpdate}
-            />
-          </ChatErrorBoundary>
-        )}
-        {!activeChatUser && activeGroupEvent && (
-          <EventGroupChatPanel
-            key={`group-chat-panel-${activeGroupEvent.id}`}
-            event={activeGroupEvent}
-            currentUser={currentUser}
-            isMapDark={isMapDark}
-            avatarUrl={avatarUrl}
-            onClose={() => setActiveGroupEventId(null)}
-          />
-        )}
-      </AnimatePresence>
-
-      <IncomingCallModal
-        incomingCall={incomingCall}
+      <KalceriansOverlayPanels
+        activeChatUser={activeChatUser}
+        activeGroupEvent={activeGroupEvent}
+        expandedProfileUser={expandedProfileUser}
+        currentUser={currentUser}
         isMapDark={isMapDark}
-        onAccept={handleAcceptIncomingCall}
-        onDecline={handleDeclineIncomingCall}
+        events={events}
+        avatarUrl={avatarUrl}
+        isUserFriend={isUserFriend}
+        favouriteUserIds={favouriteUserIds}
+        mutedUserIds={mutedUserIds}
+        blockedUserIds={blockedUserIds}
+        blockedByUserIds={blockedByUserIds}
+        incomingCallInitialState={incomingCallInitialState}
+        setIncomingCallInitialState={setIncomingCallInitialState}
+        onToggleFavourite={onToggleFavourite}
+        onToggleMute={onToggleMute}
+        onBlockUser={onBlockUser}
+        onUnblockUser={onUnblockUser}
+        handleClosePersonalChat={handleClosePersonalChat}
+        onOutgoingMessageUpdate={onOutgoingMessageUpdate}
+        onCloseGroupChat={() => setActiveGroupEventId(null)}
+        onClosePeerProfile={() => setExpandedUserId(null)}
+        incomingCall={incomingCall}
+        handleAcceptIncomingCall={handleAcceptIncomingCall}
+        handleDeclineIncomingCall={handleDeclineIncomingCall}
       />
 
       <motion.aside

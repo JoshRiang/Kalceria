@@ -404,3 +404,20 @@ export const uploadBlobMedia = async (rawFile, { purpose, includeThumbnail = fal
     if (timeoutId) clearTimeout(timeoutId);
   }
 };
+
+// Profile Event Archives (Auto-Ingested Event Collections + Privacy)
+export const fetchUserEventArchives = (targetUserId) =>
+  api
+    .get(`/map/profile/${encodeURIComponent(targetUserId)}/archives`)
+    .then((r) => r.data || { isArchivePrivate: false, archives: [] })
+    .catch(() => ({ isArchivePrivate: false, archives: [] }));
+
+export const updateUserEventArchive = (archiveId, payload) =>
+  api
+    .patch(`/map/profile/archives/${encodeURIComponent(archiveId)}`, payload)
+    .then((r) => r.data);
+
+export const deleteUserEventArchive = (archiveId) =>
+  api
+    .delete(`/map/profile/archives/${encodeURIComponent(archiveId)}`)
+    .then((r) => r.data);

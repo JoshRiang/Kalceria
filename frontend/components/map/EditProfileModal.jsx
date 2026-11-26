@@ -41,6 +41,7 @@ export function EditProfileModal({
   const [profileDescription, setProfileDescription] = useState("");
   const [phone, setPhone] = useState("");
   const [instagram, setInstagram] = useState("");
+  const [isArchivePrivate, setIsArchivePrivate] = useState(false);
   const [coverImage, setCoverImage] = useState("");
   const [isCoverVideo, setIsCoverVideo] = useState(false);
   const [profilePicture, setProfilePicture] = useState(null);
@@ -95,10 +96,9 @@ export function EditProfileModal({
       setPhone(rawPhone);
 
       const rawIg =
-        currentUser.instagram ||
-        (currentUser.socialPlatform === "IG" ? currentUser.socialLink : "") ||
-        "";
+        currentUser.instagram || (currentUser.socialPlatform === "IG" ? currentUser.socialLink : "") || "";
       setInstagram(rawIg ? String(rawIg).replace(/^@/, "") : "");
+      setIsArchivePrivate(Boolean(currentUser.isArchivePrivate));
 
       clearPendingCover();
       const existingCover = resolvePersistentCover(currentUser);
@@ -264,6 +264,7 @@ export function EditProfileModal({
         coverUrl: finalCover,
         coverType,
         profilePicture: finalAvatar,
+        isArchivePrivate: Boolean(isArchivePrivate),
       };
       await onSaveProfile?.(updatedData);
       onClose();
@@ -382,17 +383,10 @@ export function EditProfileModal({
                 </div>
 
                 <EditProfileSocialFields
-                  phone={phone}
-                  setPhone={setPhone}
-                  phoneInputRef={phoneInputRef}
-                  waValidation={waValidation}
-                  instagram={instagram}
-                  setInstagram={setInstagram}
-                  igInputRef={igInputRef}
-                  igValidation={igValidation}
-                  iconFg={iconFg}
-                  iconStroke={iconStroke}
-                  inputBgClass={inputBgClass}
+                  phone={phone} setPhone={setPhone} phoneInputRef={phoneInputRef} waValidation={waValidation}
+                  instagram={instagram} setInstagram={setInstagram} igInputRef={igInputRef} igValidation={igValidation}
+                  isArchivePrivate={isArchivePrivate} setIsArchivePrivate={setIsArchivePrivate}
+                  isModalDark={isModalDark} iconFg={iconFg} iconStroke={iconStroke} inputBgClass={inputBgClass}
                 />
 
                 {/* Danger Zone */}

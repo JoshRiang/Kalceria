@@ -3,6 +3,7 @@ import prisma from '../lib/prisma.js';
 import { ensurePersistentUserProfilesBatch, CANONICAL_USER_SELECT } from '../utils/profileDefaults.js';
 import { getFriendRelations } from './friendsStore.js';
 import { fetchCanonicalUserBlocks } from './canonicalFallbackStore.js';
+import { recordEventArchiveMedia } from './eventArchiveStore.js';
 
 export const REELS_CATEGORIES = ['cafe', 'eat', 'special', 'discuss', 'broadcast'];
 export const REELS_DEFAULT_PAGE_SIZE = 18;
@@ -117,6 +118,29 @@ export async function createReelsPost({
     Number.isFinite(Number(lat)) ? Number(lat) : null,
     Number.isFinite(Number(lng)) ? Number(lng) : null
   );
+
+  if (eventId) {
+    try {
+      const evRow = await prisma.miniEvent.findUnique({
+        where: { id: String(eventId) },
+        select: { id: true, title: true },
+      });
+      await recordEventArchiveMedia({
+        userId: authorId,
+        eventId: String(eventId),
+        eventTitle: evRow?.title || safeLoc || 'Kalceria Event',
+        eventCategory: safeCat,
+        eventLocation: safeLoc,
+        mediaItems: [{
+          mediaUrl: safeMedia,
+          thumbnailUrl: safeThumb,
+          mediaType: safeType,
+          caption: safeCaption,
+        }],
+        source: 'reels_post',
+      });
+    } catch {}
+  }
 
   return { id: postId, category: safeCat, visibility: safeVis };
 }

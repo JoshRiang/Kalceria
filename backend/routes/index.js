@@ -58,6 +58,11 @@ import {
   addReelsPostCommentHandler,
 } from "../controllers/reelsPostController.js";
 import {
+  getUserEventArchivesHandler,
+  updateUserEventArchiveHandler,
+  deleteUserEventArchiveHandler,
+} from "../controllers/eventArchiveController.js";
+import {
   getPersonalChatMessages,
   sendPersonalChatMessage,
   deletePersonalChatMessages,
@@ -309,6 +314,11 @@ router.delete("/map/reels/:postId", requireAuth, deleteReelsPostHandler);
 router.post("/map/reels/:postId/like", requireAuth, toggleReelsPostLikeHandler);
 router.get("/map/reels/:postId/comments", requireAuth, getReelsPostCommentsHandler);
 router.post("/map/reels/:postId/comments", requireAuth, addReelsPostCommentHandler);
+
+// ─── Profile Event Archives (Auto-Ingested Event Collections + Privacy) ──────
+router.get("/map/profile/:targetUserId/archives", requireAuth, getUserEventArchivesHandler);
+router.patch("/map/profile/archives/:archiveId", requireAuth, updateUserEventArchiveHandler);
+router.delete("/map/profile/archives/:archiveId", requireAuth, deleteUserEventArchiveHandler);
 
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import {
   hydrateFullMiniEvent,
   invalidateMiniEventsCache,
 } from './eventCrudHandlers.js';
+import { recordEventArchiveMedia } from '../../services/eventArchiveStore.js';
 
 export async function addMiniEventMedia(req, res, next) {
   try {
@@ -69,6 +70,16 @@ export async function addMiniEventMedia(req, res, next) {
         event.creator?.name || null
       );
       event.description = result.updatedDescription;
+
+      await recordEventArchiveMedia({
+        userId,
+        eventId: event.id,
+        eventTitle: event.title,
+        eventCategory: tags.category || 'cafe',
+        eventLocation: tags.location || null,
+        mediaItems: parsedMedia.clips,
+        source: 'event_clip',
+      }).catch(() => {});
 
       await invalidateMiniEventsCache();
       const formatted = await hydrateFullMiniEvent(event, { prehydratedClips: result.mediaItems });

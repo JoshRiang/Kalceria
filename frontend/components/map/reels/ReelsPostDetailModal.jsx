@@ -109,25 +109,52 @@ export function ReelsPostDetailModal({
             isMapDark ? "bg-[#0f1014] border-white/15 text-white" : "bg-white border-black/15 text-black"
           }`}
         >
-          {/* In-Panel Author Profile Redirect Overlay (Carries Golden Blue Light/Dark Texture!) */}
+          {/* Standalone Author Profile Panel (Full-bleed, zero overlap with post media behind it) */}
           <AnimatePresence>
             {viewingAuthorProfile && (
               <motion.div
                 key="reel-author-profile-panel"
-                initial={{ y: "100%", opacity: 0 }}
-                animate={{ y: "0%", opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
-                transition={{ type: "spring", stiffness: 280, damping: 28 }}
-                className="absolute inset-0 z-40 overflow-y-auto p-3 backdrop-blur-md bg-black/50 modern-kalcerian-scrollbar"
-                onClick={() => setViewingAuthorProfile(null)}
+                initial={{ x: "100%", opacity: 0.95 }}
+                animate={{ x: "0%", opacity: 1 }}
+                exit={{ x: "100%", opacity: 0.95 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className={`absolute inset-0 z-40 flex flex-col overflow-hidden ${
+                  isMapDark ? "bg-[#161b22] text-[#f0f6fc]" : "bg-white text-[#1f2328]"
+                }`}
               >
-                <div onClick={(e) => e.stopPropagation()}>
+                <div
+                  className={`shrink-0 px-3.5 py-2.5 flex items-center justify-between border-b ${
+                    isMapDark ? "border-[#30363d]/80 bg-[#161b22]" : "border-[#e5e7eb] bg-white"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setViewingAuthorProfile(null)}
+                    className="flex items-center gap-2 text-sm font-bold cursor-pointer min-w-0"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 12H5M12 19l-7-7 7-7" />
+                    </svg>
+                    <span className="truncate">
+                      @{String(viewingAuthorProfile?.nickname || viewingAuthorProfile?.username || viewingAuthorProfile?.name || "kalcerian").replace(/^@/, "")} Profile
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewingAuthorProfile(null)}
+                    aria-label="Close author profile"
+                    className="w-7 h-7 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 cursor-pointer shrink-0"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto modern-kalcerian-scrollbar">
                   <KalcerianProfileCard
                     user={viewingAuthorProfile}
                     isMapDark={isMapDark}
-                    showMobileClose={true}
+                    showMobileClose={false}
                     onClose={() => setViewingAuthorProfile(null)}
-                    isMobileCompact={true}
+                    inline={true}
                   />
                 </div>
               </motion.div>

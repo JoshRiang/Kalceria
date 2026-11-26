@@ -28,6 +28,10 @@ import {
   cleanupUserDatabaseRecords,
   purgeUserRedisFootprint,
 } from './cleanupUserFootprint.js';
+import {
+  getUserArchivePrivacy,
+  setUserArchivePrivacy,
+} from '../../services/eventArchiveStore.js';
 
 // get current user profile (for map page etc)
 export async function getMe(req, res, next) {
@@ -62,9 +66,12 @@ export async function getMe(req, res, next) {
     // only return broadcast if not expired
     const now = new Date();
     const broadcast = user.broadcast && user.broadcast.expiresAt > now ? user.broadcast : null;
-    const enrichedUser = await ensurePersistentUserProfile({ ...user, broadcast });
+    const [enrichedUser, isArchivePrivate] = await Promise.all([
+      ensurePersistentUserProfile({ ...user, broadcast }),
+      getUserArchivePrivacy(userId),
+    ]);
 
-    res.json({ user: enrichedUser });
+    res.json({ user: { ...enrichedUser, isArchivePrivate } });
   } catch (err) {
     next(err);
   }
@@ -90,6 +97,7 @@ export async function updateMe(req, res, next) {
       socialPlatform,
       socialLink,
       profilePicture,
+      isArchivePrivate,
     } = req.body || {};
 
     const existingUser = await prisma.user.findUnique({
@@ -211,9 +219,21 @@ export async function updateMe(req, res, next) {
       redis.del('cache:map_users:global'),
     ]);
 
-    const enrichedUser = await ensurePersistentUserProfile(user);
+    if (typeof isArchivePrivate === 'boolean') {
+      await setUserArchivePrivacy(userId, isArchivePrivate);
+    }
 
-    res.json({ message: 'Profile updated successfully.', user: enrichedUser });
+    const [enrichedUser, resolvedArchivePrivate] = await Promise.all([
+      ensurePersistentUserProfile(user),
+      typeof isArchivePrivate === 'boolean'
+        ? Promise.resolve(isArchivePrivate)
+        : getUserArchivePrivacy(userId),
+    ]);
+
+    res.json({
+      message: 'Profile updated successfully.',
+      user: { ...enrichedUser, isArchivePrivate: resolvedArchivePrivate },
+    });
   } catch (err) {
     next(err);
   }

@@ -21,6 +21,7 @@ import {
   PROFILE_CARD_BG_LIGHT,
   getInstantMapBgUrl,
 } from "@/lib/mapBgCache";
+import { ProfileEventArchiveSection } from "./profileArchive/ProfileEventArchiveSection";
 
 export default function KalcerianProfileCard({
   user,
@@ -345,6 +346,15 @@ export default function KalcerianProfileCard({
         )}
       </div>
       )}
+
+      {/* 7. Auto-Ingested Event Archive Card Stacks & Mini Discovery */}
+      <ProfileEventArchiveSection
+        user={user}
+        displayName={displayName}
+        isMapDark={isMapDark}
+        isOwnProfile={isOwnProfile}
+        isAnyBlocked={isAnyBlocked}
+      />
       </div>
     </div>
   );

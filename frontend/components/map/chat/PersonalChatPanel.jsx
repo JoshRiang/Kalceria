@@ -279,42 +279,56 @@ export function PersonalChatPanel({
           )}
         </div>
 
-        {/* Parked Profile Card: Smooth backdrop blur overlay + slides in and parks over chat */}
+        {/* Dedicated Standalone Contact Profile Panel (Zero overlap bleed with chat thread) */}
         <AnimatePresence>
           {showContactInfo && (
             <motion.div
-              key="profile-backdrop-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-              className="absolute inset-0 z-35 backdrop-blur-md bg-black/45 pointer-events-auto"
-              onClick={() => setShowContactInfo(false)}
-            />
-          )}
-          {showContactInfo && (
-            <motion.div
-              key="profile-card-modal"
-              initial={{ y: "100%", opacity: 0 }}
-              animate={{ y: "0%", opacity: 1 }}
-              exit={{ y: "100%", opacity: 0 }}
-              transition={{
-                type: "spring",
-                stiffness: 280,
-                damping: 28,
-                mass: 0.9,
-              }}
-              className="absolute inset-2 z-40 flex flex-col overflow-y-auto rounded-2xl shadow-2xl modern-kalcerian-scrollbar overflow-x-hidden"
+              key="profile-card-standalone-panel"
+              initial={{ x: "100%", opacity: 0.95 }}
+              animate={{ x: "0%", opacity: 1 }}
+              exit={{ x: "100%", opacity: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30, mass: 0.9 }}
+              className={`absolute inset-0 z-40 flex flex-col overflow-hidden ${
+                isMapDark ? "bg-[#161b22] text-[#f0f6fc]" : "bg-white text-[#1f2328]"
+              }`}
             >
-              <KalcerianProfileCard
-                user={activeChatUser}
-                isMapDark={isMapDark}
-                isBlocked={isTargetBlocked}
-                isBlockedByTarget={isBlockedByTarget}
-                showMobileClose={true}
-                onClose={() => setShowContactInfo(false)}
-                isMobileCompact={true}
-              />
+              <div
+                className={`shrink-0 px-3.5 py-2.5 flex items-center justify-between border-b ${
+                  isMapDark ? "border-[#30363d]/80 bg-[#161b22]" : "border-[#e5e7eb] bg-white"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowContactInfo(false)}
+                  className="flex items-center gap-2 text-sm font-bold cursor-pointer min-w-0"
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                  </svg>
+                  <span className="truncate">
+                    @{String(activeChatUser?.nickname || activeChatUser?.username || displayName).replace(/^@/, "")} Profile
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowContactInfo(false)}
+                  aria-label="Close contact profile"
+                  className="w-7 h-7 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 cursor-pointer shrink-0"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto modern-kalcerian-scrollbar">
+                <KalcerianProfileCard
+                  user={activeChatUser}
+                  isMapDark={isMapDark}
+                  isBlocked={isTargetBlocked}
+                  isBlockedByTarget={isBlockedByTarget}
+                  showMobileClose={false}
+                  onClose={() => setShowContactInfo(false)}
+                  inline={true}
+                />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

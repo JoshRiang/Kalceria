@@ -1,8 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import KalcerianProfileCard from "../KalcerianProfileCard";
+import { motion } from "framer-motion";
 import { BlockConfirmModal } from "./BlockConfirmModal";
 import {
   KalcerianCardAvatar,
@@ -216,32 +215,6 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
           setConfirmingAction={setConfirmingAction}
         />
       </div>
-
-      {/* Desktop & iPad Inline Profile Card Elongation */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            key={`profile-${user.id}`}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className={`overflow-hidden border-t ${
-              isMapDark ? "border-[#2e323d] bg-[#0f1014]" : "border-[#d1d5db] bg-white"
-            } -mt-[1px]`}
-          >
-            <KalcerianProfileCard
-              user={user}
-              isMapDark={isMapDark}
-              isBlocked={isBlocked}
-              isBlockedByTarget={isBlockedByTarget}
-              showMobileClose={deviceFamily === "hp" || deviceFamily === "tab"}
-              onClose={() => setExpandedUserId(null)}
-              inline={true}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* 5. Block / Unblock / Friend Request Slide-Blur Confirmation Overlay */}
       <BlockConfirmModal
