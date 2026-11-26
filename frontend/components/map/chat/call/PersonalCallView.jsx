@@ -40,9 +40,11 @@ export function PersonalCallView({
     remoteAudioRef,
     remoteStreamRef,
     handleHangup,
+    handleUpgradeToVideo,
   } = usePersonalCallState({
     callState,
     currentUser,
+    onSwitchMode,
     onEndCall,
     onPermissionNeeded,
   });
@@ -51,7 +53,7 @@ export function PersonalCallView({
 
   return (
     <motion.div
-      key={`call-view-${mode}`}
+      key="call-view-active"
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
@@ -94,7 +96,13 @@ export function PersonalCallView({
         setIsCamOff={setIsCamOff}
         isMicMuted={isMicMuted}
         setIsMicMuted={setIsMicMuted}
-        onSwitchMode={onSwitchMode}
+        onSwitchMode={(nextMode) => {
+          if (nextMode === "video") {
+            handleUpgradeToVideo();
+          } else {
+            onSwitchMode?.(nextMode);
+          }
+        }}
         handleHangup={handleHangup}
       />
     </motion.div>

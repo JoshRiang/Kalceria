@@ -1,5 +1,9 @@
 import { fetchCallSignals } from "@/lib/api";
 import { stopCallRingtone } from "@/lib/soundEngine";
+import {
+  handleIncomingRenegotiateOffer,
+  handleIncomingRenegotiateAnswer,
+} from "./callVideoUpgrade";
 
 export async function processCallSignalsBatch({
   signals,
@@ -8,7 +12,15 @@ export async function processCallSignalsBatch({
   isIncomingAnswer,
   pcRef,
   secondsRef,
-  mode,
+  modeRef,
+  hardwareRef,
+  targetUserId,
+  callCtrlChannelRef,
+  onSwitchModeRef,
+  processedRenegotiateRef,
+  pendingVideoUpgradeRef,
+  runPendingVideoUpgrade,
+  isHungUpRef,
   onEndCallRef,
   setStatus,
   setIsRemoteCamOff,
@@ -28,9 +40,10 @@ export async function processCallSignalsBatch({
       stopCallRingtone();
       setStatus("ended");
       const callDuration = secondsRef.current;
+      const finalMode = modeRef?.current || "voice";
       setTimeout(() => {
         teardownCall();
-        onEndCallRef.current?.({ mode, seconds: callDuration });
+        onEndCallRef.current?.({ mode: finalMode, seconds: callDuration });
       }, 700);
       return false; // Stop loop
     }
@@ -54,8 +67,43 @@ export async function processCallSignalsBatch({
           const answerDesc = JSON.parse(sig.encryptedPayload);
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(answerDesc));
           await flushPendingIceCandidates(pcRef.current);
+          if (pendingVideoUpgradeRef?.current) {
+            pendingVideoUpgradeRef.current = false;
+            runPendingVideoUpgrade?.();
+          }
         } catch {}
       }
+    }
+
+    if (sig.signalType === "renegotiate_offer" && pcRef.current && sig.encryptedPayload) {
+      try {
+        const offerDesc = JSON.parse(sig.encryptedPayload);
+        await handleIncomingRenegotiateOffer({
+          offerDesc,
+          callMode: sig.callMode || "video",
+          pc: pcRef.current,
+          hardware: hardwareRef.current,
+          targetUserId,
+          activeCallIdRef,
+          callCtrlChannelRef,
+          onSwitchModeRef,
+          flushPendingIceCandidates,
+          processedRenegotiateRef,
+          isHungUpRef,
+        });
+      } catch {}
+    }
+
+    if (sig.signalType === "renegotiate_answer" && pcRef.current && sig.encryptedPayload) {
+      try {
+        const answerDesc = JSON.parse(sig.encryptedPayload);
+        await handleIncomingRenegotiateAnswer({
+          answerDesc,
+          pc: pcRef.current,
+          flushPendingIceCandidates,
+          processedRenegotiateRef,
+        });
+      } catch {}
     }
 
     if (sig.signalType === "ice" && pcRef.current && sig.encryptedPayload) {

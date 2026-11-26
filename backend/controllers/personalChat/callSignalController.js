@@ -66,7 +66,16 @@ export async function sendCallSignal(req, res, next) {
     }
 
     const { callId, callMode, signalType, encryptedPayload, nonce, sig } = req.body || {};
-    const validSignalTypes = ['offer', 'answer', 'ice', 'ringing', 'hangup', 'cam_state'];
+    const validSignalTypes = [
+      'offer',
+      'answer',
+      'ice',
+      'ringing',
+      'hangup',
+      'cam_state',
+      'renegotiate_offer',
+      'renegotiate_answer',
+    ];
     if (!validSignalTypes.includes(signalType) || !nonce || typeof nonce !== 'string') {
       return res.status(400).json({ error: 'Invalid E2EE call signal.' });
     }

@@ -43,5 +43,9 @@ test('Chat P2P WebRTC signaling & message queries survive degraded Redis across 
 
   // Inbox summary never short-circuits on stale per-lambda RAM version when Redis is degraded
   assert.ok(inboxSrc.includes('if (!redisDegraded && sinceVer'), 'Inbox summary must bypass stale RAM version when Redis is degraded');
+
+  // Unified mid-call Voice->Video WebRTC renegotiation signal types
+  assert.ok(callSrc.includes("'renegotiate_offer'"), 'Backend call signaling must accept mid-call renegotiate_offer');
+  assert.ok(callSrc.includes("'renegotiate_answer'"), 'Backend call signaling must accept mid-call renegotiate_answer');
 });
 

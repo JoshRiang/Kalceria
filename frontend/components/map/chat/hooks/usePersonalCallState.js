@@ -13,6 +13,7 @@ export { DESKTOP_FLAG, formatCallDuration, isAhmadDummyUser };
 export function usePersonalCallState({
   callState,
   currentUser,
+  onSwitchMode,
   onEndCall,
   onPermissionNeeded,
 }) {
@@ -35,6 +36,7 @@ export function usePersonalCallState({
     callId,
     currentUser,
     onPermissionNeeded,
+    onSwitchMode,
     onEndCall,
     hardware,
   });
@@ -63,6 +65,7 @@ export function usePersonalCallState({
     remoteAudioRef: hardware.remoteAudioRef,
     remoteStreamRef: hardware.remoteStreamRef,
     handleHangup: session.handleHangup,
+    handleUpgradeToVideo: session.handleUpgradeToVideo,
     livekitSession: session.livekitSession,
   };
 }
