@@ -5,6 +5,8 @@
  * Tier 3: Deterministic multimodal corridor fallback (guaranteed dotted walk + solid transit + stops)
  */
 
+import { extractStepsFromTransitSegments } from './voiceNav/routeStepExtractor.js';
+
 const TRANSITOUS_BASE = (process.env.TRANSITOUS_BASE_URL || 'https://api.transitous.org').replace(/\/+$/, '');
 const OVERPASS_URL = process.env.OVERPASS_API_URL || 'https://overpass-api.de/api/interpreter';
 const STATION_CACHE = new Map();
@@ -165,6 +167,7 @@ async function queryTransitousItinerary({ fromLat, fromLng, toLat, toLng, mode }
     trafficLevel: 'FREE',
     segments,
     stops,
+    steps: extractStepsFromTransitSegments(segments, stops, mode),
     summary: segments
       .map((s) => s.label)
       .filter((v, i, arr) => i === 0 || arr[i - 1] !== v)
@@ -267,6 +270,16 @@ export async function computeFreeMultimodalTransitRoute({
 
     const durSeconds = Math.round(dWalkIn / 1.32 + dTransit / cruiseMps + dWalkOut / 1.32 + waitBufferSec);
 
+    const segments = [
+      { kind: 'walk', dashed: true, traffic: 'FREE', color: '#64748b', label: 'Jalan Kaki', points: walkInPts },
+      { kind: mode, dashed: false, traffic: 'FREE', color: transitColor, label: transitLabel, points: transitPts },
+      { kind: 'walk', dashed: true, traffic: 'FREE', color: '#64748b', label: 'Jalan Kaki', points: walkOutPts },
+    ];
+    const stops = [
+      { name: originStop.name, lat: originStop.lat, lng: originStop.lng, kind: mode, role: 'board' },
+      { name: destStop.name, lat: destStop.lat, lng: destStop.lng, kind: mode, role: 'alight' },
+    ];
+
     return {
       provider: 'overpass-osrm-multimodal',
       mode,
@@ -274,15 +287,9 @@ export async function computeFreeMultimodalTransitRoute({
       durationSeconds: Math.max(120, durSeconds),
       trafficDelaySeconds: 0,
       trafficLevel: 'FREE',
-      segments: [
-        { kind: 'walk', dashed: true, traffic: 'FREE', color: '#64748b', label: 'Jalan Kaki', points: walkInPts },
-        { kind: mode, dashed: false, traffic: 'FREE', color: transitColor, label: transitLabel, points: transitPts },
-        { kind: 'walk', dashed: true, traffic: 'FREE', color: '#64748b', label: 'Jalan Kaki', points: walkOutPts },
-      ],
-      stops: [
-        { name: originStop.name, lat: originStop.lat, lng: originStop.lng, kind: mode, role: 'board' },
-        { name: destStop.name, lat: destStop.lat, lng: destStop.lng, kind: mode, role: 'alight' },
-      ],
+      segments,
+      stops,
+      steps: extractStepsFromTransitSegments(segments, stops, mode),
       summary: `Jalan → ${originStop.name} (${transitLabel}) → ${destStop.name} → Jalan`,
     };
   }
@@ -303,6 +310,16 @@ export async function computeFreeMultimodalTransitRoute({
   const dist = coreLeg?.distanceMeters || haversineMeters(fromLat, fromLng, toLat, toLng);
   const durSeconds = Math.max(120, Math.round(dist / cruiseMps + waitBufferSec));
 
+  const segments = [
+    { kind: 'walk', dashed: true, traffic: 'FREE', color: '#64748b', label: 'Jalan Kaki', points: fullPts.slice(0, iStart + 1) },
+    { kind: mode, dashed: false, traffic: 'FREE', color: transitColor, label: transitLabel, points: fullPts.slice(iStart, iEnd + 1) },
+    { kind: 'walk', dashed: true, traffic: 'FREE', color: '#64748b', label: 'Jalan Kaki', points: fullPts.slice(iEnd) },
+  ];
+  const stops = [
+    { name: mode === 'train' ? 'Stasiun Naik' : 'Halte Naik', lat: fullPts[iStart][0], lng: fullPts[iStart][1], kind: mode, role: 'board' },
+    { name: mode === 'train' ? 'Stasiun Turun' : 'Halte Turun', lat: fullPts[iEnd][0], lng: fullPts[iEnd][1], kind: mode, role: 'alight' },
+  ];
+
   return {
     provider: 'multimodal-corridor-fallback',
     mode,
@@ -310,15 +327,9 @@ export async function computeFreeMultimodalTransitRoute({
     durationSeconds: durSeconds,
     trafficDelaySeconds: 0,
     trafficLevel: 'FREE',
-    segments: [
-      { kind: 'walk', dashed: true, traffic: 'FREE', color: '#64748b', label: 'Jalan Kaki', points: fullPts.slice(0, iStart + 1) },
-      { kind: mode, dashed: false, traffic: 'FREE', color: transitColor, label: transitLabel, points: fullPts.slice(iStart, iEnd + 1) },
-      { kind: 'walk', dashed: true, traffic: 'FREE', color: '#64748b', label: 'Jalan Kaki', points: fullPts.slice(iEnd) },
-    ],
-    stops: [
-      { name: mode === 'train' ? 'Stasiun Naik' : 'Halte Naik', lat: fullPts[iStart][0], lng: fullPts[iStart][1], kind: mode, role: 'board' },
-      { name: mode === 'train' ? 'Stasiun Turun' : 'Halte Turun', lat: fullPts[iEnd][0], lng: fullPts[iEnd][1], kind: mode, role: 'alight' },
-    ],
+    segments,
+    stops,
+    steps: extractStepsFromTransitSegments(segments, stops, mode),
     summary: `Jalan → ${transitLabel} → Jalan`,
   };
 }

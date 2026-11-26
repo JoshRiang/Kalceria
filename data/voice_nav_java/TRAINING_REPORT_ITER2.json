@@ -1,0 +1,113 @@
+{
+  "iteration": "2/5",
+  "architecture": {
+    "type": "multi_head_scaled_dot_product_vector_attention",
+    "featureDim": 30,
+    "numHeads": 4,
+    "headDim": 8,
+    "numUtterances": 66,
+    "parameterCount": 1990,
+    "headRoles": [
+      "Urgency & Distance Head",
+      "Pulau Jawa Road & Mode Head",
+      "Traffic & Hazard Priority Head",
+      "Multimodal Transit & Chaining Head"
+    ]
+  },
+  "dataset": {
+    "total": 14000,
+    "train": 11200,
+    "val": 1400,
+    "test": 1400
+  },
+  "weightsFile": "data/voice_nav_java/JAVA_ATTENTION_WEIGHTS_V1.json",
+  "weightsSizeKB": 26.32,
+  "validation": {
+    "loss": 0.00102,
+    "top1AccuracyPct": 100.0,
+    "directionalSafetyPct": 100.0,
+    "perCategoryAccuracyPct": {
+      "arrive": 100.0,
+      "chained": 100.0,
+      "depart": 100.0,
+      "end_of_road": 100.0,
+      "fork": 100.0,
+      "hazard": 100.0,
+      "merge": 100.0,
+      "ramp": 100.0,
+      "reroute": 100.0,
+      "roundabout": 100.0,
+      "straight": 100.0,
+      "traffic": 100.0,
+      "transit": 100.0,
+      "turn": 100.0,
+      "uturn": 100.0
+    }
+  },
+  "test": {
+    "loss": 0.00084,
+    "top1AccuracyPct": 100.0,
+    "directionalSafetyPct": 100.0,
+    "perCategoryAccuracyPct": {
+      "arrive": 100.0,
+      "chained": 100.0,
+      "depart": 100.0,
+      "end_of_road": 100.0,
+      "fork": 100.0,
+      "hazard": 100.0,
+      "merge": 100.0,
+      "ramp": 100.0,
+      "reroute": 100.0,
+      "roundabout": 100.0,
+      "straight": 100.0,
+      "traffic": 100.0,
+      "transit": 100.0,
+      "turn": 100.0,
+      "uturn": 100.0
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "trainLoss": 0.01098,
+      "trainAccPct": 99.95,
+      "valLoss": 0.01126,
+      "valAccPct": 100.0
+    },
+    {
+      "epoch": 10,
+      "trainLoss": 0.02368,
+      "trainAccPct": 99.15,
+      "valLoss": 0.03258,
+      "valAccPct": 98.86
+    },
+    {
+      "epoch": 20,
+      "trainLoss": 0.00121,
+      "trainAccPct": 100.0,
+      "valLoss": 0.00144,
+      "valAccPct": 100.0
+    },
+    {
+      "epoch": 30,
+      "trainLoss": 0.00122,
+      "trainAccPct": 100.0,
+      "valLoss": 0.00147,
+      "valAccPct": 100.0
+    },
+    {
+      "epoch": 40,
+      "trainLoss": 0.00096,
+      "trainAccPct": 100.0,
+      "valLoss": 0.00112,
+      "valAccPct": 100.0
+    },
+    {
+      "epoch": 45,
+      "trainLoss": 0.00092,
+      "trainAccPct": 100.0,
+      "valLoss": 0.00102,
+      "valAccPct": 100.0
+    }
+  ]
+}

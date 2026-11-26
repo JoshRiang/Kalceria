@@ -8,6 +8,10 @@
  */
 
 import { computeFreeMultimodalTransitRoute } from './blendTransitService.js';
+import {
+  extractStepsFromOsrmLeg,
+  extractStepsFromTomTomGuidance,
+} from './voiceNav/routeStepExtractor.js';
 
 export const BLEND_MODES = Object.freeze(['foot', 'motorcycle', 'car', 'bus', 'train']);
 
@@ -177,6 +181,7 @@ async function fetchTomTomRoute(fromLat, fromLng, toLat, toLng, mode) {
     sectionType: 'traffic',
     computeTravelTimeFor: 'all',
     routeType: 'fastest',
+    instructionsType: 'coded',
     avoid: mode === 'motorcycle' ? 'tollRoads' : '',
   });
   if (mode !== 'motorcycle') params.delete('avoid');
@@ -219,6 +224,7 @@ async function fetchTomTomRoute(fromLat, fromLng, toLat, toLng, mode) {
     trafficLevel,
     segments,
     stops: [],
+    steps: extractStepsFromTomTomGuidance(route.guidance, mode),
     summary:
       trafficDelaySeconds >= 120
         ? `+${Math.round(trafficDelaySeconds / 60)} mnt macet`
@@ -251,7 +257,7 @@ export async function fetchOsrmLeg(fromLat, fromLng, toLat, toLng, mode = 'foot'
   }
 
   for (const base of candidates) {
-    const url = `${base}/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+    const url = `${base}/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson&steps=true`;
     const data = await fetchJson(url, 3800);
     const route = Array.isArray(data?.routes) ? data.routes[0] : null;
     const coords = route?.geometry?.coordinates;
@@ -272,6 +278,7 @@ export async function fetchOsrmLeg(fromLat, fromLng, toLat, toLng, mode = 'foot'
         distanceMeters,
         durationSeconds: Math.max(30, durationSeconds),
         points,
+        steps: extractStepsFromOsrmLeg(route.legs?.[0], mode),
       };
     }
   }
@@ -303,6 +310,25 @@ export async function computeBlendRoute({ fromLat, fromLng, toLat, toLng, mode =
         { kind: 'walk', dashed: true, traffic: 'FREE', color: '#10b981', label: 'Tiba', points: [[fLat, fLng], [tLat, tLng]] },
       ],
       stops: [],
+      steps: [
+        {
+          index: 0,
+          maneuverType: 'arrive',
+          modifier: 'straight',
+          directionLock: 'arrive_ahead',
+          roadName: '',
+          spokenRoadName: '',
+          roadClass: 'lokal',
+          exitNumber: null,
+          distanceMeters: Math.round(straightDist),
+          durationSeconds: 0,
+          lat: tLat,
+          lng: tLng,
+          hasChainedNext: false,
+          isEndOfRoad: false,
+          isNewRoadName: false,
+        },
+      ],
       summary: 'Sudah tiba di lokasi event',
     };
   }
@@ -353,6 +379,7 @@ export async function computeBlendRoute({ fromLat, fromLng, toLat, toLng, mode =
             },
           ],
           stops: [],
+          steps: Array.isArray(osrm.steps) ? osrm.steps : [],
           summary: safeMode === 'foot' ? 'Rute OSRM jalan kaki' : 'Rute OSRM Pulau Jawa',
         };
       }
@@ -382,6 +409,42 @@ export async function computeBlendRoute({ fromLat, fromLng, toLat, toLng, mode =
           },
         ],
         stops: [],
+        steps: [
+          {
+            index: 0,
+            maneuverType: 'depart',
+            modifier: 'straight',
+            directionLock: 'depart',
+            roadName: '',
+            spokenRoadName: '',
+            roadClass: 'lokal',
+            exitNumber: null,
+            distanceMeters: Math.round(straightDist * 1.25),
+            durationSeconds: Math.max(60, Math.round((straightDist * 1.25) / fallbackSpeedMps)),
+            lat: fLat,
+            lng: fLng,
+            hasChainedNext: false,
+            isEndOfRoad: false,
+            isNewRoadName: false,
+          },
+          {
+            index: 1,
+            maneuverType: 'arrive',
+            modifier: 'straight',
+            directionLock: 'arrive_ahead',
+            roadName: '',
+            spokenRoadName: '',
+            roadClass: 'lokal',
+            exitNumber: null,
+            distanceMeters: 0,
+            durationSeconds: 0,
+            lat: tLat,
+            lng: tLng,
+            hasChainedNext: false,
+            isEndOfRoad: false,
+            isNewRoadName: false,
+          },
+        ],
         summary: 'Estimasi jalur langsung',
       };
     }

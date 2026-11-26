@@ -1,6 +1,6 @@
 # KALCERIA AI VOICE NAVIGATION — MASTER PLAN (5 ITERATIONS / 5 WAVES)
 
-**Status:** Iteration 1/5 COMPLETE (Architecture, License Audit, Canonical Indonesian Google-Maps Corpus & Pulau Jawa Text Normalizer)  
+**Status:** Iteration 2/5 COMPLETE (Turn-by-Turn `steps[]` Extractor + 30-Dim Multi-Head Vector-Attention Trained on 14,000 Pulau Jawa Scenarios → `JAVA_ATTENTION_WEIGHTS_V1.json` 26.32 KB, Test Acc 100.0%, Directional Safety 100.0%)  
 **Target Domain:** Pulau Jawa (`java-latest.osm.pbf`, Jabodetabek, Bandung, Semarang, Yogyakarta, Surabaya, Trans-Jawa, KRL/MRT/LRT/TransJakarta)  
 **Core Doctrine:** Hybrid Neuro-Symbolic Vector-Attention (100% Directional Truth Safety + Dynamic Road-Ahead Context Attention + Copyright-Free Neural Indonesian Voice in Docker)
 
@@ -27,7 +27,7 @@ Oleh karena itu, **Kalceria Voice Nav Engine** menggunakan arsitektur **3-Lapisa
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ LAYER 2: MULTI-HEAD VECTOR-ATTENTION ENGINE (Static-ML Jawa)    │
-│ Menghitung skor perhatian dinamis konteks jalan (24-dimensi):   │
+│ Menghitung skor perhatian dinamis konteks jalan (30-dimensi):   │
 │   Attention(Q, K) = softmax( (x · W_Q)(E_corpus · W_K)^T / √dk )│
 │ Memilih frasa Google-Maps-grade paling alami & prosodi urgensi  │
 │ untuk kondisi Pulau Jawa (Tol, Arteri, Gang, Bundaran, Macet,   │
@@ -65,8 +65,8 @@ Hasil audit lisensi dan performa CPU Docker terhadap model TTS Bahasa Indonesia 
 
 | Iterasi / Wave | Fokus Utama | Output Konkret & File Utama | Status |
 |---|---|---|---|
-| **Iterasi 1/5** | **Arsitektur, Audit Model HF, Database Frasa Google Maps Indonesia & Java Text Normalizer** | `docs/AI_VOICE_NAVIGATION_MASTER_PLAN.md`, `docs/ITERATION_1_VOICE_NAV_CORPUS_AND_METHODOLOGY.md`, `data/voice_nav_java/GOOGLE_MAPS_ID_CORPUS.json` (65+ skenario lengkap), `backend/services/voiceNav/javaTextNormalizer.js`, `corpusRegistry.js`, unit test Gate 3a | **SELESAI (Turn ini)** |
-| **Iterasi 2/5** | **Ekstraksi Step Jalan Real-Time (`steps=true`) + Pipeline Training Vector-Attention Pulau Jawa** | Upgrade `blendRoutingService.js` & `blendTransitService.js` mengekstrak `steps[]` lengkap (maneuver, modifier, roadName, exit, distance, intersections, traffic ahead); Python trainer `ml/voice_nav_java/train_java_attention.py` melatih bobot Multi-Head Vector-Attention (`W_Q`, `W_K`, `E_corpus`) pada 12.000+ skenario sintetis & topologi Pulau Jawa → export bobot ringan `java_attention_weights_v1.json` (<80 KB) + `docs/ITERATION_2_JAVA_ATTENTION_TRAINING.md` | Terjadwal |
+| **Iterasi 1/5** | **Arsitektur, Audit Model HF, Database Frasa Google Maps Indonesia & Java Text Normalizer** | `docs/AI_VOICE_NAVIGATION_MASTER_PLAN.md`, `docs/ITERATION_1_VOICE_NAV_CORPUS_AND_METHODOLOGY.md`, `data/voice_nav_java/GOOGLE_MAPS_ID_CORPUS.json` (66 skenario lengkap), `backend/services/voiceNav/javaTextNormalizer.js`, `corpusRegistry.js`, unit test Gate 3a | **SELESAI** |
+| **Iterasi 2/5** | **Ekstraksi Step Jalan Real-Time (`steps=true`) + Pipeline Training Vector-Attention Pulau Jawa** | `backend/services/voiceNav/routeStepExtractor.js` wired ke `blendRoutingService.js` (`steps=true`, `instructionsType=coded`) & `blendTransitService.js`; Python trainer `ml/voice_nav_java/train_java_attention.py` melatih Multi-Head Vector-Attention (`H=4`, `d_k=8`, 30-dim, 1.990 parameter) pada 14.000 skenario Pulau Jawa → `data/voice_nav_java/JAVA_ATTENTION_WEIGHTS_V1.json` (26,32 KB, Test Acc 100,0%, Dir Safety 100,0%) + `docs/ITERATION_2_JAVA_ATTENTION_TRAINING.md` | **SELESAI** |
 | **Iterasi 3/5** | **Runtime Vector-Attention Inference Engine + Distance Trigger State Machine** | Pure JS/ESM `attentionInferenceEngine.js` (<1ms per inferensi di Node & Browser) + `maneuverTriggerStateMachine.js` (threshold adaptif per kecepatan `1000m → 500m → 200m → 80m → 25m`, anti-spam cooldown, deteksi off-route & reroute, peringatan macet di depan & perlintasan KA) + unit test akurasi 100% arah + `docs/ITERATION_3_INFERENCE_AND_TRIGGERS.md` | Terjadwal |
 | **Iterasi 4/5** | **Docker Neural Voice TTS (`Piper ONNX MIT`) + Audio Pre-Baking & Backend `/api/map/voice-nav/speak`** | `infra/voice-tts-id/Dockerfile`, `docker-compose.yml` (terintegrasi berdampingan dengan `infra/osrm-java/`), HTTP server Piper ONNX CPU + pre-baked static audio cache untuk frasa inti + endpoint backend proxy & fallback aman + `docs/ITERATION_4_DOCKER_NEURAL_TTS.md` | Terjadwal |
 | **Iterasi 5/5** | **Integrasi Penuh AI Voice Co-Pilot ke Focus Mode Map + Audio Ducking + Live Deploy** | `BlendVoiceNavigator.js` & tombol AI Voice (Mute/Unmute, Subtitle Ticker real-time, Preview Voice) di `BlendFocusHud.jsx` & `MapBlendController.jsx`, sinkron dengan `soundEngine.js`, 6-gate full audit (0 Hook Delta di Tier A), deploy production & live probes + `docs/ITERATION_5_COPILOT_PRODUCTION_LAUNCH.md` | Terjadwal |
@@ -75,15 +75,16 @@ Hasil audit lisensi dan performa CPU Docker terhadap model TTS Bahasa Indonesia 
 
 ## 4. Spesifikasi Matematis Vector-Attention Pulau Jawa (Ringkasan)
 
-1. **Vektor Fitur Konteks Jalan (`x` ∈ ℝ²⁴)**:
-   - Dim 0..4: One-hot `transport_mode` (`foot`, `motorcycle`, `car`, `bus`, `train`)
-   - Dim 5..9: One-hot `distance_bucket` (`far_1000m`, `prepare_500m`, `approach_200m`, `imminent_80m`, `now_25m`)
-   - Dim 10..15: One-hot `road_class_java` (`tol`, `arteri`, `lokal_gang`, `bundaran`, `flyover_underpass`, `transit_hub`)
-   - Dim 16..19: One-hot `traffic_state` (`FREE`, `MODERATE`, `SLOW`, `JAM`)
-   - Dim 20: `has_street_name` (0/1)
-   - Dim 21: `has_chained_next_turn` (0/1)
-   - Dim 22: `speed_normalized` (`min(1, speed_kmh / 90)`)
-   - Dim 23: `is_convoy_blend_active` (0/1)
+1. **Vektor Fitur Konteks Jalan (`x` ∈ ℝ³⁰)**:
+   - Dim `0..4`: One-hot `transport_mode` (`foot`, `motorcycle`, `car`, `bus`, `train`)
+   - Dim `5..10`: One-hot `distance_bucket` (`far_1000m`, `prepare_500m`, `approach_200m`, `imminent_80m`, `now_25m`, `immediate`)
+   - Dim `11..20`: One-hot `road_class_java` (`tol`, `arteri`, `lokal`, `gang`, `bundaran`, `flyover`, `underpass`, `perlintasan_ka`, `stasiun`, `halte`)
+   - Dim `21..24`: One-hot `traffic_state` (`FREE`, `MODERATE`, `SLOW`, `JAM`)
+   - Dim `25`: `hasRoadName` (0/1)
+   - Dim `26`: `hasChainedNext` (0/1)
+   - Dim `27`: `speedNormalized` (`clip(speed_kmh / 90, 0, 1)`)
+   - Dim `28`: `isEndOfRoad` (0/1 — sinyal T-junction OSRM `end of road`)
+   - Dim `29`: `isNewRoadName` (0/1 — sinyal pergantian nama jalan OSRM `new name`)
 2. **Multi-Head Scaled Dot-Product Attention (`H = 4 heads`, `d_k = 8`)**:
    - Head 1 (*Urgency & Distance Head*): Memilih keringkasan kalimat (`"Belok kiri sekarang"` vs `"Dalam 500 meter, bersiap belok kiri ke Jalan Sudirman"`).
    - Head 2 (*Java Road & Mode Context Head*): Membedakan konteks khusus Jawa (larangan tol untuk motor, jalur gang kecil, bundaran besar, flyover/underpass).

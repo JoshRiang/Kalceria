@@ -39,8 +39,8 @@ export function validateCorpusSafetyInvariants(corpus) {
   }
 
   const seenIds = new Set();
-  const LEFT_LOCKS = new Set(['left', 'slight_left', 'sharp_left', 'keep_left', 'merge_left', 'arrive_left']);
-  const RIGHT_LOCKS = new Set(['right', 'slight_right', 'sharp_right', 'keep_right', 'merge_right', 'arrive_right']);
+  const LEFT_LOCKS = new Set(['left', 'slight_left', 'sharp_left', 'keep_left', 'merge_left', 'arrive_left', 'chained_ll']);
+  const RIGHT_LOCKS = new Set(['right', 'slight_right', 'sharp_right', 'keep_right', 'merge_right', 'arrive_right', 'chained_rr']);
 
   for (const entry of utterances) {
     if (!entry.id || seenIds.has(entry.id)) {
@@ -57,6 +57,20 @@ export function validateCorpusSafetyInvariants(corpus) {
     }
     if (RIGHT_LOCKS.has(entry.directionLock) && /\bkiri\b/.test(text)) {
       errors.push(`Directional safety violation in ${entry.id}: right-locked template contains "kiri".`);
+    }
+    if (entry.directionLock === 'chained_lr') {
+      const iL = text.indexOf('kiri');
+      const iR = text.indexOf('kanan');
+      if (iL === -1 || iR === -1 || iL >= iR) {
+        errors.push(`Chained directional violation in ${entry.id}: chained_lr must order "kiri" before "kanan".`);
+      }
+    }
+    if (entry.directionLock === 'chained_rl') {
+      const iL = text.indexOf('kiri');
+      const iR = text.indexOf('kanan');
+      if (iL === -1 || iR === -1 || iR >= iL) {
+        errors.push(`Chained directional violation in ${entry.id}: chained_rl must order "kanan" before "kiri".`);
+      }
     }
     if (!Array.isArray(entry.modes) || entry.modes.length === 0) {
       errors.push(`Missing transport modes in ${entry.id}`);
