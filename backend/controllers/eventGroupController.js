@@ -167,8 +167,8 @@ export async function updateEventGroupSettings(req, res, next) {
     if (check.role !== GROUP_ROLE_MAKER && check.role !== GROUP_ROLE_COLLABORATOR) {
       return res.status(403).json({ error: 'Only the maker or a collaborator can edit group settings.' });
     }
-    const { avatarUrl, description } = req.body || {};
-    const meta = await upsertEventGroupMeta(check.event.id, { avatarUrl, description });
+    const { avatarUrl, coverUrl, coverType, description } = req.body || {};
+    const meta = await upsertEventGroupMeta(check.event.id, { avatarUrl, coverUrl, coverType, description });
     return res.json({ ok: true, meta });
   } catch (err) {
     return next(err);

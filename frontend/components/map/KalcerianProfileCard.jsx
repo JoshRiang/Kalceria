@@ -16,6 +16,11 @@ import {
   normalizeMediaConfig,
   NormalizedMediaCover,
 } from "./profileCard/NormalizedMediaCover";
+import {
+  PROFILE_CARD_BG_DARK,
+  PROFILE_CARD_BG_LIGHT,
+  getInstantMapBgUrl,
+} from "@/lib/mapBgCache";
 
 export default function KalcerianProfileCard({
   user,
@@ -155,6 +160,18 @@ export default function KalcerianProfileCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
       </div>
 
+      {/* 2-6. Lower Profile Body with Signature Single-Element Golden Blue Light/Dark Texture */}
+      <div
+        className="relative"
+        style={{
+          backgroundImage: `url("${getInstantMapBgUrl(
+            isMapDark ? PROFILE_CARD_BG_DARK : PROFILE_CARD_BG_LIGHT
+          )}")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center bottom",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
       {/* 2. Profile Picture Centered at the Middle Overlapping the Square Cover */}
       <div className="relative flex justify-center -mt-10 sm:-mt-12 z-10 px-4">
         <div className="relative">
@@ -328,6 +345,7 @@ export default function KalcerianProfileCard({
         )}
       </div>
       )}
+      </div>
     </div>
   );
 }

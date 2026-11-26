@@ -10,6 +10,7 @@ import {
 
 export function useBottomPanelSwitcher({
   setDrawerOpen,
+  onCloseActivePersonalChat,
   personalChatMap = {},
   events = [],
   currentUser = null,
@@ -25,11 +26,15 @@ export function useBottomPanelSwitcher({
   const [activeGroupEventId, setActiveGroupEventId] = useState(null);
   const switchTimerRef = useRef(null);
   const activePanelRef = useRef(activePanel);
+  const onCloseChatRef = useRef(onCloseActivePersonalChat);
   activePanelRef.current = activePanel;
+  onCloseChatRef.current = onCloseActivePersonalChat;
 
   const transitionToPanel = useCallback(
     (nextPanel) => {
       if (!nextPanel || !["peeps", "chat", "meeting"].includes(nextPanel)) return;
+      // Single-layer rule: switching HUD tabs always closes any open Personal Chat or Group Chat cleanly
+      onCloseChatRef.current?.();
       setActiveGroupEventId(null);
       if (activePanelRef.current === nextPanel) {
         setDrawerOpen?.(true);

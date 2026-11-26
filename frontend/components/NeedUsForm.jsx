@@ -367,9 +367,14 @@ export default function NeedUsForm({ userName }) {
               </div>
 
               <div>
-                <label className={LABEL}>Notes (optional)</label>
-                <textarea className={INPUT} rows={3} placeholder="Additional requirements, scale, etc."
-                  value={form.additionalNotes} onChange={(e) => setField("additionalNotes", e.target.value)} />
+                <div className="flex items-center justify-between mb-1">
+                  <label className={LABEL}>Notes (optional)</label>
+                  <span className={`text-[10.5px] font-sans ${(form.additionalNotes || "").length >= 500 ? "text-red-500 font-bold" : "text-neutral-400"}`}>
+                    {(form.additionalNotes || "").length}/500
+                  </span>
+                </div>
+                <textarea className={INPUT} rows={3} maxLength={500} placeholder="Additional requirements, scale, etc."
+                  value={form.additionalNotes} onChange={(e) => setField("additionalNotes", e.target.value.slice(0, 500))} />
               </div>
 
               <AnimatePresence>

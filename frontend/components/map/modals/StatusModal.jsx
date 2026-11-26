@@ -46,8 +46,10 @@ export function StatusModal({
     }
   }, [show]);
 
+  const MAX_BROADCAST_CHARS = 120;
   const cleanText = (statusText || "").trim();
-  const isBroadcastValid = Boolean(cleanText || mediaUrl);
+  const isOverLimit = (statusText || "").length > MAX_BROADCAST_CHARS;
+  const isBroadcastValid = Boolean((cleanText || mediaUrl) && !isOverLimit);
   const resolvedBgUrl = getInstantMapBgUrl(
     isModalDark ? BROADCAST_FORM_BG_DARK : BROADCAST_FORM_BG_LIGHT
   );
@@ -142,24 +144,44 @@ export function StatusModal({
               </p>
 
               <div className="flex flex-col gap-2">
-                <label
-                  className={`text-xs font-semibold tracking-wider ${
-                    isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
-                  }`}
-                >
-                  Broadcast <span className="text-[#ef4444]">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label
+                    className={`text-xs font-semibold tracking-wider ${
+                      isModalDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
+                    }`}
+                  >
+                    Broadcast <span className="text-[#ef4444]">*</span>
+                  </label>
+                  <span
+                    style={{ fontFamily: "Arial, sans-serif" }}
+                    className={`text-[10.5px] ${
+                      (statusText || "").length >= MAX_BROADCAST_CHARS
+                        ? "text-red-500 font-bold"
+                        : "text-neutral-400"
+                    }`}
+                  >
+                    {(statusText || "").length}/{MAX_BROADCAST_CHARS}
+                  </span>
+                </div>
                 <textarea
+                  maxLength={MAX_BROADCAST_CHARS}
                   className={`w-full border rounded-lg p-3 sm:p-4 text-xs sm:text-sm outline-none min-h-[90px] sm:min-h-[110px] transition-all resize-none ${
-                    isModalDark
+                    (statusText || "").length >= MAX_BROADCAST_CHARS
+                      ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      : isModalDark
                       ? "bg-[#0a0c10]/90 border-[#30363d] text-[#ffffff] placeholder-[#8b949e] focus:border-[#58a6ff] focus:ring-1 focus:ring-[#58a6ff]"
                       : "bg-[#f6f8fa]/94 border-[#d0d7de] text-[#000000] placeholder-[#8c959f] focus:border-[#0969da] focus:ring-1 focus:ring-[#0969da]"
                   }`}
                   value={statusText}
-                  onChange={(e) => setStatusText(e.target.value)}
+                  onChange={(e) => setStatusText(e.target.value.slice(0, MAX_BROADCAST_CHARS))}
                   placeholder="OTW FM..."
                   autoFocus
                 />
+                {(statusText || "").length >= MAX_BROADCAST_CHARS && (
+                  <p className="text-[10px] text-red-500 font-sans">
+                    Batas maksimal {MAX_BROADCAST_CHARS} karakter
+                  </p>
+                )}
               </div>
 
               {/* Broadcast Media Attachment (Live Media Feed) */}

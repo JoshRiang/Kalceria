@@ -3,8 +3,7 @@
 import { memo } from "react";
 import { motion } from "framer-motion";
 import ContentImage from "@/components/ui/ContentImage";
-import { getEventCategory } from "../EventIcon";
-import { CategoryIcon } from "./PanelIcons";
+import { DEFAULT_GROUP_AVATAR, getInstantMapBgUrl } from "@/lib/mapBgCache";
 import { KalceriansSkeletonList } from "./KalceriansSkeletonList";
 import { formatGroupLastMessage } from "../groupChat/groupChatHelpers";
 import {
@@ -86,24 +85,16 @@ export const AssignMeetingList = memo(function AssignMeetingList({
                   : "bg-white/88 border-[#d1d5db] hover:border-[#b0b8c2] hover:bg-white/95 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.95),0_2px_6px_rgba(0,0,0,0.04)]"
               }`}
             >
-              {/* Custom Group Avatar OR Event Category Icon + Red Dot */}
+              {/* Custom Group Avatar OR Default Group Avatar + Red Dot */}
               <div className="relative w-11 h-11 shrink-0">
                 <div className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center border border-current/20 bg-black/5 dark:bg-white/5">
-                  {summary?.avatarUrl ? (
-                    <ContentImage
-                      src={summary.avatarUrl}
-                      alt={ev.title || "Event Group"}
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <CategoryIcon
-                      category={getEventCategory(ev)}
-                      isMapDark={isMapDark}
-                      className="w-5 h-5"
-                    />
-                  )}
+                  <ContentImage
+                    src={summary?.avatarUrl || getInstantMapBgUrl(DEFAULT_GROUP_AVATAR)}
+                    alt={ev.title || "Event Group"}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 {hasNotif && (
                   <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-[#ef4444] rounded-full ring-2 ring-white dark:ring-[#0f1014] pointer-events-none" />

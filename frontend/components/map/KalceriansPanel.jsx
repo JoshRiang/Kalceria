@@ -112,15 +112,20 @@ export const KalceriansPanel = memo(function KalceriansPanel({
     eventGroupChatMap,
   });
 
+  const resetActivePersonalChat = () => {
+    if (chatTransitionTimerRef.current) clearTimeout(chatTransitionTimerRef.current);
+    setIncomingCallInitialState(null);
+    setActiveChatUserId(null);
+    setActiveChatUserSnapshot(null);
+    setIsClosingForChat(false);
+  };
+
   const {
-    activePanel,
-    isPanelSwitching,
-    pinnedMeetingEventIds,
-    groupSummaryMap,
-    activeGroupEvent,
-    setActiveGroupEventId,
+    activePanel, isPanelSwitching, pinnedMeetingEventIds,
+    groupSummaryMap, activeGroupEvent, setActiveGroupEventId,
   } = useBottomPanelSwitcher({
     setDrawerOpen,
+    onCloseActivePersonalChat: resetActivePersonalChat,
     personalChatMap,
     events,
     currentUser,
@@ -144,12 +149,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
       stopCallRingtone();
       setIncomingCall(null);
     }
-    if (activeChatUserIdRef.current) {
-      setIncomingCallInitialState(null);
-      setActiveChatUserId(null);
-      setActiveChatUserSnapshot(null);
-      setIsClosingForChat(false);
-    }
+    if (activeChatUserIdRef.current) resetActivePersonalChat();
   }, [isSelfOffline]);
 
   const handleOpenChatWithTransition = (user) => {

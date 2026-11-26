@@ -17,7 +17,7 @@ import { getEventCategory } from "../EventIcon";
 import { CategoryIcon } from "../panel/PanelIcons";
 import { ChatDeleteConfirmOverlay } from "../chat/components/ChatDeleteConfirmOverlay";
 import { getChatBgSlideUrl, pickRandomChatBgSlideIndex } from "../chat/components/chatBackgroundCarousel";
-import { getInstantMapBgUrl } from "@/lib/mapBgCache";
+import { getInstantMapBgUrl, DEFAULT_GROUP_AVATAR } from "@/lib/mapBgCache";
 import { GroupSettingsSlideView } from "./GroupSettingsSlideView";
 import { GroupCallView } from "./GroupCallView";
 
@@ -244,11 +244,13 @@ export function EventGroupChatPanel({
                 </svg>
               </button>
               <div className="w-9 h-9 rounded-full overflow-hidden border border-current/25 flex items-center justify-center shrink-0">
-                {meta?.avatarUrl ? (
-                  <ContentImage src={meta.avatarUrl} alt={event.title} width={40} height={40} className="w-full h-full object-cover" />
-                ) : (
-                  <CategoryIcon category={getEventCategory(event)} isMapDark={isMapDark} className="w-5 h-5" />
-                )}
+                <ContentImage
+                  src={meta?.avatarUrl || getInstantMapBgUrl(DEFAULT_GROUP_AVATAR)}
+                  alt={event.title}
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-bold leading-tight truncate">{event.title}</p>

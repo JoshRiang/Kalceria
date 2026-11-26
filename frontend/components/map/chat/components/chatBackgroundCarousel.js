@@ -6,7 +6,7 @@
  * local fallback paths in `/BG_IMPROVE_FOR_MAP/...` handled by `mapBgCache.js`.
  */
 
-export const CHAT_BG_CDN_BASE = "https://cdn.kalceria.id/media/ui-bg/v61";
+export const CHAT_BG_CDN_BASE = "https://cdn.kalceria.id/media/ui-bg/v62";
 
 export const CHAT_BG_CAROUSEL_SLIDES = [
   {

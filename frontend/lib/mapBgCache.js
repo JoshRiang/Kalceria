@@ -3,7 +3,7 @@
 // with automatic local fallback (`/BG_IMPROVE_FOR_MAP/...`) and RAM blob caching so
 // Leaflet popups, chat boxes, and modals open with zero network stalls.
 
-export const MAP_BG_CDN_BASE = "https://cdn.kalceria.id/media/ui-bg/v61";
+export const MAP_BG_CDN_BASE = "https://cdn.kalceria.id/media/ui-bg/v62";
 
 export const EVENT_CARD_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_EventCardLight.webp`;
 export const EVENT_CARD_BG_DARK = `${MAP_BG_CDN_BASE}/BG_EventCardDark.webp`;
@@ -13,6 +13,11 @@ export const CHAT_PANEL_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_ChatWithOthers_Light.w
 export const CHAT_PANEL_BG_DARK = `${MAP_BG_CDN_BASE}/BG_ChatWithOthers_Dark.webp`;
 export const MEETING_PANEL_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_AssignMeeting_Light.webp`;
 export const MEETING_PANEL_BG_DARK = `${MAP_BG_CDN_BASE}/BG_AssignMeeting_Dark.webp`;
+export const PROFILE_CARD_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_ProfileCard_Light.webp`;
+export const PROFILE_CARD_BG_DARK = `${MAP_BG_CDN_BASE}/BG_ProfileCard_Dark.webp`;
+export const GROUP_PROFILE_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_GroupProfile_Light.webp`;
+export const GROUP_PROFILE_BG_DARK = `${MAP_BG_CDN_BASE}/BG_GroupProfile_Dark.webp`;
+export const DEFAULT_GROUP_AVATAR = `${MAP_BG_CDN_BASE}/DefaultGroupAvatar.webp`;
 export const CREATION_BOX_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_BroadcastBoxLight.webp`;
 export const CREATION_BOX_BG_DARK = `${MAP_BG_CDN_BASE}/BG_BroadscastBoxDark.webp`;
 export const MINI_EVENT_FORM_BG_LIGHT = `${MAP_BG_CDN_BASE}/BGCreateMini_Light.webp`;
@@ -34,6 +39,11 @@ export const MAP_BG_WEBP_ASSETS = [
   CHAT_PANEL_BG_DARK,
   MEETING_PANEL_BG_LIGHT,
   MEETING_PANEL_BG_DARK,
+  PROFILE_CARD_BG_LIGHT,
+  PROFILE_CARD_BG_DARK,
+  GROUP_PROFILE_BG_LIGHT,
+  GROUP_PROFILE_BG_DARK,
+  DEFAULT_GROUP_AVATAR,
   CREATION_BOX_BG_LIGHT,
   CREATION_BOX_BG_DARK,
   MINI_EVENT_FORM_BG_LIGHT,

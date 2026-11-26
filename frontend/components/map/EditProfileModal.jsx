@@ -346,15 +346,16 @@ export function EditProfileModal({
 
                 {/* Display Name */}
                 <div className="shrink-0 flex flex-col gap-1.5">
-                  <label style={{ fontFamily: "Arial, sans-serif" }} className="font-bold text-[11.5px] text-gray-500 dark:text-neutral-400">
-                    Display Name
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label style={{ fontFamily: "Arial, sans-serif" }} className="font-bold text-[11.5px] text-gray-500 dark:text-neutral-400">Display Name</label>
+                    <span style={{ fontFamily: "Arial, sans-serif" }} className={`text-[10.5px] ${displayName.length >= 50 ? "text-red-500 font-bold" : "text-neutral-400"}`}>{displayName.length}/50</span>
+                  </div>
                   <input
                     type="text"
                     required
                     maxLength={50}
                     value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
+                    onChange={(e) => setDisplayName(e.target.value.slice(0, 50))}
                     placeholder="Your community name or callsign"
                     className={`w-full border rounded-lg px-3 py-2 text-xs sm:text-[13px] outline-none transition-all ${inputBgClass}`}
                   />

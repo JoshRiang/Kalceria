@@ -26,10 +26,14 @@ export async function ensureEventGroupTables() {
       CREATE TABLE IF NOT EXISTS event_group_meta (
         event_id VARCHAR(128) PRIMARY KEY,
         avatar_url TEXT,
+        cover_url TEXT,
+        cover_type VARCHAR(16) DEFAULT 'image',
         description TEXT,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await prisma.$executeRawUnsafe(`ALTER TABLE event_group_meta ADD COLUMN IF NOT EXISTS cover_url TEXT`).catch(() => {});
+    await prisma.$executeRawUnsafe(`ALTER TABLE event_group_meta ADD COLUMN IF NOT EXISTS cover_type VARCHAR(16) DEFAULT 'image'`).catch(() => {});
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS event_group_members (
         event_id VARCHAR(128) NOT NULL,
@@ -205,35 +209,43 @@ export async function getEventGroupMeta(eventId) {
   await ensureEventGroupTables();
   try {
     const rows = await prisma.$queryRawUnsafe(
-      `SELECT event_id, avatar_url, description, updated_at FROM event_group_meta WHERE event_id = $1 LIMIT 1`,
+      `SELECT event_id, avatar_url, cover_url, cover_type, description, updated_at FROM event_group_meta WHERE event_id = $1 LIMIT 1`,
       String(eventId)
     );
     if (Array.isArray(rows) && rows.length > 0) {
       return {
         eventId: String(rows[0].event_id),
         avatarUrl: rows[0].avatar_url || null,
+        coverUrl: rows[0].cover_url || null,
+        coverType: rows[0].cover_type || 'image',
         description: rows[0].description || '',
         updatedAt: rows[0].updated_at ? new Date(rows[0].updated_at).toISOString() : null,
       };
     }
   } catch {}
-  return { eventId: String(eventId), avatarUrl: null, description: '', updatedAt: null };
+  return { eventId: String(eventId), avatarUrl: null, coverUrl: null, coverType: 'image', description: '', updatedAt: null };
 }
 
-export async function upsertEventGroupMeta(eventId, { avatarUrl, description }) {
+export async function upsertEventGroupMeta(eventId, { avatarUrl, coverUrl, coverType, description }) {
   await ensureEventGroupTables();
-  const safeAvatar = typeof avatarUrl === 'string' ? avatarUrl.trim().slice(0, 1200) : null;
+  const safeAvatar = typeof avatarUrl === 'string' && avatarUrl.trim() ? avatarUrl.trim().slice(0, 1200) : null;
+  const safeCover = typeof coverUrl === 'string' && coverUrl.trim() ? coverUrl.trim().slice(0, 1200) : null;
+  const safeCoverType = coverType === 'video' ? 'video' : 'image';
   const safeDesc = typeof description === 'string' ? description.trim().slice(0, 400) : '';
   await prisma.$executeRawUnsafe(
-    `INSERT INTO event_group_meta (event_id, avatar_url, description, updated_at)
-     VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+    `INSERT INTO event_group_meta (event_id, avatar_url, cover_url, cover_type, description, updated_at)
+     VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
      ON CONFLICT (event_id)
      DO UPDATE SET
        avatar_url = COALESCE(EXCLUDED.avatar_url, event_group_meta.avatar_url),
+       cover_url = COALESCE(EXCLUDED.cover_url, event_group_meta.cover_url),
+       cover_type = CASE WHEN EXCLUDED.cover_url IS NOT NULL THEN EXCLUDED.cover_type ELSE event_group_meta.cover_type END,
        description = EXCLUDED.description,
        updated_at = CURRENT_TIMESTAMP`,
     String(eventId),
     safeAvatar,
+    safeCover,
+    safeCoverType,
     safeDesc
   );
   return getEventGroupMeta(eventId);
