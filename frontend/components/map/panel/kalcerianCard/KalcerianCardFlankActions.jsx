@@ -243,75 +243,7 @@ export const KalcerianCardFlankActions = memo(function KalcerianCardFlankActions
         )}
       </div>
 
-      {/* Bottom Row: Chat Button + Block/Restore Button */}
-      <div className="grid grid-cols-2 gap-1.5 items-center justify-items-center w-[54px] mt-1.5">
-        {/* Slot 1: Chat Button (Dimmed & Disabled in Offline / Sniffer Mode, Red without glow when Blocked) */}
-        <div className="relative flex items-center justify-center w-6 h-6">
-          <button
-            type="button"
-            disabled={isSelfOffline}
-            onMouseEnter={() => !isSelfOffline && setHoveredChatIconId?.(user.id)}
-            onMouseLeave={() => setHoveredChatIconId?.(null)}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isSelfOffline) return;
-              onPersonalChatOpen?.(user);
-            }}
-            className={`relative z-20 w-7 h-7 -m-0.5 flex items-center justify-center rounded-md outline-none transition-all ${
-              isSelfOffline
-                ? "opacity-30 grayscale cursor-not-allowed"
-                : "hover:scale-115 active:scale-95 cursor-pointer"
-            }`}
-            title={isSelfOffline ? "Mode Offline (aktifkan mata untuk chat)" : isBlocked ? `Chat ${displayName} (Blocked)` : `Chat ${displayName}`}
-          >
-            <ChatButtonIcon isMapDark={isMapDark} isBlocked={isBlocked} />
-            {!isSelfOffline && !isBlocked && unreadPersonalChatCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#ef4444] rounded-full shadow-sm pointer-events-none animate-pulse ring-1 ring-white/20" />
-            )}
-          </button>
-
-          {/* Hover Tooltip Box: "Chat <Display Name>" */}
-          {!isSelfOffline && hoveredChatIconId === user.id && (
-            <div
-              className={`absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 px-2.5 py-1 rounded-md shadow-2xl text-[11px] leading-tight font-sans font-medium whitespace-nowrap pointer-events-none transition-all ${
-                isMapDark
-                  ? "bg-black border border-white text-white shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
-                  : "bg-white border border-black text-black shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
-              }`}
-              style={{ fontFamily: "Arial, sans-serif" }}
-            >
-              Chat {displayName} {isBlocked ? "(Blocked)" : ""}
-            </div>
-          )}
-        </div>
-
-        {/* Slot 2: Block Button or Restore Button */}
-        {!isBlocked ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setConfirmingAction({ userId: user.id, type: "block" });
-            }}
-            className="w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-            title={`Block ${user.name}`}
-          >
-            <BlockButtonIcon isMapDark={isMapDark} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setConfirmingAction({ userId: user.id, type: "unblock" });
-            }}
-            className="w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
-            title={`Unblock ${user.name}`}
-          >
-            <RestoreButtonIcon isMapDark={isMapDark} />
-          </button>
-        )}
-      </div>
+      {/* Bottom Row removed in Find Other Peeps: Chat now lives in "Chat with Others" and Block lives in Chat Three-Dot menu */}
     </div>
   );
 });

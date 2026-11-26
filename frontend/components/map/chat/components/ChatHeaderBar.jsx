@@ -28,10 +28,15 @@ export function ChatHeaderBar({
   onToggleFavourite,
   onToggleMute,
   onRequestDeleteChat,
+  onRequestBlockToggle,
   onCloseChat,
   menuContainerRef,
 }) {
   const iconColor = isMapDark ? "#ffffff" : "#000000";
+  const shortDisplayName =
+    String(displayName || "Kalcerian").trim().length > 12
+      ? `${String(displayName).trim().slice(0, 12).trimEnd()}...`
+      : String(displayName || "Kalcerian").trim();
   const cleanUsername = (
     activeChatUser?.nickname ||
     activeChatUser?.name ||
@@ -230,16 +235,22 @@ export function ChatHeaderBar({
                       : "bg-white border-black text-black"
                   }`}
                 >
-                  {/* 1. Select Messages */}
+                  {/* 1. Select Messages (Friends only; dimmed in Global) */}
                   <button
                     type="button"
+                    disabled={!isFriend}
                     onClick={() => {
+                      if (!isFriend) return;
                       setSelectMode((p) => !p);
                       setSelectedMsgIds([]);
                       setMenuOpen(false);
                     }}
-                    className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${
-                      isMapDark ? "hover:bg-white/10" : "hover:bg-black/5"
+                    className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center gap-2.5 transition-colors ${
+                      !isFriend
+                        ? "opacity-30 pointer-events-none cursor-not-allowed"
+                        : isMapDark
+                        ? "hover:bg-white/10 cursor-pointer"
+                        : "hover:bg-black/5 cursor-pointer"
                     }`}
                   >
                     <svg
@@ -357,15 +368,49 @@ export function ChatHeaderBar({
                     <span>{isMuted ? "Unmute notifications" : "Mute notifications"}</span>
                   </button>
 
-                  {/* 4. Delete Chat (Red trashcan + Red text) */}
+                  {/* 4. Block / Unblock User (Active in BOTH Global and Friends) */}
                   <button
                     type="button"
                     onClick={() => {
                       setMenuOpen(false);
+                      onRequestBlockToggle?.();
+                    }}
+                    className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${
+                      isMapDark ? "hover:bg-white/10" : "hover:bg-black/5"
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none" stroke={iconColor} strokeWidth="2.1" strokeLinecap="round">
+                      <circle cx="12" cy="12" r="8.5" />
+                      {isTargetBlocked ? (
+                        <>
+                          <line x1="6.4" y1="6.4" x2="9.8" y2="9.8" />
+                          <line x1="14.2" y1="14.2" x2="17.6" y2="17.6" />
+                        </>
+                      ) : (
+                        <line x1="6.4" y1="6.4" x2="17.6" y2="17.6" />
+                      )}
+                    </svg>
+                    <span className="truncate font-normal">
+                      {isTargetBlocked ? "Unblock " : "Block "}
+                      <span className="font-bold">{shortDisplayName}</span>
+                    </span>
+                  </button>
+
+                  {/* 5. Delete Chat (Red trashcan + Red text; Friends only, dimmed in Global) */}
+                  <button
+                    type="button"
+                    disabled={!isFriend}
+                    onClick={() => {
+                      if (!isFriend) return;
+                      setMenuOpen(false);
                       onRequestDeleteChat?.();
                     }}
-                    className={`w-full px-3.5 py-2 text-left text-xs font-medium text-[#ef4444] flex items-center gap-2.5 transition-colors cursor-pointer ${
-                      isMapDark ? "hover:bg-white/10" : "hover:bg-black/5"
+                    className={`w-full px-3.5 py-2 text-left text-xs font-medium text-[#ef4444] flex items-center gap-2.5 transition-colors ${
+                      !isFriend
+                        ? "opacity-30 pointer-events-none cursor-not-allowed"
+                        : isMapDark
+                        ? "hover:bg-white/10 cursor-pointer"
+                        : "hover:bg-black/5 cursor-pointer"
                     }`}
                   >
                     <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="#ef4444">

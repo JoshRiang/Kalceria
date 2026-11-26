@@ -4,7 +4,7 @@ import { memo, useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatErrorBoundary } from "./panel/ChatErrorBoundary";
 import { KalceriansHeader } from "./panel/KalceriansHeader";
-import { KalceriansCardList } from "./panel/KalceriansCardList";
+import { KalceriansPanelBody } from "./panel/KalceriansPanelBody";
 import { avatarUrl, FAMILY_LIMITS } from "./panel/kalceriansHelpers";
 import { PersonalChatPanel } from "./chat/PersonalChatPanel";
 import { IncomingCallModal } from "./chat/components/IncomingCallModal";
@@ -12,8 +12,17 @@ import { stopCallRingtone } from "@/lib/soundEngine";
 import { useKalceriansIncomingCall } from "./panel/useKalceriansIncomingCall";
 import { useKalceriansMapEvents } from "./panel/useKalceriansMapEvents";
 import { useKalceriansFriends } from "./panel/useKalceriansFriends";
+import { useBottomPanelSwitcher } from "./panel/useBottomPanelSwitcher";
 import { prewarmVideoBatch } from "@/lib/videoPrewarmer";
-import { KALCERIANS_PANEL_BG_DARK, KALCERIANS_PANEL_BG_LIGHT, getInstantMapBgUrl } from "@/lib/mapBgCache";
+import {
+  KALCERIANS_PANEL_BG_DARK,
+  KALCERIANS_PANEL_BG_LIGHT,
+  CHAT_PANEL_BG_DARK,
+  CHAT_PANEL_BG_LIGHT,
+  MEETING_PANEL_BG_DARK,
+  MEETING_PANEL_BG_LIGHT,
+  getInstantMapBgUrl,
+} from "@/lib/mapBgCache";
 
 export const KalceriansPanel = memo(function KalceriansPanel({
   scheduleTimeout,
@@ -100,6 +109,21 @@ export const KalceriansPanel = memo(function KalceriansPanel({
     events,
     eventRequestsMap,
     eventGroupChatMap,
+  });
+
+  const {
+    activePanel,
+    isPanelSwitching,
+    pinnedMeetingEventIds,
+  } = useBottomPanelSwitcher({
+    setDrawerOpen,
+    personalChatMap,
+    events,
+    currentUser,
+    acceptedCollabsMap,
+    eventRequestsMap,
+    eventGroupChatMap,
+    hasGlobalNotif,
   });
 
   useEffect(() => {
@@ -200,7 +224,15 @@ export const KalceriansPanel = memo(function KalceriansPanel({
       ) || activeChatUserSnapshot
     : null;
 
-  const isKalceriansHiddenForChat = Boolean(isClosingForChat || activeChatUser || incomingCall);
+  const isKalceriansHiddenForChat = Boolean(
+    isClosingForChat || activeChatUser || incomingCall || isPanelSwitching
+  );
+  const panelBgAsset =
+    activePanel === "chat"
+      ? isMapDark ? CHAT_PANEL_BG_DARK : CHAT_PANEL_BG_LIGHT
+      : activePanel === "meeting"
+      ? isMapDark ? MEETING_PANEL_BG_DARK : MEETING_PANEL_BG_LIGHT
+      : isMapDark ? KALCERIANS_PANEL_BG_DARK : KALCERIANS_PANEL_BG_LIGHT;
   const limits = FAMILY_LIMITS[deviceFamily] || FAMILY_LIMITS.desktop;
   const blockedRef = useRef({ out: blockedUserIds, in: blockedByUserIds });
   blockedRef.current = { out: blockedUserIds, in: blockedByUserIds };
@@ -243,6 +275,8 @@ export const KalceriansPanel = memo(function KalceriansPanel({
               onCallEnded={() => setIncomingCallInitialState(null)}
               onToggleFavourite={onToggleFavourite}
               onToggleMute={onToggleMute}
+              onBlockUser={onBlockUser}
+              onUnblockUser={onUnblockUser}
               onCloseChat={() => {
                 setIncomingCallInitialState(null);
                 handleClosePersonalChat();
@@ -290,7 +324,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
           <div
             className="w-full h-full"
             style={{
-              backgroundImage: `url("${getInstantMapBgUrl(isMapDark ? KALCERIANS_PANEL_BG_DARK : KALCERIANS_PANEL_BG_LIGHT)}")`,
+              backgroundImage: `url("${getInstantMapBgUrl(panelBgAsset)}")`,
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
@@ -305,13 +339,17 @@ export const KalceriansPanel = memo(function KalceriansPanel({
           isMapDark={isMapDark}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          activePanel={activePanel}
           activeScope={activeScope}
           setActiveScope={setActiveScope}
           hasFriendsNotif={hasFriendsNotif}
           hasGlobalNotif={hasGlobalNotif}
         />
 
-        <KalceriansCardList
+        <KalceriansPanelBody
+          activePanel={activePanel}
+          pinnedMeetingEventIds={pinnedMeetingEventIds}
+          searchQuery={searchQuery}
           listContainerRef={listContainerRef}
           isDataLoading={isDataLoading}
           isMapDark={isMapDark}

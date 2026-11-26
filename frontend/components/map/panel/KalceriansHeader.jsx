@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import {
   FIND_TITLE_LETTERS,
+  CHAT_TITLE_LETTERS,
+  MEETING_TITLE_LETTERS,
   titleWaveContainer,
   titleLetterVariant,
 } from "./kalceriansHelpers";
@@ -14,11 +16,18 @@ export function KalceriansHeader({
   isMapDark,
   searchQuery,
   setSearchQuery,
+  activePanel = "peeps",
   activeScope = "friends",
   setActiveScope,
   hasFriendsNotif = false,
   hasGlobalNotif = false,
 }) {
+  const titleLetters =
+    activePanel === "chat"
+      ? CHAT_TITLE_LETTERS
+      : activePanel === "meeting"
+      ? MEETING_TITLE_LETTERS
+      : FIND_TITLE_LETTERS;
   return (
     <>
       {/* 1. Top Scroll Bar / Pull Handle (Solid Base #0f1014 / #ffffff) */}
@@ -47,7 +56,7 @@ export function KalceriansHeader({
         }`}
       >
         <motion.h2
-          key={drawerOpen ? "drawer-open" : "drawer-closed"}
+          key={`${activePanel}-${drawerOpen ? "open" : "closed"}`}
           variants={titleWaveContainer}
           initial={drawerOpen ? "hidden" : "visible"}
           animate="visible"
@@ -55,7 +64,7 @@ export function KalceriansHeader({
             isMapDark ? "text-[#f0f6fc]" : "text-[#1f2328]"
           }`}
         >
-          {FIND_TITLE_LETTERS.map((char, index) => (
+          {titleLetters.map((char, index) => (
             <motion.span
               key={index}
               variants={titleLetterVariant}
@@ -68,7 +77,8 @@ export function KalceriansHeader({
         </motion.h2>
       </div>
 
-      {/* 2b. Scope Switcher: Global & Friends Icons above Search Bar with active underline & red notification dot */}
+      {/* 2b. Scope Switcher: Friends & Global Tabs (Shown on Find Other Peeps & Chat with Others) */}
+      {activePanel !== "meeting" && (
       <div
         className={`relative z-10 px-4 pb-2 flex items-center gap-5 select-none ${
           isMapDark ? "bg-[#0f1014]" : "bg-[#ffffff]"
@@ -122,6 +132,7 @@ export function KalceriansHeader({
           )}
         </button>
       </div>
+      )}
 
       {/* 3. Search Bar - Modern GitHub Style */}
       <div className="relative z-10 px-3 pb-2.5">

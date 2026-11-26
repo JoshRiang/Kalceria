@@ -4,17 +4,43 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export function ChatDeleteConfirmOverlay({
   isOpen,
+  mode = "delete", // "delete" | "block" | "unblock"
   displayName,
   isMapDark = false,
   isDeleting = false,
   onCancel,
   onConfirm,
 }) {
+  const renderPrompt = () => {
+    if (mode === "block") {
+      return (
+        <>
+          Do you wish to <span className="font-bold text-[#ef4444]">block</span>{" "}
+          <span className="font-bold">{displayName}</span>?
+        </>
+      );
+    }
+    if (mode === "unblock") {
+      return (
+        <>
+          Do you wish to <span className="font-bold text-[#22c55e]">unblock</span>{" "}
+          <span className="font-bold">{displayName}</span>?
+        </>
+      );
+    }
+    return (
+      <>
+        Do you wish to <span className="font-bold text-[#ef4444]">delete</span> your chat with{" "}
+        <span className="font-bold">{displayName}</span>?
+      </>
+    );
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          key="delete-chat-overlay"
+          key={`chat-confirm-overlay-${mode}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -42,9 +68,7 @@ export function ChatDeleteConfirmOverlay({
                   : "0 1px 10px rgba(255,255,255,0.95)",
               }}
             >
-              Do you wish to{" "}
-              <span className="font-bold text-[#ef4444]">delete</span> your chat with{" "}
-              <span className="font-bold">{displayName}</span>?
+              {renderPrompt()}
             </h3>
 
             <div className="flex items-center justify-center gap-10">
@@ -62,9 +86,13 @@ export function ChatDeleteConfirmOverlay({
                 type="button"
                 disabled={isDeleting}
                 onClick={onConfirm}
-                className="font-sans text-base sm:text-lg font-normal text-[#ef4444] hover:text-[#dc2626] px-2 py-1 cursor-pointer outline-none transition-transform hover:scale-110 active:scale-95 disabled:opacity-40"
+                className={`font-sans text-base sm:text-lg font-normal px-2 py-1 cursor-pointer outline-none transition-transform hover:scale-110 active:scale-95 disabled:opacity-40 ${
+                  mode === "unblock"
+                    ? "text-[#22c55e] hover:text-[#16a34a]"
+                    : "text-[#ef4444] hover:text-[#dc2626]"
+                }`}
               >
-                {isDeleting ? "Deleting..." : "Yes"}
+                {isDeleting ? "Processing..." : "Yes"}
               </button>
             </div>
           </motion.div>

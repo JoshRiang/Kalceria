@@ -3,12 +3,16 @@
 // with automatic local fallback (`/BG_IMPROVE_FOR_MAP/...`) and RAM blob caching so
 // Leaflet popups, chat boxes, and modals open with zero network stalls.
 
-export const MAP_BG_CDN_BASE = "https://cdn.kalceria.id/media/ui-bg/v53";
+export const MAP_BG_CDN_BASE = "https://cdn.kalceria.id/media/ui-bg/v61";
 
 export const EVENT_CARD_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_EventCardLight.webp`;
 export const EVENT_CARD_BG_DARK = `${MAP_BG_CDN_BASE}/BG_EventCardDark.webp`;
 export const KALCERIANS_PANEL_BG_LIGHT = `${MAP_BG_CDN_BASE}/BGOtherKalcerian_Light.webp`;
 export const KALCERIANS_PANEL_BG_DARK = `${MAP_BG_CDN_BASE}/BGOtherKalcerian_Dark.webp`;
+export const CHAT_PANEL_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_ChatWithOthers_Light.webp`;
+export const CHAT_PANEL_BG_DARK = `${MAP_BG_CDN_BASE}/BG_ChatWithOthers_Dark.webp`;
+export const MEETING_PANEL_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_AssignMeeting_Light.webp`;
+export const MEETING_PANEL_BG_DARK = `${MAP_BG_CDN_BASE}/BG_AssignMeeting_Dark.webp`;
 export const CREATION_BOX_BG_LIGHT = `${MAP_BG_CDN_BASE}/BG_BroadcastBoxLight.webp`;
 export const CREATION_BOX_BG_DARK = `${MAP_BG_CDN_BASE}/BG_BroadscastBoxDark.webp`;
 export const MINI_EVENT_FORM_BG_LIGHT = `${MAP_BG_CDN_BASE}/BGCreateMini_Light.webp`;
@@ -26,6 +30,10 @@ export const MAP_BG_WEBP_ASSETS = [
   EVENT_CARD_BG_DARK,
   KALCERIANS_PANEL_BG_LIGHT,
   KALCERIANS_PANEL_BG_DARK,
+  CHAT_PANEL_BG_LIGHT,
+  CHAT_PANEL_BG_DARK,
+  MEETING_PANEL_BG_LIGHT,
+  MEETING_PANEL_BG_DARK,
   CREATION_BOX_BG_LIGHT,
   CREATION_BOX_BG_DARK,
   MINI_EVENT_FORM_BG_LIGHT,

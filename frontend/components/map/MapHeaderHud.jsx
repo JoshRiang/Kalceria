@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { isSoundMuted } from "@/lib/soundEngine";
 import {
   HudFunctionalOuterbox,
+  HudPanelSwitcherBox,
   HudRightProfileDock,
 } from "./headerHud/index.js";
 
@@ -89,8 +90,13 @@ export const MapHeaderHud = memo(function MapHeaderHud({
           </svg>
         </button>
 
-        {/* Top-Right Controls: Clean and tight to top-right screen boundary */}
-        <div className="relative pointer-events-auto mr-2.5 sm:mr-3">
+        {/* Top-Right Controls: Companion 3-Icon Panel Switcher + Main Functional Outerbox */}
+        <div className="relative pointer-events-auto mr-2.5 sm:mr-3 flex items-start gap-1.5 sm:gap-2">
+          <HudPanelSwitcherBox
+            isMapDark={isMapDark}
+            isSelfOffline={isSelfOffline}
+            isToolbarRetracting={isToolbarRetracting}
+          />
           <HudFunctionalOuterbox
             isMapDark={isMapDark}
             setIsMapDark={setIsMapDark}

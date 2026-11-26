@@ -7,4 +7,5 @@ export * from "./HudRecenterButton";
 export * from "./HudTopDynamicEvent";
 export * from "./HudTopDynamicBroadcast";
 export * from "./HudFunctionalOuterbox";
+export * from "./HudPanelSwitcherBox";
 export * from "./HudRightProfileDock";

@@ -106,6 +106,7 @@ export function eventPopup(
     isOwner,
     isCollaborator,
     unreadGroupChatCount,
+    item,
     iconFg,
     iconStroke,
   });

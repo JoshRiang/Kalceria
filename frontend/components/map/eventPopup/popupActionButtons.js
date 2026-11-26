@@ -54,6 +54,7 @@ export function renderDoubleMessageIconButton({
   isOwner,
   isCollaborator,
   unreadGroupChatCount,
+  item,
   iconFg,
   iconStroke,
 }) {
@@ -61,13 +62,16 @@ export function renderDoubleMessageIconButton({
   const groupChatRedDotHtml = hasGroupChatRedDot
     ? `<span style="position: absolute; top: -1px; right: -1px; width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%; border: none !important; box-shadow: none !important; pointer-events: none;"></span>`
     : "";
+  const safeId = esc(item?.id || "");
 
   return `
     <button
       type="button"
-      disabled
-      title="Group Chat"
-      style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: not-allowed; display: inline-flex; align-items: center; justify-content: center; outline: none; opacity: 0.45; filter: grayscale(100%); pointer-events: none; flex-shrink: 0;"
+      onclick="window.__kalceriaOpenEventGroupChat?.('${safeId}')"
+      title="Open Event Group Chat (Assign a Meeting)"
+      style="position: relative; width: 24px; height: 24px; background: transparent; border: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: transform 0.15s ease; flex-shrink: 0;"
+      onmouseover="this.style.transform='scale(1.12)'"
+      onmouseout="this.style.transform='scale(1)'"
     >
       <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
         <path

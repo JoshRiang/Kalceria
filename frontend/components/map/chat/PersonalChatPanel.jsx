@@ -30,6 +30,8 @@ export function PersonalChatPanel({
   onCallEnded,
   onToggleFavourite,
   onToggleMute,
+  onBlockUser,
+  onUnblockUser,
   onCloseChat,
   onOutgoingMessageUpdate,
 }) {
@@ -100,17 +102,23 @@ export function PersonalChatPanel({
     isBlockedByTarget,
   });
 
-  const [showDeleteChatConfirm, setShowDeleteChatConfirm] = useState(false);
+  const [confirmModalMode, setConfirmModalMode] = useState(null); // null | "delete" | "block" | "unblock"
   const [isDeletingChat, setIsDeletingChat] = useState(false);
 
-  const handleConfirmDeleteChat = async () => {
-    if (isDeletingChat) return;
+  const handleConfirmOverlayAction = async () => {
+    if (isDeletingChat || !confirmModalMode) return;
     setIsDeletingChat(true);
     try {
-      await handleDeleteSelectedMessages("__CLEAR_ALL__");
+      if (confirmModalMode === "delete") {
+        await handleDeleteSelectedMessages("__CLEAR_ALL__");
+      } else if (confirmModalMode === "block") {
+        await onBlockUser?.(targetId);
+      } else if (confirmModalMode === "unblock") {
+        await onUnblockUser?.(targetId);
+      }
     } finally {
       setIsDeletingChat(false);
-      setShowDeleteChatConfirm(false);
+      setConfirmModalMode(null);
     }
   };
 
@@ -163,10 +171,10 @@ export function PersonalChatPanel({
           )}
         </AnimatePresence>
 
-        {/* Full Chat Content: Smoothly blurs (including Header Bar & Thread) when viewing Profile or Confirming Delete */}
+        {/* Full Chat Content: Smoothly blurs (including Header Bar & Thread) when viewing Profile or Confirming Action */}
         <div
           className={`flex flex-col flex-1 h-full min-h-0 overflow-hidden transition-all duration-300 ease-out ${
-            showContactInfo || showDeleteChatConfirm
+            showContactInfo || Boolean(confirmModalMode)
               ? "filter blur-[8px] opacity-35 pointer-events-none select-none scale-[0.98]"
               : "filter blur-0 opacity-100 scale-100"
           }`}
@@ -195,7 +203,10 @@ export function PersonalChatPanel({
             handleTriggerCall={handleTriggerCall}
             onToggleFavourite={onToggleFavourite}
             onToggleMute={onToggleMute}
-            onRequestDeleteChat={() => setShowDeleteChatConfirm(true)}
+            onRequestDeleteChat={() => setConfirmModalMode("delete")}
+            onRequestBlockToggle={() =>
+              setConfirmModalMode(isTargetBlocked ? "unblock" : "block")
+            }
             onCloseChat={onCloseChat}
             menuContainerRef={menuContainerRef}
           />
@@ -308,14 +319,15 @@ export function PersonalChatPanel({
           )}
         </AnimatePresence>
 
-        {/* Delete Chat Semi-Blur Confirmation Overlay */}
+        {/* Delete Chat & Block/Unblock Semi-Blur Confirmation Overlay */}
         <ChatDeleteConfirmOverlay
-          isOpen={showDeleteChatConfirm}
+          isOpen={Boolean(confirmModalMode)}
+          mode={confirmModalMode || "delete"}
           displayName={displayName}
           isMapDark={isMapDark}
           isDeleting={isDeletingChat}
-          onCancel={() => setShowDeleteChatConfirm(false)}
-          onConfirm={handleConfirmDeleteChat}
+          onCancel={() => setConfirmModalMode(null)}
+          onConfirm={handleConfirmOverlayAction}
         />
       </motion.aside>
 
