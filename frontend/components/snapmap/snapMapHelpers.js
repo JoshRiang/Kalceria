@@ -1,3 +1,5 @@
+import { formatElapsedUptime } from "../map/eventPopup/popupHelpers.js";
+
 export const DEFAULT_CENTER = [-6.2735, 106.7150];
 
 export function getInstantInitialCenter(currentUser = null) {
@@ -33,7 +35,7 @@ export function getInstantInitialCenter(currentUser = null) {
 export function stripDynamicUptime(html) {
   return String(html || "")
     .replace(
-      /(data-event-uptime="[^"]+"[^>]*>)(?:\d+h \d{2}m \d{2}s|\d{2,}:\d{2}:\d{2})(<\/span>)/g,
+      /(data-event-uptime="[^"]+"[^>]*>)(?:(?:\d+mo\s+)?(?:\d+d\s+)?\d+h \d{2}m \d{2}s|\d{2,}:\d{2}:\d{2})(<\/span>)/g,
       "$10h 00m 00s$2"
     )
     .replace(
@@ -46,17 +48,14 @@ export function tickAllEventUptimeElements() {
   if (typeof document === "undefined") return;
   const now = Date.now();
 
-  // 1. Event uptime elements (24h 13m 06s realtime)
+  // 1. Event uptime elements (mo / d / h / m / s realtime breakdown)
   const eventNodes = document.querySelectorAll("[data-event-uptime]");
   if (eventNodes && eventNodes.length > 0) {
     eventNodes.forEach((el) => {
       const startMs = Number(el.getAttribute("data-event-uptime"));
       if (!Number.isFinite(startMs) || startMs <= 0) return;
       const diffSec = Math.max(0, Math.floor((now - startMs) / 1000));
-      const h = Math.floor(diffSec / 3600);
-      const m = String(Math.floor((diffSec % 3600) / 60)).padStart(2, "0");
-      const s = String(diffSec % 60).padStart(2, "0");
-      const nextText = `${h}h ${m}m ${s}s`;
+      const nextText = formatElapsedUptime(diffSec);
       if (el.textContent !== nextText) {
         el.textContent = nextText;
       }

@@ -301,27 +301,33 @@ export function eventPopup(
           />
         </div>
 
-        <!-- Action button: Solid Trashcan when current user posted this clip, Reply otherwise (toggles dark/light) -->
+        <!-- Action button: Circled Solid Trashcan (owner) or Reply (peer), visually distinct from main header icons -->
         <button
           type="button"
           data-media-reply-btn="${esc(safeId)}"
+          data-media-action-circle="true"
           title="${isFirstSlideSelfAuthor ? "Hapus feed media ini" : "Balas feed media ini"}"
           onpointerdown="event.stopPropagation();"
           onclick="event.stopPropagation(); window.__kalceriaHandleMediaAction?.('${esc(safeId)}', '${esc(firstClipId)}', 0);"
           style="
-            background: transparent;
-            border: none;
-            padding: 2px 3px;
+            width: 22px;
+            height: 22px;
+            border-radius: 9999px;
+            background: ${isMapDark ? "rgba(0, 0, 0, 0.72)" : "rgba(255, 255, 255, 0.92)"};
+            border: 1.5px solid ${isMapDark ? "#ffffff" : "#000000"};
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+            padding: 0;
+            flex-shrink: 0;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             color: ${isMapDark ? "#ffffff" : "#000000"};
-            opacity: 0.9;
-            transition: opacity 0.15s ease;
+            opacity: 0.92;
+            transition: opacity 0.15s ease, transform 0.15s ease;
           "
-          onmouseenter="this.style.opacity='1';"
-          onmouseleave="this.style.opacity='0.9';"
+          onmouseenter="this.style.opacity='1'; this.style.transform='scale(1.06)';"
+          onmouseleave="this.style.opacity='0.92'; this.style.transform='scale(1)';"
         >
           ${isFirstSlideSelfAuthor ? getTrashIconSvg(isMapDark) : getReplyIconSvg(isMapDark)}
         </button>

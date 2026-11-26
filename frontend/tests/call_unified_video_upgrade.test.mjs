@@ -44,4 +44,13 @@ test("Unified Voice->Video in-call upgrade keeps single RTCPeerConnection/callId
 
   // 5. Incoming call ringtone popup ONLY listens to fresh `offer`, never `renegotiate_offer`
   assert.ok(incomingSrc.includes('if (sig.signalType === "offer")'), "Incoming call modal must only pop up on fresh call offers");
+
+  // 6. Strict Call Log Idempotency: 1 single log per callId reflecting final mode (no duplicate caller/callee/double-hangup entries)
+  const resendSrc = readFe("components/map/chat/hooks/personalChat/useChatResend.js");
+  const senderSrc = readFe("components/map/chat/hooks/personalChat/useChatSender.js");
+  assert.ok(sessionSrc.includes("hasReportedEndRef"), "useCallSession must guard onEndCall with hasReportedEndRef");
+  assert.ok(sessionSrc.includes("finishCallOnce"), "useCallSession must emit call summary at most once");
+  assert.ok(resendSrc.includes("summary.isCaller !== false"), "Only caller emits the single canonical call log bubble");
+  assert.ok(resendSrc.includes("calllog_${cleanCallId}"), "Call log must use deterministic idempotent calllog_<callId>");
+  assert.ok(senderSrc.includes("const existsIdx = prev.findIndex((m) => m.id === msgId)"), "useChatSender must deduplicate messages by id");
 });

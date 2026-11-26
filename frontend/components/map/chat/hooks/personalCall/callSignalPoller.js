@@ -20,6 +20,7 @@ export async function processCallSignalsBatch({
   processedRenegotiateRef,
   pendingVideoUpgradeRef,
   runPendingVideoUpgrade,
+  finishCallOnce,
   isHungUpRef,
   onEndCallRef,
   setStatus,
@@ -39,12 +40,16 @@ export async function processCallSignalsBatch({
     if (sig.signalType === "hangup") {
       stopCallRingtone();
       setStatus("ended");
-      const callDuration = secondsRef.current;
-      const finalMode = modeRef?.current || "voice";
-      setTimeout(() => {
-        teardownCall();
-        onEndCallRef.current?.({ mode: finalMode, seconds: callDuration });
-      }, 700);
+      if (finishCallOnce) {
+        finishCallOnce(700);
+      } else {
+        const callDuration = secondsRef.current;
+        const finalMode = modeRef?.current || "voice";
+        setTimeout(() => {
+          teardownCall();
+          onEndCallRef.current?.({ mode: finalMode, seconds: callDuration });
+        }, 700);
+      }
       return false; // Stop loop
     }
 

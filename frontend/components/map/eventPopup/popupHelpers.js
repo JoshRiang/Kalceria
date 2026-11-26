@@ -64,14 +64,33 @@ export function extractMediaList(item) {
   return rawList.filter((u) => !isMockOrDummyMedia(u));
 }
 
+const SECONDS_PER_HOUR = 3600;
+const SECONDS_PER_DAY = 24 * SECONDS_PER_HOUR;
+const SECONDS_PER_MONTH = 30 * SECONDS_PER_DAY;
+
+/**
+ * Formats elapsed seconds cleanly across months (mo), days (d), hours (h), minutes (m), and seconds (s)
+ * so multi-day or multi-month events never pile up into hundreds of hours (e.g. "16d 16h 54m 13s").
+ */
+export function formatElapsedUptime(totalSec) {
+  const safeSec = Math.max(0, Math.floor(Number(totalSec) || 0));
+  const mo = Math.floor(safeSec / SECONDS_PER_MONTH);
+  const d = Math.floor((safeSec % SECONDS_PER_MONTH) / SECONDS_PER_DAY);
+  const h = Math.floor((safeSec % SECONDS_PER_DAY) / SECONDS_PER_HOUR);
+  const m = String(Math.floor((safeSec % SECONDS_PER_HOUR) / 60)).padStart(2, "0");
+  const s = String(safeSec % 60).padStart(2, "0");
+
+  const parts = [];
+  if (mo > 0) parts.push(`${mo}mo`);
+  if (d > 0 || mo > 0) parts.push(`${d}d`);
+  parts.push(`${h}h`, `${m}m`, `${s}s`);
+  return parts.join(" ");
+}
+
 export function calculateUptime(createdAt) {
   if (!createdAt) return "0h 00m 00s";
   const diffMs = Math.max(0, Date.now() - new Date(createdAt).getTime());
-  const totalSec = Math.floor(diffMs / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
-  const s = String(totalSec % 60).padStart(2, "0");
-  return `${h}h ${m}m ${s}s`;
+  return formatElapsedUptime(Math.floor(diffMs / 1000));
 }
 
 export function formatReleaseTime(createdAt) {

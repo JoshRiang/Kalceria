@@ -47,8 +47,15 @@ export function useChatResend({
     async (summary) => {
       setCallState(null);
       onCallEndedRef.current?.();
-      if (summary && summary.mode) {
+      // Strict Idempotency: ONLY the initiating caller writes 1 canonical call log keyed by callId
+      // reflecting the FINAL call mode (e.g. voice upgraded -> video = single "video" call log).
+      if (summary && summary.mode && summary.isCaller !== false) {
+        const cleanCallId = String(summary.callId || "")
+          .replace(/[^a-zA-Z0-9_-]/g, "")
+          .slice(0, 48);
+        const idempotentId = cleanCallId ? `calllog_${cleanCallId}` : null;
         await appendAndEncryptMessage({
+          id: idempotentId,
           text: summary.mode === "video" ? "Video call" : "Voice call",
           msgType: "call",
           callMode: summary.mode,

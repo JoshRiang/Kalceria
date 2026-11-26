@@ -48,6 +48,7 @@ export function useChatSender({
 }) {
   const appendAndEncryptMessage = useCallback(
     async ({
+      id = null,
       text = "",
       msgType = "text",
       mediaUrl = null,
@@ -64,6 +65,7 @@ export function useChatSender({
       const ts = Date.now();
       const initialEnvelope = await encryptChatPayload(
         {
+          ...(id ? { id } : {}),
           text,
           msgType,
           mediaUrl: String(mediaUrl || "").startsWith("blob:") ? null : mediaUrl,
@@ -80,7 +82,7 @@ export function useChatSender({
         targetId
       );
 
-      const msgId = initialEnvelope.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const msgId = id || initialEnvelope.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       if (rawBlob) {
         pendingBlobsRef.current.set(msgId, { blob: rawBlob, trimFragment });
         savePendingMediaBlob(msgId, rawBlob, { trimFragment }).catch(() => {});
@@ -107,7 +109,11 @@ export function useChatSender({
       };
 
       setMessages((prev) => {
-        const next = [...prev, newMsg];
+        const existsIdx = prev.findIndex((m) => m.id === msgId);
+        const next =
+          existsIdx >= 0
+            ? prev.map((m, idx) => (idx === existsIdx ? { ...m, ...newMsg } : m))
+            : [...prev, newMsg];
         persistQuickLocal(next);
         persistEncryptedLocal(next);
         return next;

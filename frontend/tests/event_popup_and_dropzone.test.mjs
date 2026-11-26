@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { calculateUptime, cleanDesc } from "../components/map/eventPopup/popupHelpers.js";
+import { calculateUptime, cleanDesc, formatElapsedUptime } from "../components/map/eventPopup/popupHelpers.js";
 import { getTrashIconSvg } from "../components/map/eventPopup/popupFeedDeletePrompt.js";
 import { stripDynamicUptime } from "../components/snapmap/snapMapHelpers.js";
 import { stripEventTags } from "../components/map/mapPage/eventDescCodec.js";
@@ -14,14 +14,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FE_ROOT = path.resolve(__dirname, "..");
 const readFe = (rel) => fs.readFileSync(path.join(FE_ROOT, rel), "utf8");
 
-test("Event Popup uptime formats as '24h 13m 06s' and stripDynamicUptime masks it cleanly", () => {
-  const fixedCreatedAt = Date.now() - (24 * 3600 + 13 * 60 + 6) * 1000;
-  const formatted = calculateUptime(fixedCreatedAt);
-  assert.match(formatted, /^24h 13m 0[6-9]s$/);
+test("Event Popup uptime breaks down cleanly into months, days, hours, minutes, seconds and stripDynamicUptime masks it", () => {
+  assert.equal(formatElapsedUptime(5 * 3600 + 13 * 60 + 6), "5h 13m 06s");
+  assert.equal(formatElapsedUptime(24 * 3600 + 13 * 60 + 6), "1d 0h 13m 06s");
+  assert.equal(formatElapsedUptime(400 * 3600 + 54 * 60 + 13), "16d 16h 54m 13s");
+  assert.equal(formatElapsedUptime(35 * 86400 + 4 * 3600 + 12 * 60 + 5), "1mo 5d 4h 12m 05s");
 
-  const sampleHtml = `<span id="event-uptime-ev1" data-event-uptime="12345">387h 21m 55s</span>`;
-  const stripped = stripDynamicUptime(sampleHtml);
-  assert.equal(stripped, `<span id="event-uptime-ev1" data-event-uptime="12345">0h 00m 00s</span>`);
+  const fixedCreatedAt = Date.now() - (24 * 3600 + 13 * 60 + 6) * 1000;
+  assert.match(calculateUptime(fixedCreatedAt), /^1d 0h 13m 0[6-9]s$/);
+
+  const sampleDayHtml = `<span id="event-uptime-ev1" data-event-uptime="12345">16d 16h 54m 13s</span>`;
+  assert.equal(stripDynamicUptime(sampleDayHtml), `<span id="event-uptime-ev1" data-event-uptime="12345">0h 00m 00s</span>`);
+
+  const sampleMoHtml = `<span id="event-uptime-ev2" data-event-uptime="12345">1mo 5d 4h 12m 05s</span>`;
+  assert.equal(stripDynamicUptime(sampleMoHtml), `<span id="event-uptime-ev2" data-event-uptime="12345">0h 00m 00s</span>`);
 });
 
 test("CMETA tags are cleanly stripped across frontend event description parsers", () => {
@@ -57,10 +63,12 @@ test("Event Popup purges search icon, media view count, and clock icon; uses sol
   assert.ok(controllerSrc.includes("__kalceriaRecordBroadcastView"), "Broadcast view tracking must stay intact");
   assert.ok(callbacksSrc.includes("__kalceriaRecordBroadcastView"), "Broadcast view callback must stay intact");
 
-  // Location pin icon replaces underlined blue link; clock icon removed
+  // Location pin icon replaces underlined blue link; clock icon removed; mini-media action icon sits inside a circle
   assert.ok(popupSrc.includes("data-event-location-pin"), "EventPopup must render clickable Map Pin icon");
   assert.ok(popupSrc.includes('fill-rule="evenodd"'), "Map Pin SVG must use evenodd center hole");
   assert.ok(!popupSrc.includes("12 6 12 12 16 14"), "Clock SVG icon must be removed from EventPopup footer");
+  assert.ok(popupSrc.includes('data-media-action-circle="true"'), "Mini-media trash/reply icon must be wrapped in a circle");
+  assert.ok(popupSrc.includes("border-radius: 9999px;"), "Mini-media action circle must use full circular radius");
 });
 
 test("Event Popup geometry locks stably to first slide aspect ratio", () => {
@@ -80,6 +88,7 @@ test("Event Popup geometry locks stably to first slide aspect ratio", () => {
 test("Live Media Feed & Comment Form use ONE unified dashed MediaDropzoneBox with n+1 '+' tile, compact 'Photo/Video Max 10 MB' label, and 10MB validation", () => {
   const dropzoneSrc = readFe("components/ui/MediaDropzoneBox.jsx");
   const eventMediaSrc = readFe("components/map/modals/eventForm/EventMediaSection.jsx");
+  const broadcastMediaSrc = readFe("components/map/modals/statusModal/BroadcastMediaSection.jsx");
   const commentBodySrc = readFe("components/landing/modals/ideaComment/IdeaCommentFormBody.jsx");
   const uploadRouteSrc = readFe("app/api/blob/upload/route.ts");
   const editProfileSrc = readFe("components/map/EditProfileModal.jsx");
@@ -92,10 +101,13 @@ test("Live Media Feed & Comment Form use ONE unified dashed MediaDropzoneBox wit
   assert.ok(dropzoneSrc.includes('role="alert"'), "Dropzone must surface upload errors inside the box");
   assert.ok(dropzoneSrc.includes("onDrop"), "Dropzone must support drag and drop");
 
-  // Zero double outer dashed boxes on EventMediaSection & IdeaCommentFormBody
+  // Zero double outer dashed boxes on EventMediaSection, BroadcastMediaSection & IdeaCommentFormBody
   assert.ok(eventMediaSrc.includes("MediaDropzoneBox"), "EventMediaSection must render MediaDropzoneBox");
   assert.ok(!eventMediaSrc.includes("border-2 border-dashed"), "EventMediaSection must NOT render a second outer dashed preview box");
   assert.ok(!eventMediaSrc.includes("Upload media atau tempel link"), "Old text link box must be removed from EventMediaSection");
+
+  assert.ok(broadcastMediaSrc.includes("MediaDropzoneBox"), "BroadcastMediaSection must render shared MediaDropzoneBox");
+  assert.ok(!broadcastMediaSrc.includes("Upload media atau tempel link"), "Old text link box must be removed from BroadcastMediaSection");
 
   assert.ok(commentBodySrc.includes("MediaDropzoneBox"), "IdeaCommentFormBody must render MediaDropzoneBox");
   assert.ok(!commentBodySrc.includes("Upload media atau tempel link"), "Old text link box must be removed from IdeaCommentFormBody");

@@ -51,6 +51,7 @@ export function useCallSession({
   const activeCallIdRef = useRef(callId || `call_${Date.now()}`);
   const pollTimerRef = useRef(null);
   const isHungUpRef = useRef(false);
+  const hasReportedEndRef = useRef(false);
   const statusRef = useRef(status);
   const modeRef = useRef(mode);
   const camMountSyncedRef = useRef(false);
@@ -112,17 +113,27 @@ export function useCallSession({
     livekitSessionRef.current = null;
   }, []);
 
-  // Unified in-place Voice -> Video upgrade (same RTCPeerConnection, same callId, zero ringing)
+  const finishCallOnce = useCallback((delayMs = 500) => {
+    if (hasReportedEndRef.current) return;
+    hasReportedEndRef.current = true;
+    const summary = {
+      callId: activeCallIdRef.current,
+      mode: modeRef.current || "voice",
+      seconds: secondsRef.current,
+      isCaller: !isIncomingAnswer,
+    };
+    const emit = () => {
+      teardownCall();
+      onEndCallRef.current?.(summary);
+    };
+    if (delayMs <= 0) emit();
+    else setTimeout(emit, delayMs);
+  }, [isIncomingAnswer, teardownCall]);
+
   const handleUpgradeToVideo = useCallback(() => {
     upgradeVoiceCallToVideo({
-      pc: pcRef.current,
-      hardware: hardwareRef.current,
-      targetUserId,
-      activeCallIdRef,
-      callCtrlChannelRef,
-      onSwitchModeRef,
-      isHungUpRef,
-      pendingVideoUpgradeRef,
+      pc: pcRef.current, hardware: hardwareRef.current, targetUserId, activeCallIdRef,
+      callCtrlChannelRef, onSwitchModeRef, isHungUpRef, pendingVideoUpgradeRef,
     });
   }, [targetUserId]);
 
@@ -130,6 +141,7 @@ export function useCallSession({
   useEffect(() => {
     if (!targetUserId) return;
     isHungUpRef.current = false;
+    hasReportedEndRef.current = false;
     isCallBlockedRef.current = false;
     pendingVideoUpgradeRef.current = false;
     secondsRef.current = 0;
@@ -162,8 +174,7 @@ export function useCallSession({
           return;
         }
         setStatus("ended");
-        teardownCall();
-        onEndCallRef.current?.({ mode: modeRef.current, seconds: 0 });
+        finishCallOnce(0);
         return;
       }
 
@@ -218,11 +229,7 @@ export function useCallSession({
             onRemoteHangup: () => {
               stopCallRingtone();
               setStatus("ended");
-              const callDuration = secondsRef.current;
-              setTimeout(() => {
-                teardownCall();
-                onEndCallRef.current?.({ mode: modeRef.current, seconds: callDuration });
-              }, 500);
+              finishCallOnce(500);
             },
           });
       };
@@ -345,29 +352,11 @@ export function useCallSession({
 
       // 5. Adaptive Polling Loop for Peer Signals (Ringing / Answer / Renegotiate / ICE / CamState / Hangup)
       startSignalPollingLoop({
-        isCancelled: () => cancelled,
-        isHungUpRef,
-        statusRef,
-        pollTimerRef,
-        activeCallIdRef,
-        livekitSessionRef,
-        isIncomingAnswer,
-        pcRef,
-        secondsRef,
-        modeRef,
-        hardwareRef,
-        targetUserId,
-        callCtrlChannelRef,
-        onSwitchModeRef,
-        processedRenegotiateRef,
-        pendingVideoUpgradeRef,
-        runPendingVideoUpgrade: handleUpgradeToVideo,
-        onEndCallRef,
-        setStatus,
-        setIsRemoteCamOff,
-        flushPendingIceCandidates,
-        pendingIceCandidatesRef,
-        teardownCall,
+        isCancelled: () => cancelled, isHungUpRef, statusRef, pollTimerRef, activeCallIdRef,
+        livekitSessionRef, isIncomingAnswer, pcRef, secondsRef, modeRef, hardwareRef, targetUserId,
+        callCtrlChannelRef, onSwitchModeRef, processedRenegotiateRef, pendingVideoUpgradeRef,
+        runPendingVideoUpgrade: handleUpgradeToVideo, finishCallOnce, onEndCallRef, setStatus,
+        setIsRemoteCamOff, flushPendingIceCandidates, pendingIceCandidatesRef, teardownCall,
       });
     }
 
@@ -377,15 +366,7 @@ export function useCallSession({
       cancelled = true;
       teardownCall();
     };
-  }, [
-    targetUserId,
-    isIncomingAnswer,
-    incomingOfferSdp,
-    callId,
-    teardownCall,
-    flushPendingIceCandidates,
-    handleUpgradeToVideo,
-  ]);
+  }, [targetUserId, isIncomingAnswer, incomingOfferSdp, callId, teardownCall, finishCallOnce, flushPendingIceCandidates, handleUpgradeToVideo]);
 
   useCallStreamBinding({ hardware, mode, status, isRemoteCamOff });
 
@@ -416,13 +397,8 @@ export function useCallSession({
         nonce: generateCryptoNonce(),
       }).catch(() => {});
     }
-    const finalSeconds = secondsRef.current;
-    const finalMode = modeRef.current;
-    setTimeout(() => {
-      teardownCall();
-      onEndCallRef.current?.({ mode: finalMode, seconds: finalSeconds });
-    }, 750);
-  }, [targetUserId, teardownCall]);
+    finishCallOnce(750);
+  }, [targetUserId, finishCallOnce]);
 
   return {
     status,
