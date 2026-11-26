@@ -14,6 +14,7 @@ import {
 } from '../components/map/chat/components/chatBackgroundCarousel.js';
 import {
   MAP_BG_CDN_BASE,
+  REELS_BG_CDN_BASE,
   MAP_BG_WEBP_ASSETS,
   resolveLocalMapBgFallback,
 } from '../lib/mapBgCache.js';
@@ -66,10 +67,14 @@ test('Chat Box background carousel provides 5 distinct Nongskuy CDN slides with 
   assert.equal(threadSrc.includes('CHAT_BG_AUTO_ROTATE_MS'), false);
   assert.equal(threadSrc.includes('CHAT_BG_STORAGE_KEY'), false);
 
-  // All 24 Map UI background assets use Cloudflare Edge CDN + resolve cleanly to existing local fallback files
-  assert.equal(MAP_BG_WEBP_ASSETS.length, 24);
+  // All 37 Map UI background assets (v62 + v63 Reels/PostForm) use Cloudflare Edge CDN + resolve cleanly to existing local fallback files
+  assert.equal(MAP_BG_WEBP_ASSETS.length, 37);
   for (const url of MAP_BG_WEBP_ASSETS) {
-    assert.equal(url.startsWith(`${MAP_BG_CDN_BASE}/`), true, `Expected Cloudflare CDN URL: ${url}`);
+    assert.equal(
+      url.startsWith(`${MAP_BG_CDN_BASE}/`) || url.startsWith(`${REELS_BG_CDN_BASE}/`),
+      true,
+      `Expected Cloudflare CDN URL: ${url}`
+    );
     const localRel = resolveLocalMapBgFallback(url);
     assert.equal(fs.existsSync(path.join(FE_ROOT, 'public', localRel)), true, `Missing local fallback: ${localRel}`);
   }
