@@ -1,5 +1,6 @@
 import { createPageMetadata } from "@/lib/seo";
 import MapPageClient from "@/components/map/MapPageClient";
+import { TempMapAccessGate } from "@/temp_map_whitelist/TempMapAccessGate";
 
 export const metadata = createPageMetadata({
   title: "Kalcerians Live Map",
@@ -16,6 +17,10 @@ export const metadata = createPageMetadata({
 });
 
 export default function MapPage() {
-  return <MapPageClient />;
+  return (
+    <TempMapAccessGate>
+      <MapPageClient />
+    </TempMapAccessGate>
+  );
 }
 

@@ -1,9 +1,13 @@
 "use client";
 import { motion } from "framer-motion";
 import { SolarPhoenix } from "../backgrounds";
+import { useMapWhitelistAccess } from "@/temp_map_whitelist/useMapWhitelistAccess";
 
 export function ClosingUsersMapSection({ isMobile }) {
+  const { canAccessMap } = useMapWhitelistAccess();
+
   const handleMapNavigate = () => {
+    if (!canAccessMap) return;
     sessionStorage.setItem("landingScrollTarget", "section-map");
     sessionStorage.setItem("landingScrollY", window.scrollY);
     sessionStorage.removeItem("mapIntroSeen");
@@ -75,28 +79,49 @@ export function ClosingUsersMapSection({ isMobile }) {
 
         {/* Top Header Title: USERS MAP with SUPPORT US Typography and Large Flexible Size */}
         <div className="absolute top-6 xs:top-8 sm:top-10 md:top-12 lg:top-14 xl:top-16 left-1/2 -translate-x-1/2 z-40 w-full px-4 text-center select-none">
-          <button
-            type="button"
-            onClick={handleMapNavigate}
-            className="bg-transparent border-none p-0 inline-block cursor-pointer focus:outline-none hover:scale-[1.02] active:scale-[0.98] transition-transform"
-          >
-            <h2 className="font-mono font-black uppercase tracking-tighter text-4xl xs:text-5xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[9.5rem] 2xl:text-[11rem] text-white whitespace-nowrap leading-none">
-              USERS MAP
-            </h2>
-          </button>
+          {canAccessMap ? (
+            <button
+              type="button"
+              onClick={handleMapNavigate}
+              className="bg-transparent border-none p-0 inline-block cursor-pointer focus:outline-none hover:scale-[1.02] active:scale-[0.98] transition-transform"
+            >
+              <h2 className="font-mono font-black uppercase tracking-tighter text-4xl xs:text-5xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[9.5rem] 2xl:text-[11rem] text-white whitespace-nowrap leading-none">
+                USERS MAP
+              </h2>
+            </button>
+          ) : (
+            <div className="inline-block cursor-default">
+              <h2 className="font-mono font-black uppercase tracking-tighter text-4xl xs:text-5xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[9.5rem] 2xl:text-[11rem] text-white whitespace-nowrap leading-none">
+                USERS MAP
+              </h2>
+            </div>
+          )}
         </div>
 
         {/* Find The Others Button - Unified with SEE THE JOURNEY Typography & Proportion */}
         <div className="absolute z-40 bottom-[8%] md:bottom-auto md:top-1/2 left-1/2 -translate-x-1/2 md:-translate-y-1/2 flex items-center justify-center">
-          <button
-            type="button"
-            onClick={handleMapNavigate}
-            className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
-            style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
-          >
-            <span className="relative z-10">FIND THE OTHERS</span>
-            <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
-          </button>
+          {canAccessMap ? (
+            <button
+              type="button"
+              onClick={handleMapNavigate}
+              className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black bg-white transition-all hover:bg-[#FF00FF] hover:text-white group shadow-[0_0_20px_rgba(255,255,255,0.1)] focus-polygon focus-visible:outline-none cursor-pointer"
+              style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+            >
+              <span className="relative z-10">FIND THE OTHERS</span>
+              <div className="absolute inset-0 bg-[#050a14] scale-x-0 origin-right group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              title="Users Map is coming soon"
+              className="relative px-8 md:px-10 py-2.5 md:py-3.5 font-sans font-extrabold uppercase tracking-wide text-[13px] md:text-[15px] text-black/75 bg-white/85 shadow-[0_0_20px_rgba(255,255,255,0.12)] cursor-not-allowed select-none"
+              style={{ clipPath: "polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)" }}
+            >
+              <span className="relative z-10">COMING SOON</span>
+            </button>
+          )}
         </div>
 
         {/* Earthman - Desktop Hero Figure at Bottom */}

@@ -149,8 +149,12 @@ import {
   citySearchRateLimit,
 } from "../middleware/rateLimit.js";
 import crypto from 'node:crypto';
+import { tempMapWhitelistGuard, TEMP_MAP_GUARDED_PATHS } from "../temp_map_whitelist/requireMapWhitelist.js";
 
 const router = express.Router();
+
+// [TEMPORARY FLAG] Restrict Map APIs to whitelisted preview emails (see backend/temp_map_whitelist/README.md)
+router.use(TEMP_MAP_GUARDED_PATHS, tempMapWhitelistGuard);
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 router.get("/health", (_req, res) => res.json({ ok: true }));
