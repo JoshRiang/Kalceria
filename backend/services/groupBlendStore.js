@@ -1,7 +1,18 @@
 import prisma from '../lib/prisma.js';
 import { ensurePersistentUserProfilesBatch, CANONICAL_USER_SELECT } from '../utils/profileDefaults.js';
-import { ensureEventGroupMembership, appendGroupMessage } from './eventGroupStore.js';
+import { getMemberRoleInEvent, appendGroupMessage } from './eventGroupStore.js';
 import { computeBlendRoute, normalizeBlendMode } from './blendRoutingService.js';
+
+async function verifyEventGroupMembership(eventId, userId) {
+  if (!eventId || !userId) return { allowed: false, role: null, event: null };
+  const ev = await prisma.miniEvent.findUnique({
+    where: { id: String(eventId) },
+    select: { id: true, creatorId: true, title: true, lat: true, lng: true, isActive: true },
+  });
+  if (!ev) return { allowed: false, role: null, event: null };
+  const role = await getMemberRoleInEvent(ev.id, userId, ev.creatorId);
+  return { allowed: Boolean(role), role, event: ev };
+}
 
 let blendTablesChecked = false;
 
@@ -61,7 +72,7 @@ function parseFinite(val) {
 
 export async function inviteGroupBlend({ eventId, userId, initialPos = null }) {
   await ensureBlendTables();
-  const membership = await ensureEventGroupMembership(eventId, userId);
+  const membership = await verifyEventGroupMembership(eventId, userId);
   if (!membership?.allowed) return { forbidden: true };
 
   const eid = String(eventId);
@@ -94,15 +105,18 @@ export async function inviteGroupBlend({ eventId, userId, initialPos = null }) {
   if (!wasActive) {
     const initiator = await prisma.user.findUnique({
       where: { id: uid },
-      select: { name: true, nickname: true },
+      select: { name: true, nickname: true, profilePicture: true },
     });
     const senderName = initiator?.name || initiator?.nickname || 'Kalcerian';
     await appendGroupMessage({
       eventId: eid,
       senderId: uid,
       senderName,
-      type: 'blend_invite',
-      text: `${senderName} memulai Location Blend! Tap "Join Blend" untuk navigasi bareng ke lokasi event.`,
+      senderAvatar: initiator?.profilePicture || null,
+      msgType: 'blend_invite',
+      payload: {
+        text: `${senderName} memulai Location Blend! Tap "Join Blend" untuk navigasi bareng ke lokasi event.`,
+      },
     }).catch(() => {});
   }
 
@@ -117,7 +131,7 @@ export async function joinGroupBlend({
   announceInChat = true,
 }) {
   await ensureBlendTables();
-  const membership = await ensureEventGroupMembership(eventId, userId);
+  const membership = await verifyEventGroupMembership(eventId, userId);
   if (!membership?.allowed) return { forbidden: true };
 
   const eid = String(eventId);
@@ -167,14 +181,20 @@ export async function joinGroupBlend({
   );
 
   if (announceInChat) {
-    const user = await prisma.user.findUnique({ where: { id: uid }, select: { name: true, nickname: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: uid },
+      select: { name: true, nickname: true, profilePicture: true },
+    });
     const senderName = user?.name || user?.nickname || 'Kalcerian';
     await appendGroupMessage({
       eventId: eid,
       senderId: uid,
       senderName,
-      type: 'blend_join',
-      text: `${senderName} bergabung ke Location Blend!`,
+      senderAvatar: user?.profilePicture || null,
+      msgType: 'blend_join',
+      payload: {
+        text: `${senderName} bergabung ke Location Blend!`,
+      },
     }).catch(() => {});
   }
 
@@ -220,7 +240,7 @@ export async function updateGroupBlendMemberState({
   isStationary,
 }) {
   await ensureBlendTables();
-  const membership = await ensureEventGroupMembership(eventId, userId);
+  const membership = await verifyEventGroupMembership(eventId, userId);
   if (!membership?.allowed) return { forbidden: true };
 
   const eid = String(eventId);
@@ -272,7 +292,7 @@ export async function getGroupBlendState({ eventId, viewerId, includeRoutes = tr
   const vid = String(viewerId);
 
   // Strict GroupChat membership gate: outsiders NEVER see Blend state!
-  const membership = await ensureEventGroupMembership(eid, vid);
+  const membership = await verifyEventGroupMembership(eid, vid);
   if (!membership?.allowed) return { forbidden: true };
 
   const [blendRows, memberRows, eventRow] = await Promise.all([

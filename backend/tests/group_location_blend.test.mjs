@@ -68,7 +68,8 @@ test('Group Blend enforces strict opt-in POV privacy and backend GPS curation re
   const routesSrc = fs.readFileSync(path.resolve('backend/routes/index.js'), 'utf8');
   const telemetrySrc = fs.readFileSync(path.resolve('backend/controllers/telemetry/telemetryFeedController.js'), 'utf8');
 
-  assert.match(blendStoreSrc, /ensureEventGroupMembership/);
+  assert.match(blendStoreSrc, /verifyEventGroupMembership/);
+  assert.match(blendStoreSrc, /getMemberRoleInEvent/);
   assert.match(blendStoreSrc, /if \(!isActive \|\| !isJoined\)/);
   assert.match(routesSrc, /\/map\/blends\/active/);
   assert.match(routesSrc, /\/map\/group-chat\/:eventId\/blend\/join/);
