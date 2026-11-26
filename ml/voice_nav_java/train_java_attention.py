@@ -33,6 +33,7 @@ from java_scenario_generator import (
 ROOT = Path(__file__).resolve().parents[2]
 CORPUS_PATH = ROOT / "data" / "voice_nav_java" / "GOOGLE_MAPS_ID_CORPUS.json"
 WEIGHTS_OUT = ROOT / "data" / "voice_nav_java" / "JAVA_ATTENTION_WEIGHTS_V1.json"
+BUNDLED_WEIGHTS_OUT = ROOT / "backend" / "services" / "voiceNav" / "modelData" / "JAVA_ATTENTION_WEIGHTS_V1.json"
 REPORT_OUT = ROOT / "data" / "voice_nav_java" / "TRAINING_REPORT_ITER2.json"
 
 
@@ -240,7 +241,10 @@ def train():
         "bias": r4(final_params["bias"]),
     }
 
-    WEIGHTS_OUT.write_text(json.dumps(weights_payload, separators=(",", ":")), encoding="utf-8")
+    serialized = json.dumps(weights_payload, separators=(",", ":"))
+    WEIGHTS_OUT.write_text(serialized, encoding="utf-8")
+    BUNDLED_WEIGHTS_OUT.parent.mkdir(parents=True, exist_ok=True)
+    BUNDLED_WEIGHTS_OUT.write_text(serialized, encoding="utf-8")
     weights_kb = round(WEIGHTS_OUT.stat().st_size / 1024.0, 2)
 
     report = {

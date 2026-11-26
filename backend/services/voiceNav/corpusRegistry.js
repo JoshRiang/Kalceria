@@ -15,7 +15,10 @@ import {
 } from './javaTextNormalizer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_CORPUS_PATH = path.resolve(__dirname, '../../../data/voice_nav_java/GOOGLE_MAPS_ID_CORPUS.json');
+const BUNDLED_CORPUS_PATH = path.resolve(__dirname, 'modelData/GOOGLE_MAPS_ID_CORPUS.json');
+const DEFAULT_CORPUS_PATH = fs.existsSync(BUNDLED_CORPUS_PATH)
+  ? BUNDLED_CORPUS_PATH
+  : path.resolve(__dirname, '../../../data/voice_nav_java/GOOGLE_MAPS_ID_CORPUS.json');
 
 let cachedCorpus = null;
 

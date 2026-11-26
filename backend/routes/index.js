@@ -71,6 +71,10 @@ import {
   updateGroupBlendStateHandler,
 } from "../controllers/groupBlendController.js";
 import {
+  getVoiceNavBundleHandler,
+  evaluateVoiceNavHandler,
+} from "../controllers/voiceNavController.js";
+import {
   getPersonalChatMessages,
   sendPersonalChatMessage,
   deletePersonalChatMessages,
@@ -335,6 +339,10 @@ router.post("/map/group-chat/:eventId/blend/invite", requireAuth, inviteGroupBle
 router.post("/map/group-chat/:eventId/blend/join", requireAuth, joinGroupBlendHandler);
 router.post("/map/group-chat/:eventId/blend/leave", requireAuth, leaveGroupBlendHandler);
 router.patch("/map/group-chat/:eventId/blend/state", requireAuth, updateGroupBlendStateHandler);
+
+// ─── AI Voice Navigation Runtime (Pulau Jawa Vector-Attention Engine) ────────
+router.get("/map/voice-nav/bundle", requireAuth, getVoiceNavBundleHandler);
+router.post("/map/voice-nav/evaluate", requireAuth, evaluateVoiceNavHandler);
 
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────
