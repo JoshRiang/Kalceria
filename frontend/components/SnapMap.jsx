@@ -10,6 +10,7 @@ import { useSnapMapGlobalCallbacks } from "./snapmap/useSnapMapGlobalCallbacks";
 import { useSnapMapFocus } from "./snapmap/useSnapMapFocus";
 import { useSnapMapInit } from "./snapmap/useSnapMapInit";
 import { useSnapMapMarkers } from "./snapmap/useSnapMapMarkers";
+import { MapBlendController } from "./map/blend/MapBlendController";
 
 export default function SnapMap({
   users,
@@ -99,11 +100,19 @@ export default function SnapMap({
   });
 
   return (
-    <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>
-      <div
-        ref={mapNodeRef}
-        className="w-full h-full bg-transparent"
+    <>
+      <div className={`fixed inset-0 z-0 snap-tactical-map ${isMapDark ? "dark-theme" : "light-theme"}`}>
+        <div
+          ref={mapNodeRef}
+          className="w-full h-full bg-transparent"
+        />
+      </div>
+      <MapBlendController
+        mapRef={mapRef}
+        isReady={isReady}
+        currentUser={currentUser}
+        isMapDark={isMapDark}
       />
-    </div>
+    </>
   );
 }

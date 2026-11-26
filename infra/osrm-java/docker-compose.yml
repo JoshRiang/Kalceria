@@ -1,0 +1,43 @@
+services:
+  osrm-java-foot:
+    build: .
+    container_name: kalceria-osrm-java-foot
+    restart: unless-stopped
+    environment:
+      - OSRM_PROFILE=foot
+      - OSRM_PORT=5000
+    ports:
+      - "5001:5000"
+    volumes:
+      - java_osrm_data:/data
+    mem_limit: 1536m
+
+  osrm-java-motorcycle:
+    build: .
+    container_name: kalceria-osrm-java-motorcycle
+    restart: unless-stopped
+    environment:
+      - OSRM_PROFILE=motorcycle
+      - OSRM_PORT=5000
+    ports:
+      - "5002:5000"
+    volumes:
+      - java_osrm_data:/data
+    mem_limit: 1536m
+
+  osrm-java-car:
+    build: .
+    container_name: kalceria-osrm-java-car
+    restart: unless-stopped
+    environment:
+      - OSRM_PROFILE=car
+      - OSRM_PORT=5000
+    ports:
+      - "5003:5000"
+    volumes:
+      - java_osrm_data:/data
+    mem_limit: 1536m
+
+volumes:
+  java_osrm_data:
+

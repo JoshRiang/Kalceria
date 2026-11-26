@@ -63,6 +63,14 @@ import {
   deleteUserEventArchiveHandler,
 } from "../controllers/eventArchiveController.js";
 import {
+  getMyActiveBlendsHandler,
+  getGroupBlendHandler,
+  inviteGroupBlendHandler,
+  joinGroupBlendHandler,
+  leaveGroupBlendHandler,
+  updateGroupBlendStateHandler,
+} from "../controllers/groupBlendController.js";
+import {
   getPersonalChatMessages,
   sendPersonalChatMessage,
   deletePersonalChatMessages,
@@ -319,6 +327,14 @@ router.post("/map/reels/:postId/comments", requireAuth, addReelsPostCommentHandl
 router.get("/map/profile/:targetUserId/archives", requireAuth, getUserEventArchivesHandler);
 router.patch("/map/profile/archives/:archiveId", requireAuth, updateUserEventArchiveHandler);
 router.delete("/map/profile/archives/:archiveId", requireAuth, deleteUserEventArchiveHandler);
+
+// ─── GroupChat Location Blend (Opt-In Live Convoy Routing, Traffic & Focus) ──
+router.get("/map/blends/active", requireAuth, getMyActiveBlendsHandler);
+router.get("/map/group-chat/:eventId/blend", requireAuth, getGroupBlendHandler);
+router.post("/map/group-chat/:eventId/blend/invite", requireAuth, inviteGroupBlendHandler);
+router.post("/map/group-chat/:eventId/blend/join", requireAuth, joinGroupBlendHandler);
+router.post("/map/group-chat/:eventId/blend/leave", requireAuth, leaveGroupBlendHandler);
+router.patch("/map/group-chat/:eventId/blend/state", requireAuth, updateGroupBlendStateHandler);
 
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────

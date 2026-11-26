@@ -25,47 +25,57 @@ export function useEagerGeolocation({
   useEffect(() => {
     let active = true;
     if (typeof window !== "undefined" && navigator.geolocation) {
+      const handleFix = (pos) => {
+        if (!active) return;
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        setSelfLiveCoords({ lat, lng });
+        setInitialCoordsResolved(true);
+
+        // Popup & Interaction Protection:
+        // NEVER jump camera or call setView if:
+        // 1. Map has already centered once (hasInitialCenteredRef)
+        // 2. An event card or broadcast box popup is currently open
+        // 3. The startup sequence has already completed
+        const isPopupOpen =
+          typeof document !== "undefined" &&
+          Boolean(
+            document.querySelector(
+              ".leaflet-popup, .event-tactical-popup, .broadcast-tactical-popup, .broadcast-popup-box"
+            )
+          );
+
+        const canCenter =
+          mapRef.current &&
+          !hasInitialCenteredRef?.current &&
+          showStartup &&
+          !isPopupOpen;
+
+        if (canCenter) {
+          try {
+            mapRef.current.setView([lat, lng], 15, { animate: false });
+            if (hasInitialCenteredRef) {
+              hasInitialCenteredRef.current = true;
+            }
+          } catch (_) {}
+        }
+        prewarmOsmTiles(lat, lng, 15);
+      };
+
+      // High-precision GNSS/Wi-Fi first (fixes coarse IP drift), graceful fallback on timeout
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (!active) return;
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          setSelfLiveCoords({ lat, lng });
-          setInitialCoordsResolved(true);
-
-          // Popup & Interaction Protection:
-          // NEVER jump camera or call setView if:
-          // 1. Map has already centered once (hasInitialCenteredRef)
-          // 2. An event card or broadcast box popup is currently open
-          // 3. The startup sequence has already completed
-          const isPopupOpen =
-            typeof document !== "undefined" &&
-            Boolean(
-              document.querySelector(
-                ".leaflet-popup, .event-tactical-popup, .broadcast-tactical-popup, .broadcast-popup-box"
-              )
-            );
-
-          const canCenter =
-            mapRef.current &&
-            !hasInitialCenteredRef?.current &&
-            showStartup &&
-            !isPopupOpen;
-
-          if (canCenter) {
-            try {
-              mapRef.current.setView([lat, lng], 15, { animate: false });
-              if (hasInitialCenteredRef) {
-                hasInitialCenteredRef.current = true;
-              }
-            } catch (_) {}
-          }
-          prewarmOsmTiles(lat, lng, 15);
-        },
+        handleFix,
         () => {
-          if (active) setInitialCoordsResolved(true);
+          if (!active) return;
+          navigator.geolocation.getCurrentPosition(
+            handleFix,
+            () => {
+              if (active) setInitialCoordsResolved(true);
+            },
+            { timeout: 3500, enableHighAccuracy: false, maximumAge: 15000 }
+          );
         },
-        { timeout: 3500, enableHighAccuracy: false, maximumAge: 30000 }
+        { timeout: 6500, enableHighAccuracy: true, maximumAge: 0 }
       );
     } else {
       setInitialCoordsResolved(true);

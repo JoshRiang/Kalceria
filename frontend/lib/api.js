@@ -244,7 +244,8 @@ export const postBroadcast = (payload) =>
 export const putBroadcast = (payload) =>
   api.put('/broadcast', typeof payload === 'string' ? { message: payload } : payload);
 export const delBroadcast = () => api.delete('/broadcast');
-export const postLocation = (lat, lng) => api.post('/location/update', { lat, lng });
+export const postLocation = (lat, lng, extra = {}) =>
+  api.post('/location/update', { lat, lng, ...(extra && typeof extra === 'object' ? extra : {}) });
 export const patchVisibility = (allow) => api.patch('/location/visibility', { allowLiveLocation: allow });
 export const postMiniEvent = (data) => api.post('/mini-events', data);
 export const putMiniEvent = (id, data) => api.put(`/mini-events/${id}`, data);
@@ -420,4 +421,39 @@ export const updateUserEventArchive = (archiveId, payload) =>
 export const deleteUserEventArchive = (archiveId) =>
   api
     .delete(`/map/profile/archives/${encodeURIComponent(archiveId)}`)
+    .then((r) => r.data);
+
+// GroupChat Location Blend (Opt-In Convoy Routing, Traffic & Focus Mode)
+export const fetchMyActiveBlends = () =>
+  api
+    .get("/map/blends/active")
+    .then((r) => r.data || { blends: [] })
+    .catch(() => ({ blends: [] }));
+
+export const fetchGroupBlend = (eventId, { routes = true } = {}) =>
+  api
+    .get(`/map/group-chat/${encodeURIComponent(eventId)}/blend`, {
+      params: { routes: routes ? "true" : "false" },
+    })
+    .then((r) => r.data)
+    .catch(() => ({ ok: false, hasActiveBlend: false, isJoined: false }));
+
+export const inviteGroupBlend = (eventId, payload = {}) =>
+  api
+    .post(`/map/group-chat/${encodeURIComponent(eventId)}/blend/invite`, payload)
+    .then((r) => r.data);
+
+export const joinGroupBlend = (eventId, payload = {}) =>
+  api
+    .post(`/map/group-chat/${encodeURIComponent(eventId)}/blend/join`, payload)
+    .then((r) => r.data);
+
+export const leaveGroupBlend = (eventId) =>
+  api
+    .post(`/map/group-chat/${encodeURIComponent(eventId)}/blend/leave`)
+    .then((r) => r.data);
+
+export const updateGroupBlendState = (eventId, payload = {}) =>
+  api
+    .patch(`/map/group-chat/${encodeURIComponent(eventId)}/blend/state`, payload)
     .then((r) => r.data);

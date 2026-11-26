@@ -165,7 +165,10 @@ export async function getMapUsers(req, res, next) {
       // Never invent mock coordinates if real live coordinates are missing
       if (!Number.isFinite(rawLat) || !Number.isFinite(rawLng)) return;
 
-      const { lat, lng } = approximateCoordinate(rawLat, rawLng);
+      // Preserve curated high-precision WGS-84 coordinates for mutual friends & self
+      // (eliminates the previous 1.33km DISTRICT_OFFSET rounding drift).
+      const lat = Number(rawLat.toFixed(6));
+      const lng = Number(rawLng.toFixed(6));
       const district = maskLocationToDistrict(lat, lng);
       const broadcast = u.broadcast && u.broadcast.expiresAt > now ? u.broadcast : null;
       rawEnriched.push({

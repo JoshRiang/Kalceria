@@ -6,7 +6,7 @@ import {
   MAX_ARCHIVE_IMPRESSION_LENGTH,
   sanitizeArchiveImpression,
   filterVisibleArchivesForViewer,
-} from '../services/eventArchiveStore.js';
+} from '../services/eventArchiveHelpers.js';
 
 test('Event Archive impression sanitizes and clamps to 280 chars (distinct from media captions)', () => {
   assert.equal(MAX_ARCHIVE_IMPRESSION_LENGTH, 280);

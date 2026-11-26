@@ -7,7 +7,7 @@ import {
 } from '../services/canonicalFallbackStore.js';
 
 const LIVE_TTL_SECONDS = 60;
-const UPDATE_COOLDOWN_SECONDS = 3;
+const UPDATE_COOLDOWN_SECONDS = 2;
 
 function parseCoordinate(value) {
   if (value === undefined || value === null || value === '') return null;
@@ -67,10 +67,18 @@ export async function updateLiveLocation(req, res, next) {
     const pollingCount = current ? current.pollingCount + 1 : 1;
     const hasMoved = !current || current.lat !== lat || current.lng !== lng;
     const district = maskLocationToDistrict(lat, lng);
+    const accuracy = parseCoordinate(req.body?.accuracy);
+    const heading = parseCoordinate(req.body?.heading);
+    const speed = parseCoordinate(req.body?.speed);
+    const isStationary = typeof req.body?.isStationary === 'boolean' ? req.body.isStationary : undefined;
     const nextRecord = {
       userId,
       lat,
       lng,
+      accuracy,
+      heading,
+      speed,
+      isStationary,
       district,
       timestamp: Date.now(),
       pollingCount: pollingCount >= 5 ? 0 : pollingCount,

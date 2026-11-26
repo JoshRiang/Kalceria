@@ -20,6 +20,7 @@ import { getChatBgSlideUrl, pickRandomChatBgSlideIndex } from "../chat/component
 import { getInstantMapBgUrl, DEFAULT_GROUP_AVATAR } from "@/lib/mapBgCache";
 import { GroupSettingsSlideView } from "./GroupSettingsSlideView";
 import { GroupCallView } from "./GroupCallView";
+import { GroupBlendBanner } from "./GroupBlendBanner";
 
 export function EventGroupChatPanel({
   event,
@@ -44,6 +45,7 @@ export function EventGroupChatPanel({
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [blendTriggerCount, setBlendTriggerCount] = useState(0);
   const [bgIndex] = useState(() => pickRandomChatBgSlideIndex());
   const messagesEndRef = useRef(null);
   const mediaInputRef = useRef(null);
@@ -267,8 +269,20 @@ export function EventGroupChatPanel({
               </button>
             </div>
 
-            {/* Group Video Call, Group Voice Call, Three-Dot Menu */}
+            {/* Location Blend, Group Video Call, Group Voice Call, Three-Dot Menu */}
             <div className="flex items-center gap-0.5 shrink-0 relative">
+              <button
+                type="button"
+                onClick={() => setBlendTriggerCount((c) => c + 1)}
+                title="Start / Join Location Blend"
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-transform cursor-pointer"
+              >
+                <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke={iconColor} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="6" cy="19" r="2.5" />
+                  <circle cx="18" cy="5" r="2.5" />
+                  <path d="M8.5 18.5C12 18.5 10 12 13 10.5C15.5 9.2 15.5 6.5 15.5 5.5" />
+                </svg>
+              </button>
               <button
                 type="button"
                 onClick={() => setJoinedCallMode("video")}
@@ -369,6 +383,14 @@ export function EventGroupChatPanel({
             </div>
           </div>
 
+          {/* Active Location Blend Invite / Status Banner */}
+          <GroupBlendBanner
+            eventId={event.id}
+            isMapDark={isMapDark}
+            externalTriggerCount={blendTriggerCount}
+            onCloseChatForFocus={onClose}
+          />
+
           {/* Active Group Call Banner (if ongoing while user is in chat) */}
           {activeCall?.active && !joinedCallMode && (
             <div className="px-3 py-1.5 bg-emerald-600 text-white flex items-center justify-between text-xs shrink-0">
@@ -449,6 +471,19 @@ export function EventGroupChatPanel({
                         <video src={m.mediaUrl} controls playsInline className="rounded-lg max-h-44 mb-1" />
                       ) : m.type === "call" ? (
                         <span className="italic opacity-85">{m.text || "Group call ended"}</span>
+                      ) : m.type === "blend_invite" || m.type === "blend_join" ? (
+                        <div className="flex flex-col gap-1.5">
+                          <span className="font-semibold">{m.text}</span>
+                          {m.type === "blend_invite" && (
+                            <button
+                              type="button"
+                              onClick={() => setBlendTriggerCount((c) => c + 1)}
+                              className="self-start px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#2563eb] to-[#ec4899] text-white text-[10.5px] font-bold cursor-pointer"
+                            >
+                              Join Location Blend
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         <p className="whitespace-pre-wrap break-words">{m.text}</p>
                       )}
