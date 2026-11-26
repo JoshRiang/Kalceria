@@ -1,0 +1,58 @@
+# Unified Kalceria Pulau Jawa Navigation Docker Stack
+# Runs Pulau Jawa OSRM (Foot + Motorcycle No-Toll + Car) alongside MIT Indonesian Neural TTS.
+
+services:
+  osrm-java-foot:
+    build: ./osrm-java
+    container_name: kalceria-osrm-java-foot
+    restart: unless-stopped
+    environment:
+      - OSRM_PROFILE=foot
+      - OSRM_PORT=5000
+    ports:
+      - "5001:5000"
+    volumes:
+      - java_osrm_data:/data
+    mem_limit: 1536m
+
+  osrm-java-motorcycle:
+    build: ./osrm-java
+    container_name: kalceria-osrm-java-motorcycle
+    restart: unless-stopped
+    environment:
+      - OSRM_PROFILE=motorcycle
+      - OSRM_PORT=5000
+    ports:
+      - "5002:5000"
+    volumes:
+      - java_osrm_data:/data
+    mem_limit: 1536m
+
+  osrm-java-car:
+    build: ./osrm-java
+    container_name: kalceria-osrm-java-car
+    restart: unless-stopped
+    environment:
+      - OSRM_PROFILE=car
+      - OSRM_PORT=5000
+    ports:
+      - "5003:5000"
+    volumes:
+      - java_osrm_data:/data
+    mem_limit: 1536m
+
+  voice-tts-id:
+    build: ./voice-tts-id
+    container_name: kalceria-voice-tts-id
+    restart: unless-stopped
+    environment:
+      - VOICE_TTS_PORT=5055
+      - VOICE_TTS_LRU_MAX=256
+      - VOICE_TTS_API_SECRET=${VOICE_TTS_API_SECRET:-}
+    ports:
+      - "5055:5055"
+    mem_limit: 512m
+
+volumes:
+  java_osrm_data:
+

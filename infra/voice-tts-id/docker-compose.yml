@@ -1,0 +1,13 @@
+services:
+  voice-tts-id:
+    build: .
+    container_name: kalceria-voice-tts-id
+    restart: unless-stopped
+    environment:
+      - VOICE_TTS_PORT=5055
+      - VOICE_TTS_LRU_MAX=256
+      - VOICE_TTS_API_SECRET=${VOICE_TTS_API_SECRET:-}
+    ports:
+      - "5055:5055"
+    mem_limit: 512m
+

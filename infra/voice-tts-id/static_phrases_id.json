@@ -1,0 +1,21 @@
+[
+  { "id": "turn_left_now", "text": "Belok kiri sekarang.", "prosodyRate": 1.08 },
+  { "id": "turn_right_now", "text": "Belok kanan sekarang.", "prosodyRate": 1.08 },
+  { "id": "turn_slight_left_now", "text": "Serong ke kiri sekarang.", "prosodyRate": 1.06 },
+  { "id": "turn_slight_right_now", "text": "Serong ke kanan sekarang.", "prosodyRate": 1.06 },
+  { "id": "turn_sharp_left_now", "text": "Belok tajam ke kiri sekarang.", "prosodyRate": 1.08 },
+  { "id": "turn_sharp_right_now", "text": "Belok tajam ke kanan sekarang.", "prosodyRate": 1.08 },
+  { "id": "continue_straight_short", "text": "Terus lurus ke depan.", "prosodyRate": 1.02 },
+  { "id": "uturn_now", "text": "Putar balik sekarang jika aman.", "prosodyRate": 1.06 },
+  { "id": "fork_keep_left_now", "text": "Tetap di kiri.", "prosodyRate": 1.06 },
+  { "id": "fork_keep_right_now", "text": "Tetap di kanan.", "prosodyRate": 1.06 },
+  { "id": "off_route_recalculating", "text": "Anda keluar jalur. Menghitung ulang rute terbaik.", "prosodyRate": 1.04 },
+  { "id": "hazard_rail_crossing_java", "text": "Hati-hati, perlintasan rel kereta api di depan. Kurangi kecepatan.", "prosodyRate": 1.02 },
+  { "id": "traffic_moderate_ahead", "text": "Lalu lintas padat merayap di depan. Anda masih berada di rute tercepat.", "prosodyRate": 0.98 },
+  { "id": "arrive_ahead_event", "text": "Anda telah tiba di tujuan. Lokasi berada di depan Anda.", "prosodyRate": 0.98 },
+  { "id": "arrive_left_event", "text": "Anda telah tiba. Lokasi berada di sebelah kiri Anda.", "prosodyRate": 0.98 },
+  { "id": "arrive_right_event", "text": "Anda telah tiba. Lokasi berada di sebelah kanan Anda.", "prosodyRate": 0.98 },
+  { "id": "gps_signal_weak", "text": "Sinyal lokasi sedang lemah. Tetap ikuti jalur utama.", "prosodyRate": 1.0 },
+  { "id": "reroute_faster_found", "text": "Rute lebih cepat ditemukan. Mengalihkan jalur sekarang.", "prosodyRate": 1.02 }
+]
+

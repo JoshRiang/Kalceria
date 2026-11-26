@@ -73,6 +73,8 @@ import {
 import {
   getVoiceNavBundleHandler,
   evaluateVoiceNavHandler,
+  speakVoiceNavHandler,
+  getVoiceNavTtsHealthHandler,
 } from "../controllers/voiceNavController.js";
 import {
   getPersonalChatMessages,
@@ -340,9 +342,11 @@ router.post("/map/group-chat/:eventId/blend/join", requireAuth, joinGroupBlendHa
 router.post("/map/group-chat/:eventId/blend/leave", requireAuth, leaveGroupBlendHandler);
 router.patch("/map/group-chat/:eventId/blend/state", requireAuth, updateGroupBlendStateHandler);
 
-// ─── AI Voice Navigation Runtime (Pulau Jawa Vector-Attention Engine) ────────
+// ─── AI Voice Navigation Runtime (Pulau Jawa Vector-Attention + Piper MIT TTS)
 router.get("/map/voice-nav/bundle", requireAuth, getVoiceNavBundleHandler);
 router.post("/map/voice-nav/evaluate", requireAuth, evaluateVoiceNavHandler);
+router.post("/map/voice-nav/speak", requireAuth, speakVoiceNavHandler);
+router.get("/map/voice-nav/tts-health", requireAuth, getVoiceNavTtsHealthHandler);
 
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────
