@@ -31,6 +31,13 @@ import {
   getMutedUsers, muteUser, unmuteUser,
 } from "../controllers/telemetryController.js";
 import {
+  getFriendsState,
+  createFriendRequest,
+  deleteFriendRequest,
+  acceptFriendRequestHandler,
+  rejectFriendRequestHandler,
+} from "../controllers/friendsController.js";
+import {
   getPersonalChatMessages,
   sendPersonalChatMessage,
   deletePersonalChatMessages,
@@ -230,7 +237,12 @@ router.post("/minigame/finalize", optionalAuth, finalizeMinigameChallenge);
 router.post("/map/telemetry", requireAuth, saveTelemetry);
 router.get("/map/users", requireAuth, getMapUsers);
 router.get("/map/kalcerians", requireAuth, getAllKalcerians);
-// ─── Blocked, Favourited & Muted Users ───────────────────────────────────────
+// ─── Blocked, Favourited, Muted & Friends ────────────────────────────────────
+router.get("/map/friends", requireAuth, getFriendsState);
+router.post("/map/friends/request/:targetId", requireAuth, createFriendRequest);
+router.delete("/map/friends/request/:targetId", requireAuth, deleteFriendRequest);
+router.post("/map/friends/accept/:targetId", requireAuth, acceptFriendRequestHandler);
+router.post("/map/friends/reject/:targetId", requireAuth, rejectFriendRequestHandler);
 router.get("/map/blocked", requireAuth, getBlockedUsers);
 router.post("/map/block/:targetId", requireAuth, blockUser);
 router.delete("/map/block/:targetId", requireAuth, unblockUser);

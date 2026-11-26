@@ -3,6 +3,7 @@ import prisma from '../../lib/prisma.js';
 import { maskLocationToDistrict } from '../../utils/privacyMask.js';
 import { ensurePersistentUserProfilesBatch } from '../../utils/profileDefaults.js';
 import { getActiveCanonicalPresences } from '../../services/canonicalFallbackStore.js';
+import { getFriendRelations } from '../../services/friendsStore.js';
 import { parseCoordinate, approximateCoordinate } from './telemetryUtils.js';
 
 export async function saveTelemetry(req, res, next) {
@@ -39,9 +40,23 @@ export async function saveTelemetry(req, res, next) {
 
 export async function getMapUsers(req, res, next) {
   try {
+    const viewerId = req.user?.userId ? String(req.user.userId) : null;
+    const relations = viewerId ? await getFriendRelations(viewerId) : { friendIds: [] };
+    const friendSet = new Set(relations.friendIds);
+    const filterForViewer = (list) => {
+      if (!viewerId) return [];
+      return (list || []).filter((u) => {
+        const uid = String(u.id);
+        return uid === viewerId || friendSet.has(uid);
+      });
+    };
+
     const globalCacheKey = "cache:map_users_enriched";
     const cachedGlobal = await redis.get(globalCacheKey);
-    if (cachedGlobal) return res.json(JSON.parse(cachedGlobal));
+    if (cachedGlobal) {
+      const parsed = JSON.parse(cachedGlobal);
+      return res.json({ users: filterForViewer(parsed.users) });
+    }
 
     const members = await redis.zrange("active_users", 0, -1).catch(() => []);
     const liveRecords = members.length
@@ -177,7 +192,7 @@ export async function getMapUsers(req, res, next) {
     const response = { users: enriched };
     await redis.set(globalCacheKey, JSON.stringify(response), "EX", 2).catch(() => {});
 
-    res.json(response);
+    res.json({ users: filterForViewer(enriched) });
   } catch (err) {
     next(err);
   }

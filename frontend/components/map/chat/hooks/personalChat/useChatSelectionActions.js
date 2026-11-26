@@ -43,6 +43,28 @@ export function useChatSelectionActions({
   };
 
   const handleDeleteSelectedMessages = async (customIds = null) => {
+    if (customIds === "__CLEAR_ALL__") {
+      setPlayingVoiceId(null);
+      setMessages(() => {
+        persistQuickLocal([]);
+        persistEncryptedLocal([]);
+        return [];
+      });
+      setSelectedMsgIds([]);
+      setSelectMode(false);
+      setReplyingTo(null);
+      sendRealtimePacketRef.current?.({ type: "sync_nudge" });
+      try {
+        await deletePersonalChatMessages(targetId, { clearAll: true });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("kalceria:personal-chat-read", { detail: { peerId: targetId } })
+          );
+        }
+      } catch {}
+      return;
+    }
+
     const ids = Array.isArray(customIds) ? customIds : selectedMsgIds;
     if (!ids.length) return;
     const idSet = new Set(ids);

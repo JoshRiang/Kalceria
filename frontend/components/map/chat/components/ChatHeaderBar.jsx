@@ -11,6 +11,7 @@ export function ChatHeaderBar({
   avatarUrl,
   isFavourite,
   isMuted,
+  isFriend = true,
   isBlockedByTarget = false,
   isTargetBlocked = false,
   isPeerTyping,
@@ -26,6 +27,7 @@ export function ChatHeaderBar({
   handleTriggerCall,
   onToggleFavourite,
   onToggleMute,
+  onRequestDeleteChat,
   onCloseChat,
   menuContainerRef,
 }) {
@@ -131,30 +133,42 @@ export function ChatHeaderBar({
 
         {/* Right: Video Call, Voice Call, Search, and Three Dots (⋮) Icons */}
         <div className="flex items-center gap-0.5 shrink-0" ref={menuContainerRef}>
-          {/* Video Call Icon (Filled Black in Light Mode, Filled White in Dark Mode) */}
+          {/* Video Call Icon (Dimmed & disabled for non-friends) */}
           <button
             type="button"
+            disabled={!isFriend}
             onClick={() => {
+              if (!isFriend) return;
               if (handleTriggerCall) handleTriggerCall("video");
               else setCallState({ mode: "video", user: activeChatUser });
             }}
-            title={`Video call ${displayName}`}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+            title={!isFriend ? "Friends only" : `Video call ${displayName}`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${
+              !isFriend
+                ? "opacity-25 pointer-events-none cursor-not-allowed"
+                : "hover:scale-110 active:scale-95 cursor-pointer"
+            }`}
           >
             <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill={iconColor}>
               <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
             </svg>
           </button>
 
-          {/* Voice Call Icon (Filled Black in Light Mode, Filled White in Dark Mode) */}
+          {/* Voice Call Icon (Dimmed & disabled for non-friends) */}
           <button
             type="button"
+            disabled={!isFriend}
             onClick={() => {
+              if (!isFriend) return;
               if (handleTriggerCall) handleTriggerCall("voice");
               else setCallState({ mode: "voice", user: activeChatUser });
             }}
-            title={`Voice call ${displayName}`}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+            title={!isFriend ? "Friends only" : `Voice call ${displayName}`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${
+              !isFriend
+                ? "opacity-25 pointer-events-none cursor-not-allowed"
+                : "hover:scale-110 active:scale-95 cursor-pointer"
+            }`}
           >
             <svg viewBox="0 0 24 24" className="w-[17px] h-[17px]" fill={iconColor}>
               <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
@@ -243,15 +257,21 @@ export function ChatHeaderBar({
                     <span>{selectMode ? "Cancel selection" : "Select messages"}</span>
                   </button>
 
-                  {/* 2. Add to Favourites / Remove from Favourites */}
+                  {/* 2. Add to Favourites / Remove from Favourites (Friends only) */}
                   <button
                     type="button"
+                    disabled={!isFriend}
                     onClick={() => {
+                      if (!isFriend) return;
                       onToggleFavourite?.(targetId);
                       setMenuOpen(false);
                     }}
-                    className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${
-                      isMapDark ? "hover:bg-white/10" : "hover:bg-black/5"
+                    className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center gap-2.5 transition-colors ${
+                      !isFriend
+                        ? "opacity-30 pointer-events-none cursor-not-allowed"
+                        : isMapDark
+                        ? "hover:bg-white/10 cursor-pointer"
+                        : "hover:bg-black/5 cursor-pointer"
                     }`}
                   >
                     {isFavourite ? (
@@ -277,15 +297,21 @@ export function ChatHeaderBar({
                     <span>{isFavourite ? "Remove from Favourites" : "Add to Favourites"}</span>
                   </button>
 
-                  {/* 3. Mute Notifications / Unmute Notifications */}
+                  {/* 3. Mute Notifications / Unmute Notifications (Friends only) */}
                   <button
                     type="button"
+                    disabled={!isFriend}
                     onClick={() => {
+                      if (!isFriend) return;
                       onToggleMute?.(targetId);
                       setMenuOpen(false);
                     }}
-                    className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${
-                      isMapDark ? "hover:bg-white/10" : "hover:bg-black/5"
+                    className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center gap-2.5 transition-colors ${
+                      !isFriend
+                        ? "opacity-30 pointer-events-none cursor-not-allowed"
+                        : isMapDark
+                        ? "hover:bg-white/10 cursor-pointer"
+                        : "hover:bg-black/5 cursor-pointer"
                     }`}
                   >
                     {isMuted ? (
@@ -329,6 +355,23 @@ export function ChatHeaderBar({
                       </svg>
                     )}
                     <span>{isMuted ? "Unmute notifications" : "Mute notifications"}</span>
+                  </button>
+
+                  {/* 4. Delete Chat (Red trashcan + Red text) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onRequestDeleteChat?.();
+                    }}
+                    className={`w-full px-3.5 py-2 text-left text-xs font-medium text-[#ef4444] flex items-center gap-2.5 transition-colors cursor-pointer ${
+                      isMapDark ? "hover:bg-white/10" : "hover:bg-black/5"
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="#ef4444">
+                      <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM6 8h12l-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8z" />
+                    </svg>
+                    <span>Delete Chat</span>
                   </button>
                 </motion.div>
               )}

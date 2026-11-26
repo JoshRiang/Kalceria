@@ -2,14 +2,66 @@ import prisma from '../../lib/prisma.js';
 import { redis } from '../../lib/redis.js';
 import { ensurePersistentUserProfilesBatch } from '../../utils/profileDefaults.js';
 import { getActiveCanonicalPresences } from '../../services/canonicalFallbackStore.js';
+import { getFriendRelations } from '../../services/friendsStore.js';
 import { approximateCoordinate } from './telemetryUtils.js';
+
+function scopeKalceriansForViewer(list, viewerId, relations) {
+  const friendSet = new Set(relations?.friendIds || []);
+  const outgoingSet = new Set(relations?.outgoingRequestIds || []);
+  const incomingSet = new Set(relations?.incomingRequestIds || []);
+  const outgoingMeta = relations?.outgoingMeta || {};
+  const incomingMeta = relations?.incomingMeta || {};
+
+  return (list || []).map((u) => {
+    const uid = String(u.id);
+    const isSelf = Boolean(viewerId && uid === String(viewerId));
+    const isFriend = isSelf || friendSet.has(uid);
+    const friendshipStatus = isSelf
+      ? "self"
+      : isFriend
+      ? "friend"
+      : incomingSet.has(uid)
+      ? "incoming_pending"
+      : outgoingSet.has(uid)
+      ? "outgoing_pending"
+      : "none";
+
+    if (isFriend) {
+      return {
+        ...u,
+        friendshipStatus,
+        friendRequestExpiresAt: null,
+      };
+    }
+
+    // Non-friend privacy isolation: strip live map coordinates, online pin presence, and broadcasts
+    return {
+      ...u,
+      lat: null,
+      lng: null,
+      isOnline: false,
+      broadcast: null,
+      friendshipStatus,
+      friendRequestExpiresAt: outgoingMeta[uid] || incomingMeta[uid] || null,
+    };
+  });
+}
 
 // all kalcerians (online + offline) for the panel
 export async function getAllKalcerians(req, res, next) {
   try {
+    const viewerId = req.user?.userId ? String(req.user.userId) : null;
+    const relations = viewerId ? await getFriendRelations(viewerId) : null;
+
     const cacheKey = "cache:all_kalcerians";
     const cached = await redis.get(cacheKey);
-    if (cached) return res.json(JSON.parse(cached));
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      return res.json({
+        kalcerians: scopeKalceriansForViewer(parsed.kalcerians, viewerId, relations),
+        friendsMeta: relations || { friendIds: [], outgoingRequestIds: [], incomingRequestIds: [] },
+      });
+    }
 
     // get online user ids from redis
     const onlineIds = await redis.zrange("active_users", 0, -1);
@@ -117,7 +169,10 @@ export async function getAllKalcerians(req, res, next) {
     const response = { kalcerians: result };
     await redis.set(cacheKey, JSON.stringify(response), "EX", 2);
 
-    res.json(response);
+    res.json({
+      kalcerians: scopeKalceriansForViewer(result, viewerId, relations),
+      friendsMeta: relations || { friendIds: [], outgoingRequestIds: [], incomingRequestIds: [] },
+    });
   } catch (err) {
     next(err);
   }

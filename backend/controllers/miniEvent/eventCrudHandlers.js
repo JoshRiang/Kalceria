@@ -255,12 +255,25 @@ export async function getActiveMiniEvents(req, res, next) {
       }
     }
 
-    const myActiveReq = req.user?.userId
-      ? await getUserActiveCollabRequest(req.user.userId)
+    const viewerId = req.user?.userId ? String(req.user.userId) : null;
+    const { getFriendRelations } = await import('../../services/friendsStore.js');
+    const relations = viewerId ? await getFriendRelations(viewerId) : { friendIds: [] };
+    const friendSet = new Set(relations.friendIds);
+
+    const visibleEvents = (hydratedEvents || []).filter((ev) => {
+      if (!viewerId) return false;
+      const creatorId = String(ev.creatorId || ev.creator?.id || '');
+      if (creatorId === viewerId || friendSet.has(creatorId)) return true;
+      const collabs = Array.isArray(ev.collaborators) ? ev.collaborators : [];
+      return collabs.some((c) => String(c.userId || c.id || '') === viewerId);
+    });
+
+    const myActiveReq = viewerId
+      ? await getUserActiveCollabRequest(viewerId)
       : null;
 
     return res.json({
-      events: hydratedEvents,
+      events: visibleEvents,
       nextCursor,
       requestedEventId: myActiveReq?.eventId || null,
     });

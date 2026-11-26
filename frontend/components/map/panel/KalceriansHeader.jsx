@@ -6,6 +6,7 @@ import {
   titleWaveContainer,
   titleLetterVariant,
 } from "./kalceriansHelpers";
+import { GlobalScopeIcon, FriendsScopeIcon } from "./PanelIcons";
 
 export function KalceriansHeader({
   drawerOpen,
@@ -13,6 +14,10 @@ export function KalceriansHeader({
   isMapDark,
   searchQuery,
   setSearchQuery,
+  activeScope = "friends",
+  setActiveScope,
+  hasFriendsNotif = false,
+  hasGlobalNotif = false,
 }) {
   return (
     <>
@@ -37,7 +42,7 @@ export function KalceriansHeader({
       {/* 2. Header: "Find other Kalcerians" with left wave-in animation (Solid Base #0f1014 / #ffffff) */}
       <div
         onClick={() => setDrawerOpen((prev) => !prev)}
-        className={`relative z-10 px-4 pb-2.5 pt-0.5 cursor-pointer flex justify-between items-center transition-colors select-none ${
+        className={`relative z-10 px-4 pb-2 pt-0.5 cursor-pointer flex justify-between items-center transition-colors select-none ${
           isMapDark ? "bg-[#0f1014] hover:bg-[#181a20]" : "bg-[#ffffff] hover:bg-[#f6f8fa]/60"
         }`}
       >
@@ -61,6 +66,61 @@ export function KalceriansHeader({
             </motion.span>
           ))}
         </motion.h2>
+      </div>
+
+      {/* 2b. Scope Switcher: Global & Friends Icons above Search Bar with active underline & red notification dot */}
+      <div
+        className={`relative z-10 px-4 pb-2 flex items-center gap-5 select-none ${
+          isMapDark ? "bg-[#0f1014]" : "bg-[#ffffff]"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setActiveScope?.("friends")}
+          aria-label="Friends"
+          title="Friends"
+          className={`relative pb-1.5 px-2 flex items-center justify-center cursor-pointer outline-none transition-transform hover:scale-110 active:scale-95 ${
+            activeScope === "friends" ? "opacity-100" : "opacity-45 hover:opacity-80"
+          }`}
+        >
+          <FriendsScopeIcon isMapDark={isMapDark} />
+          {hasFriendsNotif && (
+            <span className="absolute -top-0.5 right-0.5 w-2 h-2 bg-[#ef4444] rounded-full pointer-events-none ring-1 ring-white/25" />
+          )}
+          {activeScope === "friends" && (
+            <motion.span
+              layoutId="kalcerians-scope-underline"
+              transition={{ type: "spring", stiffness: 420, damping: 32 }}
+              className={`absolute bottom-0 left-0 right-0 h-[2.5px] rounded-full ${
+                isMapDark ? "bg-white" : "bg-black"
+              }`}
+            />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveScope?.("global")}
+          aria-label="Global"
+          title="Global"
+          className={`relative pb-1.5 px-2 flex items-center justify-center cursor-pointer outline-none transition-transform hover:scale-110 active:scale-95 ${
+            activeScope === "global" ? "opacity-100" : "opacity-45 hover:opacity-80"
+          }`}
+        >
+          <GlobalScopeIcon isMapDark={isMapDark} />
+          {hasGlobalNotif && (
+            <span className="absolute -top-0.5 right-0.5 w-2 h-2 bg-[#ef4444] rounded-full pointer-events-none ring-1 ring-white/25" />
+          )}
+          {activeScope === "global" && (
+            <motion.span
+              layoutId="kalcerians-scope-underline"
+              transition={{ type: "spring", stiffness: 420, damping: 32 }}
+              className={`absolute bottom-0 left-0 right-0 h-[2.5px] rounded-full ${
+                isMapDark ? "bg-white" : "bg-black"
+              }`}
+            />
+          )}
+        </button>
       </div>
 
       {/* 3. Search Bar - Modern GitHub Style */}

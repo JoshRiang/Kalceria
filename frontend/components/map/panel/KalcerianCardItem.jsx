@@ -13,6 +13,8 @@ import {
 export const KalcerianCardItem = memo(function KalcerianCardItem({
   user,
   userEvent,
+  isFriend = true,
+  friendshipStatus = "friend",
   isBlocked,
   isBlockedByTarget = false,
   isExpanded,
@@ -55,6 +57,10 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
   setDrawerOpen,
   onBlockUser,
   onUnblockUser,
+  onSendFriendRequest,
+  onCancelFriendRequest,
+  onAcceptFriendRequest,
+  onRejectFriendRequest,
   avatarUrl,
   truncateWithEllipsis,
   cleanDesc,
@@ -70,7 +76,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
       }}
       key={user.id}
       className={`relative shrink-0 min-h-[66px] my-1 sm:my-1.5 rounded-xl border transition-colors duration-200 ${
-        isExpanded ? "overflow-hidden" : "overflow-visible"
+        isExpanded || isConfirming ? "overflow-hidden" : "overflow-visible"
       } ${
         isBlocked
           ? isMapDark
@@ -90,7 +96,7 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
         onClick={() => {
           if (isConfirming) return;
           const isAnyBlocked = Boolean(isBlocked || isBlockedByTarget);
-          if (!isAnyBlocked) {
+          if (isFriend && !isAnyBlocked) {
             const isUserActivelyOnline = Boolean(user?.isOnline && user?.allowLiveLocation !== false);
             if (isUserActivelyOnline) {
               if (userEvent) {
@@ -162,8 +168,8 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
             @{truncateWithEllipsis(cleanUsername, limits.username)}
           </span>
 
-          {/* Line 3: 24h Broadcast Status */}
-          {!isBlocked && !isBlockedByTarget && activeBroadcastMsg ? (
+          {/* Line 3: 24h Broadcast Status (Friends only) */}
+          {isFriend && !isBlocked && !isBlockedByTarget && activeBroadcastMsg ? (
             <p
               className={`text-[11px] sm:text-[11.5px] font-normal normal-case leading-snug line-clamp-2 mt-1 break-words ${
                 isMapDark ? "text-white" : "text-black"
@@ -181,7 +187,9 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
         {/* RIGHT: Synchronized 2x2 Grid Flank */}
         <KalcerianCardFlankActions
           user={user}
-          userEvent={userEvent}
+          userEvent={isFriend ? userEvent : null}
+          isFriend={isFriend}
+          friendshipStatus={friendshipStatus}
           isBlocked={isBlocked}
           isBlockedByTarget={isBlockedByTarget}
           isMapDark={isMapDark}
@@ -235,25 +243,31 @@ export const KalcerianCardItem = memo(function KalcerianCardItem({
         )}
       </AnimatePresence>
 
-      {/* 5. Block / Unblock Confirmation Overlay */}
+      {/* 5. Block / Unblock / Friend Request Slide-Blur Confirmation Overlay */}
       <BlockConfirmModal
         show={isConfirming}
         actionType={confirmingAction?.type}
-        userName={user.name}
+        userName={displayName}
         isMapDark={isMapDark}
-        onCancel={() => setConfirmingAction(null)}
-        onConfirm={() => {
-          if (confirmingAction?.type === "block") {
-            onBlockUser?.(user.id);
-          } else {
-            onUnblockUser?.(user.id);
+        onCancel={() => {
+          if (confirmingAction?.type === "friend_accept") {
+            onRejectFriendRequest?.(user.id);
           }
+          setConfirmingAction(null);
+        }}
+        onConfirm={() => {
+          const type = confirmingAction?.type;
+          if (type === "block") onBlockUser?.(user.id);
+          else if (type === "unblock") onUnblockUser?.(user.id);
+          else if (type === "friend_send") onSendFriendRequest?.(user.id);
+          else if (type === "friend_cancel") onCancelFriendRequest?.(user.id);
+          else if (type === "friend_accept") onAcceptFriendRequest?.(user.id);
           setConfirmingAction(null);
         }}
       />
 
-      {/* 6. Desktop Hover Card (Only for non-blocked users) */}
-      {(isHovered || (hoveredKalcerian !== undefined && hoveredKalcerian === user.id)) && !isBlocked && !isBlockedByTarget && (
+      {/* 6. Desktop Hover Card (Only for non-blocked friends) */}
+      {isFriend && (isHovered || (hoveredKalcerian !== undefined && hoveredKalcerian === user.id)) && !isBlocked && !isBlockedByTarget && (
         <KalcerianCardHoverFlyout
           user={user}
           userEvent={userEvent}

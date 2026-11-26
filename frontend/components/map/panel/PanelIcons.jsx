@@ -146,3 +146,54 @@ export function RestoreButtonIcon({ isMapDark }) {
     </svg>
   );
 }
+
+// ─── 6. Global Scope Icon (Globe) ────────────────────────────────────────────────
+export function GlobalScopeIcon({ isMapDark, className = "w-[18px] h-[18px] shrink-0" }) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke={fg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M2.8 12h18.4" />
+      <path d="M12 2.5c2.7 2.8 4.2 6 4.2 9.5s-1.5 6.7-4.2 9.5c-2.7-2.8-4.2-6-4.2-9.5S9.3 5.3 12 2.5z" />
+    </svg>
+  );
+}
+
+// ─── 7. Friends Scope Icon (Two People) ──────────────────────────────────────────
+export function FriendsScopeIcon({ isMapDark, className = "w-[19px] h-[19px] shrink-0" }) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke={fg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="3.5" fill={fg} stroke="none" />
+      <path d="M2.5 19.5c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5" fill={fg} stroke="none" />
+      <circle cx="16.8" cy="9" r="2.6" />
+      <path d="M16.5 14.3c2.4.3 4.5 1.9 4.8 4.7" />
+    </svg>
+  );
+}
+
+// ─── 8. Add Friend (+) Button Icon ───────────────────────────────────────────────
+export function AddFriendButtonIcon({ isMapDark }) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  const border = isMapDark ? "#000000" : "#ffffff";
+  return (
+    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
+      <path d="M12 5v14M5 12h14" stroke={border} strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M12 5v14M5 12h14" stroke={fg} strokeWidth="2.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ─── 9. Outgoing Pending Friend Request Icon (Clock inside subtle ring) ──────────
+export function PendingFriendButtonIcon({ isMapDark }) {
+  const fg = isMapDark ? "#ffffff" : "#000000";
+  const border = isMapDark ? "#000000" : "#ffffff";
+  return (
+    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] shrink-0" fill="none">
+      <circle cx="12" cy="12" r="8.5" stroke={border} strokeWidth="3.2" strokeDasharray="3.2 2.4" />
+      <circle cx="12" cy="12" r="8.5" stroke={fg} strokeWidth="2" strokeDasharray="3.2 2.4" />
+      <path d="M12 7.5V12l3 2" stroke={border} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 7.5V12l3 2" stroke={fg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

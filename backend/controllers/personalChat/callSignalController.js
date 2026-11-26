@@ -17,6 +17,7 @@ import {
   isUserBlockedCanonical,
   fetchCanonicalUserBlocks,
 } from '../../services/canonicalFallbackStore.js';
+import { areUsersFriends } from '../../services/friendsStore.js';
 
 export function generateLiveKitToken({ userId, targetId, username, callId }) {
   const apiKey = process.env.LIVEKIT_API_KEY;
@@ -78,6 +79,13 @@ export async function sendCallSignal(req, res, next) {
     ];
     if (!validSignalTypes.includes(signalType) || !nonce || typeof nonce !== 'string') {
       return res.status(400).json({ error: 'Invalid E2EE call signal.' });
+    }
+
+    if (signalType === 'offer') {
+      const isFriend = await areUsersFriends(userId, targetId);
+      if (!isFriend) {
+        return res.status(403).json({ error: 'Voice and video calls are available for friends only.' });
+      }
     }
 
     const safeCallId = typeof callId === 'string' && callId.trim()

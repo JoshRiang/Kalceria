@@ -165,6 +165,16 @@ export const addEventMedia = (eventId, payload) =>
 export const removeEventMedia = (eventId, payload) =>
   api.delete(`/mini-events/${eventId}/media`, { data: payload }).then((r) => r.data);
 export const fetchPublicEvents = () => fetchAllPages('/events', 'events', 50);
+export const fetchFriendsState = () =>
+  api.get('/map/friends').then((r) => ({
+    friendIds: Array.isArray(r.data?.friendIds) ? r.data.friendIds.map(String) : [],
+    outgoingRequestIds: Array.isArray(r.data?.outgoingRequestIds) ? r.data.outgoingRequestIds.map(String) : [],
+    incomingRequestIds: Array.isArray(r.data?.incomingRequestIds) ? r.data.incomingRequestIds.map(String) : [],
+  })).catch(() => ({ friendIds: [], outgoingRequestIds: [], incomingRequestIds: [] }));
+export const sendFriendRequest = (targetId) => api.post(`/map/friends/request/${targetId}`).then((r) => r.data);
+export const cancelFriendRequest = (targetId) => api.delete(`/map/friends/request/${targetId}`).then((r) => r.data);
+export const acceptFriendRequest = (targetId) => api.post(`/map/friends/accept/${targetId}`).then((r) => r.data);
+export const rejectFriendRequest = (targetId) => api.post(`/map/friends/reject/${targetId}`).then((r) => r.data);
 export const fetchBlockedUsers = () =>
   api.get('/map/blocked').then((r) => ({
     blockedUsers: Array.isArray(r.data?.blockedUsers) ? r.data.blockedUsers.map(String) : [],

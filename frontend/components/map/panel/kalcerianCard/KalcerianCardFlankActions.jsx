@@ -8,11 +8,15 @@ import {
   ChatButtonIcon,
   BlockButtonIcon,
   RestoreButtonIcon,
+  AddFriendButtonIcon,
+  PendingFriendButtonIcon,
 } from "../PanelIcons";
 
 export const KalcerianCardFlankActions = memo(function KalcerianCardFlankActions({
   user,
   userEvent,
+  isFriend = true,
+  friendshipStatus = "friend",
   isBlocked,
   isBlockedByTarget = false,
   isMapDark,
@@ -48,9 +52,40 @@ export const KalcerianCardFlankActions = memo(function KalcerianCardFlankActions
     : 0;
   return (
     <div className="relative z-10 shrink-0 flex flex-col items-end justify-between self-stretch py-0.5 pointer-events-auto">
-      {/* Top Row: Dynamic Category Event & Broadcast Badges (Stacked with circle texture) */}
+      {/* Top Row: Friends = Event & Broadcast Badges; Global (non-friend) = Add/Pending/Accept Friend icon on far right */}
       <div className="flex items-center justify-end w-[54px] h-6">
-        {!isBlocked && !isBlockedByTarget && (userEvent || activeBroadcastMsg) ? (
+        {!isFriend && !isBlocked && !isBlockedByTarget ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const nextType =
+                friendshipStatus === "incoming_pending"
+                  ? "friend_accept"
+                  : friendshipStatus === "outgoing_pending"
+                  ? "friend_cancel"
+                  : "friend_send";
+              setConfirmingAction({ userId: user.id, type: nextType });
+            }}
+            className="relative w-6 h-6 flex items-center justify-center transition-transform hover:scale-115 active:scale-95 outline-none cursor-pointer"
+            title={
+              friendshipStatus === "incoming_pending"
+                ? `Accept ${displayName} friend request`
+                : friendshipStatus === "outgoing_pending"
+                ? `Cancel friend request to ${displayName}`
+                : `Send friend request to ${displayName}`
+            }
+          >
+            {friendshipStatus === "outgoing_pending" ? (
+              <PendingFriendButtonIcon isMapDark={isMapDark} />
+            ) : (
+              <AddFriendButtonIcon isMapDark={isMapDark} />
+            )}
+            {friendshipStatus === "incoming_pending" && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#ef4444] rounded-full pointer-events-none ring-1 ring-white/25" />
+            )}
+          </button>
+        ) : isFriend && !isBlocked && !isBlockedByTarget && (userEvent || activeBroadcastMsg) ? (
           <div className="flex items-center justify-end">
             {/* Dynamic Slot 1: Category Event Icon */}
             {userEvent && (

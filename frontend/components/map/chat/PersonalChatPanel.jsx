@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import KalcerianProfileCard from "../KalcerianProfileCard";
 import { PersonalCallView } from "./call/PersonalCallView";
@@ -12,6 +13,7 @@ import { ChatSelectionBar } from "./components/ChatSelectionBar";
 import { EmojiPickerPopover } from "./components/EmojiPickerPopover";
 import { CameraCaptureModal } from "./components/CameraCaptureModal";
 import { HardwarePermissionModal } from "./components/HardwarePermissionModal";
+import { ChatDeleteConfirmOverlay } from "./components/ChatDeleteConfirmOverlay";
 
 export function PersonalChatPanel({
   activeChatUser,
@@ -19,6 +21,7 @@ export function PersonalChatPanel({
   isMapDark,
   avatarUrl,
   events = [],
+  isFriend = true,
   isFavourite = false,
   isMuted = false,
   isBlockedByTarget = false,
@@ -97,6 +100,20 @@ export function PersonalChatPanel({
     isBlockedByTarget,
   });
 
+  const [showDeleteChatConfirm, setShowDeleteChatConfirm] = useState(false);
+  const [isDeletingChat, setIsDeletingChat] = useState(false);
+
+  const handleConfirmDeleteChat = async () => {
+    if (isDeletingChat) return;
+    setIsDeletingChat(true);
+    try {
+      await handleDeleteSelectedMessages("__CLEAR_ALL__");
+    } finally {
+      setIsDeletingChat(false);
+      setShowDeleteChatConfirm(false);
+    }
+  };
+
   if (!activeChatUser) return null;
 
   return (
@@ -146,10 +163,10 @@ export function PersonalChatPanel({
           )}
         </AnimatePresence>
 
-        {/* Full Chat Content: Smoothly blurs (including Header Bar & Thread) when viewing Profile */}
+        {/* Full Chat Content: Smoothly blurs (including Header Bar & Thread) when viewing Profile or Confirming Delete */}
         <div
           className={`flex flex-col flex-1 h-full min-h-0 overflow-hidden transition-all duration-300 ease-out ${
-            showContactInfo
+            showContactInfo || showDeleteChatConfirm
               ? "filter blur-[8px] opacity-35 pointer-events-none select-none scale-[0.98]"
               : "filter blur-0 opacity-100 scale-100"
           }`}
@@ -160,6 +177,7 @@ export function PersonalChatPanel({
             displayName={displayName}
             isMapDark={isMapDark}
             avatarUrl={avatarUrl}
+            isFriend={isFriend}
             isFavourite={isFavourite}
             isMuted={isMuted}
             isBlockedByTarget={isBlockedByTarget}
@@ -177,6 +195,7 @@ export function PersonalChatPanel({
             handleTriggerCall={handleTriggerCall}
             onToggleFavourite={onToggleFavourite}
             onToggleMute={onToggleMute}
+            onRequestDeleteChat={() => setShowDeleteChatConfirm(true)}
             onCloseChat={onCloseChat}
             menuContainerRef={menuContainerRef}
           />
@@ -288,6 +307,16 @@ export function PersonalChatPanel({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Delete Chat Semi-Blur Confirmation Overlay */}
+        <ChatDeleteConfirmOverlay
+          isOpen={showDeleteChatConfirm}
+          displayName={displayName}
+          isMapDark={isMapDark}
+          isDeleting={isDeletingChat}
+          onCancel={() => setShowDeleteChatConfirm(false)}
+          onConfirm={handleConfirmDeleteChat}
+        />
       </motion.aside>
 
       {/* Emoji Picker Popover: Placed outside overflow-hidden aside to prevent desktop clipping */}
