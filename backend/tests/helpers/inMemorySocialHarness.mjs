@@ -7,8 +7,9 @@
  * - Exercises REAL Express controllers, stores, SQL state transitions & auth guards
  */
 
+import crypto from 'node:crypto';
 import prisma from '../../lib/prisma.js';
-import { redis } from '../../lib/redis.js';
+import { redis, __setRedisTestClient } from '../../lib/redis.js';
 
 export function createMockRes() {
   const res = {
@@ -45,10 +46,14 @@ export async function invokeController(handler, req) {
   return res;
 }
 
-export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {}) {
+export function installInMemorySocialHarness({ users = [], miniEvents = [], events = [] } = {}) {
   const db = {
     users: new Map(users.map((u) => [String(u.id), { ...u }])),
     miniEvents: new Map(miniEvents.map((e) => [String(e.id), { ...e }])),
+    events: new Map(events.map((e) => [String(e.id), { ...e }])),
+    auditLogs: [],
+    comments: [],
+    personalChatMessages: new Map(), // id -> row
     user_friends: new Set(), // "u|f"
     friend_requests: new Map(), // "s|r" -> { sender_id, receiver_id, expires_at }
     personal_chat_clear_cutoffs: new Map(), // "u|conv" -> cleared_at_ms
@@ -74,6 +79,7 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
   };
 
   const kv = new Map();
+  const kvExpiry = new Map();
   const sets = new Map();
   const lists = new Map();
   const hashes = new Map();
@@ -95,12 +101,49 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
   const orig = {
     $executeRawUnsafe: prisma.$executeRawUnsafe,
     $queryRawUnsafe: prisma.$queryRawUnsafe,
+    $transaction: prisma.$transaction,
+    $disconnect: prisma.$disconnect,
     userFindUnique: prisma.user.findUnique,
+    userFindFirst: prisma.user.findFirst,
     userFindMany: prisma.user.findMany,
+    userCreate: prisma.user.create,
     userUpdate: prisma.user.update,
+    userDelete: prisma.user.delete,
+    userDeleteMany: prisma.user.deleteMany,
+    userCount: prisma.user.count,
     miniEventFindUnique: prisma.miniEvent.findUnique,
     miniEventFindFirst: prisma.miniEvent.findFirst,
     miniEventFindMany: prisma.miniEvent.findMany,
+    miniEventUpdate: prisma.miniEvent.update,
+    miniEventDeleteMany: prisma.miniEvent.deleteMany,
+    personalChatCreate: prisma.personalChatMessage?.create,
+    personalChatUpdate: prisma.personalChatMessage?.update,
+    personalChatUpdateMany: prisma.personalChatMessage?.updateMany,
+    personalChatFindMany: prisma.personalChatMessage?.findMany,
+    personalChatCount: prisma.personalChatMessage?.count,
+    personalChatDeleteMany: prisma.personalChatMessage?.deleteMany,
+    personalChatGroupBy: prisma.personalChatMessage?.groupBy,
+    eventCreate: prisma.event?.create,
+    eventFindUnique: prisma.event?.findUnique,
+    eventFindFirst: prisma.event?.findFirst,
+    eventFindMany: prisma.event?.findMany,
+    eventUpdate: prisma.event?.update,
+    eventUpdateMany: prisma.event?.updateMany,
+    eventDelete: prisma.event?.delete,
+    eventDeleteMany: prisma.event?.deleteMany,
+    auditLogCreate: prisma.auditLog?.create,
+    auditLogFindFirst: prisma.auditLog?.findFirst,
+    auditLogFindMany: prisma.auditLog?.findMany,
+    auditLogDeleteMany: prisma.auditLog?.deleteMany,
+    commentCreate: prisma.comment?.create,
+    commentFindMany: prisma.comment?.findMany,
+    commentDeleteMany: prisma.comment?.deleteMany,
+    userBroadcastDeleteMany: prisma.userBroadcast?.deleteMany,
+    eventRegDeleteMany: prisma.eventRegistration?.deleteMany,
+    bookingDeleteMany: prisma.booking?.deleteMany,
+    serviceBookingFindMany: prisma.serviceBooking?.findMany,
+    serviceBookingDeleteMany: prisma.serviceBooking?.deleteMany,
+    serviceBookingSlotDeleteMany: prisma.serviceBookingSlot?.deleteMany,
     callLockFindUnique: prisma.callLock?.findUnique,
     callLockUpsert: prisma.callLock?.upsert,
     callLockDeleteMany: prisma.callLock?.deleteMany,
@@ -116,35 +159,116 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
     redisMethods: {},
   };
 
+  prisma.$transaction = async (fn) => (typeof fn === 'function' ? fn(prisma) : Promise.all(fn));
+  prisma.$disconnect = async () => {};
+
+  function matchUserWhere(u, where = {}) {
+    if (!where) return true;
+    if (where.id && typeof where.id === 'string' && String(u.id) !== String(where.id)) return false;
+    if (where.id?.in && !where.id.in.map(String).includes(String(u.id))) return false;
+    if (where.NOT?.id && String(u.id) === String(where.NOT.id)) return false;
+    if (where.email) {
+      if (typeof where.email === 'string') {
+        if (String(u.email || '').toLowerCase() !== where.email.toLowerCase()) return false;
+      } else if (where.email.equals) {
+        if (String(u.email || '').toLowerCase() !== String(where.email.equals).toLowerCase()) return false;
+      } else if (where.email.contains) {
+        if (!String(u.email || '').toLowerCase().includes(String(where.email.contains).toLowerCase())) return false;
+      }
+    }
+    if (where.name) {
+      const target = typeof where.name === 'string' ? where.name : where.name.equals;
+      if (target && String(u.name || '').toLowerCase() !== String(target).toLowerCase()) return false;
+    }
+    if (where.nickname) {
+      const target = typeof where.nickname === 'string' ? where.nickname : where.nickname.equals;
+      if (target && String(u.nickname || '').toLowerCase() !== String(target).toLowerCase()) return false;
+    }
+    if (where.isEmailVerified !== undefined && Boolean(u.isEmailVerified) !== Boolean(where.isEmailVerified)) return false;
+    if (where.role && (u.role || 'USER') !== where.role) return false;
+    if (where.OR && !where.OR.some((sub) => matchUserWhere(u, sub))) return false;
+    return true;
+  }
+
   // In-memory Prisma Model delegates
   prisma.user.findUnique = async ({ where }) => {
-    if (where?.id) return db.users.get(String(where.id)) || null;
+    if (where?.id) {
+      const u = db.users.get(String(where.id));
+      return u ? { ...u } : null;
+    }
     if (where?.email) {
       for (const u of db.users.values()) {
-        if (String(u.email).toLowerCase() === String(where.email).toLowerCase()) return u;
+        if (String(u.email || '').toLowerCase() === String(where.email).toLowerCase()) return { ...u };
       }
     }
     return null;
   };
+  prisma.user.findFirst = async ({ where } = {}) => {
+    for (const u of db.users.values()) {
+      if (matchUserWhere(u, where)) return { ...u };
+    }
+    return null;
+  };
   prisma.user.findMany = async ({ where } = {}) => {
-    let list = Array.from(db.users.values());
-    if (where?.id?.in) {
-      const idSet = new Set(where.id.in.map(String));
-      list = list.filter((u) => idSet.has(String(u.id)));
-    }
-    if (where?.isEmailVerified !== undefined) {
-      list = list.filter((u) => Boolean(u.isEmailVerified) === Boolean(where.isEmailVerified));
-    }
-    if (where?.role) {
-      list = list.filter((u) => (u.role || 'USER') === where.role);
-    }
-    return list.map((u) => ({ ...u }));
+    return Array.from(db.users.values())
+      .filter((u) => matchUserWhere(u, where))
+      .map((u) => ({ ...u }));
+  };
+  prisma.user.create = async ({ data }) => {
+    const id = data.id || `usr_${crypto.randomUUID()}`;
+    const row = {
+      role: 'USER',
+      isEmailVerified: false,
+      allowLiveLocation: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...data,
+      id: String(id),
+    };
+    db.users.set(String(id), row);
+    return { ...row };
   };
   prisma.user.update = async ({ where, data }) => {
-    const u = db.users.get(String(where.id));
-    if (!u) return null;
-    Object.assign(u, data);
-    return { ...u };
+    let target = null;
+    if (where?.id) target = db.users.get(String(where.id)) || null;
+    else if (where?.email) {
+      for (const u of db.users.values()) {
+        if (String(u.email || '').toLowerCase() === String(where.email).toLowerCase()) {
+          target = u;
+          break;
+        }
+      }
+    }
+    if (!target) return null;
+    Object.assign(target, data, { updatedAt: new Date() });
+    return { ...target };
+  };
+  prisma.user.delete = async ({ where }) => {
+    let target = null;
+    if (where?.id) target = db.users.get(String(where.id)) || null;
+    else if (where?.email) {
+      for (const u of db.users.values()) {
+        if (String(u.email || '').toLowerCase() === String(where.email).toLowerCase()) {
+          target = u;
+          break;
+        }
+      }
+    }
+    if (target) db.users.delete(String(target.id));
+    return target ? { ...target } : null;
+  };
+  prisma.user.deleteMany = async ({ where } = {}) => {
+    let count = 0;
+    for (const [id, u] of Array.from(db.users.entries())) {
+      if (matchUserWhere(u, where)) {
+        db.users.delete(id);
+        count++;
+      }
+    }
+    return { count };
+  };
+  prisma.user.count = async ({ where } = {}) => {
+    return Array.from(db.users.values()).filter((u) => matchUserWhere(u, where)).length;
   };
 
   prisma.miniEvent.findUnique = async ({ where }) => {
@@ -154,6 +278,7 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
   prisma.miniEvent.findFirst = async ({ where } = {}) => {
     for (const ev of db.miniEvents.values()) {
       if (where?.id && String(ev.id) !== String(where.id)) continue;
+      if (where?.creatorId && String(ev.creatorId) !== String(where.creatorId)) continue;
       if (where?.isActive !== undefined && Boolean(ev.isActive) !== Boolean(where.isActive)) continue;
       if (where?.expiresAt?.gt && new Date(ev.expiresAt) <= new Date(where.expiresAt.gt)) continue;
       return { ...ev };
@@ -165,6 +290,9 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
     if (where?.id?.in) {
       const idSet = new Set(where.id.in.map(String));
       list = list.filter((e) => idSet.has(String(e.id)));
+    }
+    if (where?.creatorId) {
+      list = list.filter((e) => String(e.creatorId) === String(where.creatorId));
     }
     if (where?.isActive !== undefined) {
       list = list.filter((e) => Boolean(e.isActive) === Boolean(where.isActive));
@@ -178,6 +306,244 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
       creator: e.creator || db.users.get(String(e.creatorId)) || null,
     }));
   };
+  prisma.miniEvent.update = async ({ where, data }) => {
+    const ev = db.miniEvents.get(String(where?.id));
+    if (!ev) return null;
+    Object.assign(ev, data);
+    return { ...ev };
+  };
+  prisma.miniEvent.deleteMany = async ({ where } = {}) => {
+    let count = 0;
+    for (const [id, ev] of Array.from(db.miniEvents.entries())) {
+      if (where?.creatorId && String(ev.creatorId) !== String(where.creatorId)) continue;
+      if (where?.id?.in && !where.id.in.map(String).includes(id)) continue;
+      db.miniEvents.delete(id);
+      count++;
+    }
+    return { count };
+  };
+
+  if (prisma.personalChatMessage) {
+    prisma.personalChatMessage.create = async ({ data }) => {
+      const id = String(data.id);
+      if (db.personalChatMessages.has(id)) {
+        const err = new Error('Unique constraint failed');
+        err.code = 'P2002';
+        throw err;
+      }
+      const row = { createdAt: new Date(), ...data, id };
+      db.personalChatMessages.set(id, row);
+      return { ...row };
+    };
+    prisma.personalChatMessage.update = async ({ where, data }) => {
+      const row = db.personalChatMessages.get(String(where.id));
+      if (!row) return null;
+      Object.assign(row, data);
+      return { ...row };
+    };
+    prisma.personalChatMessage.updateMany = async ({ where = {}, data = {} }) => {
+      let count = 0;
+      for (const row of db.personalChatMessages.values()) {
+        if (where.id?.in && !where.id.in.map(String).includes(String(row.id))) continue;
+        if (where.convHash && row.convHash !== where.convHash) continue;
+        if (where.senderId && String(row.senderId) !== String(where.senderId)) continue;
+        if (where.recipientId && String(row.recipientId) !== String(where.recipientId)) continue;
+        if (where.status?.not && row.status === where.status.not) continue;
+        if (where.status?.notIn && where.status.notIn.includes(row.status)) continue;
+        if (where.ts?.lte !== undefined && BigInt(row.ts) > BigInt(where.ts.lte)) continue;
+        if (Array.isArray(where.OR)) {
+          const matchesOr = where.OR.some((clause) => {
+            if (clause.id?.in && clause.id.in.map(String).includes(String(row.id))) return true;
+            if (clause.ts?.lte !== undefined && BigInt(row.ts) <= BigInt(clause.ts.lte)) return true;
+            return false;
+          });
+          if (!matchesOr) continue;
+        }
+        Object.assign(row, data);
+        count++;
+      }
+      return { count };
+    };
+    prisma.personalChatMessage.findMany = async ({ where = {}, orderBy, take, distinct } = {}) => {
+      let rows = Array.from(db.personalChatMessages.values());
+      if (where.convHash) rows = rows.filter((r) => r.convHash === where.convHash);
+      if (where.recipientId) rows = rows.filter((r) => String(r.recipientId) === String(where.recipientId));
+      if (where.senderId?.in) {
+        const s = new Set(where.senderId.in.map(String));
+        rows = rows.filter((r) => s.has(String(r.senderId)));
+      } else if (where.senderId) {
+        rows = rows.filter((r) => String(r.senderId) === String(where.senderId));
+      }
+      if (where.status?.not) rows = rows.filter((r) => r.status !== where.status.not);
+      if (where.status?.notIn) rows = rows.filter((r) => !where.status.notIn.includes(r.status));
+      if (where.ts?.lt !== undefined) rows = rows.filter((r) => BigInt(r.ts) < BigInt(where.ts.lt));
+      if (where.ts?.gt !== undefined) rows = rows.filter((r) => BigInt(r.ts) > BigInt(where.ts.gt));
+      if (where.ts?.lte !== undefined) rows = rows.filter((r) => BigInt(r.ts) <= BigInt(where.ts.lte));
+      if (orderBy?.ts === 'asc') {
+        rows.sort((a, b) => (BigInt(a.ts) > BigInt(b.ts) ? 1 : BigInt(a.ts) < BigInt(b.ts) ? -1 : 0));
+      } else {
+        rows.sort((a, b) => (BigInt(b.ts) > BigInt(a.ts) ? 1 : BigInt(b.ts) < BigInt(a.ts) ? -1 : 0));
+      }
+      if (Array.isArray(distinct) && distinct.length > 0) {
+        const seen = new Set();
+        rows = rows.filter((r) => {
+          const k = distinct.map((f) => String(r[f])).join('|');
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+      }
+      if (Number.isFinite(take)) rows = rows.slice(0, take);
+      return rows.map((r) => ({ ...r }));
+    };
+    prisma.personalChatMessage.count = async ({ where = {} } = {}) => {
+      return (await prisma.personalChatMessage.findMany({ where })).length;
+    };
+    prisma.personalChatMessage.deleteMany = async ({ where = {} } = {}) => {
+      let count = 0;
+      for (const [id, r] of Array.from(db.personalChatMessages.entries())) {
+        if (where.convHash && r.convHash !== where.convHash) continue;
+        if (where.id?.in && !where.id.in.map(String).includes(id)) continue;
+        if (where.OR) {
+          const ok = where.OR.some(
+            (c) => (c.senderId && String(r.senderId) === String(c.senderId)) || (c.recipientId && String(r.recipientId) === String(c.recipientId))
+          );
+          if (!ok) continue;
+        }
+        db.personalChatMessages.delete(id);
+        count++;
+      }
+      return { count };
+    };
+    prisma.personalChatMessage.groupBy = async ({ where = {} } = {}) => {
+      const rows = await prisma.personalChatMessage.findMany({ where });
+      const counts = new Map();
+      for (const r of rows) counts.set(r.senderId, (counts.get(r.senderId) || 0) + 1);
+      return Array.from(counts.entries()).map(([senderId, c]) => ({ senderId, _count: { _all: c } }));
+    };
+  }
+
+  if (prisma.event) {
+    function matchEventWhere(ev, where = {}) {
+      if (!where) return true;
+      if (where.id) {
+        if (typeof where.id === 'string' && String(ev.id) !== where.id) return false;
+        if (where.id.in && !where.id.in.map(String).includes(String(ev.id))) return false;
+        if (where.id.not && String(ev.id) === String(where.id.not)) return false;
+      }
+      if (where.isMinigameTarget !== undefined && Boolean(ev.isMinigameTarget) !== Boolean(where.isMinigameTarget)) return false;
+      if (where.status && ev.status !== where.status) return false;
+      if (where.regEndTime?.lte && new Date(ev.regEndTime) > new Date(where.regEndTime.lte)) return false;
+      if (where.regEndTime?.gt && new Date(ev.regEndTime) <= new Date(where.regEndTime.gt)) return false;
+      return true;
+    }
+    prisma.event.create = async ({ data }) => {
+      const id = String(data.id || `evt_${crypto.randomUUID()}`);
+      const row = { createdAt: new Date(), updatedAt: new Date(), isMinigameTarget: false, ...data, id };
+      db.events.set(id, row);
+      return { ...row };
+    };
+    prisma.event.findUnique = async ({ where }) => {
+      const ev = db.events.get(String(where?.id));
+      return ev ? { ...ev } : null;
+    };
+    prisma.event.findFirst = async ({ where } = {}) => {
+      for (const ev of db.events.values()) {
+        if (matchEventWhere(ev, where)) return { ...ev };
+      }
+      return null;
+    };
+    prisma.event.findMany = async ({ where } = {}) => {
+      return Array.from(db.events.values()).filter((ev) => matchEventWhere(ev, where)).map((ev) => ({ ...ev }));
+    };
+    prisma.event.update = async ({ where, data }) => {
+      const ev = db.events.get(String(where?.id));
+      if (!ev) return null;
+      Object.assign(ev, data, { updatedAt: new Date() });
+      return { ...ev };
+    };
+    prisma.event.updateMany = async ({ where, data }) => {
+      let count = 0;
+      for (const ev of db.events.values()) {
+        if (matchEventWhere(ev, where)) {
+          Object.assign(ev, data, { updatedAt: new Date() });
+          count++;
+        }
+      }
+      return { count };
+    };
+    prisma.event.delete = async ({ where }) => {
+      const ev = db.events.get(String(where?.id));
+      if (ev) db.events.delete(String(where.id));
+      return ev ? { ...ev } : null;
+    };
+    prisma.event.deleteMany = async ({ where } = {}) => {
+      let count = 0;
+      for (const [id, ev] of Array.from(db.events.entries())) {
+        if (matchEventWhere(ev, where)) {
+          db.events.delete(id);
+          count++;
+        }
+      }
+      return { count };
+    };
+  }
+
+  if (prisma.auditLog) {
+    function matchAuditWhere(l, where = {}) {
+      if (!where) return true;
+      if (where.action && l.action !== where.action) return false;
+      if (where.adminEmail) {
+        if (typeof where.adminEmail === 'string' && l.adminEmail !== where.adminEmail) return false;
+        if (where.adminEmail.in && !where.adminEmail.in.includes(l.adminEmail)) return false;
+      }
+      if (where.createdAt?.gte && new Date(l.createdAt) < new Date(where.createdAt.gte)) return false;
+      return true;
+    }
+    prisma.auditLog.create = async ({ data }) => {
+      const row = { id: `audit_${db.auditLogs.length + 1}`, createdAt: new Date(), ...data };
+      db.auditLogs.push(row);
+      return { ...row };
+    };
+    prisma.auditLog.findFirst = async ({ where } = {}) => {
+      const hit = db.auditLogs.find((l) => matchAuditWhere(l, where));
+      return hit ? { ...hit } : null;
+    };
+    prisma.auditLog.findMany = async ({ where, orderBy, take } = {}) => {
+      let rows = db.auditLogs.filter((l) => matchAuditWhere(l, where));
+      if (orderBy?.createdAt === 'desc') rows = [...rows].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      if (Number.isFinite(take)) rows = rows.slice(0, take);
+      return rows.map((r) => ({ ...r }));
+    };
+    prisma.auditLog.deleteMany = async ({ where } = {}) => {
+      const before = db.auditLogs.length;
+      db.auditLogs = db.auditLogs.filter((l) => !matchAuditWhere(l, where));
+      return { count: before - db.auditLogs.length };
+    };
+  }
+
+  if (prisma.comment) {
+    prisma.comment.create = async ({ data }) => {
+      const row = { id: `cmt_${db.comments.length + 1}`, createdAt: new Date(), ...data };
+      db.comments.push(row);
+      return { ...row };
+    };
+    prisma.comment.findMany = async () => db.comments.map((c) => ({ ...c }));
+    prisma.comment.deleteMany = async ({ where } = {}) => {
+      const before = db.comments.length;
+      db.comments = where?.userId ? db.comments.filter((c) => String(c.userId) !== String(where.userId)) : [];
+      return { count: before - db.comments.length };
+    };
+  }
+
+  if (prisma.userBroadcast) prisma.userBroadcast.deleteMany = async () => ({ count: 0 });
+  if (prisma.eventRegistration) prisma.eventRegistration.deleteMany = async () => ({ count: 0 });
+  if (prisma.booking) prisma.booking.deleteMany = async () => ({ count: 0 });
+  if (prisma.serviceBooking) {
+    prisma.serviceBooking.findMany = async () => [];
+    prisma.serviceBooking.deleteMany = async () => ({ count: 0 });
+  }
+  if (prisma.serviceBookingSlot) prisma.serviceBookingSlot.deleteMany = async () => ({ count: 0 });
 
   // Patch canonical fallback Prisma delegates (real model names from prisma/schema.prisma)
   if (prisma.callLock) {
@@ -884,16 +1250,35 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
     return [];
   };
 
-  // In-memory Redis mock (supports direct ops + pipeline())
+  // In-memory Redis mock (supports direct ops + pipeline() + multi() + TTL + glob keys)
   const redisImpl = {
-    get: async (k) => (kv.has(k) ? kv.get(k) : null),
+    get: async (k) => {
+      const exp = kvExpiry.get(k);
+      if (exp !== undefined && Date.now() > exp) {
+        kv.delete(k);
+        kvExpiry.delete(k);
+        return null;
+      }
+      return kv.has(k) ? kv.get(k) : null;
+    },
     set: async (k, v, ...rest) => {
-      if (rest.includes('NX') && kv.has(k)) return null;
+      const upper = rest.map((x) => String(x).toUpperCase());
+      if (upper.includes('NX') && kv.has(k)) return null;
       kv.set(k, String(v));
+      const exIdx = upper.indexOf('EX');
+      const pxIdx = upper.indexOf('PX');
+      if (exIdx >= 0 && Number.isFinite(Number(rest[exIdx + 1]))) {
+        kvExpiry.set(k, Date.now() + Number(rest[exIdx + 1]) * 1000);
+      } else if (pxIdx >= 0 && Number.isFinite(Number(rest[pxIdx + 1]))) {
+        kvExpiry.set(k, Date.now() + Number(rest[pxIdx + 1]));
+      } else {
+        kvExpiry.delete(k);
+      }
       return 'OK';
     },
-    setex: async (k, _sec, v) => {
+    setex: async (k, sec, v) => {
       kv.set(k, String(v));
+      if (Number.isFinite(Number(sec))) kvExpiry.set(k, Date.now() + Number(sec) * 1000);
       return 'OK';
     },
     incr: async (k) => {
@@ -902,7 +1287,19 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
       return next;
     },
     exists: async (k) => (kv.has(k) || sets.has(k) || lists.has(k) || hashes.has(k) ? 1 : 0),
-    ttl: async (k) => (kv.has(k) ? 60 : -2),
+    ttl: async (k) => {
+      if (!kv.has(k) && !sets.has(k) && !lists.has(k) && !hashes.has(k)) return -2;
+      const exp = kvExpiry.get(k);
+      if (exp === undefined) return -1;
+      const rem = Math.ceil((exp - Date.now()) / 1000);
+      return rem > 0 ? rem : -2;
+    },
+    keys: async (pattern = '*') => {
+      const escaped = String(pattern).replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+      const re = new RegExp(`^${escaped}$`);
+      const all = new Set([...kv.keys(), ...sets.keys(), ...lists.keys(), ...hashes.keys()]);
+      return Array.from(all).filter((k) => re.test(k));
+    },
     type: async (k) => {
       if (sets.has(k)) return 'set';
       if (lists.has(k)) return 'list';
@@ -914,6 +1311,7 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
       const flat = keys.flat();
       for (const k of flat) {
         kv.delete(k);
+        kvExpiry.delete(k);
         sets.delete(k);
         lists.delete(k);
         hashes.delete(k);
@@ -962,34 +1360,75 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
       for (const v of vals) l.push(String(v));
       return l.length;
     },
-    ltrim: async (k, start, end) => {
+    ltrim: async (k, start, stop) => {
       const l = getList(k);
-      lists.set(k, l.slice(start, end + 1));
+      const s = start < 0 ? Math.max(0, l.length + start) : start;
+      const e = stop < 0 ? l.length + stop + 1 : stop + 1;
+      lists.set(k, l.slice(s, e));
       return 'OK';
     },
-    lrange: async (k, start, end) => {
+    lrange: async (k, start, stop) => {
       const l = getList(k);
-      return end < 0 ? l.slice(start) : l.slice(start, end + 1);
+      const s = start < 0 ? Math.max(0, l.length + start) : start;
+      const e = stop < 0 ? l.length + stop + 1 : stop + 1;
+      return l.slice(s, e);
+    },
+    lindex: async (k, idx) => {
+      const l = getList(k);
+      const resolved = idx < 0 ? l.length + idx : idx;
+      return resolved >= 0 && resolved < l.length ? l[resolved] : null;
     },
     llen: async (k) => getList(k).length,
-    hset: async (k, field, val) => {
+    hset: async (k, ...args) => {
       const h = getHash(k);
-      if (field && typeof field === 'object') Object.assign(h, field);
-      else h[String(field)] = String(val);
+      if (args.length === 1 && args[0] && typeof args[0] === 'object') {
+        for (const [f, v] of Object.entries(args[0])) h[String(f)] = String(v);
+      } else {
+        for (let i = 0; i < args.length; i += 2) {
+          h[String(args[i])] = String(args[i + 1]);
+        }
+      }
       return 1;
     },
-    hget: async (k, field) => (Object.prototype.hasOwnProperty.call(getHash(k), field) ? getHash(k)[field] : null),
+    hget: async (k, field) => (Object.prototype.hasOwnProperty.call(getHash(k), String(field)) ? getHash(k)[String(field)] : null),
+    hincrby: async (k, field, delta) => {
+      const h = getHash(k);
+      const next = (Number(h[String(field)]) || 0) + Number(delta);
+      h[String(field)] = String(next);
+      return next;
+    },
     hdel: async (k, ...fields) => {
       const h = getHash(k);
-      for (const f of fields.flat()) delete h[f];
+      for (const f of fields.flat()) delete h[String(f)];
       return fields.length;
     },
     hgetall: async (k) => ({ ...getHash(k) }),
-    expire: async () => 1,
+    expire: async (k, sec) => {
+      if (Number.isFinite(Number(sec))) kvExpiry.set(k, Date.now() + Number(sec) * 1000);
+      return 1;
+    },
     ping: async () => 'PONG',
-    eval: async (_script, _numKeys, key, expectedVal) => {
-      if (kv.get(key) === String(expectedVal)) {
-        kv.delete(key);
+    quit: async () => 'OK',
+    disconnect: () => {},
+    eval: async (script, _numKeys, key, arg1) => {
+      const s = String(script || '');
+      // Pattern 1: Rate limiter atomic INCR + EXPIRE + TTL
+      if (/INCR/i.test(s) && /TTL/i.test(s)) {
+        const count = await redisImpl.incr(key);
+        const ttlSec = Number(arg1) || 60;
+        if (count === 1) await redisImpl.expire(key, ttlSec);
+        const rem = await redisImpl.ttl(key);
+        return [count, rem > 0 ? rem : ttlSec];
+      }
+      // Pattern 2: Atomic single-use token consume (GET + DEL)
+      if (/GET/i.test(s) && /DEL/i.test(s) && !/ARGV\[1\]/i.test(s)) {
+        const val = await redisImpl.get(key);
+        if (val !== null) await redisImpl.del(key);
+        return val;
+      }
+      // Pattern 3: Compare-and-delete distributed lock
+      if (kv.get(key) === String(arg1)) {
+        await redisImpl.del(key);
         return 1;
       }
       return 0;
@@ -1018,28 +1457,69 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
   };
   redisImpl.multi = redisImpl.pipeline;
 
-  for (const [k, fn] of Object.entries(redisImpl)) {
-    orig.redisMethods[k] = redis[k];
-    redis[k] = fn;
-  }
-
-  // Clear L1 hot caches so tests never inherit stale values across runs
-  redis.del(
-    'cache:all_kalcerians',
-    'cache:map_users_enriched',
-    'cache:active_mini_events',
-    'cache:mini_events:active_list:v1'
-  ).catch(() => {});
+  // Bind test override directly on Redis Proxy & disconnect background ioredis socket
+  // so Upstash quota/network events can NEVER race or hijack mid-test.
+  __setRedisTestClient(redisImpl);
 
   function restore() {
+    __setRedisTestClient(null);
     prisma.$executeRawUnsafe = orig.$executeRawUnsafe;
     prisma.$queryRawUnsafe = orig.$queryRawUnsafe;
+    prisma.$transaction = orig.$transaction;
+    prisma.$disconnect = orig.$disconnect;
     prisma.user.findUnique = orig.userFindUnique;
+    prisma.user.findFirst = orig.userFindFirst;
     prisma.user.findMany = orig.userFindMany;
+    prisma.user.create = orig.userCreate;
     prisma.user.update = orig.userUpdate;
+    prisma.user.delete = orig.userDelete;
+    prisma.user.deleteMany = orig.userDeleteMany;
+    prisma.user.count = orig.userCount;
     prisma.miniEvent.findUnique = orig.miniEventFindUnique;
     prisma.miniEvent.findFirst = orig.miniEventFindFirst;
     prisma.miniEvent.findMany = orig.miniEventFindMany;
+    prisma.miniEvent.update = orig.miniEventUpdate;
+    prisma.miniEvent.deleteMany = orig.miniEventDeleteMany;
+    if (prisma.personalChatMessage && orig.personalChatCreate) {
+      prisma.personalChatMessage.create = orig.personalChatCreate;
+      prisma.personalChatMessage.update = orig.personalChatUpdate;
+      prisma.personalChatMessage.updateMany = orig.personalChatUpdateMany;
+      prisma.personalChatMessage.findMany = orig.personalChatFindMany;
+      prisma.personalChatMessage.count = orig.personalChatCount;
+      prisma.personalChatMessage.deleteMany = orig.personalChatDeleteMany;
+      prisma.personalChatMessage.groupBy = orig.personalChatGroupBy;
+    }
+    if (prisma.event && orig.eventCreate) {
+      prisma.event.create = orig.eventCreate;
+      prisma.event.findUnique = orig.eventFindUnique;
+      prisma.event.findFirst = orig.eventFindFirst;
+      prisma.event.findMany = orig.eventFindMany;
+      prisma.event.update = orig.eventUpdate;
+      prisma.event.updateMany = orig.eventUpdateMany;
+      prisma.event.delete = orig.eventDelete;
+      prisma.event.deleteMany = orig.eventDeleteMany;
+    }
+    if (prisma.auditLog && orig.auditLogCreate) {
+      prisma.auditLog.create = orig.auditLogCreate;
+      prisma.auditLog.findFirst = orig.auditLogFindFirst;
+      prisma.auditLog.findMany = orig.auditLogFindMany;
+      prisma.auditLog.deleteMany = orig.auditLogDeleteMany;
+    }
+    if (prisma.comment && orig.commentCreate) {
+      prisma.comment.create = orig.commentCreate;
+      prisma.comment.findMany = orig.commentFindMany;
+      prisma.comment.deleteMany = orig.commentDeleteMany;
+    }
+    if (prisma.userBroadcast && orig.userBroadcastDeleteMany) prisma.userBroadcast.deleteMany = orig.userBroadcastDeleteMany;
+    if (prisma.eventRegistration && orig.eventRegDeleteMany) prisma.eventRegistration.deleteMany = orig.eventRegDeleteMany;
+    if (prisma.booking && orig.bookingDeleteMany) prisma.booking.deleteMany = orig.bookingDeleteMany;
+    if (prisma.serviceBooking && orig.serviceBookingFindMany) {
+      prisma.serviceBooking.findMany = orig.serviceBookingFindMany;
+      prisma.serviceBooking.deleteMany = orig.serviceBookingDeleteMany;
+    }
+    if (prisma.serviceBookingSlot && orig.serviceBookingSlotDeleteMany) {
+      prisma.serviceBookingSlot.deleteMany = orig.serviceBookingSlotDeleteMany;
+    }
     if (prisma.callLock && orig.callLockFindUnique) {
       prisma.callLock.findUnique = orig.callLockFindUnique;
       prisma.callLock.upsert = orig.callLockUpsert;
@@ -1060,10 +1540,7 @@ export function installInMemorySocialHarness({ users = [], miniEvents = [] } = {
       prisma.eventNotification.findMany = orig.eventNotifFindMany;
       prisma.eventNotification.deleteMany = orig.eventNotifDeleteMany;
     }
-    for (const [k, fn] of Object.entries(orig.redisMethods)) {
-      redis[k] = fn;
-    }
   }
 
-  return { db, kv, sets, restore };
+  return { db, kv, sets, redisImpl, restore };
 }

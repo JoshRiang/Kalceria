@@ -54,7 +54,7 @@ export function splitMediaUrlList(rawInput) {
           continue;
         } else {
           const remaining = trimmed.slice(i + 1).trim();
-          if (remaining.match(/^(?:https?:\/\/|blob:https?:\/\/|blob:http:\/\/|data:(?:image|video)\/|\/api\/blob\/)/i)) {
+          if (remaining.match(/^(?:https?:\/\/|blob:https?:\/\/|blob:http:\/\/|data:(?:image|video)\/|\/api\/blob\/|\/media\/)/i)) {
             results.push(current.trim());
             current = '';
             inDataUrl = false;
@@ -70,7 +70,7 @@ export function splitMediaUrlList(rawInput) {
     } else {
       if (char === ',') {
         const remaining = trimmed.slice(i + 1).trim();
-        if (remaining.match(/^(?:https?:\/\/|blob:https?:\/\/|blob:http:\/\/|data:(?:image|video)\/|\/api\/blob\/)/i)) {
+        if (remaining.match(/^(?:https?:\/\/|blob:https?:\/\/|blob:http:\/\/|data:(?:image|video)\/|\/api\/blob\/|\/media\/)/i)) {
           results.push(current.trim());
           current = '';
           while (i + 1 < trimmed.length && /\s/.test(trimmed[i + 1])) {

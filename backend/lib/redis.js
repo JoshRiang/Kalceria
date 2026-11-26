@@ -423,6 +423,16 @@ const memoryStore = new MemoryRedisFallback();
 
 let isQuotaExceeded = false;
 let hasLoggedFallback = false;
+let testOverrideClient = null;
+
+export function __setRedisTestClient(client) {
+  testOverrideClient = client || null;
+  if (client) {
+    try {
+      rawRedis.disconnect();
+    } catch {}
+  }
+}
 
 function markFallback(err) {
   isQuotaExceeded = true;
@@ -446,6 +456,14 @@ rawRedis.on('connect', () => console.log('[Redis] Connected'));
 
 export const redis = new Proxy(rawRedis, {
   get(target, prop, receiver) {
+    if (testOverrideClient) {
+      if (prop === 'isQuotaExceeded' || prop === 'isDegraded') return false;
+      if (prop === 'status') return 'ready';
+      if (prop in testOverrideClient) {
+        const val = testOverrideClient[prop];
+        return typeof val === 'function' ? val.bind(testOverrideClient) : val;
+      }
+    }
     if (prop === 'isQuotaExceeded' || prop === 'isDegraded') {
       return isQuotaExceeded;
     }

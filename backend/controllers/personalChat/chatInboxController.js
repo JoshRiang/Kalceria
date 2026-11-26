@@ -44,9 +44,14 @@ export async function ackPersonalChatRead(req, res, next) {
       tasks.push(
         prisma.personalChatMessage
           .updateMany({
-            where: messageIds.length > 0
-              ? { convHash, recipientId: String(userId), id: { in: messageIds }, status: { not: 'blocked_drop' } }
-              : { convHash, recipientId: String(userId), status: { notIn: ['read', 'blocked_drop'] }, ts: { lte: BigInt(Math.floor(nextReadTs)) } },
+            where: {
+              convHash,
+              recipientId: String(userId),
+              status: { notIn: ['read', 'blocked_drop'] },
+              ...(messageIds.length > 0
+                ? { OR: [{ id: { in: messageIds } }, { ts: { lte: BigInt(Math.floor(nextReadTs)) } }] }
+                : { ts: { lte: BigInt(Math.floor(nextReadTs)) } }),
+            },
             data: { status: 'read' },
           })
           .catch(() => {})
