@@ -37,11 +37,10 @@ export function KalceriansPanelBody(props) {
         acceptedCollabsMap={props.acceptedCollabsMap}
         eventRequestsMap={props.eventRequestsMap}
         eventGroupChatMap={props.eventGroupChatMap}
+        groupSummaryMap={props.groupSummaryMap}
         pinnedMeetingEventIds={props.pinnedMeetingEventIds}
         searchQuery={props.searchQuery}
-        onOpenItemOnMap={props.onOpenItemOnMap}
-        focusUser={props.focusUser}
-        setDrawerOpen={props.setDrawerOpen}
+        onOpenGroupChat={props.onOpenGroupChat}
       />
     );
   }

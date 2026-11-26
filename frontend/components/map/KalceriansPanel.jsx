@@ -7,6 +7,7 @@ import { KalceriansHeader } from "./panel/KalceriansHeader";
 import { KalceriansPanelBody } from "./panel/KalceriansPanelBody";
 import { avatarUrl, FAMILY_LIMITS } from "./panel/kalceriansHelpers";
 import { PersonalChatPanel } from "./chat/PersonalChatPanel";
+import { EventGroupChatPanel } from "./groupChat/EventGroupChatPanel";
 import { IncomingCallModal } from "./chat/components/IncomingCallModal";
 import { stopCallRingtone } from "@/lib/soundEngine";
 import { useKalceriansIncomingCall } from "./panel/useKalceriansIncomingCall";
@@ -115,6 +116,9 @@ export const KalceriansPanel = memo(function KalceriansPanel({
     activePanel,
     isPanelSwitching,
     pinnedMeetingEventIds,
+    groupSummaryMap,
+    activeGroupEvent,
+    setActiveGroupEventId,
   } = useBottomPanelSwitcher({
     setDrawerOpen,
     personalChatMap,
@@ -225,7 +229,7 @@ export const KalceriansPanel = memo(function KalceriansPanel({
     : null;
 
   const isKalceriansHiddenForChat = Boolean(
-    isClosingForChat || activeChatUser || incomingCall || isPanelSwitching
+    isClosingForChat || activeChatUser || activeGroupEvent || incomingCall || isPanelSwitching
   );
   const panelBgAsset =
     activePanel === "chat"
@@ -284,6 +288,16 @@ export const KalceriansPanel = memo(function KalceriansPanel({
               onOutgoingMessageUpdate={onOutgoingMessageUpdate}
             />
           </ChatErrorBoundary>
+        )}
+        {!activeChatUser && activeGroupEvent && (
+          <EventGroupChatPanel
+            key={`group-chat-panel-${activeGroupEvent.id}`}
+            event={activeGroupEvent}
+            currentUser={currentUser}
+            isMapDark={isMapDark}
+            avatarUrl={avatarUrl}
+            onClose={() => setActiveGroupEventId(null)}
+          />
         )}
       </AnimatePresence>
 
@@ -349,6 +363,8 @@ export const KalceriansPanel = memo(function KalceriansPanel({
         <KalceriansPanelBody
           activePanel={activePanel}
           pinnedMeetingEventIds={pinnedMeetingEventIds}
+          groupSummaryMap={groupSummaryMap}
+          onOpenGroupChat={(eid) => setActiveGroupEventId(eid)}
           searchQuery={searchQuery}
           listContainerRef={listContainerRef}
           isDataLoading={isDataLoading}

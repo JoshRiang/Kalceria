@@ -38,6 +38,18 @@ import {
   rejectFriendRequestHandler,
 } from "../controllers/friendsController.js";
 import {
+  getGroupChatsSummary,
+  getEventGroupMessages,
+  sendEventGroupMessage,
+  deleteEventGroupMessages,
+  ackEventGroupRead,
+  updateEventGroupSettings,
+  promoteEventGroupMember,
+  kickEventGroupMember,
+  startEventGroupCall,
+  leaveEventGroupCallHandler,
+} from "../controllers/eventGroupController.js";
+import {
   getPersonalChatMessages,
   sendPersonalChatMessage,
   deletePersonalChatMessages,
@@ -265,6 +277,18 @@ router.get("/map/call/signals", requireAuth, getCallSignals);
 router.delete("/map/call/signals", requireAuth, clearCallSignals);
 router.post("/map/call/:targetId/signal", requireAuth, sendCallSignal);
 router.get("/map/call/:targetId/livekit-token", requireAuth, getLiveKitCallToken);
+
+// ─── Event GroupChat, Settings, Role Controls & Realtime Group Calls ──────────
+router.get("/map/group-chat/summary", requireAuth, getGroupChatsSummary);
+router.get("/map/group-chat/:eventId/messages", requireAuth, getEventGroupMessages);
+router.post("/map/group-chat/:eventId/messages", requireAuth, sendEventGroupMessage);
+router.delete("/map/group-chat/:eventId/messages", requireAuth, deleteEventGroupMessages);
+router.post("/map/group-chat/:eventId/read", requireAuth, ackEventGroupRead);
+router.put("/map/group-chat/:eventId/settings", requireAuth, updateEventGroupSettings);
+router.post("/map/group-chat/:eventId/members/:targetId/promote", requireAuth, promoteEventGroupMember);
+router.delete("/map/group-chat/:eventId/members/:targetId", requireAuth, kickEventGroupMember);
+router.post("/map/group-chat/:eventId/call/start", requireAuth, startEventGroupCall);
+router.post("/map/group-chat/:eventId/call/leave", requireAuth, leaveEventGroupCallHandler);
 
 
 // ─── Broadcast ───────────────────────────────────────────────────────────────

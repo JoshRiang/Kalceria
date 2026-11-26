@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { fetchGroupChatsSummary } from "@/lib/api";
 import {
   isEventOwner,
   isEventCollaborator,
@@ -20,6 +21,8 @@ export function useBottomPanelSwitcher({
   const [activePanel, setActivePanel] = useState("peeps"); // "peeps" | "chat" | "meeting"
   const [isPanelSwitching, setIsPanelSwitching] = useState(false);
   const [pinnedMeetingEventIds, setPinnedMeetingEventIds] = useState([]);
+  const [groupSummaryMap, setGroupSummaryMap] = useState({});
+  const [activeGroupEventId, setActiveGroupEventId] = useState(null);
   const switchTimerRef = useRef(null);
   const activePanelRef = useRef(activePanel);
   activePanelRef.current = activePanel;
@@ -27,6 +30,7 @@ export function useBottomPanelSwitcher({
   const transitionToPanel = useCallback(
     (nextPanel) => {
       if (!nextPanel || !["peeps", "chat", "meeting"].includes(nextPanel)) return;
+      setActiveGroupEventId(null);
       if (activePanelRef.current === nextPanel) {
         setDrawerOpen?.(true);
         return;
@@ -42,6 +46,25 @@ export function useBottomPanelSwitcher({
     [setDrawerOpen]
   );
 
+  // Sync live Event GroupChat summary (custom avatar, description, unread counts, ongoing calls)
+  useEffect(() => {
+    if (!currentUser?.id) return undefined;
+    let alive = true;
+    const load = async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      const summary = await fetchGroupChatsSummary();
+      if (alive && summary && typeof summary === "object") {
+        setGroupSummaryMap(summary);
+      }
+    };
+    load();
+    const timer = setInterval(load, 5000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [currentUser?.id]);
+
   useEffect(() => {
     const onSwitch = (e) => {
       const targetPanel = e?.detail?.panel;
@@ -53,8 +76,11 @@ export function useBottomPanelSwitcher({
       if (eventId) {
         const eid = String(eventId);
         setPinnedMeetingEventIds((prev) => (prev.includes(eid) ? prev : [eid, ...prev]));
+        setActivePanel("meeting");
+        setActiveGroupEventId(eid);
+      } else {
+        transitionToPanel("meeting");
       }
-      transitionToPanel("meeting");
     };
 
     return () => {
@@ -70,16 +96,20 @@ export function useBottomPanelSwitcher({
       (entry) => Number(entry?.unreadCount || 0) > 0
     );
 
-    let hasMeetingNotif = false;
-    for (const ev of events || []) {
-      const owned = isEventOwner(ev, currentUser);
-      const collab = isEventCollaborator(ev, currentUser, acceptedCollabsMap);
-      if (!owned && !collab) continue;
-      const unreadGroup = Number(eventGroupChatMap?.[ev.id]?.unreadCount || 0);
-      const pendingReqs = owned ? getEventPendingRequests(ev, currentUser, eventRequestsMap).length : 0;
-      if (unreadGroup > 0 || pendingReqs > 0) {
-        hasMeetingNotif = true;
-        break;
+    let hasMeetingNotif = Object.values(groupSummaryMap || {}).some(
+      (g) => Number(g?.unreadCount || 0) > 0 || Boolean(g?.activeCall?.active)
+    );
+    if (!hasMeetingNotif) {
+      for (const ev of events || []) {
+        const owned = isEventOwner(ev, currentUser);
+        const collab = isEventCollaborator(ev, currentUser, acceptedCollabsMap);
+        if (!owned && !collab) continue;
+        const unreadGroup = Number(eventGroupChatMap?.[ev.id]?.unreadCount || 0);
+        const pendingReqs = owned ? getEventPendingRequests(ev, currentUser, eventRequestsMap).length : 0;
+        if (unreadGroup > 0 || pendingReqs > 0) {
+          hasMeetingNotif = true;
+          break;
+        }
       }
     }
 
@@ -100,6 +130,7 @@ export function useBottomPanelSwitcher({
   }, [
     activePanel,
     personalChatMap,
+    groupSummaryMap,
     events,
     currentUser,
     acceptedCollabsMap,
@@ -108,10 +139,17 @@ export function useBottomPanelSwitcher({
     hasGlobalNotif,
   ]);
 
+  const activeGroupEvent = activeGroupEventId
+    ? (events || []).find((ev) => String(ev.id) === String(activeGroupEventId)) || null
+    : null;
+
   return {
     activePanel,
     isPanelSwitching,
     pinnedMeetingEventIds,
+    groupSummaryMap,
+    activeGroupEvent,
+    setActiveGroupEventId,
     transitionToPanel,
   };
 }

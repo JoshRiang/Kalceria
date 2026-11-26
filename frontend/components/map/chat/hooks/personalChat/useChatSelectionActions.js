@@ -53,7 +53,6 @@ export function useChatSelectionActions({
       setSelectedMsgIds([]);
       setSelectMode(false);
       setReplyingTo(null);
-      sendRealtimePacketRef.current?.({ type: "sync_nudge" });
       try {
         await deletePersonalChatMessages(targetId, { clearAll: true });
         if (typeof window !== "undefined") {

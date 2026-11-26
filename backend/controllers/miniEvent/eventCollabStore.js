@@ -2,6 +2,11 @@ import crypto from 'node:crypto';
 import prisma from '../../lib/prisma.js';
 import { redis } from '../../lib/redis.js';
 import { ensurePersistentUserProfilesBatch, CANONICAL_USER_SELECT } from '../../utils/profileDefaults.js';
+import {
+  addGroupMemberOnly,
+  getEventGroupMemberIds,
+  getEventPromotedCollaboratorIds,
+} from '../../services/eventGroupStore.js';
 
 const acceptedKey = (eventId) => `mini_event:collab:accepted:${eventId}`;
 const requestsKey = (eventId) => `mini_event:collab:requests:${eventId}`;
@@ -187,15 +192,21 @@ export async function resolveCollabRequestDecision(eventId, requestId, accept) {
   await redis.del(userRequestKey(target.userId)).catch(() => {});
 
   if (accept) {
-    await addAcceptedCollaboratorId(eventId, target.userId);
+    // CRITICAL ROLE SPLIT: Envelope acceptance ONLY joins the user into the Event GroupChat as a regular MEMBER.
+    // Media upload Collaborator permission must be explicitly granted by the Maker (or an existing Collaborator) in Group Settings.
+    await addGroupMemberOnly(eventId, target.userId);
   }
 
-  const collaborators = await getAcceptedCollaboratorIds(eventId);
+  const [collaborators, groupMemberIds] = await Promise.all([
+    getAcceptedCollaboratorIds(eventId),
+    getEventGroupMemberIds(eventId),
+  ]);
   return {
     resolved: true,
     accepted: Boolean(accept),
     targetUserId: target.userId,
     collaborators,
+    groupMemberIds,
     pendingRequestsCount: remaining.length,
   };
 }
@@ -206,10 +217,13 @@ export async function hydrateEventCollabSummary(ev, legacyCollabs = []) {
       legacyCollabs.map((cid) => addAcceptedCollaboratorId(ev.id, cid))
     );
   }
-  const [collaborators, rawReqs] = await Promise.all([
+  const [redisCollaborators, promotedCollaborators, groupMemberIds, rawReqs] = await Promise.all([
     getAcceptedCollaboratorIds(ev.id, legacyCollabs),
+    getEventPromotedCollaboratorIds(ev.id),
+    getEventGroupMemberIds(ev.id),
     readEventRequestsRaw(ev.id),
   ]);
+  const collaborators = Array.from(new Set([...(redisCollaborators || []), ...(promotedCollaborators || [])]));
 
   let effectiveRawReqs = rawReqs;
   if (ev?.creatorId) {
@@ -247,6 +261,7 @@ export async function hydrateEventCollabSummary(ev, legacyCollabs = []) {
   return {
     collaborators: collaboratorProfiles.length > 0 ? collaboratorProfiles.map((u) => u.id) : collaborators,
     collaboratorProfiles,
+    groupMemberIds,
     pendingRequestsCount: effectiveRawReqs.length,
   };
 }

@@ -207,6 +207,26 @@ export const fetchCallSignals = (params = {}) => api.get('/map/call/signals', { 
 export const clearCallSignals = () => api.delete('/map/call/signals').then(r => r.data || { ok: false }).catch(() => ({ ok: false }));
 export const fetchLiveKitCallToken = (targetId, params = {}) =>
   api.get(`/map/call/${targetId}/livekit-token`, { params }).then(r => r.data || { ok: false }).catch(() => ({ ok: false }));
+export const fetchGroupChatsSummary = () =>
+  api.get('/map/group-chat/summary').then(r => r.data?.groups || {}).catch(() => ({}));
+export const fetchEventGroupMessages = (eventId, params = {}) =>
+  api.get(`/map/group-chat/${eventId}/messages`, { params }).then(r => r.data);
+export const postEventGroupMessage = (eventId, payload) =>
+  api.post(`/map/group-chat/${eventId}/messages`, payload).then(r => r.data);
+export const deleteEventGroupMessages = (eventId, payload) =>
+  api.delete(`/map/group-chat/${eventId}/messages`, { data: payload }).then(r => r.data);
+export const ackEventGroupRead = (eventId, payload = {}) =>
+  api.post(`/map/group-chat/${eventId}/read`, payload).then(r => r.data).catch(() => ({ ok: false }));
+export const updateEventGroupSettings = (eventId, payload) =>
+  api.put(`/map/group-chat/${eventId}/settings`, payload).then(r => r.data);
+export const promoteEventGroupMember = (eventId, targetId, role) =>
+  api.post(`/map/group-chat/${eventId}/members/${targetId}/promote`, { role }).then(r => r.data);
+export const kickEventGroupMember = (eventId, targetId) =>
+  api.delete(`/map/group-chat/${eventId}/members/${targetId}`).then(r => r.data);
+export const startEventGroupCall = (eventId, mode = 'voice') =>
+  api.post(`/map/group-chat/${eventId}/call/start`, { mode }).then(r => r.data);
+export const leaveEventGroupCall = (eventId) =>
+  api.post(`/map/group-chat/${eventId}/call/leave`).then(r => r.data).catch(() => ({ ok: false }));
 export const postBroadcast = (payload) =>
   api.post('/broadcast', typeof payload === 'string' ? { message: payload } : payload);
 export const putBroadcast = (payload) =>

@@ -212,6 +212,8 @@ export function CallMediaStage({
         >
           {status === "ended"
             ? "Call Ended"
+            : status === "in_another_call"
+            ? "In Another Call"
             : status === "calling"
             ? "Calling..."
             : status === "ringing"

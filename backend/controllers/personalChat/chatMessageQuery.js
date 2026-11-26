@@ -4,6 +4,7 @@ import {
   isUserBlockedCanonical,
   fetchCanonicalChatRtcSignals,
 } from '../../services/canonicalFallbackStore.js';
+import { getPersonalChatClearedAt } from '../../services/chatClearStore.js';
 import {
   HOT_RING_BUFFER_SIZE,
   COLD_ARCHIVE_MAX_SIZE,
@@ -93,10 +94,14 @@ export async function getPersonalChatMessages(req, res, next) {
     const myReadUpTo = Number(meta[`readUpTo:${userId}`] || 0);
     let peerReadUpTo = Number(meta[`readUpTo:${targetId}`] || 0);
     const deleteRev = Number(meta.deleteRev || 0);
+    const redisClearedAt = Number(meta[`clearedAt:${userId}`] || 0);
+    const canonicalClearedAt = await getPersonalChatClearedAt(userId, convHash);
+    const myClearedAtMs = Math.max(redisClearedAt, canonicalClearedAt);
     const hasPendingUnreadForMe =
       !isPeekOnly &&
       meta.lastSender === String(targetId) &&
-      metaLastTs > myReadUpTo;
+      metaLastTs > myReadUpTo &&
+      metaLastTs > myClearedAtMs;
 
     // 2. O(1) Delta Short-Circuit: ONLY trust Redis metadata when Redis is healthy (never stale per-lambda RAM)
     if (
@@ -244,6 +249,9 @@ export async function getPersonalChatMessages(req, res, next) {
     }
 
     let combined = Array.from(byId.values());
+    if (myClearedAtMs > 0) {
+      combined = combined.filter((m) => Number(m.ts || 0) > myClearedAtMs);
+    }
 
     // Apply monotonic O(1) read watermarks before checking newly-read transitions
     for (const m of combined) {

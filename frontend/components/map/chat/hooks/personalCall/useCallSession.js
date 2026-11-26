@@ -341,7 +341,13 @@ export function useCallSession({
             }
             if (res?.livekit && !cancelled) livekitSessionRef.current = res.livekit;
           })
-          .catch(() => {});
+          .catch((err) => {
+            if (!cancelled && !isHungUpRef.current && (err?.response?.status === 409 || err?.response?.data?.busy)) {
+              stopCallRingtone();
+              setStatus("in_another_call");
+              finishCallOnce(2600);
+            }
+          });
 
         setTimeout(() => {
           if (!cancelled && !isHungUpRef.current && !isCallBlockedRef.current) {

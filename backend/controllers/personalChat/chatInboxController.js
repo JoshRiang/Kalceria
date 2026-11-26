@@ -1,6 +1,7 @@
 import { redis } from '../../lib/redis.js';
 import prisma from '../../lib/prisma.js';
 import { getCanonicalInboxSummary, fetchCanonicalUserBlocks } from '../../services/canonicalFallbackStore.js';
+import { setPersonalChatClearedForMe } from '../../services/chatClearStore.js';
 import {
   HOT_RING_BUFFER_SIZE,
   COLD_ARCHIVE_MAX_SIZE,
@@ -188,22 +189,18 @@ export async function deletePersonalChatMessages(req, res, next) {
     const { messageIds, clearAll } = req.body || {};
 
     if (clearAll) {
+      // Delete Chat for Me ONLY: records a per-user cutoff timestamp so the peer keeps their entire chat history
+      const clearedAtMs = Date.now();
       const clearPipe = redis.pipeline();
-      clearPipe.del(hotKey);
-      clearPipe.del(coldKey);
-      clearPipe.hincrby(metaKey, 'deleteRev', 1);
-      clearPipe.hset(metaKey, 'emptyConfirmed', '1', 'backfilled', '1', 'lastTs', '0');
+      clearPipe.hset(metaKey, `clearedAt:${userId}`, String(clearedAtMs));
       clearPipe.expire(metaKey, HOT_TTL_SECONDS);
       clearPipe.hdel(`chat:unread:${userId}`, String(targetId));
-      clearPipe.hdel(`chat:unread:${targetId}`, String(userId));
 
       await Promise.all([
         clearPipe.exec().catch(() => {}),
-        prisma?.personalChatMessage
-          ? prisma.personalChatMessage.deleteMany({ where: { convHash } }).catch(() => {})
-          : Promise.resolve(),
+        setPersonalChatClearedForMe(userId, convHash, clearedAtMs),
       ]);
-      return res.json({ ok: true, cleared: true });
+      return res.json({ ok: true, cleared: true, clearedForMe: true, clearedAtMs });
     }
 
     if (Array.isArray(messageIds) && messageIds.length > 0) {

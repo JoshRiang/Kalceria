@@ -219,6 +219,9 @@ export function formatMiniEventResponse(ev, hydrated = {}) {
   const pendingRequestsCount = Number.isFinite(hydrated.pendingRequestsCount)
     ? hydrated.pendingRequestsCount
     : 0;
+  const groupMemberIds = Array.isArray(hydrated.groupMemberIds)
+    ? hydrated.groupMemberIds
+    : [];
 
   return {
     ...ev,
@@ -228,6 +231,7 @@ export function formatMiniEventResponse(ev, hydrated = {}) {
     mediaItems,
     collaborators,
     collaboratorProfiles,
+    groupMemberIds,
     pendingRequestsCount,
     location: tags.location || ev.location || null,
     description: tags.plainDescription,

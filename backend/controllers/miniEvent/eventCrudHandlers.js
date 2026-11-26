@@ -265,7 +265,9 @@ export async function getActiveMiniEvents(req, res, next) {
       const creatorId = String(ev.creatorId || ev.creator?.id || '');
       if (creatorId === viewerId || friendSet.has(creatorId)) return true;
       const collabs = Array.isArray(ev.collaborators) ? ev.collaborators : [];
-      return collabs.some((c) => String(c.userId || c.id || '') === viewerId);
+      if (collabs.some((c) => String(c.userId || c.id || c || '') === viewerId)) return true;
+      const members = Array.isArray(ev.groupMemberIds) ? ev.groupMemberIds : [];
+      return members.some((m) => String(m) === viewerId);
     });
 
     const myActiveReq = viewerId
