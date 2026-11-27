@@ -135,8 +135,23 @@
 
 ---
 
+### BABAK 10 — AUDIT TEST 4-WAVE, PERBAIKAN 2 BUG PRODUKSI & GATE KUALITAS PERMANEN (`92d0fad`, `201562c`, `0fcf9a3`, `c34e5fc` → Wave 4/4)
+- **Perubahan Kunci**:
+  - **Wave 1 (`92d0fad`, `201562c`)**: Sensus seluruh 61 file test, penghapusan satu-satunya `assert.equal(true, true)` di `event_media_clips.test.mjs`, perbaikan 5 kegagalan frontend, dan pembersihan 4 akun dummy stray dari Postgres produksi (`TOTAL_DB_USERS_CLEAN: 12`).
+  - **Wave 2 (`0fcf9a3`)**: Pembangunan harness in-memory terisolasi [`backend/tests/helpers/inMemorySocialHarness.mjs`](file:///d:/TheWeb/Kalceria/backend/tests/helpers/inMemorySocialHarness.mjs) & upgrade 5 suite fitur baru (`friends_and_chat_delete`, `event_group_chat_and_roles`, `reels_and_public_events`, `event_archives_and_privacy`, `group_location_blend`) dari source-grep menjadi eksekusi controller Express & SQL state machine nyata (`14/14 PASS`, 0 koneksi eksternal).
+  - **Wave 3 (`c34e5fc`)**: Perbaikan seluruh 15 kegagalan test legacy pada 10 file + isolasi penuh 12 suite yang sebelumnya memutasi DB produksi (`auth_vertical_slice`, `chat_call_bi_devices_slice`, `minigame_target_event_pipeline`, dll.) + perbaikan **2 bug produksi nyata** yang ditemukan oleh test:
+    1. [`backend/utils/urlSecurity.js`](file:///d:/TheWeb/Kalceria/backend/utils/urlSecurity.js) (`splitMediaUrlList`): menambahkan `\/media\/` pada regex lookahead pemisah koma agar daftar multi-URL internal `/media/...` terpecah dengan benar.
+    2. [`backend/controllers/personalChat/chatInboxController.js`](file:///d:/TheWeb/Kalceria/backend/controllers/personalChat/chatInboxController.js) (`ackPersonalChatRead`): menandai secara monotonik seluruh pesan `ts <= nextReadTs` (bukan hanya `id IN messageIds`) sebagai `'read'` di PostgreSQL untuk mencegah *phantom red dot* pada percakapan > 50 pesan.
+    3. [`backend/lib/redis.js`](file:///d:/TheWeb/Kalceria/backend/lib/redis.js): menambahkan `__setRedisTestClient` (0 overhead produksi) guna mencegah event kuota Upstash asinkron membajak test mock di tengah eksekusi.
+  - **Wave 4 (Final Certification)**: Upgrade 3 file test frontend `GREP_ONLY` terakhir (`call_unified_video_upgrade`, `location_polling_and_map_zoom`, `service_request_integrity` + pure module [`commsValidation.js`](file:///d:/TheWeb/Kalceria/frontend/components/service-request/commsValidation.js)) menjadi eksekusi runtime nyata (`GREP_ONLY: 0 / 21`), pemasangan gate kualitas permanen [`scripts/audit/test-quality-audit.mjs`](file:///d:/TheWeb/Kalceria/scripts/audit/test-quality-audit.mjs), serta sertifikasi penuh **61/61 file test (`552/552` aktif PASS, 0 fail)** + **Next.js 16.4.6 production build PASS**.
+- **Cara Improve Sendiri**:
+  - Setiap kali menambah fitur baru, wajib tulis test runtime (bukan regex `readFileSync` saja) menggunakan `inMemorySocialHarness.mjs` (backend) atau pure helper tanpa `@/` (frontend), lalu jalankan `node scripts/audit/test-quality-audit.mjs --check` sebelum commit.
+
+---
+
 ## DAFTAR HOTSPOT & CHECKLIST KEAMANAN PERUBAHAN MASA DEPAN
 1. **Jangan Pernah Sentuh `BaselineNovember#2`** dan jaga **0 Hook Delta** pada Tier A (`MapPageClient.jsx`, `usePersonalChatState.js`) — selalu cek dengan `node scripts/audit/modularity-audit.mjs --check`.
 2. **Jangan Pernah Jalankan `cd backend; npx vercel`** — selalu deploy backend dari root repo menggunakan `backend/.vercel/project.json`.
-3. **Wajib Jalankan `git add -f` untuk file baru di `tests/` atau `*.py`** karena `.gitignore` mengabaikan pola tersebut.
+3. **Wajib Jalankan `git add -f` untuk file baru di `tests/`, `*TEST*.md`, atau `*.py`** karena `.gitignore` mengabaikan pola tersebut.
 4. **Wajib Jalankan Cek ESM Graph** sebelum deploy backend: `node -e "import('./backend/routes/index.js').then(() => process.exit(0))"`.
+5. **Wajib Jalankan Gate Kualitas Test** sebelum commit/push: `node scripts/audit/test-quality-audit.mjs --check` (menjamin 0 `assert.equal(true, true)`, 0 frontend grep-only, dan 0 mutasi DB produksi tak terisolasi).
